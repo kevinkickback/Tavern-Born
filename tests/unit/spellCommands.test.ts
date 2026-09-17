@@ -510,6 +510,45 @@ describe('Spell Commands', () => {
       })
     })
 
+    test('repairs missing choice provenance while replacing a non-fixed class spell', () => {
+      const character = makeCharacterFixture({
+        classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 3 }],
+        spells: {
+          ...makeCharacterFixture().spells,
+          spellProfiles: [
+            {
+              id: 'class:Sorcerer|PHB',
+              type: 'class',
+              label: 'Sorcerer (Lv 3)',
+              className: 'Sorcerer',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['Witch Bolt'],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+          ],
+        },
+      })
+
+      const result = swapClassSpellAtLevel(character, emptyProvenance(), {
+        className: 'Sorcerer',
+        classSource: 'PHB',
+        swapAtLevel: 3,
+        removedName: 'Witch Bolt',
+        addedName: 'Misty Step',
+      })
+
+      expect(result.characterPatch.spells?.spellProfiles[0].spellsKnown).toEqual(['Misty Step'])
+      expect(result.provenanceUpdate.spells['misty step']?.[0]).toMatchObject({
+        sourceType: 'class',
+        sourceName: 'Sorcerer',
+        sourceRef: 'PHB',
+        grantType: 'choice',
+        spellGrantedAtLevel: 3,
+      })
+    })
+
     test('rejects replacing a fixed subclass spell without class-choice ownership', () => {
       const character = makeCharacterFixture({
         classProgression: [

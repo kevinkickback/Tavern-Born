@@ -18,10 +18,11 @@
 * Light theme, tooltips, contextual hints, and small-window layouts improved
 * Organization emblems added to 2014 character sheets
 * Remote game-data loading and update reliability improved
+* Too many of bug fixes to count
 
 ## ⚠️ Important
 
-* Characters created before v0.4.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export their original `.tbc` files before you acknowledge their removal.
+* Characters created before v0.4.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export their original `.tbc` before removal incase you would like to use them in an older compatable version.
 
 </details>
 

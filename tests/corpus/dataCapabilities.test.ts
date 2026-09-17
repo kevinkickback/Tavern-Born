@@ -81,6 +81,12 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       choiceCoverage,
       maximumLevel,
     )
+    const revisedFighter = classes.find(
+      (classData) => classData.name === 'Fighter' && classData.source === 'XPHB',
+    )
+    const copiedArcaneArcher = revisedFighter?.subclasses?.find(
+      (subclass) => subclass.name === 'Arcane Archer' && subclass.source === 'XGE',
+    )
     const issuesByCode = Object.fromEntries(
       Array.from(
         report.issues.reduce((counts, issue) => {
@@ -127,6 +133,8 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
     expect(choiceCoverageGaps).toEqual([])
+    expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)
+    expect(copiedArcaneArcher?.subclassFeatureRefs?.length).toBeGreaterThan(0)
     expect(
       report.movement.absent +
         report.movement.numeric +

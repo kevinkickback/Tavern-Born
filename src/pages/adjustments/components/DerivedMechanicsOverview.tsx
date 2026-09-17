@@ -93,30 +93,27 @@ export function SourceDerivedActions({ actions }: { actions: readonly CharacterA
 
   return (
     <Accordion type="single" collapsible defaultValue="source-derived-actions">
-      <AccordionItem value="source-derived-actions" className="border-0">
-        <AccordionTrigger className="py-1">
-          <span className="min-w-0">
-            <span className="block font-semibold">Source-derived actions</span>
-            <span className="mt-0.5 block text-sm font-normal text-muted-foreground">
-              Limited to attacks and rules that explicitly grant an action, bonus action, or
-              reaction. Manage each entry at its source.
-            </span>
-          </span>
+      <AccordionItem
+        value="source-derived-actions"
+        className="overflow-hidden rounded-lg border border-border bg-workspace-pane"
+      >
+        <AccordionTrigger className="rounded-none px-4 py-3 hover:bg-surface-raised/70 hover:no-underline data-[state=open]:bg-surface-raised/50">
+          <span className="font-semibold">Source-derived actions</span>
           <Badge variant="outline" className="ml-auto">
             {derivedActions.length}
           </Badge>
         </AccordionTrigger>
-        <AccordionContent className="pt-2 pb-0">
+        <AccordionContent className="border-t border-border p-0">
           {derivedActions.length === 0 ? (
-            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+            <p className="px-4 py-4 text-sm text-muted-foreground">
               No source-derived actions are currently available.
             </p>
           ) : (
-            <div className="divide-y divide-border border-y border-border">
+            <div className="divide-y divide-border">
               {derivedActions.map((action) => {
                 const details = actionDetails(action)
                 return (
-                  <div key={action.id} className="py-3">
+                  <div key={action.id} className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{action.name}</span>
                       <Badge variant="secondary">{ACTION_KIND_LABELS[action.kind]}</Badge>

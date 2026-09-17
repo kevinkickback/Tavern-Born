@@ -209,8 +209,10 @@ copy atomically without creating an unsaved edit.
   profile and provenance ledger are committed by one command, while choices from other levels and
   profile entries without level attribution remain intact.
 - Replacement-only class levels remain present in the class-page choice model even when they grant no
-  new picks. Source readiness compares selected references with the catalog through the same
-  normalized, case-insensitive name identity used by spell profiles.
+  new picks. The Replace control and modal share one eligibility calculation, including the
+  non-fixed-profile consistency fallback, so the control cannot open into a silent no-op. Source
+  readiness compares selected references with the catalog through the same normalized,
+  case-insensitive name identity used by spell profiles.
 - Subclass-owned spellcasting progressions are overlaid on their base class for class-page choices
   and Review validation. Review derives an absent class profile before checking quotas, so selecting
   a spellcasting subclass produces actionable cantrip/spell requirements instead of a missing-profile
@@ -340,7 +342,9 @@ effects and activation context as persisted reads before current HP is clamped. 
 changes and the player has not manually edited Current HP in the open modal, the preview moves
 Current HP by the same delta before saving.
 
-`applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together.
+`applyLevelUp()` in `classCommands.ts` commits progression, the raw hit-die choice, and current HP
+together. A completed level-up sets current HP to the newly resolved maximum while preserving
+temporary HP.
 Removing levels prunes gain records and class-owned ASI choices that no longer belong to the
 retained progression, rebuilding ASI provenance in the same command result. Average Hit Points
 records the fixed average automatically unless explicitly disabled; when disabled, `LevelUpModal`

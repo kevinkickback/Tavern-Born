@@ -319,6 +319,33 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
+function getSubclassIdentityKey(subclass: ParsedObject): string | undefined {
+  const name = typeof subclass.name === 'string' ? subclass.name : undefined
+  const source = typeof subclass.source === 'string' ? subclass.source : undefined
+  const shortName = typeof subclass.shortName === 'string' ? subclass.shortName : undefined
+  const className = typeof subclass.className === 'string' ? subclass.className : undefined
+  const classSource = typeof subclass.classSource === 'string' ? subclass.classSource : undefined
+  if (!name || !source || !shortName || !className || !classSource) return undefined
+  return `${name}|${source}|${shortName}|${className}|${classSource}`
+}
+
+function materializeSubclassCopies(subclasses: unknown[]): ParsedObject[] {
+  const byIdentity = new Map<string, ParsedObject>()
+  for (const subclass of subclasses) {
+    const subclassObj = asObject(subclass)
+    const key = getSubclassIdentityKey(subclassObj)
+    if (key && !byIdentity.has(key)) byIdentity.set(key, subclassObj)
+  }
+
+  return subclasses.map((subclass) => {
+    const subclassObj = asObject(subclass)
+    const copy = asObject(subclassObj._copy)
+    const copiedIdentity = getSubclassIdentityKey(copy)
+    const copiedSubclass = copiedIdentity ? byIdentity.get(copiedIdentity) : undefined
+    return copiedSubclass ? { ...copiedSubclass, ...subclassObj } : subclassObj
+  })
+}
+
 export function parseClasses(data: unknown): unknown[] {
   const obj = asObject(data)
   const classes: unknown[] = obj.class
@@ -326,7 +353,7 @@ export function parseClasses(data: unknown): unknown[] {
     : Array.isArray(data)
       ? [...data]
       : []
-  const subclassEntries: unknown[] = asArray(obj.subclass)
+  const subclassEntries = materializeSubclassCopies(asArray(obj.subclass))
   const classFeatureRecords: unknown[] = asArray(obj.classFeature)
   const classFeatureIndex = getClassFeatureIndex(classFeatureRecords)
 
@@ -379,7 +406,17 @@ export function parseClasses(data: unknown): unknown[] {
     const introKey = `${String(scObj.shortName ?? '')}|${className}|${classSource ?? ''}`
     // Fallback: PHB-style subclasses where shortName != feature name; look up by sc.name
     const fullNameKey = `${String(scObj.name ?? '')}|${className}|${classSource ?? ''}`
-    const entries = introEntriesMap.get(introKey) ?? fullNameIntroMap.get(fullNameKey) ?? []
+    const copiedSubclass = asObject(scObj._copy)
+    const copiedClassName = String(copiedSubclass.className ?? '')
+    const copiedClassSource = String(copiedSubclass.classSource ?? '')
+    const copiedIntroKey = `${String(copiedSubclass.shortName ?? '')}|${copiedClassName}|${copiedClassSource}`
+    const copiedFullNameKey = `${String(copiedSubclass.name ?? '')}|${copiedClassName}|${copiedClassSource}`
+    const entries =
+      introEntriesMap.get(introKey) ??
+      fullNameIntroMap.get(fullNameKey) ??
+      introEntriesMap.get(copiedIntroKey) ??
+      fullNameIntroMap.get(copiedFullNameKey) ??
+      []
     const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
     const levelFeatures =
       groupSubclassFeaturesByLevel(subclassFeatureRefs).length > 0

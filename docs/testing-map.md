@@ -57,8 +57,10 @@ new tests land and do not lower them to merge a change.
   casters. Readiness and presentation regressions verify fixed or always-prepared grants and
   case-variant duplicates do not satisfy or inflate player-choice quotas. Ownership regressions
   cover class selections that overlap subclass grants, case-insensitive/source-qualified readiness,
-  replacement-only levels, reverse-order spell-swap rollback on level-down, and 2014 subclass-owned
-  spellcasting profiles and class-page choice lists. Spell identity and selection coverage verifies
+  replacement-only levels, non-fixed profile fallback when choice provenance is missing, clean
+  source-qualified replacement labels, conservative replacement-level recovery, reverse-order
+  spell-swap rollback on level-down, and 2014 subclass-owned spellcasting profiles and class-page
+  choice lists. Spell identity and selection coverage verifies
   exact `Name|Source` resolution, selected-printing persistence, source-safe pruning, and clean
   display labels.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
@@ -117,7 +119,7 @@ new tests land and do not lower them to merge a change.
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 	- `formatWeaponCategoryLabel` weapon category key → display label
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
-- Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive inventory summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive weight/attunement/currency summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
 - Manual item-selection category coverage includes parsed spellcasting-focus types and unknown or
   homebrew type codes in tests/unit/itemSelectionModal.test.ts.
 - Shared class/background generic-equipment selection has an accessible-name regression test in
@@ -132,9 +134,15 @@ new tests land and do not lower them to merge a change.
   source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
+- Subclass picker coverage verifies structured inline source markup is rendered as formatted content
+  rather than exposed as raw 5etools syntax in tests/integration/subclassSelectionModal.test.tsx.
+  Class parser coverage verifies subclasses copied onto revised parent classes inherit their
+  summaries and resolved feature references, including the configured-corpus 2024 Fighter copy of
+  Arcane Archer.
 - Header HP/AC launch controls, deliberate Rest-action absence, immediate in-session one-time-hint
-  reset coverage, and responsive persistent-anchor recovery in
-  tests/integration/appHeader.test.tsx and tests/hooks/useAnchoredHintPosition.test.tsx
+  reset coverage, responsive persistent-anchor recovery, and one-time entrance animation across
+  temporary anchor loss in tests/integration/appHeader.test.tsx,
+  tests/integration/anchoredHint.test.tsx, and tests/hooks/useAnchoredHintPosition.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
   plus nested-only history navigation, streamlined transient controls, selected-entry pinning
@@ -146,7 +154,8 @@ new tests land and do not lower them to merge a change.
 - Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
   tests/integration/derivedMechanicsOverview.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
-  including Actions-first ordering/default, Effects deep links, action-sized source filtering,
+  including Actions-first ordering/default, Effects deep links, visually grouped collapsible action
+  categories, action-sized source filtering,
   independently collapsible source/manual groups for both mechanic types, read-only source-owned
   rows, active equipment requirements,
   manual-entry separation, and the responsive form/detail split workbench
@@ -200,7 +209,9 @@ new tests land and do not lower them to merge a change.
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
 - Class-page spell choice coverage in tests/unit/spellCommands.test.ts and
   tests/hooks/useClassPageControllers.test.tsx verifies that later-level additions and reselections
-  update profile/provenance state atomically without removing earlier or unattributed choices. The
+  update profile/provenance state atomically without removing earlier or unattributed choices, while
+  subclass school restrictions display plain-language guidance and replacement ceilings follow the
+  level of the replacement rather than the removed spell's original selection level. The
   command matrix covers every core 2014 and 2024 spellcasting class plus Artificer, including known,
   prepared, spellbook, and Pact casting models.
 - Basic E2E startup/navigation smoke

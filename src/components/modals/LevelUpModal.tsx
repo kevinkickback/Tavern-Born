@@ -159,7 +159,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       const newProgression = classProgression.map((entry, index) =>
         index === targetIndex ? { ...entry, levels: pending.classLevel } : entry,
       )
-      const result = applyLevelUp(character, character.provenance, newProgression, hpChoice)
+      const result = applyLevelUp(
+        character,
+        character.provenance,
+        newProgression,
+        hpChoice,
+        getProjectedMaximumHitPoints(hpChoice),
+      )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
@@ -196,7 +202,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const nextProficiencies =
       multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
     const nextProvenance = multiclassResult?.provenanceUpdate ?? character.provenance
-    const result = applyLevelUp(character, nextProvenance, newProgression, hpChoice)
+    const result = applyLevelUp(
+      character,
+      nextProvenance,
+      newProgression,
+      hpChoice,
+      getProjectedMaximumHitPoints(hpChoice),
+    )
 
     updateCharacter(character.id, {
       ...result.characterPatch,
@@ -370,6 +382,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const maximumOverride = getMaxHitPointsOverride(character)
   const currentEffectiveMaxHp = maximumOverride ?? currentAdjustedMaxHp
   const projectedEffectiveMaxHp = maximumOverride ?? projectedAdjustedMaxHp
+  const getProjectedMaximumHitPoints = (choice: LevelUpHitPointChoice) => {
+    const levelGain = Math.max(1, choice.dieResult + conModifier)
+    return maximumOverride ?? Math.max(1, calculatedMaxHp + levelGain + projectedAdjustmentTotal)
+  }
 
   const handleConfirmHitPoints = () => {
     if (!pendingLevelUp || !validHpDieResult) return

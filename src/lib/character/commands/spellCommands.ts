@@ -10,6 +10,7 @@ import {
   getClassSpellRuleContext,
   getClassSpellSchoolRule,
   getMaximumUnrestrictedSchoolChoices,
+  getReplaceableClassSpellNames,
   isClassChoiceSpellTag,
   isSpellInRestrictedSchools,
   UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
@@ -222,7 +223,18 @@ export function swapClassSpellAtLevel(
   const removedKey = getSpellNameKey(removedName)
   const profile = profiles.find((candidate) => candidate.id === profileId)
   const removedTags = ledger.spells[normalizeKey(removedName)] ?? []
-  const removedClassTag = getClassChoiceSpellTag(ledger, removedName, className, classSource)
+  const existingClassTag = getClassChoiceSpellTag(ledger, removedName, className, classSource)
+  const removedClassTag =
+    existingClassTag ??
+    (getReplaceableClassSpellNames(profile, ledger, className, classSource).some(
+      (name) => getSpellNameKey(name) === removedKey,
+    )
+      ? {
+          ...makeSourceTag('class', className, 'choice', classSource),
+          spellGrantedAtLevel: swapAtLevel,
+          spellAttributionMode: 'exact' as const,
+        }
+      : undefined)
   if (
     !profile?.spellsKnown.some((name) => getSpellNameKey(name) === removedKey) ||
     !removedClassTag

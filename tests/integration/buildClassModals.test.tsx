@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
@@ -11,11 +12,18 @@ vi.mock('@/hooks/character/useTotalAbilityScores', () => ({
 
 afterEach(cleanup)
 
-function makeSpell(name: string, className: string, school: string = 'A'): Spell5e {
+type ModalProps = ComponentProps<typeof BuildClassModals>
+
+function makeSpell(
+  name: string,
+  className: string,
+  school: string = 'A',
+  level: number = 1,
+): Spell5e {
   return {
     name,
     source: 'PHB',
-    level: 1,
+    level,
     school,
     time: [{ number: 1, unit: 'action' }],
     range: { type: 'self' },
@@ -25,12 +33,77 @@ function makeSpell(name: string, className: string, school: string = 'A'): Spell
   }
 }
 
-function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = false) {
+function renderClassModals(
+  character: ModalProps['character'],
+  overrides: Partial<ModalProps> = {},
+) {
+  render(
+    <BuildClassModals
+      character={character}
+      classes={[]}
+      classPickerOpen={false}
+      classPickerSearch=""
+      onClassPickerOpenChange={vi.fn()}
+      onClassPickerSearchChange={vi.fn()}
+      onClassSelect={vi.fn()}
+      spellPickerLevel={null}
+      onSpellPickerLevelChange={vi.fn()}
+      spellChoicesByLevel={new Map()}
+      classSpells={[]}
+      spellByReference={new Map()}
+      onSetClassSpellSelectionsAtLevel={vi.fn()}
+      onSwapClassSpellAtLevel={vi.fn()}
+      spellSwapLevel={null}
+      spellSwapDrop={null}
+      onSpellSwapLevelChange={vi.fn()}
+      onSpellSwapDropChange={vi.fn()}
+      subclassPickerOpen={false}
+      onSubclassPickerOpenChange={vi.fn()}
+      subclassTitle="Subclass"
+      subclasses={[]}
+      onSubclassConfirm={vi.fn()}
+      characterSnapshot={{} as never}
+      asiPickerLevel={null}
+      onAsiPickerLevelChange={vi.fn()}
+      appliedAsiChoicesForClass={[]}
+      onAsiApply={vi.fn()}
+      featPickerOpen={false}
+      onFeatPickerOpenChange={vi.fn()}
+      featModalFeats={[]}
+      featPickerInitialSelectedIds={[]}
+      onFeatConfirm={vi.fn()}
+      {...overrides}
+    />,
+  )
+}
+
+function renderWarlockSwap(
+  spellSwapDrop: string | null,
+  includeFixedSpell = false,
+  includeChoiceTag = true,
+  maxSpellLevel = 1,
+  sourceQualified = false,
+  progression: {
+    characterLevel?: number
+    spellGrantedAtLevel?: number
+    swapAtLevel?: number
+    replacementSpellLevel?: number
+  } = {},
+) {
+  const characterLevel = progression.characterLevel ?? 2
+  const spellGrantedAtLevel = progression.spellGrantedAtLevel ?? 1
+  const swapAtLevel = progression.swapAtLevel ?? 2
   const hex = makeSpell('Hex', 'Warlock', 'E')
-  const armorOfAgathys = makeSpell('Armor of Agathys', 'Warlock', 'A')
+  const armorOfAgathys = makeSpell(
+    'Armor of Agathys',
+    'Warlock',
+    'A',
+    progression.replacementSpellLevel ?? 1,
+  )
   const bless = makeSpell('Bless', 'Cleric', 'E')
+  const hexReference = sourceQualified ? 'Hex|PHB' : 'Hex'
   const character = makeCharacterFixture({
-    classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
+    classProgression: [{ name: 'Warlock', source: 'PHB', levels: characterLevel }],
     spells: {
       ...makeCharacterFixture().spells,
       spellProfiles: [
@@ -41,7 +114,7 @@ function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = fal
           className: 'Warlock',
           classSource: 'PHB',
           cantrips: [],
-          spellsKnown: includeFixedSpell ? ['Hex', 'Armor of Agathys'] : ['Hex'],
+          spellsKnown: includeFixedSpell ? [hexReference, 'Armor of Agathys'] : [hexReference],
           preparedSpells: [],
           fixedSpells: includeFixedSpell ? ['Armor of Agathys'] : undefined,
           alwaysPrepared: false,
@@ -51,16 +124,20 @@ function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = fal
     provenance: {
       ...makeCharacterFixture().provenance!,
       spells: {
-        hex: [
-          {
-            sourceType: 'class',
-            sourceName: 'Warlock',
-            sourceRef: 'PHB',
-            grantType: 'choice',
-            label: 'Warlock',
-            spellGrantedAtLevel: 1,
-          },
-        ],
+        ...(includeChoiceTag
+          ? {
+              hex: [
+                {
+                  sourceType: 'class' as const,
+                  sourceName: 'Warlock',
+                  sourceRef: 'PHB',
+                  grantType: 'choice' as const,
+                  label: 'Warlock',
+                  spellGrantedAtLevel,
+                },
+              ],
+            }
+          : {}),
         ...(includeFixedSpell
           ? {
               'armor of agathys': [
@@ -78,54 +155,23 @@ function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = fal
     },
   })
 
-  render(
-    <BuildClassModals
-      character={character}
-      classes={[]}
-      classPickerOpen={false}
-      classPickerSearch=""
-      onClassPickerOpenChange={vi.fn()}
-      onClassPickerSearchChange={vi.fn()}
-      onClassSelect={vi.fn()}
-      spellPickerLevel={null}
-      onSpellPickerLevelChange={vi.fn()}
-      spellChoicesByLevel={
-        new Map([[2, { cantrips: 0, spells: 1, maxSpellLevel: 1, canSwap: true }]])
-      }
-      classSpells={[armorOfAgathys, bless]}
-      spellByReference={
-        new Map(
-          [hex, armorOfAgathys, bless].map((spell) => [
-            getSpellReferenceKey(spell.name, spell.source),
-            spell,
-          ]),
-        )
-      }
-      viewingClass="Warlock"
-      viewingClassSource="PHB"
-      onSetClassSpellSelectionsAtLevel={vi.fn()}
-      onSwapClassSpellAtLevel={vi.fn()}
-      spellSwapLevel={2}
-      spellSwapDrop={spellSwapDrop}
-      onSpellSwapLevelChange={vi.fn()}
-      onSpellSwapDropChange={vi.fn()}
-      subclassPickerOpen={false}
-      onSubclassPickerOpenChange={vi.fn()}
-      subclassTitle="Patron"
-      subclasses={[]}
-      onSubclassConfirm={vi.fn()}
-      characterSnapshot={{} as never}
-      asiPickerLevel={null}
-      onAsiPickerLevelChange={vi.fn()}
-      appliedAsiChoicesForClass={[]}
-      onAsiApply={vi.fn()}
-      featPickerOpen={false}
-      onFeatPickerOpenChange={vi.fn()}
-      featModalFeats={[]}
-      featPickerInitialSelectedIds={[]}
-      onFeatConfirm={vi.fn()}
-    />,
-  )
+  renderClassModals(character, {
+    spellChoicesByLevel: new Map([
+      [swapAtLevel, { cantrips: 0, spells: 1, maxSpellLevel, canSwap: true }],
+    ]),
+    classSpells: [armorOfAgathys, bless],
+    spellByReference: new Map(
+      [hex, armorOfAgathys, bless].map((spell) => [
+        getSpellReferenceKey(spell.name, spell.source),
+        spell,
+      ]),
+    ),
+    viewingClass: 'Warlock',
+    viewingClassSource: 'PHB',
+    spellSwapLevel: swapAtLevel,
+    spellSwapDrop,
+    subclassTitle: 'Patron',
+  })
 }
 
 describe('BuildClassModals spell replacement', () => {
@@ -143,5 +189,79 @@ describe('BuildClassModals spell replacement', () => {
 
     expect(screen.getByText('Hex')).toBeTruthy()
     expect(screen.queryByText('Armor of Agathys')).toBeNull()
+  })
+
+  test('opens the replacement chooser for a non-fixed class-profile spell without a tag', () => {
+    renderWarlockSwap(null, false, false)
+
+    expect(screen.getByText('Replace a Spell at Level 2')).toBeTruthy()
+    expect(screen.getByText('Hex')).toBeTruthy()
+  })
+
+  test('uses the replacement level rather than the original spell-selection level', async () => {
+    renderWarlockSwap('Hex', false, true, 4, false, {
+      characterLevel: 7,
+      spellGrantedAtLevel: 2,
+      swapAtLevel: 7,
+      replacementSpellLevel: 4,
+    })
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="1"]')).toBeTruthy(),
+    )
+    expect(screen.getByText(/replacement \(up to 4th-level\)/)).toBeTruthy()
+    expect(screen.getByText('1 results')).toBeTruthy()
+  })
+
+  test('hides source qualifiers and recovers a missing replacement level limit', async () => {
+    renderWarlockSwap(null, false, true, 0, true)
+
+    expect(screen.getByText('Hex')).toBeTruthy()
+    expect(screen.queryByText('Hex|PHB')).toBeNull()
+
+    cleanup()
+    renderWarlockSwap('Hex|PHB', false, true, 0, true)
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="1"]')).toBeTruthy(),
+    )
+    expect(screen.getByText('Replace: Hex')).toBeTruthy()
+    expect(screen.queryByText('Replace: Hex|PHB')).toBeNull()
+    expect(screen.getByText(/replacement \(up to 1st-level\)/)).toBeTruthy()
+    expect(screen.queryByText(/0th-level/)).toBeNull()
+  })
+})
+
+describe('BuildClassModals spell-school guidance', () => {
+  test('explains the Arcane Trickster level-three rule without a quota badge', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+
+    renderClassModals(character, {
+      spellPickerLevel: 3,
+      spellChoicesByLevel: new Map([
+        [3, { cantrips: 2, spells: 3, maxSpellLevel: 1, canSwap: true }],
+      ]),
+      viewingClass: 'Rogue',
+      viewingClassSource: 'PHB',
+      viewingSubclass: 'Arcane Trickster',
+      viewingSubclassSource: 'PHB',
+    })
+
+    expect(
+      screen.getByText(
+        'At least 2 of your 3 spells must be Enchantment or Illusion spells. The remaining spell may be from any Wizard school.',
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText(/outside the usual schools/i)).toBeNull()
   })
 })

@@ -130,9 +130,9 @@ describe('EquipmentPage item details', () => {
     const summaryGrid = container.querySelector('[data-slot="equipment-summary-grid"]')
     expect(summary.className).toContain('@container')
     expect(summary.className).not.toContain('overflow-x-auto')
-    expect(summaryGrid?.className).toContain('@min-[520px]:grid-cols-3')
-    expect(summaryGrid?.className).toContain('@min-[820px]:grid-cols-[1fr_0.8fr_0.7fr_1.8fr]')
+    expect(summaryGrid?.className).toContain('@min-[820px]:grid-cols-[1fr_0.8fr_1.8fr]')
     expect(summaryGrid?.className).not.toContain('min-w-[820px]')
+    expect(within(summary).queryByText('Armor Class')).toBeNull()
     expect(screen.getByLabelText('CP').parentElement?.parentElement?.className).toContain(
       '@min-[380px]:grid-cols-5',
     )

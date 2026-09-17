@@ -6,7 +6,12 @@ import { ManualEffectsForm, ManualEffectsList } from '@/components/character/Man
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import {
+  WorkspaceBody,
+  WorkspaceDetailContent,
+  WorkspacePage,
+  WorkspacePaneHeader,
+} from '@/components/workspace'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { isActionSizedCharacterAction } from '@/lib/calculations/actions'
@@ -141,7 +146,7 @@ export function AdjustmentsPage() {
                   className="pr-20"
                 />
                 <ScrollArea className="flex-1 overflow-hidden">
-                  <div className="space-y-8 p-5">
+                  <WorkspaceDetailContent className="space-y-4">
                     {section === 'actions' ? (
                       <>
                         <SourceDerivedActions actions={actions} />
@@ -156,7 +161,7 @@ export function AdjustmentsPage() {
                         <ManualEffectsList />
                       </>
                     )}
-                  </div>
+                  </WorkspaceDetailContent>
                 </ScrollArea>
               </div>
             }

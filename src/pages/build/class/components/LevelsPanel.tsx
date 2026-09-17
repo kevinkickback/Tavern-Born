@@ -19,6 +19,7 @@ import {
 import { WorkspacePaneHeader } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getReplaceableClassSpellNames } from '@/lib/calculations/classSpellChoiceRules'
 import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
@@ -231,7 +232,13 @@ export function BuildClassLevelsPanel({
 
   const classProfileId = `class:${viewingClass}|${viewingClassSource ?? ''}`
   const classProfile = ensureSpellProfiles(character).find((p) => p.id === classProfileId)
-  const hasExistingKnown = (classProfile?.spellsKnown?.length ?? 0) > 0
+  const hasExistingKnown =
+    getReplaceableClassSpellNames(
+      classProfile,
+      character.provenance,
+      viewingClass,
+      viewingClassSource,
+    ).length > 0
   const swapsByLevel = classProfile?.spellSwaps ?? {}
 
   return (

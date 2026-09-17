@@ -36,6 +36,7 @@ export interface SpellSelectionModalProps {
   lockedNames?: Set<string>
   characterSpellNames?: Set<string>
   categories?: CategoryLimit<Spell5e>[]
+  selectionHint?: string
   initialSelectedNames?: string[]
   initialFilters?: ActiveFilters
   allowedLevels?: Set<string>
@@ -298,6 +299,7 @@ export function SpellSelectionModal({
   lockedNames = EMPTY_SPELL_NAMES,
   characterSpellNames,
   categories,
+  selectionHint,
   initialSelectedNames = [],
   initialFilters,
   allowedLevels,
@@ -403,6 +405,7 @@ export function SpellSelectionModal({
       }
       filterSections={filterSections}
       categories={categories}
+      selectionHint={selectionHint}
       initialSelectedIds={initialSelectedIds}
       initialFilters={effectiveInitialFilters}
       onConfirm={(_ids, selectedItems) =>

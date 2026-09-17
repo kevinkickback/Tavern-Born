@@ -7,7 +7,7 @@ import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspa
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useClassLookup } from '@/hooks/data/useGameData'
+import { useClassLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import {
   getClassFeatureGroups,
@@ -64,6 +64,7 @@ export function BuildClassPage() {
     itemMasteries,
   } = useFilteredGameData()
   const classLookup = useClassLookup()
+  const spellLookup = useSpellLookup()
   const { selectClass } = useUnifiedClassSelection()
   const { applyClassEquipmentChoice } = useClassProvenanceMutations()
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
@@ -98,12 +99,12 @@ export function BuildClassPage() {
   const spellByReference = useMemo(
     () =>
       new Map(
-        (spells as Spell5e[]).map((spell) => [
+        Object.values(spellLookup).map((spell) => [
           getSpellReferenceKey(spell.name, spell.source),
           spell,
         ]),
       ),
-    [spells],
+    [spellLookup],
   )
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]

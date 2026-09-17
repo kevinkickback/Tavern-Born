@@ -1,6 +1,6 @@
 import { arrow, autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react-dom'
 import { X } from '@phosphor-icons/react'
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { AnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getTitleBarSafeTop } from '@/lib/overlayPosition'
@@ -24,6 +24,10 @@ export function AnchoredHint({
   dismissLabel = 'Dismiss hint',
   className,
 }: AnchoredHintProps) {
+  const hasShownRef = useRef(false)
+  const markShown = useCallback(() => {
+    hasShownRef.current = true
+  }, [])
   if (!position || typeof document === 'undefined') return null
   return createPortal(
     <AnchoredHintContent
@@ -32,6 +36,8 @@ export function AnchoredHint({
       onDismiss={onDismiss}
       dismissLabel={dismissLabel}
       className={className}
+      animateOnMount={!hasShownRef.current}
+      onShown={markShown}
     >
       {children}
     </AnchoredHintContent>,
@@ -46,7 +52,14 @@ function AnchoredHintContent({
   children,
   dismissLabel,
   className,
-}: Omit<AnchoredHintProps, 'position'> & { position: AnchoredHintPosition }) {
+  animateOnMount,
+  onShown,
+}: Omit<AnchoredHintProps, 'position'> & {
+  position: AnchoredHintPosition
+  animateOnMount: boolean
+  onShown: () => void
+}) {
+  const [animate] = useState(animateOnMount)
   const uiScale = useAppPreferencesStore((state) => state.uiScale)
   const safeTop = getTitleBarSafeTop(uiScale)
   const arrowRef = useRef<HTMLDivElement>(null)
@@ -65,6 +78,7 @@ function AnchoredHintContent({
   useEffect(() => {
     refs.setReference(position.reference)
   }, [position.reference, refs])
+  useEffect(onShown, [onShown])
 
   const arrowX = middlewareData.arrow?.x
   const side = placement.split('-')[0]
@@ -74,15 +88,17 @@ function AnchoredHintContent({
     <div
       ref={refs.setFloating}
       className={cn(
-        'pointer-events-none z-[70] animate-in fade-in-0 zoom-in-95 duration-200',
-        placeAbove ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2',
+        'pointer-events-none z-[70]',
+        animate && 'animate-in fade-in-0 zoom-in-95 duration-200',
+        animate && (placeAbove ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'),
       )}
       style={{ ...floatingStyles, width: `${width / 16}rem` }}
       role="status"
     >
       <div
         className={cn(
-          'pointer-events-auto animate-hint-bounce relative rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20',
+          'pointer-events-auto relative rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20',
+          animate && 'animate-hint-bounce',
           className,
         )}
       >

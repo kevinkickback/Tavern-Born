@@ -108,6 +108,34 @@ describe('SpellProfileManager', () => {
     expect(screen.getByText('Fire Bolt')).toBeTruthy()
   })
 
+  test('resets the final group span when the spell pane can fit three columns', () => {
+    const items = [
+      makeItem({ name: 'Fire Bolt', level: 0, kind: 'cantrip' }),
+      makeItem({ name: 'Magic Missile', level: 1, kind: 'spell' }),
+      makeItem({ name: 'Misty Step', level: 2, kind: 'spell' }),
+    ]
+
+    render(
+      <SpellProfileManager
+        spellProfiles={[BASE_CLASS_PROFILE]}
+        detailsByProfileId={new Map([[BASE_CLASS_PROFILE.id, BASE_DETAIL]])}
+        groupedItems={new Map([[BASE_CLASS_PROFILE.id, items]])}
+        selectionSourceByProfileAndSpell={new Map()}
+        getSpellByName={() => undefined}
+        onTogglePrepared={vi.fn()}
+        onRemoveSpell={vi.fn()}
+        renderSpellName={({ item }) => <span>{item.name}</span>}
+      />,
+    )
+
+    const secondLevelGroup = screen
+      .getByText('2nd-levels')
+      .closest('[data-slot="spell-level-group"]')
+    expect(secondLevelGroup?.className).toContain('@min-[54rem]:col-span-1')
+    expect(secondLevelGroup?.parentElement?.className).toContain('@container')
+    expect(secondLevelGroup?.parentElement?.className).toContain('@min-[54rem]:grid-cols-3')
+  })
+
   test('counts the full displayed list for true prepared casters', () => {
     const cantrip = makeItem({ name: 'Guidance', level: 0, kind: 'cantrip' })
     const preparedDetail = {

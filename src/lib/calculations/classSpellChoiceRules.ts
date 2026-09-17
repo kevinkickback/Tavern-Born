@@ -1,5 +1,11 @@
+import {
+  buildSpellNameKeySet,
+  resolveSpellReferenceFromMap,
+} from '@/lib/calculations/spellIdentity'
+import { getSchoolName } from '@/lib/calculations/spellUtils'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Spell5e } from '@/types/5etools'
+import type { CharacterClassEntry, SpellProfile } from '@/types/character'
 
 export const UNRESTRICTED_SCHOOL_CHOICE_VARIANT = 'unrestricted-school'
 
@@ -69,6 +75,32 @@ export function getMaximumUnrestrictedSchoolChoices(
   return rule?.unrestrictedGrantLevels.has(classLevel) ? 1 : 0
 }
 
+export function getClassSpellSchoolGuidance(
+  rule: ClassSpellSchoolRule | undefined,
+  spellCount: number,
+  maximumUnrestricted: number,
+): string | undefined {
+  if (!rule || spellCount <= 0) return undefined
+
+  const schools = [...rule.restrictedSchools].map(getSchoolName).join(' or ')
+  const unrestricted = Math.min(spellCount, Math.max(0, maximumUnrestricted))
+  const restricted = spellCount - unrestricted
+
+  if (restricted === 0) {
+    return spellCount === 1
+      ? 'This spell may be from any Wizard school.'
+      : 'These spells may be from any Wizard school.'
+  }
+  if (unrestricted === 0) {
+    return spellCount === 1
+      ? `This spell must be an ${schools} spell.`
+      : `All ${spellCount} spells must be ${schools} spells.`
+  }
+
+  const remainder = unrestricted === 1 ? 'spell' : `${unrestricted} spells`
+  return `At least ${restricted} of your ${spellCount} spells must be ${schools} spells. The remaining ${remainder} may be from any Wizard school.`
+}
+
 export function getClassSpellRuleContext(
   originSystem: '2014' | '2024',
   entry: CharacterClassEntry | undefined,
@@ -104,4 +136,35 @@ export function getClassChoiceSpellTag(
   return (ledger?.spells[normalize(spellName)] ?? []).find((tag) =>
     isClassChoiceSpellTag(tag, className, classSource),
   )
+}
+
+/** Returns leveled class-profile spells that may be replaced when gaining a class level. */
+export function getReplaceableClassSpellNames(
+  profile: SpellProfile | undefined,
+  ledger: ProvenanceLedger | undefined,
+  className: string,
+  classSource: string | undefined,
+): string[] {
+  if (!profile || profile.type !== 'class') return []
+
+  const fixedSpellKeys = buildSpellNameKeySet(profile.fixedSpells ?? [])
+  return profile.spellsKnown.filter(
+    (name) =>
+      !!getClassChoiceSpellTag(ledger, name, className, classSource) ||
+      !fixedSpellKeys.has(normalize(name)),
+  )
+}
+
+/** Uses parsed progression first, then conservatively falls back to replaceable known spells. */
+export function getClassSpellReplacementLevelLimit(
+  configuredMaximum: number,
+  replaceableSpellNames: readonly string[],
+  spellsByReference: ReadonlyMap<string, Spell5e>,
+): number {
+  if (configuredMaximum > 0) return configuredMaximum
+
+  return replaceableSpellNames.reduce((maximum, name) => {
+    const spell = resolveSpellReferenceFromMap(name, spellsByReference)
+    return spell && spell.level > 0 ? Math.max(maximum, spell.level) : maximum
+  }, 0)
 }

@@ -33,7 +33,6 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
-import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -159,7 +158,6 @@ export function EquipmentPage() {
     })
   }
   const { getSourcesRowsBySection } = useProvenanceLedger()
-  const { calculatedAC, overrideAC } = useArmorClass()
   const equipmentItems = useMemo(
     () =>
       Array.from(
@@ -318,7 +316,7 @@ export function EquipmentPage() {
               >
                 <div
                   data-slot="equipment-summary-grid"
-                  className="grid grid-cols-2 @min-[520px]:grid-cols-3 @min-[820px]:grid-cols-[1fr_0.8fr_0.7fr_1.8fr]"
+                  className="grid grid-cols-2 @min-[820px]:grid-cols-[1fr_0.8fr_1.8fr]"
                 >
                   <div className="col-span-2 border-b border-border px-4 py-3 @min-[520px]:col-span-1 @min-[520px]:border-r @min-[520px]:border-b-0">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -382,20 +380,7 @@ export function EquipmentPage() {
                     </div>
                   </div>
 
-                  <div className="px-4 py-3 @min-[820px]:border-r @min-[820px]:border-border">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Shield className="size-5 text-warning" weight="fill" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide">
-                        Armor Class
-                      </span>
-                    </div>
-                    <p className="mt-1 font-mono text-xl font-semibold">{calculatedAC}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {overrideAC !== undefined ? 'Override active' : 'Equipped armor'}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2 border-t border-border px-4 py-3 @min-[520px]:col-span-3 @min-[820px]:col-span-1 @min-[820px]:border-t-0">
+                  <div className="col-span-2 border-t border-border px-4 py-3 @min-[820px]:col-span-1 @min-[820px]:border-t-0">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Coins className="size-5 text-yellow-500" weight="fill" />

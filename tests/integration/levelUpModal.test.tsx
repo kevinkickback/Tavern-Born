@@ -215,6 +215,8 @@ describe('level up hit-point choices', () => {
         method: 'manual',
       }),
     ])
+    expect(updated?.hitPoints).toEqual({ current: 21, temporary: 0 })
+    expect(updated?.hitPointsInitialized).toBe(true)
   })
 
   test('records the fixed average without opening the roll dialog', async () => {
@@ -235,6 +237,7 @@ describe('level up hit-point choices', () => {
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([
       expect.objectContaining({ dieResult: 6, method: 'average' }),
     ])
+    expect(useCharacterStore.getState().activeCharacter?.hitPoints.current).toBe(16)
   })
 
   test('can roll the class hit die and persist the generated result', async () => {

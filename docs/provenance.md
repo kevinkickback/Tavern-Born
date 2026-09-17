@@ -170,8 +170,15 @@ Class and subclass spell-choice behavior:
 - The 2014 PHB Eldritch Knight and Arcane Trickster school limits are enforced in both the picker and
   spell commands. Their unrestricted choices at levels 3, 8, 14, and 20 carry
   `grantVariant: "unrestricted-school"`, so the exception follows that choice when it is swapped.
-- A class spell can be swapped only when the spell profile and ledger both identify it as a choice
-  owned by that exact class/subclass. Fixed subclass spells are never eligible replacement sources.
+- A class spell is replaceable when the ledger identifies it as a choice owned by that exact class.
+  A non-fixed spell on that exact class profile is also accepted as a consistency fallback, and the
+  replacement command restores the missing class-choice tag atomically. Fixed subclass spells are
+  never eligible replacement sources without independent class-choice ownership.
+- Replacement level limits come from the parsed class progression. If that value is temporarily
+  unavailable, the picker conservatively falls back to the highest resolved spell already eligible
+  for replacement rather than presenting an unrestricted or empty selection. The limit belongs to
+  the class level at which the replacement occurs; the level at which the removed spell was first
+  selected does not cap its replacement.
 - Level rollback restores a swapped-out spell only while its original class-choice grant still
   exists; removing the originating level must not resurrect it.
   Feat selections require the feat-options workflow, and item selections may describe mastery or

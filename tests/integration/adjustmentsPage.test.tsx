@@ -46,12 +46,19 @@ describe('AdjustmentsPage', () => {
     expect(screen.getByRole('heading', { name: 'Manual Actions' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Current actions' })).toBeTruthy()
     expect(screen.getByText('Source-derived actions')).toBeTruthy()
+    expect(screen.getByText('Source-derived actions').closest('.max-w-4xl')).toBeTruthy()
+    expect(
+      screen.queryByText(/Limited to attacks and rules that explicitly grant an action/),
+    ).toBeNull()
     expect(document.querySelector('[data-slot="split-pane"]')).toBeTruthy()
     expect(screen.getByTitle('Collapse manual form panel')).toBeTruthy()
     expect(screen.getByTitle('Collapse current mechanics panel')).toBeTruthy()
 
     const sourceActions = screen.getByRole('button', { name: /Source-derived actions/ })
     const manualActions = screen.getByRole('button', { name: /Manual actions/ })
+    for (const trigger of [sourceActions, manualActions]) {
+      expect(trigger.closest('[data-slot="accordion-item"]')?.className).toContain('border-border')
+    }
     expect(sourceActions.getAttribute('aria-expanded')).toBe('true')
     expect(manualActions.getAttribute('aria-expanded')).toBe('true')
     await user.click(sourceActions)

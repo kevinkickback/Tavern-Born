@@ -85,7 +85,7 @@ export function BuildClassSpellSection({
               onClick={() => onOpenSpellSwap(level)}
             >
               <ArrowsClockwise className="h-3 w-3" />
-              {swapDoneAtLevel ? 'Swapped' : 'Replace'}
+              {swapDoneAtLevel ? `Swapped at level ${level}` : `Replace at level ${level}`}
             </Button>
           )}
         </div>

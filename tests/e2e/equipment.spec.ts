@@ -62,15 +62,13 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
 
   const weightBox = await summary.getByText('Weight', { exact: true }).boundingBox()
   const attunementBox = await summary.getByText('Attunement', { exact: true }).boundingBox()
-  const armorClassBox = await summary.getByText('Armor Class', { exact: true }).boundingBox()
   const currencyBox = await summary.getByText('Currency', { exact: true }).boundingBox()
   expect(weightBox).not.toBeNull()
   expect(attunementBox).not.toBeNull()
-  expect(armorClassBox).not.toBeNull()
   expect(currencyBox).not.toBeNull()
+  await expect(summary.getByText('Armor Class', { exact: true })).toHaveCount(0)
   expect(summaryWidth.client).toBeLessThan(820)
   expect(Math.abs((attunementBox?.y ?? 0) - (weightBox?.y ?? 0))).toBeLessThan(2)
-  expect(Math.abs((armorClassBox?.y ?? 0) - (weightBox?.y ?? 0))).toBeLessThan(2)
   expect(currencyBox?.y).toBeGreaterThan(weightBox?.y ?? 0)
 
   const categoryTabs = page.getByRole('tablist', { name: 'Inventory category' })

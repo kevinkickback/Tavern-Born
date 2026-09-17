@@ -90,10 +90,11 @@ source content.
   not become counters. Source-qualified adapters cover rules that upstream exposes only through
   prose. Encoded reference levels take precedence when repeated feature names occur at more than
   one level.
-- Copied subclasses can retain feature references from their original class printing. Resolution
-  first uses the full encoded identity, then permits progressively broader matching only when the
-  remaining source-qualified identity selects exactly one feature. Ambiguous copies remain
-  unresolved; the parser never chooses the first name match.
+- Copied subclasses are materialized from their exact `_copy` identity before nesting under a
+  revised parent class, so inherited summaries, spellcasting fields, and feature references remain
+  available. Feature resolution first uses the full encoded identity, then permits progressively
+  broader matching only when the remaining source-qualified identity selects exactly one feature.
+  Ambiguous copies remain unresolved; the parser never chooses the first name match.
 - Background ingestion produces `normalizedOriginRules`. Structured ability and feat fields win;
   a ruleset-qualified, versioned 2024 adapter fills only the upstream prose-only gap and records its
   provenance.
@@ -134,7 +135,7 @@ source content.
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
-- Cache entries carry a normalization-schema version (currently 5). Changes to ingestion-owned normalized rules
+- Cache entries carry a normalization-schema version (currently 6). Changes to ingestion-owned normalized rules
   invalidate older parsed caches so corrected adapters apply immediately after an app update.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 

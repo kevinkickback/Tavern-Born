@@ -553,6 +553,7 @@ export function applyLevelUp(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
   hpChoice: LevelUpHitPointChoice,
+  maximumHitPoints: number,
 ): ClassCommandResult {
   const characterLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const targetEntry = nextProgression.find(
@@ -574,6 +575,9 @@ export function applyLevelUp(
   ) {
     throw new RangeError('Hit-point die result must be an integer within the hit die range.')
   }
+  if (!Number.isInteger(maximumHitPoints) || maximumHitPoints < 1) {
+    throw new RangeError('Maximum hit points must be a positive integer.')
+  }
 
   const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
   const gain: HitPointGain = { ...hpChoice, characterLevel }
@@ -594,6 +598,11 @@ export function applyLevelUp(
     characterPatch: {
       ...progressionResult.characterPatch,
       hitPointGains,
+      hitPoints: {
+        ...character.hitPoints,
+        current: maximumHitPoints,
+      },
+      hitPointsInitialized: true,
     },
   }
 }

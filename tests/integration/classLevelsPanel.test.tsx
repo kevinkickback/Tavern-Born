@@ -143,7 +143,7 @@ describe('BuildClassLevelsPanel', () => {
     fireEvent.click(screen.getByText('Level 12 Features'))
     expect(screen.getByText('Spell Replacement')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Replace' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Replace at level 12' }))
     expect(onOpenSpellSwap).toHaveBeenCalledWith(12)
   })
 

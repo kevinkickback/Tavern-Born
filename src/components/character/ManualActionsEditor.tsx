@@ -354,22 +354,25 @@ export function ManualActionsList() {
 
   return (
     <Accordion type="single" collapsible defaultValue="manual-actions">
-      <AccordionItem value="manual-actions" className="border-0">
-        <AccordionTrigger className="py-1">
-          <span className="text-sm font-semibold">Manual actions</span>
+      <AccordionItem
+        value="manual-actions"
+        className="overflow-hidden rounded-lg border border-border bg-workspace-pane"
+      >
+        <AccordionTrigger className="rounded-none px-4 py-3 hover:bg-surface-raised/70 hover:no-underline data-[state=open]:bg-surface-raised/50">
+          <span className="font-semibold">Manual actions</span>
           <Badge variant="outline" className="ml-auto">
             {manualActions.length}
           </Badge>
         </AccordionTrigger>
-        <AccordionContent className="pt-2 pb-0">
+        <AccordionContent className="border-t border-border p-0">
           {manualActions.length === 0 ? (
-            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+            <p className="px-4 py-4 text-sm text-muted-foreground">
               No manual actions have been added.
             </p>
           ) : (
-            <div className="divide-y divide-border border-y border-border">
+            <div className="divide-y divide-border">
               {manualActions.map((action) => (
-                <div key={action.id} className="flex items-center gap-3 py-3">
+                <div key={action.id} className="flex items-center gap-3 px-4 py-3">
                   <Switch
                     checked={action.active}
                     aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}

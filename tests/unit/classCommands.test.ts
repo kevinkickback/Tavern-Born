@@ -392,6 +392,7 @@ describe('Class Commands', () => {
         dieResult: 7,
         method: 'manual',
       },
+      17,
     )
 
     expect(result.characterPatch.classProgression?.[0]?.levels).toBe(2)
@@ -404,6 +405,8 @@ describe('Class Commands', () => {
         method: 'manual',
       }),
     ])
+    expect(result.characterPatch.hitPoints).toEqual({ current: 17, temporary: 0 })
+    expect(result.characterPatch.hitPointsInitialized).toBe(true)
   })
 
   test('level removal prunes its persisted hit-point gain', () => {

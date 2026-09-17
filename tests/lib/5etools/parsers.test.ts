@@ -169,6 +169,87 @@ describe('5etools/parsers', () => {
     expect(parsed[0]?.isSpellcaster).toBe(false)
   })
 
+  test('materializes copied subclasses for a revised parent class', () => {
+    const parsed = parseClasses({
+      class: [
+        { name: 'Fighter', source: 'PHB' },
+        { name: 'Fighter', source: 'XPHB' },
+      ],
+      subclass: [
+        {
+          name: 'Arcane Archer',
+          shortName: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassFeatures: [
+            'Arcane Archer|Fighter||Arcane Archer|XGE|3',
+            'Magic Arrow|Fighter||Arcane Archer|XGE|7',
+          ],
+        },
+        {
+          name: 'Arcane Archer',
+          shortName: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'XPHB',
+          _copy: {
+            name: 'Arcane Archer',
+            shortName: 'Arcane Archer',
+            source: 'XGE',
+            className: 'Fighter',
+            classSource: 'PHB',
+          },
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassShortName: 'Arcane Archer',
+          subclassSource: 'XGE',
+          level: 3,
+          entries: ['{@i Deploy Magical Effects Through Enchanted Ammunition}'],
+        },
+        {
+          name: 'Magic Arrow',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassShortName: 'Arcane Archer',
+          subclassSource: 'XGE',
+          level: 7,
+          entries: ['Magic Arrow details.'],
+        },
+      ],
+    }) as Array<{
+      source: string
+      subclasses?: Array<{
+        classSource?: string
+        entries?: unknown[]
+        subclassFeatureRefs?: Array<{ name: string; feature?: { entries?: unknown[] } }>
+      }>
+    }>
+
+    const revisedFighter = parsed.find((classData) => classData.source === 'XPHB')
+    const copiedSubclass = revisedFighter?.subclasses?.[0]
+
+    expect(copiedSubclass?.classSource).toBe('XPHB')
+    expect(copiedSubclass?.entries).toEqual([
+      '{@i Deploy Magical Effects Through Enchanted Ammunition}',
+    ])
+    expect(copiedSubclass?.subclassFeatureRefs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Magic Arrow',
+          feature: expect.objectContaining({ entries: ['Magic Arrow details.'] }),
+        }),
+      ]),
+    )
+  })
+
   test('parseItems combines item, itemGroup, and baseitem arrays', () => {
     const items = parseItems({
       item: [{ name: 'Rope' }],

@@ -61,22 +61,26 @@ function getSpanForGroup(index: number, totalGroups: number, itemCount: number) 
 
 function getColSpanClasses(span: { xlSpan: number; xxlSpan: number }) {
   const parts: string[] = []
-  if (span.xlSpan === 2) parts.push('xl:col-span-2')
-  if (span.xxlSpan === 2) parts.push('2xl:col-span-2')
-  if (span.xxlSpan === 3) parts.push('2xl:col-span-3')
+  if (span.xlSpan === 2) parts.push('@min-[36rem]:col-span-2')
+  if (span.xxlSpan === 1) parts.push('@min-[54rem]:col-span-1')
+  if (span.xxlSpan === 2) parts.push('@min-[54rem]:col-span-2')
+  if (span.xxlSpan === 3) parts.push('@min-[54rem]:col-span-3')
   return parts.join(' ')
 }
 
 function getInnerColumnClasses(span: { xlSpan: number; xxlSpan: number }) {
-  const xlCols = span.xlSpan >= 2 ? 'xl:grid-cols-2' : 'xl:grid-cols-1'
+  const xlCols = span.xlSpan >= 2 ? '@min-[36rem]:grid-cols-2' : '@min-[36rem]:grid-cols-1'
   const xxlCols =
     span.xxlSpan >= 3
-      ? '2xl:grid-cols-3'
+      ? '@min-[54rem]:grid-cols-3'
       : span.xxlSpan >= 2
-        ? '2xl:grid-cols-2'
-        : '2xl:grid-cols-1'
-  return `grid grid-cols-1 gap-px sm:grid-cols-2 ${xlCols} ${xxlCols}`
+        ? '@min-[54rem]:grid-cols-2'
+        : '@min-[54rem]:grid-cols-1'
+  return `grid grid-cols-1 gap-px ${xlCols} ${xxlCols}`
 }
+
+const SPELL_LEVEL_GRID_CLASSES =
+  '@container grid grid-cols-1 gap-3 pt-3 @min-[36rem]:grid-cols-2 @min-[54rem]:grid-cols-3'
 
 interface SpellLevelGroupProps {
   title: string
@@ -91,6 +95,7 @@ const SpellLevelGroup = memo(function SpellLevelGroup({
 }: SpellLevelGroupProps) {
   return (
     <div
+      data-slot="spell-level-group"
       className={cn(
         'overflow-hidden rounded-md border border-border bg-surface-raised/35',
         getColSpanClasses(span),
@@ -536,7 +541,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div data-slot="spell-level-grid" className={SPELL_LEVEL_GRID_CLASSES}>
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
@@ -631,7 +636,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = levels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div data-slot="spell-level-grid" className={SPELL_LEVEL_GRID_CLASSES}>
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
