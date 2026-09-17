@@ -280,6 +280,44 @@ describe('level up hit-point choices', () => {
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
   })
 
+  test('clamps current hit points to the new maximum when a level is removed', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+        abilityScores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+        variantRules: { averageHitPoints: true },
+        hitPoints: { current: 16, temporary: 0 },
+        hitPointGains: [
+          {
+            className: 'Fighter',
+            classSource: 'PHB',
+            classLevel: 2,
+            characterLevel: 2,
+            hitDie: 10,
+            dieResult: 6,
+            method: 'average',
+          },
+        ],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.classProgression).toEqual([{ name: 'Fighter', source: 'PHB', levels: 1 }])
+    expect(updated?.hitPoints.current).toBe(10)
+  })
+
   test('clears level history when the active character changes', async () => {
     const user = userEvent.setup()
     const fighter = makeCharacterFixture({

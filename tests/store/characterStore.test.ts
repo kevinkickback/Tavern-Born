@@ -454,6 +454,27 @@ describe('characterStore', () => {
     unsubscribe()
   })
 
+  test('persist rehydrate quarantines malformed current-version characters', () => {
+    const malformed = {
+      ...makeCharacterFixture({ id: 'malformed-current', name: 'Malformed Current' }),
+      proficiencies: { armor: [] },
+    }
+
+    useCharacterStore.setState({
+      characters: [malformed as unknown as ReturnType<typeof makeCharacterFixture>],
+      activeCharacterId: malformed.id,
+      activeCharacter: malformed as unknown as ReturnType<typeof makeCharacterFixture>,
+    })
+
+    useCharacterStore.getState().finishCharacterHydration()
+
+    const state = useCharacterStore.getState()
+    expect(state.characters).toEqual([])
+    expect(state.activeCharacterId).toBeNull()
+    expect(state.activeCharacter).toBeNull()
+    expect(state.unsupportedCharacters).toEqual([malformed])
+  })
+
   test('persist partialize stores characters and the durable unsupported quarantine', () => {
     const fixture = makeCharacterFixture({ id: 'persist-id', name: 'Persist' })
     useCharacterStore.setState({

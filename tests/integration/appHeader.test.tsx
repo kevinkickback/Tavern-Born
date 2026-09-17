@@ -225,6 +225,19 @@ describe('app header character summary', () => {
     expect(screen.queryByRole('button', { name: 'Manage manual actions' })).toBeNull()
   })
 
+  test('does not advertise an unimplemented save keyboard shortcut', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({ isActiveCharacterDirty: true })
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.hover(screen.getByRole('button', { name: 'Save character' }))
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Save character')
+  })
+
   test('shows level up in the build workspace', () => {
     render(
       <MemoryRouter initialEntries={['/build/race']}>

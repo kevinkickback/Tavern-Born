@@ -22,8 +22,8 @@ export function UnsupportedCharactersDialog({
   onAcknowledge,
 }: UnsupportedCharactersDialogProps) {
   const plural = count === 1 ? '' : 's'
-  const compatibilityDescription = `Tavern Born found ${count} character${plural} created with an older version. ${count === 1 ? 'It is' : 'They are'} incompatible with the current version and ${count === 1 ? 'has' : 'have'} been removed from the character list.`
-  const backupDescription = `Download the original file${plural} before continuing if you want to keep ${count === 1 ? 'a backup' : 'backups'} for use with a compatible older version of Tavern Born.`
+  const compatibilityDescription = `Tavern Born found ${count} character${plural} that ${count === 1 ? 'is incompatible with the current version or contains invalid data' : 'are incompatible with the current version or contain invalid data'}. ${count === 1 ? 'It has' : 'They have'} been removed from the character list.`
+  const backupDescription = `Download the original file${plural} before continuing if you want to keep ${count === 1 ? 'a backup' : 'backups'} for recovery or use with a compatible older version of Tavern Born.`
 
   return (
     <AlertDialog open={count > 0}>

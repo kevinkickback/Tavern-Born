@@ -123,6 +123,17 @@ function setStatus(status: UpdateStatus) {
   currentStatus = status
 }
 
+function setErrorStatus(message: string): UpdateStatus {
+  const status: UpdateStatus = { status: 'error', error: message }
+  setStatus(status)
+  sendToRenderer('update-error', { message })
+  return status
+}
+
+function setOfflineStatus(): UpdateStatus {
+  return setErrorStatus('No internet connection. Check your connection and try again.')
+}
+
 export async function fetchChangelog(version: string): Promise<string | null> {
   const tag = `v${version}`
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/${tag}`
@@ -180,13 +191,16 @@ export function initAutoUpdater() {
 
   autoUpdater.on('error', (err: Error) => {
     // In unpacked (--dir) builds, app-update.yml is absent — treat as not-available.
-    if (err.message.includes('app-update.yml') || isConnectivityError(err)) {
+    if (err.message.includes('app-update.yml')) {
       setStatus({ status: 'not-available' })
       sendToRenderer('update-not-available')
       return
     }
-    setStatus({ status: 'error', error: err.message })
-    sendToRenderer('update-error', { message: err.message })
+    if (isConnectivityError(err)) {
+      setOfflineStatus()
+      return
+    }
+    setErrorStatus(err.message)
   })
 
   autoUpdater.on('download-progress', (progress: ProgressInfo) => {
@@ -207,9 +221,7 @@ export function initAutoUpdater() {
 
 async function checkForUpdatePortable(): Promise<UpdateStatus> {
   if (isOfflineNow()) {
-    setStatus({ status: 'not-available' })
-    sendToRenderer('update-not-available')
-    return { status: 'not-available' }
+    return setOfflineStatus()
   }
 
   const currentVersion = app.getVersion()
@@ -227,9 +239,7 @@ async function checkForUpdatePortable(): Promise<UpdateStatus> {
     })
 
     if (!response.ok) {
-      setStatus({ status: 'not-available' })
-      sendToRenderer('update-not-available')
-      return { status: 'not-available' }
+      return setErrorStatus(`The update server returned HTTP ${response.status}.`)
     }
 
     const data = (await response.json()) as { tag_name?: string; body?: string }
@@ -255,13 +265,9 @@ async function checkForUpdatePortable(): Promise<UpdateStatus> {
     return { status: 'not-available' }
   } catch (err) {
     if (isConnectivityError(err)) {
-      setStatus({ status: 'not-available' })
-      sendToRenderer('update-not-available')
-      return { status: 'not-available' }
+      return setOfflineStatus()
     }
-    const status: UpdateStatus = { status: 'error', error: (err as Error).message }
-    setStatus(status)
-    return status
+    return setErrorStatus((err as Error).message)
   }
 }
 
@@ -273,9 +279,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
   }
 
   if (isOfflineNow()) {
-    setStatus({ status: 'not-available' })
-    sendToRenderer('update-not-available')
-    return { status: 'not-available' }
+    return setOfflineStatus()
   }
 
   if (isPortableMode) {
@@ -307,13 +311,9 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     return { status: 'not-available' }
   } catch (err) {
     if (isConnectivityError(err)) {
-      setStatus({ status: 'not-available' })
-      sendToRenderer('update-not-available')
-      return { status: 'not-available' }
+      return setOfflineStatus()
     }
-    const status: UpdateStatus = { status: 'error', error: (err as Error).message }
-    setStatus(status)
-    return status
+    return setErrorStatus((err as Error).message)
   }
 }
 
@@ -349,6 +349,8 @@ export async function downloadUpdate(): Promise<void> {
   cancellationToken = token
   try {
     await autoUpdater.downloadUpdate(token)
+  } catch (error) {
+    if (!token.cancelled) throw error
   } finally {
     if (cancellationToken === token) cancellationToken = null
   }

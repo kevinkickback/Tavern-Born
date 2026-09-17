@@ -66,7 +66,11 @@ vi.mock('electron-updater', () => ({
     quitAndInstall: quitAndInstallMock,
   },
   CancellationToken: class {
-    cancel = cancelMock
+    cancelled = false
+    cancel() {
+      this.cancelled = true
+      cancelMock()
+    }
   },
 }))
 
@@ -164,13 +168,16 @@ describe('updateManager offline safeguards', () => {
     vi.useRealTimers()
   })
 
-  test('checkForUpdate returns not-available offline without calling electron-updater', async () => {
+  test('checkForUpdate reports an offline error without calling electron-updater', async () => {
     netState.online = false
 
     const result = await checkForUpdate()
 
-    expect(result.status).toBe('not-available')
-    expect(getUpdateStatus().status).toBe('not-available')
+    expect(result).toEqual({
+      status: 'error',
+      error: 'No internet connection. Check your connection and try again.',
+    })
+    expect(getUpdateStatus()).toEqual(result)
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
   })
 
@@ -182,7 +189,7 @@ describe('updateManager offline safeguards', () => {
     await vi.advanceTimersByTimeAsync(3000)
 
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
-    expect(getUpdateStatus().status).toBe('not-available')
+    expect(getUpdateStatus().status).toBe('error')
   })
 })
 
@@ -274,10 +281,15 @@ describe('update event lifecycle', () => {
     })
   })
 
-  test('classifies connectivity errors as not available and forwards other failures', () => {
+  test('reports connectivity and updater failures as errors', () => {
     updaterHandler('error')(new Error('network timed out') as never)
-    expect(getUpdateStatus()).toEqual({ status: 'not-available' })
-    expect(rendererSendMock).toHaveBeenLastCalledWith('update-not-available', undefined)
+    expect(getUpdateStatus()).toEqual({
+      status: 'error',
+      error: 'No internet connection. Check your connection and try again.',
+    })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-error', {
+      message: 'No internet connection. Check your connection and try again.',
+    })
 
     updaterHandler('error')(new Error('signature validation failed') as never)
     expect(getUpdateStatus()).toEqual({
@@ -325,11 +337,11 @@ describe('download cancellation lifecycle', () => {
   })
 
   test('starts only one updater download while a request is in flight and cancels it once', async () => {
-    let finishDownload: (() => void) | undefined
+    let rejectDownload: ((error: Error) => void) | undefined
     downloadUpdateMock.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finishDownload = resolve
+        new Promise<void>((_resolve, reject) => {
+          rejectDownload = reject
         }),
     )
 
@@ -343,8 +355,8 @@ describe('download cancellation lifecycle', () => {
     expect(rendererSendMock).toHaveBeenLastCalledWith('update-cancelled', undefined)
     expect(cancelDownload()).toBe(false)
 
-    finishDownload?.()
-    await firstDownload
+    rejectDownload?.(new Error('cancelled'))
+    await expect(firstDownload).resolves.toBeUndefined()
   })
 
   test('clears the cancellation handle after a completed download', async () => {

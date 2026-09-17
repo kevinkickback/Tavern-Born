@@ -33,6 +33,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   checkMulticlassRequirements,
@@ -51,6 +52,7 @@ import {
   calculateHitPointAdjustmentTotal,
   calculateMaxHP,
   getCharacterClassEntries,
+  getEffectiveMaxHP,
   getMaxHitPointsOverride,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
@@ -60,7 +62,7 @@ import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 
 interface LevelUpModalProps {
   open: boolean
@@ -328,8 +330,42 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
 
     const progressionResult = applyClassProgressionUpdate(character, ledger, newProgression)
+    const projectedCharacter: Character = {
+      ...character,
+      ...progressionResult.characterPatch,
+      provenance: progressionResult.provenanceUpdate,
+    }
+    const retainedFeatKeys = new Set(
+      [
+        ...(projectedCharacter.feats ?? []),
+        ...(projectedCharacter.specialFeats ?? []),
+        ...(projectedCharacter.classFeatChoices ?? []).flatMap((choice) => choice.feats),
+      ].map((feat) => getEntityLookupKey(feat.name, feat.source)),
+    )
+    const projectedSourceEffects = (calculationContext?.effects.sourceDeclarations ?? []).filter(
+      (effect) =>
+        effect.source.kind !== 'feat' ||
+        retainedFeatKeys.has(getEntityLookupKey(effect.source.name, effect.source.source)),
+    )
+    const projectedAbilityScores = deriveEffectiveAbilityScores(
+      projectedCharacter,
+      calculationContext?.raceResolution.parentRace,
+      calculationContext?.raceResolution.subraceData,
+      calculationContext?.background,
+      projectedSourceEffects,
+    ).total
+    const projectedMaximumHitPoints = getEffectiveMaxHP(
+      projectedCharacter,
+      allClasses,
+      projectedAbilityScores,
+      projectedSourceEffects,
+    )
     updateCharacter(character.id, {
       ...progressionResult.characterPatch,
+      hitPoints: {
+        ...character.hitPoints,
+        current: Math.min(character.hitPoints.current, projectedMaximumHitPoints),
+      },
       provenance: progressionResult.provenanceUpdate,
     })
 

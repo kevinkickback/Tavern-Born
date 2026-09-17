@@ -173,8 +173,7 @@ export const useCharacterStore = create<CharacterState>()(
         set((state) => {
           const results = state.characters.map((character) => parseCharacterData(character))
           const newlyUnsupportedCharacters = state.characters.filter(
-            (_character, index) =>
-              results[index]?.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+            (_character, index) => !results[index]?.data,
           )
           return {
             characters: ensureUniqueCharacterIds(

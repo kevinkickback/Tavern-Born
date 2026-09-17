@@ -257,12 +257,12 @@ Origin system note:
 
 The app supports exactly one character format. Import and IndexedDB hydration validate records
 against the strict current schema; records with an older or newer version are rejected rather than
-transformed. Hydration drops unsupported records from the active library and exposes them to the Home
-page so the tester can choose whether to export them before acknowledging the change. Original
-unsupported-version payloads remain in a transient, non-persisted
-quarantine until a blocking Home-page dialog is acknowledged, allowing the tester to export unchanged
-`.tbc` backups for use with a compatible older version. The sanitized character collection is the
-only collection persisted after hydration.
+transformed. Hydration removes incompatible or malformed records from the active library and exposes
+them to the Home page so the tester can choose whether to export them before acknowledging the
+change. Original rejected payloads remain in the persisted quarantine until a blocking Home-page
+dialog is acknowledged, allowing the tester to export unchanged `.tbc` backups for recovery or use
+with a compatible older version. The sanitized character collection is the only active collection
+persisted after hydration.
 
 For a breaking character-format change, update the version constant, type, strict schema, factory,
 fixtures, and store tests in the same change. Do not add migrations, downgrade handlers,

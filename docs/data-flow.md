@@ -88,9 +88,9 @@ Flow:
 Validation behavior:
 - Imported files are validated with full character-shape checks before addCharacter.
 - Character store mutations apply minimal structural coercion and then validate against `characterPersistenceSchema`; payloads missing required canonical fields such as `proficiencies.skills` are rejected.
-- Rehydrated characters from IndexedDB are validated and normalized. Unsupported-version records
-  move into a persisted quarantine until the user acknowledges the compatibility dialog; malformed
-  current-version records are dropped.
+- Rehydrated characters from IndexedDB are validated and normalized. Unsupported-version and
+  malformed current-version records move into a persisted quarantine until the user acknowledges
+  the compatibility dialog.
 - Spell payloads are additionally checked against spellSelectionSchema for structural integrity.
 
 Unsaved changes behavior:
@@ -283,11 +283,12 @@ Entry points:
 Flow:
 1. `Character.schemaVersion` must equal `CURRENT_CHARACTER_SCHEMA_VERSION`.
 2. Import validates the exact current version and strict character schema before saving.
-3. IndexedDB hydration keeps valid current records and drops unsupported or malformed records.
-4. Unsupported-version records are moved out of the character list into a persisted quarantine
-   until the Home page requires the user to acknowledge their removal. The dialog can export each
-   original record as a `.tbc` backup for use with a compatible older app version. A restart before
-   acknowledgment preserves the quarantine and presents the dialog again.
+3. IndexedDB hydration keeps valid current records and removes unsupported or malformed records from
+   the character list.
+4. Rejected records are moved into a persisted quarantine until the Home page requires the user to
+   acknowledge their removal. The dialog can export each original record as a `.tbc` backup for
+   recovery or use with a compatible older app version. A restart before acknowledgment preserves
+   the quarantine and presents the dialog again.
 
 Versioning strategy:
 - Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
@@ -329,8 +330,10 @@ Portable executable behavior:
 - `updateManager` detects portable mode and adjusts behavior accordingly.
 
 Offline behavior:
-- Scheduled and manual checks short-circuit to `not-available` when Electron reports no network connectivity.
-- Connectivity-related updater failures are treated as `not-available` (not hard errors), avoiding noisy offline startup failure states.
+- Scheduled and manual checks return an explicit connection error when Electron reports no network
+  connectivity or the updater fails for a connectivity-related reason.
+- Scheduled checks remain quiet because only the Settings manual-check surface subscribes to update
+  errors; manual checks can therefore distinguish an offline failure from a confirmed current version.
 
 IPC channels:
 - `update:check`, `update:download`, `update:cancel`, `update:install`, `update:status`, `update:set-auto-check`, `update:get-version`, `update:get-current-changelog`

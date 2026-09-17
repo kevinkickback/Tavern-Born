@@ -286,7 +286,7 @@ export function AppHeader() {
               {!activeCharacter
                 ? 'No character loaded'
                 : hasUnsavedChanges
-                  ? 'Save character (Ctrl+S)'
+                  ? 'Save character'
                   : 'No changes to save'}
             </TooltipContent>
           </Tooltip>
