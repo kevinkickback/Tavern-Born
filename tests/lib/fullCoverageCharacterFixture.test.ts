@@ -24,6 +24,7 @@ import {
   parseItemMasteries,
   parseItems,
   parseItemTypes,
+  parseMagicVariants,
   parseOptionalFeatures,
   parseRaces,
   parseSpells,
@@ -108,7 +109,10 @@ const rawClassFeatures = classPayloads.flatMap((payload) => [
 const races = parseRaces(readJson(join(dataRoot, 'races.json'))) as Race5e[]
 const backgrounds = parseBackgrounds(readJson(join(dataRoot, 'backgrounds.json'))) as Background5e[]
 const feats = parseFeats(readJson(join(dataRoot, 'feats.json'))) as Feat5e[]
-const items = parseItems(readJson(join(dataRoot, 'items.json'))) as Item5e[]
+const items = [
+  ...parseItems(readJson(join(dataRoot, 'items.json'))),
+  ...parseMagicVariants(readJson(join(dataRoot, 'magicvariants.json'))),
+] as Item5e[]
 const itemsBasePayload = readJson(join(dataRoot, 'items-base.json'))
 const itemsBase = parseItems(itemsBasePayload) as Item5e[]
 const allItems = [...items, ...itemsBase]
@@ -213,6 +217,7 @@ describe('full-coverage character fixtures', () => {
     expect(character.equipment).toHaveLength(90)
     expect(character.features).toHaveLength(18)
     expect(character.proficiencies.skills).toHaveLength(18)
+    expect(character.proficiencies.expertise.length).toBeGreaterThan(0)
     expect(character.details.allies).toHaveLength(3)
     expect(character.hitPointGains).toHaveLength(19)
 

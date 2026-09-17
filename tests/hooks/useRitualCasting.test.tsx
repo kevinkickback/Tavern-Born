@@ -37,7 +37,6 @@ function makeMinimalGameData(classes: unknown[]) {
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],

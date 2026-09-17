@@ -321,6 +321,7 @@ export interface Item5e {
   type: string
   tier?: string
   rarity?: string
+  curse?: boolean
   weight?: number
   value?: number
   entries?: unknown[]
@@ -504,7 +505,6 @@ export interface GameData {
   skills: unknown[]
   senses: unknown[]
   languages: Language5e[]
-  magicvariants: unknown[]
   optionalfeatures: unknown[]
   variantrules: unknown[]
   trapHazards: unknown[]

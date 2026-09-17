@@ -6,6 +6,7 @@ export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
   name: string
   source?: string
+  minimumClassLevel?: number
 }
 
 export interface NormalizedChoiceOptionFilter {
@@ -13,10 +14,15 @@ export interface NormalizedChoiceOptionFilter {
   categories?: string[]
   featureTypes?: string[]
   itemTypes?: string[]
+  excludedItemTypes?: string[]
+  rarities?: string[]
+  excludeCursed?: boolean
   weaponRanges?: Array<'melee' | 'ranged'>
   source?: string
   requiresProficiency?: boolean
   requiresMastery?: boolean
+  minimumClassLevel?: number
+  anyOf?: NormalizedChoiceOptionFilter[]
 }
 
 export interface NormalizedCharacterChoice {

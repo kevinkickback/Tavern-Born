@@ -1,5 +1,6 @@
 import type {
   Background5e,
+  Item5e,
   ItemMastery5e,
   ItemProperty5e,
   ItemType5e,
@@ -96,12 +97,28 @@ export function parseLanguages(data: unknown): Language5e[] {
   return []
 }
 
-export function parseMagicVariants(data: unknown): unknown[] {
+export function parseMagicVariants(data: unknown): Item5e[] {
   const obj = asObject(data)
-  if (obj.variant) return asArray(obj.variant)
-  if (obj.magicvariant) return asArray(obj.magicvariant)
-  if (Array.isArray(data)) return data
-  return []
+  const variants = obj.variant
+    ? asArray(obj.variant)
+    : obj.magicvariant
+      ? asArray(obj.magicvariant)
+      : Array.isArray(data)
+        ? data
+        : []
+  return variants.flatMap((value) => {
+    const variant = asObject(value)
+    const inherits = asObject(variant.inherits)
+    const name = typeof variant.name === 'string' ? variant.name.replace(/ \(\*\)$/, '') : ''
+    const source =
+      typeof inherits.source === 'string'
+        ? inherits.source
+        : typeof variant.source === 'string'
+          ? variant.source
+          : ''
+    if (!name || !source || typeof variant.type !== 'string') return []
+    return [{ ...variant, ...inherits, name, source, type: variant.type } as unknown as Item5e]
+  })
 }
 
 export function parseOptionalFeatures(data: unknown): unknown[] {

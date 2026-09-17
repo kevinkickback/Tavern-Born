@@ -58,10 +58,13 @@ export function useClassChoiceController({
       new Map(
         choices.map((choice) => {
           const selected = persistedSelectionByChoiceId.get(choice.id)?.selected ?? []
-          return [choice.id, resolveClassChoiceOptions(choice, resolvedCatalogs, selected)]
+          return [
+            choice.id,
+            resolveClassChoiceOptions(choice, resolvedCatalogs, selected, viewingClassLevel),
+          ]
         }),
       ),
-    [choices, persistedSelectionByChoiceId, resolvedCatalogs],
+    [choices, persistedSelectionByChoiceId, resolvedCatalogs, viewingClassLevel],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
   const selectedViewsByChoiceId = useMemo(

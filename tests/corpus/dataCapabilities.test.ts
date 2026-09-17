@@ -13,6 +13,7 @@ import {
   parseClasses,
   parseFeats,
   parseItems,
+  parseMagicVariants,
   parseOptionalFeatures,
   parseRaces,
 } from '@/lib/5etools/parsers'
@@ -47,7 +48,10 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       readJson(resolve(DATA_ROOT, 'backgrounds.json')),
     ) as Background5e[]
     const feats = parseFeats(readJson(resolve(DATA_ROOT, 'feats.json'))) as Feat5e[]
-    const items = parseItems(readJson(resolve(DATA_ROOT, 'items.json'))) as Item5e[]
+    const items = [
+      ...parseItems(readJson(resolve(DATA_ROOT, 'items.json'))),
+      ...parseMagicVariants(readJson(resolve(DATA_ROOT, 'magicvariants.json'))),
+    ] as Item5e[]
     const itemsBase = parseItems(readJson(resolve(DATA_ROOT, 'items-base.json'))) as Item5e[]
     const optionalfeatures = parseOptionalFeatures(
       readJson(resolve(DATA_ROOT, 'optionalfeatures.json')),
@@ -118,7 +122,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.classes).toBeGreaterThan(0)
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
-    expect(report.issues.filter((issue) => issue.code === 'unresolved-reference')).toEqual([])
+    expect(report.issues).toEqual([])
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)

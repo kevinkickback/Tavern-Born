@@ -155,35 +155,6 @@ const numericEffectTargetSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('resource-maximum'), resourceId: z.string().min(1) }),
 ])
 
-const rollEffectTargetSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('ability-check'),
-    ability: z.enum([
-      'strength',
-      'dexterity',
-      'constitution',
-      'intelligence',
-      'wisdom',
-      'charisma',
-    ]),
-  }),
-  z.object({ kind: z.literal('skill-check'), skill: z.string().min(1) }),
-  z.object({
-    kind: z.literal('saving-throw'),
-    ability: z.enum([
-      'strength',
-      'dexterity',
-      'constitution',
-      'intelligence',
-      'wisdom',
-      'charisma',
-    ]),
-  }),
-  z.object({ kind: z.literal('initiative-roll') }),
-  z.object({ kind: z.literal('attack-roll'), attackId: z.string().min(1).optional() }),
-  z.object({ kind: z.literal('spell-attack'), profileId: z.string().min(1).optional() }),
-])
-
 const traitEffectTargetSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('damage-resistance'), damageType: z.string().min(1) }),
   z.object({ kind: z.literal('damage-immunity'), damageType: z.string().min(1) }),
@@ -252,14 +223,6 @@ const characterEffectSchema = z.union([
   characterEffectBaseSchema.extend({
     target: numericEffectTargetSchema,
     operation: z.union([numericEffectOperationSchema, conditionalNoteOperationSchema]),
-  }),
-  characterEffectBaseSchema.extend({
-    target: rollEffectTargetSchema,
-    operation: z.discriminatedUnion('kind', [
-      z.object({ kind: z.literal('advantage') }),
-      z.object({ kind: z.literal('disadvantage') }),
-      conditionalNoteOperationSchema,
-    ]),
   }),
   characterEffectBaseSchema.extend({
     target: traitEffectTargetSchema,
@@ -415,14 +378,6 @@ const hitPointsSchema = z.object({
   temporary: z.number().int().min(0),
 })
 
-const skillEntrySchema = z.object({
-  proficient: z.boolean(),
-  expertise: z.boolean(),
-  bonus: z.number().int(),
-})
-
-const skillsSchema = z.record(skillEntrySchema)
-
 const portraitTransformSchema = z.object({
   zoom: z.number(),
   panX: z.number(),
@@ -485,6 +440,7 @@ const proficienciesSchema = z.object({
   weapons: z.array(z.string()),
   tools: z.array(z.string()),
   skills: z.array(z.string()),
+  expertise: z.array(z.string()),
   languages: z.array(z.string()),
   savingThrows: z.array(z.string()),
 })
@@ -781,7 +737,6 @@ export const characterSchema = z
     damageResistances: z.array(z.string()).optional(),
     damageImmunities: z.array(z.string()).optional(),
     conditionImmunities: z.array(z.string()).optional(),
-    skills: skillsSchema,
     details: characterDetailsSchema,
     portrait: z.string().optional(),
     portraitTransform: portraitTransformSchema.optional(),
@@ -800,7 +755,7 @@ export const characterSchema = z
       .optional(),
     conditions: z.array(z.string()).optional(),
     exhaustion: z.number().int().min(0).optional(),
-    hitDiceUsed: z.number().int().min(0).optional(),
+    hitDiceUsed: z.record(z.number().int().min(0)).optional(),
     ritualCasting: z.boolean().optional(),
     classResources: z.record(z.number().int().min(0)).optional(),
     manualEffects: z.array(characterEffectSchema).optional(),

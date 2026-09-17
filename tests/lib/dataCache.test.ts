@@ -36,7 +36,6 @@ function makeGameData(seed = 'a'): GameData {
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],

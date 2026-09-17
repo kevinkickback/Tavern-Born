@@ -13,13 +13,14 @@ export function detectSourceConflicts(
   character: Character,
   allowedSources: string[],
 ): SourceConflict[] {
-  const allowed = new Set(allowedSources)
+  const allowed = new Set(allowedSources.map((source) => source.toUpperCase()))
   const bySource = new Map<string, string[]>()
 
   const flag = (label: string, source?: string) => {
-    if (!source || allowed.has(source)) return
+    if (!source || allowed.has(source.toUpperCase())) return
     if (!bySource.has(source)) bySource.set(source, [])
-    bySource.get(source)?.push(label)
+    const items = bySource.get(source)
+    if (!items?.includes(label)) items?.push(label)
   }
 
   flag(character.race, character.raceSource)
@@ -38,30 +39,38 @@ export function detectSourceConflicts(
   for (const feat of character.specialFeats ?? []) {
     flag(feat.name, feat.source)
   }
+  for (const choice of character.classFeatChoices ?? []) {
+    for (const feat of choice.feats) flag(feat.name, feat.source)
+  }
+  for (const choice of character.classChoiceSelections ?? []) {
+    for (const option of choice.selected) flag(option.name, option.source)
+  }
 
   return Array.from(bySource.entries()).map(([source, items]) => ({ source, items }))
 }
 
 /** Count player-selected spells that were removed (excludes fixedSpells). */
 export function countRemovedSpells(character: Character, newProfiles: SpellProfile[]): number {
-  let before = 0
-  let after = 0
-  for (let i = 0; i < character.spells.spellProfiles.length; i++) {
-    const prev = character.spells.spellProfiles[i]
-    const next = newProfiles[i]
-    if (!prev || !next) continue
-    before +=
-      prev.cantrips.length +
-      prev.spellsKnown.length +
-      prev.preparedSpells.length +
-      (prev.choices?.reduce((s, c) => s + c.selected.length, 0) ?? 0)
-    after +=
-      next.cantrips.length +
-      next.spellsKnown.length +
-      next.preparedSpells.length +
-      (next.choices?.reduce((s, c) => s + c.selected.length, 0) ?? 0)
+  const selectedSpellKeys = (profile: SpellProfile): Set<string> =>
+    new Set(
+      [
+        ...profile.cantrips,
+        ...profile.spellsKnown,
+        ...profile.preparedSpells,
+        ...(profile.choices?.flatMap((choice) => choice.selected) ?? []),
+      ].map(getSpellNameKey),
+    )
+  const nextById = new Map(newProfiles.map((profile) => [profile.id, profile]))
+  let removed = 0
+  for (const previous of character.spells.spellProfiles) {
+    const before = selectedSpellKeys(previous)
+    const after = nextById.get(previous.id)
+    const afterKeys = after ? selectedSpellKeys(after) : new Set<string>()
+    for (const key of before) {
+      if (!afterKeys.has(key)) removed += 1
+    }
   }
-  return before - after
+  return removed
 }
 
 /**

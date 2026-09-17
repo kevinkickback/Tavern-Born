@@ -21,7 +21,6 @@ const ACTION_KIND_LABELS: Record<CharacterAction['kind'], string> = {
 }
 
 const EFFECT_TARGET_LABELS: Record<CharacterEffect['target']['kind'], string> = {
-  'ability-check': 'Ability check',
   'ability-check-modifier': 'Ability checks',
   'ability-score': 'Ability score',
   'armor-class': 'Armor Class',
@@ -32,13 +31,10 @@ const EFFECT_TARGET_LABELS: Record<CharacterEffect['target']['kind'], string> = 
   'damage-immunity': 'Damage immunity',
   'damage-resistance': 'Damage resistance',
   initiative: 'Initiative',
-  'initiative-roll': 'Initiative rolls',
   'hit-point-maximum': 'Maximum HP',
   'resource-maximum': 'Resource maximum',
   sense: 'Sense',
-  'skill-check': 'Skill check',
   'skill-modifier': 'Skill modifier',
-  'saving-throw': 'Saving throw',
   'saving-throw-modifier': 'Saving throws',
   speed: 'Speed',
   'spell-attack': 'Spell attacks',

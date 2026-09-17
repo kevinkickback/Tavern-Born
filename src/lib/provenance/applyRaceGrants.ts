@@ -42,10 +42,11 @@ export function resolveRaceGrantFilterOptions(
 ): string[] {
   const allowedSources = context.allowedSources ?? []
   const hasSourceFilter = allowedSources.length > 0
+  const enabledSources = new Set(allowedSources.map((source) => source.toUpperCase()))
   const isAllowedBySource = (item: { source?: string } | null | undefined) => {
     if (!hasSourceFilter) return true
     if (!item?.source) return true
-    return allowedSources.includes(item.source)
+    return enabledSources.has(item.source.toUpperCase())
   }
 
   const criteria = new Map(

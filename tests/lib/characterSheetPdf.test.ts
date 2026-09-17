@@ -92,13 +92,14 @@ describe('characterSheetPdf', () => {
         current: 24,
         temporary: 5,
       },
-      hitDiceUsed: 1,
+      hitDiceUsed: { 'fighter|phb': 1 },
       proficiencies: {
         armor: [],
         weapons: [],
         tools: [],
         languages: ['Common', 'Elvish'],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
       feats: [
@@ -163,6 +164,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: ['stealth', 'perception'],
+        expertise: ['stealth'],
         savingThrows: ['dexterity', 'wisdom'],
       },
       abilityScores: {
@@ -172,9 +174,6 @@ describe('characterSheetPdf', () => {
         intelligence: 10,
         wisdom: 14,
         charisma: 10,
-      },
-      skills: {
-        stealth: { proficient: true, expertise: true, bonus: 0 },
       },
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 5 }],
     })
@@ -212,6 +211,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: ['athletics', 'perception'],
+        expertise: [],
         savingThrows: ['strength', 'constitution'],
       },
     })
@@ -242,6 +242,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common', 'Elvish', 'Dwarvish'],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -262,6 +263,7 @@ describe('characterSheetPdf', () => {
         tools: ["Thieves' Tools", 'Dice Set'],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -281,6 +283,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -305,6 +308,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -961,6 +965,7 @@ describe('characterSheetPdf', () => {
         tools: ["Calligrapher's Supplies"],
         languages: ['Common', 'Draconic'],
         skills: ['arcana'],
+        expertise: [],
         savingThrows: ['intelligence', 'wisdom'],
       },
       equipment: [
@@ -1075,7 +1080,7 @@ describe('characterSheetPdf', () => {
   test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
-      hitDiceUsed: 2,
+      hitDiceUsed: { 'fighter|phb': 2 },
       abilityScores: {
         strength: 16,
         dexterity: 14,
@@ -1090,6 +1095,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: [],
+        expertise: [],
         savingThrows: ['strength', 'constitution'],
       },
       equipment: [

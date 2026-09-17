@@ -6,6 +6,7 @@ import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import { getHitDiePoolId } from '@/lib/calculations/hitDice'
 import { type HitPointSettings, resolveHitPointSettings } from '@/lib/calculations/statSettings'
 import {
   calculateHitPointAdjustmentTotal,
@@ -26,6 +27,7 @@ export interface HitPointsState {
   effectiveMaxHP: number
   resolution: ResolvedNumericEffect
   hitDie: number
+  hitDicePools: Array<{ id: string; label: string; die: number; max: number; used: number }>
   conMod: number
   levelsHPBreakdown: number[]
   setCurrentHP: (hp: number) => void
@@ -59,6 +61,26 @@ export function useHitPoints(): HitPointsState {
     )
     return getHitDiceFromClass(found)
   }, [resolvedProgression, filteredClassLookup, rawClassLookup])
+
+  const hitDicePools = useMemo(
+    () =>
+      resolvedProgression.map((entry) => {
+        const classData = resolveClassReference(
+          entry,
+          { classesByKey: filteredClassLookup },
+          { classesByKey: rawClassLookup },
+        )
+        const id = getHitDiePoolId(entry)
+        return {
+          id,
+          label: entry.name,
+          die: getHitDiceFromClass(classData),
+          max: entry.levels,
+          used: Math.min(entry.levels, Math.max(0, character?.hitDiceUsed?.[id] ?? 0)),
+        }
+      }),
+    [character?.hitDiceUsed, filteredClassLookup, rawClassLookup, resolvedProgression],
+  )
 
   const conMod = useMemo(
     () => getAbilityModifier(calculationContext?.abilityScores.total.constitution ?? 10),
@@ -138,6 +160,7 @@ export function useHitPoints(): HitPointsState {
     effectiveMaxHP,
     resolution,
     hitDie,
+    hitDicePools,
     conMod,
     levelsHPBreakdown,
     setCurrentHP: (hp) =>

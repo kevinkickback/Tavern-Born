@@ -18,6 +18,7 @@ describe('character action projection', () => {
         weapons: ['Test Weapon'],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },

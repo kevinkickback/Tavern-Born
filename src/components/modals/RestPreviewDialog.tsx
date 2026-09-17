@@ -31,27 +31,25 @@ function parseRecovery(value: string, maximum: number): number {
 export function RestPreviewDialog({ open, onOpenChange }: RestPreviewDialogProps) {
   const [restType, setRestType] = useState<RestType>('short')
   const [restoreHitPoints, setRestoreHitPoints] = useState(false)
-  const [hitDiceRecoveredText, setHitDiceRecoveredText] = useState('0')
-  const { hitDiceUsed, preview, commit } = useRestPreview()
+  const [hitDiceRecovered, setHitDiceRecovered] = useState<Record<string, number>>({})
+  const { hitDicePools, preview, commit } = useRestPreview()
   const shortRestId = useId()
   const longRestId = useId()
   const restoreHitPointsId = useId()
-  const hitDiceRecoveredId = useId()
 
   useEffect(() => {
     if (!open) return
     setRestType('short')
     setRestoreHitPoints(false)
-    setHitDiceRecoveredText('0')
+    setHitDiceRecovered({})
   }, [open])
 
-  const hitDiceRecovered = parseRecovery(hitDiceRecoveredText, hitDiceUsed)
   const result = useMemo(
     () =>
       preview({
         restType,
         restoreHitPoints: restType === 'long' && restoreHitPoints,
-        hitDiceRecovered: restType === 'long' ? hitDiceRecovered : 0,
+        hitDiceRecovered: restType === 'long' ? hitDiceRecovered : {},
       }),
     [hitDiceRecovered, preview, restType, restoreHitPoints],
   )
@@ -127,22 +125,32 @@ export function RestPreviewDialog({ open, onOpenChange }: RestPreviewDialogProps
                 </Label>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor={hitDiceRecoveredId}>Hit dice to recover</Label>
-                <Input
-                  id={hitDiceRecoveredId}
-                  type="number"
-                  min={0}
-                  max={hitDiceUsed}
-                  step={1}
-                  value={hitDiceRecoveredText}
-                  onChange={(event) => setHitDiceRecoveredText(event.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {hitDiceUsed} currently marked used. Enter the amount allowed by the character's
-                  rules.
-                </p>
-              </div>
+              {hitDicePools
+                .filter((pool) => pool.used > 0)
+                .map((pool) => (
+                  <div key={pool.id} className="grid gap-2">
+                    <Label htmlFor={`recover-${pool.id}`}>
+                      {pool.label} d{pool.die} hit dice to recover
+                    </Label>
+                    <Input
+                      id={`recover-${pool.id}`}
+                      type="number"
+                      min={0}
+                      max={pool.used}
+                      step={1}
+                      value={hitDiceRecovered[pool.id] ?? 0}
+                      onChange={(event) =>
+                        setHitDiceRecovered((current) => ({
+                          ...current,
+                          [pool.id]: parseRecovery(event.target.value, pool.used),
+                        }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {pool.used} currently marked used.
+                    </p>
+                  </div>
+                ))}
             </section>
           )}
 

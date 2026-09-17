@@ -3,7 +3,6 @@ import {
   isCharacterEffectActive,
   resolveGrantedTrait,
   resolveNumericEffect,
-  resolveRollEffect,
 } from '@/lib/calculations/effects'
 import type { CharacterEffect } from '@/types/effects'
 
@@ -119,26 +118,6 @@ describe('typed character effects', () => {
         suppressedEffectIds: ['effect'],
       }),
     ).toBe(false)
-  })
-
-  test('cancels advantage and disadvantage and retains conditional notes', () => {
-    const target = { kind: 'skill-check' as const, skill: 'test skill' }
-    const result = resolveRollEffect(target, [
-      effect({ id: 'advantage', target, operation: { kind: 'advantage' } }),
-      effect({ id: 'disadvantage', target, operation: { kind: 'disadvantage' } }),
-      effect({
-        id: 'note',
-        target,
-        operation: { kind: 'conditional-note', note: 'Only in the declared situation.' },
-      }),
-    ])
-
-    expect(result.mode).toBe('normal')
-    expect(result.advantageSources).toHaveLength(1)
-    expect(result.disadvantageSources).toHaveLength(1)
-    expect(result.conditionalNotes).toEqual([
-      expect.objectContaining({ effectId: 'note', note: 'Only in the declared situation.' }),
-    ])
   })
 
   test('grants typed traits only from active effects', () => {

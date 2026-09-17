@@ -76,7 +76,7 @@ Stored examples (mutable runtime):
 - selected class equipment option per class source (`classEquipmentChoices`)
 - selected concrete items for generic class equipment per class source (`classEquipmentItemChoices`)
 - race-applied trait state (`visions`, `damageResistances`, `damageImmunities`, `conditionImmunities`)
-- session state: `inspiration`, `deathSaves`, `conditions`, `exhaustion`, `hitDiceUsed`, `ritualCasting`, `classResources`
+- session state: `inspiration`, `deathSaves`, `conditions`, `exhaustion`, per-class `hitDiceUsed`, `ritualCasting`, `classResources`
 
 Derived examples (do not store as canonical):
 - proficiency bonus
@@ -89,10 +89,10 @@ Derived examples (do not store as canonical):
 
 ## Proficiency State Model
 
-- `character.proficiencies` is the canonical persisted list model for armor, weapons, tools, skills, languages, and saving throw proficiencies.
+- `character.proficiencies` is the canonical persisted list model for armor, weapons, tools, skills, skill expertise, languages, and saving throw proficiencies.
 - `character.proficiencies.skills` is required and stores the set of proficient skill names.
-- `character.skills` stores per-skill runtime detail (`proficient`, `expertise`, `bonus`) and must stay synchronized with `character.proficiencies.skills`.
-- Both structures must be written together when skill proficiencies change. Use `mergeSkillState()` from `src/lib/calculations/skills.ts` to produce the combined patch. Missing `proficiencies.skills` is invalid current-schema data and is not silently repaired at runtime.
+- `character.proficiencies.expertise` is required and stores the subset of those skills with expertise.
+- `reconcileSkillExpertise()` removes expertise when its underlying proficiency is removed. Numeric skill adjustments belong to typed effects rather than a second skill-state mirror.
 
 ## Unsaved Changes and App Close Safety
 
@@ -161,8 +161,8 @@ copy atomically without creating an unsaved edit.
   so level-down and class removal retract only unavailable slots without requiring game data during
   the state transition. Retained options keep that original slot when later choices are added or
   the catalog is reordered; newly selected options receive the remaining earned slots. The
-  class-page choice controller resolves each descriptor against the
-  character-filtered catalogs and writes an explicit availability state into the view projection.
+  class-page choice controller resolves each descriptor against character-filtered catalogs and the
+  owning-class level, including level-gated table options, and projects explicit availability.
   Retained unavailable references stay
   visible so the user can understand and replace them, but they are not initialized as selected and
   do not count toward the required selection total. The controller writes
@@ -249,7 +249,7 @@ Origin system note:
 
 **File:** `src/lib/schema/characterSchemaVersion.ts`
 
-The beta supports exactly one character format. Import and IndexedDB hydration validate records
+The app supports exactly one character format. Import and IndexedDB hydration validate records
 against the strict current schema; records with an older or newer version are rejected rather than
 transformed. Hydration drops unsupported records from the active library and exposes them to the Home
 page so the tester can choose whether to export them before acknowledging the change. Original

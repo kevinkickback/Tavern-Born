@@ -19,7 +19,6 @@ export const MINIMAL_GAME_DATA: GameData = {
   skills: [],
   senses: [],
   languages: [],
-  magicvariants: [],
   optionalfeatures: [],
   variantrules: [],
   trapHazards: [],

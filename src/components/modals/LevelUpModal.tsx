@@ -201,7 +201,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     updateCharacter(character.id, {
       ...result.characterPatch,
       proficiencies: nextProficiencies,
-      skills: multiclassResult?.characterPatch.skills ?? character.skills,
       provenance: result.provenanceUpdate,
     })
     toast.success(`Added ${pending.className} (level 1).`)

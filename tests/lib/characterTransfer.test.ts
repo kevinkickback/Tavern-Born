@@ -15,7 +15,7 @@ function makeUsedCharacter() {
     deathSaves: { successes: 2, failures: 1 },
     conditions: ['test condition'],
     exhaustion: 2,
-    hitDiceUsed: 3,
+    hitDiceUsed: { 'fighter|phb': 1 },
     classResources: { 'test-resource': 2 },
     spells: {
       ...makeCharacterFixture().spells,

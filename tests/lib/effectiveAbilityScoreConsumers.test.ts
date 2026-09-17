@@ -48,6 +48,7 @@ describe('effective ability score consumers', () => {
         weapons: [],
         tools: [],
         skills: ['acrobatics'],
+        expertise: [],
         languages: [],
         savingThrows: ['intelligence'],
       },

@@ -194,6 +194,58 @@ function getFeatureText(ref: ClassFeatureReference): string {
   }
 }
 
+function visitFeatureRecords(
+  value: unknown,
+  visitor: (record: Record<string, unknown>) => void,
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      visitFeatureRecords(entry, visitor)
+    })
+    return
+  }
+  const record = asRecord(value)
+  if (!record) return
+  visitor(record)
+  if (Array.isArray(record.entries)) visitFeatureRecords(record.entries, visitor)
+}
+
+function getTableMinimumClassLevel(table: Record<string, unknown>, fallbackLevel: number): number {
+  const caption = typeof table.caption === 'string' ? table.caption : ''
+  const parsed = /\bLevel\s+(\d+)\+/i.exec(caption)?.[1]
+  return parsed ? Number.parseInt(parsed, 10) : fallbackLevel
+}
+
+function getFeatureTableRules(ref: ClassFeatureReference): {
+  options: NormalizedChoiceOptionReference[]
+  tags: ParsedFilterTag[]
+} {
+  const options = new Map<string, NormalizedChoiceOptionReference>()
+  const tags: ParsedFilterTag[] = []
+  const fallbackLevel = getReferenceLevel(ref) ?? 1
+  visitFeatureRecords(ref.feature?.entries, (table) => {
+    if (table.type !== 'table' || !Array.isArray(table.rows)) return
+    const minimumClassLevel = getTableMinimumClassLevel(table, fallbackLevel)
+    const text = JSON.stringify(table.rows)
+    tags.push(
+      ...parseFilterTags(text).map((tag) => ({
+        ...tag,
+        filter: { ...tag.filter, minimumClassLevel },
+      })),
+    )
+    for (const match of text.matchAll(/\{@item\s+([^|}]+)(?:\|([^|}]*))?(?:\|[^}]*)?}/gi)) {
+      const name = match[1]?.trim()
+      if (!name) continue
+      const source = match[2]?.trim() || ref.source
+      const option = { entityType: 'item' as const, name, source, minimumClassLevel }
+      const key = `${normalizedIdPart(name)}|${normalizedIdPart(source ?? '')}`
+      if (minimumClassLevel < (options.get(key)?.minimumClassLevel ?? Infinity))
+        options.set(key, option)
+    }
+  })
+  return { options: [...options.values()], tags }
+}
+
 function toSearchableText(text: string): string {
   return text
     .replace(/\{@[^\s}]+\s+([^|}]+)(?:\|[^}]*)?}/g, '$1')
@@ -268,7 +320,11 @@ function filtersSameOptionalFeatureFamily(
   const progressionTypes = new Set(
     (progression.optionFilter?.featureTypes ?? []).map((type) => type.toLowerCase()),
   )
-  return (filter.featureTypes ?? []).some((type) => progressionTypes.has(type.toLowerCase()))
+  const filterTypes = [
+    ...(filter.featureTypes ?? []),
+    ...(filter.anyOf ?? []).flatMap((candidate) => candidate.featureTypes ?? []),
+  ]
+  return filterTypes.some((type) => progressionTypes.has(type.toLowerCase()))
 }
 
 function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedCharacterChoiceKind {
@@ -305,22 +361,9 @@ function inferFilteredChoiceCount(text: string, label: string): number | undefin
 function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
   const entityType = tags[0]?.entityType
   if (!entityType || tags.some((tag) => tag.entityType !== entityType)) return undefined
-  const distinct = <T extends string>(values: (T | undefined)[]) => [
-    ...new Set(values.filter((value): value is T => Boolean(value))),
-  ]
-  const categories = distinct(tags.flatMap((tag) => tag.filter.categories ?? []))
-  const featureTypes = distinct(tags.flatMap((tag) => tag.filter.featureTypes ?? []))
-  const itemTypes = distinct(tags.flatMap((tag) => tag.filter.itemTypes ?? []))
-  const weaponRanges = distinct(tags.flatMap((tag) => tag.filter.weaponRanges ?? []))
-  const sources = distinct(tags.map((tag) => tag.filter.source))
-  return {
-    entityType,
-    ...(categories.length > 0 ? { categories } : {}),
-    ...(featureTypes.length > 0 ? { featureTypes } : {}),
-    ...(itemTypes.length > 0 ? { itemTypes } : {}),
-    ...(weaponRanges.length > 0 ? { weaponRanges } : {}),
-    ...(sources.length === 1 ? { source: sources[0] } : {}),
-  }
+  const filters = [...new Map(tags.map((tag) => [JSON.stringify(tag.filter), tag.filter])).values()]
+  if (filters.length === 1) return filters[0]
+  return { entityType, anyOf: filters }
 }
 
 function addChoiceContext(
@@ -368,7 +411,15 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
         .filter(Boolean)
       if (key === 'category') filter.categories = values
       else if (key === 'feature type') filter.featureTypes = values
-      else if (key === 'type') filter.itemTypes = values
+      else if (key === 'type') {
+        const included = values.filter((value) => !value.startsWith('!'))
+        const excluded = values
+          .filter((value) => value.startsWith('!'))
+          .map((value) => value.slice(1))
+        if (included.length > 0) filter.itemTypes = included
+        if (excluded.length > 0) filter.excludedItemTypes = excluded
+      } else if (key === 'rarity') filter.rarities = values
+      else if (key === 'miscellaneous' && values.includes('!cursed')) filter.excludeCursed = true
       else if (key === 'melee weapon') {
         filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'melee' as const])]
       } else if (key === 'ranged weapon') {
@@ -556,18 +607,23 @@ function normalizeTableBackedFilterChoices(
 ): NormalizedCharacterChoice[] {
   return refs.flatMap((featureRef) => {
     const text = getFeatureText(featureRef)
-    const tags = parseFilterTags(text)
+    const tableRules = getFeatureTableRules(featureRef)
+    const tags = tableRules.tags.length > 0 ? tableRules.tags : parseFilterTags(text)
     const mergedFilter = mergeFilters(tags)
     if (!mergedFilter) return []
     const filter = addChoiceContext(mergedFilter, text)
+    const sectionNames = new Set([featureRef.name.toLowerCase()])
+    visitFeatureRecords(featureRef.feature?.entries, (entry) => {
+      if (typeof entry.name === 'string')
+        sectionNames.add(toSearchableText(entry.name).toLowerCase())
+    })
 
     for (const [groupIndex, rawGroup] of (classData.classTableGroups ?? []).entries()) {
       const group = asRecord(rawGroup)
       const labels = Array.isArray(group?.colLabels) ? group.colLabels : []
       const columnIndex = labels.findIndex(
         (label) =>
-          typeof label === 'string' &&
-          toSearchableText(label).toLowerCase() === featureRef.name.trim().toLowerCase(),
+          typeof label === 'string' && sectionNames.has(toSearchableText(label).toLowerCase()),
       )
       if (columnIndex < 0 || !Array.isArray(group?.rows)) continue
       const rows = group.rows
@@ -596,7 +652,7 @@ function normalizeTableBackedFilterChoices(
           minimumSelections: maximumSelections,
           maximumSelections,
           selectionCountByLevel: counts,
-          options: [],
+          options: filter.entityType === 'item' ? tableRules.options : [],
           optionFilter: filter,
           repeatable: false,
           replacement: inferReplacement(text),

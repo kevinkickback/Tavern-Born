@@ -105,6 +105,14 @@
       "intelligence",
       "wisdom",
       "charisma"
+    ],
+    "expertise": [
+      "acrobatics",
+      "arcana",
+      "deception",
+      "investigation",
+      "performance",
+      "stealth"
     ]
   },
   "features": [
@@ -1937,98 +1945,6 @@
     "Poisoned",
     "Paralyzed"
   ],
-  "skills": {
-    "acrobatics": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": -1
-    },
-    "animal handling": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 0
-    },
-    "arcana": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": 1
-    },
-    "athletics": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": -1
-    },
-    "deception": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": 0
-    },
-    "history": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 1
-    },
-    "insight": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": -1
-    },
-    "intimidation": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 0
-    },
-    "investigation": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": 1
-    },
-    "medicine": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": -1
-    },
-    "nature": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 0
-    },
-    "perception": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 1
-    },
-    "performance": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": -1
-    },
-    "persuasion": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 0
-    },
-    "religion": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 1
-    },
-    "sleight of hand": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": -1
-    },
-    "stealth": {
-      "proficient": true,
-      "expertise": true,
-      "bonus": 0
-    },
-    "survival": {
-      "proficient": true,
-      "expertise": false,
-      "bonus": 1
-    }
-  },
   "details": {
     "playerName": "PDF Regression Tester",
     "gender": "Woman",
@@ -2151,7 +2067,9 @@
     "Restrained"
   ],
   "exhaustion": 3,
-  "hitDiceUsed": 9,
+  "hitDiceUsed": {
+    "wizard|phb": 9
+  },
   "ritualCasting": true,
   "classResources": {
     "wizard-arcane-recovery": 0,
@@ -4072,7 +3990,7 @@
       "name": "Full-coverage test fixture"
     }
   },
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "hitPoints": {
     "current": 121,
     "temporary": 17

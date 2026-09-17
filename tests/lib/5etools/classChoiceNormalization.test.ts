@@ -295,8 +295,18 @@ describe('class choice normalization', () => {
 
     expect(mastery?.optionFilter).toEqual({
       entityType: 'item',
-      itemTypes: ['simple weapon', 'martial weapon'],
-      weaponRanges: ['melee'],
+      anyOf: [
+        {
+          entityType: 'item',
+          itemTypes: ['simple weapon'],
+          weaponRanges: ['melee'],
+        },
+        {
+          entityType: 'item',
+          itemTypes: ['martial weapon'],
+          weaponRanges: ['melee'],
+        },
+      ],
       requiresMastery: true,
     })
   })
@@ -387,8 +397,8 @@ describe('class choice normalization', () => {
         expect.objectContaining({
           label: 'Weapon Mastery',
           optionFilter: expect.objectContaining({
-            weaponRanges: ['melee'],
             requiresMastery: true,
+            anyOf: expect.arrayContaining([expect.objectContaining({ weaponRanges: ['melee'] })]),
           }),
         }),
       ]),
@@ -448,5 +458,19 @@ describe('class choice normalization', () => {
     })
     expect(getRequiredChoiceSelectionCount(choice!, 1)).toBe(2)
     expect(getRequiredChoiceSelectionCount(choice!, 2)).toBe(3)
+  })
+
+  test('preserves Artificer plan level gates from the configured tables', () => {
+    const artificer = loadParsedClass('class-artificer.json', 'Artificer', 'EFA')
+    const choice = artificer.normalizedRules?.choices.find(
+      (candidate) => candidate.label === 'Replicate Magic Item',
+    )
+    const levelOf = (name: string) =>
+      choice?.options.find((option) => option.name === name)?.minimumClassLevel
+    expect([levelOf('Bag of Holding'), levelOf('Boots of Elvenkind')]).toEqual([2, 6])
+    expect(choice?.optionFilter?.anyOf?.map((filter) => filter.minimumClassLevel)).toEqual([
+      2, 10, 14,
+    ])
+    expect(choice?.selectionCountByLevel.slice(0, 4)).toEqual([0, 4, 4, 4])
   })
 })

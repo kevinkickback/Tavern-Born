@@ -10,7 +10,8 @@ function restCharacter() {
       pactSpellSlots: { 2: { max: 2, used: 1 } },
     },
     classResources: { 'test-short': 0, 'test-long': 1 },
-    hitDiceUsed: 3,
+    classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
+    hitDiceUsed: { 'fighter|phb': 3 },
     hitPoints: { current: 4, temporary: 3 },
   })
 }
@@ -37,7 +38,7 @@ const restContext = {
     },
   ],
   maximumHitPoints: 12,
-  hitDiceRecovered: 2,
+  hitDiceRecovered: { 'fighter|phb': 2 },
   restoreHitPoints: true,
 }
 
@@ -49,7 +50,7 @@ describe('applyRest', () => {
     expect(result.patch.spells.spellSlots[1]?.used).toBe(2)
     expect(result.patch.spells.pactSpellSlots?.[2]?.used).toBe(0)
     expect(result.patch.classResources).toEqual({ 'test-short': 1, 'test-long': 1 })
-    expect(result.patch.hitDiceUsed).toBe(3)
+    expect(result.patch.hitDiceUsed).toEqual({ 'fighter|phb': 3 })
     expect(result.patch.hitPoints).toEqual(character.hitPoints)
     expect(character.spells.pactSpellSlots?.[2]?.used).toBe(1)
   })
@@ -60,7 +61,7 @@ describe('applyRest', () => {
     expect(result.patch.spells.spellSlots[1]?.used).toBe(0)
     expect(result.patch.spells.pactSpellSlots?.[2]?.used).toBe(0)
     expect(result.patch.classResources).toEqual({ 'test-short': 2, 'test-long': 4 })
-    expect(result.patch.hitDiceUsed).toBe(1)
+    expect(result.patch.hitDiceUsed).toEqual({ 'fighter|phb': 1 })
     expect(result.patch.hitPoints).toEqual({ current: 12, temporary: 0 })
     expect(result.changes.map((change) => change.id)).toEqual(
       expect.arrayContaining([
@@ -68,9 +69,32 @@ describe('applyRest', () => {
         'spell-slot:pact:2',
         'resource:test-short',
         'resource:test-long',
-        'hit-dice',
+        'hit-dice:fighter|phb',
         'hit-points',
         'temporary-hit-points',
+      ]),
+    )
+  })
+
+  test('recovers multiclass hit dice from the selected class pools', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Fighter', source: 'PHB', levels: 3 },
+        { name: 'Wizard', source: 'PHB', levels: 2 },
+      ],
+      hitDiceUsed: { 'fighter|phb': 2, 'wizard|phb': 2 },
+    })
+
+    const result = applyRest(character, 'long', {
+      ...restContext,
+      hitDiceRecovered: { 'fighter|phb': 1, 'wizard|phb': 2 },
+    })
+
+    expect(result.patch.hitDiceUsed).toEqual({ 'fighter|phb': 1 })
+    expect(result.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'hit-dice:fighter|phb', before: 2, after: 1 }),
+        expect.objectContaining({ id: 'hit-dice:wizard|phb', before: 2, after: 0 }),
       ]),
     )
   })

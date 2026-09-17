@@ -92,6 +92,39 @@ describe('class choice option resolution', () => {
     })
   })
 
+  test('combines named magic-item plans with filtered rarity choices', () => {
+    const filtered = (rarity: string, minimumClassLevel: number) => ({
+      entityType: 'item' as const,
+      rarities: [rarity],
+      excludedItemTypes: ['potion', 'scroll'],
+      excludeCursed: true,
+      minimumClassLevel,
+    })
+    const planChoice = choice({
+      kind: 'item',
+      options: [{ entityType: 'item', name: 'Named Plan', source: 'HB', minimumClassLevel: 2 }],
+      optionFilter: { entityType: 'item', anyOf: [filtered('common', 2), filtered('uncommon', 6)] },
+    })
+    const catalogs = {
+      ...emptyCatalogs,
+      items: [
+        { name: 'Named Plan', source: 'HB', type: 'GV', rarity: 'rare' },
+        { name: 'Common Compass', source: 'HB', type: 'W', rarity: 'common' },
+        { name: 'Uncommon Boots', source: 'HB', type: 'W', rarity: 'uncommon' },
+        { name: 'Common Potion', source: 'HB', type: 'P', rarity: 'common' },
+        { name: 'Cursed Compass', source: 'HB', type: 'W', rarity: 'common', curse: true },
+      ],
+      itemTypeByAbbr: { P: 'Potion', W: 'Wondrous Item' },
+    }
+    const namesAt = (level: number) =>
+      resolveClassChoiceOptions(planChoice, catalogs, [], level).map(
+        (option) => option.reference.name,
+      )
+
+    expect(namesAt(2)).toEqual(['Common Compass', 'Named Plan'])
+    expect(namesAt(6)).toEqual(['Common Compass', 'Named Plan', 'Uncommon Boots'])
+  })
+
   test('limits proficiency-bound item choices to current weapon proficiencies', () => {
     const result = resolveClassChoiceOptions(
       choice({

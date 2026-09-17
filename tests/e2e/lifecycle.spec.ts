@@ -16,7 +16,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: 'Seed Character',
     originSystem: '2014',
     race: 'Human',
@@ -39,6 +39,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: ['Common'],
       savingThrows: [],
     },
@@ -74,7 +75,6 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
       speeds: { walk: 30 },
       source: { kind: 'manual', name: 'E2E seed' },
     },
-    skills: {},
     details: {},
     provenance: {
       proficiencies: {

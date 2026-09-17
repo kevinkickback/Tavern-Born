@@ -6,6 +6,7 @@ import {
   parseClassFeatures,
   parseItemMasteries,
   parseItems,
+  parseMagicVariants,
   parseOrganizations,
   parseRaces,
   parseSpells,
@@ -176,6 +177,13 @@ describe('5etools/parsers', () => {
     }) as Array<{ name: string }>
 
     expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
+  })
+
+  test('parseMagicVariants exposes inherited item metadata as selectable templates', () => {
+    const [variant] = parseMagicVariants([
+      { name: '+1 Shield (*)', type: 'GV|XDMG', inherits: { source: 'XDMG', rarity: 'uncommon' } },
+    ])
+    expect(variant).toMatchObject({ name: '+1 Shield', source: 'XDMG', rarity: 'uncommon' })
   })
 
   test('parseItemMasteries preserves data-driven mastery descriptions', () => {

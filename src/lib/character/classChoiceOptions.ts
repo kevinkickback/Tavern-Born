@@ -64,11 +64,21 @@ function getCatalog(
 }
 
 function getFilteredCatalog(
-  entityType: ChoiceOptionEntityType,
+  filter: NormalizedChoiceOptionFilter,
   catalogs: ClassChoiceCatalogs,
 ): readonly ChoiceCatalogEntity[] {
-  if (entityType === 'item') return catalogs.itemsBase
-  return getCatalog(entityType, catalogs)
+  if (filter.entityType !== 'item') return getCatalog(filter.entityType, catalogs)
+  const includesMagicItems =
+    (filter.rarities?.length ?? 0) > 0 ||
+    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate))
+  return includesMagicItems ? [...catalogs.itemsBase, ...catalogs.items] : catalogs.itemsBase
+}
+
+function getFilteredCatalogIncludesMagicItems(filter: NormalizedChoiceOptionFilter): boolean {
+  return (
+    (filter.rarities?.length ?? 0) > 0 ||
+    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate)) === true
+  )
 }
 
 function getFeatureTypes(entity: ChoiceCatalogEntity): string[] {
@@ -109,7 +119,17 @@ function matchesFilter(
   filter: NormalizedChoiceOptionFilter,
   itemTypeByAbbr: Readonly<Record<string, string>>,
   weaponProficiencies: readonly string[],
+  classLevel: number,
 ): boolean {
+  if ((filter.minimumClassLevel ?? 1) > classLevel) return false
+  if (
+    filter.anyOf?.length &&
+    !filter.anyOf.some((candidate) =>
+      matchesFilter(entity, candidate, itemTypeByAbbr, weaponProficiencies, classLevel),
+    )
+  ) {
+    return false
+  }
   if (filter.source && normalized(entity.source) !== normalized(filter.source)) return false
   if (
     filter.entityType === 'feat' &&
@@ -129,6 +149,20 @@ function matchesFilter(
   ) {
     return false
   }
+  if (
+    filter.entityType === 'item' &&
+    filter.excludedItemTypes?.length &&
+    matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.excludedItemTypes)
+  ) {
+    return false
+  }
+  if (
+    filter.entityType === 'item' &&
+    !matchesAny([(entity as Item5e).rarity ?? ''], filter.rarities)
+  ) {
+    return false
+  }
+  if (filter.entityType === 'item' && filter.excludeCursed && (entity as Item5e).curse) return false
   if (
     filter.entityType === 'item' &&
     !matchesAny(
@@ -233,17 +267,31 @@ export function resolveClassChoiceOptions(
   choice: NormalizedCharacterChoice,
   catalogs: ClassChoiceCatalogs,
   saved: readonly CharacterClassChoiceOption[] = [],
+  classLevel = 20,
 ): ClassChoiceOptionView[] {
   const filter = choice.optionFilter
-  let resolved: ClassChoiceOptionView[] = []
+  const resolved: ClassChoiceOptionView[] = []
   if (choice.options.length > 0) {
-    resolved = choice.options.map((option) => resolveExplicitOption(option, catalogs))
-  } else if (filter) {
-    resolved = getFilteredCatalog(filter.entityType, catalogs)
-      .filter((entity) =>
-        matchesFilter(entity, filter, catalogs.itemTypeByAbbr, catalogs.weaponProficiencies),
-      )
-      .map((entity) => toView(filter.entityType, entity, catalogs))
+    resolved.push(
+      ...choice.options
+        .filter((option) => (option.minimumClassLevel ?? 1) <= classLevel)
+        .map((option) => resolveExplicitOption(option, catalogs)),
+    )
+  }
+  if (filter) {
+    resolved.push(
+      ...getFilteredCatalog(filter, catalogs)
+        .filter((entity) =>
+          matchesFilter(
+            entity,
+            filter,
+            catalogs.itemTypeByAbbr,
+            catalogs.weaponProficiencies,
+            classLevel,
+          ),
+        )
+        .map((entity) => toView(filter.entityType, entity, catalogs)),
+    )
   }
 
   const byKey = new Map(

@@ -27,6 +27,7 @@ describe('Class Commands', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -281,6 +282,7 @@ describe('Class Commands', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -507,10 +509,10 @@ describe('Class Commands', () => {
         weapons: [],
         tools: [],
         skills: ['arcana'],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
-      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
     })
     const ledger = {
       ...(character.provenance ?? emptyProvenance()),
@@ -569,6 +571,7 @@ describe('Class Commands', () => {
         tools: [],
         languages: ['Elvish'],
         skills: ['athletics'],
+        expertise: [],
         savingThrows: [],
       },
       spells: {
@@ -634,6 +637,7 @@ describe('Class Commands', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })

@@ -92,11 +92,7 @@ describe('equipment commands', () => {
     )
 
     expect(added.characterPatch.proficiencies?.skills).toEqual(['arcana'])
-    expect(added.characterPatch.skills?.arcana).toEqual({
-      proficient: true,
-      expertise: false,
-      bonus: 0,
-    })
+    expect(added.characterPatch.proficiencies?.expertise).toEqual([])
     expect(added.provenanceUpdate.proficiencies.skills.arcana).toHaveLength(1)
 
     const updatedCharacter = {
@@ -113,7 +109,7 @@ describe('equipment commands', () => {
     )
 
     expect(removed.characterPatch.proficiencies?.skills).toEqual([])
-    expect(removed.characterPatch.skills?.arcana?.proficient).toBe(false)
+    expect(removed.characterPatch.proficiencies?.expertise).toEqual([])
     expect(removed.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
 })

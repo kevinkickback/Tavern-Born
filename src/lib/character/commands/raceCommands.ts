@@ -8,7 +8,7 @@ import {
   ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import {
@@ -59,12 +59,7 @@ function buildRaceMaterializedPatch(
   sourcesToRemove: Array<readonly ['race' | 'subrace', string | undefined]>,
 ): Pick<
   Character,
-  | 'proficiencies'
-  | 'skills'
-  | 'visions'
-  | 'damageResistances'
-  | 'damageImmunities'
-  | 'conditionImmunities'
+  'proficiencies' | 'visions' | 'damageResistances' | 'damageImmunities' | 'conditionImmunities'
 > {
   let proficiencies = removeSourceProficiencies(character, ledger, sourcesToRemove)
   const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
@@ -121,8 +116,7 @@ function buildRaceMaterializedPatch(
   }
 
   return {
-    proficiencies,
-    skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
+    proficiencies: reconcileSkillExpertise(proficiencies),
     visions: visions.length > 0 ? visions : undefined,
     damageResistances: dedupeValues([...(race.resist ?? []), ...(subrace?.resist ?? [])]),
     damageImmunities: dedupeValues([...(race.immune ?? []), ...(subrace?.immune ?? [])]),

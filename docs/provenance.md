@@ -145,7 +145,7 @@ Feat replacement behavior:
 Manual equipment behavior:
 - `equipmentCommands.ts` materializes inventory and manual ledger tags together for add/remove actions.
 - Removing one duplicate inventory row retains the manual tag while another same-name row remains.
-- Manual proficiency transitions update the persisted proficiency list and ledger together; skills also synchronize `character.skills` through `mergeSkillState`.
+- Manual proficiency transitions update the persisted proficiency list and ledger together; skill expertise is stored in `character.proficiencies.expertise` and reconciled when proficiency is removed.
 
 Optional-feature behavior:
 - Class optional-feature replacement is a batch command. It removes only scoped prior choice tags,

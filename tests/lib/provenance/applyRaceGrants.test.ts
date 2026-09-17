@@ -1,7 +1,17 @@
 import { describe, expect, test } from 'vitest'
 import { applyRaceGrants, emptyProvenance } from '@/lib/provenance'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance/applyRaceGrants'
 
 describe('provenance/applyRaceGrants', () => {
+  test('matches item sources without regard to source-code casing', () => {
+    expect(
+      resolveRaceGrantFilterOptions('weapons', 'type=martial weapon', {
+        allowedSources: ['FRHOF'],
+        items: [{ name: 'Test Blade', source: 'FRHoF', weaponCategory: 'martial' } as never],
+      }),
+    ).toEqual(['Test Blade'])
+  })
+
   test('applies race additionalSpells progressively by character level', () => {
     const race = {
       name: 'Tiefling',

@@ -10,7 +10,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',
@@ -35,6 +35,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: ['Common'],
       savingThrows: [],
     },
@@ -92,7 +93,6 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
       speeds: { walk: 30 },
       source: { kind: 'manual', name: 'E2E seed' },
     },
-    skills: {},
     details: {},
     provenance: {
       proficiencies: {
@@ -180,7 +180,6 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],

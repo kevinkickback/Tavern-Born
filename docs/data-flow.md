@@ -302,7 +302,7 @@ Example breaking change requiring a version bump:
 - Restructuring a nested object that changes how data is accessed
 - Removing a field that changes the interpretation of other fields
 
-See docs/contributor-start-here.md for the beta character-format policy.
+See docs/contributor-start-here.md for the pre-1.0 character-format policy.
 
 
 ## 7) Auto-Update Lifecycle

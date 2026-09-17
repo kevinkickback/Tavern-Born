@@ -49,7 +49,7 @@ function validateSelectedOptions(
   if (!choice.repeatable && new Set(keys).size !== keys.length) {
     throw new RangeError(`${choice.label} does not allow duplicate selections.`)
   }
-  if (choice.options.length === 0) return
+  if (choice.options.length === 0 || choice.optionFilter) return
   const allowed = new Set(choice.options.map(optionKey))
   if (keys.some((key) => !allowed.has(key))) {
     throw new RangeError(`A selected option is not available for ${choice.label}.`)

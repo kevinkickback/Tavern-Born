@@ -12,7 +12,7 @@ async function navigateToClassPage(page: import('@playwright/test').Page) {
 
 const MULTICLASS_CHARACTER = {
   id: 'multiclass-e2e-1',
-  schemaVersion: 1,
+  schemaVersion: 2,
   name: 'Multiclass E2E Hero',
   originSystem: '2014' as const,
   race: 'Human',
@@ -37,6 +37,7 @@ const MULTICLASS_CHARACTER = {
     weapons: ['simple weapons', 'martial weapons', 'daggers', 'darts'],
     tools: [],
     skills: ['athletics', 'perception'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['strength', 'constitution', 'intelligence', 'wisdom'],
   },
@@ -83,7 +84,6 @@ const MULTICLASS_CHARACTER = {
     speeds: { walk: 30 },
     source: { kind: 'manual' as const, name: 'E2E seed' },
   },
-  skills: {},
   details: {},
   provenance: {
     proficiencies: {

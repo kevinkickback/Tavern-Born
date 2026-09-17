@@ -103,19 +103,17 @@ function getCapacityIssues(
   return issues.filter((issue): issue is ExportPreflightIssue => issue !== null)
 }
 
-function isUnsupportedPdfEffect(effect: CharacterEffect): boolean {
-  if (
-    effect.operation.kind === 'conditional-note' ||
-    effect.operation.kind === 'advantage' ||
-    effect.operation.kind === 'disadvantage'
-  ) {
+function isUnsupportedPdfEffect(
+  templateId: CharacterSheetTemplateId,
+  effect: CharacterEffect,
+): boolean {
+  if (effect.operation.kind === 'conditional-note') {
     return true
   }
   return (
     effect.target.kind === 'carrying-capacity' ||
-    effect.target.kind === 'initiative' ||
-    effect.target.kind === 'resource-maximum' ||
-    effect.target.kind === 'sense'
+    (templateId === '2024' &&
+      (effect.target.kind === 'resource-maximum' || effect.target.kind === 'sense'))
   )
 }
 
@@ -134,7 +132,8 @@ export function getPdfExportPreflight(
     detail: issue.explanation,
   }))
   const unsupportedEffects = effects.filter(
-    (effect) => isCharacterEffectActive(effect, effectContext) && isUnsupportedPdfEffect(effect),
+    (effect) =>
+      isCharacterEffectActive(effect, effectContext) && isUnsupportedPdfEffect(templateId, effect),
   )
   const unsupportedIssues: ExportPreflightIssue[] = unsupportedEffects.map((effect) => ({
     id: `unsupported:${effect.id}`,

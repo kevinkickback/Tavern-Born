@@ -145,6 +145,16 @@ describe('class choice commands', () => {
         { entityType: 'classFeature', name: 'Protector', source: 'HB' },
       ]),
     ).toThrow(/not available/i)
+    expect(() =>
+      applyClassChoiceSelectionCommand(
+        character,
+        {
+          ...divineOrder,
+          optionFilter: { entityType: 'classFeature' },
+        },
+        [{ entityType: 'classFeature', name: 'Filtered Order', source: 'HB' }],
+      ),
+    ).not.toThrow()
   })
 
   test('materializes feature selections with exact class-choice ownership', () => {

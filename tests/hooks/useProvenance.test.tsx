@@ -44,7 +44,6 @@ function setGameDataItems(
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
       trapHazards: [],
@@ -65,7 +64,6 @@ describe('useProvenance mutations', () => {
     const character = makeCharacterFixture({
       id: 'race-profs',
       race: 'Human',
-      skills: {},
     })
 
     useCharacterStore.setState({
@@ -87,11 +85,7 @@ describe('useProvenance mutations', () => {
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.proficiencies.skills).toEqual(['perception'])
     expect(updated?.proficiencies.languages).toContain('elvish')
-    expect(updated?.skills.perception).toEqual({
-      proficient: true,
-      expertise: false,
-      bonus: 0,
-    })
+    expect(updated?.proficiencies.expertise).toEqual([])
   })
 
   test('applyClassSelection materializes saving throw proficiencies', () => {

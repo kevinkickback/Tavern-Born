@@ -10,7 +10,7 @@ const commit = vi.fn()
 const basePatch = {
   spells: makeCharacterFixture().spells,
   classResources: {},
-  hitDiceUsed: 2,
+  hitDiceUsed: { 'fighter|phb': 2 },
   hitPoints: makeCharacterFixture().hitPoints,
 }
 
@@ -26,12 +26,13 @@ function resultFor(options: RestPreviewOptions): RestResult {
   if (options.restoreHitPoints) {
     changes.push({ id: 'hit-points', label: 'Current hit points', before: 4, after: 10 })
   }
-  if (options.hitDiceRecovered > 0) {
+  const recovered = options.hitDiceRecovered['fighter|phb'] ?? 0
+  if (recovered > 0) {
     changes.push({
       id: 'hit-dice',
       label: 'Hit dice used',
       before: 2,
-      after: 2 - options.hitDiceRecovered,
+      after: 2 - recovered,
     })
   }
   return { patch: basePatch, changes }
@@ -39,7 +40,7 @@ function resultFor(options: RestPreviewOptions): RestResult {
 
 vi.mock('@/hooks/character/useRestPreview', () => ({
   useRestPreview: () => ({
-    hitDiceUsed: 2,
+    hitDicePools: [{ id: 'fighter|phb', label: 'Fighter', die: 10, max: 3, used: 2 }],
     preview: resultFor,
     commit,
   }),
@@ -75,7 +76,9 @@ describe('RestPreviewDialog', () => {
         name: 'Restore current hit points to maximum and clear temporary hit points',
       }),
     )
-    const hitDiceInput = screen.getByRole('spinbutton', { name: 'Hit dice to recover' })
+    const hitDiceInput = screen.getByRole('spinbutton', {
+      name: 'Fighter d10 hit dice to recover',
+    })
     await user.clear(hitDiceInput)
     await user.type(hitDiceInput, '1')
 

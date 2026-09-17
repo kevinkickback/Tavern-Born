@@ -95,7 +95,7 @@ export function validateClassChoices(
       const storedSelection = selections.get(choice.id)?.selected ?? []
       const eligibleOptionKeys = catalogs
         ? new Set(
-            resolveClassChoiceOptions(choice, catalogs).map((option) =>
+            resolveClassChoiceOptions(choice, catalogs, [], entry.levels).map((option) =>
               getClassChoiceOptionKey(option.reference),
             ),
           )

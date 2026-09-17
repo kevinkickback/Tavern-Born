@@ -44,7 +44,6 @@ describe('5etools/lookups', () => {
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [{ name: 'Cantrip Formulas', source: 'TCE' }],
       variantrules: [],
       trapHazards: [],

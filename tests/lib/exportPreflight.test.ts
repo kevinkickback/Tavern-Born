@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterReadinessResult } from '@/lib/readiness/characterReadiness'
-import type { CharacterEffect } from '@/types/effects'
+import type { CharacterEffect, NumericEffectTarget } from '@/types/effects'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const READY: CharacterReadinessResult = {
@@ -25,6 +25,16 @@ function createViewModel(equipmentCount = 0) {
     }),
     {},
   )
+}
+
+function effect(id: string, target: NumericEffectTarget): CharacterEffect {
+  return {
+    id,
+    label: id,
+    source: { kind: 'manual', name: 'Test adjustment' },
+    target,
+    operation: { kind: 'add', value: 1 },
+  }
 }
 
 describe('getPdfExportPreflight', () => {
@@ -61,20 +71,11 @@ describe('getPdfExportPreflight', () => {
       recommendations: [],
     }
     const effects: CharacterEffect[] = [
+      effect('active-initiative', { kind: 'initiative' }),
+      effect('active-carrying-capacity', { kind: 'carrying-capacity' }),
       {
-        id: 'active-initiative',
-        label: 'Initiative adjustment',
-        source: { kind: 'manual', name: 'Test adjustment' },
-        target: { kind: 'initiative' },
-        operation: { kind: 'add', value: 1 },
-      },
-      {
-        id: 'inactive-sense',
-        label: 'Inactive sense',
-        source: { kind: 'manual', name: 'Test adjustment' },
+        ...effect('inactive-sense', { kind: 'sense', sense: 'test sense' }),
         requirements: [{ kind: 'flag', key: 'enabled', expected: true }],
-        target: { kind: 'sense', sense: 'test sense' },
-        operation: { kind: 'add', value: 1 },
       },
     ]
 
@@ -89,5 +90,16 @@ describe('getPdfExportPreflight', () => {
     expect(result.blockingCount).toBe(1)
     expect(result.warningCount).toBe(3)
     expect(result.issues.some((issue) => issue.id.includes('inactive-sense'))).toBe(false)
+    expect(result.issues.some((issue) => issue.id.includes('active-initiative'))).toBe(false)
+  })
+
+  test('only warns about template-specific unsupported effects', () => {
+    const effects = [
+      effect('sense', { kind: 'sense', sense: 'darkvision' }),
+      effect('resource', { kind: 'resource-maximum', resourceId: 'test' }),
+    ]
+
+    expect(getPdfExportPreflight('2014', createViewModel(), READY, effects).warningCount).toBe(0)
+    expect(getPdfExportPreflight('2024', createViewModel(), READY, effects).warningCount).toBe(2)
   })
 })

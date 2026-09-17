@@ -14,7 +14,7 @@
 * Equipment browsing, filtering, and item details improved
 * Character Rules and Sources pages added to Rules navigation
 * Race, background, class, and feat setup improved
-* Class resource tracking and rest recovery corrected
+* Class resource and multiclass hit-die tracking corrected
 * Light theme, tooltips, contextual hints, and small-window layouts improved
 * Organization emblems added to 2014 character sheets
 * Remote game-data loading and update reliability improved

@@ -23,6 +23,8 @@ export interface CharacterClassEntry {
   subclassSource?: string
 }
 
+export type HitDiceUsed = Record<string, number>
+
 export type HitPointGainMethod = 'average' | 'rolled' | 'manual'
 
 /** The raw hit-die result chosen for a level after character level 1. */
@@ -161,7 +163,6 @@ export interface Character {
 
   /** Condition immunities granted by race or other sources. */
   conditionImmunities?: string[]
-  skills: Skills
 
   details: CharacterDetails
   portrait?: string
@@ -227,8 +228,8 @@ export interface Character {
   conditions?: string[]
   /** Exhaustion level 0–6. */
   exhaustion?: number
-  /** Hit dice expended (spent on short rests). Type and max are derived from class data. */
-  hitDiceUsed?: number
+  /** Expended hit dice keyed by source-qualified class pool. */
+  hitDiceUsed?: HitDiceUsed
   /** Whether the character can cast spells as rituals (derived from class, may be manually set). */
   ritualCasting?: boolean
   /** Current usage counts for class resources, keyed by stable ID. Label/max are derived. */
@@ -266,11 +267,12 @@ export interface VariantRules {
 
 export type AbilityScores = Record<AbilityName, number>
 
-interface Proficiencies {
+export interface Proficiencies {
   armor: string[]
   weapons: string[]
   tools: string[]
   skills: string[]
+  expertise: string[]
   languages: string[]
   savingThrows: string[]
 }
@@ -419,10 +421,6 @@ export interface Currency {
 export interface HitPoints {
   current: number
   temporary: number
-}
-
-export interface Skills {
-  [key: string]: { proficient: boolean; expertise: boolean; bonus: number }
 }
 
 interface CharacterDetails {

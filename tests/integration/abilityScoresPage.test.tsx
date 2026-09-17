@@ -78,7 +78,6 @@ describe('BuildAbilityScoresPage', () => {
         skills: [],
         senses: [],
         languages: [],
-        magicvariants: [],
         optionalfeatures: [],
         variantrules: [],
         trapHazards: [],

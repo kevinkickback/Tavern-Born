@@ -1,5 +1,5 @@
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import { type ClassFeatChoiceOwner, getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
@@ -73,7 +73,6 @@ export function retractFeatChoiceOptionsForSources(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate,
@@ -167,7 +166,6 @@ export function resolveFeatChoiceCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate: addGrant(provenanceUpdate, 'feats', feat.name, tag),
@@ -233,7 +231,6 @@ export function removeFeatChoiceCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate,
@@ -297,7 +294,6 @@ export function resolveProficiencyChoiceCommand(
       return {
         characterPatch: {
           proficiencies: { ...character.proficiencies, skills },
-          skills: mergeSkillState(character.skills ?? {}, skills),
         },
         provenanceUpdate,
       }
@@ -327,8 +323,7 @@ export function resolveProficiencyChoiceCommand(
       : character.proficiencies.skills.filter((entry) => normalizeKey(entry) !== normalized)
     return {
       characterPatch: {
-        proficiencies: { ...character.proficiencies, skills },
-        skills: mergeSkillState(character.skills ?? {}, skills),
+        proficiencies: reconcileSkillExpertise({ ...character.proficiencies, skills }),
       },
       provenanceUpdate,
     }
@@ -384,7 +379,6 @@ export function retractFeatOptionsCommand(
     }
   })
   let proficiencies = { ...character.proficiencies }
-  const skills = { ...(character.skills ?? {}) }
 
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
@@ -393,8 +387,9 @@ export function retractFeatOptionsCommand(
       ...proficiencies,
       skills: proficiencies.skills.filter((name) => normalizeKey(name) !== normalized),
     }
-    const existing = skills[normalized]
-    skills[normalized] = { proficient: false, expertise: false, bonus: existing?.bonus ?? 0 }
+    proficiencies.expertise = proficiencies.expertise.filter(
+      (name) => normalizeKey(name) !== normalized,
+    )
   }
   for (const language of selections.languages ?? []) {
     if (provenanceUpdate.proficiencies.languages[normalizeKey(language)]) continue
@@ -418,19 +413,15 @@ export function retractFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    const existing = skills[normalized]
-    skills[normalized] = {
-      proficient: existing?.proficient ?? false,
-      expertise: false,
-      bonus: existing?.bonus ?? 0,
-    }
+    proficiencies.expertise = proficiencies.expertise.filter(
+      (name) => normalizeKey(name) !== normalized,
+    )
   }
 
   return {
     characterPatch: {
       spells: { ...character.spells, spellProfiles },
-      proficiencies,
-      skills,
+      proficiencies: reconcileSkillExpertise(proficiencies),
       abilityScores,
     },
     provenanceUpdate,
@@ -486,18 +477,12 @@ export function commitFeatOptionsCommand(
       ]
 
   let proficiencies = { ...character.proficiencies }
-  const skills = { ...(character.skills ?? {}) }
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
     provenanceUpdate = addGrant(provenanceUpdate, 'skills', skillName, sourceTag)
     proficiencies = {
       ...proficiencies,
       skills: [...new Set([...proficiencies.skills, normalized])],
-    }
-    skills[normalized] = {
-      proficient: true,
-      expertise: skills[normalized]?.expertise ?? false,
-      bonus: skills[normalized]?.bonus ?? 0,
     }
   }
   for (const language of selections.languages ?? []) {
@@ -529,10 +514,10 @@ export function commitFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    skills[normalized] = {
-      proficient: skills[normalized]?.proficient ?? true,
-      expertise: true,
-      bonus: skills[normalized]?.bonus ?? 0,
+    proficiencies = {
+      ...proficiencies,
+      skills: [...new Set([...proficiencies.skills, normalized])],
+      expertise: [...new Set([...proficiencies.expertise, normalized])],
     }
   }
   provenanceUpdate = {
@@ -597,7 +582,6 @@ export function commitFeatOptionsCommand(
       fixedFeatOptions,
       spells: { ...character.spells, spellProfiles },
       proficiencies,
-      skills,
       abilityScores,
     },
     provenanceUpdate,
@@ -672,7 +656,6 @@ export function replaceFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
       feats: selectedFeats.map((feat) => {
         const existing = character.feats.find(
@@ -774,7 +757,6 @@ export function replaceClassFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
       classFeatChoices:
         feats.length > 0
@@ -820,7 +802,6 @@ export function replaceBonusFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
       specialFeats: selectedFeats.map((feat) => {
         const existing = character.specialFeats?.find(

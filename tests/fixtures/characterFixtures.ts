@@ -60,6 +60,7 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: [],
       savingThrows: [],
     },
@@ -117,7 +118,6 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
       temporary: 0,
     },
     movement: { speeds: { walk: 30 }, source: { kind: 'manual', name: 'Manual' } },
-    skills: {},
     details: {},
     provenance: {
       proficiencies: {

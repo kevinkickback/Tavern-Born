@@ -3,7 +3,6 @@ import type {
   CharacterEffectRequirement,
   NumericEffectOperation,
   NumericEffectTarget,
-  RollEffectTarget,
   TraitEffectTarget,
 } from '@/types/effects'
 
@@ -26,14 +25,6 @@ export interface ResolvedNumericEffect {
   baseValue: number
   value: number
   steps: NumericEffectBreakdownStep[]
-  inactiveEffects: CharacterEffect[]
-  conditionalNotes: Array<{ effectId: string; label: string; note: string }>
-}
-
-export interface ResolvedRollEffect {
-  mode: 'normal' | 'advantage' | 'disadvantage'
-  advantageSources: CharacterEffect[]
-  disadvantageSources: CharacterEffect[]
   inactiveEffects: CharacterEffect[]
   conditionalNotes: Array<{ effectId: string; label: string; note: string }>
 }
@@ -157,31 +148,6 @@ export function resolveNumericEffect(
     value,
     steps,
     inactiveEffects,
-    conditionalNotes: conditionalNotes(active),
-  }
-}
-
-/** D&D advantage and disadvantage do not stack; any presence on both sides cancels. */
-export function resolveRollEffect(
-  target: RollEffectTarget,
-  effects: readonly CharacterEffect[],
-  context: EffectResolutionContext = {},
-): ResolvedRollEffect {
-  const relevant = effects.filter((effect) => targetsMatch(effect.target, target))
-  const active = relevant.filter((effect) => isCharacterEffectActive(effect, context))
-  const advantageSources = active.filter((effect) => effect.operation.kind === 'advantage')
-  const disadvantageSources = active.filter((effect) => effect.operation.kind === 'disadvantage')
-  const mode =
-    advantageSources.length > 0 && disadvantageSources.length === 0
-      ? 'advantage'
-      : disadvantageSources.length > 0 && advantageSources.length === 0
-        ? 'disadvantage'
-        : 'normal'
-  return {
-    mode,
-    advantageSources,
-    disadvantageSources,
-    inactiveEffects: relevant.filter((effect) => !isCharacterEffectActive(effect, context)),
     conditionalNotes: conditionalNotes(active),
   }
 }

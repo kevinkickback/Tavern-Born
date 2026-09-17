@@ -163,10 +163,10 @@ const dwarfMartialCharacter = standardCharacter({
     weapons: ['martial weapons'],
     tools: [],
     skills: ['athletics'],
+    expertise: [],
     languages: ['Common', 'Dwarvish'],
     savingThrows: ['strength', 'constitution'],
   },
-  skills: { athletics: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'dwarf-medium-armor',
@@ -244,10 +244,10 @@ const elfWizardCharacter = standardCharacter({
     weapons: [],
     tools: [],
     skills: ['arcana'],
+    expertise: [],
     languages: ['Common', 'Elvish'],
     savingThrows: ['intelligence'],
   },
-  skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'elf-light-armor',
@@ -352,10 +352,10 @@ const clericCharacter = standardCharacter({
     weapons: ['simple weapons'],
     tools: [],
     skills: ['religion'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['wisdom', 'charisma'],
   },
-  skills: { religion: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'cleric-medium-armor',
@@ -518,10 +518,10 @@ const druidCharacter = standardCharacter({
     weapons: ['simple weapons'],
     tools: [],
     skills: ['nature'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['intelligence', 'wisdom'],
   },
-  skills: { nature: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'druid-light-armor',
@@ -640,10 +640,10 @@ const weaponMasteryCharacter = standardCharacter({
     weapons: [masteryWeapon.name],
     tools: [],
     skills: ['athletics'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['strength', 'constitution'],
   },
-  skills: { athletics: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'mastery-weapon',
@@ -766,10 +766,10 @@ const multiclassCharacter = standardCharacter({
     weapons: [],
     tools: [],
     skills: ['arcana'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['intelligence'],
   },
-  skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
   equipment: [
     {
       id: 'multiclass-light-armor',

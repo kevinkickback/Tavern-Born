@@ -76,6 +76,7 @@ source content.
   remain visible in `choiceDiagnostics`. Choice kinds come from the referenced entity collection,
   and table-backed choices are joined by source-provided feature and column labels; runtime code
   contains no class names, feature names, option catalogs, or assumed selection/replacement values.
+  Table-defined item pools retain level gates, combine named and filtered entries, and keep separate filters as alternatives.
   Item-filter dimensions remain independent, so a source restriction such as Simple or Martial
   Melee weapons is normalized as both a weapon-category pool and a melee-only requirement rather
   than broadening into an either/or match. Narrow replacement and singular-choice phrases are parsed only when an entity filter provides
@@ -113,6 +114,7 @@ source content.
 - Item consumers resolve raw type codes through the parsed `itemType` catalog. The manual item picker
   keeps records with unfamiliar or uncategorized codes in a data-derived Other group and displays the
   parsed type label when available, rather than using recognized categories as an inclusion gate.
+- Generic magic variants flatten inherited metadata into the item catalog so named templates resolve normally.
 - The shared item classifier derives melee/ranged weapon range from those parsed type labels. The
   versioned `M`/`R` metadata is a validated compatibility fallback, not the primary classification
   path, so alternate and homebrew abbreviations work when their parsed labels carry the semantics.
@@ -132,7 +134,7 @@ source content.
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
-- Cache entries carry a normalization-schema version (currently 4). Changes to ingestion-owned normalized rules
+- Cache entries carry a normalization-schema version (currently 5). Changes to ingestion-owned normalized rules
   invalidate older parsed caches so corrected adapters apply immediately after an app update.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 

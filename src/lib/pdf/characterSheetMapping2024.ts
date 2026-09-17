@@ -1,4 +1,5 @@
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { getHitDiceUsedTotal } from '@/lib/calculations/hitDice'
 import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
 import {
   type CharacterSheetViewModel,
@@ -124,7 +125,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     Text_9: String(character.hitPoints.current),
     Text_10: String(character.hitPoints.temporary),
     Text_11: String(viewModel.maxHP),
-    Text_12: String(Math.max(0, character.hitDiceUsed ?? 0)),
+    Text_12: String(getHitDiceUsedTotal(character.hitDiceUsed)),
     Text_13: String(viewModel.level),
     Text_14: formatViewModelModifier(viewModel.proficiencyBonus),
     Text_16: formatViewModelModifier(viewModel.initiativeModifier),

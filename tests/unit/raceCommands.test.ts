@@ -156,10 +156,10 @@ describe('race commands', () => {
         weapons: [],
         tools: [],
         skills: ['arcana'],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
-      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
     })
     const ledger = {
       ...emptyProvenance(),
@@ -198,7 +198,7 @@ describe('race commands', () => {
     )
 
     expect(result.characterPatch.proficiencies?.skills).toEqual([])
-    expect(result.characterPatch.skills?.arcana?.proficient).toBe(false)
+    expect(result.characterPatch.proficiencies?.expertise).toEqual([])
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
 })

@@ -14,6 +14,7 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
 import {
   type EffectiveMovement,
   formatEffectiveMovement,
@@ -464,10 +465,10 @@ function buildHitDiceRows(
     return {
       level: entry.levels,
       die: classData?.hd?.faces ? `d${classData.hd.faces}` : '',
-      used:
-        entries.length === 1
-          ? Math.min(entry.levels, Math.max(0, character.hitDiceUsed ?? 0))
-          : null,
+      used: Math.min(
+        entry.levels,
+        Math.max(0, character.hitDiceUsed?.[getHitDiePoolId(entry)] ?? 0),
+      ),
     }
   })
 }
@@ -562,9 +563,7 @@ export function createCharacterSheetViewModel(
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
   const abilityModifiers = calculationContext.abilityScores.modifiers
-  const expertiseSkills = Object.entries(character.skills)
-    .filter(([, value]) => value?.expertise)
-    .map(([name]) => name.toLowerCase())
+  const expertiseSkills = character.proficiencies.expertise
   const skillByName = new Map(
     deriveAllSkills(
       abilityModifiers,
@@ -639,7 +638,7 @@ export function createCharacterSheetViewModel(
     movementSummary: formatEffectiveMovement(calculationContext.movement),
     additionalMovementSummary: getAdditionalMovementSummary(calculationContext.movement),
     walkingSpeed: getWalkingSpeed(calculationContext.movement),
-    remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
+    remainingHitDice: Math.max(0, level - getHitDiceUsedTotal(character.hitDiceUsed)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
     classResourceRows: buildClassResourceRows(
       character,

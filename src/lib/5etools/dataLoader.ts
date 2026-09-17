@@ -167,7 +167,6 @@ export class FiveEToolsDataLoader {
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
       trapHazards: [],
@@ -182,6 +181,7 @@ export class FiveEToolsDataLoader {
     let classIndexData: unknown = null
     let spellIndexData: unknown = null
     let spellSourceLookupData: unknown = null
+    let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
     let loadedTopLevelResources = 0
 
@@ -273,8 +273,8 @@ export class FiveEToolsDataLoader {
             this.addItemSources(gameData.languages, sourcesSet)
             break
           case 'magicvariants':
-            gameData.magicvariants = parseMagicVariants(data)
-            this.addItemSources(gameData.magicvariants, sourcesSet)
+            magicVariants = parseMagicVariants(data)
+            this.addItemSources(magicVariants, sourcesSet)
             break
           case 'optionalfeatures':
             gameData.optionalfeatures = parseOptionalFeatures(data)
@@ -330,6 +330,8 @@ export class FiveEToolsDataLoader {
 
     throwIfAborted(options?.signal)
 
+    gameData.items.push(...magicVariants)
+
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
@@ -342,7 +344,7 @@ export class FiveEToolsDataLoader {
       validateArmorTypeCodes(gameData.lookups.itemTypeByAbbr)
       validateSpellSchoolCoverage(gameData.spells)
       validateDamageTypeCoverage([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])])
-      validateRarityCoverage([...(gameData.items ?? []), ...(gameData.magicvariants ?? [])])
+      validateRarityCoverage(gameData.items ?? [])
     }
 
     if (options?.onProgress) {

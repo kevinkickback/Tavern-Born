@@ -58,7 +58,7 @@ breaking persisted-data change:
 4. Test current-format import and persistence plus explicit rejection of older and newer formats.
 
 Do not add migrations, downgrade paths, compatibility mirrors, or old-shape fallbacks. Testers with
-unsupported beta characters must create new ones.
+unsupported pre-1.0 characters must be recreated.
 
 ## Review Readiness Checklist
 

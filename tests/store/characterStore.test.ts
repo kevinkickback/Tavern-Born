@@ -40,7 +40,7 @@ describe('characterStore', () => {
     expect(validateCharacterData({ foo: 'bar' })).toContain('Invalid character structure')
   })
 
-  test.each([0, 2, '1', 'invalid'])('rejects unsupported schema version %s', (schemaVersion) => {
+  test.each([0, 1, 3, '2', 'invalid'])('rejects unsupported schema version %s', (schemaVersion) => {
     expect(validateCharacterData({ ...makeCharacterFixture(), schemaVersion })).toContain(
       UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
     )

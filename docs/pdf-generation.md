@@ -69,7 +69,7 @@ exports cannot silently reprioritize entries.
 - The 2014 Actions, Bonus Actions, and Reactions columns each hold six entries. Inactive entries,
   prose-only features without reliable timing, and weapon attacks already shown in the attack table
   are excluded. Additional structured entries remain available in the app but cannot fit the form.
-- Multiclass characters store one aggregate `hitDiceUsed` value. The generator prints each class's die and level but leaves per-class spent values blank because the split cannot be reconstructed safely.
+- Spent hit dice are stored by source-qualified class pool, so multiclass sheets can print each class's die, level, and spent count accurately.
 - The 2024 template has one spellcasting summary, 30 spell rows, six weapon rows, and three attunement rows. Additional entries remain available in the app but cannot fit this fixed form.
 - The 2014 template has five attack rows, three hit-die rows, eight limited-resource rows, five magic-item cards, and 90 equipment rows. Additional data is limited by the template.
 - The 2014 portrait is supported; the 2024 template has no portrait field.

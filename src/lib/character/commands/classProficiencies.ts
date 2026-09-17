@@ -1,9 +1,7 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
-import { mergeSkillState } from '@/lib/calculations/skills'
 import { stripItemTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type { Skills } from '@/types/character'
 
 interface ClassProficiencyEntity {
   proficiency?: string[]
@@ -43,10 +41,10 @@ export function buildInitialCharacterProficiencies(
     weapons: string[]
     tools: string[]
     skills: string[]
+    expertise: string[]
     languages: string[]
     savingThrows: string[]
   }
-  skills: Skills
 } {
   const clsProfs = cls?.startingProficiencies ?? {}
   const armor = (clsProfs.armor ?? [])
@@ -83,9 +81,10 @@ export function buildInitialCharacterProficiencies(
     weapons,
     tools: [...new Set([...classTools, ...backgroundTools])],
     skills,
+    expertise: [],
     languages: [...new Set(backgroundLanguages)],
     savingThrows,
   }
 
-  return { proficiencies, skills: mergeSkillState({}, skills) }
+  return { proficiencies }
 }

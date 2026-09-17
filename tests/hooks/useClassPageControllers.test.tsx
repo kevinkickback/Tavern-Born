@@ -25,7 +25,7 @@ describe('class page controllers', () => {
       {
         name: 'Bladesinger',
         shortName: 'Bladesinger',
-        source: 'SCAG',
+        source: 'FRHoF',
         className: 'Wizard',
         classSource: 'PHB',
       },
@@ -53,7 +53,7 @@ describe('class page controllers', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
       race: 'Human',
-      allowedSources: ['PHB'],
+      allowedSources: ['PHB', 'FRHOF'],
     })
     useCharacterStore.setState({
       characters: [character],
@@ -90,6 +90,7 @@ describe('class page controllers', () => {
     expect(result.current.spells.choicesByLevel.size).toBeGreaterThan(0)
     expect(result.current.asi.totalAsi).toBe(1)
     expect(result.current.subclass.subclasses.map((subclass) => subclass.name)).toEqual([
+      'Bladesinger',
       'Evocation',
     ])
   })

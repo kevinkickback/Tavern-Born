@@ -75,7 +75,7 @@ new tests land and do not lower them to merge a change.
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
   classification, bounded singular/plural counts, proficiency-constrained item choices, and
-  unsafe-shape diagnostics, including the configured 2024 core corpus.
+  unsafe-shape diagnostics, including level-gated Artificer plans and the configured 2024 corpus.
 - Corpus capability coverage inventories class choices, movement forms, top-level structured field
   shapes, and unresolved source-qualified references without making the external `data/` directory
   a CI prerequisite. Copied-subclass tests cover both unique source-safe resolution and ambiguous
@@ -84,7 +84,7 @@ new tests land and do not lower them to merge a change.
   tests/lib/classChoiceOptions.test.ts, tests/hooks/useClassPageControllers.test.tsx, and
   tests/integration/classLevelsPanel.test.tsx and
   tests/integration/classChoiceSelectionModal.test.tsx (base-item catalog filters, parsed mastery
-  descriptions, parsed-label weapon range, mastery-property filtering and presentation, source
+  descriptions, parsed-label weapon range, magic-variant templates, mastery-property filtering and presentation, source
   identity, retained unavailable selections, store-backed persistence, selection-card level/feature
   placement, eligibility-aware completion cards, unavailable-option selection guards, and
   unresolved-choice warnings). Shared pane tests also verify collapsed panes leave flex sizing.

@@ -10,7 +10,8 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import {
@@ -142,8 +143,7 @@ function retractRemovedClassMaterializedState(
   const profileId = toClassProfileId(removed.name, removed.source)
   return {
     ...character,
-    proficiencies,
-    skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
+    proficiencies: reconcileSkillExpertise(proficiencies),
     spells: {
       ...character.spells,
       spellProfiles: character.spells.spellProfiles.filter((profile) => profile.id !== profileId),
@@ -336,8 +336,7 @@ function computeClassSelectionEffects(
 
   return {
     characterPatch: {
-      proficiencies,
-      skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
+      proficiencies: reconcileSkillExpertise(proficiencies),
       equipment: upsertGrantedEquipment(equipment, classEquipment.items),
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
@@ -528,6 +527,7 @@ export function applyClassProgressionUpdate(
 
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
@@ -535,7 +535,6 @@ export function applyClassProgressionUpdate(
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
     proficiencies: workingCharacter.proficiencies,
-    skills: workingCharacter.skills,
     abilityScores: workingCharacter.abilityScores,
   }
 
@@ -656,9 +655,9 @@ export function selectBaseClass(
   }
 
   const characterPatch: Partial<Character> = {
-    proficiencies: updatedProficiencies,
-    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
+    proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
   }
 
   const provenanceUpdate = ledger
@@ -745,8 +744,8 @@ export function applyClassSelectionCommand(
           proficiencies: {
             ...effectProficiencies,
             skills: identityProficiencies.skills,
+            expertise: identityProficiencies.expertise,
           },
-          skills: identity.characterPatch.skills,
         }
       : {}),
   }
@@ -892,8 +891,8 @@ export function addMulticlass(
 
   const characterPatch: Partial<Character> = {
     classProgression: updatedProgression,
-    proficiencies: updatedProficiencies,
-    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
+    proficiencies: reconcileSkillExpertise(updatedProficiencies),
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
   }
 
   const provenanceUpdate = applyMulticlassGrants({ ...classEntity, source: classSource }, ledger)

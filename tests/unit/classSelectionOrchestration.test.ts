@@ -74,14 +74,14 @@ describe('buildInitialCharacterProficiencies', () => {
     // Common is NOT injected here; it comes from race data via applyRaceGrants
   })
 
-  test('initializes skills state map for background skills', () => {
+  test('initializes background skill proficiency', () => {
     const bg = {
       skillProficiencies: [{ perception: true }],
       languageProficiencies: [],
       toolProficiencies: [],
     }
     const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.skills.perception?.proficient).toBe(true)
+    expect(result.proficiencies.skills).toContain('perception')
   })
 
   test('handles both undefined cls and background', () => {
@@ -133,6 +133,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: ['martial weapons'],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: ['strength', 'constitution'],
       },
@@ -178,6 +179,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -238,6 +240,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: ['simple weapons'],
         tools: [],
         skills: [],
+        expertise: [],
         languages: ['Common'],
         savingThrows: ['strength', 'constitution'],
       },
@@ -294,15 +297,16 @@ describe('applyClassSelectionCommand', () => {
   test('removes an old class skill and synchronizes skill state when switching class', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
+      hitDiceUsed: { 'rogue|phb': 1 },
       proficiencies: {
         armor: [],
         weapons: [],
         tools: [],
         skills: ['stealth'],
+        expertise: ['stealth'],
         languages: [],
         savingThrows: [],
       },
-      skills: { stealth: { proficient: true, expertise: true, bonus: 0 } },
     })
     const ledger = addGrant(
       emptyProvenance(),
@@ -320,10 +324,8 @@ describe('applyClassSelectionCommand', () => {
     )
 
     expect(result.characterPatch.proficiencies?.skills).toEqual([])
-    expect(result.characterPatch.skills?.stealth).toMatchObject({
-      proficient: false,
-      expertise: false,
-    })
+    expect(result.characterPatch.proficiencies?.expertise).toEqual([])
+    expect(result.characterPatch.hitDiceUsed).toEqual({})
   })
 
   test('adds starting equipment from class blocks', () => {
@@ -338,6 +340,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -426,6 +429,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -452,6 +456,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },

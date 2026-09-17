@@ -56,7 +56,6 @@ function seedFighterCharacter(level: number, classResources?: Record<string, num
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
       trapHazards: [],

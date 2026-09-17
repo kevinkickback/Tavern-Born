@@ -410,6 +410,7 @@ describe('Multiclass Updates', () => {
         ],
         proficiencies: {
           skills: ['arcana', 'history'], // From Wizard
+          expertise: [],
           languages: ['common'],
           tools: [],
           weapons: [],

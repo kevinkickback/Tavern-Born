@@ -52,10 +52,7 @@ describe('feat commands', () => {
     )
 
     expect(retracted.characterPatch.proficiencies?.skills).toEqual([])
-    expect(retracted.characterPatch.skills?.arcana).toMatchObject({
-      proficient: false,
-      expertise: false,
-    })
+    expect(retracted.characterPatch.proficiencies?.expertise).toEqual([])
     expect(retracted.characterPatch.abilityScores?.intelligence).toBe(10)
     expect(retracted.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
@@ -84,7 +81,6 @@ describe('feat commands', () => {
         ...makeCharacterFixture().proficiencies,
         skills: ['arcana'],
       },
-      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
     })
 
     const result = resolveProficiencyChoiceCommand(
@@ -97,7 +93,7 @@ describe('feat commands', () => {
     )
 
     expect(result.characterPatch.proficiencies?.skills).toEqual(['arcana'])
-    expect(result.characterPatch.skills?.arcana?.proficient).toBe(true)
+    expect(result.characterPatch.proficiencies?.expertise).toEqual([])
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toEqual([
       makeSourceTag('background', 'Sage', 'fixed', 'PHB'),
     ])
@@ -220,10 +216,10 @@ describe('feat commands', () => {
         weapons: [],
         tools: [],
         skills: ['arcana'],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
-      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
     })
     const oldFeatTag = makeSourceTag('manual', 'User Choice', 'choice', 'PHB')
     const fixedFeatTag = makeSourceTag('background', 'Sage', 'fixed', 'XPHB')
@@ -388,7 +384,7 @@ describe('feat commands', () => {
       },
     ])
     expect(configured.abilityScores.intelligence).toBe(11)
-    expect(configured.skills?.arcana?.expertise).toBe(true)
+    expect(configured.proficiencies.expertise).toEqual(['arcana'])
 
     const replaced = resolveFeatChoiceCommand(configured, configured.provenance, choice.id, {
       name: 'Alert',
@@ -396,7 +392,7 @@ describe('feat commands', () => {
     })
     expect(replaced.characterPatch.abilityScores?.intelligence).toBe(10)
     expect(replaced.characterPatch.proficiencies?.skills).toEqual([])
-    expect(replaced.characterPatch.skills?.arcana?.expertise).toBe(false)
+    expect(replaced.characterPatch.proficiencies?.expertise).toEqual([])
     expect(replaced.provenanceUpdate.choices[0]?.selectedRefs).toEqual([
       { name: 'Alert', source: 'PHB' },
     ])

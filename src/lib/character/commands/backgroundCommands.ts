@@ -9,7 +9,7 @@ import {
   ensureOriginSystemInvariants,
   normalizeBackgroundForOriginSystem,
 } from '@/lib/calculations/originSystem'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import {
   removeSourceGrantedEquipment,
@@ -136,8 +136,7 @@ export function applyBackgroundSelectionCommand(
       backgroundSource: background.source || undefined,
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
-      proficiencies,
-      skills: mergeSkillState(workingCharacter.skills ?? {}, proficiencies.skills),
+      proficiencies: reconcileSkillExpertise(proficiencies),
       equipment: upsertGrantedEquipment(equipment, resolvedPackage.items),
       currency,
       backgroundCurrencyGrant: resolvedPackage.currency,

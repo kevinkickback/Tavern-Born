@@ -37,14 +37,15 @@ export function useSubclassSelectionController({
     const implicitSource = getImplicitSource(character?.originSystem ?? '2014')
     const effectiveSources =
       allowedSources && allowedSources.length > 0
-        ? allowedSources.includes(implicitSource)
+        ? allowedSources.some((source) => source.toUpperCase() === implicitSource.toUpperCase())
           ? allowedSources
           : [...allowedSources, implicitSource]
         : undefined
+    const enabledSources = effectiveSources?.map((source) => source.toUpperCase())
 
     return (viewingClassData?.subclasses ?? []).filter(
       (subclass) =>
-        (!effectiveSources || effectiveSources.includes(subclass.source)) &&
+        (!enabledSources || enabledSources.includes(subclass.source.toUpperCase())) &&
         isSubclassEligible({
           subclass,
           className: viewingClass,

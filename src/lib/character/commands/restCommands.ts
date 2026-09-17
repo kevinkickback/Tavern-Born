@@ -1,3 +1,4 @@
+import { getHitDiePoolId, reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
 import type { Character } from '@/types/character'
 import type { ClassResourceRecovery } from '@/types/classRules'
 import { reconcileSpellSlotMaximaCommand, type SpellSlotMaxima } from './spellSlotCommands'
@@ -16,7 +17,7 @@ export interface RestContext {
   spellSlots: SpellSlotMaxima
   resources: readonly RestResourceState[]
   maximumHitPoints: number
-  hitDiceRecovered: number
+  hitDiceRecovered: Record<string, number>
   restoreHitPoints: boolean
 }
 
@@ -90,12 +91,17 @@ export function applyRest(
     classResources[resource.id] = next
   }
 
-  const beforeHitDice = Math.max(0, character.hitDiceUsed ?? 0)
-  const nextHitDice =
-    restType === 'long'
-      ? Math.max(0, beforeHitDice - Math.max(0, Math.trunc(context.hitDiceRecovered)))
-      : beforeHitDice
-  recordChange(changes, 'hit-dice', 'Hit dice used', beforeHitDice, nextHitDice)
+  const beforeHitDice = reconcileHitDiceUsed(character.hitDiceUsed, character.classProgression)
+  const nextHitDice = { ...beforeHitDice }
+  for (const entry of character.classProgression) {
+    const id = getHitDiePoolId(entry)
+    const before = beforeHitDice[id] ?? 0
+    const recovered = Math.max(0, Math.trunc(context.hitDiceRecovered[id] ?? 0))
+    const after = restType === 'long' ? Math.max(0, before - recovered) : before
+    recordChange(changes, `hit-dice:${id}`, `${entry.name} hit dice used`, before, after)
+    if (after > 0) nextHitDice[id] = after
+    else delete nextHitDice[id]
+  }
 
   const hitPoints = { ...character.hitPoints }
   if (restType === 'long' && context.restoreHitPoints) {

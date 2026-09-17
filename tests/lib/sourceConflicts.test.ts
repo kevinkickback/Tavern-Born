@@ -29,6 +29,11 @@ describe('detectSourceConflicts', () => {
     expect(detectSourceConflicts(char, ['PHB'])).toEqual([])
   })
 
+  test('matches source identifiers without regard to casing', () => {
+    const char = makeCharacterFixture({ race: 'Moon Elf', raceSource: 'FRHoF' })
+    expect(detectSourceConflicts(char, ['PHB', 'FRHOF'])).toEqual([])
+  })
+
   test('flags race from disabled source', () => {
     const char = makeCharacterFixture({ race: 'Aasimar', raceSource: 'VGM' })
     const conflicts = detectSourceConflicts(char, ['PHB'])
@@ -73,6 +78,39 @@ describe('detectSourceConflicts', () => {
     const vgmConflict = detectSourceConflicts(char2, ['PHB'])
     const xgeConflict = vgmConflict.find((c) => c.source === 'XGE')
     expect(xgeConflict?.items).toEqual(['Squat Nimbleness', 'Wood Elf Magic'])
+  })
+
+  test('includes class-owned feat and feature-option selections', () => {
+    const char = makeCharacterFixture({
+      classFeatChoices: [
+        {
+          id: 'fighter-feat',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Ability Score Improvement',
+          categories: [],
+          feats: [{ id: 'f1', name: 'Skill Expert', source: 'TCE', description: '' }],
+        },
+      ],
+      classChoiceSelections: [
+        {
+          choiceId: 'artificer-plan',
+          label: 'Replicate Magic Item',
+          kind: 'item',
+          className: 'Artificer',
+          classSource: 'EFA',
+          classLevel: 2,
+          selected: [{ entityType: 'item', name: 'Manifold Tool', source: 'EFA', slotLevel: 2 }],
+        },
+      ],
+    })
+
+    expect(detectSourceConflicts(char, ['PHB'])).toEqual(
+      expect.arrayContaining([
+        { source: 'TCE', items: ['Skill Expert'] },
+        { source: 'EFA', items: ['Manifold Tool'] },
+      ]),
+    )
   })
 })
 
@@ -416,6 +454,6 @@ describe('countRemovedSpells', () => {
       preparedSpells: [], // removed Frostbite
       choices: [{ id: 'c1', count: 1, isCantrip: false, selected: [] }], // removed Control Flames
     }))
-    expect(countRemovedSpells(char, newProfiles)).toBe(4)
+    expect(countRemovedSpells(char, newProfiles)).toBe(2)
   })
 })

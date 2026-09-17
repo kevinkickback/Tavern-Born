@@ -20,7 +20,6 @@ import { useRitualCasting } from '@/hooks/character/useRitualCasting'
 import { useConditions } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
-import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -188,7 +187,7 @@ export function ConditionsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { hitDie } = useHitPoints()
+  const { hitDicePools = [] } = useHitPoints()
   const ritualCasting = useRitualCasting()
   const { resources, updateCurrent, resetResource, resetAll } = useClassResources()
   const conditionRecords = useConditions()
@@ -255,9 +254,8 @@ export function ConditionsPage() {
   const deathSaves = character.deathSaves ?? { successes: 0, failures: 0 }
   const conditions = character.conditions ?? []
   const exhaustion = character.exhaustion ?? 0
-  const hitDiceUsed = character.hitDiceUsed ?? 0
-  const totalLevel = getTotalCharacterLevel(character) ?? 1
-  const hitDiceRemaining = Math.max(0, totalLevel - hitDiceUsed)
+  const hitDiceUsed = character.hitDiceUsed ?? {}
+  const totalHitDiceUsed = hitDicePools.reduce((total, pool) => total + pool.used, 0)
 
   const toggleCondition = (name: string) => {
     const next = conditions.includes(name)
@@ -399,39 +397,49 @@ export function ConditionsPage() {
                       Track hit dice spent to recover hit points during rests.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="size-8 p-0"
-                      aria-label="Spend one hit die"
-                      disabled={hitDiceUsed >= totalLevel}
-                      onClick={() => update('hitDiceUsed', hitDiceUsed + 1)}
-                    >
-                      <Minus size={14} />
-                    </Button>
-                    <div className="flex-1 text-center">
-                      <span className="text-lg font-bold tabular-nums">{hitDiceRemaining}</span>
-                      <span className="text-sm text-muted-foreground">/{totalLevel}</span>
-                      <div className="text-xs text-muted-foreground">d{hitDie} remaining</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="size-8 p-0"
-                      aria-label="Restore one hit die"
-                      disabled={hitDiceUsed === 0}
-                      onClick={() => update('hitDiceUsed', hitDiceUsed - 1)}
-                    >
-                      <Plus size={14} />
-                    </Button>
+                  <div className="space-y-2">
+                    {hitDicePools.map((pool) => (
+                      <div key={pool.id} className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-8 p-0"
+                          aria-label={`Spend one ${pool.label} hit die`}
+                          disabled={pool.used >= pool.max}
+                          onClick={() =>
+                            update('hitDiceUsed', { ...hitDiceUsed, [pool.id]: pool.used + 1 })
+                          }
+                        >
+                          <Minus size={14} />
+                        </Button>
+                        <div className="flex-1 text-center">
+                          <span className="font-bold tabular-nums">{pool.max - pool.used}</span>
+                          <span className="text-sm text-muted-foreground">/{pool.max}</span>
+                          <div className="text-xs text-muted-foreground">
+                            {pool.label} d{pool.die}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-8 p-0"
+                          aria-label={`Restore one ${pool.label} hit die`}
+                          disabled={pool.used === 0}
+                          onClick={() =>
+                            update('hitDiceUsed', { ...hitDiceUsed, [pool.id]: pool.used - 1 })
+                          }
+                        >
+                          <Plus size={14} />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs text-muted-foreground"
-                    disabled={hitDiceUsed === 0}
-                    onClick={() => update('hitDiceUsed', 0)}
+                    disabled={totalHitDiceUsed === 0}
+                    onClick={() => update('hitDiceUsed', {})}
                   >
                     Restore All
                   </Button>

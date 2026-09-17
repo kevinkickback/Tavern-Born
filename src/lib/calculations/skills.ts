@@ -1,6 +1,6 @@
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry, Skills } from '@/types/character'
+import type { CharacterClassEntry, Proficiencies } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
 import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
@@ -214,33 +214,13 @@ export function deriveAllSkills(
   })
 }
 
-/**
- * Produce a new `character.skills` map that reflects the given list of proficient skill names.
- *
- * Preserves existing expertise and per-skill bonus values. The `proficient` flag is updated
- * to match `proficiencies`; `expertise` is cleared if proficiency is being removed.
- *
- * Use this whenever `character.proficiencies.skills` changes so both structures stay in sync.
- */
-export function mergeSkillState(current: Skills, proficiencies: string[]): Skills {
-  const normalized = new Set(proficiencies.map((name) => name.toLowerCase()))
-  const next: Skills = {}
-
-  for (const [name, entry] of Object.entries(current)) {
-    const isProficient = normalized.has(name.toLowerCase())
-    next[name] = {
-      ...entry,
-      proficient: isProficient,
-      expertise: isProficient ? entry.expertise : false,
-    }
+/** Keep expertise constrained to the authoritative skill-proficiency set. */
+export function reconcileSkillExpertise(proficiencies: Proficiencies): Proficiencies {
+  const skills = new Set(proficiencies.skills.map((name) => name.toLowerCase()))
+  return {
+    ...proficiencies,
+    expertise: proficiencies.expertise.filter((name) => skills.has(name.toLowerCase())),
   }
-
-  for (const name of normalized) {
-    if (next[name]) continue
-    next[name] = { proficient: true, expertise: false, bonus: 0 }
-  }
-
-  return next
 }
 
 /**

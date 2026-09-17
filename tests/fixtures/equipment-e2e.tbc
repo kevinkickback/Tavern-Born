@@ -1,6 +1,6 @@
 {
   "id": "equipment-e2e-char",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Equipment E2E Hero",
   "originSystem": "2014",
   "race": "Human",
@@ -29,7 +29,8 @@
     "tools": [],
     "skills": [],
     "languages": [],
-    "savingThrows": []
+    "savingThrows": [],
+    "expertise": []
   },
   "features": [],
   "feats": [],
@@ -89,7 +90,6 @@
     "speeds": { "walk": 30 },
     "source": { "kind": "manual", "name": "E2E fixture" }
   },
-  "skills": {},
   "details": {},
   "provenance": {
     "proficiencies": {

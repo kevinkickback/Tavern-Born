@@ -5,15 +5,16 @@ import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { applyRest, type RestResult, type RestType } from '@/lib/character/commands/restCommands'
 import type { SpellSlotMaxima } from '@/lib/character/commands/spellSlotCommands'
 import { useCharacterStore } from '@/store/characterStore'
+import type { HitDiceUsed } from '@/types/character'
 
 export interface RestPreviewOptions {
   restType: RestType
   restoreHitPoints: boolean
-  hitDiceRecovered: number
+  hitDiceRecovered: HitDiceUsed
 }
 
 export interface RestPreviewState {
-  hitDiceUsed: number
+  hitDicePools: Array<{ id: string; label: string; die: number; max: number; used: number }>
   preview: (options: RestPreviewOptions) => RestResult | null
   commit: (result: RestResult) => void
 }
@@ -23,7 +24,7 @@ export function useRestPreview(): RestPreviewState {
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const { sharedSlots, pactSlots } = useSpellSlots()
   const { resources } = useClassResources()
-  const { effectiveMaxHP } = useHitPoints()
+  const { effectiveMaxHP, hitDicePools } = useHitPoints()
 
   const spellSlots = useMemo<SpellSlotMaxima>(
     () => ({
@@ -56,7 +57,7 @@ export function useRestPreview(): RestPreviewState {
   )
 
   return {
-    hitDiceUsed: Math.max(0, character?.hitDiceUsed ?? 0),
+    hitDicePools,
     preview,
     commit,
   }
