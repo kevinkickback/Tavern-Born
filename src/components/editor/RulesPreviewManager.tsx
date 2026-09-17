@@ -34,6 +34,7 @@ import {
 } from '@/lib/calculations/spellUtils'
 import {
   getAnchoredPreviewFallbackPosition,
+  getCollisionAvoidingPreviewPosition,
   getTitleBarSafeTop,
   type PreviewBounds,
   type PreviewPosition,
@@ -380,6 +381,7 @@ function PreviewSurface({
 }
 
 interface FloatingPreviewSurfaceProps {
+  avoidElementIds: string
   cancelClose: () => void
   emphasized: boolean
   hasChild: boolean
@@ -396,6 +398,7 @@ interface FloatingPreviewSurfaceProps {
 }
 
 function FloatingPreviewSurface({
+  avoidElementIds,
   cancelClose,
   emphasized,
   hasChild,
@@ -418,16 +421,35 @@ function FloatingPreviewSurface({
     if (!element || !anchor || positionLocked) return
 
     const gap = placement === 'right-start' ? PREVIEW_GAP : 4
-    const fallback = getAnchoredPreviewFallbackPosition(
-      anchor.isConnected ? toBounds(anchor.getBoundingClientRect()) : anchorBounds,
-      {
-        width: element.getBoundingClientRect().width || PREVIEW_WIDTH,
-        height: element.getBoundingClientRect().height || PREVIEW_ESTIMATED_HEIGHT,
-      },
-      { width: window.innerWidth, height: window.innerHeight },
+    const liveAnchorBounds = anchor.isConnected
+      ? toBounds(anchor.getBoundingClientRect())
+      : anchorBounds
+    const overlaySize = {
+      width: element.getBoundingClientRect().width || PREVIEW_WIDTH,
+      height: element.getBoundingClientRect().height || PREVIEW_ESTIMATED_HEIGHT,
+    }
+    const viewport = { width: window.innerWidth, height: window.innerHeight }
+    const getObstacleBounds = () =>
+      avoidElementIds.split('|').flatMap((elementId) => {
+        if (!elementId) return []
+        const obstacle = document.getElementById(elementId)
+        return obstacle?.isConnected ? [toBounds(obstacle.getBoundingClientRect())] : []
+      })
+    const fallback = getCollisionAvoidingPreviewPosition(
+      getAnchoredPreviewFallbackPosition(
+        liveAnchorBounds,
+        overlaySize,
+        viewport,
+        safeTop,
+        placement,
+        gap,
+      ),
+      liveAnchorBounds,
+      overlaySize,
+      viewport,
       safeTop,
-      placement,
-      gap,
+      getObstacleBounds(),
+      PREVIEW_GAP,
     )
     onMove(id, fallback)
 
@@ -444,14 +466,31 @@ function FloatingPreviewSurface({
         ],
       }).then(({ x, y }) => {
         if (!active || !element.isConnected) return
-        onMove(id, { left: x, top: y })
+        const currentAnchorBounds = anchor.isConnected
+          ? toBounds(anchor.getBoundingClientRect())
+          : anchorBounds
+        onMove(
+          id,
+          getCollisionAvoidingPreviewPosition(
+            { left: x, top: y },
+            currentAnchorBounds,
+            {
+              width: element.getBoundingClientRect().width || PREVIEW_WIDTH,
+              height: element.getBoundingClientRect().height || PREVIEW_ESTIMATED_HEIGHT,
+            },
+            { width: window.innerWidth, height: window.innerHeight },
+            safeTop,
+            getObstacleBounds(),
+            PREVIEW_GAP,
+          ),
+        )
       })
     })
     return () => {
       active = false
       cleanup()
     }
-  }, [onMove, anchor, anchorBounds, id, placement, positionLocked, safeTop])
+  }, [onMove, anchor, anchorBounds, avoidElementIds, id, placement, positionLocked, safeTop])
 
   useEffect(() => {
     const source = preview.sourceElement
@@ -874,6 +913,10 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
             {previewChain.map((preview, index) => (
               <FloatingPreviewSurface
                 key={preview.id}
+                avoidElementIds={[
+                  ...(pinnedPreview ? [PINNED_PREVIEW_ID] : []),
+                  ...previewChain.slice(0, index).map((ancestor) => ancestor.id),
+                ].join('|')}
                 preview={preview}
                 emphasized={index === previewChain.length - 1}
                 hasChild={previewChain[index + 1]?.parentId === preview.id}

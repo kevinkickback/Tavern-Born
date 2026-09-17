@@ -141,18 +141,28 @@ test('rules previews preserve their spawning surface in a bounded rolling chain'
 
   const rootBounds = await nestedPreview.boundingBox()
   const previewBounds = await restrainedPreview.boundingBox()
+  const deepestPreviewBounds = await blindedPreview.boundingBox()
   expect(rootBounds).not.toBeNull()
   expect(previewBounds).not.toBeNull()
-  if (!rootBounds || !previewBounds) return
+  expect(deepestPreviewBounds).not.toBeNull()
+  if (!rootBounds || !previewBounds || !deepestPreviewBounds) return
+
+  const doNotOverlap = (
+    first: { x: number; y: number; width: number; height: number },
+    second: { x: number; y: number; width: number; height: number },
+  ) =>
+    first.x >= second.x + second.width ||
+    first.x + first.width <= second.x ||
+    first.y >= second.y + second.height ||
+    first.y + first.height <= second.y
 
   const horizontalGap = Math.min(
     Math.abs(previewBounds.x + previewBounds.width - rootBounds.x),
     Math.abs(previewBounds.x - (rootBounds.x + rootBounds.width)),
   )
-  const previewsDoNotOverlap =
-    previewBounds.x >= rootBounds.x + rootBounds.width ||
-    previewBounds.x + previewBounds.width <= rootBounds.x
-  expect(previewsDoNotOverlap).toBe(true)
+  expect(doNotOverlap(previewBounds, rootBounds)).toBe(true)
+  expect(doNotOverlap(deepestPreviewBounds, rootBounds)).toBe(true)
+  expect(doNotOverlap(deepestPreviewBounds, previewBounds)).toBe(true)
   expect(horizontalGap).toBeLessThanOrEqual(16)
 
   const stackingOrder = await Promise.all([

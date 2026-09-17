@@ -145,14 +145,16 @@ Current implementation notes:
 - Portaled hints and rules previews use `@floating-ui/react-dom` for measured anchoring, offsets,
   collision-aware flipping/shifting, and live viewport updates. The shared scale-aware native
   title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top collision boundary;
-  that module retains only the application-specific clamping used after a preview is pinned and
-  dragged. `src/components/editor/RulesPreviewManager.tsx` owns one app-level portal and enforces a
+  that module retains the application-specific clamping used after a preview is pinned and dragged,
+  plus ancestor-aware packing for recursive preview chains. `src/components/editor/RulesPreviewManager.tsx` owns one app-level portal and enforces a
   rolling maximum of two unpinned previews across every page and modal. The immediate spawning
   surface is retained while the oldest unpinned ancestor is retired. Pinned content is an
   element-independent snapshot, so source rerenders and virtualized-row unmounts do not dismiss it;
   a pin may coexist with the two-level transient chain. Pinning a transient explicitly transfers the
   single pin. Short hover intent, pointer-safe inter-preview corridors, and delayed outside-chain
-  dismissal keep traversal stable without animating shell geometry. Pinned title areas use
+  dismissal keep traversal stable without animating shell geometry. Each transient avoids its
+  visible ancestors, using vertical space when the viewport cannot fit three windows side by side.
+  Pinned title areas use
   `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning.
 - Actions & Effects lives in Builder's Details group and presents source-derived actions and typed
   effects as read-only rows beside clearly separated manual editors. Its responsive split

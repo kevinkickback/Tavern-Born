@@ -153,7 +153,9 @@ pointer and keyboard drag handle through `useDraggablePreview`.
 
 `RulesPreviewManager` creates one portal at `document.body`. Floating UI owns measured anchoring,
 flipping, and viewport shifting; the manager supplies a synchronous collision-safe fallback so an
-overlay never flashes at the viewport origin. Recursive hover uses a short intent delay, while
+overlay never flashes at the viewport origin. Transient placement also reserves the bounds of the
+pin and earlier transient ancestors, trying every side of the spawning shell so deeper content
+cannot cover the context that opened it. Recursive hover uses a short intent delay, while
 invisible collision-aware corridors bridge physical gaps between parent and child shells. Delayed
 dismissal and a document-level outside-chain fallback prevent size changes, pin transfers, or
 unpinning beneath a stationary pointer from stranding or prematurely closing the chain. Preview

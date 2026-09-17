@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   clampPreviewPosition,
   getAnchoredPreviewFallbackPosition,
+  getCollisionAvoidingPreviewPosition,
   getTitleBarCollisionPadding,
   getTitleBarOverlayHeight,
   getTitleBarSafeTop,
@@ -95,5 +96,39 @@ describe('title-bar-safe overlay positioning', () => {
         4,
       ),
     ).toEqual({ left: 120, top: 88 })
+  })
+
+  test('places a deeper preview away from a pinned ancestor', () => {
+    expect(
+      getCollisionAvoidingPreviewPosition(
+        { left: 388, top: 120 },
+        { left: 60, top: 120, width: 320, height: 220 },
+        { width: 320, height: 180 },
+        { width: 1280, height: 720 },
+        40,
+        [
+          { left: 388, top: 120, width: 320, height: 240 },
+          { left: 60, top: 120, width: 320, height: 220 },
+        ],
+        8,
+      ),
+    ).toEqual({ left: 60, top: 348 })
+  })
+
+  test('uses vertical space when three previews cannot fit side by side', () => {
+    expect(
+      getCollisionAvoidingPreviewPosition(
+        { left: 380, top: 120 },
+        { left: 52, top: 120, width: 320, height: 180 },
+        { width: 320, height: 180 },
+        { width: 900, height: 720 },
+        40,
+        [
+          { left: 380, top: 120, width: 320, height: 240 },
+          { left: 52, top: 120, width: 320, height: 180 },
+        ],
+        8,
+      ),
+    ).toEqual({ left: 52, top: 308 })
   })
 })

@@ -110,3 +110,68 @@ export function getAnchoredPreviewFallbackPosition(
     safeTop,
   )
 }
+
+function getOverlapArea(
+  position: PreviewPosition,
+  overlay: OverlaySize,
+  obstacle: PreviewBounds,
+  gap: number,
+): number {
+  const left = Math.max(position.left, obstacle.left - gap)
+  const right = Math.min(position.left + overlay.width, obstacle.left + obstacle.width + gap)
+  const top = Math.max(position.top, obstacle.top - gap)
+  const bottom = Math.min(position.top + overlay.height, obstacle.top + obstacle.height + gap)
+  return Math.max(0, right - left) * Math.max(0, bottom - top)
+}
+
+/**
+ * Keeps a nested preview clear of its visible ancestors. The preferred position is tried first,
+ * followed by every side of the spawning surface; when the viewport cannot fit every window, the
+ * position with the smallest overlap is used.
+ */
+export function getCollisionAvoidingPreviewPosition(
+  preferredPosition: PreviewPosition,
+  anchor: PreviewBounds,
+  overlay: OverlaySize,
+  viewport: ViewportSize,
+  safeTop: number,
+  obstacles: readonly PreviewBounds[],
+  gap: number,
+): PreviewPosition {
+  if (obstacles.length === 0) {
+    return clampPreviewPosition(preferredPosition, overlay, viewport, safeTop)
+  }
+
+  const candidates = [
+    preferredPosition,
+    { left: anchor.left + anchor.width + gap, top: anchor.top },
+    { left: anchor.left - overlay.width - gap, top: anchor.top },
+    { left: anchor.left, top: anchor.top + anchor.height + gap },
+    { left: anchor.left, top: anchor.top - overlay.height - gap },
+  ].map((position) => clampPreviewPosition(position, overlay, viewport, safeTop))
+
+  const uniqueCandidates = candidates.filter(
+    (candidate, index) =>
+      candidates.findIndex(
+        (other) => other.left === candidate.left && other.top === candidate.top,
+      ) === index,
+  )
+  const scored = uniqueCandidates.map((position, index) => ({
+    index,
+    position,
+    overlap: obstacles.reduce(
+      (total, obstacle) => total + getOverlapArea(position, overlay, obstacle, gap),
+      0,
+    ),
+  }))
+
+  return (
+    scored.find((candidate) => candidate.overlap === 0) ??
+    scored.reduce((best, candidate) =>
+      candidate.overlap < best.overlap ||
+      (candidate.overlap === best.overlap && candidate.index < best.index)
+        ? candidate
+        : best,
+    )
+  ).position
+}

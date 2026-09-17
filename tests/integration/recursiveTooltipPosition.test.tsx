@@ -153,6 +153,53 @@ describe('rules preview positioning', () => {
     expect(third.style.top).not.toBe('0px')
   })
 
+  test('keeps a third preview clear when its pinned ancestor forced the parent to the left', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.dataset.hoverName === 'First') return rect(100, 400, 60, 24)
+      if (this.getAttribute('aria-label') === 'First preview') return rect(400, 120, 320, 240)
+      if (this.getAttribute('aria-label') === 'Second preview') return rect(72, 120, 320, 180)
+      if (this.getAttribute('aria-label') === 'Third preview') {
+        return rect(
+          Number.parseFloat(this.style.left) || 0,
+          Number.parseFloat(this.style.top) || 0,
+          320,
+          160,
+        )
+      }
+      return rect(0, 0, 0, 0)
+    })
+    const lookup = buildRecursiveLookup({
+      conditions: [
+        { name: 'First', source: 'PHB', entries: ['See {@condition Second|PHB}.'] },
+        { name: 'Second', source: 'PHB', entries: ['See {@condition Third|PHB}.'] },
+        { name: 'Third', source: 'PHB', entries: ['Third details.'] },
+      ],
+    })
+
+    render(
+      <RulesPreviewManager>
+        <RenderedEntryWithTooltip entry="Read {@condition First|PHB}." recursiveLookup={lookup} />
+      </RulesPreviewManager>,
+    )
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'First' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'First preview' })).getByTitle('Pin tooltip'),
+    )
+    const pinned = screen.getByRole('dialog', { name: 'First preview' })
+    fireEvent.focus(within(pinned).getByRole('button', { name: 'Second' }))
+    const second = screen.getByRole('dialog', { name: 'Second preview' })
+    fireEvent.focus(within(second).getByRole('button', { name: 'Third' }))
+    const third = screen.getByRole('dialog', { name: 'Third preview' })
+
+    expect(pinned.getAttribute('data-preview-pinned')).toBe('true')
+    expect(second.style.left).toBe('72px')
+    expect(second.style.top).toBe('120px')
+    expect(third.style.left).toBe('72px')
+    expect(third.style.top).toBe('308px')
+  })
+
   test('keeps the chain open while the pointer crosses its safe corridor', () => {
     vi.useFakeTimers()
     try {

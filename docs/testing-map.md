@@ -102,7 +102,7 @@ new tests land and do not lower them to merge a change.
   and `itemsBase`. Rules-preview integration and browser coverage enforce the rolling two-preview
   chain, physical-slot reuse without moving the spawning surface, a pin plus two bounded transient levels, hover intent,
   pointer-safe corridors, immutable pinned content, explicit pin transfer, modal-safe portaled interaction, layered Escape behavior,
-  collision-safe placement, stable pinned-child positioning, keyboard access, and pinned snapshots
+  ancestor-aware non-overlapping placement for a pin plus two transients, stable pinned-child positioning, keyboard access, and pinned snapshots
   that survive virtualized source-row unmounts. Selection-modal coverage verifies portaled previews
   remain pointer-interactive and scroll independently above modal dialog layers.
 - Provenance ledger/reconciliation modules
@@ -163,8 +163,9 @@ new tests land and do not lower them to merge a change.
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
   plus global preview-slot invariants, selected-entry pinning without a position jump, and
-  constrained pointer/keyboard movement. Pure positioning tests cover only Tavern Born's fallback
-  and pinned-preview clamping; Floating UI's geometry implementation is not duplicated.
+  constrained pointer/keyboard movement. Pure positioning tests cover Tavern Born's fallback,
+  pinned-preview clamping, and recursive ancestor avoidance; Floating UI's geometry implementation
+  is not duplicated.
 - HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
 - Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
