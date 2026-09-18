@@ -5,10 +5,9 @@ the authority for implementation details; avoid turning this folder into a file-
 
 ## Reading order
 
-1. [.github/copilot-instructions.md](../.github/copilot-instructions.md)
-2. [Architecture Map](architecture-map.md)
-3. The topic document for the area being changed
-4. [Testing Map](testing-map.md)
+1. [Architecture Map](architecture-map.md)
+2. The topic document for the area being changed
+3. [Testing Map](testing-map.md)
 
 ## Topic guides
 

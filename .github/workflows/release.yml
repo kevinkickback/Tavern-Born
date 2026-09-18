@@ -24,8 +24,10 @@ jobs:
   release-source:
     name: Prepare manual release draft
     runs-on: ubuntu-latest
+    # Draft releases are hidden from read-only tokens. This job performs only
+    # reads, but needs write visibility so its initial snapshot includes them.
     permissions:
-      contents: read
+      contents: write
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
@@ -293,15 +295,23 @@ jobs:
             return 1
           }
 
-          assert_draft() {
+          assert_unchanged_draft() {
             local release_id="$1"
-            local state
-            if ! state="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" --jq '.draft')"; then
+            local expected_updated_at="$2"
+            local current_state
+            if ! current_state="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+              --jq '[.draft, .updated_at] | @tsv')"; then
               echo "Could not re-check release $RELEASE_TAG; refusing to modify it." >&2
               exit 1
             fi
-            if [[ "$state" != "true" ]]; then
+            local current_is_draft current_updated_at
+            IFS=$'\t' read -r current_is_draft current_updated_at <<<"$current_state"
+            if [[ "$current_is_draft" != "true" ]]; then
               echo "Release $RELEASE_TAG was published while this run was active; refusing to modify it." >&2
+              exit 1
+            fi
+            if [[ "$current_updated_at" != "$expected_updated_at" ]]; then
+              echo "Release $RELEASE_TAG changed while this run was active; refusing to modify it." >&2
               exit 1
             fi
           }
@@ -344,13 +354,15 @@ jobs:
           fi
 
           release_ids=()
-          while IFS=$'\t' read -r release_id release_is_draft _release_updated_at; do
+          release_updated_at=()
+          while IFS=$'\t' read -r release_id release_is_draft release_updated; do
             [[ -z "$release_id" ]] && continue
             if [[ "$release_is_draft" != "true" ]]; then
               echo "Release $RELEASE_TAG is published; refusing to modify it." >&2
               exit 1
             fi
             release_ids+=("$release_id")
+            release_updated_at+=("$release_updated")
           done <<<"$release_info"
 
           tag_found=false
@@ -388,8 +400,9 @@ jobs:
           # Every replacement starts from one clean draft. This also repairs an
           # interrupted run that left duplicate unpublished drafts for the tag.
           assert_current_main
-          for release_id in "${release_ids[@]}"; do
-            assert_draft "$release_id"
+          for index in "${!release_ids[@]}"; do
+            release_id="${release_ids[$index]}"
+            assert_unchanged_draft "$release_id" "${release_updated_at[$index]}"
             gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
           done
 

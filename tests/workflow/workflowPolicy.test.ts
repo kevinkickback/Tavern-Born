@@ -76,6 +76,13 @@ describe('trusted workflow policy', () => {
       workflow.indexOf('\n  build:'),
       workflow.indexOf('\n  publish-release:'),
     )
+    const releaseSourceJob = workflow.slice(
+      workflow.indexOf('\n  release-source:'),
+      workflow.indexOf('\n  build:'),
+    )
+    expect(releaseSourceJob).toContain('permissions:\n      contents: write')
+    expect(releaseSourceJob).toContain('[.id, .draft, .updated_at] | @tsv')
+
     expect(buildJob).toContain('permissions:\n      contents: read')
     expect(buildJob).not.toContain('GH_TOKEN')
     expect(buildJob).not.toContain('contents: write')
@@ -86,8 +93,12 @@ describe('trusted workflow policy', () => {
     )
     expect(publishJob).not.toContain('actions/checkout')
     expect(publishJob).toContain('contents: write')
-    expect(publishJob).toContain(`for release_id in "\${release_ids[@]}"`)
-    expect(publishJob).toContain('assert_draft "$release_id"')
+    expect(publishJob).toContain(`for index in "\${!release_ids[@]}"`)
+    expect(publishJob).toContain(
+      `assert_unchanged_draft "$release_id" "\${release_updated_at[$index]}"`,
+    )
+    expect(publishJob).toContain('[.draft, .updated_at] | @tsv')
+    expect(publishJob).toContain('current_updated_at" != "$expected_updated_at')
     expect(publishJob).toContain('"$REPLACE_UNPUBLISHED" == "true"')
     expect(publishJob).toContain('"$tag_sha" != "$SOURCE_SHA"')
     expect(publishJob).toContain('"$tag_sha" != "$INITIAL_TAG_SHA"')
