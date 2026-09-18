@@ -425,14 +425,77 @@ jobs:
               -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
           fi
 
+          assert_current_main
           if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
             echo "Tag $RELEASE_TAG no longer points to $SOURCE_SHA; refusing to create a draft." >&2
             exit 1
           fi
-          assert_current_main
+
+          # Use a run-unique temporary title so the exact draft created here can
+          # be identified and rolled back if the tag or main moves during creation.
+          release_title="$RELEASE_TAG (workflow $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT)"
+
+          find_created_release_ids() {
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\" and .draft == true and .name == \"$release_title\") | .id"
+          }
+
+          created_release_id=""
+          cleanup_created_draft() {
+            local status="$1"
+            trap - EXIT
+            if [[ -z "$created_release_id" ]]; then
+              local cleanup_candidates=()
+              while IFS= read -r release_id; do
+                [[ -n "$release_id" ]] && cleanup_candidates+=("$release_id")
+              done < <(find_created_release_ids || true)
+              if [[ "${#cleanup_candidates[@]}" -eq 1 ]]; then
+                created_release_id="${cleanup_candidates[0]}"
+              fi
+            fi
+            if [[ -n "$created_release_id" ]]; then
+              echo "Release state changed during draft creation; removing draft $created_release_id." >&2
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$created_release_id" || true
+            else
+              echo "Could not safely identify this run's draft for cleanup; inspect drafts for $RELEASE_TAG." >&2
+            fi
+            exit "$status"
+          }
+
           gh release create "$RELEASE_TAG" release-artifacts/* \
-            --draft --title "$RELEASE_TAG" \
+            --draft --title "$release_title" \
             --notes-file release-metadata/release-notes.md --verify-tag
+          trap 'cleanup_created_draft "$?"' EXIT
+
+          if ! created_release_info="$(find_created_release_ids)"; then
+            echo "Could not look up the draft created by this run; refusing to continue." >&2
+            exit 1
+          fi
+          created_release_ids=()
+          while IFS= read -r release_id; do
+            [[ -n "$release_id" ]] && created_release_ids+=("$release_id")
+          done <<<"$created_release_info"
+          if [[ "${#created_release_ids[@]}" -ne 1 ]]; then
+            echo "Could not identify the draft created by this run; refusing to continue." >&2
+            exit 1
+          fi
+          created_release_id="${created_release_ids[0]}"
+
+          assert_current_main
+          if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
+            echo "Tag $RELEASE_TAG moved during draft creation; refusing to keep the draft." >&2
+            exit 1
+          fi
+
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$created_release_id" \
+            -f name="$RELEASE_TAG"
+
+          if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
+            echo "Tag $RELEASE_TAG moved while finalizing the draft; refusing to keep it." >&2
+            exit 1
+          fi
+          trap - EXIT
 
   verify-release:
     name: Verify draft release artifacts
