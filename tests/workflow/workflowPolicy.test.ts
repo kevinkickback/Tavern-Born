@@ -106,6 +106,10 @@ describe('trusted workflow policy', () => {
     expect(publishJob).toContain('Tag $RELEASE_TAG was created after release preparation')
     expect(publishJob).toContain('Release $RELEASE_TAG changed after release preparation')
     expect(publishJob).toContain('"$release_fingerprint" != "$INITIAL_RELEASE_FINGERPRINT"')
+    expect(publishJob).toContain('assert_initial_release_state()')
+    expect(publishJob).toContain('assert_no_releases()')
+    expect(publishJob).toContain('A release for $RELEASE_TAG appeared while this run was active')
+    expect(publishJob.match(/assert_no_releases/g)?.length).toBeGreaterThanOrEqual(3)
     expect(publishJob.match(/assert_current_main/g)?.length).toBeGreaterThanOrEqual(4)
     expect(publishJob).toContain(
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"',
@@ -137,12 +141,14 @@ describe('trusted workflow policy', () => {
     const mutateIndex = publishJob.indexOf('Replace or create draft from completed artifacts')
     const deleteIndex = publishJob.indexOf('gh api --method DELETE')
     const createDraftIndex = publishJob.indexOf('gh release create "$RELEASE_TAG"')
+    const cleanupTrapIndex = publishJob.indexOf(`trap 'cleanup_created_draft "$?"' EXIT`)
     const verifyCreatedTagIndex = publishJob.indexOf('Tag $RELEASE_TAG moved during draft creation')
     expect(validateIndex).toBeGreaterThan(-1)
     expect(validateIndex).toBeLessThan(attestIndex)
     expect(attestIndex).toBeLessThan(mutateIndex)
     expect(mutateIndex).toBeLessThan(deleteIndex)
     expect(createDraftIndex).toBeGreaterThan(deleteIndex)
+    expect(cleanupTrapIndex).toBeLessThan(createDraftIndex)
     expect(verifyCreatedTagIndex).toBeGreaterThan(createDraftIndex)
   })
 

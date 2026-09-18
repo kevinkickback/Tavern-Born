@@ -341,6 +341,31 @@ jobs:
             fi
           }
 
+          assert_initial_release_state() {
+            local current_release_info current_release_fingerprint
+            if ! current_release_info="$(lookup_releases)"; then
+              echo "Could not re-check releases for $RELEASE_TAG; refusing to continue." >&2
+              exit 1
+            fi
+            current_release_fingerprint="$(printf '%s' "$current_release_info" | sort | sha256sum | cut -d' ' -f1)"
+            if [[ "$current_release_fingerprint" != "$INITIAL_RELEASE_FINGERPRINT" ]]; then
+              echo "Release $RELEASE_TAG changed after release preparation; refusing to continue." >&2
+              exit 1
+            fi
+          }
+
+          assert_no_releases() {
+            local current_release_info
+            if ! current_release_info="$(lookup_releases)"; then
+              echo "Could not re-check releases for $RELEASE_TAG; refusing to continue." >&2
+              exit 1
+            fi
+            if [[ -n "$current_release_info" ]]; then
+              echo "A release for $RELEASE_TAG appeared while this run was active; refusing to continue." >&2
+              exit 1
+            fi
+          }
+
           assert_current_main
 
           if ! release_info="$(lookup_releases)"; then
@@ -400,6 +425,7 @@ jobs:
           # Every replacement starts from one clean draft. This also repairs an
           # interrupted run that left duplicate unpublished drafts for the tag.
           assert_current_main
+          assert_initial_release_state
           for index in "${!release_ids[@]}"; do
             release_id="${release_ids[$index]}"
             assert_unchanged_draft "$release_id" "${release_updated_at[$index]}"
@@ -408,11 +434,12 @@ jobs:
 
           if [[ "$REPLACE_UNPUBLISHED" == "true" && "$tag_found" == "true" &&
                 "$tag_sha" != "$SOURCE_SHA" ]]; then
+            assert_current_main
+            assert_no_releases
             if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$tag_sha" ]]; then
               echo "Tag $RELEASE_TAG changed while the release was building; refusing to delete it." >&2
               exit 1
             fi
-            assert_current_main
             gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
             tag_found=false
           fi
@@ -426,6 +453,7 @@ jobs:
           fi
 
           assert_current_main
+          assert_no_releases
           if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
             echo "Tag $RELEASE_TAG no longer points to $SOURCE_SHA; refusing to create a draft." >&2
             exit 1
@@ -463,10 +491,10 @@ jobs:
             exit "$status"
           }
 
+          trap 'cleanup_created_draft "$?"' EXIT
           gh release create "$RELEASE_TAG" release-artifacts/* \
             --draft --title "$release_title" \
             --notes-file release-metadata/release-notes.md --verify-tag
-          trap 'cleanup_created_draft "$?"' EXIT
 
           if ! created_release_info="$(find_created_release_ids)"; then
             echo "Could not look up the draft created by this run; refusing to continue." >&2
