@@ -19,12 +19,13 @@ describe('characterPersistenceSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  test('keeps the shared browser character fixture on the current schema', () => {
+  test('accepts the character fixture published with v0.4.0', () => {
     const fixture = JSON.parse(
       fs.readFileSync(path.resolve('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
-    ) as unknown
+    ) as { schemaVersion?: unknown }
     const result = characterPersistenceSchema.safeParse(fixture)
 
+    expect(fixture.schemaVersion).toBe(2)
     expect(result.success ? [] : result.error.issues).toEqual([])
   })
 

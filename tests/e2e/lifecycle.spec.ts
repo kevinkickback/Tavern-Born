@@ -16,7 +16,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
-    schemaVersion: 3,
+    schemaVersion: 2,
     name: 'Seed Character',
     originSystem: '2014',
     race: 'Human',

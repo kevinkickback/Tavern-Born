@@ -7,10 +7,6 @@
 * Rules preview, Compendium, and keyboard navigation improvements
 * Safer manual release checks
 
-## ⚠️ Important
-
-* Characters created before v0.4.1 are incompatible and will be removed from the character list after Tavern Born offers to export their original `.tbc` files.
-
 </details>
 
 <details>
