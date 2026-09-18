@@ -1,82 +1,46 @@
-# Repository Instructions
+# Tavern-Born Repository Instructions
 
-These rules take precedence over convenience or creativity.
+Keep changes simple, testable, and consistent with the existing architecture. These are the
+repository-wide guardrails; detailed implementation guidance belongs in `docs/`.
 
----
+## Read the relevant guide first
 
-## Engineering Standards
+| Work area | Guide |
+| --- | --- |
+| Orientation, contribution checklist, character-format policy | [Documentation index](../docs/README.md) |
+| Code placement, dependencies, or a new subsystem | [Architecture map](../docs/architecture-map.md) |
+| Startup, loading, saving, rendering, or updates | [Data flow](../docs/data-flow.md) |
+| 5etools loading, parsing, filtering, or entity resolution | [Data ingestion](../docs/data-ingestion.md) |
+| Stores, character fields, schema changes, or mutations | [State management](../docs/state-management.md) |
+| Grants, ownership, replacement, or reconciliation | [Provenance](../docs/provenance.md) |
+| Components, hooks, styling, responsiveness, or overlays | [React patterns](../docs/react-patterns.md) |
+| Tests, fixtures, coverage, or release validation | [Testing map](../docs/testing-map.md) |
+| PDF projection, mapping, or templates | [PDF generation](../docs/pdf-generation.md) |
+| Branches, pull requests, packaging, or releases | [CI/CD workflow](../docs/cicd-workflow.md) |
+| User-visible release notes | [Changelog](../docs/changelog.md) |
 
-Use industry best practices unless overridden below. Prefer simple, composable designs with clear separation of concerns, stable public APIs, and explicit behavior. Favor maintainability and testability over cleverness.
+Update the relevant guide in the same change when a stable contract or workflow changes.
 
-## Rules
+## Non-negotiable rules
 
-### 0. Docs routing
-Read relevant docs before non-trivial changes; update them in the same change.
-
-- [docs/README.md](../docs/README.md) — index
-- [docs/architecture-map.md](../docs/architecture-map.md) — where code belongs
-- [docs/data-flow.md](../docs/data-flow.md) — startup/loading/persistence
-- [docs/data-ingestion.md](../docs/data-ingestion.md) — anything in `src/lib/5etools/`
-- [docs/state-management.md](../docs/state-management.md) — stores or mutation flows
-- [docs/provenance.md](../docs/provenance.md) — grant/reconciliation behavior
-- [docs/react-patterns.md](../docs/react-patterns.md) — React hook and rendering conventions for this codebase
-- [docs/testing-map.md](../docs/testing-map.md) — adding or modifying tests
-
-### 1. Never edit `data/`
-`data/` holds 5etools JSON managed externally. Put all fixups in source (e.g. `src/lib/5etools/sourceFallbacks.ts`). Enforced by hooks; never bypass.
-
-### 2. Prefer parsed game data; hardcoded values are fallback-only
-Canonical 5etools values must come from parsed data. If a parser is missing, write one — don't add constants. Emergency fallbacks must be clearly marked, validated against parsed data when available, and easy to remove.
-
-### 3. 5etools list keys must be `name|source`
-Names are not unique across sources. Rendered list items backed by 5etools entities must use the composite key:
-```tsx
-// ✅ items.map((i) => <SelectItem key={`${i.name}|${i.source ?? ''}`} value={i.name} />)
-// ❌ items.map((i) => <SelectItem key={i.name} value={i.name} />)
-```
-Purely synthetic (non-entity) UI arrays may use stable non-entity keys.
-
-### 4. No direct game-data access in components
-Never import JSON in a component. Use `useFilteredGameData()` for character-scoped collections and
-the named hooks in `src/hooks/data/useGameData.ts` for lookups. Direct `useGameDataStore()` selectors
-are reserved for lifecycle state or callers that explicitly own raw collection sets.
-
-### 5. Business logic belongs in `src/lib/` — search before writing
-All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. The function may already exist — check the concern routing table in `docs/architecture-map.md` before writing anything new.
-
-Hooks in `src/hooks/` are thin wrappers connecting lib functions to state.
-
-### 6. Derive, don't store (except mutable runtime state)
-Don't persist pure derived values — compute on demand:
-```tsx
-// ✅ const profBonus = getProficiencyBonus(getTotalLevel(character.classProgression))
-// ❌ character.proficiencyBonus  ← stale
-```
-Do persist mutable gameplay state: current HP, temp HP, spell slot usage, per-rest counters, user overrides. See `docs/state-management.md` for the full policy, including the intentional `activeCharacter` draft exception.
-
-### 7. Stable empty-array fallbacks for memo deps and memoized props
-`?? []` creates a new array reference every render. Never use it inline when the result is a `useMemo`/`useCallback` dep or a prop passed to a `memo`-wrapped child — use a module-level constant instead. See `docs/react-patterns.md`.
-
-### 8. All character mutations through the store
-All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Never mutate state directly.
-
-### 9. UI stack
-- **Modals/overlays**: Radix `Dialog`, `Tooltip`, `Select`, `DropdownMenu`
-- **Notifications**: `toast()` from Sonner — no `alert()` or custom toasts
-- **Styles**: Tailwind first; `cn()` for conditional classes. Inline `style` only for dynamic runtime values (CSS variables, transform values, dynamic dimensions/images). Never for static presentation.
-- **Content pages**: centered `max-w-7xl` container — see `docs/react-patterns.md`.
-- **5etools content**: never render raw JSON. Use `GameContent` for user-facing rules text so inline
-  references consistently support source-aware previews. Use `renderEntry()` from
-  `src/lib/renderer.ts` or `renderEntryCached()` only for explicitly static contexts such as PDFs,
-  plain-text projections, and compact non-interactive summaries. `RenderedEntryWithTooltip` is the
-  lower-level interactive component for callers that already own an explicit recursive lookup.
-
-### 10. Validate changes
-Run checks in proportion to the change. Before handoff, run the relevant tests plus the non-mutating
-CI checks (`npx biome ci .` and `npx tsc -b`). Use `npm run lint` only when intentional auto-format
-and auto-fix changes are acceptable; that script writes files. Never bypass failing checks.
-
-### 11. Comments, docs, and tests
-- **Inline comments**: only when the code is not self-documenting.
-- **JSDoc**: only on public functions, classes, and exported types.
-- **Tests**: every new feature requires relevant unit and/or E2E coverage.
+1. **Never edit `data/`.** It is externally managed 5etools input. Fix ingestion or add an isolated,
+   validated fallback in source code; never bypass the repository guard.
+2. **Parsed data is authoritative.** Do not hardcode canonical game values that can be parsed.
+   Preserve source-qualified `name|source` identity in lookups, persistence, and rendered entity
+   keys; never guess a printing from an unqualified name.
+3. **UI code does not read game-data JSON or recreate rules.** Use `useFilteredGameData()`,
+   `useWizardGameData()`, or the named hooks in `src/hooks/data/useGameData.ts`.
+4. **Respect layer ownership.** Pure business rules and complete transitions belong in `src/lib/`;
+   hooks adapt them to state; components own presentation and interaction. Search for an existing
+   calculator, command, resolver, or parser before adding another implementation.
+5. **Character mutations are atomic.** Route writes through the character store. Commands own
+   replacement/removal behavior and return materialized state with provenance together. Never
+   mutate character objects or patch grant state and ownership separately.
+6. **Derive deterministic values.** Persist player choices and mutable runtime state, not mirrors of
+   calculations such as modifiers, maxima, readiness, or display projections.
+7. **Use the established UI boundaries.** Use Radix primitives for overlays, Sonner for
+   notifications, Tailwind plus `cn()` for static presentation, and `GameContent` for interactive
+   user-facing 5etools rules text. Never render raw 5etools markup or JSON.
+8. **Do not weaken validation to make a change pass.** Add or update behavior-focused tests, run the
+   relevant suites, then run `npx biome ci .` and `npx tsc -b`. Use `npm run lint` only when writing
+   formatting/fixes is intentional. Never bypass a failing check.
