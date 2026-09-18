@@ -38,6 +38,6 @@ describe('Windows title-bar overlay', () => {
 
     render(<AppTitleBar />)
 
-    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#e8e8ec', '#1c2024', 32))
+    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#cdced6', '#1c2024', 32))
   })
 })

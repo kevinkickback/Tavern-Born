@@ -380,8 +380,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
 
               <div aria-live="polite" className="contents">
                 {hasNonPresetSourcesSelected && (
-                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
                     <span>
                       Non-recommended sources often contain DM-only or outdated content. These may
                       clutter your options with material not intended for players.
@@ -390,8 +390,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                 )}
 
                 {data.originSystem === '2024' && (
-                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
                     <span>
                       {preferNewerPrintingsEnabled
                         ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
@@ -401,8 +401,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                 )}
 
                 {data.originSystem === '2014' && (
-                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
                     <span>
                       {preferNewerPrintingsEnabled
                         ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'

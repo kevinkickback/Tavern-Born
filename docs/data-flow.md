@@ -156,7 +156,7 @@ Flow:
 3. Source edits patch `character.allowedSources`. The character's implicit PHB/XPHB ruleset source remains included in the effective filter.
 4. The Prefer Newer Printings control patches `variantRules.preferNewerPrintings` and changes the source-page warning to explain the active filtering behavior.
 5. Removing sources or applying a preset prunes spells from disabled sources and warns the player; other existing source conflicts are surfaced for review.
-6. Shared filtered-data hooks apply the current source and reprint settings to character-scoped selection surfaces.
+6. Shared filtered-data hooks apply the current source and reprint settings to character-scoped selection surfaces. The matching ruleset's public SRD/Basic Rules potions and spell scrolls remain available as core player inventory even though their canonical records are housed in DMG/XDMG; unrelated DMG content remains filtered out.
 
 Existing choices are preserved when rules change. Pages warn the player to review the affected Builder area rather than silently removing prior choices.
 

@@ -232,7 +232,7 @@ function PreviewContents({
         </div>
         <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
           <div className="flex items-start justify-between gap-3">
-            <div className="text-left text-accent-foreground">
+            <div className="text-left text-primary">
               {descriptor.sourceContext ? `Source: ${descriptor.sourceContext}` : ''}
             </div>
             <div className="text-right italic">

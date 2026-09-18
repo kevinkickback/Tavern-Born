@@ -40,10 +40,7 @@ export function DetailHtmlSection({
         <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
       </div>
       {html ? (
-        <GameContent
-          entry={html}
-          className="text-sm [&_a]:text-accent-foreground [&_a]:no-underline"
-        />
+        <GameContent entry={html} className="text-sm [&_a]:text-primary [&_a]:no-underline" />
       ) : (
         <p className="text-sm text-muted-foreground">None</p>
       )}

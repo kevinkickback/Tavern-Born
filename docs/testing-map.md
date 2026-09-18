@@ -137,13 +137,19 @@ new tests land and do not lower them to merge a change.
   user-facing collection boundary, source-qualified deduplication, lightweight readable summaries,
   revised-core edition classification, and composition with type, source, and text filters
 - Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive weight/attunement/currency summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
-- Manual item-selection category coverage includes parsed spellcasting-focus types and unknown or
-  homebrew type codes in tests/unit/itemSelectionModal.test.ts.
+- Manual item-selection coverage includes parsed spellcasting-focus types, unknown or homebrew type
+  codes, armor-category/source badges, and source guidance. Character item-availability tests verify
+  that ruleset-matched public core potions and spell scrolls bypass the DMG source gate without
+  exposing unrelated or wrong-edition content.
 - Shared class/background generic-equipment selection has an accessible-name regression test in
   tests/integration/genericEquipmentSelect.test.tsx.
 - Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
 - Public-route browser coverage opens the real Settings appearance controls, changes both Radix
   radio groups, and rejects uncaught renderer errors during lazy dependency loading.
+- Theme-token coverage verifies the light surface ladder, muted and navigation text contrast, and
+  separate warning accent/text roles; the title-bar overlay test keeps the native Windows chrome
+  aligned with the application shell. Proficiency detail coverage prevents contrast-only white text
+  from returning on plain light surfaces.
 - Proficiency attention-link browser coverage verifies the requested category opens initially but
   later proficiency mutations do not override the user's manual tab navigation.
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags

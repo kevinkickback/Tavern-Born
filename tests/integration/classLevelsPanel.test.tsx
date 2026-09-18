@@ -79,7 +79,7 @@ describe('BuildClassLevelsPanel', () => {
     const { rerender } = render(<BuildClassLevelsPanel {...makeProps()} />)
 
     const incompleteBadge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
-    expect(incompleteBadge?.className).toContain('text-warning')
+    expect(incompleteBadge?.className).toContain('text-warning-foreground')
 
     rerender(
       <BuildClassLevelsPanel
@@ -242,7 +242,7 @@ describe('BuildClassLevelsPanel', () => {
     )
 
     const badge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
-    expect(badge?.className).toContain('text-warning')
+    expect(badge?.className).toContain('text-warning-foreground')
     fireEvent.click(screen.getByText('Level 1 Features'))
     expect(screen.getByText(/Unavailable/)).toBeTruthy()
   })

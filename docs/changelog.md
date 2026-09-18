@@ -3,9 +3,11 @@
 
 ## ✨ Changes
 
-* Ability score, feat, weapon proficiency, and spell lookup corrections
-* Rules preview, Compendium, and keyboard navigation improvements
-* Safer manual release checks
+* Fixed Review page warnings for valid ability score and feat choices
+* Fixed some weapon proficiencies and spells not being recognized correctly
+* Fixed potions and spell scrolls missing when Dungeon Master's Guide was not an active source
+* Equipment choices now show armor types and source books
+* Improved contrast and reduced glare throughout the light theme
 
 </details>
 

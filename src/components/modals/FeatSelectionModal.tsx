@@ -71,7 +71,9 @@ const FeatCard = memo(function FeatCard({
       {!prereqMet && prereqReasons.length > 0 && (
         <div className="flex items-start gap-1.5 mb-1.5 px-2 py-1.5 rounded bg-warning/10 border border-warning/20">
           <Warning className="h-3.5 w-3.5 text-warning flex-shrink-0 mt-0.5" weight="fill" />
-          <p className="text-xs text-warning/90 leading-snug">{prereqReasons.join(' · ')}</p>
+          <p className="text-xs leading-snug text-warning-foreground">
+            {prereqReasons.join(' · ')}
+          </p>
         </div>
       )}
 

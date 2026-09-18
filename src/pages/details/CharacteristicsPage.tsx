@@ -544,7 +544,7 @@ export function CharacteristicsPage() {
               >
                 <CharacteristicsSectionHeader
                   icon={Brain}
-                  iconClassName="text-violet-400"
+                  iconClassName="text-violet-600 dark:text-violet-400"
                   title="Personality"
                 />
                 <div className="p-4 space-y-4">
@@ -635,7 +635,7 @@ export function CharacteristicsPage() {
               >
                 <CharacteristicsSectionHeader
                   icon={Scroll}
-                  iconClassName="text-amber-400"
+                  iconClassName="text-amber-600 dark:text-amber-400"
                   title="Story"
                 />
                 <div className="p-4 space-y-4">

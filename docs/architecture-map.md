@@ -26,7 +26,11 @@ This document describes the current Tavern-Born runtime architecture and where r
   path. Documentation-only artwork belongs under `docs/assets/` so it is not copied into releases.
 - Renderer styles compile through `@tailwindcss/vite`. `src/styles/theme.css` imports only the
   Radix scales reachable through the supported accent, neutral, warning, and destructive semantic
-  tokens; there is no second PostCSS/Autoprefixer processing path.
+  tokens; there is no second PostCSS/Autoprefixer processing path. Light appearance uses a subdued
+  slate surface ladder with distinct shell, canvas, pane, detail, raised, and hover roles. Primary
+  and context navigation share a stronger light-theme foreground role. Warning accents and warning
+  copy use separate semantic tokens so borders and icons stay gold while copy remains neutral and
+  readable.
 
 3. State and persistence
 - Purpose: app state ownership and IndexedDB persistence.
@@ -85,7 +89,7 @@ Spellcasting note:
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
   lower-level string renderer explicitly. External `{@link ...}` directives from game data retain
   their readable labels as non-interactive prose; community URLs are not exposed by the app.
-- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
+- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics. The Add Item catalog displays source badges and the specific armor category instead of a redundant generic armor badge. Character item filtering keeps SRD/Basic Rules potions and spell scrolls from the ruleset's DMG/XDMG available without admitting the rest of that source.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Named references without a source are rejected rather than guessed.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
 - Character-library duplicate policy lives in `src/lib/character/characterTransfer.ts`; HomePage

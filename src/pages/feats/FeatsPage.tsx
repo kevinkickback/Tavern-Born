@@ -205,7 +205,7 @@ export function FeatsPage() {
                             weight="fill"
                           />
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-warning">
+                            <span className="text-sm font-medium text-warning-foreground">
                               {remainingASI} ASI slot{remainingASI !== 1 ? 's' : ''} available
                             </span>
                             <span className="text-xs text-muted-foreground ml-2">
@@ -221,7 +221,7 @@ export function FeatsPage() {
                             weight="fill"
                           />
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-warning">
+                            <span className="text-sm font-medium text-warning-foreground">
                               {pendingRacialChoices.length} racial feat
                               {pendingRacialChoices.length !== 1 ? 's' : ''} pending
                             </span>
@@ -238,7 +238,7 @@ export function FeatsPage() {
                             weight="fill"
                           />
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-warning">
+                            <span className="text-sm font-medium text-warning-foreground">
                               {pendingOriginChoices.length} origin feat
                               {pendingOriginChoices.length !== 1 ? 's' : ''} pending
                             </span>
@@ -255,7 +255,7 @@ export function FeatsPage() {
                             weight="fill"
                           />
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-warning">
+                            <span className="text-sm font-medium text-warning-foreground">
                               {pendingOptionCount} feat{pendingOptionCount !== 1 ? 's' : ''} need
                               setup
                             </span>

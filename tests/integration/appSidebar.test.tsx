@@ -47,6 +47,12 @@ describe('desktop workspace navigation', () => {
     )
     expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('button', { name: 'Compendium' }).className).toContain(
+      'text-[color:var(--navigation-foreground)]',
+    )
+    expect(screen.getByRole('link', { name: 'Race' }).className).toContain(
+      'text-[color:var(--navigation-foreground)]',
+    )
   })
 
   test('keeps actions and effects with character details and folds sources into Rules', () => {

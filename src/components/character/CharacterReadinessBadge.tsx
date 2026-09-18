@@ -21,7 +21,10 @@ export function CharacterReadinessBadge({
   return (
     <Badge
       variant={ready ? 'default' : 'outline'}
-      className={cn(!ready && 'border-warning/50 bg-background/80 text-warning', className)}
+      className={cn(
+        !ready && 'border-warning/50 bg-background/80 text-warning-foreground',
+        className,
+      )}
       aria-label={
         ready
           ? 'Character ready'

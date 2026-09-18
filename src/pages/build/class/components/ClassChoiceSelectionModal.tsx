@@ -73,7 +73,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
       {!isClassChoiceOptionEligible(option) && (
         <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
           <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
-          <div className="text-xs leading-snug text-warning/90">
+          <div className="text-xs leading-snug text-warning-foreground">
             This saved option is no longer eligible. Choose an available replacement to continue.
           </div>
         </div>
@@ -81,7 +81,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
       {!prerequisite.met && prerequisite.reasons.length > 0 && (
         <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
           <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
-          <div className="text-xs leading-snug text-warning/90">
+          <div className="text-xs leading-snug text-warning-foreground">
             {prerequisite.reasons.join(' · ')}
           </div>
         </div>
