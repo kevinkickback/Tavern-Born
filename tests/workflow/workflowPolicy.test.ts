@@ -101,34 +101,21 @@ describe('trusted workflow policy', () => {
     )
     expect(publishJob).toContain('gh release create "$RELEASE_TAG" release-artifacts/*')
     expect(publishJob).toContain('Tag $RELEASE_TAG no longer points to $SOURCE_SHA')
-    expect(publishJob).toContain(
-      'release_title="$RELEASE_TAG (workflow $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT)"',
-    )
-    expect(publishJob).toContain('--draft --title "$release_title"')
-    expect(publishJob).toContain('find_created_release_ids()')
-    expect(publishJob).toContain('cleanup_created_draft()')
-    expect(publishJob).toContain(`trap 'cleanup_created_draft "$?"' EXIT`)
+    expect(publishJob).toContain('--draft --title "$RELEASE_TAG"')
     expect(publishJob).toContain('Tag $RELEASE_TAG moved during draft creation')
-    expect(publishJob).toContain('Tag $RELEASE_TAG moved while finalizing the draft')
-    expect(publishJob).toContain(
-      'gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$created_release_id"',
-    )
-    expect(publishJob).toContain(
-      'gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$created_release_id"',
-    )
+    expect(publishJob).not.toContain('gh api --method DELETE')
+    expect(publishJob).not.toContain('gh api --method PATCH')
     expect(publishJob).not.toContain('gh release upload')
 
     const validateIndex = publishJob.indexOf('Validate completed artifact bundle')
     const attestIndex = publishJob.indexOf('Attest build provenance')
     const mutateIndex = publishJob.indexOf('Create draft from completed artifacts')
     const createDraftIndex = publishJob.indexOf('gh release create "$RELEASE_TAG"')
-    const cleanupTrapIndex = publishJob.indexOf(`trap 'cleanup_created_draft "$?"' EXIT`)
     const verifyCreatedTagIndex = publishJob.indexOf('Tag $RELEASE_TAG moved during draft creation')
     expect(validateIndex).toBeGreaterThan(-1)
     expect(validateIndex).toBeLessThan(attestIndex)
     expect(attestIndex).toBeLessThan(mutateIndex)
     expect(createDraftIndex).toBeGreaterThan(mutateIndex)
-    expect(cleanupTrapIndex).toBeLessThan(createDraftIndex)
     expect(verifyCreatedTagIndex).toBeGreaterThan(createDraftIndex)
   })
 
