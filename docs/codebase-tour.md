@@ -14,7 +14,7 @@ Character state and lifecycle:
 - src/store/characterStore.ts
 - src/types/character.ts
 - src/types/characterSchema.ts — Zod validation schema for character imports and persistence validation (separate from TypeScript types)
-- src/lib/schema/characterSchemaVersion.ts — Exact supported character-schema version and rejection message
+- src/lib/schema/characterSchemaVersion.ts — Current character-schema version and compatibility rejection message
 - src/hooks/character/*
 - src/lib/provenance/sectionRows.ts
 

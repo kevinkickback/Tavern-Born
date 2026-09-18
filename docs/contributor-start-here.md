@@ -49,16 +49,20 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 
 ## Character Format Changes
 
-Tavern-Born is pre-1.0 and intentionally supports only the current character format. For a
-breaking persisted-data change:
+Tavern-Born uses one strict runtime character format. For a breaking persisted-data change:
 
 1. Increment `CURRENT_CHARACTER_SCHEMA_VERSION` in `src/lib/schema/characterSchemaVersion.ts`.
 2. Update `Character`, `characterSchema`, and `createEmptyCharacter` together.
-3. Keep `characterSchema` strict and require the exact current integer schema version.
-4. Test current-format import and persistence plus explicit rejection of older and newer formats.
+3. Add a pure, one-way migration from the previous supported format before strict validation.
+4. Keep historical shapes out of runtime code and persist only the current format.
+5. Test current-format persistence, every supported migration step, and rejection of newer,
+   malformed, or safely unmigratable payloads.
 
-Do not add migrations, downgrade paths, compatibility mirrors, or old-shape fallbacks. Testers with
-unsupported pre-1.0 characters must be recreated.
+Before 1.0, migration is preferred over invalidating characters. Do not add downgrade paths,
+compatibility mirrors, or scattered old-shape fallbacks. At the 1.0 boundary, review the complete
+pre-1.0 migration chain; if the schema has diverged substantially, it may be removed deliberately
+rather than carrying disproportionate compatibility debt into the stable release. Any such cutoff
+must retain export-before-removal recovery and be announced in advance.
 
 ## Review Readiness Checklist
 

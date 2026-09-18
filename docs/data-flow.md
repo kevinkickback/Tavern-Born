@@ -282,9 +282,10 @@ Entry points:
 
 Flow:
 1. `Character.schemaVersion` must equal `CURRENT_CHARACTER_SCHEMA_VERSION`.
-2. Import validates the exact current version and strict character schema before saving.
-3. IndexedDB hydration keeps valid current records and removes unsupported or malformed records from
-   the character list.
+2. Import and hydration migrate supported older payloads to the current version before strict
+   validation. The current schema is the only shape exposed to runtime code or saved again.
+3. IndexedDB hydration keeps valid current records and removes newer, malformed, or safely
+   unmigratable records from the character list.
 4. Rejected records are moved into a persisted quarantine until the Home page requires the user to
    acknowledge their removal. The dialog can export each original record as a `.tbc` backup for
    recovery or use with a compatible older app version. A restart before acknowledgment preserves
@@ -293,7 +294,11 @@ Flow:
 Versioning strategy:
 - Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
 - Non-breaking optional additions do not require a version bump.
-- Older and newer files are intentionally unsupported before 1.0; do not add conversion paths or compatibility fields.
+- Before 1.0, add a pure, sequential migration for each supported older schema rather than branching
+  on old shapes throughout the app. Newer files remain unsupported.
+- Reassess the full pre-1.0 migration chain at the 1.0 boundary. If the schema has changed
+  substantially, the project may intentionally drop that chain instead of carrying disproportionate
+  compatibility debt into 1.0; retain export recovery and announce the cutoff in advance.
 - Purely derived initiative and saving-throw totals are not persisted. Initiative resolves from the
   effective Dexterity modifier plus active effects; saving throws resolve from effective abilities,
   proficiency ownership, and active effects.
@@ -303,7 +308,7 @@ Example breaking change requiring a version bump:
 - Restructuring a nested object that changes how data is accessed
 - Removing a field that changes the interpretation of other fields
 
-See docs/contributor-start-here.md for the pre-1.0 character-format policy.
+See docs/contributor-start-here.md for the character-format policy.
 
 
 ## 7) Auto-Update Lifecycle

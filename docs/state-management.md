@@ -27,8 +27,9 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - All three Zustand stores persist with zustand/persist using the IndexedDB adapter in src/lib/storage/idb-storage.ts.
 - Character store persistence includes the supported `characters` collection and the raw
   `unsupportedCharacters` quarantine; startup always begins with no active character selected.
-  Unsupported records remain durable but hidden from the character list until the compatibility
-  dialog is acknowledged, so closing the app cannot destroy the user's only exportable copy.
+  Records that cannot be migrated or validated remain durable but hidden from the character list
+  until the compatibility dialog is acknowledged, so closing the app cannot destroy the user's
+  only exportable copy.
 - `characterPersistenceSchema` is the normalized persistence-output authority. Its compile-time
   contract requires every parsed output to be assignable to the runtime `Character` type. The
   reverse direction is intentionally broader because draft/import inputs may contain partial
@@ -254,18 +255,25 @@ Origin system note:
 
 **File:** `src/lib/schema/characterSchemaVersion.ts`
 
-The app supports exactly one character format. Import and IndexedDB hydration validate records
-against the strict current schema; records with an older or newer version are rejected rather than
-transformed. Hydration removes incompatible or malformed records from the active library and exposes
-them to the Home page so the tester can choose whether to export them before acknowledging the
-change. Original rejected payloads remain in the persisted quarantine until a blocking Home-page
-dialog is acknowledged, allowing the tester to export unchanged `.tbc` backups for recovery or use
-with a compatible older version. The sanitized character collection is the only active collection
-persisted after hydration.
+The app uses exactly one runtime character format. Import and IndexedDB hydration must migrate any
+supported older payload to the current version before validating it against the strict current
+schema. Runtime code must never branch on historical shapes. Newer, malformed, or safely
+unmigratable records are removed from the active library and exposed to the Home page so the user
+can export them before acknowledging the change. Original rejected payloads remain in the persisted
+quarantine until the blocking dialog is acknowledged. The sanitized character collection is the
+only active collection persisted after hydration.
 
-For a breaking character-format change, update the version constant, type, strict schema, factory,
-fixtures, and store tests in the same change. Do not add migrations, downgrade handlers,
-compatibility mirrors, or alternate readers while this pre-1.0 policy is active.
+Before 1.0, prefer a small, one-way migration for each breaking character-format change. Migrations
+must be pure, sequential, and covered by fixtures from every supported source version; after
+migration, only the current schema is stored. Update the version constant, type, strict schema,
+factory, fixtures, migration chain, and store tests in the same change. Do not add downgrade
+handlers, compatibility mirrors, or historical-shape branches to application code.
+
+The 1.0 release is an explicit compatibility boundary. Reassess the complete pre-1.0 migration
+chain before shipping it. If the schema has diverged enough that retaining those migrations would
+carry disproportionate maintenance debt into 1.0, remove the pre-1.0 chain deliberately and use the
+existing export-before-removal flow, with advance release-note warning. Otherwise retain the tested
+migrations.
 
 ## Current Domain Workflows
 

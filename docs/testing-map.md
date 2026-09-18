@@ -114,7 +114,9 @@ new tests land and do not lower them to merge a change.
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
 - Character persistence schema validation in tests/lib/characterSchema.test.ts, including
-  provenance choice-amount round trips and exact current-version enforcement
+  provenance choice-amount round trips and exact current-version enforcement. When the schema
+  version changes, add immutable older-version fixtures and cover every supported one-way migration
+  step through current-schema validation.
 - Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
 - Character payload validation and rehydrate safety in tests/store/characterStore.test.ts, including
   subscriber notification and persistence of sanitized current-schema records. Home-page coverage
