@@ -21,7 +21,6 @@ lerna-debug.log*
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.github/copilot-instructions.md
 .claude/
 .mcp.json
 
@@ -32,7 +31,6 @@ lerna-debug.log*
 # Tooling/CI artifacts
 **/agent-eval-report*
 docs/review
-AGENTS.md
 
 # Temp folders
 /temp/
