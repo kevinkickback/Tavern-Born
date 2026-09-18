@@ -1,4 +1,7 @@
-import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import {
+  getRaceAbilityChoiceCompletion,
+  normalizeAbilityName,
+} from '@/lib/calculations/abilityScores'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { raceAbilityChoiceReadinessId } from '@/lib/navigation/readinessFocus'
 import type { AbilityName, Character } from '@/types/character'
@@ -10,13 +13,12 @@ export function validateOriginAbilityChoices(
   calculation: CharacterCalculationContext,
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
+  const raceChoiceCompletion = getRaceAbilityChoiceCompletion(
+    calculation.abilityScores.raceAsiData,
+    character.raceAsiChoices ?? [],
+  )
   for (const [index, choice] of calculation.abilityScores.raceAsiData.choices.entries()) {
-    const selected = (character.raceAsiChoices?.[index] ?? [])
-      .map(normalizeAbilityName)
-      .filter((ability): ability is AbilityName => ability !== null)
-      .filter((ability, selectedIndex, all) => all.indexOf(ability) === selectedIndex)
-    const valid = selected.filter((ability) => choice.from.includes(ability))
-    if (valid.length < choice.count) {
+    if (!raceChoiceCompletion[index]) {
       issues.push(
         readinessIssue(
           raceAbilityChoiceReadinessId(index),

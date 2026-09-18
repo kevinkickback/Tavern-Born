@@ -243,6 +243,30 @@ describe('getCharacterReadiness', () => {
     expect(result.issues.map((issue) => issue.id)).not.toContain('background:ability-choices')
   })
 
+  test('rejects duplicate race ability choices across separate choice blocks', () => {
+    const testRace = {
+      name: 'Test Race',
+      source: 'TEST',
+      ability: [
+        { choose: { count: 1, amount: 2, from: ['str', 'dex'] } },
+        { choose: { count: 1, amount: 1, from: ['str', 'dex'] } },
+      ],
+    } as Race5e
+    const character = makeCharacterFixture({
+      race: testRace.name,
+      raceSource: testRace.source,
+      raceAsiChoices: [['str'], ['str']],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: { 'Test Race|TEST': testRace },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(result.issues.map((issue) => issue.id)).not.toContain('race:ability-choice:0')
+    expect(result.issues.map((issue) => issue.id)).toContain('race:ability-choice:1')
+  })
+
   test('does not count abbreviated and full ability names as different choices', () => {
     const testBackground = {
       name: 'Test Background',
