@@ -105,9 +105,65 @@ const MULTICLASS_CHARACTER = {
   lastModified: '2026-01-01T00:00:00.000Z',
 }
 
+const MULTICLASS_GAME_DATA = {
+  races: [],
+  classes: [
+    {
+      name: 'Fighter',
+      source: 'PHB',
+      hd: { faces: 10, number: 1 },
+      classFeatures: [],
+      classFeatureRefs: [],
+    },
+    {
+      name: 'Wizard',
+      source: 'PHB',
+      hd: { faces: 6, number: 1 },
+      casterProgression: 'full',
+      spellcastingAbility: 'intelligence',
+      spellSlotProgression: [[2], [3], [4, 2], [4, 3], [4, 3, 2]],
+      classFeatures: [],
+      classFeatureRefs: [],
+    },
+    {
+      name: 'Cleric',
+      source: 'PHB',
+      hd: { faces: 8, number: 1 },
+      casterProgression: 'full',
+      spellcastingAbility: 'wisdom',
+      preparedSpells: '<$level$> + <$wis_mod$>',
+      spellSlotProgression: [[2], [3]],
+      classFeatures: [],
+      classFeatureRefs: [],
+    },
+  ],
+  backgrounds: [],
+  spells: [],
+  feats: [],
+  items: [],
+  itemsBase: [],
+  itemProperties: [],
+  itemTypes: [],
+  classFeatures: [],
+  actions: [],
+  conditions: [],
+  deities: [],
+  skills: [],
+  senses: [],
+  languages: [],
+  optionalfeatures: [],
+  variantrules: [],
+  trapHazards: [],
+  rewards: [],
+  cultsBoons: [],
+  organizations: [],
+  sources: [],
+}
+
 async function seedCharacter(page: import('@playwright/test').Page) {
   await seedAppState(page, {
     sourcePath: 'e2e-multiclass-seed',
+    gameData: MULTICLASS_GAME_DATA,
     characters: [MULTICLASS_CHARACTER],
   })
 }
@@ -190,4 +246,57 @@ test('multiclass character total level shows in character header', async ({ page
 
   // The header or character summary should reflect total level 8 (5+3)
   await expect(page.getByText('Level 8')).toBeVisible()
+})
+
+test('@focused multiclass spellcasting shows the persisted shared slot pool', async ({ page }) => {
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
+  const multiclassCaster = {
+    ...MULTICLASS_CHARACTER,
+    id: 'multiclass-caster-e2e',
+    name: 'Multiclass Caster E2E',
+    classProgression: [
+      { name: 'Wizard', source: 'PHB', levels: 3 },
+      { name: 'Cleric', source: 'PHB', levels: 2 },
+    ],
+    spells: {
+      ...MULTICLASS_CHARACTER.spells,
+      spellProfiles: [
+        MULTICLASS_CHARACTER.spells.spellProfiles[0],
+        {
+          id: 'class:Cleric|PHB',
+          type: 'class',
+          label: 'Cleric (Lv 2)',
+          className: 'Cleric',
+          classSource: 'PHB',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: false,
+        },
+        MULTICLASS_CHARACTER.spells.spellProfiles[1],
+      ],
+      spellSlots: {
+        ...MULTICLASS_CHARACTER.spells.spellSlots,
+        1: { max: 4, used: 0 },
+        2: { max: 3, used: 0 },
+        3: { max: 2, used: 0 },
+      },
+    },
+  }
+  await seedAppState(page, {
+    sourcePath: 'e2e-multiclass-seed',
+    gameData: MULTICLASS_GAME_DATA,
+    characters: [multiclassCaster],
+    activeCharacterId: multiclassCaster.id,
+  })
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
+
+  await selectCharacterFromHome(page, 'Multiclass Caster E2E')
+  await page.getByRole('link', { name: 'Spells' }).click()
+
+  await expect(page.getByText('Shared Spell Slots')).toBeVisible()
+  await expect(page.getByText('Level 1 slots')).toBeVisible()
+  await expect(page.getByText('Level 2 slots')).toBeVisible()
 })

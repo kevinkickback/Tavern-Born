@@ -73,7 +73,6 @@ export function retractFeatChoiceOptionsForSources(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate,
   }
@@ -166,7 +165,6 @@ export function resolveFeatChoiceCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate: addGrant(provenanceUpdate, 'feats', feat.name, tag),
   }
@@ -231,7 +229,6 @@ export function removeFeatChoiceCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate,
   }
@@ -406,11 +403,6 @@ export function retractFeatOptionsCommand(
     }
   }
 
-  const abilityScores = { ...character.abilityScores }
-  if (selections.abilityScore) {
-    const ability = normalizeAbilityName(selections.abilityScore)
-    if (ability) abilityScores[ability] = Math.max(1, (abilityScores[ability] ?? 10) - 1)
-  }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
     proficiencies.expertise = proficiencies.expertise.filter(
@@ -422,7 +414,6 @@ export function retractFeatOptionsCommand(
     characterPatch: {
       spells: { ...character.spells, spellProfiles },
       proficiencies: reconcileSkillExpertise(proficiencies),
-      abilityScores,
     },
     provenanceUpdate,
   }
@@ -497,7 +488,6 @@ export function commitFeatOptionsCommand(
     proficiencies = { ...proficiencies, tools: [...new Set([...proficiencies.tools, tool])] }
   }
 
-  const abilityScores = { ...character.abilityScores }
   if (selections.abilityScore) {
     const ability = normalizeAbilityName(selections.abilityScore)
     if (ability) {
@@ -506,7 +496,6 @@ export function commitFeatOptionsCommand(
         value: 1,
         sourceTag,
       })
-      abilityScores[ability] = (abilityScores[ability] ?? 10) + 1
     }
   }
   if (selections.optionalFeature) {
@@ -582,7 +571,6 @@ export function commitFeatOptionsCommand(
       fixedFeatOptions,
       spells: { ...character.spells, spellProfiles },
       proficiencies,
-      abilityScores,
     },
     provenanceUpdate,
   }
@@ -656,7 +644,6 @@ export function replaceFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
       feats: selectedFeats.map((feat) => {
         const existing = character.feats.find(
           (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
@@ -757,7 +744,6 @@ export function replaceClassFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
       classFeatChoices:
         feats.length > 0
           ? [
@@ -802,7 +788,6 @@ export function replaceBonusFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      abilityScores: workingCharacter.abilityScores,
       specialFeats: selectedFeats.map((feat) => {
         const existing = character.specialFeats?.find(
           (entry) => entry.name === feat.name && entry.source === (feat.source ?? ''),

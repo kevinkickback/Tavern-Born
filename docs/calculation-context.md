@@ -9,20 +9,19 @@ the header, prerequisites, equipment, spellcasting, level changes, and PDF expor
 
 Effective ability scores are composed in this order:
 
-1. `character.abilityScores`: allocated/base scores and materialized feat-option changes.
+1. `character.abilityScores`: allocated/base scores.
 2. Ruleset-normalized origin bonuses: race/subrace for 2014 or background for 2024.
 3. Persisted class ASI contributions from `character.asiChoices`.
-4. Active typed lasting modifiers from structured source data and labeled manual declarations.
-5. Exact overrides, applied last when explicitly supported.
+4. Source-qualified feat-option bonuses from the provenance ledger.
+5. Active typed lasting modifiers from structured source data and labeled manual declarations.
+6. Exact overrides, applied last when explicitly supported.
 
 Each layer is added to a fresh score object. The persisted base scores are never mutated during
 derivation. Origin entities resolve by `name|source`, with the raw lookup as a fallback when a
 filtered lookup does not contain a character's saved selection.
 
-Feat option commands currently continue to materialize their reversible ability changes in
-`character.abilityScores`. Their provenance records make removal deterministic, but this is a
-temporary exception rather than the long-term model. A future format may move these changes to
-typed contributions after defining stacking and exact-override semantics.
+Feat option commands leave the allocated base untouched. Their source-qualified provenance records
+are the canonical reversible contribution consumed by the calculation context.
 
 ## Field ownership
 
@@ -38,7 +37,7 @@ typed contributions after defining stacking and exact-override semantics.
 ## Consumer contract
 
 Ordinary UI and export code must not read `character.abilityScores` directly. Score editing,
-schema validation, the context itself, and reversible feat commands are the intentional exceptions.
+schema validation, and the context itself are the intentional exceptions.
 The readiness service is
 also an explicit boundary because score-allocation validity must inspect the persisted base scores,
 not the effective totals after origin, ASI, and effect contributions. Canonical domain APIs require

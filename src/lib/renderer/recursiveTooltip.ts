@@ -29,10 +29,6 @@ export interface RecursiveTooltipData {
   html?: string
 }
 
-export interface RecursiveHintState extends RecursiveTooltipData {
-  triggerElement: HTMLElement
-}
-
 export interface RecursiveLookup {
   spells: Map<string, Spell5e>
   items: Map<string, TooltipEntityLike>

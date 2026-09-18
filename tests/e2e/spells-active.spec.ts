@@ -5,7 +5,7 @@ import {
   selectCharacterFromHome,
 } from './helpers/startup'
 
-test('active-character spell workflow: profile switch, add/remove, prepared toggle', async ({
+test('@focused active-character spell workflow: profile switch, add/remove, prepared toggle', async ({
   page,
 }) => {
   const character = {
@@ -21,6 +21,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     classProgression: [
       { name: 'Wizard', source: 'PHB', levels: 2 },
       { name: 'Cleric', source: 'PHB', levels: 1 },
+      { name: 'Druid', source: 'PHB', levels: 1 },
     ],
     abilityScores: {
       strength: 8,
@@ -59,6 +60,17 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
           type: 'class',
           label: 'Cleric (Lv 1)',
           className: 'Cleric',
+          classSource: 'PHB',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: false,
+        },
+        {
+          id: 'class:Druid|PHB',
+          type: 'class',
+          label: 'Druid (Lv 1)',
+          className: 'Druid',
           classSource: 'PHB',
           cantrips: [],
           spellsKnown: [],
@@ -136,6 +148,16 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
         preparedSpells: '<$level$> + <$wis_mod$>',
         spellSlotProgression: [[2]],
       },
+      {
+        name: 'Druid',
+        source: 'PHB',
+        classFeatures: [],
+        classFeatureRefs: [],
+        casterProgression: 'full',
+        spellcastingAbility: 'wisdom',
+        preparedSpells: '<$level$> + <$wis_mod$>',
+        spellSlotProgression: [[2]],
+      },
     ],
     backgrounds: [],
     spells: [
@@ -166,6 +188,20 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
           fromClassList: [{ name: 'Wizard', source: 'PHB' }],
         },
         entries: ['A mote of fire deals damage.'],
+      },
+      {
+        name: 'Entangle',
+        source: 'PHB',
+        level: 1,
+        school: 'C',
+        time: [{ number: 1, unit: 'action' }],
+        range: { type: 'point', distance: { type: 'feet', amount: 90 } },
+        components: { v: true, s: true },
+        duration: [{ type: 'timed', duration: { type: 'minute', amount: 1 } }],
+        classes: {
+          fromClassList: [{ name: 'Druid', source: 'PHB' }],
+        },
+        entries: ['Grasping plants sprout in an area.'],
       },
     ],
     feats: [],
@@ -212,14 +248,23 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   const spellViewTabs = page.getByRole('tablist', { name: 'Spell view' })
   const wizardTab = spellViewTabs.getByRole('tab', { name: /Wizard/ })
   const clericTab = spellViewTabs.getByRole('tab', { name: /Cleric/ })
+  const druidTab = spellViewTabs.getByRole('tab', { name: /Druid/ })
   await expect(wizardTab).toBeVisible()
   await expect(clericTab).toBeVisible()
+  await expect(druidTab).toBeVisible()
   await expect(spellViewTabs.getByRole('tab', { name: /^Class(?:\s+\d+)?$/ })).toHaveCount(0)
 
   await clericTab.click()
   await expect(clericTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('main').getByText('Cleric (Lv 1)')).toBeVisible()
   await expect(page.locator('main').getByText('Wizard (Lv 2)')).toHaveCount(0)
+
+  await druidTab.click()
+  await expect(druidTab).toHaveAttribute('aria-selected', 'true')
+  const druidSpells = page.getByRole('region', { name: /Druid/ })
+  await expect(druidSpells.getByText('Entangle', { exact: true })).toBeVisible()
+  await druidSpells.getByTitle('Not prepared — click to prepare').click()
+  await expect(druidSpells.getByTitle('Prepared — click to unprepare')).toBeVisible()
 
   await wizardTab.click()
   await expect(wizardTab).toHaveAttribute('aria-selected', 'true')

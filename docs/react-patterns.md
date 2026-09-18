@@ -132,15 +132,33 @@ remain pure calculations or commands.
 
 ---
 
-## Recursive Preview Roots
+## Rules Preview Manager
 
-Rules-entry and spell-name previews use `useRecursivePreviewController` for their shared history,
-pinning, close timing, Escape behavior, and navigation state. The root portal is rendered through
-`RecursivePreviewShell`; content-specific metadata and bodies remain in the calling feature.
+All rules-entry and spell-name previews are owned by the single `RulesPreviewManager` mounted at the
+application root. Triggers resolve an immutable content descriptor and send it to the manager; pages,
+cards, virtualized rows, and individual rendered text blocks never own preview state or portals.
 
-Do not create a second preview state machine in a page component. Recursive children remain owned by
-`RecursiveTooltipChain`, while pinned movement stays in `useDraggablePreview`. The visible title area
-is the pointer and keyboard drag handle, and pinning freezes only the selected preview in place.
+The manager keeps a rolling chain of at most two unpinned previews. Opening a reference from the
+newest preview preserves that spawning surface, retires the oldest unpinned ancestor, and reuses
+the retired ancestor's physical slot for the new child. Neither visible shell moves or swaps under
+the pointer while its content changes. A pinned preview remains immutable and may coexist with both
+transient levels, for a bounded maximum of three windows. Opening roots or recursive references can
+only change transient slots; only an explicit pin action may transfer the single global pin. Escape
+closes the newest transient, then its transient parent, then the pin.
 
-The first preview intentionally omits history and close controls. History becomes visible only after
-a child preview exists, and the history selector is the single way to return to an earlier preview.
+Pinned descriptors contain all content needed to render and have no lifecycle dependency on their
+source element. A pinned preview therefore survives route content changes and virtualized-row
+unmounts without retaining hidden rows or increasing overscan. The visible pinned title is the
+pointer and keyboard drag handle through `useDraggablePreview`.
+
+`RulesPreviewManager` creates one portal at `document.body`. Floating UI owns measured anchoring,
+flipping, and viewport shifting; the manager supplies a synchronous collision-safe fallback so an
+overlay never flashes at the viewport origin. Transient placement also reserves the bounds of the
+pin and earlier transient ancestors, trying every side of the spawning shell so deeper content
+cannot cover the context that opened it. Recursive hover uses a short intent delay, while
+invisible collision-aware corridors bridge physical gaps between parent and child shells. Delayed
+dismissal and a document-level outside-chain fallback prevent size changes, pin transfers, or
+unpinning beneath a stationary pointer from stranding or prematurely closing the chain. Preview
+entry uses a fade only; never animate position or dimensions beneath the pointer. Interactive
+content uses `RenderedHtml`, and the shared shell contains wheel events so a portaled preview scrolls
+independently of an underlying modal or virtual list.

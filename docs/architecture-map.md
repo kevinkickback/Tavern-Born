@@ -8,6 +8,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Purpose: native window lifecycle, secure IPC bridge, capability-scoped filesystem access for the
   user-selected local data source, and auto-update management. IPC requests are restricted to the
   top-level trusted renderer; local paths are canonicalized and confined to the native-picker root.
+  The main window accepts navigation only within its trusted renderer root so reload and recovery
+  remain functional, while untrusted navigation and child-window creation stay blocked.
 - Key files: electron/main.ts, electron/preload.ts, electron/updateManager.ts, electron/windowState.ts.
 
 2. Application shell and routing
@@ -81,7 +83,8 @@ Spellcasting note:
 - Full user-facing 5etools rules text renders through `GameContent`, which applies sanitized,
   source-aware recursive previews consistently across build, selection, and Compendium detail
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
-  lower-level string renderer explicitly.
+  lower-level string renderer explicitly. External `{@link ...}` directives from game data retain
+  their readable labels as non-interactive prose; community URLs are not exposed by the app.
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Named references without a source are rejected rather than guessed.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
@@ -142,14 +145,20 @@ Current implementation notes:
   across route changes and its stat group is responsive, the shared anchor hook also rechecks on
   window load/resize, observed anchor resize, and relevant DOM changes instead of assuming the
   anchor was visible when the hint first evaluated.
-- Unpinned portaled hints and recursive rules previews use `@floating-ui/react-dom` for measured
-  anchoring, offsets, collision-aware flipping/shifting, and live viewport updates. The shared
-  scale-aware native title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top
-  collision boundary; that module retains only the application-specific clamping used after a
-  preview is pinned and dragged. Root previews keep only their Pin action, nested previews add
-  direct-history navigation, and pinning freezes the selected entry at its current viewport
-  position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
-  keyboard repositioning while History and Unpin remain independent controls.
+- Portaled hints and rules previews use `@floating-ui/react-dom` for measured anchoring, offsets,
+  collision-aware flipping/shifting, and live viewport updates. The shared scale-aware native
+  title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top collision boundary;
+  that module retains the application-specific clamping used after a preview is pinned and dragged,
+  plus ancestor-aware packing for recursive preview chains. `src/components/editor/RulesPreviewManager.tsx` owns one app-level portal and enforces a
+  rolling maximum of two unpinned previews across every page and modal. The immediate spawning
+  surface is retained while the oldest unpinned ancestor is retired. Pinned content is an
+  element-independent snapshot, so source rerenders and virtualized-row unmounts do not dismiss it;
+  a pin may coexist with the two-level transient chain. Pinning a transient explicitly transfers the
+  single pin. Short hover intent, pointer-safe inter-preview corridors, and delayed outside-chain
+  dismissal keep traversal stable without animating shell geometry. Each transient avoids its
+  visible ancestors, using vertical space when the viewport cannot fit three windows side by side.
+  Pinned title areas use
+  `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning.
 - Actions & Effects lives in Builder's Details group and presents source-derived actions and typed
   effects as read-only rows beside clearly separated manual editors. Its responsive split
   workbench keeps the manual form and Actions/Effects tabs in the narrower left pane and the
@@ -168,9 +177,11 @@ Current implementation notes:
   Source-derived and manual lists are independently collapsible for both actions and effects.
   Actions remains the default.
   Cross-page configuration links carry a presentation-only focus key so the destination card can
-  scroll into view and briefly highlight itself. The route-focus hook removes that visual state
-  after 1.8 seconds, including when reduced-motion styling replaces the animation; the query does
-  not change character state. Review adds its issue ID through
+  scroll into view and briefly highlight itself. The route-focus hook waits until the destination
+  enters the visible area, then removes that visual state after two whole-element contrast flashes
+  over 1.2 seconds, without a persistent border. This attention cue temporarily runs independently of the operating system's reduced-motion
+  preference so its behavior remains visible during pre-release testing; that exception must be
+  reconsidered during the planned accessibility pass. The query does not change character state. Review adds its issue ID through
   `src/lib/navigation/readinessFocus.ts`; issue producers and destination pages share exact ID
   builders and match against known entities rather than parsing prefixes locally. Destinations use
   the resolved focus to select the relevant tab or class, expand a hidden accordion, clear a hiding
@@ -222,13 +233,17 @@ Feat options note:
 - Parsing support lives in `src/lib/5etools/parsers/featOptions.ts`.
 
 Compendium edition filtering note:
-- `src/lib/compendiumEntries.ts` classifies entries with `edition: "one"` or source `XPHB` as
-	5.5e; untagged entries are classified as 5e.
+- `src/lib/compendiumEntries.ts` classifies entries with `edition: "one"` or a revised core
+	rulebook source (`XPHB`, `XDMG`, or `XMM`) as 5.5e; untagged entries are classified as 5e.
 - `src/pages/compendium/CompendiumPage.tsx` exposes a local 5e / 5.5e / Both selector beside
 	Sources and always defaults to Both.
 - Compendium builds its index from all loaded game data and does not read the active character's
 	`originSystem` or `allowedSources`. Its edition, source, type, and text filters are explicit local
 	UI state and do not mutate or persist character state.
+- The index is deliberately curated for user-facing reference material. It includes base equipment,
+	item properties, weapon masteries, and organizations in addition to the primary character-option
+	and rules collections. Level-scoped class-feature records and internal item-type taxonomy are not
+	standalone entries; base and magic items and other exact source-qualified duplicates are collapsed.
 - Character build and gameplay surfaces remain character-scoped through their existing ruleset and
 	allowed-source filtering; the global Compendium behavior is intentionally page-local.
 

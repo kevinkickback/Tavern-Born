@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { describe, expect, expectTypeOf, test } from 'vitest'
 import {
   type CharacterSchemaOutputContract,
@@ -15,6 +17,15 @@ describe('characterPersistenceSchema', () => {
     const result = characterPersistenceSchema.safeParse(character)
 
     expect(result.success).toBe(true)
+  })
+
+  test('keeps the shared browser character fixture on the current schema', () => {
+    const fixture = JSON.parse(
+      fs.readFileSync(path.resolve('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
+    ) as unknown
+    const result = characterPersistenceSchema.safeParse(fixture)
+
+    expect(result.success ? [] : result.error.issues).toEqual([])
   })
 
   test('requires an exact source for every selected subclass', () => {

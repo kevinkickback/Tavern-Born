@@ -183,6 +183,18 @@ const workspaces: Workspace[] = [
         items: [
           { label: 'Spells', path: '/compendium', search: '?type=Spell', icon: MagicWand },
           { label: 'Items', path: '/compendium', search: '?type=Item', icon: Backpack },
+          {
+            label: 'Weapon Masteries',
+            path: '/compendium',
+            search: '?type=Weapon+Mastery',
+            icon: Sword,
+          },
+          {
+            label: 'Item Properties',
+            path: '/compendium',
+            search: '?type=Item+Property',
+            icon: Wrench,
+          },
           { label: 'Skills', path: '/compendium', search: '?type=Skill', icon: Certificate },
           { label: 'Actions', path: '/compendium', search: '?type=Action', icon: Sword },
           {
@@ -199,6 +211,12 @@ const workspaces: Workspace[] = [
           { label: 'Languages', path: '/compendium', search: '?type=Language', icon: Book },
           { label: 'Senses', path: '/compendium', search: '?type=Sense', icon: Sparkle },
           { label: 'Deities', path: '/compendium', search: '?type=Deity', icon: Star },
+          {
+            label: 'Organizations',
+            path: '/compendium',
+            search: '?type=Organization',
+            icon: Users,
+          },
           {
             label: 'Optional Features',
             path: '/compendium',

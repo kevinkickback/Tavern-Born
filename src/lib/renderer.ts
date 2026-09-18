@@ -172,6 +172,10 @@ function renderTags(text: string): string {
   let result = text
   const toAttr = (value: string) => value.replace(/"/g, '&quot;')
   const pickDisplay = (name: string, display?: string) => (display?.trim() ? display : name)
+
+  // 5etools uses these as internal template includes. Unresolved directives are not prose and
+  // must never leak into user-facing content.
+  result = result.replace(/\{#itemEntry [^}]+\}/g, '')
   const renderEntityTag = (
     tagName: string,
     defaultSource: string,
@@ -455,15 +459,7 @@ function renderTags(text: string): string {
     /{@deck ([^|}]+)(?:\|[^}]*)?}/g,
     '<span class="text-accent italic" title="Deck: $1">$1</span>',
   )
-  result = result.replace(/{@link ([^|}]+)\|([^}]+)}/g, (_match, label: string, url: string) => {
-    // Only allow safe schemes — reject javascript:, data:, etc.
-    const trimmed = url.trim()
-    if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
-      return label // strip unsafe link, keep display text
-    }
-    const safeUrl = trimmed.replace(/"/g, '%22').replace(/'/g, '%27')
-    return `<a href="${safeUrl}" class="text-primary underline">${label}</a>`
-  })
+  result = result.replace(/{@link ([^|}]+)\|[^}]+}/g, '$1')
   result = result.replace(
     /{@5etools ([^|}]+)(?:\|[^}]*)?}/g,
     '<span class="text-primary font-medium" title="5etools">$1</span>',

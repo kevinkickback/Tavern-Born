@@ -51,6 +51,11 @@ tests, a production build, measured bundle-budget enforcement, browser end-to-en
 Electron smoke test. Repository-run Node commands use Node 24 throughout CI and release
 validation/build jobs, matching `.nvmrc` and the package engine requirement.
 
+The browser job runs the complete Playwright suite, including the `@golden` level-1-to-20
+progression journeys and the narrower `@focused` caster checks. Developers can run those groups
+independently with `npm run test:e2e:golden` and `npm run test:e2e:focused`; release validation uses
+`npm run test:e2e:release`, which is intentionally the complete suite rather than a tag subset.
+
 For an ordinary ready `dev` to `main` PR:
 
 **deterministic CI → automatic squash merge**
@@ -151,6 +156,12 @@ replaces all matching drafts and the tag. This also repairs duplicate drafts lef
 run. If an earlier replacement stopped after cleanup, rerunning resumes draft creation. Do not
 publish a matching draft while a rebuild run is active. If one is published before its replacement
 starts, the workflow stops without modifying it.
+
+If a prematurely published release and its tag were deliberately deleted, merge the corrective
+changes first and use the same `rebuild-release` dispatch with the corrected `main` commit. Rebuild
+mode verifies that no published release remains, recreates the missing tag at that exact commit, and
+produces a new draft for the normal review and manual-publish steps. Do not use this recovery path
+while either the old published release or its tag still exists.
 
 ### Release artifacts
 

@@ -45,10 +45,24 @@ test('every character-only route redirects to the empty library without an activ
 test('public settings and compendium routes remain available without a character', async ({
   page,
 }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
   await test.step('settings', async () => {
     await page.goto('/#/settings')
     await expect(page).toHaveURL(/\/#\/settings$/)
     await expect(page.getByRole('tablist', { name: 'Settings category' })).toBeVisible()
+
+    await page.getByRole('tab', { name: 'Appearance' }).click()
+    await expect(page).toHaveURL(/\/#\/settings\?section=appearance$/)
+    await expect(page.getByRole('radio', { name: 'Dark' })).toBeAttached()
+    await expect(page.getByRole('radio', { name: 'Arcane' })).toBeAttached()
+
+    await page.getByText('Light', { exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Light' })).toBeChecked()
+    await page.getByText('Eldritch', { exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Eldritch' })).toBeChecked()
+    expect(pageErrors).toEqual([])
   })
 
   await test.step('compendium', async () => {

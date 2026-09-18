@@ -149,9 +149,14 @@ describe('BuildAbilityScoresPage', () => {
 
     try {
       const destination = screen.getByTestId('background-ability-choices')
+      act(() => vi.advanceTimersByTime(48))
       expect(destination.className).toContain('animate-route-focus')
 
-      act(() => vi.advanceTimersByTime(1_800))
+      act(() => vi.advanceTimersByTime(1_199))
+
+      expect(destination.className).toContain('animate-route-focus')
+
+      act(() => vi.advanceTimersByTime(1))
 
       expect(destination.className).not.toContain('animate-route-focus')
     } finally {
@@ -161,6 +166,7 @@ describe('BuildAbilityScoresPage', () => {
   })
 
   test('highlights the legacy race bonus destination from its configuration link', () => {
+    vi.useFakeTimers()
     const legacyRace: Race5e = {
       name: 'Legacy Choice Race',
       source: 'TEST',
@@ -187,8 +193,14 @@ describe('BuildAbilityScoresPage', () => {
       },
     })
 
-    renderPage('/build/ability-scores?focus=race-bonuses')
+    const view = renderPage('/build/ability-scores?focus=race-bonuses')
 
-    expect(screen.getByTestId('race-ability-choices').className).toContain('animate-route-focus')
+    try {
+      act(() => vi.advanceTimersByTime(48))
+      expect(screen.getByTestId('race-ability-choices').className).toContain('animate-route-focus')
+    } finally {
+      view.unmount()
+      vi.useRealTimers()
+    }
   })
 })
