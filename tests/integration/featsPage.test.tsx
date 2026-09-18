@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
@@ -184,7 +184,7 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByRole('status').textContent).toContain('Edit Setup')
   })
 
-  test('resolves and configures a parameterized fixed background feat', () => {
+  test('resolves and configures a parameterized fixed background feat', async () => {
     const provenance = emptyProvenance()
     provenance.feats['magic initiate'] = [
       {
@@ -208,9 +208,11 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByRole('tab', { name: 'Feats' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getAllByText('You gain the following benefits.').length).toBeGreaterThan(0)
     expect(screen.getByText('Cleric')).toBeTruthy()
-    expect(
-      screen.getByRole('button', { name: 'Select Magic Initiate' }).parentElement?.className,
-    ).toContain('animate-route-focus')
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Select Magic Initiate' }).parentElement?.className,
+      ).toContain('animate-route-focus'),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Complete Setup' }))
     expect(screen.getByRole('dialog', { name: 'Configure Magic Initiate' }).textContent).toContain(
       'Cleric Spells',

@@ -67,4 +67,9 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    // Appearance is lazy-rendered from Settings. Pre-bundle its Radix primitive with
+    // React so first navigation cannot invalidate the renderer's dependency graph.
+    include: ['@radix-ui/react-radio-group'],
+  },
 })

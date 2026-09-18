@@ -174,9 +174,11 @@ Current implementation notes:
   Source-derived and manual lists are independently collapsible for both actions and effects.
   Actions remains the default.
   Cross-page configuration links carry a presentation-only focus key so the destination card can
-  scroll into view and briefly highlight itself. The route-focus hook removes that visual state
-  after 1.8 seconds, including when reduced-motion styling replaces the animation; the query does
-  not change character state. Review adds its issue ID through
+  scroll into view and briefly highlight itself. The route-focus hook waits until the destination
+  enters the visible area, then removes that visual state after two whole-element contrast flashes
+  over 1.2 seconds, without a persistent border. This attention cue temporarily runs independently of the operating system's reduced-motion
+  preference so its behavior remains visible during pre-release testing; that exception must be
+  reconsidered during the planned accessibility pass. The query does not change character state. Review adds its issue ID through
   `src/lib/navigation/readinessFocus.ts`; issue producers and destination pages share exact ID
   builders and match against known entities rather than parsing prefixes locally. Destinations use
   the resolved focus to select the relevant tab or class, expand a hidden accordion, clear a hiding

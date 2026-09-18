@@ -27,6 +27,7 @@ const sourceTag = {
 test('a proficiency attention link selects its tab once without overriding later navigation', async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const baseCharacter = makeCharacterFixture({
     id: 'proficiency-attention-character',
     name: 'Proficiency Attention',
@@ -68,6 +69,34 @@ test('a proficiency attention link selects its tab once without overriding later
   await page.reload()
   await selectCharacterFromHome(page, character.name)
   await page.goto('/#/build/proficiencies?attention=choice%3Aacolyte-languages')
+
+  const focusedPanel = page.locator('.animate-route-focus')
+  await expect(focusedPanel).toHaveCount(1)
+  const routeFocusAnimation = await focusedPanel.evaluate((element) => {
+    const animation = element
+      .getAnimations()
+      .find(
+        (candidate) =>
+          candidate instanceof CSSAnimation && candidate.animationName === 'route-focus-flash',
+      )
+    const effect = animation?.effect
+    if (!(effect instanceof KeyframeEffect)) return null
+
+    return {
+      duration: effect.getTiming().duration,
+      filters: effect.getKeyframes().map((frame) => frame.filter),
+    }
+  })
+  expect(routeFocusAnimation).toEqual({
+    duration: 1_200,
+    filters: [
+      'brightness(1) saturate(1)',
+      'brightness(1.45) saturate(1.4)',
+      'brightness(1) saturate(1)',
+      'brightness(1.45) saturate(1.4)',
+      'brightness(1) saturate(1)',
+    ],
+  })
 
   const categoryTabs = page.getByRole('tablist', { name: 'Proficiency category' })
   const languagesTab = categoryTabs.getByRole('tab', { name: /Languages/ })

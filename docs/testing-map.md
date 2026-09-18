@@ -135,6 +135,8 @@ new tests land and do not lower them to merge a change.
 - Shared class/background generic-equipment selection has an accessible-name regression test in
   tests/integration/genericEquipmentSelect.test.tsx.
 - Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
+- Public-route browser coverage opens the real Settings appearance controls, changes both Radix
+  radio groups, and rejects uncaught renderer errors during lazy dependency loading.
 - Proficiency attention-link browser coverage verifies the requested category opens initially but
   later proficiency mutations do not override the user's manual tab navigation.
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
@@ -180,7 +182,7 @@ new tests land and do not lower them to merge a change.
   base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
   rules in tests/integration/racePageSummary.test.tsx
 - Cross-page configuration coverage verifies source-qualified feat focus plus legacy race-bonus and
-  revised background-bonus destination highlights, including explicit highlight expiry.
+  revised background-bonus destination highlights, including the pulse-and-settle highlight expiry.
 - Race-command coverage verifies that 2024 lineage selection is independent of unfinished
   background choices; the corpus-backed full-coverage-character test requires a valid selected lineage when
   the resolved race exposes lineages.
