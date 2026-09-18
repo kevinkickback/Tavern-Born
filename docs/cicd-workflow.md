@@ -93,41 +93,38 @@ enable squash auto-merge.
 ### 2. Manually create the draft
 
 After the release pull request reaches `main`, open **Actions → Release → Run workflow**, select
-`main`, leave **Replace an unpublished tag or draft that targets another commit** disabled for a
-normal release, and run it.
+`main`, and run it.
 
 The workflow:
 
 1. Requires the dispatched revision to be the current `main` head.
 2. Validates stable version metadata and the matching changelog section.
-3. Refuses to modify a published release.
+3. Refuses to modify any existing release or move an existing tag.
 4. Builds Windows, macOS, and Linux packages in parallel without repository write credentials.
 5. Validates the exact ten-file package bundle and updater manifests.
-6. Re-checks the exact initial tag and draft state and repeatedly verifies `main` immediately before
-   release mutations.
-7. Records build provenance, creates or replaces one clean draft, and verifies its tag and assets.
+6. Re-checks that no release appeared and repeatedly verifies `main` and the tag immediately before
+   creating the draft.
+7. Records build provenance, creates one clean draft, and verifies its tag and assets.
 
 The workflow never publishes the release. Review the release notes, all ten assets, the Windows
 portable build, and any advisory review findings before publishing the draft manually.
 
 ### Recovery and repeat runs
 
-The manual workflow is state-aware and safe to rerun:
+The manual workflow is state-aware and never deletes or moves pre-existing release state:
 
 | Existing state | Result |
 | --- | --- |
 | No tag and no release | Creates both after successful builds |
 | Correct tag and no release | Reuses the tag and creates the draft |
-| Correct tag and unpublished draft | Replaces the draft after successful builds |
-| Missing tag with unpublished draft | Replaces the draft and recreates the tag |
-| Unpublished tag points elsewhere | Stops unless the replacement checkbox is enabled |
+| Any unpublished draft | Stops; inspect and delete the draft deliberately before rerunning |
+| Unpublished tag points elsewhere | Stops; inspect and delete the tag deliberately before rerunning |
 | Any published release for the version | Always stops; use a new version |
 
-If a tag and release were both deleted, run the workflow normally with the replacement checkbox
-disabled. If corrective changes reached `main` while an unpublished tag still points to an older
-commit, enable the checkbox. Replacement still occurs only after every new artifact has built and
-validated. The workflow uses atomic tag creation plus immediate state revalidation to stop safely
-when a concurrent tag, draft, or `main` change is detected.
+If a tag and release were both deleted, run the workflow normally. If a failed attempt left a draft
+or an unpublished tag at the wrong commit, inspect that state on GitHub, remove only the confirmed
+unpublished object, and rerun. The workflow uses atomic tag creation and immediate state
+revalidation to stop safely when a concurrent tag, draft, or `main` change is detected.
 
 ### Release artifacts
 
