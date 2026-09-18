@@ -4,14 +4,6 @@ import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import { useGameDataStore } from '@/store/gameDataStore'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/components/settings/DataSourceConfigurator', () => ({
   DataSourceConfigurator: () => <div>Data Source Configurator</div>,
 }))

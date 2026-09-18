@@ -21,7 +21,6 @@ Read relevant docs before non-trivial changes; update them in the same change.
 - [docs/provenance.md](../docs/provenance.md) — grant/reconciliation behavior
 - [docs/react-patterns.md](../docs/react-patterns.md) — React hook and rendering conventions for this codebase
 - [docs/testing-map.md](../docs/testing-map.md) — adding or modifying tests
-- [docs/codebase-tour.md](../docs/codebase-tour.md) — fast concern-to-folder routing
 
 ### 1. Never edit `data/`
 `data/` holds 5etools JSON managed externally. Put all fixups in source (e.g. `src/lib/5etools/sourceFallbacks.ts`). Enforced by hooks; never bypass.
@@ -43,7 +42,7 @@ the named hooks in `src/hooks/data/useGameData.ts` for lookups. Direct `useGameD
 are reserved for lifecycle state or callers that explicitly own raw collection sets.
 
 ### 5. Business logic belongs in `src/lib/` — search before writing
-All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. The function may already exist — check `docs/codebase-tour.md` for where to look before writing anything new.
+All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. The function may already exist — check the concern routing table in `docs/architecture-map.md` before writing anything new.
 
 Hooks in `src/hooks/` are thin wrappers connecting lib functions to state.
 

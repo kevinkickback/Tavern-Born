@@ -1,14 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/hooks/data/useGameData', () => ({
   useClassLookup: () => ({
     'Rogue|PHB': { name: 'Rogue', source: 'PHB', hd: { faces: 8 } },

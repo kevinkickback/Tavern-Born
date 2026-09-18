@@ -1,13 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
-
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
+import { beforeEach, describe, expect, test } from 'vitest'
 
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useCharacterStore } from '@/store/characterStore'

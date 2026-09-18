@@ -5,14 +5,6 @@ import { ManualActionsEditor } from '@/components/character/ManualActionsEditor'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 Element.prototype.hasPointerCapture = () => false
 Element.prototype.setPointerCapture = () => undefined
 Element.prototype.releasePointerCapture = () => undefined

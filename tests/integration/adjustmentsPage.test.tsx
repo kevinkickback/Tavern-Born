@@ -7,14 +7,6 @@ import { SourceDerivedActions } from '@/pages/adjustments/components/DerivedMech
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 describe('AdjustmentsPage', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({ manualActions: [], manualEffects: [] })

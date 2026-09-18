@@ -1,18 +1,10 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { AbilityScoresStep } from '@/components/character/wizard/steps/6-AbilityScoresStep'
 import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
-
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
 
 function resetGameDataStore() {
   useGameDataStore.setState({

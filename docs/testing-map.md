@@ -1,392 +1,113 @@
 # Testing Map
 
-This document maps current test coverage and practical priorities for expansion.
+Tests should protect behavior at the narrowest useful layer. This guide records strategy and
+release commands; it intentionally does not inventory every test file.
 
-## Tooling
+## Layers
 
-- Unit and integration: Vitest
-- E2E: Playwright
-- Lint: Biome
-- Dead code and dependency hygiene: Knip
-- Architectural boundaries and cycles: dependency-cruiser
-- Coverage: V8 via Vitest, with baseline regression thresholds enforced in CI
+| Layer | Use it for | Location |
+| --- | --- | --- |
+| Unit/domain | Calculations, commands, parsers, schemas, reconciliation | `tests/lib/`, `tests/unit/` |
+| Hook/store | React adapters, Zustand lifecycle, async state boundaries | `tests/hooks/`, `tests/store/` |
+| Integration | Page/component workflows with controlled dependencies | `tests/integration/` |
+| Browser E2E | Critical user journeys and persistence across reload | `tests/e2e/` |
+| Electron | IPC, updater, security, packaged startup | `tests/electron/`, `tests/electron-smoke/` |
+| Corpus | Assumptions about the external local 5etools checkout | `tests/corpus/` |
+| Workflow | Release/CI policy contracts | `tests/workflow/` |
 
-Key scripts in package.json:
-- npm run lint
-- npm run check:bundle (run after `npm run build`)
-- npm run check:health
-- npm run report:capabilities (requires the externally managed local `data/` corpus)
-- npm run test
-- npm run test:coverage
-- npm run test:e2e
-- npm run test:e2e:focused
-- npm run test:e2e:golden
-- npm run test:e2e:release
-- npm run test:progression
-- npm run test:electron (run after `npm run build`)
+Prefer pure command tests for combinatorial game rules. Use integration tests for wiring and user
+interaction, not to repeat every command case. E2E covers a small number of high-risk complete
+journeys rather than every display branch.
 
-The coverage command caps Vitest at four workers so instrumentation remains deterministic on
-high-core-count hosts instead of exhausting the renderer test environment with excess concurrency.
+## Shared setup
 
-`npm run check:health` rejects unused files, exports, dependencies, circular dependencies, UI
-imports of managed data JSON, production imports of tests, and dependencies from pure `src/lib`
-modules into UI, hook, page, or store layers. Knip's duplicate-export diagnostic is excluded because
-the few same-value public aliases are intentional compatibility names; unused-code diagnostics stay
-enabled.
+`tests/setup.ts` owns browser shims and the default no-op IndexedDB adapter for tests that do not
+exercise persistence. Store-specific tests may override that module locally.
 
-`npm run check:bundle` measures the actual production output and enforces reviewed budgets for the
-initial renderer, lazy chunks, worker, static assets, and total distribution. Its measurement and
-failure behavior is covered by `tests/bundle-budget.test.ts`; CI and `npm run dist` both enforce it.
+Reusable character factories live in `tests/fixtures/characterFixtures.ts`; active-character store
+setup lives in `tests/fixtures/characterStoreFixtures.ts`. Add focused fixture builders instead of
+copying full character literals. Large representative `.tbc` fixtures are reserved for import/PDF
+and cross-surface contracts.
 
-The current global coverage floor is 60% statements, 50% branches, 57% functions, and 63% lines.
-These values are an honest ratchet based on the measured suite, not the long-term target; raise them as
-new tests land and do not lower them to merge a change.
+## Patterns
 
-## Current Coverage Areas
+- Use `test.each` for input/output matrices and ruleset/class variants.
+- Assert the public command/hook result, not intermediate implementation calls.
+- For ownership changes, assert materialized state and provenance together.
+- For store saves, cover pending success, rejection/retry, and an edit made while saving.
+- For source-qualified data, include same-name/different-source cases.
+- For parser resilience, distinguish required failure from optional degradation.
+- Test accessibility through roles/names and keyboard behavior where practical.
+- Avoid comments that narrate obvious test steps; name the behavior instead.
 
-- Core calculations in src/lib/calculations/* (including spellUtils)
-- Character calculation-context coverage for source-qualified resolution, ruleset normalization,
-  origin/ASI score composition, equipment state, and cross-surface effective-score agreement.
-- The six-fixture representative matrix in
-  `tests/fixtures/representativeCharacters.ts` and
-  `tests/integration/representativeCharacters.test.tsx` covers a 2014 dwarf martial, 2014 elf
-  wizard, 2024 cleric choices, 2024 druid choices, 2024 weapon mastery, and a level-changing
-  multiclass spellcaster. Every case crosses the real Builder review and header displays,
-  prerequisite checks, equipment/carrying calculations, spell profiles and slot pools, readiness,
-  and both PDF mappings from source-qualified lookups. The multiclass case also verifies active
-  item effects and class-owned ASI retraction on level-down.
-- Structured movement coverage for race/subrace inheritance, alternate and unknown modes, hover,
-  manual adjustments, exact overrides, and both PDF templates.
-- A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
-  consumers from bypassing the effective-score boundary.
-- Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts,
-  including independent spellbook/known, cantrip, and preparation capacities for 2014 and 2024
-  casters. Readiness and presentation regressions verify fixed or always-prepared grants and
-  case-variant duplicates do not satisfy or inflate player-choice quotas. Ownership regressions
-  cover class selections that overlap subclass grants, case-insensitive/source-qualified readiness,
-  replacement-only levels, non-fixed profile fallback when choice provenance is missing, clean
-  source-qualified replacement labels, conservative replacement-level recovery, reverse-order
-  spell-swap rollback on level-down, and 2014 subclass-owned spellcasting profiles and class-page
-  choice lists. Spell identity and selection coverage verifies
-  exact `Name|Source` resolution, selected-printing persistence, source-safe pruning, and clean
-  display labels.
-- Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
-- HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
-  recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
-  uninitialized current HP, source-aware draft previews, and current/temp HP saves without
-  typed-effect clamping drift
-- AC calculation and state coverage for equipment/Dexterity derivation, read-only equipped-source
-  breakdowns, positive and negative manual adjustments, exact overrides, source-aware direct-value
-  drafts, and canonical effective reads
-- Shared stat-settings coverage verifies HP, AC, and movement drafts preserve parsed source effects,
-  typed manual effects, and activation context through preview and persisted settings writes.
-- 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
-- Class-choice normalization coverage for source-qualified feature options, optional-feature
-  progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
-  classification, bounded singular/plural counts, proficiency-constrained item choices, and
-  unsafe-shape diagnostics, including level-gated Artificer plans and the configured 2024 corpus.
-- Corpus capability coverage inventories class choices, movement forms, top-level structured field
-  shapes, and unresolved source-qualified references without making the external `data/` directory
-  a CI prerequisite. Copied-subclass tests cover both unique source-safe resolution and ambiguous
-  no-guess behavior.
-- Class-choice option resolution and Builder workflow coverage in
-  tests/lib/classChoiceOptions.test.ts, tests/hooks/useClassPageControllers.test.tsx, and
-  tests/integration/classLevelsPanel.test.tsx and
-  tests/integration/classChoiceSelectionModal.test.tsx (base-item catalog filters, parsed mastery
-  descriptions, parsed-label weapon range, magic-variant templates, mastery-property filtering and presentation, source
-  identity, retained unavailable selections, store-backed persistence, selection-card level/feature
-  placement, eligibility-aware completion cards, unavailable-option selection guards, and
-  unresolved-choice warnings). Shared pane tests also verify collapsed panes leave flex sizing.
-- Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions,
-  source-less rejection, and nested subrace merging
-- Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
-- Renderer output in src/lib/renderer.ts, including non-interactive labels for external game-data
-  links
-- Recursive reference lookup coverage includes explicit collection sets, stable source/name keys,
-  and `itemsBase`. Rules-preview integration and browser coverage enforce the rolling two-preview
-  chain, physical-slot reuse without moving the spawning surface, a pin plus two bounded transient levels, hover intent,
-  pointer-safe corridors, immutable pinned content, explicit pin transfer, modal-safe portaled interaction, layered Escape behavior,
-  ancestor-aware non-overlapping placement for a pin plus two transients, stable pinned-child positioning, keyboard access, and pinned snapshots
-  that survive virtualized source-row unmounts. Selection-modal coverage verifies portaled previews
-  remain pointer-interactive and scroll independently above modal dialog layers.
-- Provenance ledger/reconciliation modules
-- Provenance section row routing helper in src/lib/provenance/sectionRows.ts
-- Provenance composed hooks in src/hooks/character/useProvenance*.ts
-- Zustand stores in src/store/*
-- Character persistence schema validation in tests/lib/characterSchema.test.ts, including
-  provenance choice-amount round trips and exact current-version enforcement. When the schema
-  version changes, add immutable older-version fixtures and cover every supported one-way migration
-  step through current-schema validation.
-- Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
-- Character payload validation and rehydrate safety in tests/store/characterStore.test.ts, including
-  subscriber notification and persistence of sanitized current-schema records. Home-page coverage
-  verifies unsupported records require acknowledgment and remain exportable until dismissed.
-- Compile-time compatibility between normalized persistence output and the runtime `Character`
-  contract in tests/lib/characterSchema.test.ts
-- Build flow extracted helpers:
-	- src/pages/build/ability-scores/model/data.ts
-	- src/pages/build/class/model/asi.ts
-	- src/pages/build/class/model/pageUtils.ts
-	- src/lib/character/commands/classCommands.ts
-	- src/lib/character/commands/spellCommands.ts
-	- src/pages/build/proficiencies/model/data.ts
-	- src/pages/build/class/model/levelsUtils.ts
-	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
-	- `formatWeaponCategoryLabel` weapon category key → display label
-- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including the curated
-  user-facing collection boundary, source-qualified deduplication, lightweight readable summaries,
-  revised-core edition classification, and composition with type, source, and text filters
-- Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive weight/attunement/currency summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
-- Manual item-selection coverage includes parsed spellcasting-focus types, unknown or homebrew type
-  codes, armor-category/source badges, and source guidance. Character item-availability tests verify
-  that ruleset-matched public core potions and spell scrolls bypass the DMG source gate without
-  exposing unrelated or wrong-edition content.
-- Shared class/background generic-equipment selection has an accessible-name regression test in
-  tests/integration/genericEquipmentSelect.test.tsx.
-- Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
-- Public-route browser coverage opens the real Settings appearance controls, changes both Radix
-  radio groups, and rejects uncaught renderer errors during lazy dependency loading.
-- Theme-token coverage verifies the light surface ladder, muted and navigation text contrast, and
-  separate warning accent/text roles; the title-bar overlay test keeps the native Windows chrome
-  aligned with the application shell. Proficiency detail coverage prevents contrast-only white text
-  from returning on plain light surfaces.
-- Proficiency attention-link browser coverage verifies the requested category opens initially but
-  later proficiency mutations do not override the user's manual tab navigation.
-- Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
-- Armor-restriction reconciliation coverage for nonproficient armor, duplicate body/shield slots,
-	legacy type-only armor records, and preservation of other equipped gear
-- Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
-- Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
-- Feat command coverage includes class-owned progression choices, bonus-feat isolation,
-  source-qualified race/background choices, option retraction, and class level-down cleanup.
-- Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
-- Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
-- Subclass picker coverage verifies structured inline source markup is rendered as formatted content
-  rather than exposed as raw 5etools syntax in tests/integration/subclassSelectionModal.test.tsx.
-  Class parser coverage verifies subclasses copied onto revised parent classes inherit their
-  summaries and resolved feature references, including the configured-corpus 2024 Fighter copy of
-  Arcane Archer.
-- Header HP/AC launch controls, deliberate Rest-action absence, immediate in-session one-time-hint
-  reset coverage, responsive persistent-anchor recovery, and one-time entrance animation across
-  temporary anchor loss in tests/integration/appHeader.test.tsx,
-  tests/integration/anchoredHint.test.tsx, and tests/hooks/useAnchoredHintPosition.test.tsx
-- App-mechanics coverage verifies that one-time hint resets preserve unrelated storage, notify only
-  subscribed listeners, tolerate unavailable browser storage, and remain available from Settings.
-  Anchored hints coalesce rapid layout signals and cancel pending work on teardown; rules previews
-  synchronously anchor the transient slot to its trigger or pinned shell and flip away from viewport
-  edges without flashing at the window origin.
-- Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
-- Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
-  plus global preview-slot invariants, selected-entry pinning without a position jump, and
-  constrained pointer/keyboard movement. Pure positioning tests cover Tavern Born's fallback,
-  pinned-preview clamping, and recursive ancestor avoidance; Floating UI's geometry implementation
-  is not duplicated.
-- HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
-  tests/integration/armorClassModal.test.tsx
-- Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
-  tests/integration/derivedMechanicsOverview.test.tsx,
-  tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
-  including Actions-first ordering/default, Effects deep links, visually grouped collapsible action
-  categories, action-sized source filtering,
-  independently collapsible source/manual groups for both mechanic types, read-only source-owned
-  rows, active equipment requirements,
-  manual-entry separation, and the responsive form/detail split workbench
-- Race summary coverage for parsed unresolved, completed, and fixed ability bonuses; the custom
-  base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
-  rules in tests/integration/racePageSummary.test.tsx
-- Cross-page configuration coverage verifies source-qualified feat focus plus legacy race-bonus and
-  revised background-bonus destination highlights, including the pulse-and-settle highlight expiry.
-- Race-command coverage verifies that 2024 lineage selection is independent of unfinished
-  background choices; the corpus-backed full-coverage-character test requires a valid selected lineage when
-  the resolved race exposes lineages.
-- Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
-  tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx. The 2024
-  Background page regression in tests/integration/backgroundPage.test.tsx verifies selection does
-  not force fixed-feat configuration, the proficiency grid is not duplicated with origin fields,
-  configurable feats link to the source-qualified Feats entry, and all parsed ability-assignment
-  patterns appear in the setup summary. Deep-link selection is covered by
-  tests/integration/featsPage.test.tsx; pure compact summary and pending Sources-row formatting is
-  covered by tests/unit/backgroundPageData.test.ts. Ability Scores integration covers unresolved
-  2024 background attribution and ruleset-correct empty guidance.
-- Review-page integration coverage in tests/integration/reviewPage.test.tsx verifies the default
-  Needs Attention tab, separate Character Overview, and issue-qualified readiness navigation
-  targets. Class readiness and level-panel coverage verifies that subclass, advancement, and
-  normalized class-choice links retain their class and level and reveal the exact targeted control;
-  feature-owned class diagnostics are covered so adjacent diagnostics cannot receive the same focus.
-- Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
-- Character Rules tabs, separate Rules navigation destinations, and source-page layout coverage in
-  tests/integration/rulesPage.test.tsx and tests/integration/sourcesPanelLayout.test.tsx
-- Ability-score method descriptors are tested for both origin systems in
-  tests/unit/abilityScoreMethods.test.ts.
-- Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx
-- Characteristics page draft synchronization, immediate detail persistence, and custom/preset
-	organization transitions in tests/integration/characteristicsPage.test.tsx
-- Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
-- Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
-- Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
-- Spell identity coverage includes lowercase legacy references, source-qualified catalog resolution,
-  modal hiding/locking, mixed-case command deduplication, source-qualified racial-pool retention,
-  and atomic racial-choice replacement.
-- Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
-- Structured class-choice command coverage in tests/unit/classChoiceCommands.test.ts includes
-  partial drafts, cardinality/source validation, identity-stable slot ownership across later
-  catalog-sorted additions, feature-shaped grant materialization/replacement, explicit
-  non-inference for item choices, and level/class retraction.
-- Source-qualified class-choice coverage tests select the upstream `srd52: true` cohort, require a
-  unique 20-level matrix for every tagged class, and reject diagnostics, incomplete progressions,
-  and mismatched owners (`tests/lib/5etools/classChoiceCoverage.test.ts` and
-  `tests/corpus/dataCapabilities.test.ts`).
-- Tests that validate the ignored local `data/` corpus must use `runIf` guards and skip cleanly when
-  that external corpus is absent in CI. Deterministic parser behavior remains covered by committed
-  test fixtures and synthetic inputs.
-- Strict current-version import and hydration rejection coverage in tests/store/characterStore.test.ts
-- Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
-- Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
-- Progression uses three complementary layers:
-  - `tests/e2e/progression-golden.spec.ts` runs deterministic 2014 Variant Human/Arcane
-    Trickster and 2024 Human/Eldritch Knight journeys from the creation wizard through level 20,
-    including origin choices, every earned class ASI, weapon mastery, subclass spellcasting, HP
-    refill checkpoints, readiness, save, and reload.
-  - `tests/unit/characterProgressionMatrix.test.ts` exercises every 2014 and 2024 core class at
-    every level from 1 through 20. This is the fast invariant layer for progression ownership,
-    hit-point gains, full-current-HP behavior, level-down retraction, and the level cap.
-  - `tests/corpus/dataCapabilities.test.ts` verifies that the golden journeys' Variant Human,
-    revised Human/Soldier, Arcane Trickster, Eldritch Knight, and origin-feat assumptions remain
-    present in the parsed managed corpus. The browser fixtures are therefore deterministic subsets,
-    not an independent hand-written rules source.
-- Focused browser journeys are tagged `@focused`; the level-1-to-20 release blockers are tagged
-  `@golden`. Use the tagged scripts for quick diagnosis and `npm run test:e2e:release` for the full
-  browser suite. The release script uses one worker so persistence-heavy journeys are deterministic
-  on developer machines as well as CI; `npm run test:e2e` remains the faster parallel feedback loop.
-  Pull-request CI deliberately continues to run the full suite because it is still small enough to
-  provide stronger coverage than the minimum golden-plus-focused gate.
-- Class-page spell choice coverage in tests/unit/spellCommands.test.ts and
-  tests/hooks/useClassPageControllers.test.tsx verifies that later-level additions and reselections
-  update profile/provenance state atomically without removing earlier or unattributed choices, while
-  subclass school restrictions display plain-language guidance and replacement ceilings follow the
-  level of the replacement rather than the removed spell's original selection level. The
-  command matrix covers every core 2014 and 2024 spellcasting class plus Artificer, including known,
-  prepared, spellbook, and Pact casting models.
-- Basic E2E startup/navigation smoke
-- Exhaustive no-character route-guard E2E for every protected character route, with public Settings and Compendium access checks
-- Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
-- Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
-- Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
-- Character copy and transfer coverage for immediate exact deep copies, collision-free naming,
-  complete-character `.tbc` export, and schema-validated import.
-- Initial-character command coverage verifies that legacy racial feat choices are retained and
-  racial ability choices made in the creation wizard resolve their provenance records immediately.
-- Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
-- Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
-- Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
-- Ingestion missing-file resilience in tests/lib/5etools/dataLoader.test.ts (continues when indexed class file returns 404)
-- Ingestion malformed-payload resilience in tests/lib/5etools/dataLoader.test.ts (drops non-array entity payloads and malformed spell payloads without failing load)
-- Ingestion empty-object payload resilience in tests/lib/5etools/dataLoader.test.ts (absent entity keys treated as empty collections)
-- Ingestion partial spell index resilience in tests/lib/5etools/dataLoader.test.ts (valid spell files load when some indexed files are malformed)
-- Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
-- Ingestion offline fail-fast coverage in tests/lib/5etools/dataLoader.test.ts (throws when zero top-level remote resources are reachable)
-- Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
-- Bonus feat option workflow coverage in tests/hooks/useFeatProvenanceMutations.test.tsx and tests/integration/featsPage.test.tsx (automatic configuration after selection, setup persistence, and grant cleanup on removal)
-- Parameterized fixed feat coverage in tests/lib/featGrants.test.ts, tests/lib/provenance/applyFeatGrantBlocks.test.ts, tests/integration/featOptionsModal.test.tsx, and tests/integration/featsPage.test.tsx (canonical lookup, fixed-step skipping, fixed spell-list setup, and option persistence)
-- Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
-- Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
-- SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
-- Shared/Pact slot command and hook coverage in tests/lib/spellSlotCommands.test.ts and
-  tests/hooks/useSpellSlotMutations.test.tsx; read-only Builder capacity display in
-  tests/integration/spellcastingDetailsCard.test.tsx and tests/e2e/rest-and-slots.spec.ts.
-- Atomic rest calculation, hook commit, and preview-dialog choice coverage in
-  tests/lib/restCommands.test.ts, tests/hooks/useRestPreview.test.tsx, and
-  tests/integration/restPreviewDialog.test.tsx.
-- Structured feat-effect coverage verifies source-qualified lookup across persisted feat owners,
-  deduplication, unconditional resistance/immunity projection, and fail-closed handling of choice
-  objects without interpreting rules prose.
-- Spell display-name coverage verifies lowercase 5etools grant tokens render with canonical parsed casing
-- Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
-- Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)
-- Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
-- Workflow policy coverage in tests/workflow/workflowPolicy.test.ts keeps pull-request CI scoped to
-  `main`, forbids a custom merge workflow, and locks manual draft recovery, immutable published
-  releases, read-only package builds, action pinning, and artifact validation.
-- Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload
-  bridge, trusted IPC, and trusted renderer reloads)
-- Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
-	including class icons, current portrait and organization paths, hosted base paths, and real packaged SVG loading
-- Store-level atomic load coverage in tests/store/gameDataStore.test.ts prevents failed background
-  refreshes and required foreground resource failures from clobbering cache/state while allowing
-  optional foreground presentation failures, and rejects stale progress from superseded loads.
-- Character sheet PDF boundary coverage for lookup-enriched view-model projection, active typed
-  defenses, unified feat ownership, organization-emblem embedding, semantic 2014/2024 mapping,
-  shared field-capacity limits, export-preflight classification, real shipped-template field-name
-  contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for
-  resistance, armor, language, tool, and checkbox appearances and flat
-  workspace-shell/preview-canvas presentation coverage
-- Calculation-context, resource-hook, and PDF regressions verify initiative, sense-range, and
-  resource-maximum effects have live consumers. Filtered item-effect resolution also verifies exact
-  raw-catalog fallback for retained source-qualified equipment.
-- Action projection coverage resolves parsed class, subclass, selected-feature, and every persisted
-  feat-owner container instead of relying on empty saved presentation descriptions. Spellcasting
-  detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses;
-  action activation distinguishes known and level-only prepared casters from daily prepared casters.
-- Class-rule normalization includes corpus-backed 2014 Paladin Channel Divinity progression checks.
-- Importable, ruleset-specific comprehensive PDF coverage in
-  tests/fixtures/full-coverage-character-2014.tbc, tests/fixtures/full-coverage-character-2024.tbc, and
-  tests/lib/fullCoverageCharacterFixture.test.ts. The fixtures retain high-capacity multiclass, spell,
-  skill/save, attack, magic-item, inventory, narrative, and runtime coverage while a corpus audit
-  requires every source-qualified entity to resolve and forbids embedded item/feat/feature prose.
-- Route-decomposition coverage keeps Feats and Characteristics behavior under their existing
-  integration suites; `tests/lib/characteristicsModel.test.ts` additionally locks current structured
-  organization drafts and data-agnostic organization presentation.
+## High-risk contracts
 
-## High-Priority Gaps
+Maintain coverage for:
 
-1. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
-2. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
-3. **Remaining character page journeys**: Golden progression now crosses Race, Proficiencies,
-   Ability Scores, Class, Spells, and Review. Rules, Conditions, and character-sheet interactions
-   still rely primarily on integration tests rather than focused E2E journeys.
+- character schema validation, supported migrations, quarantine/export recovery;
+- class progression through level 20, level-down, multiclassing, HP refill, and subclass casting;
+- origin-system feat/ability ownership and readiness navigation;
+- spell profile/provenance atomicity, prepared-caster models, replacements, and slot pools;
+- overlapping provenance owners and source changes;
+- source filtering, exact fallback resolution, and ingestion atomicity;
+- recursive rules previews, pin/transient behavior, anchoring, scrolling, and modal interaction;
+- character save/reload, copy/import/export, and unsaved-close protection;
+- PDF view-model/template contracts and shipped form compatibility;
+- Electron IPC/local-path boundaries, updater lifecycle, and packaged startup;
+- CI/release policy.
 
-## Test Coverage by Layer
+The golden browser journeys cover deterministic 2014 Variant Human/Arcane Trickster and 2024
+Human/Eldritch Knight creation through level 20. The fast progression matrix covers every supported
+core class and level. Guarded corpus tests verify that the external catalog still satisfies the
+fixtures' assumptions.
 
-| Layer | Actual | Aspirational | Notes |
-|-------|--------|--------------|-------|
-| Calculations (lib) | ✅ Excellent | ✅ Complete | 34+ unit tests, all passing |
-| Stores | ✅ Good | ✅ Good | Validation, rehydrate safety tested |
-| Hooks (char) | ✅ Good | ⚠️ Growing | Spell, HP, and startup data-init branch coverage; other UI-dependent hooks remain limited |
-| Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
-| Provenance | ✅ Good | ✅ Good | Core logic + multiclass/mix-source edge cases tested |
-| Pages/Components | ⚠️ Growing | ✅ Good | Golden progression covers the highest-risk creation and level-up path; several secondary pages remain integration-only |
-| Character schema | ✅ Good | ✅ Good | Exact-version import and hydration rejection coverage |
+## E2E conventions
 
-## Practical Test Patterns
+- `@focused`: narrow mechanics useful for quick diagnosis.
+- `@golden`: complete release-blocking progression journeys.
+- Seed cache/config so startup prompts are deterministic.
+- Assert important checkpoints, not only the final screen: readiness, effective abilities,
+  current/max HP, owned profiles/choices, save, and reload.
+- Corpus-dependent tests use `runIf` and skip cleanly when local `data/` is absent.
 
-Store tests:
-- Mock IndexedDB adapter module in test setup.
-- Assert draft behavior plus pending success, rejection/retry, and edits made during Save for the
-  active character lifecycle.
+## Commands
 
-Ingestion tests:
-- Validate schema checks and parser outputs for each supported data family.
-- Include index-file behavior checks for class vs spell index differences.
+During development, run the narrowest relevant Vitest/Playwright files first. Before merging:
 
-Hooks and derived state tests:
-- Verify derived data remains derived and not redundantly persisted.
-- Confirm source-filter behavior with allowedSources constraints.
+```text
+npx biome ci .
+npx tsc -b
+npm run test:coverage
+npm run test:e2e
+npm run build
+npm run check:health
+```
 
-E2E tests:
-- Start with create -> edit -> save -> reload -> verify state.
-- Add stale-cache startup flow checks where feasible.
-- Handle startup data-source prompts deterministically by seeding cache/config in test setup when no source is configured.
-- Keep long journeys deterministic and small by using real-shaped subsets, then pin each important
-  subset assumption to the parsed corpus in a guarded corpus contract.
-- Assert invariants at meaningful checkpoints rather than only the final screen: readiness issue
-  counts, effective ability bonuses, current/max HP synchronization, class-owned profiles and
-  choices, and post-reload state.
-- Tag narrow mechanics as `@focused` and complete release-blocking journeys as `@golden`; the full
-  suite remains the authoritative release check.
+Before a release, also run:
 
-## Definition of Done for New Features
+```text
+npm run test:e2e:release
+npm run test:electron
+npm run check:bundle
+npm run check:release
+```
 
-- Behavior tests added in appropriate layer.
-- Existing tests still pass.
-- Lint passes.
-- Any architecture-impacting behavior updates docs in this folder.
+`npm run lint` writes formatting/fixes; use `npx biome ci .` for read-only validation.
+
+## Coverage policy
+
+Coverage thresholds are configured in Vitest and are a floor, not a target. Removing duplicate or
+obsolete tests is acceptable only when the supported behavior remains covered at a stronger layer
+and the coverage gate stays green. Do not preserve tests that verify direct store mutation,
+historical APIs, or comments saying the asserted workflow does not run.
+
+Large suites should be split by behavior domain when navigation becomes difficult. Do not split
+only to satisfy a line count; shared setup and cohesive assertions matter more than file size.
+
+## Definition of done
+
+- New/changed behavior has appropriate unit and/or E2E coverage.
+- Relevant focused tests pass.
+- Full coverage, static checks, build, and health checks pass before merge.
+- Release checks pass before publishing.
+- Stable architecture/test conventions changed by the work are documented here.

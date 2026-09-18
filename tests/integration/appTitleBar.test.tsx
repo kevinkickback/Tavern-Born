@@ -3,14 +3,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppTitleBar } from '@/components/layout/AppTitleBar'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 describe('Windows title-bar overlay', () => {
   const setTitleBarOverlay = vi.fn()
 

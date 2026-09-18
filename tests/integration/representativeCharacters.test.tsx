@@ -27,14 +27,6 @@ import {
   type RepresentativeCharacterFixture,
 } from '../fixtures/representativeCharacters'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 interface ConsumerSnapshot {
   builderScores: ReturnType<typeof useTotalAbilityScores>['total']
   carryCapacity: number

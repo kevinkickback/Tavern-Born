@@ -1,42 +1,60 @@
-# Tavern-Born Documentation Hub
+# Tavern-Born Documentation
 
-This folder contains architecture and implementation docs intended to keep development fast and consistent as the codebase grows.
+These documents record stable architecture and maintenance contracts. Source code and tests remain
+the authority for implementation details; avoid turning this folder into a file-by-file inventory.
 
-## Start Here
+## Reading order
 
-If you are new to the repository, read these in order:
-
-1. [Contributor Start Here](contributor-start-here.md)
+1. [.github/copilot-instructions.md](../.github/copilot-instructions.md)
 2. [Architecture Map](architecture-map.md)
-3. [Data Flow](data-flow.md)
-4. [State Management](state-management.md)
-5. [Data Ingestion](data-ingestion.md)
+3. The topic document for the area being changed
+4. [Testing Map](testing-map.md)
 
-## Documents
+## Topic guides
 
-- [Architecture Map](architecture-map.md): system layers, ownership boundaries, and code placement.
-- [Data Flow](data-flow.md): startup, ingestion, editing, persistence, and update flows.
-- [Data Ingestion](data-ingestion.md): 5etools loading, parsing, validation, and caching.
-- [State Management](state-management.md): store contracts, mutations, persistence, and derived data.
-- [Character Calculation Context](calculation-context.md): canonical derived-value boundary and
-  persisted-field ownership.
-- [Provenance](provenance.md): grant tracking, reconciliation, and invariants.
-- [React Patterns](react-patterns.md): repository-specific hook and rendering conventions.
-- [Testing Map](testing-map.md): test layers, commands, coverage thresholds, and expectations.
-- [CI/CD Workflow](cicd-workflow.md): short-lived branches, native auto-merge, and manual draft
-  releases.
-- [PDF Generation](pdf-generation.md): template contracts, mapped fields, audit findings, and fixed-form limits.
-- [Codebase Tour](codebase-tour.md): concern-to-file routing for fast navigation.
-- [Changelog](changelog.md): released changes plus the next planned release.
+- [Architecture Map](architecture-map.md): layer ownership and where new code belongs.
+- [Data Flow](data-flow.md): startup, editing, persistence, rendering, and updates.
+- [State Management](state-management.md): stores, derived values, mutations, and character format.
+- [Data Ingestion](data-ingestion.md): 5etools loading, normalization, lookup, and cache contracts.
+- [Provenance](provenance.md): grant ownership and source-change reconciliation.
+- [React Patterns](react-patterns.md): repository-specific component and hook conventions.
+- [Testing Map](testing-map.md): test boundaries, commands, and release checks.
+- [CI/CD Workflow](cicd-workflow.md): short-lived branches, merging, and manual releases.
+- [PDF Generation](pdf-generation.md): template and export boundaries.
+- [Changelog](changelog.md): user-facing release notes.
 
-## Update Policy
+## Before changing code
 
-Update docs in this folder whenever one of these changes:
+- Choose the owning layer before coding: page/component, hook, pure domain library, store, or parser.
+- Search for an existing calculator, command, resolver, or parser first.
+- Keep game rules in `src/lib/`, state adapters in `src/hooks/`, and presentation in components.
+- Use `name|source` identity for 5etools entities.
+- Route character writes through the character store.
+- Never edit `data/`.
+- Add or update behavior-focused tests and the relevant topic document.
 
-- Folder ownership boundaries or major architecture direction
-- Data loading/parsing/caching behavior
-- Character state shape or mutation lifecycle
-- Provenance behavior (new grant/reconciliation rules)
-- Build, CI, or test conventions
+## Character format changes
 
-When in doubt, update docs in the same pull request as the behavior change.
+Tavern-Born exposes one current runtime character shape. For a breaking persisted-data change:
+
+1. Increment `CURRENT_CHARACTER_SCHEMA_VERSION`.
+2. Update the type, strict schema, factory, and fixtures together.
+3. Add a pure, one-way migration from each supported prior version.
+4. Validate after migration and persist only the current shape.
+5. Test persistence, every supported migration step, and rejection of newer or unsafe payloads.
+
+Before 1.0, prefer migration over invalidating characters. Do not add downgrade paths,
+compatibility mirrors, or historical branches in feature code. At the 1.0 boundary, reassess the
+full pre-1.0 migration chain; if it is deliberately removed, keep export-before-removal recovery
+and announce the cutoff in advance.
+
+## Review checklist
+
+- No direct game-data JSON imports in UI code.
+- No canonical constants where parsed data can supply the value.
+- No persisted mirrors of derived values.
+- Materialized grants and provenance change atomically.
+- Focused tests pass, followed by the checks in [Testing Map](testing-map.md).
+
+Update documentation in the same change when a stable boundary or workflow changes. Prefer links
+to an owning directory or entry point over long lists of individual files.
