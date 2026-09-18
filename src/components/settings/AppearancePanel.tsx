@@ -86,31 +86,31 @@ export function AppearancePanel() {
                     <div
                       className={cn(
                         'flex h-10 flex-col gap-1 p-1.5',
-                        isDark ? 'bg-zinc-900' : 'bg-gray-100',
+                        isDark ? 'bg-zinc-900' : 'bg-slate-300',
                       )}
                     >
                       <div
                         className={cn(
                           'h-2 w-3/4 rounded-full',
-                          isDark ? 'bg-zinc-700' : 'bg-gray-300',
+                          isDark ? 'bg-zinc-700' : 'bg-slate-500',
                         )}
                       />
                       <div
                         className={cn(
                           'h-1.5 w-full rounded-full',
-                          isDark ? 'bg-zinc-800' : 'bg-gray-200',
+                          isDark ? 'bg-zinc-800' : 'bg-slate-400',
                         )}
                       />
                       <div
                         className={cn(
                           'h-1.5 w-5/6 rounded-full',
-                          isDark ? 'bg-zinc-800' : 'bg-gray-200',
+                          isDark ? 'bg-zinc-800' : 'bg-slate-400',
                         )}
                       />
                       <div
                         className={cn(
                           'h-1.5 w-4/6 rounded-full',
-                          isDark ? 'bg-zinc-800' : 'bg-gray-200',
+                          isDark ? 'bg-zinc-800' : 'bg-slate-400',
                         )}
                       />
                     </div>

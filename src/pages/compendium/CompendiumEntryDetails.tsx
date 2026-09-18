@@ -165,6 +165,9 @@ function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
   const entryList = asArray(selectedEntry.data.entries as unknown)
   if (entryList.length) return entryList
 
+  const additionalEntries = asArray(selectedEntry.data.additionalEntries as unknown)
+  if (additionalEntries.length) return additionalEntries
+
   if (selectedEntry.type === 'Class') {
     return getClassRenderableEntries(selectedEntry.data)
   }
@@ -182,7 +185,11 @@ function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
 
   if (classFluffSections.length) return classFluffSections
 
-  return selectedEntry.description ? [selectedEntry.description] : []
+  const organizationDescription =
+    selectedEntry.type === 'Organization' && typeof selectedEntry.data.description === 'string'
+      ? selectedEntry.data.description.trim()
+      : ''
+  return organizationDescription ? [organizationDescription] : []
 }
 
 export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetailsProps) {

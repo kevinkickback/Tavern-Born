@@ -332,7 +332,7 @@ export function AppSidebar() {
                         ? 'cursor-not-allowed border-muted-foreground/20 bg-background/5 text-muted-foreground/35'
                         : active
                           ? 'border-primary/50 bg-sidebar-accent/15 text-primary'
-                          : 'border-muted-foreground/45 bg-background/10 text-muted-foreground hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground',
+                          : 'border-muted-foreground/45 bg-background/10 text-[color:var(--navigation-foreground)] hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground',
                     )}
                   >
                     {active && (
@@ -356,7 +356,7 @@ export function AppSidebar() {
                 type="button"
                 aria-label="Settings"
                 onClick={() => navigate('/settings')}
-                className="relative mt-auto flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-muted-foreground transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
+                className="relative mt-auto flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
               >
                 <Gear />
               </button>
@@ -394,7 +394,7 @@ export function AppSidebar() {
                           'relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',
                           active
                             ? 'bg-secondary text-primary font-medium'
-                            : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+                            : 'text-[color:var(--navigation-foreground)] hover:bg-secondary/70 hover:text-foreground',
                         )}
                       >
                         {active && (
@@ -443,7 +443,7 @@ export function AppSidebar() {
                             'relative flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors',
                             active
                               ? 'bg-secondary text-foreground'
-                              : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+                              : 'text-[color:var(--navigation-foreground)] hover:bg-secondary/70 hover:text-foreground',
                           )}
                         >
                           {active && (

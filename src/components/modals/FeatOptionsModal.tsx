@@ -79,7 +79,7 @@ const SpellcastingClassStep = memo(function SpellcastingClassStep({
             <SelectItem
               key={opt.name}
               value={opt.name}
-              className="data-[state=checked]:bg-accent/10 data-[state=checked]:text-accent-foreground"
+              className="data-[state=checked]:bg-accent/10 data-[state=checked]:text-foreground"
             >
               {opt.name}
             </SelectItem>
@@ -116,7 +116,7 @@ const SpellPickStep = memo(function SpellPickStep({
       <p className="text-sm text-muted-foreground">
         {step.label}
         {selected.length > 0 && (
-          <span className="ml-2 text-xs text-accent-foreground">
+          <span className="ml-2 text-xs text-primary">
             ({selected.length}/{step.count} chosen)
           </span>
         )}
@@ -193,7 +193,7 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
       <p className="text-sm text-muted-foreground">
         {step.label}
         {selected.length > 0 && (
-          <span className="ml-2 text-xs text-accent-foreground">
+          <span className="ml-2 text-xs text-primary">
             ({selected.length}/{step.count} chosen)
           </span>
         )}
@@ -256,7 +256,7 @@ const AbilityScoreStep = memo(function AbilityScoreStep({
               className={cn(
                 'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
                 isSelected
-                  ? 'border-accent bg-accent/10 text-accent-foreground'
+                  ? 'border-accent bg-accent/10 text-foreground'
                   : 'border-border hover:border-accent/50 hover:bg-muted/40',
               )}
             >
@@ -349,7 +349,9 @@ const ExpertiseStep = memo(function ExpertiseStep({
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{step.label}</p>
       {proficientSkillNames.length === 0 && (
-        <p className="text-xs text-warning/80">No proficient skills found — showing all skills.</p>
+        <p className="text-xs text-warning-foreground">
+          No proficient skills found — showing all skills.
+        </p>
       )}
       <div className="flex flex-wrap gap-2">
         {pool.map((name) => (
@@ -360,7 +362,7 @@ const ExpertiseStep = memo(function ExpertiseStep({
             className={cn(
               'px-3 py-1.5 rounded-lg border text-sm capitalize transition-colors',
               value === name
-                ? 'border-accent bg-accent/10 text-accent-foreground'
+                ? 'border-accent bg-accent/10 text-foreground'
                 : 'border-border hover:border-accent/50 hover:bg-muted/40',
             )}
           >
@@ -608,7 +610,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <MagicWand className="h-5 w-5 text-accent-foreground" weight="duotone" />
+            <MagicWand className="h-5 w-5 text-primary" weight="duotone" />
             <DialogTitle>Configure: {feat.name}</DialogTitle>
           </div>
           <DialogDescription>
@@ -624,9 +626,9 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
                 className={cn(
                   'rounded-full transition-all',
                   i === stepIndex
-                    ? 'h-2 w-4 bg-accent-foreground'
+                    ? 'h-2 w-4 bg-primary'
                     : i < stepIndex
-                      ? 'h-2 w-2 bg-accent-foreground/50'
+                      ? 'h-2 w-2 bg-primary/50'
                       : 'h-2 w-2 bg-border',
                 )}
               />

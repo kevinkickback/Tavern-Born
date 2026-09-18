@@ -205,6 +205,96 @@ describe('getCharacterReadiness', () => {
     ).toBe('/build/ability-scores')
   })
 
+  test('normalizes abbreviated origin ability choices before checking readiness', () => {
+    const testRace = {
+      name: 'Test Race',
+      source: 'TEST',
+      ability: [{ choose: { count: 1, amount: 2, from: ['str', 'dex'] } }],
+    } as Race5e
+    const testBackground = {
+      name: 'Test Background',
+      source: 'TEST',
+      ability: [
+        {
+          choose: {
+            weighted: { from: ['str', 'dex', 'con'], weights: [2, 1] },
+          },
+        },
+      ],
+    } as Background5e
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      race: testRace.name,
+      raceSource: testRace.source,
+      background: testBackground.name,
+      backgroundSource: testBackground.source,
+      raceAsiChoices: [['STR']],
+      backgroundAsiBlockIndex: 0,
+      backgroundAsiChoices: ['DEX', 'constitution'],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: { 'Test Race|TEST': testRace },
+      backgroundsByKey: { 'Test Background|TEST': testBackground },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(result.issues.map((issue) => issue.id)).not.toContain('race:ability-choice:0')
+    expect(result.issues.map((issue) => issue.id)).not.toContain('background:ability-choices')
+  })
+
+  test('rejects duplicate race ability choices across separate choice blocks', () => {
+    const testRace = {
+      name: 'Test Race',
+      source: 'TEST',
+      ability: [
+        { choose: { count: 1, amount: 2, from: ['str', 'dex'] } },
+        { choose: { count: 1, amount: 1, from: ['str', 'dex'] } },
+      ],
+    } as Race5e
+    const character = makeCharacterFixture({
+      race: testRace.name,
+      raceSource: testRace.source,
+      raceAsiChoices: [['str'], ['str']],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: { 'Test Race|TEST': testRace },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(result.issues.map((issue) => issue.id)).not.toContain('race:ability-choice:0')
+    expect(result.issues.map((issue) => issue.id)).toContain('race:ability-choice:1')
+  })
+
+  test('does not count abbreviated and full ability names as different choices', () => {
+    const testBackground = {
+      name: 'Test Background',
+      source: 'TEST',
+      ability: [
+        {
+          choose: {
+            weighted: { from: ['str', 'dex', 'con'], weights: [2, 1] },
+          },
+        },
+      ],
+    } as Background5e
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      background: testBackground.name,
+      backgroundSource: testBackground.source,
+      backgroundAsiBlockIndex: 0,
+      backgroundAsiChoices: ['str', 'strength'],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      backgroundsByKey: { 'Test Background|TEST': testBackground },
+    })
+
+    expect(
+      getCharacterReadiness(character, { calculation }).issues.map((issue) => issue.id),
+    ).toContain('background:ability-choices')
+  })
+
   test('treats a stored class choice outside its current eligibility rules as incomplete', () => {
     const testClass = {
       name: 'Test Barbarian',

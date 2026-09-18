@@ -7,14 +7,6 @@ import type { Feat5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 const configurableFeat = {
   name: 'Skilled',
   source: 'PHB',

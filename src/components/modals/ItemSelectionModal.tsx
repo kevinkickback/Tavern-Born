@@ -7,7 +7,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
-import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
+import {
+  getArmorCategoryLabel,
+  getNormalizedItemTraits,
+} from '@/lib/calculations/itemClassification'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
@@ -18,6 +21,7 @@ export interface ItemSelectionModalProps {
   title?: string
   items: Item5e[]
   onConfirm: (items: Item5e[]) => void
+  onManageSources?: () => void
 }
 
 export type ItemCategory =
@@ -220,6 +224,10 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? ''
   const itemPropertyByAbbr = useItemPropertyLookup()
+  const armorCategoryLabel = getArmorCategoryLabel(
+    getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory,
+  )
+  const primaryCategoryLabel = getPrimaryCategoryLabel(item, itemTypeByAbbr)
 
   return (
     <div className="p-3.5">
@@ -232,7 +240,8 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
         </div>
       </div>
       <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground">
-        <Badge variant="outline">{getPrimaryCategoryLabel(item, itemTypeByAbbr)}</Badge>
+        {!armorCategoryLabel && <Badge variant="outline">{primaryCategoryLabel}</Badge>}
+        {armorCategoryLabel && <Badge variant="outline">{armorCategoryLabel}</Badge>}
         {normalizedRarity && normalizedRarity.toLowerCase() !== 'none' && (
           <Badge
             variant="outline"
@@ -277,6 +286,9 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
             {item.weight} lb
           </Badge>
         )}
+        <Badge variant="outline" title="Source">
+          {item.source}
+        </Badge>
       </div>
       {description && (
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
@@ -293,6 +305,7 @@ export function ItemSelectionModal({
   title = 'Add Item',
   items,
   onConfirm,
+  onManageSources,
 }: ItemSelectionModalProps) {
   const itemTypeByAbbr = useItemTypeLookup()
   const filteredItems = useMemo(
@@ -371,6 +384,17 @@ export function ItemSelectionModal({
         matchItem(item, search, activeFilters, itemTypeByAbbr)
       }
       filterSections={filterSections}
+      selectionHint={
+        onManageSources ? (
+          <button
+            type="button"
+            className="cursor-pointer font-semibold text-primary underline-offset-2 hover:underline"
+            onClick={onManageSources}
+          >
+            Manage sources
+          </button>
+        ) : undefined
+      }
       onConfirm={(_ids, selectedItems) => onConfirm(selectedItems)}
     />
   )

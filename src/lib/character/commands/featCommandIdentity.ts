@@ -46,6 +46,7 @@ export function isSameGrantSource(tag: SourceTag, sourceTag: SourceTag): boolean
   return (
     tag.sourceType === sourceTag.sourceType &&
     tag.sourceName === sourceTag.sourceName &&
-    (tag.sourceRef ?? '') === (sourceTag.sourceRef ?? '')
+    (tag.sourceRef ?? '') === (sourceTag.sourceRef ?? '') &&
+    (tag.grantVariant ?? '') === (sourceTag.grantVariant ?? '')
   )
 }

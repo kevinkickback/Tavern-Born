@@ -3,6 +3,7 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
   ensureStartupPromptResolved,
+  MINIMAL_GAME_DATA,
   seedAppState,
   selectCharacterFromHome,
 } from './helpers/startup'
@@ -12,11 +13,46 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   const character = JSON.parse(fs.readFileSync(fixturePath, 'utf-8')) as {
     id: string
   }
+  const characterWithCoreSources = { ...character, allowedSources: ['PHB'] }
+  const gameData = {
+    ...MINIMAL_GAME_DATA,
+    items: [
+      {
+        name: 'Potion of Healing',
+        source: 'DMG',
+        type: 'P',
+        rarity: 'common',
+        srd: true,
+      },
+      {
+        name: 'Spell Scroll (1st Level)',
+        source: 'DMG',
+        type: 'SC',
+        rarity: 'common',
+        basicRules: true,
+      },
+      {
+        name: 'Bag of Holding',
+        source: 'DMG',
+        type: 'W',
+        rarity: 'uncommon',
+        srd: true,
+      },
+      {
+        name: 'Leather Armor',
+        source: 'PHB',
+        type: 'LA',
+        rarity: 'none',
+        ac: 11,
+      },
+    ],
+  }
 
   await page.goto('/')
   await seedAppState(page, {
     sourcePath: 'e2e-equipment-seed',
-    characters: [character],
+    gameData,
+    characters: [characterWithCoreSources],
     activeCharacterId: character.id,
   })
 
@@ -31,6 +67,19 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await expect(page.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible()
   await expect(page.getByText('5.0 / 150 lb')).toBeVisible()
   await expect(page.getByText('0 / 3')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Add Item' }).click()
+  const addItemDialog = page.getByRole('dialog', { name: 'Add Item' })
+  await expect(addItemDialog.getByText('Potion of Healing')).toBeVisible()
+  await expect(addItemDialog.getByText('Spell Scroll (1st Level)')).toBeVisible()
+  await expect(addItemDialog.getByText('Bag of Holding')).toHaveCount(0)
+  const leatherArmorOption = addItemDialog.getByRole('button', { name: /^Leather Armor\b/ })
+  await expect(leatherArmorOption.getByText('Light Armor', { exact: true })).toBeVisible()
+  await expect(leatherArmorOption.getByText('Armor', { exact: true })).toHaveCount(0)
+  await expect(addItemDialog.getByText(/Core potions and spell scrolls are included/)).toHaveCount(
+    0,
+  )
+  await addItemDialog.getByRole('button', { name: 'Cancel' }).click()
 
   // Use the same accessible controls a keyboard or assistive-technology user reaches.
   await page.getByRole('button', { name: 'Increase Ring of Testing quantity' }).click()

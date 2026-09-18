@@ -8,14 +8,6 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeRaceFixture } from '../fixtures/gameDataFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 Element.prototype.scrollIntoView = () => undefined
 
 describe('Race page summary', () => {

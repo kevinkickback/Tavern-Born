@@ -111,10 +111,10 @@ export const FeatDetailCard = memo(function FeatDetailCard({
   const iconColor = isBonus
     ? 'text-primary'
     : isOrigin
-      ? 'text-amber-500'
+      ? 'text-amber-600 dark:text-amber-400'
       : grantedBy
         ? 'text-violet-600 dark:text-violet-400'
-        : 'text-accent-foreground'
+        : 'text-primary'
 
   return (
     <div
@@ -175,7 +175,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                   </Badge>
                 )}
                 {optionsPending && (
-                  <Badge className="h-5 border border-warning/30 bg-warning/10 px-1.5 py-0 text-xs text-warning">
+                  <Badge className="h-5 border border-warning/30 bg-warning/10 px-1.5 py-0 text-xs text-warning-foreground">
                     Setup pending
                   </Badge>
                 )}
@@ -188,7 +188,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
               </p>
             )}
             {!met && failures.length > 0 && (
-              <p className="mb-2 text-sm text-warning/90">{failures.join(' · ')}</p>
+              <p className="mb-2 text-sm text-warning-foreground">{failures.join(' · ')}</p>
             )}
             {descHtml ? (
               <div
@@ -205,7 +205,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="pointer-events-auto mt-3 h-8 gap-1.5 border-warning/40 text-sm text-warning hover:border-warning/60 hover:bg-warning/10"
+                className="pointer-events-auto mt-3 h-8 gap-1.5 border-warning/40 text-sm text-warning-foreground hover:border-warning/60 hover:bg-warning/10"
                 onClick={(event) => {
                   event.stopPropagation()
                   onCompleteSetup(
@@ -308,7 +308,7 @@ export function FeatDetailsInspector({
                     className={cn(
                       prerequisiteResult.met
                         ? 'border-success/40 text-success'
-                        : 'border-warning/50 text-warning',
+                        : 'border-warning/50 text-warning-foreground',
                     )}
                   >
                     {prerequisiteResult.met ? 'Prerequisites met' : 'Prerequisites unmet'}
@@ -317,7 +317,7 @@ export function FeatDetailsInspector({
               </div>
               <Separator />
               {!prerequisiteResult.met && prerequisiteResult.failures.length > 0 && (
-                <div className="border-warning border-l-2 bg-warning/5 px-3 py-2 text-sm text-warning">
+                <div className="border-warning border-l-2 bg-warning/5 px-3 py-2 text-sm text-warning-foreground">
                   {prerequisiteResult.failures.join(' · ')}
                 </div>
               )}

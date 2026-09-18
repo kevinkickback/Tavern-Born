@@ -1,14 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/lib/storage/dataCache', () => ({
   readGameDataCache: vi.fn(async () => null),
   isCacheForSource: vi.fn(() => false),

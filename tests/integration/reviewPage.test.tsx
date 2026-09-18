@@ -10,14 +10,6 @@ import type { Class5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 describe('BuildReviewPage', () => {
   beforeEach(() => {
     const race = { name: 'Test Race', source: 'TEST', speed: 35 } as Race5e

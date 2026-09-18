@@ -19,12 +19,13 @@ describe('characterPersistenceSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  test('keeps the shared browser character fixture on the current schema', () => {
+  test('accepts the character fixture published with v0.4.0', () => {
     const fixture = JSON.parse(
       fs.readFileSync(path.resolve('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
-    ) as unknown
+    ) as { schemaVersion?: unknown }
     const result = characterPersistenceSchema.safeParse(fixture)
 
+    expect(fixture.schemaVersion).toBe(2)
     expect(result.success ? [] : result.error.issues).toEqual([])
   })
 
@@ -144,6 +145,34 @@ describe('characterPersistenceSchema', () => {
     )
 
     expect(result.classChoiceSelections).toEqual(character.classChoiceSelections)
+  })
+
+  test('round-trips provenance ability-choice amounts', () => {
+    const character = makeCharacterFixture()
+    character.provenance.choices = [
+      {
+        id: 'race:test:abilityBonuses:choose:0',
+        domain: 'abilityBonuses',
+        sourceTag: {
+          sourceType: 'race',
+          sourceName: 'Test Race',
+          sourceRef: 'TEST',
+          grantType: 'placeholder',
+          label: 'Test Race',
+        },
+        chooseCount: 1,
+        amount: 2,
+        optionPool: ['strength', 'dexterity'],
+        selected: ['strength'],
+        status: 'resolved',
+      },
+    ]
+
+    const result = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(character)) as unknown,
+    )
+
+    expect(result.provenance.choices[0]?.amount).toBe(2)
   })
 
   test('round-trips typed manual effects and their activation state', () => {

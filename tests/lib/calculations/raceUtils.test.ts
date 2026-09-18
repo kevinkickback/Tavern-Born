@@ -19,32 +19,20 @@ function makeRace(overrides: Partial<Race5e> = {}): Race5e {
 }
 
 describe('toTitleCase', () => {
-  test('title-cases multi-word strings', () => {
-    expect(toTitleCase('fire damage')).toBe('Fire Damage')
-  })
-
-  test('handles single word', () => {
-    expect(toTitleCase('poison')).toBe('Poison')
-  })
-
-  test('lowercases uppercase input', () => {
-    expect(toTitleCase('FIRE')).toBe('Fire')
-  })
+  test.each([
+    ['fire damage', 'Fire Damage'],
+    ['poison', 'Poison'],
+    ['FIRE', 'Fire'],
+  ])('formats %j as %j', (input, expected) => expect(toTitleCase(input)).toBe(expected))
 })
 
 describe('formatCapitalized', () => {
-  test('capitalizes first letter only', () => {
-    expect(formatCapitalized('common')).toBe('Common')
-  })
-
-  test('handles non-string input', () => {
-    expect(formatCapitalized(42)).toBe('42')
-    expect(formatCapitalized(null)).toBe('null')
-  })
-
-  test('handles empty string', () => {
-    expect(formatCapitalized('')).toBe('')
-  })
+  test.each([
+    ['common', 'Common'],
+    [42, '42'],
+    [null, 'null'],
+    ['', ''],
+  ])('formats %j as %j', (input, expected) => expect(formatCapitalized(input)).toBe(expected))
 })
 
 describe('getSpeedDisplay', () => {
@@ -80,30 +68,22 @@ describe('getSpeedDisplay', () => {
 })
 
 describe('getDarkvisionDisplay', () => {
-  test('returns dash for no darkvision', () => {
-    expect(getDarkvisionDisplay(makeRace())).toBe('—')
-  })
-
-  test('formats darkvision distance', () => {
-    expect(getDarkvisionDisplay(makeRace({ darkvision: 60 }))).toBe('60 ft.')
-  })
-
-  test('returns dash for zero darkvision', () => {
-    expect(getDarkvisionDisplay(makeRace({ darkvision: 0 }))).toBe('—')
+  test.each([
+    [undefined, '—'],
+    [60, '60 ft.'],
+    [0, '—'],
+  ])('formats %j feet as %j', (darkvision, expected) => {
+    expect(getDarkvisionDisplay(makeRace({ darkvision }))).toBe(expected)
   })
 })
 
 describe('getDamageTraitDisplay', () => {
-  test('returns dash for empty array', () => {
-    expect(getDamageTraitDisplay([])).toBe('—')
-  })
-
-  test('returns dash for undefined', () => {
-    expect(getDamageTraitDisplay(undefined)).toBe('—')
-  })
-
-  test('deduplicates and title-cases', () => {
-    expect(getDamageTraitDisplay(['fire', 'Fire', 'cold'])).toBe('Fire, Cold')
+  test.each([
+    [[], '—'],
+    [undefined, '—'],
+    [['fire', 'Fire', 'cold'], 'Fire, Cold'],
+  ])('formats %j as %j', (traits, expected) => {
+    expect(getDamageTraitDisplay(traits)).toBe(expected)
   })
 
   test('filters non-string entries', () => {

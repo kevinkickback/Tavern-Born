@@ -223,7 +223,7 @@ export function PortraitPicker({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-accent-foreground"
+                  className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-primary"
                 >
                   <Upload className="h-5 w-5" />
                   <span className="text-xs leading-tight">Upload</span>

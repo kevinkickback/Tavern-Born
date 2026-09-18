@@ -1,6 +1,7 @@
 interface WeaponProficiencyTarget {
   name: string
   weaponCategory?: string
+  type?: string
 }
 
 function normalized(value: string | undefined): string {
@@ -14,12 +15,20 @@ export function isProficientWithWeapon(
 ): boolean {
   const name = normalized(weapon.name)
   const category = normalized(weapon.weaponCategory)
+  const typeCode = normalized(weapon.type).split('|')[0]
+  const range =
+    typeCode === 'm' || typeCode === 'mw'
+      ? 'melee'
+      : typeCode === 'r' || typeCode === 'rw'
+        ? 'ranged'
+        : ''
   return proficiencies.some((rawProficiency) => {
     const proficiency = normalized(rawProficiency)
-    return (
-      proficiency === name ||
-      (category.length > 0 &&
-        (proficiency === category || proficiency.includes(`${category} weapon`)))
-    )
+    if (proficiency === name) return true
+    if (!category) return false
+
+    const categoryLabels = new Set([category, `${category} weapon`, `${category} weapons`])
+    if (categoryLabels.has(proficiency)) return true
+    return range.length > 0 && proficiency === `${category} ${range} weapons`
   })
 }

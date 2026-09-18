@@ -7,14 +7,6 @@ import { ConditionsPage } from '@/pages/details/ConditionsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/hooks/character/useHitPoints', () => ({
   useHitPoints: () => ({
     hitDicePools: [{ id: 'fighter|phb', label: 'Fighter', die: 8, max: 1, used: 0 }],

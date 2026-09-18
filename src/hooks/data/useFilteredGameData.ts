@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { DataFilter } from '@/lib/5etools/filters'
+import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { useCharacterStore } from '@/store/characterStore'
@@ -19,6 +20,7 @@ import type {
 interface FilterParams {
   allowedSources?: string[]
   preferNewerPrintings?: boolean
+  originSystem?: '2014' | '2024'
 }
 
 /**
@@ -28,7 +30,7 @@ interface FilterParams {
  */
 export function useFilteredGameDataParams(params: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
-  const { allowedSources, preferNewerPrintings = false } = params
+  const { allowedSources, preferNewerPrintings = false, originSystem } = params
 
   const filteredData = useMemo(() => {
     if (!gameData) {
@@ -148,12 +150,16 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: allowedSources,
         suppressedKeys,
       }),
-      items: DataFilter.filterItems(items, {
-        sources: allowedSources,
+      items: filterCharacterItems(items, {
+        allowedSources,
+        originSystem,
+        itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
-      itemsBase: DataFilter.filterItems(itemsBase, {
-        sources: allowedSources,
+      itemsBase: filterCharacterItems(itemsBase, {
+        allowedSources,
+        originSystem,
+        itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
       itemMasteries: itemMasteries.filter((mastery) =>
@@ -177,7 +183,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: allowedSources,
       }),
     }
-  }, [gameData, allowedSources, preferNewerPrintings])
+  }, [gameData, allowedSources, preferNewerPrintings, originSystem])
 
   return filteredData
 }
@@ -201,5 +207,9 @@ export function useFilteredGameData() {
     return [...allowedSources, implicit]
   }, [allowedSources, originSystem])
 
-  return useFilteredGameDataParams({ allowedSources: effectiveSources, preferNewerPrintings })
+  return useFilteredGameDataParams({
+    allowedSources: effectiveSources,
+    preferNewerPrintings,
+    originSystem: originSystem ?? '2014',
+  })
 }

@@ -461,9 +461,7 @@ function SelectionModalInner<T>({
                 {selectedIds.size}
               </Badge>
             )}
-            {selectionHint && (
-              <span className="text-xs text-muted-foreground">{selectionHint}</span>
-            )}
+            {selectionHint && <div className="text-xs text-muted-foreground">{selectionHint}</div>}
           </div>
           <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>
         </div>

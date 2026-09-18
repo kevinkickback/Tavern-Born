@@ -204,6 +204,100 @@ describe('rules previews', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
+  test('dismisses a keyboard-opened preview chain after focus leaves it', async () => {
+    const recursiveLookup = buildRecursiveLookup({
+      conditions: [
+        { name: 'First', source: 'PHB', entries: ['See {@condition Second|PHB}.'] },
+        { name: 'Second', source: 'PHB', entries: ['Second details.'] },
+      ],
+    })
+    renderWithManager(
+      <>
+        <RenderedEntryWithTooltip
+          entry="Read {@condition First|PHB}."
+          recursiveLookup={recursiveLookup}
+        />
+        <button type="button">Outside</button>
+      </>,
+    )
+
+    fireEvent.focus(screen.getByRole('button', { name: 'First' }))
+    const innerTrigger = within(screen.getByRole('dialog', { name: 'First preview' })).getByRole(
+      'button',
+      { name: 'Second' },
+    )
+    fireEvent.focus(innerTrigger)
+    expect(screen.getByRole('dialog', { name: 'Second preview' })).toBeTruthy()
+
+    const outside = screen.getByRole('button', { name: 'Outside' })
+    fireEvent.blur(innerTrigger, { relatedTarget: outside })
+    fireEvent.focus(outside)
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  test('dismisses an unpinned preview when its source is removed', async () => {
+    const recursiveLookup = buildRecursiveLookup({
+      conditions: [{ name: 'Prone', source: 'PHB', entries: ['Details.'] }],
+    })
+    const view = renderWithManager(
+      <RenderedEntryWithTooltip
+        entry="Read {@condition Prone|PHB}."
+        recursiveLookup={recursiveLookup}
+      />,
+    )
+
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Prone' }))
+    expect(screen.getByRole('dialog', { name: 'Prone preview' })).toBeTruthy()
+    view.rerender(<RulesPreviewManager>{null}</RulesPreviewManager>)
+    fireEvent(window, new Event('resize'))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  test('leaves Escape handling to an ordinary modal', () => {
+    renderWithManager(
+      <>
+        <RenderedEntryWithTooltip
+          entry="Read {@condition Prone|PHB}."
+          recursiveLookup={buildRecursiveLookup({
+            conditions: [{ name: 'Prone', source: 'PHB', entries: ['Details.'] }],
+          })}
+        />
+        <div role="dialog" aria-label="Editor modal">
+          <button type="button">Modal action</button>
+        </div>
+      </>,
+    )
+
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Prone' }))
+    const modalAction = screen.getByRole('button', { name: 'Modal action' })
+    modalAction.focus()
+    fireEvent.keyDown(modalAction, { key: 'Escape' })
+
+    expect(screen.getByRole('dialog', { name: 'Prone preview' })).toBeTruthy()
+  })
+
+  test('returns focus to the source after pinning a transient preview', () => {
+    renderWithManager(
+      <RenderedEntryWithTooltip
+        entry="Read {@condition Prone|PHB}."
+        recursiveLookup={buildRecursiveLookup({
+          conditions: [{ name: 'Prone', source: 'PHB', entries: ['Details.'] }],
+        })}
+      />,
+    )
+
+    const source = screen.getByRole('button', { name: 'Prone' })
+    source.focus()
+    fireEvent.mouseMove(source)
+    fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Pin tooltip'))
+    fireEvent.keyDown(document.activeElement ?? document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(source)
+  })
+
   test('uses the same manager for spell-name previews and their references', async () => {
     const spell = {
       name: 'Root Spell',

@@ -5,14 +5,6 @@ import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/components/PdfCanvasPreview', () => ({
   PdfCanvasPreview: () => <div>PDF preview</div>,
 }))

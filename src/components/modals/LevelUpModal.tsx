@@ -525,7 +525,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                     <span />
                   )}
                   {isAtCap && (
-                    <span className="rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning-foreground dark:text-warning">
+                    <span className="rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning-foreground">
                       Level cap reached ({MAX_CHARACTER_LEVEL})
                     </span>
                   )}
@@ -721,7 +721,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
               </div>
 
               {maximumOverride != null && (
-                <p className="text-xs text-warning-foreground dark:text-warning">
+                <p className="text-xs text-warning-foreground">
                   This character has an exact maximum-HP override of {maximumOverride}. The roll
                   will be saved, but that override remains authoritative.
                 </p>

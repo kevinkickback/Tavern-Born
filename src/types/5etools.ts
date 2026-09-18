@@ -318,6 +318,10 @@ export interface Item5e {
   name: string
   source: string
   page?: number
+  srd?: boolean | string
+  srd52?: boolean | string
+  basicRules?: boolean
+  basicRules2024?: boolean
   type: string
   tier?: string
   rarity?: string

@@ -14,14 +14,6 @@ Element.prototype.setPointerCapture = () => undefined
 Element.prototype.releasePointerCapture = () => undefined
 Element.prototype.scrollIntoView = () => undefined
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 const ability = [
   {
     choose: {

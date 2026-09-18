@@ -47,6 +47,7 @@ export type RulesPreviewAction =
   | { type: 'open-child'; parentId: string; preview: TransientRulesPreview }
   | { type: 'move-preview'; id: string; position: PreviewPosition }
   | { type: 'close-chain' }
+  | { type: 'close-from'; id: string }
   | { type: 'close-descendants'; parentId: string }
   | { type: 'close-newest' }
   | { type: 'pin'; preview: PinnedRulesPreview }
@@ -126,6 +127,10 @@ export function rulesPreviewReducer(
     }
     case 'close-chain':
       return state.chain.length > 0 ? { ...state, chain: [] } : state
+    case 'close-from': {
+      const index = state.chain.findIndex((preview) => preview.id === action.id)
+      return index >= 0 ? { ...state, chain: state.chain.slice(0, index) } : state
+    }
     case 'close-descendants': {
       if (action.parentId === 'rules-preview-pinned') {
         return state.chain.length > 0 ? { ...state, chain: [] } : state

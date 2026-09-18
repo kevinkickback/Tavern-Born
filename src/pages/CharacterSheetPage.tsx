@@ -195,14 +195,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         <p className="shrink-0 text-sm font-semibold">{editionLabel}</p>
 
         {rulesetMismatch && (
-          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning-foreground">
             <Warning className="size-3.5" />
             Different from character ruleset
           </Badge>
         )}
 
         {readiness?.status === 'incomplete' && (
-          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning-foreground">
             <Warning className="size-3.5" />
             {readiness.blockingIssues.length} required
           </Badge>

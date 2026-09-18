@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 
 afterEach(() => {
   cleanup()
@@ -7,14 +7,6 @@ afterEach(() => {
 
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
 import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel'
-
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
 
 const emptyProficiencies: ProficiencyProvenance = {
   armor: {},

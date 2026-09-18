@@ -60,7 +60,7 @@ function getDataStatus(
       label: 'Using cached game data',
       detail: 'No game data source is currently configured',
       icon: CloudSlash,
-      tone: 'text-warning',
+      tone: 'text-warning-foreground',
     }
   }
 
@@ -69,7 +69,7 @@ function getDataStatus(
       label: 'Game data not configured',
       detail: 'Choose a game data source in Settings',
       icon: WarningCircle,
-      tone: 'text-warning',
+      tone: 'text-warning-foreground',
     }
   }
 
@@ -141,7 +141,7 @@ export function AppStatusBar() {
             <span
               className={cn(
                 'truncate',
-                hasUnsavedChanges ? 'font-medium text-warning' : 'text-muted-foreground',
+                hasUnsavedChanges ? 'font-medium text-warning-foreground' : 'text-muted-foreground',
               )}
               data-testid="character-save-status"
             >

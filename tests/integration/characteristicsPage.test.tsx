@@ -6,14 +6,6 @@ import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/components/ui/select', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
   const SelectContext = React.createContext<(value: string) => void>(() => undefined)

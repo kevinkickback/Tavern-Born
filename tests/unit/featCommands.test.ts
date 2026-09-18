@@ -407,4 +407,54 @@ describe('feat commands', () => {
     expect(replaced.provenanceUpdate.feats['skill expert']).toBeUndefined()
     expect(replaced.provenanceUpdate.feats.alert).toHaveLength(1)
   })
+
+  test('keeps same-source feat grants owned by a different grant variant', () => {
+    const firstChoice = {
+      id: 'first-choice',
+      domain: 'feats' as const,
+      sourceTag: {
+        ...makeSourceTag('class', 'Test Class', 'placeholder', 'TEST'),
+        grantVariant: 'first',
+      },
+      chooseCount: 1,
+      optionPool: [],
+      selected: [],
+      status: 'pending' as const,
+    }
+    const secondChoice = {
+      ...firstChoice,
+      id: 'second-choice',
+      sourceTag: { ...firstChoice.sourceTag, grantVariant: 'second' },
+    }
+    const character = makeCharacterFixture()
+    const ledger = { ...emptyProvenance(), choices: [firstChoice, secondChoice] }
+    const first = resolveFeatChoiceCommand(character, ledger, firstChoice.id, {
+      name: 'Alert',
+      source: 'PHB',
+    })
+    const configured = applyResult(character, first)
+    const second = resolveFeatChoiceCommand(configured, configured.provenance, secondChoice.id, {
+      name: 'Alert',
+      source: 'PHB',
+    })
+    const twiceGranted = applyResult(configured, second)
+
+    expect(twiceGranted.provenance.feats.alert.map((tag) => tag.grantVariant)).toEqual([
+      'first',
+      'second',
+    ])
+
+    const removed = resolveFeatChoiceCommand(
+      twiceGranted,
+      twiceGranted.provenance,
+      firstChoice.id,
+      {
+        name: 'Lucky',
+        source: 'PHB',
+      },
+    )
+    expect(removed.provenanceUpdate.feats.alert).toEqual([
+      expect.objectContaining({ grantVariant: 'second' }),
+    ])
+  })
 })

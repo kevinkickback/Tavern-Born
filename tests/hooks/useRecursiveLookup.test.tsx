@@ -1,13 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
-
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
+import { afterEach, describe, expect, test } from 'vitest'
 
 import { useRawRecursiveLookup, useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useCharacterStore } from '@/store/characterStore'

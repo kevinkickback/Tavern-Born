@@ -13,14 +13,6 @@ import type { Background5e, Feat5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/components/modals/FeatOptionsModal', () => ({
   FeatOptionsModal: () => <div data-testid="feat-options-modal">Feat options</div>,
 }))

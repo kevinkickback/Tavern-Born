@@ -15,7 +15,7 @@ import {
   Trash,
 } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -83,21 +83,22 @@ function getItemCategoryIcon(category: Exclude<ItemCategory, 'All'>) {
 function getRarityClass(rarity: string): string {
   switch (rarity.toLowerCase()) {
     case 'uncommon':
-      return 'border-green-500/40 text-green-400 bg-green-500/10'
+      return 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400'
     case 'rare':
-      return 'border-blue-500/40 text-blue-400 bg-blue-500/10'
+      return 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400'
     case 'very rare':
-      return 'border-purple-500/40 text-purple-400 bg-purple-500/10'
+      return 'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-400'
     case 'legendary':
-      return 'border-orange-500/40 text-orange-400 bg-orange-500/10'
+      return 'border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400'
     case 'artifact':
-      return 'border-red-500/40 text-red-400 bg-red-500/10'
+      return 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400'
     default:
       return 'border-border text-muted-foreground'
   }
 }
 
 export function EquipmentPage() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [addItemOpen, setAddItemOpen] = useState(false)
   const [inventoryCollapsed, setInventoryCollapsed] = useState(false)
@@ -348,7 +349,10 @@ export function EquipmentPage() {
 
                   <div className="border-r border-border px-4 py-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Diamond className="size-5 text-violet-400" weight="fill" />
+                      <Diamond
+                        className="size-5 text-violet-600 dark:text-violet-400"
+                        weight="fill"
+                      />
                       <span className="text-[11px] font-semibold uppercase tracking-wide">
                         Attunement
                       </span>
@@ -383,7 +387,10 @@ export function EquipmentPage() {
                   <div className="col-span-2 border-t border-border px-4 py-3 @min-[820px]:col-span-1 @min-[820px]:border-t-0">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <Coins className="size-5 text-yellow-500" weight="fill" />
+                        <Coins
+                          className="size-5 text-amber-600 dark:text-amber-400"
+                          weight="fill"
+                        />
                         <span className="text-[11px] font-semibold uppercase tracking-wide">
                           Currency
                         </span>
@@ -758,6 +765,10 @@ export function EquipmentPage() {
         open={addItemOpen}
         onOpenChange={setAddItemOpen}
         items={equipmentItems}
+        onManageSources={() => {
+          setAddItemOpen(false)
+          navigate('/sources')
+        }}
         onConfirm={(selectedItems) => {
           for (const item of selectedItems) {
             handleAddItem(item)

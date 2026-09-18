@@ -242,7 +242,7 @@ const SpellCard = memo(function SpellCard({
           {isConcentration && (
             <Badge
               variant="outline"
-              className="text-xs px-1.5 py-0 h-5 border-warning/60 text-warning"
+              className="h-5 border-warning/60 px-1.5 py-0 text-xs text-warning-foreground"
             >
               C
             </Badge>

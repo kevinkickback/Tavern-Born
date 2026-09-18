@@ -13,7 +13,7 @@ export function PreviewPinButton({ pinned, onPinToggle }: PreviewPinButtonProps)
       onClick={onPinToggle}
       className={cn(
         'flex size-7 shrink-0 items-center justify-center rounded border border-border bg-card text-muted-foreground hover:bg-muted/40 disabled:pointer-events-none disabled:opacity-40',
-        pinned && 'border-accent/60 text-accent-foreground',
+        pinned && 'border-accent/60 text-primary',
       )}
       title={pinned ? 'Unpin tooltip' : 'Pin tooltip'}
       aria-label={pinned ? 'Unpin tooltip' : 'Pin tooltip'}

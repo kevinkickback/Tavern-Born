@@ -9,7 +9,7 @@ export function AppTitleBar() {
   useEffect(() => {
     // Electron's native title-bar overlay accepts hex colors. Computed Radix colors may
     // serialize as display-p3, which the main-process validation intentionally rejects.
-    const shellColor = appearance === 'dark' ? '#111113' : '#e8e8ec'
+    const shellColor = appearance === 'dark' ? '#111113' : '#cdced6'
     const symbolColor = appearance === 'dark' ? '#fafafa' : '#1c2024'
     const height = getTitleBarOverlayHeight(uiScale)
     window.electronAPI?.setTitleBarOverlay?.(shellColor, symbolColor, height)

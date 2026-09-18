@@ -21,8 +21,15 @@ export function CharacterReadinessBadge({
   return (
     <Badge
       variant={ready ? 'default' : 'outline'}
-      className={cn(!ready && 'border-warning/50 bg-background/80 text-warning', className)}
-      aria-label={ready ? 'Character ready' : `${readiness.blockingIssues.length} required choices`}
+      className={cn(
+        !ready && 'border-warning/50 bg-background/80 text-warning-foreground',
+        className,
+      )}
+      aria-label={
+        ready
+          ? 'Character ready'
+          : `${readiness.blockingIssues.length} ${readiness.blockingIssues.length === 1 ? 'issue' : 'issues'} requiring attention`
+      }
     >
       {ready
         ? 'Ready'
