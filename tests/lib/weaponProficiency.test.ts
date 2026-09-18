@@ -32,4 +32,14 @@ describe('isProficientWithWeapon', () => {
     expect(isProficientWithWeapon(['martial melee weapons'], martialMelee)).toBe(true)
     expect(isProficientWithWeapon(['simple melee weapons'], martialMelee)).toBe(false)
   })
+
+  it('recognizes 2024 melee and ranged weapon type codes', () => {
+    const simpleMelee = { name: 'Sickle', weaponCategory: 'simple', type: 'MW|XPHB' }
+    const martialRanged = { name: 'Longbow', weaponCategory: 'martial', type: 'RW' }
+
+    expect(isProficientWithWeapon(['simple melee weapons'], simpleMelee)).toBe(true)
+    expect(isProficientWithWeapon(['simple ranged weapons'], simpleMelee)).toBe(false)
+    expect(isProficientWithWeapon(['martial ranged weapons'], martialRanged)).toBe(true)
+    expect(isProficientWithWeapon(['martial melee weapons'], martialRanged)).toBe(false)
+  })
 })

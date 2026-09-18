@@ -16,7 +16,12 @@ export function isProficientWithWeapon(
   const name = normalized(weapon.name)
   const category = normalized(weapon.weaponCategory)
   const typeCode = normalized(weapon.type).split('|')[0]
-  const range = typeCode === 'm' ? 'melee' : typeCode === 'r' ? 'ranged' : ''
+  const range =
+    typeCode === 'm' || typeCode === 'mw'
+      ? 'melee'
+      : typeCode === 'r' || typeCode === 'rw'
+        ? 'ranged'
+        : ''
   return proficiencies.some((rawProficiency) => {
     const proficiency = normalized(rawProficiency)
     if (proficiency === name) return true
