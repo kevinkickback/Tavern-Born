@@ -1,6 +1,18 @@
-import type { Background5e, Class5e, Feat5e, Item5e, Race5e, Spell5e } from '@/types/5etools'
+import type {
+  Background5e,
+  Class5e,
+  Feat5e,
+  Item5e,
+  ItemMastery5e,
+  ItemProperty5e,
+  ItemType5e,
+  Organization5e,
+  Race5e,
+  Spell5e,
+} from '@/types/5etools'
 
 interface CompendiumEntryBase {
+  id: string
   name: string
   source: string
   description?: string
@@ -14,6 +26,9 @@ type UntypedEntryType =
   | 'Condition'
   | 'Language'
   | 'Deity'
+  | 'Organization'
+  | 'Item Property'
+  | 'Weapon Mastery'
   | 'Optional Feature'
   | 'Variant Rule'
   | 'Trap / Hazard'
@@ -31,13 +46,22 @@ export type CompendiumEntry =
 
 export type CompendiumEditionFilter = '5e' | '5.5e' | 'both'
 
+const REVISED_CORE_SOURCES = new Set(['XPHB', 'XDMG', 'XMM'])
+
 interface CompendiumGameData {
   races?: Race5e[] | Record<string, Race5e>
   classes?: Class5e[] | Record<string, Class5e>
   spells?: Spell5e[] | Record<string, Spell5e>
   items?: Item5e[]
+  itemsBase?: Item5e[]
+  itemProperties?: ItemProperty5e[]
+  itemTypes?: ItemType5e[]
+  itemMasteries?: ItemMastery5e[]
   backgrounds?: Background5e[] | Record<string, Background5e>
+  organizations?: Organization5e[]
   feats?: Feat5e[] | Record<string, Feat5e>
+  /** Present on GameData, but intentionally excluded from the curated reference index. */
+  classFeatures?: unknown[]
   skills?: unknown
   senses?: unknown[]
   actions?: unknown[]
@@ -63,59 +87,111 @@ function asCollection<T = unknown>(value: unknown): T[] {
   return []
 }
 
-function toSpacedLowerKey(key: string): string {
-  return key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()
-}
-
-function extractSearchText(value: unknown, depth = 0): string {
-  if (value == null || depth > 6) return ''
-
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-
-  if (Array.isArray(value)) {
-    return value.map((item) => extractSearchText(item, depth + 1)).join(' ')
-  }
-
-  if (typeof value === 'object') {
-    return Object.entries(value)
-      .map(([key, nested]) => {
-        if (depth > 1 && !['name', 'entries', 'entry', 'source', 'type'].includes(key)) {
-          return extractSearchText(nested, depth + 1)
-        }
-        return `${toSpacedLowerKey(key)} ${extractSearchText(nested, depth + 1)}`
-      })
-      .join(' ')
-  }
-
-  return ''
-}
-
 function normalizeSearchText(...parts: Array<string | undefined>): string {
   return parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
-function isRawTag(s: string): boolean {
-  return s.startsWith('{@')
+function toPreviewPlainText(value: string): string {
+  return value
+    .replace(/\{#itemEntry [^}]+\}/g, '')
+    .replace(/\{@([a-zA-Z]+)(?:\s+([^}]*))?\}/g, (_match, tag: string, content = '') => {
+      const primaryText = content.split('|')[0]?.trim() ?? ''
+      if (tag === 'h') return 'Hit:'
+      if (tag === 'hit') return primaryText ? `+${primaryText}` : ''
+      if (tag === 'dc') return primaryText ? `DC ${primaryText}` : ''
+      if (tag === 'chance') return primaryText ? `${primaryText}%` : ''
+      if (tag === 'recharge') return `(Recharge ${primaryText || '5'}-6)`
+      return primaryText
+    })
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-function getPreviewDescription(value: unknown): string {
-  if (typeof value === 'string') return isRawTag(value) ? '' : value
+function isInternalReference(value: string): boolean {
+  const trimmed = value.trim()
+  return /^\{#[^}]+\}$/.test(trimmed) || /^[^|]+\|[A-Z][A-Z0-9-]*$/.test(trimmed)
+}
 
-  if (Array.isArray(value) && value.length > 0) {
+function collectPreviewText(value: unknown, output: string[], depth = 0): void {
+  if (value == null || depth > 6 || output.length >= 4) return
+
+  if (typeof value === 'string') {
+    if (isInternalReference(value)) return
+    if (value.trim()) output.push(value)
+    return
+  }
+
+  if (Array.isArray(value)) {
     for (const item of value) {
-      if (typeof item === 'string' && !isRawTag(item) && item.trim()) return item
+      collectPreviewText(item, output, depth + 1)
+      if (output.length >= 4) return
     }
-    const firstNonString = value.find((item) => typeof item !== 'string')
-    if (firstNonString !== undefined) return extractSearchText(firstNonString)
-    return ''
+    return
   }
 
   if (typeof value === 'object' && value !== null) {
-    return extractSearchText(value)
+    const entry = value as {
+      entries?: unknown[]
+      entry?: unknown
+      items?: unknown[]
+      description?: unknown
+    }
+    collectPreviewText(entry.entries, output, depth + 1)
+    collectPreviewText(entry.entry, output, depth + 1)
+    collectPreviewText(entry.items, output, depth + 1)
+    collectPreviewText(entry.description, output, depth + 1)
   }
+}
 
-  return ''
+function getPreviewDescription(value: unknown): string {
+  const rawCandidates: string[] = []
+  collectPreviewText(value, rawCandidates)
+  const candidates = rawCandidates.map(toPreviewPlainText).filter(Boolean)
+  const description = candidates.find((candidate) => candidate.length >= 40) ?? candidates[0] ?? ''
+  if (description.length <= 220) return description
+  const shortened = description.slice(0, 220)
+  const lastSpace = shortened.lastIndexOf(' ')
+  return `${shortened.slice(0, lastSpace > 40 ? lastSpace : 220).trim()}...`
+}
+
+function buildItemTypeNameMap(itemTypes: readonly ItemType5e[]): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const itemType of itemTypes) {
+    const abbreviation = itemType.abbreviation?.trim()
+    const source = itemType.source?.trim()
+    const name = itemType.name?.trim()
+    if (!abbreviation || !name) continue
+    names.set(`${abbreviation}|${source ?? ''}`.toLowerCase(), name)
+    if (!names.has(abbreviation.toLowerCase())) names.set(abbreviation.toLowerCase(), name)
+  }
+  return names
+}
+
+function getItemTypeName(item: Item5e, itemTypeNames: ReadonlyMap<string, string>): string {
+  const rawType = item.type?.trim()
+  if (!rawType) return ''
+  const [abbreviation = '', source = ''] = rawType.split('|')
+  return (
+    itemTypeNames.get(`${abbreviation}|${source}`.toLowerCase()) ??
+    itemTypeNames.get(abbreviation.toLowerCase()) ??
+    rawType
+  )
+}
+
+function getItemPropertyName(property: ItemProperty5e): string {
+  const directName = typeof property.name === 'string' ? property.name.trim() : ''
+  if (directName) return directName
+  for (const entry of property.entries ?? []) {
+    if (typeof entry.name === 'string' && entry.name.trim()) return entry.name.trim()
+  }
+  return property.abbreviation
 }
 
 function buildEntry(
@@ -126,6 +202,7 @@ function buildEntry(
   data: Record<string, unknown>,
 ): CompendiumEntry {
   return {
+    id: [type, source, name].join('|').toLowerCase(),
     name,
     type,
     source,
@@ -133,6 +210,16 @@ function buildEntry(
     searchText: normalizeSearchText(name, type, source, description),
     data,
   } as CompendiumEntry
+}
+
+function deduplicateEntries(entries: CompendiumEntry[]): CompendiumEntry[] {
+  const uniqueEntries = new Map<string, CompendiumEntry>()
+  for (const entry of entries) {
+    if (!entry.name.trim()) continue
+    const identity = `${entry.type}|${entry.source}|${entry.name}`.toLowerCase()
+    if (!uniqueEntries.has(identity)) uniqueEntries.set(identity, entry)
+  }
+  return Array.from(uniqueEntries.values())
 }
 
 function tokenizeSearchQuery(searchQuery: string): string[] {
@@ -235,16 +322,52 @@ export function buildCompendiumEntries(
     })
   }
 
-  if (gameData.items) {
-    gameData.items.forEach((item) => {
-      const description = getPreviewDescription(item.entries ?? []) || item.type
+  const itemTypeNames = buildItemTypeNameMap(gameData.itemTypes ?? [])
+  const seenItems = new Set<string>()
+  const allItems = [...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]
+  allItems.forEach((item) => {
+    const identity = `${item.name ?? ''}|${item.source ?? ''}`.toLowerCase()
+    if (!item.name || seenItems.has(identity)) return
+    seenItems.add(identity)
+    const description =
+      getPreviewDescription(item.entries ?? item.additionalEntries ?? []) ||
+      getItemTypeName(item, itemTypeNames)
+    entries.push(
+      buildEntry(
+        item.name,
+        'Item',
+        item.source ?? 'Unknown',
+        description,
+        item as unknown as Record<string, unknown>,
+      ),
+    )
+  })
+
+  if (gameData.itemProperties) {
+    gameData.itemProperties.forEach((property) => {
+      const description = getPreviewDescription(property.entries ?? [])
       entries.push(
         buildEntry(
-          item.name ?? '',
-          'Item',
-          item.source ?? 'Unknown',
+          getItemPropertyName(property),
+          'Item Property',
+          property.source ?? 'Unknown',
           description,
-          item as unknown as Record<string, unknown>,
+          property as unknown as Record<string, unknown>,
+        ),
+      )
+    })
+  }
+
+  if (gameData.itemMasteries) {
+    gameData.itemMasteries.forEach((mastery) => {
+      const description = getPreviewDescription(mastery.entries ?? [])
+      entries.push(
+        buildEntry(
+          mastery.name ?? '',
+          'Weapon Mastery',
+          mastery.source ?? 'Unknown',
+          description,
+          mastery as unknown as Record<string, unknown>,
         ),
       )
     })
@@ -260,6 +383,20 @@ export function buildCompendiumEntries(
           bg.source ?? 'Unknown',
           description,
           bg as unknown as Record<string, unknown>,
+        ),
+      )
+    })
+  }
+
+  if (gameData.organizations) {
+    gameData.organizations.forEach((organization) => {
+      entries.push(
+        buildEntry(
+          organization.name ?? '',
+          'Organization',
+          organization.source ?? 'Unknown',
+          organization.description ?? '',
+          organization as unknown as Record<string, unknown>,
         ),
       )
     })
@@ -468,14 +605,16 @@ export function buildCompendiumEntries(
     })
   }
 
-  return entries
+  return deduplicateEntries(entries)
 }
 
 function getCompendiumEntryEdition(
   entry: CompendiumEntry,
 ): Exclude<CompendiumEditionFilter, 'both'> {
   const data = entry.data as Record<string, unknown>
-  return data.edition === 'one' || entry.source.toUpperCase() === 'XPHB' ? '5.5e' : '5e'
+  return data.edition === 'one' || REVISED_CORE_SOURCES.has(entry.source.toUpperCase())
+    ? '5.5e'
+    : '5e'
 }
 
 export function filterCompendiumEntries(

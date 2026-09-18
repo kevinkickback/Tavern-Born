@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
@@ -70,7 +70,9 @@ describe('BuildClassLevelsPanel', () => {
     )
 
     const label = await screen.findByText('Ability Score Improvement')
-    expect(label.closest('.rounded-lg')?.className).toContain('animate-route-focus')
+    await waitFor(() =>
+      expect(label.closest('.rounded-lg')?.className).toContain('animate-route-focus'),
+    )
   })
 
   test('marks the level choice badge complete only after its ASI choice is resolved', () => {
@@ -280,7 +282,7 @@ describe('BuildClassLevelsPanel', () => {
     )
 
     await screen.findByText('Second Training')
-    expect(container.querySelectorAll('.animate-route-focus')).toHaveLength(1)
+    await waitFor(() => expect(container.querySelectorAll('.animate-route-focus')).toHaveLength(1))
     expect(screen.getByText(/No rule was guessed/).closest('.animate-route-focus')).toBeTruthy()
   })
 

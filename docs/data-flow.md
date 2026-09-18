@@ -225,7 +225,7 @@ Tooltip note:
   languages. Parent class/subclass identity disambiguates feature names that collide within a source.
 - Generated inline references are focusable and expose button/dialog semantics. Hover or focus opens
   a preview, Enter/Space pins it, and Escape closes it and restores focus to the reference.
-- Rich text inside an open tooltip can open another tooltip. Each nested reference keeps its parent visible, shares the parent card styling, and uses the same source-aware lookup, allowing the interaction to continue recursively. Dismissal includes a short grace period so the pointer can cross the gap between parent and child previews. The newest card receives the strongest border and elevation, older cards remain fully opaque, active triggers stay highlighted, and constrained placement staggers overlapping cards to preserve visible context.
+- Rich text inside an open tooltip can open another tooltip. Each nested reference keeps its parent visible, shares the parent card styling, and uses the same source-aware lookup, allowing the interaction to continue recursively. Dismissal includes a short grace period so the pointer can cross the gap between parent and child previews. The newest card receives the strongest border and elevation, older cards remain fully opaque, active triggers stay highlighted, and ancestor-aware placement uses another side of the spawning window rather than covering the pin or transient context.
 
 ## 5a) Source Preset and Reprint Filtering
 

@@ -107,6 +107,7 @@ export function BuildAbilityScoresPage() {
     raceAsiData,
     racialBonuses,
     backgroundBonuses,
+    featBonuses,
     bgAsiData,
     normalizedBackground,
     selectedRace,
@@ -192,8 +193,11 @@ export function BuildAbilityScoresPage() {
     for (const ability of Object.keys(asiBonuses) as AbilityName[]) {
       merged[ability] = (merged[ability] ?? 0) + (asiBonuses[ability] ?? 0)
     }
+    for (const ability of Object.keys(featBonuses) as AbilityName[]) {
+      merged[ability] = (merged[ability] ?? 0) + (featBonuses[ability] ?? 0)
+    }
     return merged
-  }, [asiBonuses, backgroundBonuses, racialBonuses])
+  }, [asiBonuses, backgroundBonuses, featBonuses, racialBonuses])
 
   const skillDetailsMap = useMemo(() => buildSkillDetailsMap(skills), [skills])
 

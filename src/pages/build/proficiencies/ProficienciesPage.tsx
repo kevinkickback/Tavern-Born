@@ -63,13 +63,17 @@ export function BuildProficienciesPage() {
       focusedChoice?.domain === 'armor' ||
       focusedChoice?.domain === 'weapons') ??
     false
+  const focusedChoiceTarget =
+    focusProficiencyChoice && focusedChoice
+      ? `${readinessFocus ?? ''}\0${focusedChoice.domain}`
+      : null
   const { ref: choicePanelRef, highlighted: choicePanelHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(focusProficiencyChoice)
 
   useEffect(() => {
-    if (!focusProficiencyChoice || !focusedChoice) return
-    setActiveTab(focusedChoice.domain as ProficiencyTabValue)
-  }, [focusProficiencyChoice, focusedChoice])
+    if (!focusedChoiceTarget) return
+    setActiveTab(focusedChoiceTarget.split('\0')[1] as ProficiencyTabValue)
+  }, [focusedChoiceTarget])
 
   const { itemsByName, weaponInfoMap } = useMemo(() => {
     const byName = new Map<string, (typeof itemsBase)[0]>()

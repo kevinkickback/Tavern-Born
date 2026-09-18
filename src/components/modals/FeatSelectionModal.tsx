@@ -34,7 +34,7 @@ const FeatCard = memo(function FeatCard({
   prereqReasons,
   recursiveLookup,
 }: FeatCardProps) {
-  const firstEntry = feat.entries?.[0]
+  const descriptionEntries = feat.entries ?? []
   const categoryLabel =
     typeof feat.category === 'string' && feat.category.length > 0
       ? featCategoryToFull(feat.category)
@@ -75,11 +75,11 @@ const FeatCard = memo(function FeatCard({
         </div>
       )}
 
-      {firstEntry != null && (
+      {descriptionEntries.length > 0 && (
         <RenderedEntryWithTooltip
-          entry={firstEntry}
+          entry={descriptionEntries}
           className={cn(
-            'text-sm text-muted-foreground line-clamp-3 leading-snug',
+            'text-sm text-muted-foreground line-clamp-5 leading-snug',
             !prereqMet && !isSelected && 'opacity-70',
           )}
           recursiveLookup={recursiveLookup}

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { ConditionsPage } from '@/pages/details/ConditionsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -86,7 +87,9 @@ vi.mock('@/hooks/data/useGameData', () => ({
 function renderPage(initialEntry = '/details/conditions') {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <ConditionsPage />
+      <RulesPreviewManager>
+        <ConditionsPage />
+      </RulesPreviewManager>
     </MemoryRouter>,
   )
 }

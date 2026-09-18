@@ -32,6 +32,17 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     expect(runtime.rendererProcessType).toBe('undefined')
     expect(runtime.rendererRequireType).toBe('undefined')
 
+    await page.evaluate(() => sessionStorage.setItem('electron-smoke-reload', 'preserved'))
+    const trustedReload = page.waitForEvent('framenavigated', {
+      predicate: (frame) => frame === page.mainFrame(),
+    })
+    await page.evaluate(() => window.location.reload())
+    await trustedReload
+    await expect(page).toHaveTitle(/Tavern Born/i)
+    await expect
+      .poll(() => page.evaluate(() => sessionStorage.getItem('electron-smoke-reload')))
+      .toBe('preserved')
+
     const bundledClassIcon = await page.evaluate(async () => {
       const image = new Image()
       const loaded = new Promise<boolean>((resolve) => {

@@ -163,9 +163,10 @@ Rules, sources, and condition tracking:
 5etools rich text rendering:
 - src/lib/renderer.ts
 - src/lib/entryRenderCache.ts — object-identity cache for repeatedly rendered entries
-- src/lib/renderer/recursiveTooltip.ts — shared recursive tooltip types, reference resolution, positioning, and explicit collection-set lookup builder
+- src/lib/renderer/recursiveTooltip.ts — shared rules-reference types, source-aware resolution, and explicit collection-set lookup builder
 - src/components/editor/GameContent.tsx — canonical user-facing rules-text renderer with the cached app lookup
-- src/components/editor/RenderedEntryWithTooltip.tsx — recursive source-aware rich-text UI
+- src/components/editor/RulesPreviewManager.tsx — app-level pinned/transient rules-preview state and portal
+- src/components/editor/RenderedEntryWithTooltip.tsx — source-aware interactive rich-text trigger boundary
 
 Character sheet PDF:
 - src/lib/pdf/characterSheetViewModel.ts — pure character and raw game-data projection

@@ -51,6 +51,7 @@ export interface EffectiveAbilityScoreData {
   backgroundAbilityData: BackgroundAbilityData
   backgroundBonuses: Partial<Record<AbilityName, number>>
   asiBonuses: Partial<Record<AbilityName, number>>
+  featBonuses: Partial<Record<AbilityName, number>>
 }
 
 interface CharacterEquipmentCalculationState {
@@ -145,6 +146,18 @@ function addBonuses(scores: AbilityScores, bonuses: Partial<Record<AbilityName, 
   }
 }
 
+function getProvenanceFeatBonuses(
+  character: Character | null | undefined,
+): Partial<Record<AbilityName, number>> {
+  const bonuses: Partial<Record<AbilityName, number>> = {}
+  for (const record of character?.provenance?.abilityBonuses ?? []) {
+    if (record.sourceTag.sourceType !== 'feat') continue
+    const ability = record.ability as AbilityName
+    bonuses[ability] = (bonuses[ability] ?? 0) + record.value
+  }
+  return bonuses
+}
+
 export function deriveEffectiveAbilityScores(
   character: Character | null | undefined,
   race?: Race5e,
@@ -185,11 +198,13 @@ export function deriveEffectiveAbilityScores(
       asiBonuses[ability] = (asiBonuses[ability] ?? 0) + amount
     }
   }
+  const featBonuses = getProvenanceFeatBonuses(character)
 
   const total = { ...base }
   addBonuses(total, racialBonuses)
   addBonuses(total, backgroundBonuses)
   addBonuses(total, asiBonuses)
+  addBonuses(total, featBonuses)
 
   if (character) {
     const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
@@ -226,6 +241,7 @@ export function deriveEffectiveAbilityScores(
     backgroundAbilityData,
     backgroundBonuses,
     asiBonuses,
+    featBonuses,
   }
 }
 

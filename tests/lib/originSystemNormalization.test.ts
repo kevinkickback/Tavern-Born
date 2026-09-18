@@ -62,7 +62,7 @@ describe('originSystem normalization', () => {
     expect(normalized.race?.feats).toBeUndefined()
   })
 
-  test('2014 preserves race and subrace ASI data while stripping origin feats', () => {
+  test('2014 preserves legacy race and subrace ASI and feat benefits', () => {
     const race: Race5e = {
       name: 'Elf',
       source: 'PHB',
@@ -80,8 +80,21 @@ describe('originSystem normalization', () => {
 
     expect(normalized.race?.ability).toEqual([{ dexterity: 2 }])
     expect(normalized.subrace?.ability).toEqual([{ intelligence: 1 }])
+    expect(normalized.race?.feats).toEqual([{ anyFromCategory: { category: ['O'], count: 1 } }])
+    expect(normalized.subrace?.feats).toEqual([{ anyFromCategory: { category: ['O'], count: 1 } }])
+  })
+
+  test('2014 strips revised race origin feats when revised content is mixed in', () => {
+    const race: Race5e = {
+      name: 'Human',
+      source: 'XPHB',
+      edition: 'one',
+      feats: [{ anyFromCategory: { category: ['O'], count: 1 } }],
+    }
+
+    const normalized = normalizeRaceSelectionForOriginSystem(race, undefined, '2014')
+
     expect(normalized.race?.feats).toBeUndefined()
-    expect(normalized.subrace?.feats).toBeUndefined()
   })
 
   test('2024 synthesizes background ASI and origin feat when missing', () => {

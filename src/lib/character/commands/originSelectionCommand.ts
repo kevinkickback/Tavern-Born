@@ -5,7 +5,11 @@ import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { applyBackgroundSelectionCommand } from './backgroundCommands'
 import { applyClassSelectionCommand } from './classCommands'
-import { applyRaceSelectionCommand, type ResolveRaceChoiceOptions } from './raceCommands'
+import {
+  applyRaceAsiChoicesCommand,
+  applyRaceSelectionCommand,
+  type ResolveRaceChoiceOptions,
+} from './raceCommands'
 
 export interface InitialCharacterSelections {
   initial: Partial<Character>
@@ -61,6 +65,13 @@ export function buildInitialCharacter(
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
+
+    const raceAsiResult = applyRaceAsiChoicesCommand(
+      ledger,
+      selections.raceAsiChoices ?? selections.initial.raceAsiChoices ?? [],
+    )
+    character = applyPatch(character, raceAsiResult.characterPatch)
+    ledger = raceAsiResult.provenanceUpdate
   }
 
   if (selections.classEntity) {
@@ -102,6 +113,5 @@ export function buildInitialCharacter(
   return {
     ...character,
     provenance: ledger,
-    raceAsiChoices: selections.raceAsiChoices ?? character.raceAsiChoices,
   }
 }

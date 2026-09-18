@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 
 const RACE: Race5e = { name: 'Human', source: 'XPHB' }
@@ -12,7 +14,7 @@ const BACKGROUND: Background5e = {
 
 const resolveRaceChoiceOptions = () => []
 
-describe('buildInitialCharacter (2024 origin system)', () => {
+describe('buildInitialCharacter', () => {
   test('applying race, class, and background together does not throw', () => {
     expect(() =>
       buildInitialCharacter(
@@ -108,5 +110,61 @@ describe('buildInitialCharacter (2024 origin system)', () => {
     )
 
     expect(character.hitPoints.current).toBe(13)
+  })
+
+  test('preserves the Variant Human feat and resolves wizard racial ability choices', () => {
+    const human = {
+      name: 'Human',
+      source: 'PHB',
+    } as Race5e
+    const variant = {
+      name: 'Variant',
+      source: 'PHB',
+      ability: [
+        {
+          choose: {
+            from: ['str', 'dex', 'con', 'int', 'wis', 'cha'],
+            count: 2,
+          },
+        },
+      ],
+      feats: [{ any: 1 }],
+    } as Race5e
+
+    const character = buildInitialCharacter(
+      {
+        initial: { originSystem: '2014' },
+        race: human,
+        subrace: variant,
+        raceAsiChoices: [['strength', 'dexterity']],
+      },
+      new Map(),
+      resolveRaceChoiceOptions,
+    )
+
+    expect(character.raceAsiChoices).toEqual([['strength', 'dexterity']])
+    expect(
+      character.provenance?.choices.find((choice) => choice.domain === 'abilityBonuses'),
+    ).toMatchObject({
+      selected: ['strength', 'dexterity'],
+      status: 'resolved',
+    })
+    expect(character.provenance?.choices.find((choice) => choice.domain === 'feats')).toMatchObject(
+      {
+        sourceTag: { sourceType: 'subrace', sourceName: 'Variant', sourceRef: 'PHB' },
+        chooseCount: 1,
+        status: 'pending',
+      },
+    )
+
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: { 'Human|PHB': { ...human, subraces: [variant] } },
+    })
+    const issueIds = getCharacterReadiness(character, { calculation }).blockingIssues.map(
+      (issue) => issue.id,
+    )
+    expect(issueIds).not.toContain('race:ability-choice:0')
+    expect(issueIds).not.toContain('choice:subrace:variant:abilityBonuses:choose:0')
+    expect(issueIds).toContain('choice:subrace:variant:feats:any:0')
   })
 })

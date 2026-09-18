@@ -229,8 +229,7 @@ Ability-score method labels and explanations are derived from the character's se
 `CORE_RULES_METADATA` record. The wizard and Rules page consume the same view-neutral descriptors,
 so displayed point-buy limits and standard-array values follow the selected origin system.
 
-Persisted `character.abilityScores` are raw allocated scores, with a documented temporary
-exception for reversible feat-option changes. Effective scores, modifiers, skills, saves, HP, AC,
+Persisted `character.abilityScores` are raw allocated scores. Effective scores, modifiers, skills, saves, HP, AC,
 carrying capacity, prerequisites, and spellcasting values are derived through
 `CharacterCalculationContext` and are not persisted. See
 [Character Calculation Context](calculation-context.md) for the composition order and complete

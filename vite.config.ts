@@ -36,6 +36,8 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@cantoo/pdf-lib')) return 'vendor-pdf-lib'
           if (id.includes('pdfjs-dist')) return 'vendor-pdfjs'
+          if (id.includes('/zod/')) return 'vendor-schema'
+          if (id.includes('/dompurify/')) return 'vendor-sanitize'
           if (id.includes('/react-router')) return 'vendor-router'
           if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
             return 'vendor-react'
@@ -64,5 +66,10 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src'),
     },
     dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // Appearance is lazy-rendered from Settings. Pre-bundle its Radix primitive with
+    // React so first navigation cannot invalidate the renderer's dependency graph.
+    include: ['@radix-ui/react-radio-group'],
   },
 })

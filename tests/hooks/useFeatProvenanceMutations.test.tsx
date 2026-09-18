@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -48,7 +49,11 @@ describe('useFeatProvenanceMutations bonus feats', () => {
       abilityScore: 'int',
     })
     expect(updated?.proficiencies.skills).toEqual(['arcana'])
-    expect(updated?.abilityScores.intelligence).toBe(11)
+    expect(updated?.abilityScores.intelligence).toBe(10)
+    expect(updated && deriveEffectiveAbilityScores(updated).total.intelligence).toBe(11)
+    expect(updated?.provenance?.abilityBonuses).toEqual([
+      expect.objectContaining({ ability: 'intelligence', value: 1 }),
+    ])
     expect(updated?.provenance?.proficiencies.skills.arcana).toHaveLength(1)
 
     act(() => {
@@ -70,6 +75,8 @@ describe('useFeatProvenanceMutations bonus feats', () => {
     expect(updated?.proficiencies.skills).toEqual([])
     expect(updated?.proficiencies.expertise).toEqual([])
     expect(updated?.abilityScores.intelligence).toBe(10)
+    expect(updated && deriveEffectiveAbilityScores(updated).total.intelligence).toBe(10)
+    expect(updated?.provenance?.abilityBonuses).toEqual([])
     expect(updated?.provenance?.proficiencies.skills.arcana).toBeUndefined()
   })
 

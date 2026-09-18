@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -37,7 +38,9 @@ function renderPage() {
   return render(
     <MemoryRouter>
       <TooltipProvider>
-        <EquipmentPage />
+        <RulesPreviewManager>
+          <EquipmentPage />
+        </RulesPreviewManager>
       </TooltipProvider>
     </MemoryRouter>,
   )

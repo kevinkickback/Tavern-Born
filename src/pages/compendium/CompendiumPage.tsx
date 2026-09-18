@@ -27,7 +27,6 @@ import {
   type CompendiumEntry,
   filterCompendiumEntries,
 } from '@/lib/compendiumEntries'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -45,6 +44,9 @@ const ENTRY_TYPES = [
   'Condition',
   'Language',
   'Deity',
+  'Organization',
+  'Item Property',
+  'Weapon Mastery',
   'Optional Feature',
   'Variant Rule',
   'Trap / Hazard',
@@ -262,7 +264,7 @@ export function CompendiumPage() {
                     {displayedEntries.map((entry) => {
                       const selected = selectedEntry === entry
                       return (
-                        <li key={`${entry.type}-${entry.source}-${entry.name}`}>
+                        <li key={entry.id}>
                           <button
                             type="button"
                             aria-pressed={selected}
@@ -278,12 +280,9 @@ export function CompendiumPage() {
                             <div className="min-w-0 flex-1">
                               <h3 className="truncate text-sm font-medium">{entry.name}</h3>
                               {entry.description && (
-                                <p
-                                  className="mt-0.5 line-clamp-1 text-xs text-muted-foreground"
-                                  dangerouslySetInnerHTML={{
-                                    __html: renderEntry(entry.description),
-                                  }}
-                                />
+                                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                                  {entry.description}
+                                </p>
                               )}
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-0.5">

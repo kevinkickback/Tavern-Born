@@ -4,12 +4,20 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { GeneralPanel } from '@/components/settings/GeneralPanel'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
+const { resetAllHintsMock } = vi.hoisted(() => ({
+  resetAllHintsMock: vi.fn(),
+}))
+
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
     getItem: vi.fn(async () => null),
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
+}))
+
+vi.mock('@/lib/storage/hints', () => ({
+  resetAllHints: resetAllHintsMock,
 }))
 
 function installElectronApi(checkForUpdate: ReturnType<typeof vi.fn>) {
@@ -88,5 +96,16 @@ describe('general update settings', () => {
 
     expect(await screen.findByText('Error: IPC unavailable')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Check Now' }).hasAttribute('disabled')).toBe(false)
+  })
+
+  test('resets dismissed one-time hints from settings', async () => {
+    installElectronApi(
+      vi.fn(async () => ({ success: true, data: { status: 'not-available' }, error: null })),
+    )
+
+    render(<GeneralPanel />)
+    await userEvent.click(screen.getByRole('button', { name: 'Reset' }))
+
+    expect(resetAllHintsMock).toHaveBeenCalledTimes(1)
   })
 })

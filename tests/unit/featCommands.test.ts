@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
@@ -41,7 +42,11 @@ describe('feat commands', () => {
     const configured = applyResult(character, committed)
 
     expect(configured.proficiencies.skills).toEqual(['arcana'])
-    expect(configured.abilityScores.intelligence).toBe(11)
+    expect(configured.abilityScores.intelligence).toBe(10)
+    expect(configured.provenance.abilityBonuses).toEqual([
+      expect.objectContaining({ ability: 'intelligence', value: 1 }),
+    ])
+    expect(deriveEffectiveAbilityScores(configured).total.intelligence).toBe(11)
     expect(configured.provenance.proficiencies.skills.arcana).toHaveLength(1)
 
     const retracted = retractFeatOptionsCommand(
@@ -53,7 +58,8 @@ describe('feat commands', () => {
 
     expect(retracted.characterPatch.proficiencies?.skills).toEqual([])
     expect(retracted.characterPatch.proficiencies?.expertise).toEqual([])
-    expect(retracted.characterPatch.abilityScores?.intelligence).toBe(10)
+    expect(retracted.characterPatch.abilityScores).toBeUndefined()
+    expect(retracted.provenanceUpdate.abilityBonuses).toEqual([])
     expect(retracted.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
 
@@ -383,14 +389,16 @@ describe('feat commands', () => {
         },
       },
     ])
-    expect(configured.abilityScores.intelligence).toBe(11)
+    expect(configured.abilityScores.intelligence).toBe(10)
+    expect(deriveEffectiveAbilityScores(configured).total.intelligence).toBe(11)
     expect(configured.proficiencies.expertise).toEqual(['arcana'])
 
     const replaced = resolveFeatChoiceCommand(configured, configured.provenance, choice.id, {
       name: 'Alert',
       source: 'PHB',
     })
-    expect(replaced.characterPatch.abilityScores?.intelligence).toBe(10)
+    expect(replaced.characterPatch.abilityScores).toBeUndefined()
+    expect(replaced.provenanceUpdate.abilityBonuses).toEqual([])
     expect(replaced.characterPatch.proficiencies?.skills).toEqual([])
     expect(replaced.characterPatch.proficiencies?.expertise).toEqual([])
     expect(replaced.provenanceUpdate.choices[0]?.selectedRefs).toEqual([

@@ -30,6 +30,14 @@ function stripRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
   return rest as T
 }
 
+function isRevisedRace(race: Race5e | undefined): boolean {
+  return race?.edition === 'one' || race?.source === 'XPHB' || race?.basicRules2024 === true
+}
+
+function stripRevisedRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
+  return isRevisedRace(race) ? stripRaceOriginFeats(race) : race
+}
+
 function stripRaceOriginBenefits<T extends Race5e | undefined>(race: T): T {
   if (!race) return race
   const { ability: _ability, feats: _feats, ...rest } = race
@@ -69,8 +77,8 @@ export function normalizeRaceSelectionForOriginSystem(
     }
   }
 
-  const normalizedRace = stripRaceOriginFeats(race) as OriginNormalizedRace
-  const normalizedSubrace = stripRaceOriginFeats(subrace) as OriginNormalizedRace | undefined
+  const normalizedRace = stripRevisedRaceOriginFeats(race) as OriginNormalizedRace
+  const normalizedSubrace = stripRevisedRaceOriginFeats(subrace) as OriginNormalizedRace | undefined
   const hasAnyRaceAsi = hasAbilityEntries(race) || hasAbilityEntries(subrace)
 
   if (hasAnyRaceAsi) {

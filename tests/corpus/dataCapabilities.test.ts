@@ -87,6 +87,22 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const copiedArcaneArcher = revisedFighter?.subclasses?.find(
       (subclass) => subclass.name === 'Arcane Archer' && subclass.source === 'XGE',
     )
+    const legacyHuman = races.find((race) => race.name === 'Human' && race.source === 'PHB')
+    const variantHuman = legacyHuman?.subraces?.find(
+      (subrace) => subrace.name === 'Variant' && subrace.source === 'PHB',
+    )
+    const revisedHuman = races.find((race) => race.name === 'Human' && race.source === 'XPHB')
+    const revisedSoldier = backgrounds.find(
+      (background) => background.name === 'Soldier' && background.source === 'XPHB',
+    )
+    const arcaneTrickster = classes
+      .find((classData) => classData.name === 'Rogue' && classData.source === 'PHB')
+      ?.subclasses?.find(
+        (subclass) => subclass.name === 'Arcane Trickster' && subclass.source === 'PHB',
+      )
+    const eldritchKnight = revisedFighter?.subclasses?.find(
+      (subclass) => subclass.name === 'Eldritch Knight' && subclass.source === 'XPHB',
+    )
     const issuesByCode = Object.fromEntries(
       Array.from(
         report.issues.reduce((counts, issue) => {
@@ -135,6 +151,55 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(choiceCoverageGaps).toEqual([])
     expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)
     expect(copiedArcaneArcher?.subclassFeatureRefs?.length).toBeGreaterThan(0)
+    expect(variantHuman?.ability).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          choose: expect.objectContaining({ count: 2 }),
+        }),
+      ]),
+    )
+    expect(variantHuman?.feats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ any: 1 })]),
+    )
+    expect(variantHuman?.skillProficiencies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ any: 1 })]),
+    )
+    expect(revisedHuman?.feats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          anyFromCategory: expect.objectContaining({ category: expect.arrayContaining(['O']) }),
+        }),
+      ]),
+    )
+    expect(revisedHuman?.skillProficiencies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ any: 1 })]),
+    )
+    expect(revisedSoldier?.ability).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          choose: expect.objectContaining({
+            weighted: expect.objectContaining({ weights: [2, 1] }),
+          }),
+        }),
+      ]),
+    )
+    expect(revisedSoldier?.feats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ 'savage attacker|xphb': true })]),
+    )
+    expect(arcaneTrickster).toMatchObject({
+      casterProgression: expect.stringMatching(/^(?:third|1\/3)$/),
+      spellcastingAbility: expect.stringMatching(/int/i),
+    })
+    expect(eldritchKnight).toMatchObject({
+      casterProgression: expect.stringMatching(/^(?:third|1\/3)$/),
+      spellcastingAbility: expect.stringMatching(/int/i),
+    })
+    expect(feats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Alert', source: 'XPHB', category: 'O' }),
+        expect.objectContaining({ name: 'Savage Attacker', source: 'XPHB', category: 'O' }),
+      ]),
+    )
     expect(
       report.movement.absent +
         report.movement.numeric +

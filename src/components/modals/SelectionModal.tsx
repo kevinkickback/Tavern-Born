@@ -388,7 +388,11 @@ function SelectionModalInner<T>({
             {sidebar}
           </div>
         )}
-        <div ref={scrollParentRef} className="min-w-0 flex-1 overflow-y-auto">
+        <div
+          ref={scrollParentRef}
+          data-selection-scroll-container
+          className="min-w-0 flex-1 overflow-y-auto"
+        >
           {filteredItems.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-16">
               No results match your filters.

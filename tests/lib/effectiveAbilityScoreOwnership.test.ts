@@ -6,7 +6,6 @@ const EXPECTED_RAW_SCORE_READS = new Map<string, number>([
   ['src/hooks/character/useAbilityScores.ts', 2],
   ['src/lib/calculations/characterCalculationContext.ts', 1],
   ['src/lib/calculations/prerequisites.ts', 1],
-  ['src/lib/character/commands/featCommands.ts', 2],
   ['src/lib/readiness/coreReadiness.ts', 1],
 ])
 

@@ -52,6 +52,127 @@ describe('compendiumEntries', () => {
     ])
   })
 
+  test('indexes curated user-facing references without exposing implementation collections', () => {
+    const entries = buildCompendiumEntries({
+      items: [{ name: 'Longsword', source: 'PHB', type: 'M' }],
+      itemsBase: [
+        { name: 'Longsword', source: 'PHB', type: 'M' },
+        { name: 'War Pick', source: 'XPHB', type: 'M|XPHB' },
+      ],
+      itemProperties: [
+        {
+          abbreviation: 'V',
+          source: 'PHB',
+          entries: [{ type: 'entries', name: 'Versatile', entries: ['Property details.'] }],
+        },
+      ],
+      itemTypes: [
+        { abbreviation: 'M', name: 'Martial Melee Weapon', source: 'PHB' },
+        { abbreviation: 'M', name: 'Martial Melee Weapon', source: 'XPHB' },
+      ],
+      itemMasteries: [{ name: 'Cleave', source: 'XPHB', entries: ['Mastery details.'] }],
+      classFeatures: [
+        { name: 'Second Wind', source: 'XPHB', className: 'Fighter', entries: ['Feature text.'] },
+      ],
+      organizations: [
+        { name: 'The Harpers', source: 'SCAG', description: 'A covert organization.' },
+      ],
+    })
+
+    expect(entries.map((entry) => `${entry.type}:${entry.name}`)).toEqual([
+      'Item:Longsword',
+      'Item:War Pick',
+      'Item Property:Versatile',
+      'Weapon Mastery:Cleave',
+      'Organization:The Harpers',
+    ])
+    expect(
+      entries.filter((entry) => entry.type === 'Item' && entry.name === 'Longsword'),
+    ).toHaveLength(1)
+  })
+
+  test('collapses exact duplicates while retaining one canonical rule per source and edition', () => {
+    const repeatedClassFeatures = Array.from({ length: 120 }, (_, index) => ({
+      name: 'Ability Score Improvement',
+      source: index % 2 === 0 ? 'PHB' : 'XPHB',
+      className: index % 2 === 0 ? 'Fighter' : 'Artificer',
+      level: (index % 19) + 1,
+      entries: [`${index + 1}th-level class feature.`],
+    }))
+
+    const entries = buildCompendiumEntries({
+      classFeatures: repeatedClassFeatures,
+      variantrules: [
+        { name: 'Ability Scores', source: 'PHB', entries: ['General 2014 ability score rules.'] },
+        { name: 'Ability Scores', source: 'PHB', entries: ['Duplicate imported rule.'] },
+        { name: 'Ability Scores', source: 'XPHB', entries: ['General 2024 ability score rules.'] },
+      ],
+    })
+
+    expect(entries.map((entry) => `${entry.type}:${entry.name}:${entry.source}`)).toEqual([
+      'Variant Rule:Ability Scores:PHB',
+      'Variant Rule:Ability Scores:XPHB',
+    ])
+  })
+
+  test('does not traverse excluded class features or unbounded preview payloads', () => {
+    const classFeature = {
+      name: 'Ability Score Improvement',
+      source: 'PHB',
+      get entries(): never {
+        throw new Error('Class feature payload should not be indexed')
+      },
+    }
+    const itemEntries = [
+      'First useful summary entry with enough detail for the result list.',
+      'Second summary candidate.',
+      'Third summary candidate.',
+      'Fourth summary candidate.',
+    ]
+    Object.defineProperty(itemEntries, 4, {
+      get: () => {
+        throw new Error('Preview extraction exceeded its bounded candidate count')
+      },
+    })
+    itemEntries.length = 5
+
+    expect(() =>
+      buildCompendiumEntries({
+        classFeatures: [classFeature],
+        items: [{ name: 'Bounded Item', source: 'PHB', type: 'G', entries: itemEntries }],
+      }),
+    ).not.toThrow()
+  })
+
+  test('turns internal item references and type codes into readable summaries', () => {
+    const entries = buildCompendiumEntries({
+      items: [
+        {
+          name: 'Ioun Stone, Absorption',
+          source: 'XDMG',
+          type: 'WD|XDMG',
+          entries: [
+            '{#itemEntry Ioun Stone|XDMG}',
+            'While this stone orbits your head, you can cancel a spell.',
+          ],
+        },
+        { name: 'Golden Idol', source: 'XDMG', type: '$A|XDMG' },
+      ],
+      itemTypes: [
+        { abbreviation: 'WD', name: 'Wand', source: 'XDMG' },
+        { abbreviation: '$A', name: 'Treasure (Art Object)', source: 'XDMG' },
+      ],
+    })
+
+    expect(entries.find((entry) => entry.name === 'Ioun Stone, Absorption')?.description).toBe(
+      'While this stone orbits your head, you can cancel a spell.',
+    )
+    expect(entries.find((entry) => entry.name === 'Golden Idol')?.description).toBe(
+      'Treasure (Art Object)',
+    )
+    expect(entries.map((entry) => entry.description).join(' ')).not.toMatch(/\{#|\$A\|XDMG/)
+  })
+
   test('filterCompendiumEntries filters by type, source, and text query', () => {
     const entries = [
       {
@@ -115,18 +236,21 @@ describe('compendiumEntries', () => {
   test('filterCompendiumEntries filters entries by rules edition', () => {
     const entries = [
       {
+        id: 'class|phb|legacy fighter|',
         name: 'Legacy Fighter',
         type: 'Class',
         source: 'PHB',
         data: {},
       },
       {
+        id: 'class|xphb|revised fighter|',
         name: 'Revised Fighter',
         type: 'Class',
         source: 'XPHB',
         data: { edition: 'one' },
       },
       {
+        id: 'class|efa|revised artificer|',
         name: 'Revised Artificer',
         type: 'Class',
         source: 'EFA',
@@ -142,21 +266,54 @@ describe('compendiumEntries', () => {
     expect(filterCompendiumEntries(entries, '', new Set(), new Set(), 'both')).toHaveLength(3)
   })
 
+  test('classifies all revised core rulebook sources as 5.5e', () => {
+    const entries = [
+      {
+        id: 'item|dmg|legacy item|',
+        name: 'Legacy Item',
+        type: 'Item',
+        source: 'DMG',
+        data: {},
+      },
+      {
+        id: 'item|xdmg|revised item|',
+        name: 'Revised Item',
+        type: 'Item',
+        source: 'XDMG',
+        data: {},
+      },
+      {
+        id: 'condition|xmm|revised condition|',
+        name: 'Revised Condition',
+        type: 'Condition',
+        source: 'XMM',
+        data: {},
+      },
+    ] as CompendiumEntry[]
+
+    expect(
+      filterCompendiumEntries(entries, '', new Set(), new Set(), '5.5e').map((entry) => entry.name),
+    ).toEqual(['Revised Condition', 'Revised Item'])
+  })
+
   test('edition filtering composes with type, source, and text filters', () => {
     const entries = [
       {
+        id: 'class|phb|legacy fighter|',
         name: 'Legacy Fighter',
         type: 'Class',
         source: 'PHB',
         data: {},
       },
       {
+        id: 'class|xphb|revised fighter|',
         name: 'Revised Fighter',
         type: 'Class',
         source: 'XPHB',
         data: { edition: 'one' },
       },
       {
+        id: 'class|xphb|revised wizard|',
         name: 'Revised Wizard',
         type: 'Class',
         source: 'XPHB',
