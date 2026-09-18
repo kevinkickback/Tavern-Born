@@ -96,6 +96,48 @@ describe('wizard 2024 origin-system ability display', () => {
     expect(screen.queryByText('10+2')).toBeNull()
   })
 
+  test('ability scores step rejects duplicate racial choices across bonus blocks', () => {
+    const race = {
+      name: 'Test Race',
+      source: 'TEST',
+      ability: [
+        { choose: { count: 1, amount: 2, from: ['str', 'dex'] } },
+        { choose: { count: 1, amount: 1, from: ['str', 'dex'] } },
+      ],
+    } as Race5e
+
+    render(
+      <AbilityScoresStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          originSystem: '2014',
+          race: race.name,
+          raceSource: race.source,
+          abilityScoreMethod: 'custom',
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10,
+          },
+          raceAsiChoices: [['str'], ['str']],
+        }}
+        onChange={() => undefined}
+        raceResolution={{
+          parentRace: race,
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
+      />,
+    )
+
+    expect(screen.getByText('Bonus +2')).toBeTruthy()
+    expect(screen.queryByText('Bonus +3')).toBeNull()
+  })
+
   test('review step does not include racial ASI totals for 2024 rules', () => {
     render(
       <ReviewStep
