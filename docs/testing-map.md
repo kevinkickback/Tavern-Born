@@ -295,6 +295,9 @@ new tests land and do not lower them to merge a change.
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)
 - Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
+- Workflow policy coverage in tests/workflow/workflowPolicy.test.ts keeps pull-request CI scoped to
+  `main`, forbids a custom merge workflow, and locks manual draft recovery, immutable published
+  releases, read-only package builds, action pinning, and artifact validation.
 - Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload
   bridge, trusted IPC, and trusted renderer reloads)
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,

@@ -1,77 +1,31 @@
 name: Release
 
 on:
-  # Manual merges emit a normal push; automated GITHUB_TOKEN merges use the
-  # repository_dispatch path created by merge.yml.
-  push:
-    branches: [main]
-  # repository_dispatch always loads this workflow from the protected default branch.
-  repository_dispatch:
-    types: [release-merged, rebuild-release]
+  workflow_dispatch:
+    inputs:
+      replace_unpublished:
+        description: Replace an unpublished tag or draft that targets another commit
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: release-main
   cancel-in-progress: false
 
 env:
-  SOURCE_SHA: ${{ github.event.client_payload.source_sha || github.sha }}
-  REBUILD_EXISTING_DRAFT: ${{ github.event.action == 'rebuild-release' }}
+  SOURCE_SHA: ${{ github.sha }}
+  REPLACE_UNPUBLISHED: ${{ inputs.replace_unpublished }}
 
 jobs:
-  detect-version-change:
-    name: Detect package version change
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      changed: ${{ steps.version.outputs.changed }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ env.SOURCE_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 24
-      - name: Compare package versions
-        id: version
-        shell: bash
-        run: |
-          current_version="$(node -p "require('./package.json').version")"
-          previous_version="$(
-            git show "$SOURCE_SHA^:package.json" |
-              node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
-          )"
-
-          if [[ "$current_version" == "$previous_version" ]]; then
-            if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-              echo "Package version remains $current_version; rebuilding its unpublished draft."
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "Package version remains $current_version; skipping release."
-              echo "changed=false" >> "$GITHUB_OUTPUT"
-            fi
-          elif [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            echo "Draft rebuild mode is only valid when the package version is unchanged." >&2
-            exit 1
-          else
-            echo "Package version changed from $previous_version to $current_version."
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
   release-source:
-    name: Prepare release from merged PR
-    needs: detect-version-change
-    if: needs.detect-version-change.outputs.changed == 'true'
+    name: Prepare manual release draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
@@ -81,41 +35,28 @@ jobs:
           ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
-          path: source
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          # Automated merges cannot modify release infrastructure. Changes to
-          # this protected validation code require an explicit maintainer merge.
-          ref: ${{ github.workflow_sha || github.sha }}
-          persist-credentials: false
-          path: trusted
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
-      - name: Require a merged dev to main pull request
+      - name: Require the current main revision
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           SOURCE_SHA: ${{ env.SOURCE_SHA }}
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pulls = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
-              owner, repo, commit_sha: process.env.SOURCE_SHA, per_page: 100,
-            });
-            const pull = pulls.find((candidate) =>
-              candidate.merged_at &&
-              candidate.merge_commit_sha === process.env.SOURCE_SHA &&
-              candidate.base.ref === 'main' &&
-              candidate.head.ref === 'dev' &&
-              candidate.head.repo.full_name === `${owner}/${repo}`,
-            );
-            if (!pull) throw new Error(`Commit ${process.env.SOURCE_SHA} did not come from a merged dev -> main PR.`);
+            if (context.ref !== 'refs/heads/main') {
+              throw new Error('Release drafts must be created from main.');
+            }
+            const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            if (branch.commit.sha !== process.env.SOURCE_SHA) {
+              throw new Error('main changed before release preparation; run the workflow again.');
+            }
       - name: Validate release version and changelog
         id: release
         shell: bash
-        working-directory: source
         run: |
-          mkdir -p ../release-metadata
+          mkdir -p release-metadata
 
           lookup_releases() {
             local output
@@ -143,15 +84,7 @@ jobs:
           }
 
           version="$(node -p "require('./package.json').version")"
-          previous_version="$(
-            git show "$SOURCE_SHA^:package.json" |
-              node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
-          )"
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            node ../trusted/scripts/check-release.mjs --source-root . --notes-file ../release-metadata/release-notes.md
-          else
-            node ../trusted/scripts/check-release.mjs --source-root . --previous-version "$previous_version" --notes-file ../release-metadata/release-notes.md
-          fi
+          node scripts/check-release.mjs --notes-file release-metadata/release-notes.md
           tag="v$version"
 
           tag_found=false
@@ -180,26 +113,17 @@ jobs:
             draft_count=$((draft_count + 1))
           done <<<"$release_info"
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if [[ "$draft_count" -gt 0 ]]; then
-              echo "$draft_count draft(s) for $tag will be replaced only after all new packages finish building."
-            else
-              echo "No $tag release exists; the rebuild will resume draft creation after the builds finish."
-            fi
+          if [[ "$tag_found" == "true" && "$existing_sha" != "$SOURCE_SHA" &&
+                "$REPLACE_UNPUBLISHED" != "true" ]]; then
+            echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; enable replacement of the unpublished release to move it." >&2
+            exit 1
+          fi
+          if [[ "$draft_count" -gt 0 ]]; then
+            echo "$draft_count draft(s) for $tag will be replaced only after all new packages finish building."
+          elif [[ "$tag_found" == "true" ]]; then
+            echo "Tag $tag already exists; draft creation will resume after the builds finish."
           else
-            if [[ "$tag_found" == "true" && "$existing_sha" != "$SOURCE_SHA" ]]; then
-              echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; use explicit draft rebuild mode." >&2
-              exit 1
-            fi
-            if [[ "$draft_count" -gt 0 ]]; then
-              if [[ "$tag_found" != "true" ]]; then
-                echo "Draft $tag has no matching tag; use explicit draft rebuild mode." >&2
-                exit 1
-              fi
-              echo "$draft_count draft(s) for $tag will be replaced with one clean draft after the builds finish."
-            elif [[ "$tag_found" == "true" ]]; then
-              echo "Tag $tag already targets the exact source; draft creation can resume."
-            fi
+            echo "No tag or release exists for $tag; both will be created after the builds finish."
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -380,6 +304,15 @@ jobs:
             return 1
           }
 
+          if ! current_main_sha="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"; then
+            echo "Could not verify the current main revision; refusing to continue." >&2
+            exit 1
+          fi
+          if [[ "$current_main_sha" != "$SOURCE_SHA" ]]; then
+            echo "main changed while release artifacts were building; run the workflow again." >&2
+            exit 1
+          fi
+
           if ! release_info="$(lookup_releases)"; then
             echo "Could not enumerate releases for $RELEASE_TAG; refusing to continue." >&2
             exit 1
@@ -406,9 +339,9 @@ jobs:
             fi
           fi
 
-          if [[ "$REBUILD_EXISTING_DRAFT" != "true" && "$tag_found" == "true" &&
+          if [[ "$REPLACE_UNPUBLISHED" != "true" && "$tag_found" == "true" &&
                 "$tag_sha" != "$SOURCE_SHA" ]]; then
-            echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; use explicit draft rebuild mode." >&2
+            echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; enable replacement of the unpublished release to move it." >&2
             exit 1
           fi
 
@@ -419,14 +352,13 @@ jobs:
             gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
           done
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if [[ "$tag_found" == "true" ]]; then
-              if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$tag_sha" ]]; then
-                echo "Tag $RELEASE_TAG changed during the rebuild; refusing to delete it." >&2
-                exit 1
-              fi
-              gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
+          if [[ "$REPLACE_UNPUBLISHED" == "true" && "$tag_found" == "true" &&
+                "$tag_sha" != "$SOURCE_SHA" ]]; then
+            if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$tag_sha" ]]; then
+              echo "Tag $RELEASE_TAG changed while the release was building; refusing to delete it." >&2
+              exit 1
             fi
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
             tag_found=false
           fi
 
