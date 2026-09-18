@@ -32,6 +32,7 @@ export function useWizardGameData({
   const filteredData = useFilteredGameDataParams({
     allowedSources: effectiveSources,
     preferNewerPrintings,
+    originSystem: originSystem || '2014',
   })
   const rawClassLookup = useClassLookup()
   const rawRaceLookup = useRaceLookup()

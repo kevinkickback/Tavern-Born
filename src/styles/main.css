@@ -47,17 +47,18 @@
   --control-height-lg: 2.5rem;
 
   /* Semantic surface ladder. Neutral roles remain stable when the accent changes. */
-  --app-shell: #e8e8ec;
-  --workspace-canvas: #f4f4f6;
-  --workspace-pane: #eeeef1;
-  --workspace-detail: #e8e8ec;
-  --surface-raised: #e1e1e6;
+  --app-shell: #cdced6;
+  --workspace-canvas: #e8e8ec;
+  --workspace-pane: #e0e1e6;
+  --workspace-detail: #d9d9e0;
+  --surface-raised: #f0f0f3;
   --surface-hover: #d9d9e0;
   --surface-selected: var(--color-accent-3);
   --surface-selected-hover: var(--color-accent-4);
-  --border-subtle: #cdced6;
-  --border-default: #b9bbc6;
-  --border-strong: #a9abb6;
+  --border-subtle: #b9bbc6;
+  --border-default: #a9abb6;
+  --border-strong: #8b8d98;
+  --navigation-foreground: #414650;
 
   /* Type roles use rem so the Settings interface scale remains authoritative. */
   --font-size-caption: 0.6875rem;
@@ -81,15 +82,15 @@
   --secondary: var(--surface-hover);
   --secondary-foreground: var(--color-fg);
   --muted: var(--surface-raised);
-  --muted-foreground: #5b5f67;
+  --muted-foreground: #535862;
   --accent: var(--color-accent-11);
   --accent-foreground: var(--color-accent-contrast);
   --destructive: var(--red-9);
   --destructive-foreground: oklch(0.98 0 0);
   --success: var(--green-9);
   --success-foreground: var(--green-12);
-  --warning: var(--amber-9);
-  --warning-foreground: var(--amber-12);
+  --warning: #b07800;
+  --warning-foreground: var(--color-fg);
   --info: var(--blue-9);
   --info-foreground: var(--blue-12);
   --accent-secondary: var(--color-accent-secondary-9);
@@ -127,6 +128,7 @@
   --border-subtle: var(--color-neutral-5);
   --border-default: var(--color-neutral-6);
   --border-strong: var(--color-neutral-7);
+  --navigation-foreground: var(--color-neutral-11);
   --background: var(--app-shell);
   --foreground: var(--color-neutral-12);
   --card: var(--workspace-canvas);
@@ -142,6 +144,8 @@
   --accent: var(--color-accent-10);
   --accent-foreground: var(--color-accent-contrast);
   --destructive: oklch(0.704 0.191 22.216);
+  --warning: var(--amber-11);
+  --warning-foreground: var(--amber-12);
   --border: var(--border-default);
   --input: var(--border-strong);
   --ring: var(--color-focus-ring);

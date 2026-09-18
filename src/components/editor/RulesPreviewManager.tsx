@@ -232,7 +232,7 @@ function PreviewContents({
         </div>
         <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
           <div className="flex items-start justify-between gap-3">
-            <div className="text-left text-accent-foreground">
+            <div className="text-left text-primary">
               {descriptor.sourceContext ? `Source: ${descriptor.sourceContext}` : ''}
             </div>
             <div className="text-right italic">
@@ -354,6 +354,17 @@ function PreviewSurface({
         const trigger = findReference(event.target)
         if (trigger && event.currentTarget.contains(trigger)) onReferenceImmediate(trigger)
       }}
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget
+        if (
+          nextTarget instanceof HTMLElement &&
+          nextTarget.closest('[data-rules-preview-layer], [data-recursive-title]')
+        ) {
+          cancelClose()
+          return
+        }
+        scheduleClose()
+      }}
       onClick={(event) => {
         const trigger = findReference(event.target)
         if (!trigger || !event.currentTarget.contains(trigger)) return
@@ -385,6 +396,7 @@ interface FloatingPreviewSurfaceProps {
   cancelClose: () => void
   emphasized: boolean
   hasChild: boolean
+  onAnchorDisconnected: (id: string) => void
   onMove: (id: string, position: PreviewPosition) => void
   onPin: (id: string) => void
   onReferenceImmediate: (trigger: HTMLElement, lookup: RecursiveLookup) => void
@@ -402,6 +414,7 @@ function FloatingPreviewSurface({
   cancelClose,
   emphasized,
   hasChild,
+  onAnchorDisconnected,
   onMove,
   onPin,
   onReferenceImmediate,
@@ -414,16 +427,18 @@ function FloatingPreviewSurface({
   scheduleClose,
 }: FloatingPreviewSurfaceProps) {
   const previewRef = useRef<HTMLDivElement | null>(null)
-  const { anchor, anchorBounds, id, placement, positionLocked } = preview
+  const { anchor, id, placement, positionLocked } = preview
 
   useLayoutEffect(() => {
     const element = previewRef.current
     if (!element || !anchor || positionLocked) return
+    if (!anchor.isConnected) {
+      onAnchorDisconnected(id)
+      return
+    }
 
     const gap = placement === 'right-start' ? PREVIEW_GAP : 4
-    const liveAnchorBounds = anchor.isConnected
-      ? toBounds(anchor.getBoundingClientRect())
-      : anchorBounds
+    const liveAnchorBounds = toBounds(anchor.getBoundingClientRect())
     const overlaySize = {
       width: element.getBoundingClientRect().width || PREVIEW_WIDTH,
       height: element.getBoundingClientRect().height || PREVIEW_ESTIMATED_HEIGHT,
@@ -453,9 +468,12 @@ function FloatingPreviewSurface({
     )
     onMove(id, fallback)
 
-    if (!anchor.isConnected) return
     let active = true
     const cleanup = autoUpdate(anchor, element, () => {
+      if (!anchor.isConnected) {
+        onAnchorDisconnected(id)
+        return
+      }
       void computePosition(anchor, element, {
         placement,
         strategy: 'fixed',
@@ -466,9 +484,7 @@ function FloatingPreviewSurface({
         ],
       }).then(({ x, y }) => {
         if (!active || !element.isConnected) return
-        const currentAnchorBounds = anchor.isConnected
-          ? toBounds(anchor.getBoundingClientRect())
-          : anchorBounds
+        const currentAnchorBounds = toBounds(anchor.getBoundingClientRect())
         onMove(
           id,
           getCollisionAvoidingPreviewPosition(
@@ -490,7 +506,16 @@ function FloatingPreviewSurface({
       active = false
       cleanup()
     }
-  }, [onMove, anchor, anchorBounds, avoidElementIds, id, placement, positionLocked, safeTop])
+  }, [
+    onMove,
+    onAnchorDisconnected,
+    anchor,
+    avoidElementIds,
+    id,
+    placement,
+    positionLocked,
+    safeTop,
+  ])
 
   useEffect(() => {
     const source = preview.sourceElement
@@ -772,6 +797,7 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
     if (!transient) return
     const bounds = document.getElementById(id)?.getBoundingClientRect()
     const hasMeasuredBounds = Boolean(bounds && (bounds.width > 0 || bounds.height > 0))
+    returnFocusRef.current = transient.sourceElement?.isConnected ? transient.sourceElement : null
     focusPinnedRef.current = true
     dispatch({
       type: 'pin',
@@ -814,6 +840,10 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
     dispatch({ type: 'move-preview', id, position })
   }, [])
 
+  const closeDisconnectedTransient = useCallback((id: string) => {
+    dispatch({ type: 'close-from', id })
+  }, [])
+
   useEffect(() => {
     if (!state.pinned || !focusPinnedRef.current) return
     focusPinnedRef.current = false
@@ -823,6 +853,10 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      const target = event.target
+      const targetDialog =
+        target instanceof HTMLElement ? target.closest<HTMLElement>('[role="dialog"]') : null
+      if (targetDialog && !targetDialog.hasAttribute('data-rules-preview-layer')) return
       const current = stateRef.current
       if (current.chain.length > 0) {
         event.preventDefault()
@@ -921,6 +955,7 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
                 emphasized={index === previewChain.length - 1}
                 hasChild={previewChain[index + 1]?.parentId === preview.id}
                 safeTop={safeTop}
+                onAnchorDisconnected={closeDisconnectedTransient}
                 onMove={moveTransient}
                 onPin={pinTransient}
                 onReferenceImmediate={openReference}

@@ -12,14 +12,6 @@ const { loadDataFromSourceMock, writeGameDataCacheMock, clearGameDataCacheMock }
   }),
 )
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/lib/5etools', () => ({
   loadDataFromSource: loadDataFromSourceMock,
 }))

@@ -90,7 +90,7 @@ function EntriesSection({ entries }: { entries?: unknown[] }) {
   if (!entries?.length) return null
   return (
     <div>
-      <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-2">
+      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground">
         Description
       </h4>
       <div className="space-y-1">
@@ -474,7 +474,7 @@ function ItemDetails({
         <h2 className="text-xl font-display font-bold capitalize">{displayName}</h2>
         <p className="text-sm text-muted-foreground">
           {focused.isProficient ? (
-            <span className="text-accent-foreground font-medium">Proficient</span>
+            <span className="font-medium text-primary">Proficient</span>
           ) : (
             <span className="text-muted-foreground/70 italic">Not proficient</span>
           )}{' '}
@@ -524,7 +524,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.proficient ? 'text-accent-foreground' : 'text-muted-foreground',
+                      focused.proficient ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >
                     {focused.proficient ? 'Yes' : 'No'}
@@ -534,7 +534,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.expertise ? 'text-accent-foreground' : 'text-muted-foreground',
+                      focused.expertise ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >
                     {focused.expertise ? 'Yes' : 'No'}
@@ -543,7 +543,7 @@ export function BuildProficienciesDetailsPanel({
               </div>
               {skillDescriptions[focused.name.toLowerCase()]?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-2">
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground">
                     Description
                   </h4>
                   {skillDescriptions[focused.name.toLowerCase()].map((e) => (
@@ -573,7 +573,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.proficient ? 'text-accent-foreground' : 'text-muted-foreground',
+                      focused.proficient ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >
                     {focused.proficient ? 'Yes' : 'No'}

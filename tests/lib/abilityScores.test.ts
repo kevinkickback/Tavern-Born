@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  buildRacialBonuses,
   calculatePointBuyTotal,
   formatModifier,
   getAbilityModifierForCharacter,
@@ -161,6 +162,23 @@ describe('abilityScores', () => {
     expect(hasUnresolvedRaceAbilityChoices(getRaceAbilityData({ ability: [{ str: 2 }] }), [])).toBe(
       false,
     )
+  })
+
+  test('does not count the same ability in separate race choice blocks', () => {
+    const data = getRaceAbilityData({
+      ability: [
+        { choose: { count: 1, amount: 2, from: ['str', 'dex'] } },
+        { choose: { count: 1, amount: 1, from: ['str', 'dex'] } },
+      ],
+    })
+
+    expect(hasUnresolvedRaceAbilityChoices(data, [['str'], ['str']])).toBe(true)
+    expect(hasUnresolvedRaceAbilityChoices(data, [['str'], ['dex']])).toBe(false)
+    expect(buildRacialBonuses(data, [['str'], ['str']])).toEqual({ strength: 2 })
+    expect(buildRacialBonuses(data, [['str'], ['dex']])).toEqual({
+      strength: 2,
+      dexterity: 1,
+    })
   })
 
   test('getRaceAbilityData synthesizes lineage ASI blocks from selected mode', () => {

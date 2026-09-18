@@ -145,7 +145,7 @@ export function BuildProficienciesCategorySwitcher({
               {showExpertiseBadge && (
                 <span
                   title={`${expertiseChoiceCount} expertise slot${expertiseChoiceCount !== 1 ? 's' : ''} remaining`}
-                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/20 px-1 text-[10px] font-bold leading-none text-amber-500"
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-warning/20 px-1 text-[10px] font-bold leading-none text-warning-foreground"
                 >
                   {expertiseChoiceCount}
                 </span>

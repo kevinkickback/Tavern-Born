@@ -22,10 +22,8 @@ describe('trusted workflow policy', () => {
     const workflow = await readWorkflow('release.yml')
 
     expect(workflow).toContain('workflow_dispatch:')
-    expect(workflow).toContain('replace_unpublished:')
-    expect(workflow).toContain(
-      ['REPLACE_UNPUBLISHED: $', '{{ inputs.replace_unpublished }}'].join(''),
-    )
+    expect(workflow).not.toContain('replace_unpublished')
+    expect(workflow).not.toContain('REPLACE_UNPUBLISHED')
     expect(workflow).not.toContain('repository_dispatch:')
     expect(workflow).not.toContain('release-merged')
     expect(workflow).not.toContain('rebuild-release')
@@ -39,13 +37,13 @@ describe('trusted workflow policy', () => {
     )
   })
 
-  test('builds before safely creating, resuming, or replacing an unpublished draft', async () => {
+  test('builds before safely creating a clean unpublished draft', async () => {
     const workflow = await readWorkflow('release.yml')
 
     expect(workflow).toContain('Build artifacts and update manifests without publishing')
     expect(workflow).toContain('run: npm run dist -- --publish never')
     expect(workflow).toContain('needs: [release-source, build]')
-    expect(workflow).toContain('name: Replace or create draft from completed artifacts')
+    expect(workflow).toContain('name: Create draft from completed artifacts')
     expect(workflow).toContain('pattern: release-build-*')
     expect(workflow).toContain('path: release-metadata/release-notes.md')
     expect(workflow.match(/overwrite: true/g)).toHaveLength(2)
@@ -57,13 +55,28 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain("require_manifest 'latest-mac.yml'")
     expect(workflow).toContain("require_manifest 'latest-linux.yml'")
     expect(workflow).toContain('No tag or release exists for $tag; both will be created')
-    expect(workflow).toContain('Release $RELEASE_TAG is published; refusing to modify it.')
+    expect(workflow).toContain('draft(s) already exist for $tag; inspect and remove them')
+    expect(workflow).toContain('inspect and remove the unpublished tag before rerunning')
     expect(workflow).toContain('main changed while release artifacts were building')
+    expect(workflow).toContain(
+      ['initial_tag_state: $', '{{ steps.release.outputs.initial_tag_state }}'].join(''),
+    )
+    expect(workflow).toContain(
+      ['initial_tag_sha: $', '{{ steps.release.outputs.initial_tag_sha }}'].join(''),
+    )
+    expect(workflow).not.toContain('initial_release_fingerprint')
 
     const buildJob = workflow.slice(
       workflow.indexOf('\n  build:'),
       workflow.indexOf('\n  publish-release:'),
     )
+    const releaseSourceJob = workflow.slice(
+      workflow.indexOf('\n  release-source:'),
+      workflow.indexOf('\n  build:'),
+    )
+    expect(releaseSourceJob).toContain('permissions:\n      contents: write')
+    expect(releaseSourceJob).toContain('[.id, .draft, .updated_at] | @tsv')
+
     expect(buildJob).toContain('permissions:\n      contents: read')
     expect(buildJob).not.toContain('GH_TOKEN')
     expect(buildJob).not.toContain('contents: write')
@@ -74,27 +87,36 @@ describe('trusted workflow policy', () => {
     )
     expect(publishJob).not.toContain('actions/checkout')
     expect(publishJob).toContain('contents: write')
-    expect(publishJob).toContain(`for release_id in "\${release_ids[@]}"`)
-    expect(publishJob).toContain('assert_draft "$release_id"')
-    expect(publishJob).toContain('"$REPLACE_UNPUBLISHED" == "true"')
-    expect(publishJob).toContain('"$tag_sha" != "$SOURCE_SHA"')
-    expect(publishJob).toContain(
-      'gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"',
-    )
-    expect(publishJob).toContain(
+    expect(publishJob).not.toContain('REPLACE_UNPUBLISHED')
+    expect(publishJob).not.toContain('assert_unchanged_draft')
+    expect(publishJob).toContain('"$tag_sha" != "$INITIAL_TAG_SHA"')
+    expect(publishJob).toContain('Tag $RELEASE_TAG changed after release preparation')
+    expect(publishJob).toContain('Tag $RELEASE_TAG was created after release preparation')
+    expect(publishJob).toContain('assert_no_releases()')
+    expect(publishJob).toContain('A release for $RELEASE_TAG appeared while this run was active')
+    expect(publishJob.match(/assert_no_releases/g)?.length).toBeGreaterThanOrEqual(3)
+    expect(publishJob.match(/assert_current_main/g)?.length).toBeGreaterThanOrEqual(4)
+    expect(publishJob).not.toContain(
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"',
     )
     expect(publishJob).toContain('gh release create "$RELEASE_TAG" release-artifacts/*')
+    expect(publishJob).toContain('Tag $RELEASE_TAG no longer points to $SOURCE_SHA')
+    expect(publishJob).toContain('--draft --title "$RELEASE_TAG"')
+    expect(publishJob).toContain('Tag $RELEASE_TAG moved during draft creation')
+    expect(publishJob).not.toContain('gh api --method DELETE')
+    expect(publishJob).not.toContain('gh api --method PATCH')
     expect(publishJob).not.toContain('gh release upload')
 
     const validateIndex = publishJob.indexOf('Validate completed artifact bundle')
     const attestIndex = publishJob.indexOf('Attest build provenance')
-    const mutateIndex = publishJob.indexOf('Replace or create draft from completed artifacts')
-    const deleteIndex = publishJob.indexOf('gh api --method DELETE')
+    const mutateIndex = publishJob.indexOf('Create draft from completed artifacts')
+    const createDraftIndex = publishJob.indexOf('gh release create "$RELEASE_TAG"')
+    const verifyCreatedTagIndex = publishJob.indexOf('Tag $RELEASE_TAG moved during draft creation')
     expect(validateIndex).toBeGreaterThan(-1)
     expect(validateIndex).toBeLessThan(attestIndex)
     expect(attestIndex).toBeLessThan(mutateIndex)
-    expect(mutateIndex).toBeLessThan(deleteIndex)
+    expect(createDraftIndex).toBeGreaterThan(mutateIndex)
+    expect(verifyCreatedTagIndex).toBeGreaterThan(createDraftIndex)
   })
 
   test('uses upload-safe Windows installer names that match update metadata', async () => {

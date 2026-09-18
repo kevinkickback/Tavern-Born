@@ -5,14 +5,6 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 import { makeClassFixture, makeRaceFixture } from '../fixtures/gameDataFixtures'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),

@@ -1,12 +1,9 @@
 import { useCallback, useMemo } from 'react'
-import { useLedgerPatch } from '@/hooks/character/useLedgerPatch'
 import {
   type ClassSpellSelectionInput,
   setClassSpellSelectionsAtLevel as setClassSpellSelectionsAtLevelCommand,
   swapClassSpellAtLevel as swapClassSpellAtLevelCommand,
 } from '@/lib/character/commands/spellCommands'
-import { addSpellGrant, applyClassSpellGrant, makeSourceTag } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
@@ -17,51 +14,6 @@ export function useSpellProvenanceMutations() {
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
     [character],
-  )
-
-  const patch = useLedgerPatch()
-
-  const applySpellSelection = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      spellName: string,
-      grantedAtLevel?: number,
-    ) => {
-      if (!character || !classSource) return
-      const newLedger = applyClassSpellGrant(ledger, className, classSource, spellName, 'choice', {
-        ...(grantedAtLevel ? { spellGrantedAtLevel: grantedAtLevel } : {}),
-        spellAttributionMode: grantedAtLevel ? 'exact' : undefined,
-      })
-      patch(newLedger)
-    },
-    [character, ledger, patch],
-  )
-
-  const applyBatchSpellSelections = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      spells: Array<{ name: string; grantedAtLevel?: number }>,
-    ) => {
-      if (!character || spells.length === 0) return
-      let accumulated = ledger
-      for (const spell of spells) {
-        accumulated = applyClassSpellGrant(
-          accumulated,
-          className,
-          classSource,
-          spell.name,
-          'choice',
-          {
-            ...(spell.grantedAtLevel ? { spellGrantedAtLevel: spell.grantedAtLevel } : {}),
-            spellAttributionMode: spell.grantedAtLevel ? 'exact' : undefined,
-          },
-        )
-      }
-      patch(accumulated)
-    },
-    [character, ledger, patch],
   )
 
   const setClassSpellSelectionsAtLevel = useCallback(
@@ -112,102 +64,8 @@ export function useSpellProvenanceMutations() {
     [character, ledger, updateCharacter],
   )
 
-  const applyInferredClassSpellSelection = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      spellName: string,
-      grantedAtLevel: number,
-    ) => {
-      if (!character) return
-      const newLedger = applyClassSpellGrant(ledger, className, classSource, spellName, 'choice', {
-        spellGrantedAtLevel: grantedAtLevel,
-        spellAttributionMode: 'inferred-lowest-eligible',
-      })
-      patch(newLedger)
-    },
-    [character, ledger, patch],
-  )
-
-  const applyManualSpellGrant = useCallback(
-    (spellName: string) => {
-      if (!character) return
-      const tag = makeSourceTag('manual', 'User Choice', 'choice')
-      patch(addSpellGrant(ledger, spellName, tag))
-    },
-    [character, ledger, patch],
-  )
-
-  const removeSpellProvenance = useCallback(
-    (spellName: string) => {
-      if (!character) return
-      const normKey = normalizeKey(spellName)
-      const newSpells = { ...ledger.spells }
-      delete newSpells[normKey]
-      patch({ ...ledger, spells: newSpells })
-    },
-    [character, ledger, patch],
-  )
-
-  const swapSpellProvenance = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      removedName: string,
-      addedName: string,
-    ) => {
-      if (!character) return
-      const removedKey = normalizeKey(removedName)
-      const removedTags = ledger.spells[removedKey] ?? []
-      const sourceRef = classSource ?? ''
-      const removedClassTags = removedTags.filter(
-        (tag) =>
-          tag.sourceType === 'class' &&
-          tag.sourceName === className &&
-          (tag.sourceRef ?? '') === sourceRef,
-      )
-      const inheritedGrantedAtLevel = removedClassTags.find(
-        (tag) => !!tag.spellGrantedAtLevel,
-      )?.spellGrantedAtLevel
-
-      const retainedTags = removedTags.filter(
-        (tag) =>
-          !(
-            tag.sourceType === 'class' &&
-            tag.sourceName === className &&
-            (tag.sourceRef ?? '') === sourceRef
-          ),
-      )
-
-      const updatedSpells = { ...ledger.spells }
-      if (retainedTags.length > 0) {
-        updatedSpells[removedKey] = retainedTags
-      } else {
-        delete updatedSpells[removedKey]
-      }
-
-      const withRemoval = { ...ledger, spells: updatedSpells }
-      const withAdd = applyClassSpellGrant(
-        withRemoval,
-        className,
-        classSource,
-        addedName,
-        'choice',
-        inheritedGrantedAtLevel ? { spellGrantedAtLevel: inheritedGrantedAtLevel } : {},
-      )
-      patch(withAdd)
-    },
-    [character, ledger, patch],
-  )
-
   return {
-    applySpellSelection,
-    applyBatchSpellSelections,
     setClassSpellSelectionsAtLevel,
     swapClassSpellAtLevel,
-    applyInferredClassSpellSelection,
-    applyManualSpellGrant,
-    removeSpellProvenance,
-    swapSpellProvenance,
   }
 }

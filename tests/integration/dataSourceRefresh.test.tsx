@@ -14,14 +14,6 @@ vi.mock('sonner', () => ({
   },
 }))
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 describe('data source refresh feedback', () => {
   beforeEach(() => {
     const loadGameData = vi.fn(() => {

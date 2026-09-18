@@ -446,7 +446,7 @@ export function BuildClassLevelsPanel({
                               'h-5 gap-1 px-1.5 text-xs pointer-events-none border',
                               allChoicesComplete
                                 ? 'border-success/40 bg-success/15 text-success hover:bg-success/15'
-                                : 'border-warning/40 bg-warning/20 text-warning-foreground hover:bg-warning/20 dark:border-warning/30 dark:text-warning',
+                                : 'border-warning/40 bg-warning/20 text-warning-foreground hover:bg-warning/20 dark:border-warning/30',
                             )}
                           >
                             {allChoicesComplete ? (

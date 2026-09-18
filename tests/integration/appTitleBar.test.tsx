@@ -3,14 +3,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppTitleBar } from '@/components/layout/AppTitleBar'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 describe('Windows title-bar overlay', () => {
   const setTitleBarOverlay = vi.fn()
 
@@ -38,6 +30,6 @@ describe('Windows title-bar overlay', () => {
 
     render(<AppTitleBar />)
 
-    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#e8e8ec', '#1c2024', 32))
+    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#cdced6', '#1c2024', 32))
   })
 })

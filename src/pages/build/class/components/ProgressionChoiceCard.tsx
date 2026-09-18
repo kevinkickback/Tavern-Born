@@ -131,7 +131,7 @@ export function BuildClassProgressionChoiceCard({
                   · {item.masteries?.map((mastery) => mastery.name).join(', ')}
                 </span>
               )}
-              {item.unavailable && <span className="text-warning">· Unavailable</span>}
+              {item.unavailable && <span className="text-warning-foreground">· Unavailable</span>}
             </button>
           ))}
         </div>

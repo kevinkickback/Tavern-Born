@@ -17,6 +17,7 @@ import {
   parseOptionalFeatures,
   parseRaces,
 } from '@/lib/5etools/parsers'
+import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { Background5e, Class5e, ClassFeature, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
@@ -53,6 +54,14 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       ...parseMagicVariants(readJson(resolve(DATA_ROOT, 'magicvariants.json'))),
     ] as Item5e[]
     const itemsBase = parseItems(readJson(resolve(DATA_ROOT, 'items-base.json'))) as Item5e[]
+    const legacyCoreItems = filterCharacterItems(items, {
+      allowedSources: ['PHB'],
+      originSystem: '2014',
+    })
+    const revisedCoreItems = filterCharacterItems(items, {
+      allowedSources: ['XPHB'],
+      originSystem: '2024',
+    })
     const optionalfeatures = parseOptionalFeatures(
       readJson(resolve(DATA_ROOT, 'optionalfeatures.json')),
     )
@@ -198,6 +207,21 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       expect.arrayContaining([
         expect.objectContaining({ name: 'Alert', source: 'XPHB', category: 'O' }),
         expect.objectContaining({ name: 'Savage Attacker', source: 'XPHB', category: 'O' }),
+      ]),
+    )
+    expect(legacyCoreItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Potion of Healing', source: 'DMG' }),
+        expect.objectContaining({ name: 'Spell Scroll (1st Level)', source: 'DMG' }),
+      ]),
+    )
+    expect(legacyCoreItems).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'Bag of Holding', source: 'DMG' })]),
+    )
+    expect(revisedCoreItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Potion of Healing', source: 'XDMG' }),
+        expect.objectContaining({ name: 'Spell Scroll (Level 1)', source: 'XDMG' }),
       ]),
     )
     expect(

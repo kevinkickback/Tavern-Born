@@ -16,12 +16,12 @@ import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
+  buildRacialBonuses,
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
   isValidStandardArrayAssignment,
   makeDefaultAbilityScores,
   makeDefaultStandardArrayAssignment,
-  normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
 import {
   ABILITY_SCORE_MIN,
@@ -165,23 +165,6 @@ function RaceAsiBonuses({
       </div>
     </section>
   )
-}
-
-function buildRacialBonuses(
-  raceAsiData: ReturnType<typeof getRaceAbilityData>,
-  raceAsiChoices: string[][],
-): Partial<Record<AbilityName, number>> {
-  const bonuses: Partial<Record<AbilityName, number>> = {}
-  for (const fb of raceAsiData.fixed) {
-    bonuses[fb.ability] = (bonuses[fb.ability] ?? 0) + fb.value
-  }
-  for (const [blockIdx, block] of raceAsiData.choices.entries()) {
-    for (const raw of raceAsiChoices[blockIdx] ?? []) {
-      const ab = normalizeAbilityName(raw)
-      if (ab) bonuses[ab] = (bonuses[ab] ?? 0) + block.amount
-    }
-  }
-  return bonuses
 }
 
 function PointBuyPanel({

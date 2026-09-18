@@ -4,14 +4,6 @@ const { setThemePreferencesMock } = vi.hoisted(() => ({
   setThemePreferencesMock: vi.fn(),
 }))
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/lib/themeManager', () => ({
   ACCENT_THEMES: ['blue', 'violet', 'green', 'orange'],
   APPEARANCE_THEMES: ['light', 'dark'],

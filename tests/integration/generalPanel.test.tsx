@@ -8,14 +8,6 @@ const { resetAllHintsMock } = vi.hoisted(() => ({
   resetAllHintsMock: vi.fn(),
 }))
 
-vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
-}))
-
 vi.mock('@/lib/storage/hints', () => ({
   resetAllHints: resetAllHintsMock,
 }))

@@ -162,14 +162,16 @@ export interface RaceAbilityData {
   choices: ChoosableAbilityBonus[]
 }
 
-export function hasUnresolvedRaceAbilityChoices(
-  data: RaceAbilityData,
+function evaluateRaceAbilityChoices(
+  data: { choices: Array<{ count: number; from: AbilityName[] }> },
   selections: string[][],
-): boolean {
+) {
+  const selectedByBlock: AbilityName[][] = []
+  const completion: boolean[] = []
   const selectedAcrossBlocks = new Set<AbilityName>()
 
-  return data.choices.some((block, blockIndex) => {
-    let validSelectionCount = 0
+  for (const [blockIndex, block] of data.choices.entries()) {
+    const accepted: AbilityName[] = []
     const selectedInBlock = new Set<AbilityName>()
 
     for (const rawSelection of selections[blockIndex] ?? []) {
@@ -184,18 +186,35 @@ export function hasUnresolvedRaceAbilityChoices(
       }
       selectedInBlock.add(ability)
       selectedAcrossBlocks.add(ability)
-      validSelectionCount += 1
-      if (validSelectionCount === block.count) break
+      accepted.push(ability)
+      if (accepted.length === block.count) break
     }
 
-    return validSelectionCount < block.count
-  })
+    selectedByBlock.push(accepted)
+    completion.push(accepted.length >= block.count)
+  }
+
+  return { completion, selectedByBlock }
+}
+
+export function getRaceAbilityChoiceCompletion(
+  data: RaceAbilityData,
+  selections: string[][],
+): boolean[] {
+  return evaluateRaceAbilityChoices(data, selections).completion
+}
+
+export function hasUnresolvedRaceAbilityChoices(
+  data: RaceAbilityData,
+  selections: string[][],
+): boolean {
+  return getRaceAbilityChoiceCompletion(data, selections).some((isComplete) => !isComplete)
 }
 
 export function buildRacialBonuses(
   raceAsiData: {
     fixed: Array<{ ability: AbilityName; value: number }>
-    choices: Array<{ amount: number; count?: number; from?: AbilityName[] }>
+    choices: Array<{ amount: number; count: number; from: AbilityName[] }>
   },
   raceAsiChoices: string[][],
 ): Partial<Record<AbilityName, number>> {
@@ -205,12 +224,11 @@ export function buildRacialBonuses(
     racialBonuses[fixedBonus.ability] = (racialBonuses[fixedBonus.ability] ?? 0) + fixedBonus.value
   }
 
-  for (const [blockIndex, block] of raceAsiData.choices.entries()) {
-    for (const rawChoice of raceAsiChoices[blockIndex] ?? []) {
-      const ability = normalizeAbilityName(rawChoice)
-      if (ability) {
-        racialBonuses[ability] = (racialBonuses[ability] ?? 0) + block.amount
-      }
+  const { selectedByBlock } = evaluateRaceAbilityChoices(raceAsiData, raceAsiChoices)
+  for (const [blockIndex, selected] of selectedByBlock.entries()) {
+    for (const ability of selected) {
+      racialBonuses[ability] =
+        (racialBonuses[ability] ?? 0) + raceAsiData.choices[blockIndex].amount
     }
   }
 
