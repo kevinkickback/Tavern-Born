@@ -29,6 +29,9 @@ jobs:
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
+      initial_tag_state: ${{ steps.release.outputs.initial_tag_state }}
+      initial_tag_sha: ${{ steps.release.outputs.initial_tag_sha }}
+      initial_release_fingerprint: ${{ steps.release.outputs.initial_release_fingerprint }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -62,7 +65,7 @@ jobs:
             local output
             if output="$(gh api --paginate \
               "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-              --jq ".[] | select(.tag_name == \"$1\") | [.id, .draft] | @tsv" 2>&1)"; then
+              --jq ".[] | select(.tag_name == \"$1\") | [.id, .draft, .updated_at] | @tsv" 2>&1)"; then
               printf '%s' "$output"
               return 0
             fi
@@ -104,7 +107,7 @@ jobs:
           fi
 
           draft_count=0
-          while IFS=$'\t' read -r release_id release_is_draft; do
+          while IFS=$'\t' read -r release_id release_is_draft _release_updated_at; do
             [[ -z "$release_id" ]] && continue
             if [[ "$release_is_draft" != "true" ]]; then
               echo "Release $tag is published; refusing to modify it." >&2
@@ -128,6 +131,15 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          release_fingerprint="$(printf '%s' "$release_info" | sort | sha256sum | cut -d' ' -f1)"
+          echo "initial_release_fingerprint=$release_fingerprint" >> "$GITHUB_OUTPUT"
+          if [[ "$tag_found" == "true" ]]; then
+            echo "initial_tag_state=present" >> "$GITHUB_OUTPUT"
+            echo "initial_tag_sha=$existing_sha" >> "$GITHUB_OUTPUT"
+          else
+            echo "initial_tag_state=missing" >> "$GITHUB_OUTPUT"
+            echo "initial_tag_sha=" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -189,6 +201,9 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
       RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
+      INITIAL_TAG_STATE: ${{ needs.release-source.outputs.initial_tag_state }}
+      INITIAL_TAG_SHA: ${{ needs.release-source.outputs.initial_tag_sha }}
+      INITIAL_RELEASE_FINGERPRINT: ${{ needs.release-source.outputs.initial_release_fingerprint }}
     steps:
       - name: Download validated release notes
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -270,7 +285,7 @@ jobs:
             local output
             if output="$(gh api --paginate \
               "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | [.id, .draft] | @tsv" 2>&1)"; then
+              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | [.id, .draft, .updated_at] | @tsv" 2>&1)"; then
               printf '%s' "$output"
               return 0
             fi
@@ -304,22 +319,32 @@ jobs:
             return 1
           }
 
-          if ! current_main_sha="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"; then
-            echo "Could not verify the current main revision; refusing to continue." >&2
-            exit 1
-          fi
-          if [[ "$current_main_sha" != "$SOURCE_SHA" ]]; then
-            echo "main changed while release artifacts were building; run the workflow again." >&2
-            exit 1
-          fi
+          assert_current_main() {
+            local current_main_sha
+            if ! current_main_sha="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"; then
+              echo "Could not verify the current main revision; refusing to continue." >&2
+              exit 1
+            fi
+            if [[ "$current_main_sha" != "$SOURCE_SHA" ]]; then
+              echo "main changed while release artifacts were building; run the workflow again." >&2
+              exit 1
+            fi
+          }
+
+          assert_current_main
 
           if ! release_info="$(lookup_releases)"; then
             echo "Could not enumerate releases for $RELEASE_TAG; refusing to continue." >&2
             exit 1
           fi
+          release_fingerprint="$(printf '%s' "$release_info" | sort | sha256sum | cut -d' ' -f1)"
+          if [[ "$release_fingerprint" != "$INITIAL_RELEASE_FINGERPRINT" ]]; then
+            echo "Release $RELEASE_TAG changed after release preparation; refusing to continue." >&2
+            exit 1
+          fi
 
           release_ids=()
-          while IFS=$'\t' read -r release_id release_is_draft; do
+          while IFS=$'\t' read -r release_id release_is_draft _release_updated_at; do
             [[ -z "$release_id" ]] && continue
             if [[ "$release_is_draft" != "true" ]]; then
               echo "Release $RELEASE_TAG is published; refusing to modify it." >&2
@@ -339,6 +364,21 @@ jobs:
             fi
           fi
 
+          if [[ "$INITIAL_TAG_STATE" == "present" ]]; then
+            if [[ "$tag_found" != "true" || "$tag_sha" != "$INITIAL_TAG_SHA" ]]; then
+              echo "Tag $RELEASE_TAG changed after release preparation; refusing to continue." >&2
+              exit 1
+            fi
+          elif [[ "$INITIAL_TAG_STATE" == "missing" ]]; then
+            if [[ "$tag_found" == "true" ]]; then
+              echo "Tag $RELEASE_TAG was created after release preparation; refusing to continue." >&2
+              exit 1
+            fi
+          else
+            echo "The initial tag state is unavailable; refusing to continue." >&2
+            exit 1
+          fi
+
           if [[ "$REPLACE_UNPUBLISHED" != "true" && "$tag_found" == "true" &&
                 "$tag_sha" != "$SOURCE_SHA" ]]; then
             echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; enable replacement of the unpublished release to move it." >&2
@@ -347,6 +387,7 @@ jobs:
 
           # Every replacement starts from one clean draft. This also repairs an
           # interrupted run that left duplicate unpublished drafts for the tag.
+          assert_current_main
           for release_id in "${release_ids[@]}"; do
             assert_draft "$release_id"
             gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
@@ -358,6 +399,7 @@ jobs:
               echo "Tag $RELEASE_TAG changed while the release was building; refusing to delete it." >&2
               exit 1
             fi
+            assert_current_main
             gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
             tag_found=false
           fi
@@ -365,10 +407,16 @@ jobs:
           if [[ "$tag_found" != "true" ]]; then
             # Creating a new ref is atomic: a concurrent tag wins and this
             # request fails without moving any existing tag.
+            assert_current_main
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
           fi
 
+          if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
+            echo "Tag $RELEASE_TAG no longer points to $SOURCE_SHA; refusing to create a draft." >&2
+            exit 1
+          fi
+          assert_current_main
           gh release create "$RELEASE_TAG" release-artifacts/* \
             --draft --title "$RELEASE_TAG" \
             --notes-file release-metadata/release-notes.md --verify-tag

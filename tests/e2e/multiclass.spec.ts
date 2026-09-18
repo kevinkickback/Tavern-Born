@@ -12,7 +12,7 @@ async function navigateToClassPage(page: import('@playwright/test').Page) {
 
 const MULTICLASS_CHARACTER = {
   id: 'multiclass-e2e-1',
-  schemaVersion: 2,
+  schemaVersion: 3,
   name: 'Multiclass E2E Hero',
   originSystem: '2014' as const,
   race: 'Human',

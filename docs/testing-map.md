@@ -113,7 +113,8 @@ new tests land and do not lower them to merge a change.
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
-- Character persistence schema validation in tests/lib/characterSchema.test.ts
+- Character persistence schema validation in tests/lib/characterSchema.test.ts, including
+  provenance choice-amount round trips and exact current-version enforcement
 - Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
 - Character payload validation and rehydrate safety in tests/store/characterStore.test.ts, including
   subscriber notification and persistence of sanitized current-schema records. Home-page coverage

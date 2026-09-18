@@ -1,4 +1,19 @@
 <details>
+<summary><strong>v0.4.1</strong></summary>
+
+## ✨ Changes
+
+* Ability score, feat, weapon proficiency, and spell lookup corrections
+* Rules preview, Compendium, and keyboard navigation improvements
+* Safer manual release checks
+
+## ⚠️ Important
+
+* Characters created before v0.4.1 are incompatible and will be removed from the character list after Tavern Born offers to export their original `.tbc` files.
+
+</details>
+
+<details>
 <summary><strong>v0.4.0</strong></summary>
 
 ## ✨ Changes

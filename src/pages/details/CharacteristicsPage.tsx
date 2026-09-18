@@ -119,6 +119,7 @@ export function CharacteristicsPage() {
   const organizationSelectId = useId()
   const organizationCustomNameId = useId()
   const organizationCustomDescriptionId = useId()
+  const characteristicsTabsId = useId()
 
   const organizationOptions = useMemo(() => {
     return (gameData.organizations ?? EMPTY_ORGANIZATIONS).map((organization) => ({
@@ -241,7 +242,11 @@ export function CharacteristicsPage() {
   return (
     <WorkspacePage>
       <WorkspaceBody className="flex flex-col overflow-hidden bg-workspace-pane">
-        <CharacteristicsTabs activeSection={activeSection} onChange={setActiveSection} />
+        <CharacteristicsTabs
+          activeSection={activeSection}
+          idPrefix={characteristicsTabsId}
+          onChange={setActiveSection}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[var(--workspace-form-max-width)] p-4">
@@ -341,6 +346,10 @@ export function CharacteristicsPage() {
             <div className="w-full">
               {/* ── Identity ── */}
               <section
+                id={`${characteristicsTabsId}-panel-identity`}
+                role="tabpanel"
+                aria-labelledby={`${characteristicsTabsId}-tab-identity`}
+                hidden={activeSection !== 'identity'}
                 className={cn(
                   'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
                   activeSection !== 'identity' && 'hidden',
@@ -524,6 +533,10 @@ export function CharacteristicsPage() {
 
               {/* ── Personality ── */}
               <section
+                id={`${characteristicsTabsId}-panel-personality`}
+                role="tabpanel"
+                aria-labelledby={`${characteristicsTabsId}-tab-personality`}
+                hidden={activeSection !== 'personality'}
                 className={cn(
                   'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
                   activeSection !== 'personality' && 'hidden',
@@ -611,6 +624,10 @@ export function CharacteristicsPage() {
 
               {/* ── Story ── */}
               <section
+                id={`${characteristicsTabsId}-panel-story`}
+                role="tabpanel"
+                aria-labelledby={`${characteristicsTabsId}-tab-story`}
+                hidden={activeSection !== 'story'}
                 className={cn(
                   'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
                   activeSection !== 'story' && 'hidden',
@@ -638,6 +655,10 @@ export function CharacteristicsPage() {
 
               {/* ── Connections ── */}
               <section
+                id={`${characteristicsTabsId}-panel-connections`}
+                role="tabpanel"
+                aria-labelledby={`${characteristicsTabsId}-tab-connections`}
+                hidden={activeSection !== 'connections'}
                 className={cn(
                   'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
                   activeSection !== 'connections' && 'hidden',

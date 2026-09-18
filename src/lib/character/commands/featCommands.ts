@@ -155,12 +155,15 @@ export function resolveFeatChoiceCommand(
     ),
   }
 
-  const tag = makeSourceTag(
-    choice.sourceTag.sourceType,
-    choice.sourceTag.sourceName,
-    'choice',
-    choice.sourceTag.sourceRef,
-  )
+  const tag: SourceTag = {
+    ...makeSourceTag(
+      choice.sourceTag.sourceType,
+      choice.sourceTag.sourceName,
+      'choice',
+      choice.sourceTag.sourceRef,
+    ),
+    grantVariant: choice.sourceTag.grantVariant,
+  }
   return {
     characterPatch: {
       spells: workingCharacter.spells,

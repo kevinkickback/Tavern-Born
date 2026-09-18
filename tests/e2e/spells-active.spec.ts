@@ -10,7 +10,7 @@ test('@focused active-character spell workflow: profile switch, add/remove, prep
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    schemaVersion: 2,
+    schemaVersion: 3,
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',

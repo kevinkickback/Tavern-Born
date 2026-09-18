@@ -3990,7 +3990,7 @@
       "name": "Full-coverage test fixture"
     }
   },
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "hitPoints": {
     "current": 121,
     "temporary": 17

@@ -59,6 +59,18 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('No tag or release exists for $tag; both will be created')
     expect(workflow).toContain('Release $RELEASE_TAG is published; refusing to modify it.')
     expect(workflow).toContain('main changed while release artifacts were building')
+    expect(workflow).toContain(
+      ['initial_tag_state: $', '{{ steps.release.outputs.initial_tag_state }}'].join(''),
+    )
+    expect(workflow).toContain(
+      ['initial_tag_sha: $', '{{ steps.release.outputs.initial_tag_sha }}'].join(''),
+    )
+    expect(workflow).toContain(
+      [
+        'initial_release_fingerprint: $',
+        '{{ steps.release.outputs.initial_release_fingerprint }}',
+      ].join(''),
+    )
 
     const buildJob = workflow.slice(
       workflow.indexOf('\n  build:'),
@@ -78,6 +90,12 @@ describe('trusted workflow policy', () => {
     expect(publishJob).toContain('assert_draft "$release_id"')
     expect(publishJob).toContain('"$REPLACE_UNPUBLISHED" == "true"')
     expect(publishJob).toContain('"$tag_sha" != "$SOURCE_SHA"')
+    expect(publishJob).toContain('"$tag_sha" != "$INITIAL_TAG_SHA"')
+    expect(publishJob).toContain('Tag $RELEASE_TAG changed after release preparation')
+    expect(publishJob).toContain('Tag $RELEASE_TAG was created after release preparation')
+    expect(publishJob).toContain('Release $RELEASE_TAG changed after release preparation')
+    expect(publishJob).toContain('"$release_fingerprint" != "$INITIAL_RELEASE_FINGERPRINT"')
+    expect(publishJob.match(/assert_current_main/g)?.length).toBeGreaterThanOrEqual(4)
     expect(publishJob).toContain(
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"',
     )
@@ -85,6 +103,7 @@ describe('trusted workflow policy', () => {
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"',
     )
     expect(publishJob).toContain('gh release create "$RELEASE_TAG" release-artifacts/*')
+    expect(publishJob).toContain('Tag $RELEASE_TAG no longer points to $SOURCE_SHA')
     expect(publishJob).not.toContain('gh release upload')
 
     const validateIndex = publishJob.indexOf('Validate completed artifact bundle')

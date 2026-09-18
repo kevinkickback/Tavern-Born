@@ -20,4 +20,16 @@ describe('isProficientWithWeapon', () => {
       }),
     ).toBe(false)
   })
+
+  it('honors melee and ranged category qualifiers', () => {
+    const simpleMelee = { name: 'Dagger', weaponCategory: 'simple', type: 'M' }
+    const simpleRanged = { name: 'Shortbow', weaponCategory: 'simple', type: 'R' }
+    const martialMelee = { name: 'Longsword', weaponCategory: 'martial', type: 'M|XPHB' }
+
+    expect(isProficientWithWeapon(['simple melee weapons'], simpleMelee)).toBe(true)
+    expect(isProficientWithWeapon(['simple melee weapons'], simpleRanged)).toBe(false)
+    expect(isProficientWithWeapon(['simple ranged weapons'], simpleRanged)).toBe(true)
+    expect(isProficientWithWeapon(['martial melee weapons'], martialMelee)).toBe(true)
+    expect(isProficientWithWeapon(['simple melee weapons'], martialMelee)).toBe(false)
+  })
 })

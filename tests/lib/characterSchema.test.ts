@@ -146,6 +146,34 @@ describe('characterPersistenceSchema', () => {
     expect(result.classChoiceSelections).toEqual(character.classChoiceSelections)
   })
 
+  test('round-trips provenance ability-choice amounts', () => {
+    const character = makeCharacterFixture()
+    character.provenance.choices = [
+      {
+        id: 'race:test:abilityBonuses:choose:0',
+        domain: 'abilityBonuses',
+        sourceTag: {
+          sourceType: 'race',
+          sourceName: 'Test Race',
+          sourceRef: 'TEST',
+          grantType: 'placeholder',
+          label: 'Test Race',
+        },
+        chooseCount: 1,
+        amount: 2,
+        optionPool: ['strength', 'dexterity'],
+        selected: ['strength'],
+        status: 'resolved',
+      },
+    ]
+
+    const result = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(character)) as unknown,
+    )
+
+    expect(result.provenance.choices[0]?.amount).toBe(2)
+  })
+
   test('round-trips typed manual effects and their activation state', () => {
     const character = makeCharacterFixture({
       manualEffects: [

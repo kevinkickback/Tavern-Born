@@ -499,6 +499,7 @@ const choiceRecordSchema = z.object({
   domain: choiceDomainSchema,
   sourceTag: sourceTagSchema,
   chooseCount: z.number().int().min(1),
+  amount: z.number().int().optional(),
   optionPool: z.array(z.string()),
   selected: z.array(z.string()),
   selectedRefs: z

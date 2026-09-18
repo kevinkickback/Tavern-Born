@@ -27,13 +27,6 @@ If you are new to the repository, read these in order:
   releases.
 - [PDF Generation](pdf-generation.md): template contracts, mapped fields, audit findings, and fixed-form limits.
 - [Codebase Tour](codebase-tour.md): concern-to-file routing for fast navigation.
-- [Review Prompts](review/README.md): Tavern-Born review order, convergence controls, and portable
-  prompt templates.
-- [Capability Completion Plan](review/TODO.md): phased implementation roadmap for correctness and
-  character-building completeness, plus deferred designs for bundled SRD content, homebrew, and
-  optional live play.
-- [Review Findings Ledger](review/FINDINGS_LEDGER.md): historical review findings, dispositions,
-  evidence, and revisit triggers.
 - [Changelog](changelog.md): released changes plus the next planned release.
 
 ## Update Policy

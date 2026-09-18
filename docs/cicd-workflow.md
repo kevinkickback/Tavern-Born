@@ -22,9 +22,12 @@ Passing CI does not opt a pull request into merging. Once a change is intentiona
 all branch-protection requirements pass. There is no custom merge workflow or repository-dispatch
 handoff.
 
-The pull request that installs or changes release infrastructure should be reviewed carefully and
-merged only after its CI checks pass. Subsequent application changes use the same native auto-merge
-path; workflow code receives no special write credentials during pull-request CI.
+Pull requests that change `.github/workflows/**`, `.github/scripts/**`, or
+`scripts/check-release.mjs` are the exception: do not enable auto-merge until the complete workflow
+diff and advisory review have been inspected. Once that review is complete, the pull request may use
+the same native squash auto-merge path. CI status names alone are not a trust boundary because a pull
+request can change the workflow that produces them. Add required CODEOWNERS approval for these paths
+when the project has a second maintainer; a solo maintainer cannot provide an independent approval.
 
 ---
 
@@ -100,7 +103,8 @@ The workflow:
 3. Refuses to modify a published release.
 4. Builds Windows, macOS, and Linux packages in parallel without repository write credentials.
 5. Validates the exact ten-file package bundle and updater manifests.
-6. Re-checks that `main`, the tag, and release state did not change during the builds.
+6. Re-checks the exact initial tag and draft state and repeatedly verifies `main` immediately before
+   release mutations.
 7. Records build provenance, creates or replaces one clean draft, and verifies its tag and assets.
 
 The workflow never publishes the release. Review the release notes, all ten assets, the Windows
@@ -122,7 +126,8 @@ The manual workflow is state-aware and safe to rerun:
 If a tag and release were both deleted, run the workflow normally with the replacement checkbox
 disabled. If corrective changes reached `main` while an unpublished tag still points to an older
 commit, enable the checkbox. Replacement still occurs only after every new artifact has built and
-validated, and the workflow stops if the tag, draft, or `main` changes concurrently.
+validated. The workflow uses atomic tag creation plus immediate state revalidation to stop safely
+when a concurrent tag, draft, or `main` change is detected.
 
 ### Release artifacts
 
