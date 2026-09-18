@@ -29,7 +29,7 @@
     "lint": "npx biome format --write . && npx biome check --write .",
     "report:capabilities": "vitest run tests/corpus/dataCapabilities.test.ts --reporter=verbose",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --maxWorkers=4",
     "test:e2e": "playwright test",
     "test:e2e:focused": "playwright test --grep @focused",
     "test:e2e:golden": "playwright test --grep @golden",

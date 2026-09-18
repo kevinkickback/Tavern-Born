@@ -157,18 +157,6 @@ async function createWindow(): Promise<void> {
     }
   })
 
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (
-      !isTrustedRendererUrl(
-        url,
-        RENDERER_ROOT_URL,
-        isDev ? process.env.VITE_DEV_SERVER_URL : undefined,
-      )
-    ) {
-      event.preventDefault()
-    }
-  })
-
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
       if (new URL(url).protocol === 'https:') void shell.openExternal(url)
@@ -394,8 +382,15 @@ app.on('web-contents-created', (_event, contents) => {
     contents.on('devtools-opened', () => contents.closeDevTools())
   }
 
-  contents.on('will-navigate', (event) => {
-    event.preventDefault()
+  contents.on('will-navigate', (event, url) => {
+    const isTrustedMainRenderer =
+      contents === mainWindow?.webContents &&
+      isTrustedRendererUrl(
+        url,
+        RENDERER_ROOT_URL,
+        isDev ? process.env.VITE_DEV_SERVER_URL : undefined,
+      )
+    if (!isTrustedMainRenderer) event.preventDefault()
   })
 
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))

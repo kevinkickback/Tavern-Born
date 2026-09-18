@@ -25,6 +25,9 @@ Key scripts in package.json:
 - npm run test:progression
 - npm run test:electron (run after `npm run build`)
 
+The coverage command caps Vitest at four workers so instrumentation remains deterministic on
+high-core-count hosts instead of exhausting the renderer test environment with excess concurrency.
+
 `npm run check:health` rejects unused files, exports, dependencies, circular dependencies, UI
 imports of managed data JSON, production imports of tests, and dependencies from pure `src/lib`
 modules into UI, hook, page, or store layers. Knip's duplicate-export diagnostic is excluded because
@@ -97,7 +100,8 @@ new tests land and do not lower them to merge a change.
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions,
   source-less rejection, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
-- Renderer output in src/lib/renderer.ts
+- Renderer output in src/lib/renderer.ts, including non-interactive labels for external game-data
+  links
 - Recursive reference lookup coverage includes explicit collection sets, stable source/name keys,
   and `itemsBase`. Rules-preview integration and browser coverage enforce the rolling two-preview
   chain, physical-slot reuse without moving the spawning surface, a pin plus two bounded transient levels, hover intent,
@@ -291,7 +295,8 @@ new tests land and do not lower them to merge a change.
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)
 - Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
-- Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
+- Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload
+  bridge, trusted IPC, and trusted renderer reloads)
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
 	including class icons, current portrait and organization paths, hosted base paths, and real packaged SVG loading
 - Store-level atomic load coverage in tests/store/gameDataStore.test.ts prevents failed background

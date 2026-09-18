@@ -10,6 +10,17 @@ describe('renderEntry', () => {
     expect(renderEntry('{#itemEntry Ioun Stone|XDMG}')).toBe('<p></p>')
   })
 
+  test('renders external game-data links as non-interactive prose', () => {
+    const result = renderEntry(
+      'Read {@link this correction|https://example.com/rules} and {@link this warning|javascript:alert(1)}.',
+    )
+
+    expect(result).toBe('<p>Read this correction and this warning.</p>')
+    expect(result).not.toContain('<a')
+    expect(result).not.toContain('href=')
+    expect(result).not.toContain('example.com')
+  })
+
   test('renders an entries object with name and nested text', () => {
     const result = renderEntry({
       type: 'entries',

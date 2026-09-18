@@ -8,6 +8,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Purpose: native window lifecycle, secure IPC bridge, capability-scoped filesystem access for the
   user-selected local data source, and auto-update management. IPC requests are restricted to the
   top-level trusted renderer; local paths are canonicalized and confined to the native-picker root.
+  The main window accepts navigation only within its trusted renderer root so reload and recovery
+  remain functional, while untrusted navigation and child-window creation stay blocked.
 - Key files: electron/main.ts, electron/preload.ts, electron/updateManager.ts, electron/windowState.ts.
 
 2. Application shell and routing
@@ -81,7 +83,8 @@ Spellcasting note:
 - Full user-facing 5etools rules text renders through `GameContent`, which applies sanitized,
   source-aware recursive previews consistently across build, selection, and Compendium detail
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
-  lower-level string renderer explicitly.
+  lower-level string renderer explicitly. External `{@link ...}` directives from game data retain
+  their readable labels as non-interactive prose; community URLs are not exposed by the app.
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Named references without a source are rejected rather than guessed.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
