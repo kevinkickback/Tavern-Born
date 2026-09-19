@@ -154,4 +154,15 @@ describe('trusted workflow policy', () => {
     expect(nodeVersions.length).toBeGreaterThan(0)
     expect(nodeVersions.every((version) => version === '24')).toBe(true)
   })
+
+  test('pins every Linux job to Ubuntu 26.04', async () => {
+    const ciWorkflow = await readWorkflow('ci.yml')
+    const releaseWorkflow = await readWorkflow('release.yml')
+    const workflows = [ciWorkflow, releaseWorkflow]
+
+    expect(workflows.every((workflow) => !workflow.includes('ubuntu-latest'))).toBe(true)
+    expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(2)
+    expect(releaseWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(3)
+    expect(releaseWorkflow).toContain('os: [windows-latest, macos-latest, ubuntu-26.04]')
+  })
 })

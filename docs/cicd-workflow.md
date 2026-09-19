@@ -56,6 +56,9 @@ branch protection, or an out-of-date base.
 architectural boundaries, linting, type checking, coverage thresholds, a production build, bundle
 budgets, the complete browser suite, and the compiled Electron smoke test. Repository-run Node
 commands use Node 24, matching `.nvmrc` and the package engine requirement.
+Linux CI and release jobs use the explicit `ubuntu-26.04` runner instead of `ubuntu-latest`, so a
+future GitHub runner migration cannot change the build environment without a reviewed repository
+change.
 
 The browser job includes the `@golden` level-1-to-20 journeys and narrower `@focused` checks.
 Developers can run those groups independently with `npm run test:e2e:golden` and
