@@ -3,6 +3,7 @@ import { formatCopperValue } from '@/lib/calculations/currency'
 import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
+  type NormalizedItemTraits,
 } from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
@@ -21,8 +22,7 @@ export interface ItemDetailField {
   value: string | number
 }
 
-export function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
-  const traits = getNormalizedItemTraits(item)
+function getItemCategoryFromTraits(traits: NormalizedItemTraits): Exclude<ItemCategory, 'All'> {
   if (traits.isWeapon) return 'Weapons'
   if (traits.isArmor) return 'Armor'
   if (traits.isAmmunition) return 'Ammunition'
@@ -31,15 +31,28 @@ export function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
   return 'Gear'
 }
 
+export function getInventoryItemClassification(item: Equipment): {
+  category: Exclude<ItemCategory, 'All'>
+  label: string
+} {
+  const traits = getNormalizedItemTraits(item)
+  const category = getItemCategoryFromTraits(traits)
+  const label =
+    category === 'Armor' ? (getArmorCategoryLabel(traits.armorCategory) ?? category) : category
+  return { category, label }
+}
+
+export function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
+  return getInventoryItemClassification(item).category
+}
+
 export function itemMatchesFilter(item: Equipment, filter: ItemCategory): boolean {
   if (filter === 'All') return true
   return getItemCategory(item) === filter
 }
 
 export function getInventoryItemTypeLabel(item: Equipment): Exclude<ItemCategory, 'All'> | string {
-  const category = getItemCategory(item)
-  if (category !== 'Armor') return category
-  return getArmorCategoryLabel(getNormalizedItemTraits(item).armorCategory) ?? category
+  return getInventoryItemClassification(item).label
 }
 
 function toTitleCase(value: string): string {

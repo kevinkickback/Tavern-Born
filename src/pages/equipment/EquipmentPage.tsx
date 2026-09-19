@@ -51,8 +51,7 @@ import { NoCharCard } from '../_shared'
 import {
   buildItemDetailFields,
   getDamageSummary,
-  getInventoryItemTypeLabel,
-  getItemCategory,
+  getInventoryItemClassification,
   getPropertySummary,
   type ItemCategory,
   itemMatchesFilter,
@@ -218,7 +217,10 @@ export function EquipmentPage() {
   const selectedItemDetailFields = selectedItem
     ? buildItemDetailFields(selectedItem, selectedItemData, itemPropertyByAbbr)
     : []
-  const selectedItemCategory = selectedItem ? getItemCategory(selectedItem) : null
+  const selectedItemClassification = selectedItem
+    ? getInventoryItemClassification(selectedItem)
+    : null
+  const selectedItemCategory = selectedItemClassification?.category ?? null
   const SelectedItemIcon = selectedItemCategory
     ? getItemCategoryIcon(selectedItemCategory)
     : Package
@@ -510,8 +512,8 @@ export function EquipmentPage() {
                     <ScrollArea className="min-h-0 flex-1 overflow-hidden">
                       <div className="divide-y divide-border">
                         {filteredEquipment.map((item) => {
-                          const category = getItemCategory(item)
-                          const categoryLabel = getInventoryItemTypeLabel(item)
+                          const { category, label: categoryLabel } =
+                            getInventoryItemClassification(item)
                           const ItemIcon = getItemCategoryIcon(category)
                           const dmg = getDamageSummary(item)
                           const props = getPropertySummary(item, itemPropertyByAbbr)
@@ -675,7 +677,7 @@ export function EquipmentPage() {
                           <div className="min-w-0">
                             <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              {[getInventoryItemTypeLabel(selectedItem), selectedItem.source]
+                              {[selectedItemClassification?.label, selectedItem.source]
                                 .filter(Boolean)
                                 .join(' · ')}
                             </p>

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildItemDetailFields,
+  getInventoryItemClassification,
   getInventoryItemTypeLabel,
   getItemCategory,
   itemMatchesFilter,
@@ -104,6 +105,10 @@ describe('equipment item detail fields', () => {
 
     expect(getInventoryItemTypeLabel(lightArmor)).toBe('Light Armor')
     expect(getInventoryItemTypeLabel(shield)).toBe('Shields')
+    expect(getInventoryItemClassification(shield)).toEqual({
+      category: 'Armor',
+      label: 'Shields',
+    })
     expect(itemMatchesFilter(lightArmor, 'Armor')).toBe(true)
     expect(itemMatchesFilter(shield, 'Armor')).toBe(true)
   })
