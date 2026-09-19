@@ -18,23 +18,22 @@ describe('trusted workflow policy', () => {
     await expect(readWorkflow('merge.yml')).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
-  test('creates release drafts only through a manual main-branch dispatch', async () => {
+  test('creates release drafts only through a protected current-main dispatch', async () => {
     const workflow = await readWorkflow('release.yml')
 
-    expect(workflow).toContain('workflow_dispatch:')
+    expect(workflow).toContain('repository_dispatch:')
+    expect(workflow).toContain('types: [release-requested]')
+    expect(workflow).not.toContain('workflow_dispatch:')
     expect(workflow).not.toContain('replace_unpublished')
     expect(workflow).not.toContain('REPLACE_UNPUBLISHED')
-    expect(workflow).not.toContain('repository_dispatch:')
     expect(workflow).not.toContain('release-merged')
     expect(workflow).not.toContain('rebuild-release')
     expect(workflow).not.toContain('\n  push:')
     expect(workflow).not.toContain('detect-version-change:')
-    expect(workflow).toContain("context.ref !== 'refs/heads/main'")
+    expect(workflow).toContain('A full main source SHA is required.')
     expect(workflow).toContain("github.rest.repos.getBranch({ owner, repo, branch: 'main' })")
-    expect(workflow).toContain('branch.commit.sha !== process.env.SOURCE_SHA')
-    expect(workflow).toContain(
-      'node scripts/check-release.mjs --notes-file release-metadata/release-notes.md',
-    )
+    expect(workflow).toContain('branch.commit.sha !== sourceSha')
+    expect(workflow).toContain('--published-tags-file release-metadata/published-tags.txt')
   })
 
   test('builds before safely creating a clean unpublished draft', async () => {
@@ -42,7 +41,7 @@ describe('trusted workflow policy', () => {
 
     expect(workflow).toContain('Build artifacts and update manifests without publishing')
     expect(workflow).toContain('run: npm run dist -- --publish never')
-    expect(workflow).toContain('needs: [release-source, build]')
+    expect(workflow).toContain('needs: [validate-source, release-state, build]')
     expect(workflow).toContain('name: Create draft from completed artifacts')
     expect(workflow).toContain('pattern: release-build-*')
     expect(workflow).toContain('path: release-metadata/release-notes.md')
@@ -54,15 +53,14 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain("require_manifest 'latest.yml'")
     expect(workflow).toContain("require_manifest 'latest-mac.yml'")
     expect(workflow).toContain("require_manifest 'latest-linux.yml'")
-    expect(workflow).toContain('No tag or release exists for $tag; both will be created')
-    expect(workflow).toContain('draft(s) already exist for $tag; inspect and remove them')
+    expect(workflow).toContain('draft(s) already exist for $RELEASE_TAG')
     expect(workflow).toContain('inspect and remove the unpublished tag before rerunning')
     expect(workflow).toContain('main changed while release artifacts were building')
     expect(workflow).toContain(
-      ['initial_tag_state: $', '{{ steps.release.outputs.initial_tag_state }}'].join(''),
+      ['initial_tag_state: $', '{{ steps.state.outputs.initial_tag_state }}'].join(''),
     )
     expect(workflow).toContain(
-      ['initial_tag_sha: $', '{{ steps.release.outputs.initial_tag_sha }}'].join(''),
+      ['initial_tag_sha: $', '{{ steps.state.outputs.initial_tag_sha }}'].join(''),
     )
     expect(workflow).not.toContain('initial_release_fingerprint')
 
@@ -70,12 +68,33 @@ describe('trusted workflow policy', () => {
       workflow.indexOf('\n  build:'),
       workflow.indexOf('\n  publish-release:'),
     )
-    const releaseSourceJob = workflow.slice(
-      workflow.indexOf('\n  release-source:'),
+    const validateJob = workflow.slice(
+      workflow.indexOf('\n  validate-source:'),
+      workflow.indexOf('\n  release-state:'),
+    )
+    expect(validateJob).toContain('permissions:\n      contents: read')
+    expect(validateJob).toContain('node scripts/check-release.mjs')
+    expect(validateJob).not.toContain('contents: write')
+    const fetchTagsIndex = validateJob.indexOf('Fetch published release tags')
+    const validateReleaseIndex = validateJob.indexOf('Validate release version and changelog')
+    const preserveNotesIndex = validateJob.indexOf('Preserve validated release notes')
+    expect(fetchTagsIndex).toBeGreaterThan(-1)
+    expect(fetchTagsIndex).toBeLessThan(validateReleaseIndex)
+    expect(validateReleaseIndex).toBeLessThan(preserveNotesIndex)
+    const fetchTagsStep = validateJob.slice(fetchTagsIndex, validateReleaseIndex)
+    const validateReleaseStep = validateJob.slice(validateReleaseIndex, preserveNotesIndex)
+    expect(fetchTagsStep).toContain('GH_TOKEN')
+    expect(fetchTagsStep).not.toContain('scripts/check-release.mjs')
+    expect(validateReleaseStep).toContain('scripts/check-release.mjs')
+    expect(validateReleaseStep).not.toContain('GH_TOKEN')
+
+    const releaseStateJob = workflow.slice(
+      workflow.indexOf('\n  release-state:'),
       workflow.indexOf('\n  build:'),
     )
-    expect(releaseSourceJob).toContain('permissions:\n      contents: write')
-    expect(releaseSourceJob).toContain('[.id, .draft, .updated_at] | @tsv')
+    expect(releaseStateJob).toContain('permissions:\n      contents: write')
+    expect(releaseStateJob).not.toContain('actions/checkout')
+    expect(releaseStateJob).not.toContain('scripts/check-release.mjs')
 
     expect(buildJob).toContain('permissions:\n      contents: read')
     expect(buildJob).not.toContain('GH_TOKEN')
@@ -103,6 +122,7 @@ describe('trusted workflow policy', () => {
     expect(publishJob).toContain('Tag $RELEASE_TAG no longer points to $SOURCE_SHA')
     expect(publishJob).toContain('--draft --title "$RELEASE_TAG"')
     expect(publishJob).toContain('Tag $RELEASE_TAG moved during draft creation')
+    expect(publishJob).toContain('Missing or empty completed build artifact')
     expect(publishJob).not.toContain('gh api --method DELETE')
     expect(publishJob).not.toContain('gh api --method PATCH')
     expect(publishJob).not.toContain('gh release upload')
@@ -117,6 +137,9 @@ describe('trusted workflow policy', () => {
     expect(attestIndex).toBeLessThan(mutateIndex)
     expect(createDraftIndex).toBeGreaterThan(mutateIndex)
     expect(verifyCreatedTagIndex).toBeGreaterThan(createDraftIndex)
+
+    expect(workflow).toContain('select(.size <= 0)')
+    expect(workflow).toContain('Release notes do not match the validated changelog.')
   })
 
   test('uses upload-safe Windows installer names that match update metadata', async () => {
@@ -162,7 +185,7 @@ describe('trusted workflow policy', () => {
 
     expect(workflows.every((workflow) => !workflow.includes('ubuntu-latest'))).toBe(true)
     expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(2)
-    expect(releaseWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(3)
+    expect(releaseWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(4)
     expect(releaseWorkflow).toContain('os: [windows-latest, macos-latest, ubuntu-26.04]')
   })
 })

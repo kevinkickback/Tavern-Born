@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   candidatePackageVersion: '3.0.0',
   candidateLockVersion: '3.0.0',
   candidateRootLockVersion: '3.0.0',
+  publishedTags: 'v1.8.0\nv1.9.9\npreview-build',
   changelog: [
     '<details>',
     '<summary><strong>v2.0.0</strong></summary>',
@@ -58,6 +59,7 @@ vi.mock('node:fs/promises', () => {
       if (path.endsWith('/docs/changelog.md')) {
         return candidate ? state.candidateChangelog : state.changelog
       }
+      if (path.endsWith('/published-tags.txt')) return state.publishedTags
       throw new Error(`Missing mocked file: ${path}`)
     },
     writeFile: (path: string, contents: string) => {
@@ -78,6 +80,7 @@ beforeEach(() => {
     candidatePackageVersion: '3.0.0',
     candidateLockVersion: '3.0.0',
     candidateRootLockVersion: '3.0.0',
+    publishedTags: 'v1.8.0\nv1.9.9\npreview-build',
     changelog: [
       '<details>',
       '<summary><strong>v2.0.0</strong></summary>',
@@ -141,6 +144,19 @@ test('extracts only the current release section for draft notes', async () => {
       contents: '- New release\n',
     },
   ])
+})
+
+test('accepts a version newer than every published stable release', async () => {
+  process.argv.push('--published-tags-file', 'published-tags.txt')
+
+  await expect(run()).resolves.toBeDefined()
+})
+
+test.each(['v2.0.0', 'v2.1.0'])('rejects a release after published tag %s', async (tag) => {
+  state.publishedTags = tag
+  process.argv.push('--published-tags-file', 'published-tags.txt')
+
+  await expect(run()).rejects.toThrow('must be greater than the latest published version')
 })
 
 test.each([
