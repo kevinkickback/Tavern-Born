@@ -47,11 +47,11 @@ import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigat
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Item5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 import {
   buildItemDetailFields,
   getDamageSummary,
+  getInventoryItemTypeLabel,
   getItemCategory,
   getPropertySummary,
   type ItemCategory,
@@ -116,7 +116,7 @@ export function EquipmentPage() {
     attunedCount,
     currency,
     totalCurrencyCopper,
-    addFromGameData,
+    addManyFromGameData,
     removeItem,
     updateItem,
     toggleEquip,
@@ -223,9 +223,6 @@ export function EquipmentPage() {
     ? getItemCategoryIcon(selectedItemCategory)
     : Package
 
-  const handleAddItem = (item: Item5e) => {
-    addFromGameData(item)
-  }
   const handleRemoveItem = (itemId: string) => {
     removeItem(itemId)
     if (selectedItemId === itemId) {
@@ -513,6 +510,7 @@ export function EquipmentPage() {
                       <div className="divide-y divide-border">
                         {filteredEquipment.map((item) => {
                           const category = getItemCategory(item)
+                          const categoryLabel = getInventoryItemTypeLabel(item)
                           const ItemIcon = getItemCategoryIcon(category)
                           const dmg = getDamageSummary(item)
                           const props = getPropertySummary(item, itemPropertyByAbbr)
@@ -566,7 +564,7 @@ export function EquipmentPage() {
                                     )}
                                   </div>
                                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                    {[category, item.source, dmg, props]
+                                    {[categoryLabel, item.source, dmg, props]
                                       .filter(Boolean)
                                       .join(' · ')}
                                   </p>
@@ -676,7 +674,7 @@ export function EquipmentPage() {
                           <div className="min-w-0">
                             <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              {[getItemCategory(selectedItem), selectedItem.source]
+                              {[getInventoryItemTypeLabel(selectedItem), selectedItem.source]
                                 .filter(Boolean)
                                 .join(' · ')}
                             </p>
@@ -769,11 +767,7 @@ export function EquipmentPage() {
           setAddItemOpen(false)
           navigate('/sources')
         }}
-        onConfirm={(selectedItems) => {
-          for (const item of selectedItems) {
-            handleAddItem(item)
-          }
-        }}
+        onConfirm={addManyFromGameData}
       />
     </WorkspacePage>
   )

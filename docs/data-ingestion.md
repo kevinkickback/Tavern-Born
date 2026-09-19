@@ -55,7 +55,7 @@ The parser layer owns normalization that would otherwise be repeated across page
 
 - class/subclass feature references, copied subclasses, spellcasting, resources, ritual casting,
   ASIs, and source-owned choice descriptors;
-- background origin rules and starting-equipment blocks;
+- background origin rules, source-qualified narrative entries, and starting-equipment blocks;
 - race versions/lineages, structured traits, and presentation entries;
 - conditions versus diseases and structured rules entries;
 - item type labels, generic magic variants, mastery definitions, generic equipment candidates;

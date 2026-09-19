@@ -271,6 +271,13 @@ test('@focused active-character spell workflow: profile switch, add/remove, prep
   await expect(page.locator('main').getByText('Wizard (Lv 2)')).toBeVisible()
   await expect(page.locator('main').getByText('Cleric (Lv 1)')).toHaveCount(0)
 
+  const spellName = page.getByRole('button', { name: 'Magic Missile' })
+  await spellName.hover()
+  const spellPreview = page.getByRole('dialog', { name: 'Magic Missile preview' })
+  await expect(spellPreview).toBeVisible()
+  await page.waitForTimeout(300)
+  await expect(spellPreview).toBeVisible()
+
   // Seed an exact source-qualified spell reference into the Bonus Spells profile, then reload.
   await page.evaluate(
     async ({ characterId }) => {

@@ -86,6 +86,29 @@ export function addManualEquipmentCommand(
   return addManualEquipmentEntryCommand(character, ledger, buildEquipment(item))
 }
 
+export function addManualEquipmentBatchCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  items: readonly Item5e[],
+): CharacterCommandResult {
+  if (items.length === 0) return { characterPatch: {}, provenanceUpdate: ledger }
+
+  const equipment = [...(character.equipment ?? [])]
+  let provenanceUpdate = ledger
+  for (const item of items) {
+    const entry = buildEquipment(item)
+    equipment.push(entry)
+    provenanceUpdate = addGrant(
+      provenanceUpdate,
+      'equipment',
+      entry.name,
+      makeSourceTag('manual', 'User Choice', 'choice'),
+    )
+  }
+
+  return { characterPatch: { equipment }, provenanceUpdate }
+}
+
 export function removeManualEquipmentCommand(
   character: Character,
   ledger: ProvenanceLedger,

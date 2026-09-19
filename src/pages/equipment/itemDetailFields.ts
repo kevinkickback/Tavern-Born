@@ -1,6 +1,9 @@
 import { getArmorCategory } from '@/lib/calculations/armorClass'
 import { formatCopperValue } from '@/lib/calculations/currency'
-import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
+import {
+  getArmorCategoryLabel,
+  getNormalizedItemTraits,
+} from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 
@@ -31,6 +34,12 @@ export function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
 export function itemMatchesFilter(item: Equipment, filter: ItemCategory): boolean {
   if (filter === 'All') return true
   return getItemCategory(item) === filter
+}
+
+export function getInventoryItemTypeLabel(item: Equipment): Exclude<ItemCategory, 'All'> | string {
+  const category = getItemCategory(item)
+  if (category !== 'Armor') return category
+  return getArmorCategoryLabel(getNormalizedItemTraits(item).armorCategory) ?? category
 }
 
 function toTitleCase(value: string): string {

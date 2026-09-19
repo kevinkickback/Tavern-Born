@@ -102,4 +102,30 @@ describe('BackgroundStep', () => {
     expect(getByText(/spent years learning the lore/i)).toBeTruthy()
     expect(getByText(/attempt to learn lore/i)).toBeTruthy()
   })
+
+  test('uses source-qualified fluff for a 2024 background with no inline entries', () => {
+    const backgrounds: Background5e[] = [
+      {
+        name: 'Acolyte',
+        source: 'XPHB',
+        edition: 'one',
+        fluffEntries: ['You devoted yourself to service in a temple.'],
+      },
+    ]
+
+    const { getByText, queryByText } = render(
+      <BackgroundStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          background: 'Acolyte',
+          backgroundSource: 'XPHB',
+        }}
+        onChange={vi.fn()}
+        backgrounds={backgrounds}
+      />,
+    )
+
+    expect(getByText(/devoted yourself to service in a temple/i)).toBeTruthy()
+    expect(queryByText(/no background feature details available/i)).toBeNull()
+  })
 })

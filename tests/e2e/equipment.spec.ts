@@ -45,6 +45,13 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
         rarity: 'none',
         ac: 11,
       },
+      {
+        name: 'Shield',
+        source: 'PHB',
+        type: 'S',
+        rarity: 'none',
+        ac: 2,
+      },
     ],
   }
 
@@ -79,7 +86,25 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await expect(addItemDialog.getByText(/Core potions and spell scrolls are included/)).toHaveCount(
     0,
   )
-  await addItemDialog.getByRole('button', { name: 'Cancel' }).click()
+  await addItemDialog.getByRole('button', { name: /^Potion of Healing\b/ }).click()
+  await leatherArmorOption.click()
+  await addItemDialog.getByRole('button', { name: /^Shield\b/ }).click()
+  await addItemDialog.getByRole('button', { name: 'Confirm' }).click()
+
+  await expect(page.getByRole('button', { name: 'Inspect Potion of Healing' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Inspect Leather Armor' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Inspect Shield' })).toBeVisible()
+
+  const inventoryCategoryTabs = page.getByRole('tablist', { name: 'Inventory category' })
+  await inventoryCategoryTabs.getByRole('tab', { name: 'Armor' }).click()
+  await expect(
+    page.getByRole('button', { name: 'Inspect Leather Armor' }).getByText('Light Armor'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Inspect Shield' }).getByText('Shields'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Inspect Potion of Healing' })).toHaveCount(0)
+  await inventoryCategoryTabs.getByRole('tab', { name: 'All', exact: true }).click()
 
   // Use the same accessible controls a keyboard or assistive-technology user reaches.
   await page.getByRole('button', { name: 'Increase Ring of Testing quantity' }).click()

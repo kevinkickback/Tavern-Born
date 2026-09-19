@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  addManualEquipmentBatchCommand,
   addManualEquipmentCommand,
   applyManualProficiencyCommand,
   removeManualEquipmentCommand,
@@ -40,6 +41,22 @@ describe('equipment commands', () => {
     expect(result.provenanceUpdate.equipment['chain shirt']).toEqual([
       expect.objectContaining({ sourceType: 'manual', sourceName: 'User Choice' }),
     ])
+  })
+
+  test('adds multiple selected items and their provenance atomically', () => {
+    const character = makeCharacterFixture()
+    const result = addManualEquipmentBatchCommand(
+      character,
+      character.provenance ?? emptyProvenance(),
+      [item, { name: 'Shield', source: 'PHB', type: 'S', ac: 2 }],
+    )
+
+    expect(result.characterPatch.equipment?.map((entry) => entry.name)).toEqual([
+      'Chain Shirt',
+      'Shield',
+    ])
+    expect(result.provenanceUpdate.equipment['chain shirt']).toHaveLength(1)
+    expect(result.provenanceUpdate.equipment.shield).toHaveLength(1)
   })
 
   test('keeps manual provenance while another matching inventory row remains', () => {

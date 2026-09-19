@@ -136,6 +136,15 @@ describe('5etools/dataLoader', () => {
       },
       'adventures.json': { adventure: [] },
       'races.json': { race: [{ name: 'Human', source: 'PHB' }] },
+      'fluff-backgrounds.json': {
+        backgroundFluff: [
+          {
+            name: 'Acolyte',
+            source: 'XPHB',
+            entries: ['Source-qualified background description.'],
+          },
+        ],
+      },
       'class/index.json': {
         PHB: 'class-phb.json',
       },
@@ -161,7 +170,12 @@ describe('5etools/dataLoader', () => {
           },
         ],
       },
-      'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
+      'backgrounds.json': {
+        background: [
+          { name: 'Acolyte', source: 'PHB' },
+          { name: 'Acolyte', source: 'XPHB', edition: 'one' },
+        ],
+      },
       'spells/index.json': {
         PHB: 'spells-phb.json',
       },
@@ -224,6 +238,12 @@ describe('5etools/dataLoader', () => {
     const gameData = await loader.loadAllData({ onResourceFailure })
 
     expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Wrong Source Class'])
+    expect(
+      gameData.backgrounds.find((background) => background.source === 'PHB')?.fluffEntries,
+    ).toBe(undefined)
+    expect(
+      gameData.backgrounds.find((background) => background.source === 'XPHB')?.fluffEntries,
+    ).toEqual(['Source-qualified background description.'])
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Wrong Feature'])
 
     expect(gameData.spells.map((it) => it.name)).toEqual(['Magic Missile'])

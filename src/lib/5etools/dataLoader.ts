@@ -12,6 +12,7 @@ import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
   parseActions,
+  parseBackgroundFluff,
   parseBackgrounds,
   parseClasses,
   parseClassFeatures,
@@ -183,6 +184,7 @@ export class FiveEToolsDataLoader {
     let spellSourceLookupData: unknown = null
     let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
+    let backgroundFluffEntriesByKey = new Map<string, unknown[]>()
     let loadedTopLevelResources = 0
 
     let completedResources = 0
@@ -222,6 +224,12 @@ export class FiveEToolsDataLoader {
             )
             break
           case 'backgroundFluff':
+            backgroundFluffEntriesByKey = new Map(
+              parseBackgroundFluff(data).map((item) => [
+                `${item.name}|${item.source}`,
+                item.entries,
+              ]),
+            )
             gameData.organizations = parseOrganizations(data)
             this.addItemSources(gameData.organizations, sourcesSet)
             break
@@ -325,6 +333,15 @@ export class FiveEToolsDataLoader {
       gameData.races = gameData.races.map((race) => {
         const summary = raceFluffSummaryByKey.get(`${race.name}|${race.source}`)
         return summary ? { ...race, fluffEntries: [summary] } : race
+      })
+    }
+
+    if (backgroundFluffEntriesByKey.size > 0) {
+      gameData.backgrounds = gameData.backgrounds.map((background) => {
+        const fluffEntries = backgroundFluffEntriesByKey.get(
+          `${background.name}|${background.source}`,
+        )
+        return fluffEntries ? { ...background, fluffEntries } : background
       })
     }
 

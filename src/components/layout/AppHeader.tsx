@@ -142,6 +142,10 @@ export function AppHeader() {
     setHintDismissed(STAT_MENUS_HINT_ID, true)
   }
 
+  const dismissVisibleStatMenusHint = () => {
+    if (showStatMenusHintOnPage && statMenusHintPosition) dismissStatMenusHint()
+  }
+
   return (
     <TooltipProvider delayDuration={300}>
       <AnchoredHint
@@ -207,7 +211,7 @@ export function AppHeader() {
                       data-testid="header-ac-badge"
                       aria-label={`Manage Armor Class. Current ${effectiveAC}`}
                       onClick={() => {
-                        dismissStatMenusHint()
+                        dismissVisibleStatMenusHint()
                         setArmorClassOpen(true)
                       }}
                     >
@@ -228,7 +232,7 @@ export function AppHeader() {
                       data-testid="header-hp-badge"
                       aria-label={`Manage hit points. Maximum ${effectiveMaxHP}`}
                       onClick={() => {
-                        dismissStatMenusHint()
+                        dismissVisibleStatMenusHint()
                         setHitPointsOpen(true)
                       }}
                     >
