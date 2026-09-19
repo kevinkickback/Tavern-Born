@@ -36,6 +36,7 @@ export function SpellNameTooltip({
       onMouseEnter={(event) => {
         openPreview(descriptor, event.currentTarget)
       }}
+      onMouseMove={cancelClose}
       onMouseLeave={scheduleClose}
       onFocus={(event) => {
         openPreview(descriptor, event.currentTarget)

@@ -3,10 +3,13 @@
 
 ## ✨ Changes
 
+* Fixed 5.5e (2024) backgrounds missing descriptions
+* Fixed shields not counting as armor when filtering equipment
 * Fixed Review page warnings for valid ability score and feat choices
 * Fixed some weapon proficiencies and spells not being recognized correctly
-* Fixed potions and spell scrolls missing when Dungeon Master's Guide was not an active source
-* Equipment choices now show armor types and source books
+* Fixed adding multiple items to equipment only added the last selected item
+* Fixed potion and scroll options missing when Dungeon Master's Guide was not an active source
+* One-time hints now close after using the control they describe
 * Improved contrast and reduced glare throughout the light theme
 
 </details>

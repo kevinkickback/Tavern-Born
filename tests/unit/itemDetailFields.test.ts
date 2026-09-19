@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildItemDetailFields,
+  getInventoryItemClassification,
+  getInventoryItemTypeLabel,
   getItemCategory,
   itemMatchesFilter,
 } from '@/pages/equipment/itemDetailFields'
@@ -95,5 +97,19 @@ describe('equipment item detail fields', () => {
     expect(getItemCategory(tool)).toBe('Gear')
     expect(itemMatchesFilter(tool, 'Gear')).toBe(true)
     expect(itemMatchesFilter(tool, 'Weapons')).toBe(false)
+  })
+
+  test('labels armor by subtype while keeping shields in the Armor filter', () => {
+    const lightArmor = makeItem({ type: 'LA', armorType: 'light' })
+    const shield = makeItem({ type: 'S', armorType: 'shield' })
+
+    expect(getInventoryItemTypeLabel(lightArmor)).toBe('Light Armor')
+    expect(getInventoryItemTypeLabel(shield)).toBe('Shields')
+    expect(getInventoryItemClassification(shield)).toEqual({
+      category: 'Armor',
+      label: 'Shields',
+    })
+    expect(itemMatchesFilter(lightArmor, 'Armor')).toBe(true)
+    expect(itemMatchesFilter(shield, 'Armor')).toBe(true)
   })
 })

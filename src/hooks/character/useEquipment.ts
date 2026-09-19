@@ -6,6 +6,7 @@ import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
 import {
+  addManualEquipmentBatchCommand,
   addManualEquipmentCommand,
   addManualEquipmentEntryCommand,
   removeManualEquipmentCommand,
@@ -33,6 +34,7 @@ export interface EquipmentState {
   totalCurrencyCopper: number
   addItem: (item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>) => void
   addFromGameData: (item5e: Item5e) => void
+  addManyFromGameData: (items: readonly Item5e[]) => void
   removeItem: (id: string) => void
   updateItem: (id: string, patch: Partial<Equipment>) => void
   toggleEquip: (id: string) => void
@@ -111,6 +113,22 @@ export function useEquipment(): EquipmentState {
         character,
         character.provenance ?? emptyProvenance(),
         item5e,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, updateCharacter],
+  )
+
+  const addManyFromGameData = useCallback(
+    (items: readonly Item5e[]) => {
+      if (!character || items.length === 0) return
+      const result = addManualEquipmentBatchCommand(
+        character,
+        character.provenance ?? emptyProvenance(),
+        items,
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
@@ -215,6 +233,7 @@ export function useEquipment(): EquipmentState {
     totalCurrencyCopper,
     addItem,
     addFromGameData,
+    addManyFromGameData,
     removeItem,
     updateItem,
     toggleEquip,

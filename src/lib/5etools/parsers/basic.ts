@@ -25,6 +25,19 @@ export function parseBackgrounds(data: unknown): unknown[] {
   })
 }
 
+export function parseBackgroundFluff(
+  data: unknown,
+): Array<{ name: string; source: string; entries: unknown[] }> {
+  const obj = asObject(data)
+  return asArray(obj.backgroundFluff).flatMap((entry) => {
+    const record = asObject(entry)
+    const name = typeof record.name === 'string' ? record.name : ''
+    const source = typeof record.source === 'string' ? record.source : ''
+    const entries = asArray(record.entries)
+    return name && source && entries.length > 0 ? [{ name, source, entries }] : []
+  })
+}
+
 export function parseFeats(data: unknown): unknown[] {
   const obj = asObject(data)
   if (obj.feat) return asArray(obj.feat)

@@ -345,6 +345,7 @@ export function BuildClassPage() {
         width={LEVEL_UP_HINT_WIDTH}
         onDismiss={handleDismissLevelUpHint}
         dismissLabel="Dismiss class page hint"
+        dismissOnReferenceAction
       >
         Use the Level Up button to add, remove, or change your classes.
       </AnchoredHint>
