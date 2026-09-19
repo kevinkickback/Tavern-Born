@@ -142,10 +142,6 @@ export function AppHeader() {
     setHintDismissed(STAT_MENUS_HINT_ID, true)
   }
 
-  const dismissVisibleStatMenusHint = () => {
-    if (showStatMenusHintOnPage && statMenusHintPosition) dismissStatMenusHint()
-  }
-
   return (
     <TooltipProvider delayDuration={300}>
       <AnchoredHint
@@ -153,6 +149,7 @@ export function AppHeader() {
         width={STAT_MENUS_HINT_WIDTH}
         onDismiss={dismissStatMenusHint}
         dismissLabel="Dismiss Armor Class and Hit Points hint"
+        dismissOnReferenceAction
       >
         Click the shield or heart to review Armor Class and Hit Point sources or add manual bonuses
         and penalties.
@@ -210,10 +207,7 @@ export function AppHeader() {
                       className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-ac-badge"
                       aria-label={`Manage Armor Class. Current ${effectiveAC}`}
-                      onClick={() => {
-                        dismissVisibleStatMenusHint()
-                        setArmorClassOpen(true)
-                      }}
+                      onClick={() => setArmorClassOpen(true)}
                     >
                       <Shield className="absolute inset-0 size-10 text-primary" weight="fill" />
                       <span className="relative z-10 mt-0.5 text-xs font-bold leading-none text-primary-foreground drop-shadow-sm">
@@ -231,10 +225,7 @@ export function AppHeader() {
                       className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-hp-badge"
                       aria-label={`Manage hit points. Maximum ${effectiveMaxHP}`}
-                      onClick={() => {
-                        dismissVisibleStatMenusHint()
-                        setHitPointsOpen(true)
-                      }}
+                      onClick={() => setHitPointsOpen(true)}
                     >
                       <Heart className="absolute inset-0 size-10 text-red-500" weight="fill" />
                       <span className="relative z-10 -mt-0.5 text-xs font-bold leading-none text-white drop-shadow-sm">

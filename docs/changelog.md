@@ -9,6 +9,7 @@
 * Fixed some weapon proficiencies and spells not being recognized correctly
 * Fixed adding multiple items to equipment only added the last selected item
 * Fixed potion and scroll options missing when Dungeon Master's Guide was not an active source
+* One-time hints now close after using the control they describe
 * Improved contrast and reduced glare throughout the light theme
 
 </details>

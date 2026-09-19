@@ -241,6 +241,7 @@ export function EquipmentPage() {
         position={showEquipHint ? hintPosition : null}
         width={EQUIP_HINT_WIDTH}
         onDismiss={handleDismissEquipHint}
+        dismissOnReferenceAction
       >
         Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them active
         and applying their effect.

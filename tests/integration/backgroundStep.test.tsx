@@ -109,11 +109,13 @@ describe('BackgroundStep', () => {
         name: 'Acolyte',
         source: 'XPHB',
         edition: 'one',
-        fluffEntries: ['You devoted yourself to service in a temple.'],
+        fluffEntries: [
+          'You devoted yourself to service in a temple and learned to play a {@item lute|XPHB}.',
+        ],
       },
     ]
 
-    const { getByText, queryByText } = render(
+    const { container, getByText, queryByText } = render(
       <BackgroundStep
         data={{
           ...INITIAL_CHARACTER_DATA,
@@ -126,6 +128,9 @@ describe('BackgroundStep', () => {
     )
 
     expect(getByText(/devoted yourself to service in a temple/i)).toBeTruthy()
+    const itemTag = container.querySelector('[data-hover-type="item"]')
+    expect(itemTag?.textContent).toBe('lute')
+    expect(itemTag?.getAttribute('data-hover-source')).toBe('XPHB')
     expect(queryByText(/no background feature details available/i)).toBeNull()
   })
 })

@@ -110,7 +110,10 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await page.getByRole('button', { name: 'Increase Ring of Testing quantity' }).click()
   await expect(page.getByText('10.0 / 150 lb')).toBeVisible()
 
+  const equipHint = page.getByRole('status').filter({ hasText: 'Toggle Equip' })
+  await expect(equipHint).toBeVisible()
   await page.getByRole('switch', { name: 'Equip Ring of Testing' }).click()
+  await expect(equipHint).toHaveCount(0)
   await page.getByRole('switch', { name: 'Attune Ring of Testing' }).click()
   await expect(page.getByRole('switch', { name: 'Equip Ring of Testing' })).toBeChecked()
   await expect(page.getByRole('switch', { name: 'Attune Ring of Testing' })).toBeChecked()

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { AnchoredHint } from '@/components/workspace/AnchoredHint'
 
@@ -39,5 +39,26 @@ describe('AnchoredHint', () => {
     expect(screen.getByText('Equipment hint').parentElement?.className).not.toContain(
       'animate-hint-bounce',
     )
+  })
+
+  test('dismisses when its anchored action is performed', () => {
+    const reference = document.createElement('button')
+    document.body.append(reference)
+    const onDismiss = vi.fn()
+
+    render(
+      <AnchoredHint
+        position={{ reference, gap: 12, placement: 'bottom' }}
+        width={300}
+        onDismiss={onDismiss}
+        dismissOnReferenceAction
+      >
+        Action hint
+      </AnchoredHint>,
+    )
+
+    fireEvent.click(reference)
+
+    expect(onDismiss).toHaveBeenCalledOnce()
   })
 })

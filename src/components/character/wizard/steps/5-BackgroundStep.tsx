@@ -190,9 +190,16 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                     Background Overview
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {summary || 'No description available.'}
-                </p>
+                {summary ? (
+                  <GameContent
+                    entry={summary}
+                    className="text-sm text-muted-foreground leading-relaxed"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    No description available.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
