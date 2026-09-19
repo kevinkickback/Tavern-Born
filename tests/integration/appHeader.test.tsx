@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { resetAllHints, setHintDismissed } from '@/lib/storage/hints'
+import { isHintDismissed, resetAllHints, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -197,6 +197,28 @@ describe('app header character summary', () => {
     )
     act(() => resetAllHints())
 
+    expect(screen.getByRole('status').textContent).toContain(
+      'Click the shield or heart to review Armor Class and Hit Point sources',
+    )
+  })
+
+  test('does not dismiss the Race-page hint when stat controls are used elsewhere first', async () => {
+    const user = userEvent.setup()
+    const firstView = render(
+      <MemoryRouter initialEntries={['/equipment']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Manage hit points. Maximum 42' }))
+    expect(isHintDismissed('header-stat-management-menus')).toBe(false)
+    firstView.unmount()
+
+    render(
+      <MemoryRouter initialEntries={['/build/race']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
     expect(screen.getByRole('status').textContent).toContain(
       'Click the shield or heart to review Armor Class and Hit Point sources',
     )

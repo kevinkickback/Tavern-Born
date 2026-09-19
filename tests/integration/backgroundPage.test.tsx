@@ -31,6 +31,7 @@ describe('BackgroundPage', () => {
     feats: [{ 'Configurable Fixture Feat|TEST': true }],
     skillProficiencies: [{ arcana: true }],
     toolProficiencies: [{ tools: true }],
+    fluffEntries: ['A 2024 background description from the source data.'],
   }
   const feat: Feat5e = {
     name: 'Configurable Fixture Feat',
@@ -89,5 +90,6 @@ describe('BackgroundPage', () => {
       '/build/ability-scores?focus=background-bonuses',
     )
     expect(screen.getAllByText('Origin Feat')).toHaveLength(1)
+    expect(screen.getByText('A 2024 background description from the source data.')).toBeTruthy()
   })
 })

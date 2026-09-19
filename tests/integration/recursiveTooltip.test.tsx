@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { GameContent } from '@/components/editor/GameContent'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
@@ -17,6 +17,7 @@ function renderWithManager(ui: React.ReactNode) {
 describe('rules previews', () => {
   afterEach(() => {
     cleanup()
+    vi.useRealTimers()
     useGameDataStore.setState({ gameData: null })
   })
 
@@ -328,6 +329,35 @@ describe('rules previews', () => {
     expect(screen.getByRole('dialog', { name: 'Prone preview' }).textContent).toContain(
       'Prone details.',
     )
+  })
+
+  test('keeps a spell preview open while the pointer remains on its trigger', () => {
+    vi.useFakeTimers()
+    const spell = {
+      name: 'Shield',
+      source: 'PHB',
+      level: 1,
+      school: 'A',
+      time: [],
+      duration: [],
+      range: { type: 'special' },
+      entries: ['A protective spell.'],
+    } as Spell5e
+
+    renderWithManager(
+      <SpellNameTooltip
+        name={spell.name}
+        spell={spell}
+        recursiveLookup={buildRecursiveLookup({ spells: [spell] })}
+      />,
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Shield' })
+    fireEvent.mouseEnter(trigger)
+    fireEvent.mouseMove(trigger)
+    act(() => vi.advanceTimersByTime(250))
+
+    expect(screen.getByRole('dialog', { name: 'Shield preview' })).toBeTruthy()
   })
 
   test('renders canonical spell casing instead of a lowercase stored reference', () => {

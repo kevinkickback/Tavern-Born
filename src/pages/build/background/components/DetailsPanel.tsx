@@ -9,7 +9,10 @@ import {
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
 import { cn } from '@/lib/utils'
-import { getBackgroundEntries } from '@/pages/build/background/model/data'
+import {
+  getBackgroundEntries,
+  getBackgroundNarrativeEntries,
+} from '@/pages/build/background/model/data'
 import type { Background5e } from '@/types/5etools'
 
 interface BuildBackgroundDetailsPanelProps {
@@ -108,10 +111,7 @@ function BackgroundDetails2024({
   equipmentBlocks: ResolvedEquipmentBlock[]
   bgEquipmentChoices: string[]
 }) {
-  const narrativeEntries = ((background.entries as unknown[]) ?? []).filter((e) => {
-    const entry = e as { type?: string }
-    return typeof e === 'object' && entry.type === 'entries'
-  }) as { name?: string; entries: unknown[] }[]
+  const narrativeEntries = getBackgroundNarrativeEntries(background)
 
   return (
     <div className="space-y-5">
@@ -134,19 +134,18 @@ function BackgroundDetails2024({
       {narrativeEntries.length > 0 && (
         <div className="mx-auto w-full max-w-[72ch]">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Features
+            Background
           </h4>
           <div className="border-t border-border">
-            {narrativeEntries.map((section, i) => (
-              <div key={section.name ?? i} className="border-b border-border py-3">
-                {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
-                {section.entries.map((entry, idx) => (
-                  <GameContent
-                    key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                    entry={entry}
-                    className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                  />
-                ))}
+            {narrativeEntries.map((entry, index) => (
+              <div
+                key={typeof entry === 'string' ? `${index}:${entry}` : index}
+                className="border-b border-border py-3"
+              >
+                <GameContent
+                  entry={entry}
+                  className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
+                />
               </div>
             ))}
           </div>

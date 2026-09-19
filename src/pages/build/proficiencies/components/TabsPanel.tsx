@@ -401,6 +401,7 @@ export function BuildProficienciesTabsPanel({
         position={showExpertiseHint ? expertiseHintPos : null}
         width={EXPERTISE_HINT_WIDTH}
         onDismiss={handleDismissExpertiseHint}
+        dismissOnReferenceAction
       >
         Click the two dots on a proficient skill to toggle expertise — doubling your proficiency
         bonus for that skill.

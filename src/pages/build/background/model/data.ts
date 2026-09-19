@@ -36,6 +36,10 @@ export function getBackgroundEntries(
     })
 }
 
+export function getBackgroundNarrativeEntries(background: Background5e): unknown[] {
+  return background.fluffEntries?.length ? background.fluffEntries : (background.entries ?? [])
+}
+
 export function getBackgroundSkillNames(background?: Background5e): string[] {
   if (!background) return []
   return extractProficiencyBlockNames(background.skillProficiencies ?? [])

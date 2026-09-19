@@ -249,6 +249,7 @@ export interface Background5e {
   name: string
   source: string
   page?: number
+  fluffEntries?: unknown[]
   /** Present on 2024 (XPHB/one-D&D) backgrounds; value is 'one'. */
   edition?: string
   ability?: unknown[]

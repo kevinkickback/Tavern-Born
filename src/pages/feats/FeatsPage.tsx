@@ -190,6 +190,7 @@ export function FeatsPage() {
                     position={showEditHint ? hintPosition : null}
                     width={FEATS_HINT_WIDTH}
                     onDismiss={handleDismissEditHint}
+                    dismissOnReferenceAction
                   >
                     You can revise a configured feat's spells, skills, or other choices later. Click{' '}
                     <strong>Edit Setup</strong> to change its selections.

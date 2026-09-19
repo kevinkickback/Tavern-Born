@@ -633,6 +633,7 @@ export function SpellsPage() {
         position={showPreparedHint ? hintPosition : null}
         width={SPELLS_HINT_WIDTH}
         onDismiss={handleDismissPreparedHint}
+        dismissOnReferenceAction
       >
         Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
         prepared spells between rests.

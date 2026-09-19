@@ -13,6 +13,7 @@ interface AnchoredHintProps {
   onDismiss: () => void
   children: ReactNode
   dismissLabel?: string
+  dismissOnReferenceAction?: boolean
   className?: string
 }
 
@@ -22,12 +23,20 @@ export function AnchoredHint({
   onDismiss,
   children,
   dismissLabel = 'Dismiss hint',
+  dismissOnReferenceAction = false,
   className,
 }: AnchoredHintProps) {
   const hasShownRef = useRef(false)
   const markShown = useCallback(() => {
     hasShownRef.current = true
   }, [])
+  const actionReference = position?.reference ?? null
+  useEffect(() => {
+    if (!dismissOnReferenceAction || !actionReference) return
+    actionReference.addEventListener('click', onDismiss)
+    return () => actionReference.removeEventListener('click', onDismiss)
+  }, [actionReference, dismissOnReferenceAction, onDismiss])
+
   if (!position || typeof document === 'undefined') return null
   return createPortal(
     <AnchoredHintContent

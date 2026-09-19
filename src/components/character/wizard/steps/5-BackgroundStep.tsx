@@ -40,7 +40,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
       (bg) =>
         bg.name.toLowerCase().includes(query) ||
         bg.source.toLowerCase().includes(query) ||
-        getFirstStringEntry(bg.entries ?? [])
+        getFirstStringEntry([...(bg.fluffEntries ?? []), ...(bg.entries ?? [])])
           .toLowerCase()
           .includes(query),
     )
@@ -82,7 +82,10 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
     : 'None'
 
   const summary = selectedBackground
-    ? getBackgroundOverviewDescription(selectedBackground.entries ?? [])
+    ? getBackgroundOverviewDescription([
+        ...(selectedBackground.fluffEntries ?? []),
+        ...(selectedBackground.entries ?? []),
+      ])
     : ''
   const backgroundFeature = selectedBackground
     ? getBackgroundFeatureBlock(selectedBackground.entries ?? [])
@@ -187,9 +190,16 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                     Background Overview
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {summary || 'No description available.'}
-                </p>
+                {summary ? (
+                  <GameContent
+                    entry={summary}
+                    className="text-sm text-muted-foreground leading-relaxed"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    No description available.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -216,44 +226,46 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                 </DetailSection>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Details
-                  </span>
-                </div>
-                {featureEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No background feature details available.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">
-                      Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
-                    </h4>
-                    {(() => {
-                      const entries = featureEntries
-                      const collisionCounts = new Map<string, number>()
-
-                      return entries.map((entry) => {
-                        const baseKey = getEntryBaseKey(entry)
-                        const seen = collisionCounts.get(baseKey) ?? 0
-                        collisionCounts.set(baseKey, seen + 1)
-                        const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
-
-                        return (
-                          <GameContent
-                            key={key}
-                            entry={entry}
-                            className="text-sm leading-relaxed"
-                          />
-                        )
-                      })
-                    })()}
+              {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
+                <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
+                      Details
+                    </span>
                   </div>
-                )}
-              </div>
+                  {featureEntries.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No background feature details available.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold">
+                        Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
+                      </h4>
+                      {(() => {
+                        const entries = featureEntries
+                        const collisionCounts = new Map<string, number>()
+
+                        return entries.map((entry) => {
+                          const baseKey = getEntryBaseKey(entry)
+                          const seen = collisionCounts.get(baseKey) ?? 0
+                          collisionCounts.set(baseKey, seen + 1)
+                          const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
+
+                          return (
+                            <GameContent
+                              key={key}
+                              entry={entry}
+                              className="text-sm leading-relaxed"
+                            />
+                          )
+                        })
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
