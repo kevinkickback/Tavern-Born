@@ -159,6 +159,24 @@ test.each(['v2.0.0', 'v2.1.0'])('rejects a release after published tag %s', asyn
   await expect(run()).rejects.toThrow('must be greater than the latest published version')
 })
 
+test('compares large version components without losing integer precision', async () => {
+  state.packageVersion = '9007199254740993.0.0'
+  state.lockVersion = state.packageVersion
+  state.rootLockVersion = state.packageVersion
+  state.publishedTags = 'v9007199254740992.0.0'
+  state.changelog = [
+    '<details>',
+    `<summary><strong>v${state.packageVersion}</strong></summary>`,
+    '',
+    '- Large version',
+    '',
+    '</details>',
+  ].join('\n')
+  process.argv.push('--published-tags-file', 'published-tags.txt')
+
+  await expect(run()).resolves.toBeDefined()
+})
+
 test.each([
   [
     'prerelease version',

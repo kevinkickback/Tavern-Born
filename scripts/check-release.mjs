@@ -37,10 +37,11 @@ const packageLock = await readJson('package-lock.json')
 const version = packageJson.version
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 const compareVersions = (left, right) => {
-  const leftParts = left.split('.').map(Number)
-  const rightParts = right.split('.').map(Number)
+  const leftParts = left.split('.').map(BigInt)
+  const rightParts = right.split('.').map(BigInt)
   for (let index = 0; index < 3; index += 1) {
-    if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index]
+    if (leftParts[index] > rightParts[index]) return 1
+    if (leftParts[index] < rightParts[index]) return -1
   }
   return 0
 }

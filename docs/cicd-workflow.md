@@ -117,8 +117,8 @@ The workflow:
 4. Refuses to modify any existing release or move an existing tag.
 5. Builds Windows, macOS, and Linux packages in parallel without repository write credentials.
 6. Validates the exact ten-file package bundle and updater manifests.
-7. Re-checks that no release appeared and repeatedly verifies `main` and the tag immediately before
-   creating the draft.
+7. Re-checks that no release appeared or published stable version changed, and repeatedly verifies
+   `main` and the tag immediately before creating the draft.
 8. Records build provenance, creates one clean draft, and verifies its notes, tag, and non-empty
    assets.
 

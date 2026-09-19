@@ -54,6 +54,7 @@ jobs:
           gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
             > release-metadata/published-tags.txt
+          sort -u -o release-metadata/published-tags.txt release-metadata/published-tags.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -73,7 +74,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-notes
-          path: release-metadata/release-notes.md
+          path: |
+            release-metadata/release-notes.md
+            release-metadata/published-tags.txt
           if-no-files-found: error
           retention-days: 1
           overwrite: true
@@ -350,6 +353,24 @@ jobs:
             fi
           }
 
+          assert_published_versions_unchanged() {
+            local current_tags
+            current_tags="$(mktemp)"
+            if ! gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+              | sort -u > "$current_tags"; then
+              echo "Could not re-check published stable releases; refusing to continue." >&2
+              rm -f "$current_tags"
+              exit 1
+            fi
+            if ! diff -u release-metadata/published-tags.txt "$current_tags"; then
+              echo "Published stable releases changed while artifacts were building; run the release again." >&2
+              rm -f "$current_tags"
+              exit 1
+            fi
+            rm -f "$current_tags"
+          }
+
           assert_current_main
           assert_no_releases
 
@@ -384,12 +405,14 @@ jobs:
             # Creating a new ref is atomic: a concurrent tag wins and this
             # request fails without moving any existing tag.
             assert_current_main
+            assert_published_versions_unchanged
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
           fi
 
           assert_current_main
           assert_no_releases
+          assert_published_versions_unchanged
           if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$SOURCE_SHA" ]]; then
             echo "Tag $RELEASE_TAG no longer points to $SOURCE_SHA; refusing to create a draft." >&2
             exit 1

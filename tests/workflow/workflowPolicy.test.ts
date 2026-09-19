@@ -44,7 +44,8 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('needs: [validate-source, release-state, build]')
     expect(workflow).toContain('name: Create draft from completed artifacts')
     expect(workflow).toContain('pattern: release-build-*')
-    expect(workflow).toContain('path: release-metadata/release-notes.md')
+    expect(workflow).toContain('release-metadata/release-notes.md')
+    expect(workflow).toContain('release-metadata/published-tags.txt')
     expect(workflow.match(/overwrite: true/g)).toHaveLength(2)
     expect(workflow).toContain('Validate completed artifact bundle')
     expect(workflow).toContain('Expected exactly 10 release artifacts')
@@ -112,8 +113,13 @@ describe('trusted workflow policy', () => {
     expect(publishJob).toContain('Tag $RELEASE_TAG changed after release preparation')
     expect(publishJob).toContain('Tag $RELEASE_TAG was created after release preparation')
     expect(publishJob).toContain('assert_no_releases()')
+    expect(publishJob).toContain('assert_published_versions_unchanged()')
+    expect(publishJob).toContain('Published stable releases changed while artifacts were building')
     expect(publishJob).toContain('A release for $RELEASE_TAG appeared while this run was active')
     expect(publishJob.match(/assert_no_releases/g)?.length).toBeGreaterThanOrEqual(3)
+    expect(publishJob.match(/assert_published_versions_unchanged/g)?.length).toBeGreaterThanOrEqual(
+      3,
+    )
     expect(publishJob.match(/assert_current_main/g)?.length).toBeGreaterThanOrEqual(4)
     expect(publishJob).not.toContain(
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"',
