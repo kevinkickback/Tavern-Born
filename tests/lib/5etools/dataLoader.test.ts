@@ -4,6 +4,7 @@ import {
   DATA_REQUEST_TIMEOUT_MS,
   FiveEToolsDataLoader,
 } from '@/lib/5etools/dataLoader'
+import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
 
 function makeJsonResponse(jsonData: unknown, ok = true) {
   return new Response(JSON.stringify(jsonData), {
@@ -25,38 +26,6 @@ describe('5etools/dataLoader', () => {
     vi.unstubAllGlobals()
   })
 
-  test('buildUrl always resolves to data path in remote mode', () => {
-    const loader = new FiveEToolsDataLoader({
-      type: 'remote',
-      path: 'https://example.com/5etools-src/main',
-      isValid: true,
-    })
-
-    const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
-
-    expect(buildUrl('class/class-wizard.json')).toBe(
-      'https://example.com/5etools-src/main/data/class/class-wizard.json',
-    )
-    expect(buildUrl('spells/spells-phb.json')).toBe(
-      'https://example.com/5etools-src/main/data/spells/spells-phb.json',
-    )
-    expect(buildUrl('books.json')).toBe('https://example.com/5etools-src/main/data/books.json')
-  })
-
-  test('buildUrl does not inject data prefix in local mode', () => {
-    const loader = new FiveEToolsDataLoader({
-      type: 'local',
-      path: 'C:\\5etools',
-      isValid: true,
-    })
-
-    const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
-
-    expect(buildUrl('class/class-wizard.json')).toBe('C:\\5etools/class/class-wizard.json')
-  })
-
   test('reads bundled resources through the restricted Electron bridge', async () => {
     const readBundledJson = vi.fn(async (relativePath: string) => ({ relativePath }))
     vi.stubGlobal('electronAPI', { readBundledJson })
@@ -75,6 +44,37 @@ describe('5etools/dataLoader', () => {
       relativePath: 'class/index.json',
     })
     expect(readBundledJson).toHaveBeenCalledWith('class/index.json')
+  })
+
+  test('parses matching bundled and local readers through the same pipeline', async () => {
+    const createReader = (type: JsonResourceReader['type']): JsonResourceReader => ({
+      type,
+      readJson: vi.fn((relativePath: string) => {
+        if (relativePath === 'races.json') {
+          return Promise.resolve({ race: [{ name: 'Human', source: 'PHB' }] })
+        }
+        return Promise.resolve({})
+      }),
+    })
+    const bundled = new FiveEToolsDataLoader(
+      {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: 'test',
+        isValid: true,
+      },
+      createReader('bundled'),
+    )
+    const local = new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:\\data', isValid: true },
+      createReader('local'),
+    )
+
+    const [bundledData, localData] = await Promise.all([bundled.loadAllData(), local.loadAllData()])
+
+    expect(bundledData).toEqual(localData)
+    expect(bundledData.races).toEqual([expect.objectContaining({ name: 'Human', source: 'PHB' })])
   })
 
   test('times out a stalled remote request', async () => {

@@ -94,11 +94,8 @@ describe('5etools/validator', () => {
     expect(result.normalizedPath).toBe('https://example.com')
   })
 
-  test('falls back to GET when a remote source does not support HEAD', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request, init?: RequestInit) => {
-      if (init?.method === 'HEAD') {
-        return new Response(null, { status: 405 })
-      }
+  test('validates remote JSON through the shared resource reader', async () => {
+    globalThis.fetch = vi.fn((input: string | URL | Request) => {
       const url = String(input)
       const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
       return entry ? makeJsonResponse(entry[1]) : makeJsonResponse({}, false)
@@ -112,6 +109,7 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(true)
     expect(result.foundResources).toHaveLength(17)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(17)
   })
 
   test('validates bundled resources through the Electron bridge without a network request', async () => {

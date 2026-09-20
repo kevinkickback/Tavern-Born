@@ -1,5 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import type { DataSourceConfig } from '@/types/5etools'
+import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import {
   ActionDataSchema,
   BackgroundDataSchema,
@@ -47,75 +48,14 @@ const REQUIRED_FILES: FileValidationConfig[] = [
   { name: 'variantrules.json', schema: GenericDataSchema },
 ]
 
-async function validateLocalFile(basePath: string, file: FileValidationConfig): Promise<boolean> {
+async function validateFile(
+  reader: JsonResourceReader,
+  file: FileValidationConfig,
+): Promise<boolean> {
   try {
-    // file.name is relative to the data folder (e.g. 'books.json', 'class/index.json')
-    const sep = basePath.includes('\\') ? '\\' : '/'
-    const fullPath = `${basePath}${sep}${file.name.replace(/\//g, sep)}`
-    const readLocalJson = window.electronAPI?.readLocalJson
-    if (!readLocalJson) return false
-    const data = await readLocalJson(fullPath)
-    if (!data || typeof data !== 'object') return false
-    if (file.schema) {
-      const result = file.schema.safeParse(data)
-      if (!result.success) {
-        console.warn(`Schema validation failed for ${file.name}:`, result.error)
-        return false
-      }
-    }
-    return true
-  } catch {
-    return false
-  }
-}
-
-async function validateBundledFile(file: FileValidationConfig): Promise<boolean> {
-  try {
-    const readBundledJson = window.electronAPI?.readBundledJson
-    if (!readBundledJson) return false
-    const data = await readBundledJson(file.name)
+    const data = await reader.readJson(file.name)
     if (!data || typeof data !== 'object') return false
     if (!file.schema) return true
-    return file.schema.safeParse(data).success
-  } catch {
-    return false
-  }
-}
-
-async function validateRemoteFile(basePath: string, file: FileValidationConfig): Promise<boolean> {
-  const base = basePath.endsWith('/') ? basePath : `${basePath}/`
-  const url = `${base}data/${file.name}`
-  try {
-    // HEAD first: fast existence + content-type check with no body download
-    const headResponse = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(10000),
-    })
-    if (headResponse.ok) {
-      const contentType = headResponse.headers.get('content-type')
-      if (
-        contentType &&
-        !contentType.includes('application/json') &&
-        !contentType.includes('text/plain')
-      ) {
-        return false
-      }
-
-      if (!file.schema) return true
-    }
-
-    // Validate content when a schema exists, and fall back to GET when the host
-    // does not support HEAD.
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!response.ok) return false
-    if (!file.schema) return true
-
-    const data = await response.json()
-    if (!data || typeof data !== 'object') return false
-
     const result = file.schema.safeParse(data)
     if (!result.success) {
       console.warn(`Schema validation failed for ${file.name}:`, result.error)
@@ -158,14 +98,10 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       }
     }
 
+    const reader = createJsonResourceReader({ ...config, path: normalizedPath })
     const results = await Promise.all(
       REQUIRED_FILES.map(async (file) => {
-        const isValid =
-          config.type === 'bundled'
-            ? await validateBundledFile(file)
-            : config.type === 'local'
-              ? await validateLocalFile(normalizedPath, file)
-              : await validateRemoteFile(normalizedPath, file)
+        const isValid = await validateFile(reader, file)
         return { name: file.name, isValid }
       }),
     )

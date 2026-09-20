@@ -100,10 +100,10 @@ source-qualified lookup collision tests without any SRD-only parser branch.
 
 ## Phase 2 — Bundled Resource Transport
 
-- [ ] Refactor `FiveEToolsDataLoader` around a small `readJson(relativePath)` resource-reader
+- [x] Refactor `FiveEToolsDataLoader` around a small `readJson(relativePath)` resource-reader
   boundary. Keep the current bounded concurrency, abort, timeout, progress, validation, parsing,
   and partial-resource rules unchanged.
-- [ ] Retain adapters for the existing remote URL and authorized local directory sources.
+- [x] Retain adapters for the existing remote URL and authorized local directory sources.
 - [x] Add a bundled adapter backed by a preload IPC method that accepts only normalized relative
   `.json` paths below Tavern Born's immutable packaged SRD root.
 - [x] Resolve the development root from the repository and the packaged root from
@@ -111,7 +111,7 @@ source-qualified lookup collision tests without any SRD-only parser branch.
   and retain the existing JSON size limit.
 - [ ] Configure Electron Builder `extraResources` for `resources/srd/core/**`. Do not place the
   snapshot in the renderer bundle or expose arbitrary packaged-file reads.
-- [ ] Extend `DataSourceConfig` with `type: 'bundled'`, a stable pack ID, and version. Keep a
+- [x] Extend `DataSourceConfig` with `type: 'bundled'`, a stable pack ID, and version. Keep a
   compatibility migration for persisted local/remote configurations.
 
 Exit gate: the same `loadDataFromSource` contract returns equivalent normalized `GameData` for a

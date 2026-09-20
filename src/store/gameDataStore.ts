@@ -15,6 +15,34 @@ let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
+const GAME_DATA_STORE_VERSION = 1
+
+export function migrateGameDataPersistedState(persistedState: unknown): unknown {
+  if (!persistedState || typeof persistedState !== 'object' || Array.isArray(persistedState)) {
+    return persistedState
+  }
+  const state = persistedState as Record<string, unknown>
+  const config = state.dataSourceConfig
+  if (config == null) return state
+  if (typeof config !== 'object' || Array.isArray(config)) {
+    return { ...state, dataSourceConfig: null }
+  }
+
+  const candidate = config as Record<string, unknown>
+  const hasBaseFields =
+    typeof candidate.path === 'string' &&
+    typeof candidate.isValid === 'boolean' &&
+    (candidate.type === 'local' || candidate.type === 'remote' || candidate.type === 'bundled')
+  const hasBundledIdentity =
+    candidate.type !== 'bundled' ||
+    (typeof candidate.packId === 'string' &&
+      candidate.packId.length > 0 &&
+      typeof candidate.packVersion === 'string' &&
+      candidate.packVersion.length > 0)
+
+  return hasBaseFields && hasBundledIdentity ? state : { ...state, dataSourceConfig: null }
+}
+
 function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {
   const operation = cacheMutationQueue.then(mutation)
   cacheMutationQueue = operation.then(
@@ -364,6 +392,8 @@ export const useGameDataStore = create<GameDataState>()(
     {
       name: 'game-data-storage',
       storage: createIdbStorage(),
+      version: GAME_DATA_STORE_VERSION,
+      migrate: migrateGameDataPersistedState,
       // Only persist the config — game data is cached separately in dataCache.ts.
       partialize: (state) => ({
         dataSourceConfig: state.dataSourceConfig,
