@@ -12,6 +12,7 @@ import type {
 export interface RaceFilters {
   sources?: string[]
   suppressedKeys?: Set<string>
+  allowedKeys?: ReadonlySet<string>
   sizes?: string[]
   hasAbilityScore?: string[]
   hasDarkvision?: boolean
@@ -20,6 +21,7 @@ export interface RaceFilters {
 export interface ClassFilters {
   sources?: string[]
   suppressedKeys?: Set<string>
+  allowedSubclassKeys?: ReadonlySet<string>
   hasProficiency?: string[]
   spellcaster?: boolean
   hitDice?: number[]
@@ -50,6 +52,7 @@ export interface BackgroundFilters {
 export interface FeatFilters {
   sources?: string[]
   suppressedKeys?: Set<string>
+  allowedKeys?: ReadonlySet<string>
   categories?: string[]
   hasPrerequisite?: boolean
   grantsAbilityScore?: boolean
@@ -79,18 +82,42 @@ const isSuppressed = (
   return suppressedKeys.has(`${name}|${source}`)
 }
 
+const isExplicitlyAllowed = (
+  name: string | undefined,
+  source: string | undefined,
+  allowedKeys?: ReadonlySet<string>,
+): boolean => Boolean(name && source && allowedKeys?.has(`${name}|${source}`))
+
+const getSubclassKey = (
+  className: string,
+  classSource: string,
+  subclassName: string,
+  subclassSource: string,
+): string => `${className}|${classSource}|${subclassName}|${subclassSource}`
+
 export class DataFilter {
   static filterRaces(races: Race5e[], filters: RaceFilters): Race5e[] {
     let filtered = [...races]
 
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
-      filtered = filtered.filter((r) => sourcesUpper.has(r.source.toUpperCase()))
+      filtered = filtered.filter(
+        (r) =>
+          sourcesUpper.has(r.source.toUpperCase()) ||
+          isExplicitlyAllowed(r.name, r.source, filters.allowedKeys),
+      )
       filtered = filtered.map((r) => {
         if (!r.subraces || r.subraces.length === 0) return r
-        const filteredSubraces = r.subraces.filter((sr) =>
-          sourcesUpper.has(((sr as { source?: string }).source ?? r.source).toUpperCase()),
-        )
+        const parentExplicitlyAllowed = isExplicitlyAllowed(r.name, r.source, filters.allowedKeys)
+        const filteredSubraces = r.subraces.filter((sr) => {
+          const subrace = sr as { name?: string; source?: string }
+          const source = subrace.source ?? r.source
+          return (
+            sourcesUpper.has(source.toUpperCase()) ||
+            parentExplicitlyAllowed ||
+            isExplicitlyAllowed(subrace.name, source, filters.allowedKeys)
+          )
+        })
         return { ...r, subraces: filteredSubraces }
       })
     }
@@ -155,20 +182,41 @@ export class DataFilter {
           ),
         ),
         subclasses: cls.subclasses
-          ?.filter((subclass) => sourcesUpper.has(subclass.source.toUpperCase()))
+          ?.filter((subclass) => {
+            const key = getSubclassKey(
+              subclass.className || cls.name,
+              subclass.classSource || cls.source,
+              subclass.name,
+              subclass.source,
+            )
+            return (
+              sourcesUpper.has(subclass.source.toUpperCase()) ||
+              Boolean(filters.allowedSubclassKeys?.has(key))
+            )
+          })
           .map((subclass) => {
+            const key = getSubclassKey(
+              subclass.className || cls.name,
+              subclass.classSource || cls.source,
+              subclass.name,
+              subclass.source,
+            )
+            const isExplicitlyAllowed = Boolean(filters.allowedSubclassKeys?.has(key))
+            const isNestedSourceAllowed = (source: string) =>
+              sourcesUpper.has(source.toUpperCase()) ||
+              (isExplicitlyAllowed && source.toUpperCase() === subclass.source.toUpperCase())
             const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
               const source =
                 typeof feature === 'string'
                   ? feature.split('|')[6] || subclass.source
                   : feature.source || subclass.source
-              return sourcesUpper.has(source.toUpperCase())
+              return isNestedSourceAllowed(source)
             }) as typeof subclass.subclassFeatures
             const levelFeatures = subclass.levelFeatures
               ?.map((group) => ({
                 ...group,
                 features: group.features.filter((feature) =>
-                  sourcesUpper.has((feature.source || subclass.source).toUpperCase()),
+                  isNestedSourceAllowed(feature.source || subclass.source),
                 ),
               }))
               .filter((group) => group.features.length > 0)
@@ -176,8 +224,8 @@ export class DataFilter {
               ...subclass,
               subclassFeatures,
               subclassFeatureRefs: subclass.subclassFeatureRefs?.filter((reference) =>
-                sourcesUpper.has(
-                  (reference.source || reference.feature?.source || subclass.source).toUpperCase(),
+                isNestedSourceAllowed(
+                  reference.source || reference.feature?.source || subclass.source,
                 ),
               ),
               levelFeatures,
@@ -383,7 +431,11 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
-      filtered = filtered.filter((f) => sourcesUpper.has(f.source.toUpperCase()))
+      filtered = filtered.filter(
+        (f) =>
+          sourcesUpper.has(f.source.toUpperCase()) ||
+          isExplicitlyAllowed(f.name, f.source, filters.allowedKeys),
+      )
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {

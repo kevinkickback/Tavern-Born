@@ -81,7 +81,7 @@ test('Rules warnings remain visible while Allowed Sources scrolls', async ({ pag
 
   const sourceWarning = dialog.getByText(/Non-recommended sources often contain/)
   const rulesetWarning = dialog.getByText(
-    /Some content exists in both Legacy|Older options are hidden when newer versions exist/,
+    /Revised replacements are always used.*Compatible older options remain available/,
   )
   await expect(sourceWarning).toBeInViewport()
   await expect(rulesetWarning).toBeInViewport()

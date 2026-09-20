@@ -455,6 +455,8 @@ export interface SourceBook {
   published?: string
   year?: number
   hasCharacterOptions?: boolean
+  /** Present when character options from this source require the revised rules foundation. */
+  minimumRuleset?: '2024'
 }
 
 export interface Language5e {

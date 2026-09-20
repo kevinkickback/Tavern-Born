@@ -73,4 +73,33 @@ describe('RulesStep average hit-points toggle', () => {
       variantRules: expect.objectContaining({ averageHitPoints: false }),
     })
   })
+
+  test('normalizes core sources when the ruleset changes', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <RulesStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          originSystem: '2014',
+          allowedSources: ['DMG', 'XDMG'],
+        }}
+        onChange={onChange}
+        sources={[
+          { abbreviation: 'DMG', name: "Dungeon Master's Guide (2014)", group: 'core' },
+          { abbreviation: 'XDMG', name: "Dungeon Master's Guide (2024)", group: 'core' },
+        ]}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /5\.5e Revised/ }))
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originSystem: '2024',
+        allowedSources: ['XDMG'],
+        variantRules: expect.objectContaining({ preferNewerPrintings: true }),
+      }),
+    )
+  })
 })
