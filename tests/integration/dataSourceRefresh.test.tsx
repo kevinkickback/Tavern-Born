@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -52,7 +52,7 @@ describe('data source refresh feedback', () => {
     const user = userEvent.setup()
     render(<DataSourceConfigurator />)
 
-    await user.click(screen.getByRole('button', { name: 'Update Data' }))
+    await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('Failed to check for updates', {
@@ -81,16 +81,28 @@ describe('data source refresh feedback', () => {
     useGameDataStore.setState({ restoreBundledData })
     render(<DataSourceConfigurator onSourceLoaded={onSourceLoaded} />)
 
-    await user.click(screen.getByRole('button', { name: 'Restore Bundled SRD' }))
+    expect(screen.queryByRole('button', { name: 'Revert to Included SRD' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Change Game Data' }))
+    const revertButton = screen.getByRole('button', { name: 'Revert to Included SRD' })
+    expect(revertButton.className).toContain('border-warning')
+    await user.click(revertButton)
 
-    expect(restoreBundledData).toHaveBeenCalledTimes(1)
-    expect(toast.success).toHaveBeenCalledWith('Bundled SRD data restored', {
-      description: 'SRD 5.1 and 5.2.1 rules are ready to use.',
+    const confirmation = screen.getByRole('alertdialog')
+    expect(confirmation.textContent).toContain('removes its saved connection')
+    expect(confirmation.textContent).toContain('characters will not be deleted')
+    expect(restoreBundledData).not.toHaveBeenCalled()
+    await user.click(within(confirmation).getByRole('button', { name: 'Revert to Included SRD' }))
+
+    await waitFor(() => {
+      expect(restoreBundledData).toHaveBeenCalledTimes(1)
+      expect(toast.success).toHaveBeenCalledWith('Included SRD is ready', {
+        description: 'The included 2014 and 2024 SRD rules are ready to use.',
+      })
+      expect(onSourceLoaded).toHaveBeenCalledTimes(1)
     })
-    expect(onSourceLoaded).toHaveBeenCalledTimes(1)
   })
 
-  test('shows bundled pack identity, validation, license, and rebuild controls', async () => {
+  test('shows useful included SRD details without redundant status or rebuild controls', async () => {
     vi.stubGlobal('electronAPI', {
       getBundledManifest: vi.fn(async () => ({
         schemaVersion: 1,
@@ -100,9 +112,15 @@ describe('data source refresh feedback', () => {
         documents: [
           {
             version: '5.1',
-            landingPage: 'https://example.com/srd',
+            landingPage: 'https://example.com/srd-5.1',
             downloadUrl: 'https://example.com/srd-5.1.pdf',
-            attribution: 'Official test attribution.',
+            attribution: 'SRD 5.1 attribution',
+          },
+          {
+            version: '5.2.1',
+            landingPage: 'https://example.com/srd-5.2.1',
+            downloadUrl: 'https://example.com/srd-5.2.1.pdf',
+            attribution: 'SRD 5.2.1 attribution',
           },
         ],
         license: {
@@ -110,7 +128,7 @@ describe('data source refresh feedback', () => {
           identifier: 'CC-BY-4.0',
           url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
         },
-        transformationNotice: 'Test transformation notice.',
+        transformationNotice: 'Internal transformation note',
       })),
     })
     useGameDataStore.setState({
@@ -125,15 +143,18 @@ describe('data source refresh feedback', () => {
 
     render(<DataSourceConfigurator />)
 
-    expect(screen.getByText('Bundled SRD 5.1 + 5.2.1')).toBeTruthy()
-    expect(screen.getByText('1.0.0')).toBeTruthy()
-    expect(screen.getByText('Validated')).toBeTruthy()
-    await waitFor(() => expect(screen.getByRole('link', { name: 'CC-BY-4.0' })).toBeTruthy())
-    expect(screen.getByText('Test transformation notice.')).toBeTruthy()
-    expect(screen.getByText('Official test attribution.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Rebuild Bundled SRD' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Update Data' })).toBeNull()
-    expect(screen.queryByText('Auto-refresh on Launch')).toBeNull()
+    expect(screen.getByText('Included SRD Rules')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('SRD 5.1 and SRD 5.2.1')).toBeTruthy())
+    expect(screen.getByText('2014 and 2024')).toBeTruthy()
+    expect(screen.getByText('Not required')).toBeTruthy()
+    expect(screen.queryByText('1.0.0')).toBeNull()
+    expect(screen.queryByText('Content updated:')).toBeNull()
+    expect(screen.queryByText('Status:')).toBeNull()
+    expect(screen.queryByText('Ready to use:')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add Additional Content' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Use Included SRD' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Check for Updates' })).toBeNull()
+    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
   })
 
   test('offers bundled SRD as a fallback when no external source produced usable data', async () => {
@@ -153,10 +174,10 @@ describe('data source refresh feedback', () => {
     })
     render(<DataSourceConfigurator selectorOnly />)
 
-    await user.click(screen.getByRole('button', { name: 'Use Bundled SRD' }))
+    await user.click(screen.getByRole('button', { name: 'Use Included SRD' }))
 
     expect(restoreBundledData).toHaveBeenCalledTimes(1)
-    expect(toast.error).toHaveBeenCalledWith('Unable to load bundled SRD data', {
+    expect(toast.error).toHaveBeenCalledWith('Unable to load the included SRD', {
       description: 'Bundled pack is unavailable',
     })
   })
@@ -169,7 +190,7 @@ describe('data source refresh feedback', () => {
 
     render(<DataSourceConfigurator />)
 
-    expect(screen.getByRole('button', { name: 'Use Bundled SRD' })).toBeTruthy()
-    expect(screen.getByText(/Use the included bundled SRD/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Use Included SRD' })).toBeTruthy()
+    expect(screen.getByText(/No game data is loaded/)).toBeTruthy()
   })
 })

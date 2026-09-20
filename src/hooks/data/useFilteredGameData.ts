@@ -35,6 +35,9 @@ interface FilterParams {
  */
 export function useFilteredGameDataParams(params: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
+  const includeBundledSrdItems = useGameDataStore(
+    (state) => state.dataSourceConfig?.type === 'bundled',
+  )
   const { allowedSources, preferNewerPrintings = false, originSystem } = params
 
   const filteredData = useMemo(() => {
@@ -171,12 +174,14 @@ export function useFilteredGameDataParams(params: FilterParams) {
         originSystem,
         itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
+        includeBundledSrdItems,
       }),
       itemsBase: filterCharacterItems(itemsBase, {
         allowedSources: compatibleAllowedSources,
         originSystem,
         itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
+        includeBundledSrdItems,
       }),
       itemMasteries: itemMasteries.filter((mastery) =>
         compatibleAllowedSources.some(
@@ -201,7 +206,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: compatibleAllowedSources,
       }),
     }
-  }, [gameData, allowedSources, preferNewerPrintings, originSystem])
+  }, [gameData, allowedSources, preferNewerPrintings, originSystem, includeBundledSrdItems])
 
   return filteredData
 }

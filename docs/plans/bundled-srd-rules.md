@@ -1,6 +1,6 @@
 # Bundled SRD Rules Implementation Plan
 
-Status: in progress on `feature/bundled-srd-rules` (2026-09-19).
+Status: in progress on `feature/bundled-srd-rules` (updated 2026-09-20).
 
 ## Outcome
 
@@ -20,17 +20,24 @@ rules engine.
    original `PHB`/`XPHB` source-qualified identities so existing ruleset filters separate them.
 2. **Same ingestion pipeline.** Select the source before resource loading, then run bundled,
    local, and remote resources through the same schemas, parsers, diagnostics, and lookup builder.
-3. **External data replaces rather than merges.** Never merge the bundled and external raw
-   catalogs. This avoids duplicate entities and ambiguous reprints while retaining stable
-   `name|source` references when users switch sources.
+3. **This implementation uses one active catalog.** For the bundled-SRD implementation, an external
+   full data source replaces the bundled parsed catalog. Never concatenate raw catalogs. This avoids
+   duplicate entities and ambiguous reprints while retaining stable `name|source` references when
+   users switch sources. Future homebrew support should use explicit parsed layers as described
+   below rather than extending this replacement model.
 4. **Generated data stays outside `data/`.** The managed `data/` tree is read-only input. Generated
    snapshots belong under `resources/srd/` and ship through Electron's packaged resources.
 5. **Fail closed on licensing and dependency closure.** `srd` and `srd52` flags are candidate
    selectors, not sufficient provenance by themselves. Every distributed field must be traceable
    to the corresponding official SRD, and every unflagged supporting record must be explicitly
    justified or omitted.
-6. **Bundled content is the safe default.** Existing users keep their configured external source.
-   New users and users who choose “Restore bundled SRD” use the immutable bundled source.
+6. **Included content is the safe default.** Existing users keep their configured external source.
+   New users and users who choose “Revert to Included SRD” use the immutable bundled source.
+7. **Additional-content warnings use exact saved identities.** While the Included SRD is active,
+   character cards compare source-qualified saved races/species, classes, subclasses,
+   backgrounds, feats, spells, equipment, and structured choices with the loaded SRD catalog.
+   Book abbreviations alone are not sufficient because both SRD and non-SRD options can use
+   `PHB` or `XPHB`. The compact information indicator does not mutate existing characters.
 
 ## Current Extension Points
 
@@ -155,8 +162,11 @@ bundled fixture and a matching local fixture.
 - [x] Keep foreground/background replacement atomic. A failed external refresh retains the
   last-known-good external cache; if no usable external cache exists, offer an explicit bundled
   fallback and record diagnostics without deleting the external configuration.
-- [x] Change “Clear Data” into “Restore bundled SRD” for external sources. For the bundled source,
-  allow rebuilding its parsed cache without making the app content-free.
+- [x] Replace destructive clear/rebuild controls with a “Change Game Data” flow. From that chooser,
+  external-source users can choose the warning-styled “Revert to Included SRD” action. Confirm that
+  it replaces the current data and removes its saved connection before proceeding, using the
+  standard accent action inside the confirmation dialog for consistent contrast. Do not show a
+  rebuild action while the Included SRD is already active.
 - [x] Do not auto-refresh immutable bundled data. It changes only with an application release.
 
 Exit gate: first launch, cache reuse, app upgrade, external-source failure, source switching, and
@@ -165,19 +175,41 @@ cache clearing all end with a complete usable catalog.
 ## Phase 4 — First-Run and Settings Experience
 
 - [x] Replace the blocking data-source setup prompt with a short first-run message that says SRD
-  content is included. Its primary action continues with bundled content; a secondary “Add more
-  content” action opens the existing external local/remote controls.
+  content is included. Its primary action continues with the Included SRD; a secondary “Add
+  Additional Content” action opens the existing online/local controls and points users who need a
+  starting place to the 5etools wiki.
 - [x] Rework `DataSourceConfigurator` into two clear states:
-  “Bundled SRD 5.1 + 5.2.1” and “External 5etools source.” Reuse the current remote validation,
-  local folder picker, load progress, cancellation, and error feedback.
-- [x] Show the active source, bundled version, last data change, validation status, and license in
-  Settings. Show external-path details only for external sources.
-- [x] Update the status bar and empty states to describe “Bundled SRD” or “External source” instead
-  of reporting no data on a normal installation.
+  “Included SRD Rules,” “Online Game Data,” and “Game Data on This Computer.” Reuse the current
+  remote validation, local folder picker, load progress, cancellation, and error feedback.
+- [x] Show the Included SRD document versions, supported character rules, and offline availability
+  in Game Data settings. Show location, update timestamps, and status only for external sources.
+- [x] Update the status bar and empty states to use reader-facing “Included SRD” and “Game Data”
+  language instead of reporting no data on a normal installation.
 - [x] Explain that external data is user supplied, replaces the bundled presentation catalog, and
   is not distributed by Tavern Born.
 - [x] Preserve forced setup as a recoverable settings flow, but never require network access or a
   folder selection to enter the app.
+- [x] Rename the user-facing Sources workspace to “Additional Content” while retaining the existing
+  route. Hide selection counts and source presets while the Included SRD is active, because it has
+  no additional sourcebooks to enable, and direct users to Settings → Game Data to add their own
+  compatible 5etools data.
+- [x] Keep provenance-only DMG/MM/XDMG/XMM records available to the loader but out of selectable
+  character source lists. Enforce ruleset compatibility so 2014 and 2024 core counterparts cannot
+  be mixed; 2024 characters may still use compatible legacy supplements.
+- [x] Audit Recommended and Expanded presets after the compatibility change. Their current
+  supplement lists remain cross-compatible, so their membership does not change; preset matching
+  and application still pass through ruleset compatibility normalization.
+- [x] Remove the bordered panel treatment from the character-creation Included SRD explanation so
+  it reads as supporting guidance rather than another selectable source card.
+- [x] Mark character cards with a compact, neutral caution icon only when the Included SRD is active
+  and exact source-qualified saved choices are absent from that catalog. Keep the glyph large enough
+  to read clearly, explain the state on hover, do not infer it from a saved allowed-source list, and
+  do not block opening or using the character. Keep the indicator persistent rather than relying on
+  an easy-to-miss launch toast.
+- [x] Normalize supported GitHub `/releases`, `/releases/latest`, and `/releases/tag/...` addresses
+  to the repository root before validation.
+- [ ] Revisit visual styling around the online/local Game Data chooser in a separate UX pass. The
+  current layout is intentionally unchanged for this implementation slice.
 
 Exit gate: a first-time user can remain offline and reach character creation with one confirmation;
 an advanced user can configure, refresh, replace, and leave an external source.
@@ -186,7 +218,9 @@ an advanced user can configure, refresh, replace, and leave an external source.
 
 - [x] Add the two official attribution statements, CC BY 4.0 link, transformation notice, source
   URLs, and bundled manifest version to repository and packaged third-party notices.
-- [x] Surface the same information in Settings/About without loading it from the network.
+- [x] Surface concise SRD attribution, license, and source links in Settings/About without loading
+  them from the network. Keep the implementation-focused transformation notice in packaged legal
+  notices rather than the Game Data page.
 - [x] Update `docs/data-flow.md` and `docs/data-ingestion.md` with the bundled reader, default-source
   selection, fallback rules, and cache identity.
 - [x] Update release and bundle-budget checks so the SRD pack is required in installers and
@@ -240,6 +274,25 @@ keeps architecture work reviewable without accidentally shipping unaudited conte
   contains the required attribution and modification notice.
 - No generated content is written under `data/`, no non-SRD content or art is packaged, and no
   network connection is required for bundled operation.
+
+## Future Content-Layering Direction
+
+Before adding homebrew, replace the single-catalog configuration with an ordered, provenance-aware
+composition:
+
+1. Keep the Included SRD as the always-available fallback layer.
+2. Allow one optional full 5etools-compatible data source to overlay it. A source-qualified entity
+   supplied by that source wins; an SRD entity omitted from it remains available from the fallback.
+3. Allow zero or more homebrew/add-on layers above the base content. Require their own source codes
+   and reject silent collisions unless an explicit override contract is introduced.
+4. Parse and validate each layer independently, then compose normalized `GameData` collections by
+   their canonical source-qualified identities. Do not concatenate raw 5etools JSON.
+5. Resolve cross-record references against the completed catalog and cache the ordered source list,
+   per-layer fingerprints, precedence, and provenance so refreshes remain atomic and explainable.
+
+This model supports Included SRD plus homebrew, preserves SRD options missing from an external data
+source, and keeps existing character references stable. It requires a dedicated design and
+migration slice and is the next planned implementation before the 0.5.0 release.
 
 ## Explicit Non-Goals
 

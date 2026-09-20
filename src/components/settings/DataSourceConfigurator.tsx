@@ -1,5 +1,6 @@
 import {
   ArrowClockwise,
+  ArrowLeft,
   ArrowsLeftRight,
   CheckCircle,
   CloudArrowDown,
@@ -11,6 +12,16 @@ import {
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +41,7 @@ type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManif
 type DataSourceConfiguratorProps = {
   selectorOnly?: boolean
   onSourceLoaded?: () => void
+  onCancel?: () => void
 }
 
 export function isValidatableRemoteUrl(value: string): boolean {
@@ -39,6 +51,7 @@ export function isValidatableRemoteUrl(value: string): boolean {
 export function DataSourceConfigurator({
   selectorOnly = false,
   onSourceLoaded,
+  onCancel,
 }: DataSourceConfiguratorProps) {
   const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
   const gameData = useGameDataStore((state) => state.gameData)
@@ -60,6 +73,7 @@ export function DataSourceConfigurator({
   const [sourcePath, setSourcePath] = useState('')
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
   const [isValidating, setIsValidating] = useState(false)
+  const [confirmRevertOpen, setConfirmRevertOpen] = useState(false)
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
   const [bundledManifest, setBundledManifest] = useState<BundledManifest | null>(null)
   const remotePathId = useId()
@@ -160,7 +174,7 @@ export function DataSourceConfigurator({
       setValidationStatus(result.isValid ? 'valid' : 'invalid')
 
       if (!result.isValid) {
-        toast.error('Data source validation failed', {
+        toast.error('Game data check failed', {
           description: result.error,
         })
       }
@@ -172,7 +186,7 @@ export function DataSourceConfigurator({
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       setValidationStatus('invalid')
-      toast.error('Validation failed')
+      toast.error('Game data check failed')
     } finally {
       if (requestId === validationRequestRef.current) {
         setIsValidating(false)
@@ -240,8 +254,8 @@ export function DataSourceConfigurator({
         throw new Error(loadError || 'Game data failed to load')
       }
 
-      toast.success('Data source updated and loaded!', {
-        description: 'Game data is now available',
+      toast.success('Game data loaded', {
+        description: 'Your available rules and character options have been updated.',
       })
       setIsSelectingDataSource(false)
       setSourcePath('')
@@ -278,13 +292,12 @@ export function DataSourceConfigurator({
   }
 
   const handleRestoreBundled = async () => {
-    const wasBundled = dataSourceConfig?.type === 'bundled'
     try {
       const restored = await restoreBundledData()
       if (!restored) {
-        toast.error('Unable to load bundled SRD data', {
+        toast.error('Unable to load the included SRD', {
           description:
-            useGameDataStore.getState().error ?? 'The bundled rules pack is unavailable.',
+            useGameDataStore.getState().error ?? 'The included SRD rules are unavailable.',
         })
         return
       }
@@ -293,12 +306,12 @@ export function DataSourceConfigurator({
       setSourcePath('')
       setValidationStatus('idle')
       setValidationResult(null)
-      toast.success(wasBundled ? 'Bundled SRD data rebuilt' : 'Bundled SRD data restored', {
-        description: 'SRD 5.1 and 5.2.1 rules are ready to use.',
+      toast.success('Included SRD is ready', {
+        description: 'The included 2014 and 2024 SRD rules are ready to use.',
       })
       onSourceLoaded?.()
     } catch (restoreError) {
-      toast.error('Unable to load bundled SRD data', {
+      toast.error('Unable to load the included SRD', {
         description: restoreError instanceof Error ? restoreError.message : 'Unknown error',
       })
     }
@@ -331,14 +344,18 @@ export function DataSourceConfigurator({
     return ''
   }
 
+  const bundledSrdVersions =
+    bundledManifest?.documents.map((document) => `SRD ${document.version}`).join(' and ') ??
+    '2014 and 2024 SRD rules'
+
   return (
     <div className="min-w-0">
       <Section
-        title={selectorOnly ? 'Choose a data source' : 'Data Source Configuration'}
+        title={selectorOnly ? 'Choose Game Data' : 'Game Data'}
         description={
           selectorOnly
-            ? 'Use the included SRD or replace it with a user-supplied external 5etools source.'
-            : 'Configure where to load game data from.'
+            ? 'Enter a web address or select a folder containing 5etools-compatible JSON files.'
+            : 'Choose which rules and character options Tavern Born can use.'
         }
         className="pt-0"
       >
@@ -359,60 +376,47 @@ export function DataSourceConfigurator({
                 )}
                 <span className="text-sm font-medium capitalize">
                   {dataSourceConfig.type === 'bundled'
-                    ? 'Bundled SRD 5.1 + 5.2.1'
+                    ? 'Included SRD Rules'
                     : dataSourceConfig.type === 'remote'
-                      ? 'External Remote URL'
-                      : 'External Local Directory'}
+                      ? 'Online Game Data'
+                      : 'Game Data on This Computer'}
                 </span>
               </div>
 
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">
-                  {dataSourceConfig.type === 'bundled' ? 'Pack version:' : 'Source:'}
-                </span>
-                <span className="text-xs font-mono break-all">
-                  {dataSourceConfig.type === 'bundled'
-                    ? dataSourceConfig.packVersion
-                    : dataSourceConfig.path}
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Last data change:</span>
-                <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
-              </div>
-
-              {dataSourceConfig.type !== 'bundled' && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-muted-foreground min-w-24">Last checked:</span>
-                  <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
-                </div>
-              )}
-
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Status:</span>
-                <span className="text-xs">{getStatusLabel()}</span>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Validation:</span>
-                <span className="text-xs">
-                  {dataSourceConfig.isValid ? 'Validated' : 'Needs validation'}
-                </span>
-              </div>
-
-              {dataSourceConfig.type === 'bundled' && bundledManifest && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-muted-foreground min-w-24">License:</span>
-                  <a
-                    href={bundledManifest.license.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-primary underline underline-offset-2"
-                  >
-                    {bundledManifest.license.identifier}
-                  </a>
-                </div>
+              {dataSourceConfig.type === 'bundled' ? (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">SRD versions:</span>
+                    <span className="text-xs">{bundledSrdVersions}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Character rules:</span>
+                    <span className="text-xs">2014 and 2024</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Internet:</span>
+                    <span className="text-xs">Not required</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Location:</span>
+                    <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Content updated:</span>
+                    <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Updates checked:</span>
+                    <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Status:</span>
+                    <span className="text-xs">{getStatusLabel()}</span>
+                  </div>
+                </>
               )}
             </div>
           ) : (
@@ -421,11 +425,11 @@ export function DataSourceConfigurator({
                 <div className="relative space-y-3 rounded-md border border-border bg-workspace-pane p-4">
                   <div className="flex items-center gap-2">
                     <XCircle className="size-[1.125rem] text-muted-foreground" />
-                    <span className="text-sm font-medium">None</span>
+                    <span className="text-sm font-medium">No Game Data</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    No data source is active. Use the included bundled SRD or configure a
-                    user-supplied external source below.
+                    No game data is loaded. Use the Included SRD or add compatible 5etools data
+                    below.
                   </p>
                 </div>
               )}
@@ -440,17 +444,17 @@ export function DataSourceConfigurator({
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="remote" className="gap-2">
                       <CloudArrowDown className="size-[1.125rem]" />
-                      Remote URL
+                      Online
                     </TabsTrigger>
                     <TabsTrigger value="local" className="gap-2">
                       <FolderOpen className="size-[1.125rem]" />
-                      Local Directory
+                      This Computer
                     </TabsTrigger>
                   </TabsList>
                 </div>
                 <TabsContent value="remote" className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor={remotePathId}>Repository URL</Label>
+                    <Label htmlFor={remotePathId}>Web Address</Label>
                     <div className="relative">
                       <Input
                         id={remotePathId}
@@ -477,29 +481,29 @@ export function DataSourceConfigurator({
                       )}
                     </div>
                     {validationStatus === 'validating' && (
-                      <p className="text-sm text-muted-foreground">Checking data source...</p>
+                      <p className="text-sm text-muted-foreground">Checking compatibility...</p>
                     )}
                     {validationStatus === 'valid' && (
-                      <p className="text-sm text-success">✓ Valid data source ready to load</p>
+                      <p className="text-sm text-success">✓ Compatible game data found</p>
                     )}
                     {validationStatus === 'invalid' && validationResult?.error && (
                       <p className="text-sm text-destructive">✗ {validationResult.error}</p>
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        Enter an HTTPS URL to a 5etools data repository.
+                        Enter a web address containing compatible 5etools JSON data.
                       </p>
                     )}
                   </div>
                 </TabsContent>
                 <TabsContent value="local" className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor={localPathId}>Local Path</Label>
+                    <Label htmlFor={localPathId}>Folder</Label>
                     <div className="flex gap-2">
                       <Input
                         id={localPathId}
                         value={sourcePath}
-                        placeholder="/path/to/5etools/data"
+                        placeholder="Choose a folder containing 5etools data"
                         readOnly
                         disabled={isLoading}
                         className={`flex-1 ${getValidationBorderClass()}`}
@@ -515,17 +519,17 @@ export function DataSourceConfigurator({
                       </Button>
                     </div>
                     {validationStatus === 'validating' && (
-                      <p className="text-sm text-muted-foreground">Checking data source...</p>
+                      <p className="text-sm text-muted-foreground">Checking compatibility...</p>
                     )}
                     {validationStatus === 'valid' && (
-                      <p className="text-sm text-success">✓ Valid data source ready to load</p>
+                      <p className="text-sm text-success">✓ Compatible game data found</p>
                     )}
                     {validationStatus === 'invalid' && validationResult?.error && (
                       <p className="text-sm text-destructive">✗ {validationResult.error}</p>
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        Path to the directory containing 5etools data files
+                        Choose a folder containing compatible 5etools JSON data.
                       </p>
                     )}
                   </div>
@@ -535,19 +539,38 @@ export function DataSourceConfigurator({
           )}
 
           <div className="flex gap-2">
-            <Button
-              onClick={handleRestoreBundled}
-              disabled={isLoading}
-              variant="outline"
-              className="gap-2"
-            >
-              <Database className="size-4" />
-              {dataSourceConfig?.type === 'bundled'
-                ? 'Rebuild Bundled SRD'
-                : hasActiveDataSource
-                  ? 'Restore Bundled SRD'
-                  : 'Use Bundled SRD'}
-            </Button>
+            {selectorOnly && onCancel && (
+              <Button onClick={onCancel} disabled={isLoading} variant="outline" className="gap-2">
+                <ArrowLeft className="size-4" />
+                Back
+              </Button>
+            )}
+            {dataSourceConfig?.type !== 'bundled' &&
+              (!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
+                <Button
+                  onClick={() => {
+                    if (hasActiveDataSource) {
+                      setConfirmRevertOpen(true)
+                    } else {
+                      void handleRestoreBundled()
+                    }
+                  }}
+                  disabled={isLoading}
+                  variant="outline"
+                  className={
+                    hasActiveDataSource
+                      ? 'gap-2 border-warning/50 bg-warning/10 text-warning-foreground hover:border-warning/70 hover:bg-warning/20 hover:text-warning-foreground'
+                      : 'gap-2'
+                  }
+                >
+                  {hasActiveDataSource ? (
+                    <Warning className="size-4" />
+                  ) : (
+                    <Database className="size-4" />
+                  )}
+                  {hasActiveDataSource ? 'Revert to Included SRD' : 'Use Included SRD'}
+                </Button>
+              )}
             <div className="flex gap-2 ml-auto">
               {!selectorOnly && hasActiveDataSource && !isSelectingDataSource && (
                 <Button
@@ -560,7 +583,9 @@ export function DataSourceConfigurator({
                   className="gap-2"
                 >
                   <ArrowsLeftRight className="size-4" />
-                  Change Source
+                  {dataSourceConfig.type === 'bundled'
+                    ? 'Add Additional Content'
+                    : 'Change Game Data'}
                 </Button>
               )}
               {!selectorOnly && hasActiveDataSource && isSelectingDataSource && (
@@ -585,7 +610,7 @@ export function DataSourceConfigurator({
                   className="gap-2"
                 >
                   <ArrowClockwise className="size-4" />
-                  Update Data
+                  Check for Updates
                 </Button>
               )}
               {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
@@ -596,43 +621,21 @@ export function DataSourceConfigurator({
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
                   <Database className="size-4" />
-                  {isLoading ? 'Saving...' : 'Save & Load'}
+                  {isLoading ? 'Loading...' : 'Load Game Data'}
                 </Button>
               )}
             </div>
           </div>
-
-          {!selectorOnly && dataSourceConfig?.type === 'bundled' && bundledManifest && (
-            <details className="rounded-md border border-border bg-workspace-pane p-4 text-sm">
-              <summary className="cursor-pointer font-medium">SRD attribution and sources</summary>
-              <div className="mt-3 space-y-3 text-xs leading-relaxed text-muted-foreground">
-                <p>{bundledManifest.transformationNotice}</p>
-                {bundledManifest.documents.map((document) => (
-                  <div key={document.version} className="space-y-1">
-                    <p>{document.attribution}</p>
-                    <a
-                      href={document.landingPage}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      Official SRD {document.version} source
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
         </div>
       </Section>
 
       {!selectorOnly && dataSourceConfig?.type !== 'bundled' && (
         <Section
-          title="Auto-refresh on Launch"
-          description="Automatically check for game data updates when the app starts."
+          title="Check for Updates at Startup"
+          description="Automatically check your selected game data for changes when Tavern Born starts."
         >
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm font-medium">Enable auto-refresh</p>
+            <p className="text-sm font-medium">Check automatically</p>
             <Switch checked={autoRefreshGameData} onCheckedChange={setAutoRefreshGameData} />
           </div>
         </Section>
@@ -665,6 +668,25 @@ export function DataSourceConfigurator({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      <AlertDialog open={confirmRevertOpen} onOpenChange={setConfirmRevertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revert to the Included SRD?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This replaces your current game data with the Included SRD and removes its saved
+              connection. Your characters will not be deleted, but choices outside the Included SRD
+              may be unavailable until you add that data again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Keep Current Game Data</AlertDialogCancel>
+            <AlertDialogAction disabled={isLoading} onClick={() => void handleRestoreBundled()}>
+              Revert to Included SRD
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

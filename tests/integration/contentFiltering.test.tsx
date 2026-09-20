@@ -163,6 +163,33 @@ describe('Content Filtering (allowedSources)', () => {
       expect(result.current.items.map((i) => i.name)).not.toContain('Immovable Rod')
     })
 
+    test('useFilteredGameData exposes matching bundled SRD items without a DMG selection', () => {
+      const character = makeCharacterFixture({ allowedSources: ['PHB'] })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        dataSourceConfig: {
+          type: 'bundled',
+          path: 'srd/core',
+          packId: 'tavern-born-srd-core',
+          packVersion: 'test',
+          isValid: true,
+        },
+        gameData: partialGameData({
+          items: [
+            { name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true },
+            { name: 'Private Item', source: 'DMG', type: 'W' },
+            { name: 'Revised Bag', source: 'XDMG', type: 'W', srd52: true },
+          ],
+        }),
+      })
+
+      const { result, unmount } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.items.map((item) => item.name)).toEqual(['Bag of Holding'])
+      unmount()
+      useGameDataStore.setState({ dataSourceConfig: null })
+    })
+
     test('preferNewerPrintings suppresses nested class reprints', () => {
       const character = makeCharacterFixture({
         allowedSources: ['PHB', 'TCE'],

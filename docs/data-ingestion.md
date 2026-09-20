@@ -19,6 +19,7 @@ data. UI code consumes parsed results through hooks; it never imports source JSO
 Local reads are capability-scoped to a native-picker root, canonicalized against symlinks, limited
 to JSON below that root, and size-limited by Electron. Remote production sources are HTTPS. GitHub
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.
+GitHub repository release-page URLs are treated as links to that repository root.
 
 Bundled reads use a separate, read-only IPC capability. The renderer supplies only a normalized
 relative JSON path. Electron resolves approved managed data below `resources/srd/core/data`, uses
@@ -147,8 +148,10 @@ items. The character stores the selected concrete `name|source` separately from 
 inventory entries.
 
 Core SRD/Basic Rules potions and scrolls housed in DMG/XDMG may be admitted by the shared
-player-item policy without enabling the full source. This is a filtering rule, not duplicated item
-data.
+player-item policy without enabling the full source. When the bundled SRD is active, all public
+SRD items for the character's matching ruleset are admitted without presenting DMG, MM, XDMG, or
+XMM as selectable books. Their original source-qualified identities remain intact for references
+and lookups. This is a filtering and source-catalog policy, not duplicated or relabeled item data.
 
 ## Cache compatibility
 

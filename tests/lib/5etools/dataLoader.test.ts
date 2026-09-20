@@ -46,12 +46,23 @@ describe('5etools/dataLoader', () => {
     expect(readBundledJson).toHaveBeenCalledWith('class/index.json')
   })
 
-  test('parses matching bundled and local readers through the same pipeline', async () => {
+  test('parses bundled and local readers through the same pipeline with bundled source policy', async () => {
     const createReader = (type: JsonResourceReader['type']): JsonResourceReader => ({
       type,
       readJson: vi.fn((relativePath: string) => {
         if (relativePath === 'races.json') {
           return Promise.resolve({ race: [{ name: 'Human', source: 'PHB' }] })
+        }
+        if (relativePath === 'items.json') {
+          return Promise.resolve({
+            item: [
+              { name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true },
+              { name: 'Revised Bag of Holding', source: 'XDMG', type: 'W', srd52: true },
+            ],
+          })
+        }
+        if (relativePath === 'senses.json') {
+          return Promise.resolve({ sense: [{ name: 'Tremorsense', source: 'MM' }] })
         }
         return Promise.resolve({})
       }),
@@ -73,8 +84,20 @@ describe('5etools/dataLoader', () => {
 
     const [bundledData, localData] = await Promise.all([bundled.loadAllData(), local.loadAllData()])
 
-    expect(bundledData).toEqual(localData)
     expect(bundledData.races).toEqual([expect.objectContaining({ name: 'Human', source: 'PHB' })])
+    expect(bundledData.items).toEqual(localData.items)
+    expect(bundledData.senses).toEqual(localData.senses)
+    expect(bundledData.sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ abbreviation: 'PHB', hasCharacterOptions: true }),
+        expect.objectContaining({ abbreviation: 'DMG', hasCharacterOptions: false }),
+        expect.objectContaining({ abbreviation: 'MM', hasCharacterOptions: false }),
+        expect.objectContaining({ abbreviation: 'XDMG', hasCharacterOptions: false }),
+      ]),
+    )
+    expect(localData.sources.find((source) => source.abbreviation === 'DMG')).toEqual(
+      expect.objectContaining({ hasCharacterOptions: true }),
+    )
   })
 
   test('times out a stalled remote request', async () => {

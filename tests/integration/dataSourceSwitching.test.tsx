@@ -113,15 +113,15 @@ describe('data source switching', () => {
     })
 
     render(<DataSourceConfigurator />)
-    await user.click(screen.getByRole('button', { name: 'Change Source' }))
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
     await user.type(
-      screen.getByRole('textbox', { name: 'Repository URL' }),
+      screen.getByRole('textbox', { name: 'Web Address' }),
       'https://github.com/example/rules',
     )
     await waitFor(() => expect(validateDataSourceMock).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole('button', { name: 'Save & Load' }))
+    await user.click(screen.getByRole('button', { name: 'Load Game Data' }))
 
-    await waitFor(() => expect(screen.getByText('External Remote URL')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Online Game Data')).toBeTruthy())
     const gameDataState = useGameDataStore.getState()
     expect(gameDataState.gameData).toBe(externalData)
     expect(gameDataState.gameData?.classes.map(({ name, source }) => `${name}|${source}`)).toEqual([

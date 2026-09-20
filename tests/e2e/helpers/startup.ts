@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import { GAME_DATA_CACHE_SCHEMA_VERSION } from '@/lib/storage/dataCache'
-import type { GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 export const MINIMAL_GAME_DATA: GameData = {
   races: [],
@@ -30,6 +30,7 @@ export const MINIMAL_GAME_DATA: GameData = {
 
 interface AppStateSeed {
   sourcePath: string
+  dataSourceConfig?: DataSourceConfig
   gameData?: GameData
   characters?: unknown[]
   activeCharacterId?: string | null
@@ -41,9 +42,38 @@ interface AppStateSeed {
  */
 export async function seedAppState(
   page: Page,
-  { sourcePath, gameData = MINIMAL_GAME_DATA, characters, activeCharacterId = null }: AppStateSeed,
+  {
+    sourcePath,
+    dataSourceConfig,
+    gameData = MINIMAL_GAME_DATA,
+    characters,
+    activeCharacterId = null,
+  }: AppStateSeed,
 ) {
+  // Let the app finish hydrating its persisted stores before replacing them.
+  // Otherwise the first render can write its older in-memory state over this seed.
+  const loadingOverlay = page.getByTestId('app-loading-overlay')
+  if ((await loadingOverlay.count()) > 0) {
+    await expect(loadingOverlay).toHaveAttribute('data-phase', /ready|fading/, {
+      timeout: 10_000,
+    })
+  }
+
   const now = new Date().toISOString()
+  const resolvedConfig: DataSourceConfig = dataSourceConfig ?? {
+    type: 'remote',
+    path: sourcePath,
+    isValid: true,
+  }
+  const sourceSnapshot =
+    resolvedConfig.type === 'bundled'
+      ? {
+          type: resolvedConfig.type,
+          path: resolvedConfig.path,
+          packId: resolvedConfig.packId,
+          packVersion: resolvedConfig.packVersion,
+        }
+      : { type: resolvedConfig.type, path: resolvedConfig.path }
 
   await page.evaluate(
     async ({ cacheSeed, configSeed, characterSeed }) => {
@@ -76,16 +106,11 @@ export async function seedAppState(
         data: gameData,
         cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
         cachedAt: now,
-        sourceSnapshot: { type: 'remote', path: sourcePath },
+        sourceSnapshot,
       },
       configSeed: {
         state: {
-          dataSourceConfig: {
-            type: 'remote',
-            path: sourcePath,
-            isValid: true,
-            lastLoaded: now,
-          },
+          dataSourceConfig: { ...resolvedConfig, lastLoaded: now },
           lastLoadedAt: now,
         },
         version: 0,
@@ -108,14 +133,42 @@ export async function ensureStartupPromptResolved(
   sourcePath = 'e2e-startup-seeded',
   gameData: GameData = MINIMAL_GAME_DATA,
 ) {
+  const hasPersistedCache = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve, reject) => {
+        const request = indexedDB.open('keyval-store')
+        request.onerror = () => reject(request.error)
+        request.onupgradeneeded = () => {
+          const db = request.result
+          if (!db.objectStoreNames.contains('keyval')) {
+            db.createObjectStore('keyval')
+          }
+        }
+        request.onsuccess = () => {
+          const db = request.result
+          const tx = db.transaction('keyval', 'readonly')
+          const read = tx.objectStore('keyval').get('tb:game-data-cache')
+          read.onerror = () => reject(read.error)
+          read.onsuccess = () => {
+            resolve(Boolean(read.result))
+            db.close()
+          }
+        }
+      }),
+  )
+
   const startupHeading = page
-    .getByRole('heading', { name: /Welcome to Tavern Born|Data Source Setup/i })
+    .getByRole('heading', {
+      name: /Welcome to Tavern Born|Game Data Setup|Choose Game Data/i,
+    })
     .first()
 
-  const startupVisible = await startupHeading
-    .waitFor({ state: 'visible', timeout: 2000 })
-    .then(() => true)
-    .catch(() => false)
+  const startupVisible = hasPersistedCache
+    ? false
+    : await startupHeading
+        .waitFor({ state: 'visible', timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false)
 
   if (startupVisible) {
     await seedAppState(page, { sourcePath, gameData })

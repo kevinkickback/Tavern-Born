@@ -68,7 +68,7 @@ function getDataStatus(
   if (cacheStatus === 'unconfigured') {
     return {
       label: 'Game data not configured',
-      detail: 'Restore the bundled SRD or choose an external source in Settings',
+      detail: 'Use the Included SRD or add compatible 5etools data in Settings',
       icon: WarningCircle,
       tone: 'text-warning-foreground',
     }
@@ -106,11 +106,11 @@ export function AppStatusBar() {
   const error = useGameDataStore((state) => state.error)
   const sourceDescription =
     dataSourceConfig?.type === 'bundled'
-      ? `Bundled SRD ${dataSourceConfig.packVersion}`
+      ? 'Included SRD'
       : dataSourceConfig?.type === 'local'
-        ? 'External local source'
+        ? 'Game Data on This Computer'
         : dataSourceConfig?.type === 'remote'
-          ? 'External remote source'
+          ? 'Online Game Data'
           : null
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export function AppStatusBar() {
     [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress, sourceDescription],
   )
   const DataStatusIcon = dataStatus.icon
-  const dataSourceLabel = dataSourceConfig?.type === 'bundled' ? 'Bundled SRD' : sourceDescription
+  const dataSourceLabel = dataSourceConfig?.type === 'bundled' ? 'Included SRD' : sourceDescription
   const dataSourceTitle =
     dataSourceConfig?.type === 'bundled'
       ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`

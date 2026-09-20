@@ -135,7 +135,8 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
       const repo = pathParts[1].replace(/\.git$/i, '')
       const marker = pathParts[2]
       const markerIndex = marker === 'tree' || marker === 'blob' ? 2 : -1
-      if (pathParts.length > 2 && markerIndex < 0) {
+      const isReleasesPage = marker === 'releases'
+      if (pathParts.length > 2 && markerIndex < 0 && !isReleasesPage) {
         return { kind: 'invalid', error: 'Unsupported GitHub repository URL path' }
       }
 

@@ -66,8 +66,11 @@ export function DataSourceStartupModal() {
   }
 
   const handleAddMoreContent = () => {
-    acknowledgeBundledIntro()
     setShowExternalSetup(true)
+  }
+
+  const handleReturnToBundledIntro = () => {
+    setShowExternalSetup(false)
   }
 
   const handleSourceLoaded = () => {
@@ -110,23 +113,39 @@ export function DataSourceStartupModal() {
                   ? 'Game Data Setup'
                   : showBundledIntro
                     ? 'Welcome to Tavern Born'
-                    : 'Choose a Game Data Source'}
+                    : showExternalSetup
+                      ? 'Add Additional Content'
+                      : 'Choose Game Data'}
               </DialogTitle>
               <p className="mt-1 text-xs text-muted-foreground">
                 {showBundledIntro
-                  ? 'The included SRD rules are ready to use offline.'
-                  : 'Choose the rules data used by the character builder.'}
+                  ? 'Your adventure starts here.'
+                  : 'Expand the ruleset and character options.'}
               </p>
             </div>
           </div>
-          <DialogDescription className="pt-1 leading-relaxed">
-            {isForced
-              ? 'Reconfigure your data source. Close when done.'
-              : showBundledIntro
-                ? 'Tavern Born includes SRD 5.1 and SRD 5.2.1 for 2014 and 2024 characters. No download or folder selection is required.'
-                : showExternalSetup
-                  ? 'External content is supplied by you and replaces the bundled presentation catalog. Tavern Born does not distribute that content.'
-                  : 'The bundled SRD could not be loaded. Try it again or choose a user-supplied external 5etools source.'}
+          <DialogDescription className={showBundledIntro ? 'sr-only' : 'pt-1 leading-relaxed'}>
+            {isForced ? (
+              'Choose the game data Tavern Born should use. Close when done.'
+            ) : showBundledIntro ? (
+              'Tavern Born is ready to use with the included rules.'
+            ) : showExternalSetup ? (
+              <>
+                Want more character options? Tavern Born supports 5etools-compatible JSON data from
+                the web or your computer. The{' '}
+                <a
+                  href="https://wiki.tercept.net/en/5eTools/InstallGuide"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  5etools community wiki
+                </a>{' '}
+                might know a thing or two about finding the files and getting set up.
+              </>
+            ) : (
+              'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -137,10 +156,11 @@ export function DataSourceStartupModal() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="mt-0.5 size-5 shrink-0 text-primary" weight="fill" />
                   <div>
-                    <p className="text-sm font-medium">Bundled SRD 5.1 + 5.2.1</p>
+                    <p className="text-sm font-medium">SRD Rules Included</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      Create both 2014 and 2024 characters with the included open rules. You can
-                      change the source later in Settings.
+                      Tavern Born includes the SRD content for both 2014 and 2024 characters. Please
+                      note that the SRD provides a limited selection of character options. You can
+                      add additional game data now or later in Settings.
                     </p>
                   </div>
                 </div>
@@ -148,11 +168,11 @@ export function DataSourceStartupModal() {
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button variant="outline" className="gap-2" onClick={handleAddMoreContent}>
                   <PlusCircle className="size-4" />
-                  Add More Content
+                  Add Additional Content
                 </Button>
                 <Button className="gap-2" onClick={handleContinueWithBundled}>
                   <Database className="size-4" />
-                  Continue with Bundled SRD
+                  Continue with Included SRD
                 </Button>
               </div>
             </div>
@@ -160,6 +180,7 @@ export function DataSourceStartupModal() {
             <DataSourceConfigurator
               selectorOnly={shouldShowSelectorOnly}
               onSourceLoaded={handleSourceLoaded}
+              onCancel={showExternalSetup ? handleReturnToBundledIntro : undefined}
             />
           )}
         </div>

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { Section } from '@/components/workspace'
 import { getBundledFileUrl } from '@/lib/assetUrls'
 
+type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
+
 const TECH_STACK = [
   { icon: Code, label: 'Electron + React 19' },
   { icon: Books, label: 'Radix UI + Tailwind CSS v4' },
@@ -10,12 +12,28 @@ const TECH_STACK = [
 
 export function AboutPanel() {
   const [appVersion, setAppVersion] = useState('')
+  const [srdManifest, setSrdManifest] = useState<BundledManifest | null>(null)
 
   useEffect(() => {
     window.electronAPI
       ?.getAppVersion()
       .then(setAppVersion)
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const getBundledManifest = window.electronAPI?.getBundledManifest
+    if (!getBundledManifest) return
+
+    let active = true
+    getBundledManifest()
+      .then((manifest) => {
+        if (active) setSrdManifest(manifest)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
   }, [])
 
   const infoRows = [
@@ -55,6 +73,38 @@ export function AboutPanel() {
           ))}
         </dl>
       </Section>
+
+      {srdManifest && (
+        <Section title="SRD Attribution">
+          <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+            {srdManifest.documents.map((document) => (
+              <div key={document.version} className="space-y-1">
+                <p>{document.attribution}</p>
+                <a
+                  href={document.landingPage}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-primary underline underline-offset-2"
+                >
+                  View the official SRD {document.version}
+                </a>
+              </div>
+            ))}
+            <p>
+              Available under the{' '}
+              <a
+                href={srdManifest.license.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline underline-offset-2"
+              >
+                {srdManifest.license.name}
+              </a>
+              .
+            </p>
+          </div>
+        </Section>
+      )}
 
       <Section title="Built With">
         <ul className="grid gap-2 sm:grid-cols-2">

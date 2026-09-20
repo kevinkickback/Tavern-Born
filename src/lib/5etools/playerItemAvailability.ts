@@ -7,6 +7,13 @@ interface CharacterItemFilterOptions {
   originSystem?: '2014' | '2024'
   itemTypeByAbbr?: Readonly<Record<string, string>>
   suppressedKeys?: Set<string>
+  includeBundledSrdItems?: boolean
+}
+
+function isPublicCoreItem(item: Item5e, originSystem: '2014' | '2024'): boolean {
+  return originSystem === '2024'
+    ? item.source.toUpperCase() === 'XDMG' && Boolean(item.srd52 || item.basicRules2024)
+    : item.source.toUpperCase() === 'DMG' && Boolean(item.srd || item.basicRules)
 }
 
 function isCoreRulesetConsumable(
@@ -14,12 +21,7 @@ function isCoreRulesetConsumable(
   originSystem: '2014' | '2024',
   itemTypeByAbbr: Readonly<Record<string, string>>,
 ): boolean {
-  const isMatchingCoreItem =
-    originSystem === '2024'
-      ? item.source.toUpperCase() === 'XDMG' && Boolean(item.srd52 || item.basicRules2024)
-      : item.source.toUpperCase() === 'DMG' && Boolean(item.srd || item.basicRules)
-
-  if (!isMatchingCoreItem) return false
+  if (!isPublicCoreItem(item, originSystem)) return false
 
   const traits = getNormalizedItemTraits(item, itemTypeByAbbr)
   return traits.isPotion || traits.isScroll
@@ -31,7 +33,13 @@ function isCoreRulesetConsumable(
  */
 export function filterCharacterItems(
   items: Item5e[],
-  { allowedSources, originSystem, itemTypeByAbbr = {}, suppressedKeys }: CharacterItemFilterOptions,
+  {
+    allowedSources,
+    originSystem,
+    itemTypeByAbbr = {},
+    suppressedKeys,
+    includeBundledSrdItems = false,
+  }: CharacterItemFilterOptions,
 ): Item5e[] {
   const unsuppressedItems = DataFilter.filterItems(items, { suppressedKeys })
   if (!allowedSources || allowedSources.length === 0) return unsuppressedItems
@@ -40,6 +48,7 @@ export function filterCharacterItems(
   return unsuppressedItems.filter(
     (item) =>
       allowed.has(item.source.toUpperCase()) ||
+      (includeBundledSrdItems && originSystem ? isPublicCoreItem(item, originSystem) : false) ||
       (originSystem ? isCoreRulesetConsumable(item, originSystem, itemTypeByAbbr) : false),
   )
 }

@@ -1,5 +1,6 @@
 import { CopySimple, DownloadSimple, Trash } from '@phosphor-icons/react'
 import { memo } from 'react'
+import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ interface CharacterCardProps {
   onToggleSelect?: (id: string) => void
   cardSize?: number
   highlighted?: boolean
+  usesAdditionalContent?: boolean
 }
 
 export const CharacterCard = memo(function CharacterCard({
@@ -37,6 +39,7 @@ export const CharacterCard = memo(function CharacterCard({
   onToggleSelect,
   cardSize = 340,
   highlighted = false,
+  usesAdditionalContent = false,
 }: CharacterCardProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
@@ -139,11 +142,11 @@ export const CharacterCard = memo(function CharacterCard({
         }
       />
 
-      {isActive && (
-        <CharacterReadinessBadge
-          character={character}
-          className="pointer-events-none absolute left-3 top-3 z-10 shadow-sm"
-        />
+      {!selectionMode && (isActive || usesAdditionalContent) && (
+        <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+          {isActive && <CharacterReadinessBadge character={character} className="shadow-sm" />}
+          {usesAdditionalContent && <AdditionalContentBadge />}
+        </div>
       )}
 
       {selectionMode && (

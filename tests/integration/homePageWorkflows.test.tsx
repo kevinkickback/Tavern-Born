@@ -10,7 +10,9 @@ import {
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('sonner', () => ({
   toast: {
@@ -28,6 +30,7 @@ interface MockCharacterCardProps {
   onDuplicate: (character: { id: string; name: string }) => void
   selectionMode?: boolean
   onToggleSelect?: (id: string) => void
+  usesAdditionalContent?: boolean
 }
 
 vi.mock('@/components/character/CharacterCard', () => ({
@@ -38,6 +41,7 @@ vi.mock('@/components/character/CharacterCard', () => ({
     onDuplicate,
     selectionMode,
     onToggleSelect,
+    usesAdditionalContent,
   }: MockCharacterCardProps) => (
     <div data-testid={`card-${character.id}`}>
       <span>{character.name}</span>
@@ -55,6 +59,7 @@ vi.mock('@/components/character/CharacterCard', () => ({
           select-{character.id}
         </button>
       )}
+      {usesAdditionalContent && <span>Additional content</span>}
     </div>
   ),
 }))
@@ -92,6 +97,7 @@ function mockDynamicFileInput() {
 describe('home page integration workflows', () => {
   beforeEach(() => {
     resetCharacterStore()
+    useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
     useAppPreferencesStore.setState({ characterViewMode: 'gallery' })
   })
 
@@ -107,6 +113,43 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('No Characters Yet')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'New Character' }))
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
+  })
+
+  test('marks external saved choices only while the Included SRD is active', () => {
+    const character = makeCharacterFixture({
+      feats: [
+        {
+          id: 'external-feat',
+          name: 'External Feat',
+          source: 'XGE',
+          description: 'User-provided content.',
+        },
+      ],
+    })
+    useCharacterStore.setState({ characters: [character] })
+    useGameDataStore.setState({
+      dataSourceConfig: {
+        type: 'bundled',
+        path: 'resources/srd/core',
+        isValid: true,
+        packId: 'tavern-born-srd',
+        packVersion: 'test',
+      },
+      gameData: makeGameDataFixture({
+        races: [{ name: 'Human', source: 'PHB' }],
+        classes: [makeClassFixture({ name: 'Fighter', source: 'PHB' })],
+        backgrounds: [{ name: 'Soldier', source: 'PHB' }],
+      }),
+    })
+
+    const { rerender } = render(<HomePage />)
+    expect(screen.getByText('Additional content')).toBeTruthy()
+
+    useGameDataStore.setState({
+      dataSourceConfig: { type: 'local', path: 'C:/game-data', isValid: true },
+    })
+    rerender(<HomePage />)
+    expect(screen.queryByText('Additional content')).toBeNull()
   })
 
   test('requires acknowledgment and can export unsupported-character backups', async () => {

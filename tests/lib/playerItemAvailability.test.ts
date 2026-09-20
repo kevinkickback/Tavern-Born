@@ -67,4 +67,30 @@ describe('character item availability', () => {
       }),
     ).toEqual([revisedScroll, supplementPotion])
   })
+
+  test('includes every matching public core item for the bundled SRD only', () => {
+    const legacyBag = item({ name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true })
+    const revisedBag = item({
+      name: 'Revised Bag of Holding',
+      source: 'XDMG',
+      type: 'W',
+      srd52: true,
+    })
+    const privateItem = item({ name: 'Private Item', source: 'DMG', type: 'W' })
+
+    expect(
+      filterCharacterItems([legacyBag, revisedBag, privateItem], {
+        allowedSources: ['PHB'],
+        originSystem: '2014',
+        includeBundledSrdItems: true,
+      }),
+    ).toEqual([legacyBag])
+    expect(
+      filterCharacterItems([legacyBag, revisedBag, privateItem], {
+        allowedSources: ['XPHB'],
+        originSystem: '2024',
+        includeBundledSrdItems: true,
+      }),
+    ).toEqual([revisedBag])
+  })
 })

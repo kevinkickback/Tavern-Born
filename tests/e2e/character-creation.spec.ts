@@ -58,7 +58,7 @@ const CHARACTER_CREATION_GAME_DATA: GameData = {
 
 test.use({ viewport: { width: 1280, height: 720 } })
 
-test('Rules warnings remain visible while Allowed Sources scrolls', async ({ page }) => {
+test('Rules warnings remain visible while Additional Content scrolls', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-character-creation', GAME_DATA_WITH_MANY_SOURCES)
 
@@ -68,7 +68,7 @@ test('Rules warnings remain visible while Allowed Sources scrolls', async ({ pag
   await dialog.getByRole('button', { name: 'Next' }).click()
 
   await dialog.getByRole('button', { name: /5\.5e Revised/ }).click()
-  const sourceScroller = dialog.getByRole('region', { name: 'Allowed sources' })
+  const sourceScroller = dialog.getByRole('region', { name: 'Additional Content' })
   await expect(sourceScroller).toBeVisible()
   await expect
     .poll(() => sourceScroller.evaluate((element) => element.scrollHeight > element.clientHeight))

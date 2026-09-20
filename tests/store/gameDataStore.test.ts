@@ -324,7 +324,7 @@ describe('gameDataStore', () => {
     expect(restored).toBe(false)
     expect(state.gameData).toBe(existingData)
     expect(state.dataSourceConfig).toBe(config)
-    expect(state.error).toContain('unavailable or has not been approved')
+    expect(state.error).toContain('Included SRD is unavailable')
     expect(loadDataFromSourceMock).not.toHaveBeenCalled()
   })
 

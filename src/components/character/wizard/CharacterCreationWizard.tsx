@@ -14,6 +14,7 @@ import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { AbilityScores } from '@/types/character'
 import { INITIAL_CHARACTER_DATA, WIZARD_STEPS } from './constants'
 import {
@@ -44,6 +45,7 @@ function getDefaultAbilityScoresForMethod(method: string): Record<string, number
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
+  const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -213,6 +215,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   data={characterData}
                   onChange={updateCharacterData}
                   sources={wizardData.sources}
+                  isBundledSrd={isBundledSrd}
                   invalidFields={invalidFields}
                 />
               )}

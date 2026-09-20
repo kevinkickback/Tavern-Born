@@ -21,6 +21,19 @@ describe('parseRemoteDataSourceUrl', () => {
   })
 
   test.each([
+    'https://github.com/5etools-mirror-3/5etools-src/releases',
+    'https://github.com/5etools-mirror-3/5etools-src/releases/latest',
+    'https://github.com/5etools-mirror-3/5etools-src/releases/tag/v1.0.0',
+  ])('treats a GitHub releases page as its repository root: %s', (url) => {
+    expect(parseRemoteDataSourceUrl(url)).toEqual({
+      kind: 'github-repository',
+      owner: '5etools-mirror-3',
+      repo: '5etools-src',
+      normalizedUrl: 'https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main',
+    })
+  })
+
+  test.each([
     [
       'https://github.com/example/rules?ref=feature%2F5etools',
       'https://raw.githubusercontent.com/example/rules/feature/5etools',

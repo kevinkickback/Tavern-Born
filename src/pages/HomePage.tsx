@@ -15,6 +15,7 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
@@ -48,6 +49,10 @@ import {
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import {
+  characterUsesContentOutsideCatalog,
+  createGameDataAvailabilityIndex,
+} from '@/lib/character/additionalContentAvailability'
 import { duplicateCharacter, getDuplicateCharacterName } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
@@ -55,6 +60,7 @@ import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
@@ -81,6 +87,7 @@ interface CharacterListRowProps {
   onDuplicate: (character: Character) => void
   onDelete: (id: string) => void
   highlighted?: boolean
+  usesAdditionalContent?: boolean
 }
 
 function CharacterListRow({
@@ -94,6 +101,7 @@ function CharacterListRow({
   onDuplicate,
   onDelete,
   highlighted = false,
+  usesAdditionalContent = false,
 }: CharacterListRowProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
@@ -146,6 +154,7 @@ function CharacterListRow({
               </span>
             )}
             {isActive && <CharacterReadinessBadge character={character} />}
+            {usesAdditionalContent && <AdditionalContentBadge />}
           </div>
           <p className="truncate text-xs text-muted-foreground">{summary}</p>
         </div>
@@ -200,6 +209,8 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const dismissUnsupportedCharacters = useCharacterStore(
     (state) => state.dismissUnsupportedCharacters,
   )
+  const gameData = useGameDataStore((state) => state.gameData)
+  const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -215,6 +226,15 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const focusCharacterName = readinessFocus === 'identity:name'
+  const additionalContentCharacterIds = useMemo(() => {
+    if (!isBundledSrd || !gameData) return new Set<string>()
+    const availability = createGameDataAvailabilityIndex(gameData)
+    return new Set(
+      characters
+        .filter((character) => characterUsesContentOutsideCatalog(character, availability))
+        .map((character) => character.id),
+    )
+  }, [characters, gameData, isBundledSrd])
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -408,6 +428,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         onToggleSelect={handleToggleCharacterSelection}
         cardSize={360}
         highlighted={focusCharacterName && character.id === activeCharacterId}
+        usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
       />
     ) : (
       <CharacterListRow
@@ -422,6 +443,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
         highlighted={focusCharacterName && character.id === activeCharacterId}
+        usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
       />
     )
 

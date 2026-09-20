@@ -377,7 +377,7 @@ export const useGameDataStore = create<GameDataState>()(
         if (!bundledSource) {
           set({
             error:
-              'Bundled SRD data is unavailable or has not been approved for distribution in this build.',
+              'The Included SRD is unavailable in this copy of Tavern Born. Reinstall the app or add compatible 5etools data in Settings.',
           })
           return false
         }

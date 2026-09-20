@@ -65,6 +65,8 @@ interface ExtractIndexFilesOptions {
 
 export const DATA_FETCH_CONCURRENCY = 6
 
+const BUNDLED_SRD_SELECTABLE_SOURCES = new Set(['PHB', 'XPHB'])
+
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
@@ -289,7 +291,7 @@ export class FiveEToolsDataLoader {
     if (this.sourceType !== 'local' && loadedTopLevelResources === 0) {
       throw new Error(
         this.sourceType === 'bundled'
-          ? 'Unable to load bundled SRD data. Reinstall Tavern Born or restore the packaged resources.'
+          ? 'Unable to load the included SRD. Reinstall Tavern Born or restore the application files.'
           : 'Unable to load remote data source. Check internet connectivity and source URL.',
       )
     }
@@ -324,12 +326,19 @@ export class FiveEToolsDataLoader {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
 
-    gameData.sources = buildSourcesList(
+    const sourceCatalog = buildSourcesList(
       Array.from(sourcesSet),
       booksData,
       adventuresData,
       collectRevisedSourceAbbreviations(gameData),
     )
+    gameData.sources =
+      this.sourceType === 'bundled'
+        ? sourceCatalog.map((source) => ({
+            ...source,
+            hasCharacterOptions: BUNDLED_SRD_SELECTABLE_SOURCES.has(source.abbreviation),
+          }))
+        : sourceCatalog
     gameData.lookups = buildGameDataLookups(gameData)
 
     if (import.meta.env.DEV) {

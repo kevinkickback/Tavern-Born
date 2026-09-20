@@ -6,7 +6,16 @@ import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupM
 import { useGameDataStore } from '@/store/gameDataStore'
 
 vi.mock('@/components/settings/DataSourceConfigurator', () => ({
-  DataSourceConfigurator: () => <div>Data Source Configurator</div>,
+  DataSourceConfigurator: ({ onCancel }: { onCancel?: () => void }) => (
+    <div>
+      Data Source Configurator
+      {onCancel && (
+        <button type="button" onClick={onCancel}>
+          Back
+        </button>
+      )}
+    </div>
+  ),
 }))
 
 const storage = new Map<string, string>()
@@ -97,7 +106,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<DataSourceStartupModal />)
 
-    expect(screen.getByText('Choose a Game Data Source')).toBeTruthy()
+    expect(screen.getByText('Choose Game Data')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
   })
 
@@ -144,16 +153,19 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<DataSourceStartupModal />)
 
     expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
-    expect(screen.getByText('Bundled SRD 5.1 + 5.2.1')).toBeTruthy()
+    expect(screen.getByText('Your adventure starts here.')).toBeTruthy()
+    expect(screen.getByText('SRD Rules Included')).toBeTruthy()
+    expect(screen.getByText(/SRD content for both 2014 and 2024 characters/)).toBeTruthy()
+    expect(screen.getByText(/add additional game data now or later in Settings/)).toBeTruthy()
     expect(screen.queryByText('Data Source Configurator')).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: 'Continue with Bundled SRD' }))
+    await user.click(screen.getByRole('button', { name: 'Continue with Included SRD' }))
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith('tb:bundled-srd-intro:v1', '1')
     expect(screen.queryByText('Welcome to Tavern Born')).toBeNull()
   })
 
-  test('opens optional external setup from the bundled introduction', async () => {
+  test('opens optional external setup and can return to the bundled introduction', async () => {
     const user = userEvent.setup()
     useGameDataStore.setState({
       hasHydrated: true,
@@ -194,11 +206,20 @@ describe('startup integration: loading overlay and startup modal', () => {
     })
 
     render(<DataSourceStartupModal />)
-    await user.click(screen.getByRole('button', { name: 'Add More Content' }))
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
 
-    expect(screen.getByText('Choose a Game Data Source')).toBeTruthy()
+    expect(screen.getByText('Add Additional Content')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
-    expect(screen.getByText(/External content is supplied by you/)).toBeTruthy()
+    expect(screen.getByText(/Want more character options/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5etools community wiki' }).getAttribute('href')).toBe(
+      'https://wiki.tercept.net/en/5eTools/InstallGuide',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
+    expect(screen.queryByText('Data Source Configurator')).toBeNull()
+    expect(storage.get('tb:bundled-srd-intro:v1')).toBeUndefined()
   })
 
   test('DataSourceStartupModal remains closed when game data already exists', () => {

@@ -31,7 +31,7 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     expect(screen.getByTestId('game-data-status').textContent).toContain('Game data ready')
-    expect(screen.getByText('External local source')).toBeTruthy()
+    expect(screen.getByText('Game Data on This Computer')).toBeTruthy()
   })
 
   test('identifies the bundled SRD pack without exposing a filesystem path', () => {
@@ -48,10 +48,10 @@ describe('application status bar', () => {
 
     render(<AppStatusBar />)
 
-    const source = screen.getByText('Bundled SRD')
+    const source = screen.getByText('Included SRD')
     expect(source.getAttribute('title')).toBe('tavern-born-srd-core 1.0.0')
     expect(screen.getByTestId('game-data-status').getAttribute('title')).toBe(
-      'Bundled SRD 1.0.0 loaded successfully',
+      'Included SRD loaded successfully',
     )
   })
 
