@@ -22,6 +22,7 @@ describe('5etools/dataLoader', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   test('buildUrl always resolves to data path in remote mode', () => {
@@ -54,6 +55,26 @@ describe('5etools/dataLoader', () => {
       (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
 
     expect(buildUrl('class/class-wizard.json')).toBe('C:\\5etools/class/class-wizard.json')
+  })
+
+  test('reads bundled resources through the restricted Electron bridge', async () => {
+    const readBundledJson = vi.fn(async (relativePath: string) => ({ relativePath }))
+    vi.stubGlobal('electronAPI', { readBundledJson })
+    const loader = new FiveEToolsDataLoader({
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: 'test',
+      isValid: true,
+    })
+    const loadResource = (
+      loader as unknown as { loadResource: (filename: string) => Promise<unknown> }
+    ).loadResource.bind(loader)
+
+    await expect(loadResource('class/index.json')).resolves.toEqual({
+      relativePath: 'class/index.json',
+    })
+    expect(readBundledJson).toHaveBeenCalledWith('class/index.json')
   })
 
   test('times out a stalled remote request', async () => {

@@ -12,6 +12,7 @@ import {
   session,
   shell,
 } from 'electron'
+import { readBundledJsonFromRoot } from './bundledResources'
 import { isPathWithinRoot, isTrustedRendererUrl } from './security'
 import {
   cancelDownload,
@@ -89,6 +90,12 @@ async function authorizeLocalDataRoot(folderPath: string): Promise<string> {
   )
   localDataRootPath = canonicalPath
   return canonicalPath
+}
+
+function getBundledDataRoot(): string {
+  return isDev
+    ? join(__dirname, '../resources/srd/core/data')
+    : join(process.resourcesPath, 'srd/core/data')
 }
 
 function isDevToolsShortcut(input: Electron.Input): boolean {
@@ -260,6 +267,10 @@ app.on('ready', async () => {
 
     const content = await readFile(canonicalTarget, 'utf-8')
     return JSON.parse(content)
+  })
+  ipcMain.handle('resources:readBundledJson', (event, relativePath: unknown) => {
+    assertTrustedIpcSender(event)
+    return readBundledJsonFromRoot(getBundledDataRoot(), relativePath)
   })
   ipcMain.on('state:setUnsavedChanges', (event, value: unknown) => {
     if (!isTrustedIpcSender(event)) return

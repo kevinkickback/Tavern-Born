@@ -1,0 +1,105 @@
+{
+  "rootExclusions": {
+    "deities.json#deity": ["Oghma|PHB|Forgotten Realms", "Silvanus|PHB|Forgotten Realms"]
+  },
+  "dependencies": [
+    {
+      "collection": "itemProperty",
+      "srdVersion": "5.1",
+      "officialSection": "Equipment — Weapons and weapon properties",
+      "identities": [
+        "2H|PHB",
+        "A|PHB",
+        "F|PHB",
+        "H|PHB",
+        "L|PHB",
+        "LD|PHB",
+        "R|PHB",
+        "S|PHB",
+        "T|PHB",
+        "V|PHB"
+      ]
+    },
+    {
+      "collection": "itemProperty",
+      "srdVersion": "5.2.1",
+      "officialSection": "Equipment — Weapons and weapon properties",
+      "identities": [
+        "2H|XPHB",
+        "A|XPHB",
+        "F|XPHB",
+        "H|XPHB",
+        "L|XPHB",
+        "LD|XPHB",
+        "R|XPHB",
+        "T|XPHB",
+        "V|XPHB"
+      ]
+    },
+    {
+      "collection": "itemType",
+      "srdVersion": "5.1",
+      "officialSection": "Equipment",
+      "identities": [
+        "A|PHB",
+        "AT|PHB",
+        "FD|PHB",
+        "G|PHB",
+        "GS|PHB",
+        "HA|PHB",
+        "INS|PHB",
+        "LA|PHB",
+        "M|PHB",
+        "MA|PHB",
+        "MNT|PHB",
+        "P|PHB",
+        "R|PHB",
+        "S|PHB",
+        "SCF|PHB",
+        "T|PHB",
+        "TAH|PHB",
+        "TG|PHB",
+        "VEH|PHB"
+      ]
+    },
+    {
+      "collection": "itemType",
+      "srdVersion": "5.1",
+      "officialSection": "Magic Items — Magic item categories",
+      "identities": ["RD|DMG", "RG|DMG", "SC|DMG", "SHP|DMG", "WD|DMG"]
+    },
+    {
+      "collection": "itemType",
+      "srdVersion": "5.2.1",
+      "officialSection": "Equipment",
+      "identities": [
+        "A|XPHB",
+        "AT|XPHB",
+        "FD|XPHB",
+        "G|XPHB",
+        "GS|XPHB",
+        "HA|XPHB",
+        "INS|XPHB",
+        "LA|XPHB",
+        "M|XPHB",
+        "MA|XPHB",
+        "MNT|XPHB",
+        "P|XPHB",
+        "R|XPHB",
+        "S|XPHB",
+        "SC|XPHB",
+        "SCF|XPHB",
+        "SHP|XPHB",
+        "T|XPHB",
+        "TAH|XPHB",
+        "VEH|XPHB"
+      ]
+    },
+    {
+      "collection": "itemType",
+      "srdVersion": "5.2.1",
+      "officialSection": "Magic Items — Magic item categories",
+      "identities": ["GV|XDMG", "RD|XDMG", "RG|XDMG", "TG|XDMG", "WD|XDMG"]
+    }
+  ]
+}

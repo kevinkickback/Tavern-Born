@@ -69,6 +69,19 @@ async function validateLocalFile(basePath: string, file: FileValidationConfig): 
   }
 }
 
+async function validateBundledFile(file: FileValidationConfig): Promise<boolean> {
+  try {
+    const readBundledJson = window.electronAPI?.readBundledJson
+    if (!readBundledJson) return false
+    const data = await readBundledJson(file.name)
+    if (!data || typeof data !== 'object') return false
+    if (!file.schema) return true
+    return file.schema.safeParse(data).success
+  } catch {
+    return false
+  }
+}
+
 async function validateRemoteFile(basePath: string, file: FileValidationConfig): Promise<boolean> {
   const base = basePath.endsWith('/') ? basePath : `${basePath}/`
   const url = `${base}data/${file.name}`
@@ -118,7 +131,7 @@ async function validateRemoteFile(basePath: string, file: FileValidationConfig):
 
 export async function validateDataSource(config: DataSourceConfig): Promise<ValidationResult> {
   try {
-    if (!config.path || config.path.trim() === '') {
+    if (config.type !== 'bundled' && (!config.path || config.path.trim() === '')) {
       return {
         isValid: false,
         error: 'Path cannot be empty',
@@ -148,9 +161,11 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
     const results = await Promise.all(
       REQUIRED_FILES.map(async (file) => {
         const isValid =
-          config.type === 'local'
-            ? await validateLocalFile(normalizedPath, file)
-            : await validateRemoteFile(normalizedPath, file)
+          config.type === 'bundled'
+            ? await validateBundledFile(file)
+            : config.type === 'local'
+              ? await validateLocalFile(normalizedPath, file)
+              : await validateRemoteFile(normalizedPath, file)
         return { name: file.name, isValid }
       }),
     )

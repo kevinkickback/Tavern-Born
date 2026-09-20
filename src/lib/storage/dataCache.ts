@@ -11,7 +11,7 @@ export interface GameDataCacheEntry {
   cachedAt: string
   contentFingerprint?: string
   lastDataChangedAt?: string
-  sourceSnapshot: { type: string; path: string }
+  sourceSnapshot: { type: string; path: string; packId?: string; packVersion?: string }
 }
 
 function hashStringFnv1a(value: string): string {
@@ -85,7 +85,13 @@ export async function writeGameDataCache(
     cachedAt: now,
     contentFingerprint,
     lastDataChangedAt,
-    sourceSnapshot: { type: config.type, path: config.path },
+    sourceSnapshot: {
+      type: config.type,
+      path: config.path,
+      ...(config.type === 'bundled'
+        ? { packId: config.packId, packVersion: config.packVersion }
+        : {}),
+    },
   }
 
   await set(CACHE_KEY, entry)
@@ -101,5 +107,12 @@ export function isCacheStale(cachedAt: string): boolean {
 }
 
 export function isCacheForSource(entry: GameDataCacheEntry, config: DataSourceConfig): boolean {
-  return entry.sourceSnapshot.type === config.type && entry.sourceSnapshot.path === config.path
+  if (entry.sourceSnapshot.type !== config.type || entry.sourceSnapshot.path !== config.path) {
+    return false
+  }
+  if (config.type !== 'bundled') return true
+  return (
+    entry.sourceSnapshot.packId === config.packId &&
+    entry.sourceSnapshot.packVersion === config.packVersion
+  )
 }

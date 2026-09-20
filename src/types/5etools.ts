@@ -483,12 +483,21 @@ export interface Condition5e {
   [key: string]: unknown
 }
 
-export interface DataSourceConfig {
-  type: 'local' | 'remote'
+interface DataSourceConfigBase {
   path: string
   isValid: boolean
   lastLoaded?: string
 }
+
+export type DataSourceConfig =
+  | (DataSourceConfigBase & {
+      type: 'local' | 'remote'
+    })
+  | (DataSourceConfigBase & {
+      type: 'bundled'
+      packId: string
+      packVersion: string
+    })
 
 export interface GameData {
   races: Race5e[]

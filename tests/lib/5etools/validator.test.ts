@@ -37,6 +37,7 @@ describe('5etools/validator', () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    vi.unstubAllGlobals()
   })
 
   test('rejects empty path', async () => {
@@ -111,5 +112,23 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(true)
     expect(result.foundResources).toHaveLength(17)
+  })
+
+  test('validates bundled resources through the Electron bridge without a network request', async () => {
+    const readBundledJson = vi.fn(async (relativePath: string) => payloadByFile[relativePath])
+    vi.stubGlobal('electronAPI', { readBundledJson })
+    globalThis.fetch = vi.fn() as unknown as typeof fetch
+
+    const result = await validateDataSource({
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: 'test',
+      isValid: false,
+    })
+
+    expect(result.isValid).toBe(true)
+    expect(readBundledJson).toHaveBeenCalledTimes(17)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })

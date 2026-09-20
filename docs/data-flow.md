@@ -7,13 +7,19 @@ guides and code, not duplicated here.
 
 Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dataCache`.
 
-1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB.
+1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB. A source
+   can be the immutable bundled SRD pack, an authorized local directory, or a remote HTTPS root.
 2. Theme bootstrap data is applied from local storage before React paints, then reconciled with
    hydrated preferences.
 3. `useDataInit` waits for hydration and chooses cache, foreground load, or source configuration.
 4. A usable cache starts the app immediately. Stale data refreshes in the background.
 5. The loader fetches, validates, parses, normalizes, and indexes the configured source.
 6. A successful complete result replaces memory/cache atomically. Failed or superseded loads do not.
+
+Bundled transport and version-aware cache identity are implemented, but bundled-first startup stays
+disabled while the generated pack has `provenance-review-required` status. Until the reviewed pack
+is committed and included in release resources, existing local/remote startup behavior remains the
+release behavior.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 parsed content fingerprint changes. Background refreshes never replace a more complete catalog

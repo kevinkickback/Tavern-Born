@@ -51,7 +51,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   const setAutoRefreshGameData = useAppPreferencesStore((state) => state.setAutoRefreshGameData)
 
   const [sourceType, setSourceType] = useState<'local' | 'remote'>(
-    dataSourceConfig?.type || 'remote',
+    dataSourceConfig?.type === 'local' ? 'local' : 'remote',
   )
   const [sourcePath, setSourcePath] = useState('')
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)

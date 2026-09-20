@@ -14,6 +14,7 @@ vi.mock('idb-keyval', () => ({
 
 import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
+  isCacheForSource,
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
@@ -216,5 +217,31 @@ describe('writeGameDataCache', () => {
 
     expect(entry.lastDataChangedAt).not.toBe(before)
     expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
+  })
+})
+
+describe('isCacheForSource', () => {
+  test('includes bundled pack identity and version in cache matching', () => {
+    const bundled: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const entry = {
+      data: makeGameData(),
+      cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+      },
+    }
+
+    expect(isCacheForSource(entry, bundled)).toBe(true)
+    expect(isCacheForSource(entry, { ...bundled, packVersion: '1.0.1' })).toBe(false)
   })
 })

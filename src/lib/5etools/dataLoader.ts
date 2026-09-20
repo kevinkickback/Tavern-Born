@@ -107,9 +107,11 @@ function createTimedSignal(parentSignal?: AbortSignal): {
 export class FiveEToolsDataLoader {
   private baseUrl: string
   private isRemote: boolean
+  private isBundled: boolean
 
   constructor(config: DataSourceConfig) {
     this.isRemote = config.type === 'remote'
+    this.isBundled = config.type === 'bundled'
     if (this.isRemote) {
       const parsedUrl = parseRemoteDataSourceUrl(config.path)
       if (parsedUrl.kind === 'invalid') throw new Error(parsedUrl.error)
@@ -318,9 +320,11 @@ export class FiveEToolsDataLoader {
       }
     })
 
-    if (this.isRemote && loadedTopLevelResources === 0) {
+    if ((this.isRemote || this.isBundled) && loadedTopLevelResources === 0) {
       throw new Error(
-        'Unable to load remote data source. Check internet connectivity and source URL.',
+        this.isBundled
+          ? 'Unable to load bundled SRD data. Reinstall Tavern Born or restore the packaged resources.'
+          : 'Unable to load remote data source. Check internet connectivity and source URL.',
       )
     }
 
@@ -581,6 +585,14 @@ export class FiveEToolsDataLoader {
   }
 
   private async loadResource(filename: string, signal?: AbortSignal): Promise<unknown> {
+    if (this.isBundled) {
+      const readBundledJson = window.electronAPI?.readBundledJson
+      if (!readBundledJson) {
+        throw new Error('Bundled data loading requires Electron runtime')
+      }
+      return readBundledJson(filename)
+    }
+
     if (!this.isRemote) {
       const sep = this.baseUrl.includes('\\') ? '\\' : '/'
       const fullPath = `${this.baseUrl}${sep}${filename.replace(/\//g, sep)}`
