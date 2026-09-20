@@ -31,7 +31,7 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     expect(screen.getByTestId('game-data-status').textContent).toContain('Game data ready')
-    expect(screen.getByText('Game Data on This Computer')).toBeTruthy()
+    expect(screen.getByText('Included SRD + Local Content')).toBeTruthy()
   })
 
   test('identifies the bundled SRD pack without exposing a filesystem path', () => {

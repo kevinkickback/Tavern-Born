@@ -1,22 +1,27 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
-const { loadDataFromSourceMock, writeGameDataCacheMock, clearGameDataCacheMock } = vi.hoisted(
-  () => ({
-    loadDataFromSourceMock: vi.fn(),
-    writeGameDataCacheMock: vi.fn(async () => ({
-      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
-      contentFingerprint: 'abc123ef',
-    })),
-    clearGameDataCacheMock: vi.fn(async () => undefined),
-  }),
-)
+const {
+  loadDataFromSourceMock,
+  loadGameDataSourceStackMock,
+  writeGameDataCacheMock,
+  clearGameDataCacheMock,
+} = vi.hoisted(() => ({
+  loadDataFromSourceMock: vi.fn(),
+  loadGameDataSourceStackMock: vi.fn(),
+  writeGameDataCacheMock: vi.fn(async () => ({
+    lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+    contentFingerprint: 'abc123ef',
+  })),
+  clearGameDataCacheMock: vi.fn(async () => undefined),
+}))
 const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
   resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
 }))
 
 vi.mock('@/lib/5etools', () => ({
   loadDataFromSource: loadDataFromSourceMock,
+  loadGameDataSourceStack: loadGameDataSourceStackMock,
 }))
 
 vi.mock('@/lib/5etools/bundledSource', () => ({
@@ -111,6 +116,33 @@ describe('gameDataStore', () => {
     expect(contentChanged).toBe(true)
   })
 
+  test('loads external content above the Included SRD and caches both source identities', async () => {
+    const data = makeGameDataFixture()
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadGameDataSourceStackMock.mockResolvedValue(data)
+
+    await useGameDataStore.getState().loadGameData(config)
+
+    const expectedStack = { base: bundledConfig, additional: config }
+    expect(loadGameDataSourceStackMock).toHaveBeenCalledWith(
+      expectedStack,
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
+    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+    expect(writeGameDataCacheMock).toHaveBeenCalledWith(
+      data,
+      expectedStack,
+      expect.objectContaining({ fingerprint: null, lastDataChangedAt: null }),
+    )
+  })
+
   test('ignores progress reported by a superseded load', async () => {
     let firstProgress: ((current: number, total: number, resource: string) => void) | undefined
     let secondProgress: ((current: number, total: number, resource: string) => void) | undefined
@@ -132,6 +164,10 @@ describe('gameDataStore', () => {
 
     const firstLoad = useGameDataStore.getState().loadGameData(config)
     const secondLoad = useGameDataStore.getState().loadGameData({ ...config, path: '/new-data' })
+    await vi.waitFor(() => {
+      expect(firstProgress).toBeTypeOf('function')
+      expect(secondProgress).toBeTypeOf('function')
+    })
     secondProgress?.(1, 4, 'new/classes')
     firstProgress?.(9, 10, 'old/spells')
 

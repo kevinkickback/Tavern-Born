@@ -26,14 +26,19 @@ interface ValidationResult {
 interface FileValidationConfig {
   name: string
   schema?: ZodTypeAny
+  required?: boolean
 }
 
-const REQUIRED_FILES: FileValidationConfig[] = [
+const CANDIDATE_FILES: FileValidationConfig[] = [
   { name: 'books.json', schema: BookDataSchema },
+  { name: 'adventures.json', schema: GenericDataSchema },
   { name: 'races.json', schema: RaceDataSchema },
+  { name: 'fluff-races.json', schema: GenericDataSchema, required: false },
+  { name: 'fluff-backgrounds.json', schema: GenericDataSchema, required: false },
   { name: 'class/index.json', schema: IndexSchema },
   { name: 'backgrounds.json', schema: BackgroundDataSchema },
   { name: 'spells/index.json', schema: IndexSchema },
+  { name: 'generated/gendata-spell-source-lookup.json', schema: GenericDataSchema },
   { name: 'feats.json', schema: FeatDataSchema },
   { name: 'items.json', schema: ItemDataSchema },
   { name: 'items-base.json', schema: ItemDataSchema },
@@ -46,26 +51,40 @@ const REQUIRED_FILES: FileValidationConfig[] = [
   { name: 'magicvariants.json', schema: GenericDataSchema },
   { name: 'optionalfeatures.json', schema: OptionalFeatureDataSchema },
   { name: 'variantrules.json', schema: GenericDataSchema },
+  { name: 'trapshazards.json', schema: GenericDataSchema },
+  { name: 'rewards.json', schema: GenericDataSchema },
+  { name: 'cultsboons.json', schema: GenericDataSchema },
 ]
 
 async function validateFile(
   reader: JsonResourceReader,
   file: FileValidationConfig,
-): Promise<boolean> {
+): Promise<'valid' | 'invalid' | 'unavailable'> {
   try {
     const data = await reader.readJson(file.name)
-    if (!data || typeof data !== 'object') return false
-    if (!file.schema) return true
+    if (!data || typeof data !== 'object') return 'invalid'
+    if (!file.schema) return 'valid'
     const result = file.schema.safeParse(data)
     if (!result.success) {
       console.warn(`Schema validation failed for ${file.name}:`, result.error)
-      return false
+      return 'invalid'
     }
 
-    return true
+    return 'valid'
   } catch (error) {
-    console.warn(`Failed to validate ${file.name}:`, error)
-    return false
+    const message = error instanceof Error ? error.message : String(error)
+    const isMalformedJson =
+      error instanceof SyntaxError ||
+      /(?:Unexpected (?:token|end)|Expected property|JSON\.parse|not valid JSON)/i.test(message)
+
+    if (isMalformedJson) {
+      console.warn(`Failed to validate ${file.name}:`, error)
+      return 'invalid'
+    }
+
+    // Missing files are normal for partial additional-content sources. They
+    // simply are not capabilities supplied by this source.
+    return 'unavailable'
   }
 }
 
@@ -100,13 +119,25 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
 
     const reader = createJsonResourceReader({ ...config, path: normalizedPath })
     const results = await Promise.all(
-      REQUIRED_FILES.map(async (file) => {
-        const isValid = await validateFile(reader, file)
-        return { name: file.name, isValid }
+      CANDIDATE_FILES.map(async (file) => {
+        const status = await validateFile(reader, file)
+        return { name: file.name, status }
       }),
     )
 
-    const foundResources = results.filter((r) => r.isValid).map((r) => r.name)
+    const foundResources = results.filter((result) => result.status === 'valid').map((r) => r.name)
+    const invalidResources = results
+      .filter((result) => result.status === 'invalid')
+      .map((result) => result.name)
+
+    if (invalidResources.length > 0) {
+      return {
+        isValid: false,
+        error: `Invalid ${invalidResources.length === 1 ? 'file' : 'files'}: ${invalidResources.join(', ')}`,
+        foundResources,
+        normalizedPath: persistedPath,
+      }
+    }
 
     if (foundResources.length === 0) {
       return {
@@ -116,11 +147,12 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       }
     }
 
-    const requiredFileNames = REQUIRED_FILES.map((f) => f.name)
-    const foundRequired = requiredFileNames.filter((f) => foundResources.includes(f))
-    const missingRequired = requiredFileNames.filter((f) => !foundResources.includes(f))
+    const requiredFileNames = CANDIDATE_FILES.filter((file) => file.required !== false).map(
+      (file) => file.name,
+    )
+    const missingRequired = requiredFileNames.filter((file) => !foundResources.includes(file))
 
-    if (foundRequired.length < requiredFileNames.length) {
+    if (config.type === 'bundled' && missingRequired.length > 0) {
       return {
         isValid: false,
         error: `Missing required ${missingRequired.length === 1 ? 'file' : 'files'}: ${missingRequired.join(', ')}`,

@@ -247,6 +247,7 @@ export function DataSourceConfigurator({
         type: sourceType,
         path: pathToUse,
         isValid: true,
+        availableResources: validationResult?.foundResources,
       })
 
       const { gameData: loadedGameData, error: loadError } = useGameDataStore.getState()
@@ -254,8 +255,8 @@ export function DataSourceConfigurator({
         throw new Error(loadError || 'Game data failed to load')
       }
 
-      toast.success('Game data loaded', {
-        description: 'Your available rules and character options have been updated.',
+      toast.success('Additional content added', {
+        description: 'Additional rules and character options were added to the Included SRD.',
       })
       setIsSelectingDataSource(false)
       setSourcePath('')
@@ -306,8 +307,8 @@ export function DataSourceConfigurator({
       setSourcePath('')
       setValidationStatus('idle')
       setValidationResult(null)
-      toast.success('Included SRD is ready', {
-        description: 'The included 2014 and 2024 SRD rules are ready to use.',
+      toast.success('Additional content removed', {
+        description: 'The included 2014 and 2024 SRD rules remain ready to use.',
       })
       onSourceLoaded?.()
     } catch (restoreError) {
@@ -355,7 +356,7 @@ export function DataSourceConfigurator({
         description={
           selectorOnly
             ? 'Enter a web address or select a folder containing 5etools-compatible JSON files.'
-            : 'Choose which rules and character options Tavern Born can use.'
+            : 'The Included SRD is always available. Add compatible content to expand your options.'
         }
         className="pt-0"
       >
@@ -378,8 +379,8 @@ export function DataSourceConfigurator({
                   {dataSourceConfig.type === 'bundled'
                     ? 'Included SRD Rules'
                     : dataSourceConfig.type === 'remote'
-                      ? 'Online Game Data'
-                      : 'Game Data on This Computer'}
+                      ? 'Online Additional Content'
+                      : 'Additional Content on This Computer'}
                 </span>
               </div>
 
@@ -400,6 +401,10 @@ export function DataSourceConfigurator({
                 </>
               ) : (
                 <>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground min-w-24">Base content:</span>
+                    <span className="text-xs">Included SRD</span>
+                  </div>
                   <div className="flex items-start gap-2">
                     <span className="text-xs text-muted-foreground min-w-24">Location:</span>
                     <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
@@ -568,7 +573,7 @@ export function DataSourceConfigurator({
                   ) : (
                     <Database className="size-4" />
                   )}
-                  {hasActiveDataSource ? 'Revert to Included SRD' : 'Use Included SRD'}
+                  {hasActiveDataSource ? 'Remove Additional Content' : 'Use Included SRD'}
                 </Button>
               )}
             <div className="flex gap-2 ml-auto">
@@ -585,7 +590,7 @@ export function DataSourceConfigurator({
                   <ArrowsLeftRight className="size-4" />
                   {dataSourceConfig.type === 'bundled'
                     ? 'Add Additional Content'
-                    : 'Change Game Data'}
+                    : 'Change Additional Content'}
                 </Button>
               )}
               {!selectorOnly && hasActiveDataSource && isSelectingDataSource && (
@@ -621,7 +626,7 @@ export function DataSourceConfigurator({
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
                   <Database className="size-4" />
-                  {isLoading ? 'Loading...' : 'Load Game Data'}
+                  {isLoading ? 'Loading...' : 'Add Additional Content'}
                 </Button>
               )}
             </div>
@@ -672,17 +677,17 @@ export function DataSourceConfigurator({
       <AlertDialog open={confirmRevertOpen} onOpenChange={setConfirmRevertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revert to the Included SRD?</AlertDialogTitle>
+            <AlertDialogTitle>Remove additional content?</AlertDialogTitle>
             <AlertDialogDescription>
-              This replaces your current game data with the Included SRD and removes its saved
-              connection. Your characters will not be deleted, but choices outside the Included SRD
-              may be unavailable until you add that data again.
+              This removes the saved connection to your additional content. The Included SRD and
+              your characters will remain, but choices that depend on the removed content may be
+              unavailable until you add it again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Keep Current Game Data</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>Keep Additional Content</AlertDialogCancel>
             <AlertDialogAction disabled={isLoading} onClick={() => void handleRestoreBundled()}>
-              Revert to Included SRD
+              Remove Additional Content
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

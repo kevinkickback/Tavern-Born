@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { loadDataFromSource } from '@/lib/5etools'
+import { type DataLoaderOptions, loadDataFromSource, loadGameDataSourceStack } from '@/lib/5etools'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   clearGameDataCache,
@@ -10,7 +10,7 @@ import {
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
@@ -82,6 +82,12 @@ interface LoadProgress {
   current: number
   total: number
   resource: string
+}
+
+async function resolveSourceStack(config: DataSourceConfig): Promise<GameDataSourceStack | null> {
+  if (config.type === 'bundled') return null
+  const bundled = await resolveDefaultBundledSource()
+  return bundled ? { base: bundled, additional: config } : null
 }
 
 /** How the current gameData was sourced this session. */
@@ -178,6 +184,8 @@ export const useGameDataStore = create<GameDataState>()(
           setLastContentFingerprint,
         } = get()
         const cache = await readGameDataCache()
+        const configuredStack = dataSourceConfig ? await resolveSourceStack(dataSourceConfig) : null
+        const cacheIdentity = configuredStack ?? dataSourceConfig
 
         if (!cache && !dataSourceConfig) {
           const bundledSource = await resolveDefaultBundledSource()
@@ -190,7 +198,7 @@ export const useGameDataStore = create<GameDataState>()(
         }
 
         if (cache && dataSourceConfig) {
-          if (!isCacheForSource(cache, dataSourceConfig)) {
+          if (!cacheIdentity || !isCacheForSource(cache, cacheIdentity)) {
             await loadGameData(dataSourceConfig)
             return {}
           }
@@ -257,7 +265,9 @@ export const useGameDataStore = create<GameDataState>()(
         try {
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
-          const data = await loadDataFromSource(config, {
+          const sourceStack = await resolveSourceStack(config)
+          const cacheIdentity = sourceStack ?? config
+          const loaderOptions: DataLoaderOptions = {
             onProgress: background
               ? undefined
               : (current, total, resource) => {
@@ -270,7 +280,10 @@ export const useGameDataStore = create<GameDataState>()(
               if (failure.required) failedRequiredResources.add(resource)
             },
             signal: controller.signal,
-          })
+          }
+          const data = sourceStack
+            ? await loadGameDataSourceStack(sourceStack, loaderOptions)
+            : await loadDataFromSource(config, loaderOptions)
 
           const existingData = get().gameData
           if (background && failedResources.size > 0) {
@@ -305,7 +318,7 @@ export const useGameDataStore = create<GameDataState>()(
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
           const cacheEntry = await enqueueCacheMutation(() =>
-            writeGameDataCache(data, config, {
+            writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
             }),

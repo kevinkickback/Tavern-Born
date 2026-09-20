@@ -108,9 +108,9 @@ export function AppStatusBar() {
     dataSourceConfig?.type === 'bundled'
       ? 'Included SRD'
       : dataSourceConfig?.type === 'local'
-        ? 'Game Data on This Computer'
+        ? 'Included SRD + Local Content'
         : dataSourceConfig?.type === 'remote'
-          ? 'Online Game Data'
+          ? 'Included SRD + Online Content'
           : null
 
   useEffect(() => {

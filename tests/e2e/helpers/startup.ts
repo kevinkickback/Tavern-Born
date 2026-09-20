@@ -65,6 +65,16 @@ export async function seedAppState(
     path: sourcePath,
     isValid: true,
   }
+  const bundledManifest =
+    resolvedConfig.type === 'bundled'
+      ? null
+      : await page.evaluate(async () => {
+          try {
+            return await window.electronAPI?.getBundledManifest()
+          } catch {
+            return null
+          }
+        })
   const sourceSnapshot =
     resolvedConfig.type === 'bundled'
       ? {
@@ -73,7 +83,36 @@ export async function seedAppState(
           packId: resolvedConfig.packId,
           packVersion: resolvedConfig.packVersion,
         }
-      : { type: resolvedConfig.type, path: resolvedConfig.path }
+      : {
+          type: resolvedConfig.type,
+          path: resolvedConfig.path,
+          ...(resolvedConfig.availableResources
+            ? { resources: [...new Set(resolvedConfig.availableResources)].sort() }
+            : {}),
+          ...(bundledManifest
+            ? {
+                layers: [
+                  {
+                    role: 'base',
+                    type: 'bundled',
+                    path: 'srd/core',
+                    packId: bundledManifest.packId,
+                    packVersion: bundledManifest.packVersion,
+                  },
+                  {
+                    role: 'additional',
+                    type: resolvedConfig.type,
+                    path: resolvedConfig.path,
+                    ...(resolvedConfig.availableResources
+                      ? {
+                          resources: [...new Set(resolvedConfig.availableResources)].sort(),
+                        }
+                      : {}),
+                  },
+                ],
+              }
+            : {}),
+        }
 
   await page.evaluate(
     async ({ cacheSeed, configSeed, characterSeed }) => {

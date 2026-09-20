@@ -61,7 +61,7 @@ describe('data source switching', () => {
     vi.unstubAllGlobals()
   })
 
-  test('replaces bundled data without merging or rewriting character identities', async () => {
+  test('adds external content without rewriting character identities', async () => {
     const user = userEvent.setup()
     const bundledData = makeGameDataFixture({
       classes: [
@@ -69,7 +69,7 @@ describe('data source switching', () => {
         makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
       ],
     })
-    const externalData = makeGameDataFixture({
+    const layeredData = makeGameDataFixture({
       classes: [
         makeClassFixture({ name: 'Wizard', source: 'PHB' }),
         makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
@@ -93,7 +93,7 @@ describe('data source switching', () => {
     })
     const loadGameData = vi.fn((config: DataSourceConfig) => {
       useGameDataStore.setState({
-        gameData: externalData,
+        gameData: layeredData,
         dataSourceConfig: { ...config, isValid: true },
         error: null,
         cacheStatus: 'fetched',
@@ -119,11 +119,11 @@ describe('data source switching', () => {
       'https://github.com/example/rules',
     )
     await waitFor(() => expect(validateDataSourceMock).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole('button', { name: 'Load Game Data' }))
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
 
-    await waitFor(() => expect(screen.getByText('Online Game Data')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Online Additional Content')).toBeTruthy())
     const gameDataState = useGameDataStore.getState()
-    expect(gameDataState.gameData).toBe(externalData)
+    expect(gameDataState.gameData).toBe(layeredData)
     expect(gameDataState.gameData?.classes.map(({ name, source }) => `${name}|${source}`)).toEqual([
       'Wizard|PHB',
       'Wizard|XPHB',
@@ -133,6 +133,7 @@ describe('data source switching', () => {
       type: 'remote',
       path: 'https://raw.githubusercontent.com/example/rules/main/data',
       isValid: true,
+      availableResources: ['class/index.json'],
     })
 
     const characterState = useCharacterStore.getState()

@@ -6,8 +6,9 @@ Status: in progress on `feature/bundled-srd-rules` (updated 2026-09-20).
 
 Ship Tavern Born with an offline, read-only catalog containing both SRD 5.1 (the 2014/5e rules)
 and SRD 5.2.1 (the 2024/5.5e rules). A fresh install must support character creation without a
-user-selected data source. Users may still replace the bundled catalog with an external 5etools
-checkout or URL for content they are entitled to use.
+user-selected data source. Users may add an external 5etools checkout or URL for content they are
+entitled to use. External content is composed above the Included SRD rather than making the offline
+catalog disappear.
 
 The bundle must use the existing 5etools-shaped resource files, validation, parsers, normalizers,
 lookups, filters, and `GameData` model. It must not introduce SRD-specific entity types or a second
@@ -20,19 +21,20 @@ rules engine.
    original `PHB`/`XPHB` source-qualified identities so existing ruleset filters separate them.
 2. **Same ingestion pipeline.** Select the source before resource loading, then run bundled,
    local, and remote resources through the same schemas, parsers, diagnostics, and lookup builder.
-3. **This implementation uses one active catalog.** For the bundled-SRD implementation, an external
-   full data source replaces the bundled parsed catalog. Never concatenate raw catalogs. This avoids
-   duplicate entities and ambiguous reprints while retaining stable `name|source` references when
-   users switch sources. Future homebrew support should use explicit parsed layers as described
-   below rather than extending this replacement model.
+3. **Compose parsed content layers.** The Included SRD is the permanent base. One optional external
+   5etools data source overlays it by canonical entity identity, with the external version winning
+   exact matches and omitted SRD entities remaining available. Parse each source independently and
+   never concatenate raw catalogs. The same internal boundary can support standalone add-on
+   documents later without making this feature a homebrew implementation.
 4. **Generated data stays outside `data/`.** The managed `data/` tree is read-only input. Generated
    snapshots belong under `resources/srd/` and ship through Electron's packaged resources.
 5. **Fail closed on licensing and dependency closure.** `srd` and `srd52` flags are candidate
    selectors, not sufficient provenance by themselves. Every distributed field must be traceable
    to the corresponding official SRD, and every unflagged supporting record must be explicitly
    justified or omitted.
-6. **Included content is the safe default.** Existing users keep their configured external source.
-   New users and users who choose “Revert to Included SRD” use the immutable bundled source.
+6. **Included content is the safe default.** Existing users keep their configured external source,
+   which is added above the immutable bundled source after migration. New users start with only the
+   Included SRD. Removing additional content never removes the base catalog.
 7. **Additional-content warnings use exact saved identities.** While the Included SRD is active,
    character cards compare source-qualified saved races/species, classes, subclasses,
    backgrounds, feats, spells, equipment, and structured choices with the loaded SRD catalog.
@@ -43,11 +45,11 @@ rules engine.
 
 | Concern | Existing owner | Planned change |
 | --- | --- | --- |
-| Source configuration | `src/types/5etools.ts` | Add a discriminated bundled source while retaining local/remote fields. |
-| Resource loading | `src/lib/5etools/dataLoader.ts` | Separate resource transport from the existing parse pipeline; add a bundled reader. |
+| Source configuration | `src/types/5etools.ts` | Retain individual source configs and add an ordered base/additional stack. |
+| Resource loading | `src/lib/5etools/dataLoader.ts`, `contentLayers.ts` | Load sources independently, compose parsed collections, and rebuild lookups. |
 | Local file capability | `electron/main.ts`, `electron/preload.ts` | Add a narrowly scoped, read-only bundled-JSON IPC capability. |
 | Startup and fallback | `src/store/gameDataStore.ts`, `src/hooks/data/useDataInit.ts` | Default to the bundled source and preserve last-known-good external data. |
-| Cache identity | `src/lib/storage/dataCache.ts` | Key source snapshots by stable source ID and bundled pack version. |
+| Cache identity | `src/lib/storage/dataCache.ts` | Key composed snapshots by both bundled-pack and external-source identity. |
 | First-run UI | `DataSourceStartupModal`, `DataSourceConfigurator` | Make bundled SRD the default and external setup optional. |
 | Packaging | `package.json`, bundle-budget checks | Ship versioned SRD resources and measure their packaged size separately. |
 
@@ -162,11 +164,11 @@ bundled fixture and a matching local fixture.
 - [x] Keep foreground/background replacement atomic. A failed external refresh retains the
   last-known-good external cache; if no usable external cache exists, offer an explicit bundled
   fallback and record diagnostics without deleting the external configuration.
-- [x] Replace destructive clear/rebuild controls with a “Change Game Data” flow. From that chooser,
-  external-source users can choose the warning-styled “Revert to Included SRD” action. Confirm that
-  it replaces the current data and removes its saved connection before proceeding, using the
-  standard accent action inside the confirmation dialog for consistent contrast. Do not show a
-  rebuild action while the Included SRD is already active.
+- [x] Replace destructive clear/rebuild controls with a “Change Additional Content” flow. External
+  users can choose the warning-styled “Remove Additional Content” action. Confirm that it removes
+  the saved external connection while retaining characters and the Included SRD, using the standard
+  accent action inside the confirmation dialog. Do not show a rebuild action while only the
+  Included SRD is active.
 - [x] Do not auto-refresh immutable bundled data. It changes only with an application release.
 
 Exit gate: first launch, cache reuse, app upgrade, external-source failure, source switching, and
@@ -178,15 +180,15 @@ cache clearing all end with a complete usable catalog.
   content is included. Its primary action continues with the Included SRD; a secondary “Add
   Additional Content” action opens the existing online/local controls and points users who need a
   starting place to the 5etools wiki.
-- [x] Rework `DataSourceConfigurator` into two clear states:
-  “Included SRD Rules,” “Online Game Data,” and “Game Data on This Computer.” Reuse the current
-  remote validation, local folder picker, load progress, cancellation, and error feedback.
+- [x] Rework `DataSourceConfigurator` into clear Included SRD and additional-content states. Reuse
+  the current remote validation, local folder picker, load progress, cancellation, and error
+  feedback.
 - [x] Show the Included SRD document versions, supported character rules, and offline availability
   in Game Data settings. Show location, update timestamps, and status only for external sources.
 - [x] Update the status bar and empty states to use reader-facing “Included SRD” and “Game Data”
   language instead of reporting no data on a normal installation.
-- [x] Explain that external data is user supplied, replaces the bundled presentation catalog, and
-  is not distributed by Tavern Born.
+- [x] Explain that external data is user supplied, expands the Included SRD catalog, and is not
+  distributed by Tavern Born.
 - [x] Preserve forced setup as a recoverable settings flow, but never require network access or a
   folder selection to enter the app.
 - [x] Rename the user-facing Sources workspace to “Additional Content” while retaining the existing
@@ -212,7 +214,7 @@ cache clearing all end with a complete usable catalog.
   current layout is intentionally unchanged for this implementation slice.
 
 Exit gate: a first-time user can remain offline and reach character creation with one confirmation;
-an advanced user can configure, refresh, replace, and leave an external source.
+an advanced user can configure, refresh, change, and remove an external source.
 
 ## Phase 5 — Notices, Documentation, and Release Packaging
 
@@ -240,11 +242,11 @@ an advanced user can configure, refresh, replace, and leave an external source.
     snapshot.
 - [ ] Add offline end-to-end journeys for representative 2014 and 2024 characters: create, edit,
   save, reload, open rules previews/compendium, and export PDF.
-- [ ] Verify switching to a full external source produces no duplicate core choices and does not
-  rewrite saved SRD `name|source` references.
-  - [x] Add an integration contract proving that an external catalog replaces rather than merges
-    the bundled catalog and that the saved and active character snapshots remain byte-for-byte
-    unchanged across the switch.
+- [ ] Verify adding a full external source produces no duplicate core choices and does not rewrite
+  saved SRD `name|source` references.
+  - [x] Add composition and integration contracts proving that an external catalog overlays exact
+    identities, retains omitted SRD entities, and leaves saved and active character snapshots
+    byte-for-byte unchanged.
 - [ ] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
   Biome, TypeScript, Knip, dependency boundaries, production build, release checks, and revised
   bundle budgets.
@@ -275,24 +277,44 @@ keeps architecture work reviewable without accidentally shipping unaudited conte
 - No generated content is written under `data/`, no non-SRD content or art is packaged, and no
   network connection is required for bundled operation.
 
-## Future Content-Layering Direction
+## Content-Layering Implementation
 
-Before adding homebrew, replace the single-catalog configuration with an ordered, provenance-aware
-composition:
+The SRD implementation now uses an ordered, provenance-aware composition. This work is about making
+the Included SRD a permanent base; it intentionally does not add a homebrew import surface:
 
 1. Keep the Included SRD as the always-available fallback layer.
-2. Allow one optional full 5etools-compatible data source to overlay it. A source-qualified entity
+2. Allow one optional 5etools-compatible data source to overlay it. A source-qualified entity
    supplied by that source wins; an SRD entity omitted from it remains available from the fallback.
-3. Allow zero or more homebrew/add-on layers above the base content. Require their own source codes
-   and reject silent collisions unless an explicit override contract is introduced.
+3. Reserve zero or more future add-on layers above the base content. They will require their own
+   source codes and must reject silent collisions unless an explicit override contract is added.
 4. Parse and validate each layer independently, then compose normalized `GameData` collections by
    their canonical source-qualified identities. Do not concatenate raw 5etools JSON.
 5. Resolve cross-record references against the completed catalog and cache the ordered source list,
    per-layer fingerprints, precedence, and provenance so refreshes remain atomic and explainable.
 
-This model supports Included SRD plus homebrew, preserves SRD options missing from an external data
-source, and keeps existing character references stable. It requires a dedicated design and
-migration slice and is the next planned implementation before the 0.5.0 release.
+Current progress:
+
+- [x] Add a base/additional source-stack contract without invalidating existing persisted external
+  source selections.
+- [x] Load the Included SRD and an external source independently, compose normalized collections by
+  identity, and rebuild lookups from the result.
+- [x] Retain omitted SRD entities, replace exact top-level identities with richer external records,
+  and use parent/level-aware identity for class features.
+- [x] Cache the identities of both layers so either an SRD pack update or external-source change
+  invalidates the composed cache.
+- [x] Update Settings and status language so additional content is added or removed rather than
+  replacing or reverting the Included SRD.
+- [x] Allow coherent partial 5etools directory/URL layers through a persisted top-level capability
+  inventory while rejecting malformed resources, broken indexes, and inventoried families that
+  disappear during refresh.
+- [ ] Resolve supported cross-layer references after composition and report missing hard
+  dependencies without partially applying a layer.
+  - [x] Re-link unresolved class-feature references against the completed catalog and rebuild their
+    normalized class rules.
+- [ ] Extend the persisted capability inventory with per-layer fingerprints and richer diagnostics
+  for atomic refreshes.
+- [ ] Add standalone 5etools homebrew/add-on document import in a future feature; do not require a
+  repository folder structure or index for those documents.
 
 ## Explicit Non-Goals
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const { idbGetMock, idbSetMock } = vi.hoisted(() => ({
   idbGetMock: vi.fn<() => Promise<unknown>>(async () => null),
@@ -243,5 +243,36 @@ describe('isCacheForSource', () => {
 
     expect(isCacheForSource(entry, bundled)).toBe(true)
     expect(isCacheForSource(entry, { ...bundled, packVersion: '1.0.1' })).toBe(false)
+  })
+
+  test('keys a layered cache by both the Included SRD and additional source', async () => {
+    const stack: GameDataSourceStack = {
+      base: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+      additional: { ...config, availableResources: ['feats.json'] },
+    }
+
+    const entry = await writeGameDataCache(makeGameData(), stack)
+
+    expect(entry.sourceSnapshot.layers).toHaveLength(2)
+    expect(isCacheForSource(entry, stack)).toBe(true)
+    expect(
+      isCacheForSource(entry, {
+        ...stack,
+        base: { ...stack.base, packVersion: '1.0.1' },
+      }),
+    ).toBe(false)
+    expect(isCacheForSource(entry, config)).toBe(false)
+    expect(
+      isCacheForSource(entry, {
+        ...stack,
+        additional: { ...config, availableResources: ['class/index.json'] },
+      }),
+    ).toBe(false)
   })
 })

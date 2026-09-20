@@ -79,6 +79,7 @@ function throwIfAborted(signal?: AbortSignal): void {
 
 export class FiveEToolsDataLoader {
   private sourceType: DataSourceConfig['type']
+  private availableResources: Set<string> | null
   private reader: JsonResourceReader
 
   constructor(
@@ -86,6 +87,10 @@ export class FiveEToolsDataLoader {
     reader: JsonResourceReader = createJsonResourceReader(config),
   ) {
     this.sourceType = config.type
+    this.availableResources =
+      config.type !== 'bundled' && config.availableResources
+        ? new Set(config.availableResources)
+        : null
     this.reader = reader
   }
 
@@ -119,6 +124,9 @@ export class FiveEToolsDataLoader {
       { key: 'rewards', file: 'rewards.json' },
       { key: 'cultsBoons', file: 'cultsboons.json' },
     ]
+    const configuredResources = this.availableResources
+      ? resources.filter((resource) => this.availableResources?.has(resource.file))
+      : resources
 
     const gameData: GameData = {
       races: [],
@@ -159,7 +167,7 @@ export class FiveEToolsDataLoader {
     let loadedTopLevelResources = 0
 
     let completedResources = 0
-    await mapWithConcurrency(resources, DATA_FETCH_CONCURRENCY, async (resource) => {
+    await mapWithConcurrency(configuredResources, DATA_FETCH_CONCURRENCY, async (resource) => {
       throwIfAborted(options?.signal)
 
       try {
@@ -283,16 +291,18 @@ export class FiveEToolsDataLoader {
       } finally {
         completedResources += 1
         if (options?.onProgress) {
-          options.onProgress(completedResources, resources.length, resource.file)
+          options.onProgress(completedResources, configuredResources.length, resource.file)
         }
       }
     })
 
-    if (this.sourceType !== 'local' && loadedTopLevelResources === 0) {
+    if (loadedTopLevelResources === 0) {
       throw new Error(
         this.sourceType === 'bundled'
           ? 'Unable to load the included SRD. Reinstall Tavern Born or restore the application files.'
-          : 'Unable to load remote data source. Check internet connectivity and source URL.',
+          : this.sourceType === 'remote'
+            ? 'Unable to load additional content. Check internet connectivity and the source address.'
+            : 'Unable to load additional content from the selected folder.',
       )
     }
 
@@ -350,7 +360,7 @@ export class FiveEToolsDataLoader {
     }
 
     if (options?.onProgress) {
-      options.onProgress(resources.length, resources.length, 'Complete')
+      options.onProgress(configuredResources.length, configuredResources.length, 'Complete')
     }
 
     return gameData

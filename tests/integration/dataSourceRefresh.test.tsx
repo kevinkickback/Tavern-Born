@@ -62,7 +62,7 @@ describe('data source refresh feedback', () => {
     expect(toast.info).not.toHaveBeenCalledWith('Data is already up to date')
   })
 
-  test('restores bundled SRD data without clearing the current source first', async () => {
+  test('removes additional content without clearing the current source first', async () => {
     const user = userEvent.setup()
     const onSourceLoaded = vi.fn()
     const restoreBundledData = vi.fn(() => {
@@ -81,22 +81,24 @@ describe('data source refresh feedback', () => {
     useGameDataStore.setState({ restoreBundledData })
     render(<DataSourceConfigurator onSourceLoaded={onSourceLoaded} />)
 
-    expect(screen.queryByRole('button', { name: 'Revert to Included SRD' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Change Game Data' }))
-    const revertButton = screen.getByRole('button', { name: 'Revert to Included SRD' })
+    expect(screen.queryByRole('button', { name: 'Remove Additional Content' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+    const revertButton = screen.getByRole('button', { name: 'Remove Additional Content' })
     expect(revertButton.className).toContain('border-warning')
     await user.click(revertButton)
 
     const confirmation = screen.getByRole('alertdialog')
-    expect(confirmation.textContent).toContain('removes its saved connection')
-    expect(confirmation.textContent).toContain('characters will not be deleted')
+    expect(confirmation.textContent).toContain('removes the saved connection')
+    expect(confirmation.textContent).toContain('your characters will remain')
     expect(restoreBundledData).not.toHaveBeenCalled()
-    await user.click(within(confirmation).getByRole('button', { name: 'Revert to Included SRD' }))
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Remove Additional Content' }),
+    )
 
     await waitFor(() => {
       expect(restoreBundledData).toHaveBeenCalledTimes(1)
-      expect(toast.success).toHaveBeenCalledWith('Included SRD is ready', {
-        description: 'The included 2014 and 2024 SRD rules are ready to use.',
+      expect(toast.success).toHaveBeenCalledWith('Additional content removed', {
+        description: 'The included 2014 and 2024 SRD rules remain ready to use.',
       })
       expect(onSourceLoaded).toHaveBeenCalledTimes(1)
     })

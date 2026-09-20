@@ -761,12 +761,62 @@ describe('5etools/dataLoader', () => {
     const onResourceFailure = vi.fn()
 
     await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
-      'Unable to load remote data source. Check internet connectivity and source URL.',
+      'Unable to load additional content. Check internet connectivity and the source address.',
     )
     expect(onResourceFailure).toHaveBeenCalledWith('books.json', { required: true })
     expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
     expect(onResourceFailure).toHaveBeenCalledWith('generated/gendata-spell-source-lookup.json', {
       required: true,
     })
+  })
+
+  test('loads an inventoried partial external source without reporting absent families', async () => {
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: vi.fn((relativePath: string) => {
+        if (relativePath === 'feats.json') {
+          return Promise.resolve({ feat: [{ name: 'Focused', source: 'TEST' }] })
+        }
+        return Promise.reject(new Error('missing'))
+      }),
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:partial-data',
+        isValid: true,
+        availableResources: ['feats.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    const gameData = await loader.loadAllData({ onResourceFailure })
+
+    expect(gameData.feats).toEqual([expect.objectContaining({ name: 'Focused', source: 'TEST' })])
+    expect(onResourceFailure).not.toHaveBeenCalled()
+  })
+
+  test('rejects a refresh when an inventoried partial-source family disappears', async () => {
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: vi.fn(() => Promise.reject(new Error('missing'))),
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:partial-data',
+        isValid: true,
+        availableResources: ['feats.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
+      'Unable to load additional content from the selected folder.',
+    )
+    expect(onResourceFailure).toHaveBeenCalledWith('feats.json', { required: true })
+    expect(onResourceFailure).not.toHaveBeenCalledWith('books.json', expect.anything())
   })
 })

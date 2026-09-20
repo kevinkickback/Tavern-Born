@@ -7,32 +7,35 @@ guides and code, not duplicated here.
 
 Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dataCache`.
 
-1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB. A source
-   can be the immutable bundled SRD pack, an authorized local directory, or a remote HTTPS root.
+1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB. The
+   immutable bundled SRD is the base source; an authorized local directory or remote HTTPS root can
+   be configured as one additional-content source.
 2. Theme bootstrap data is applied from local storage before React paints, then reconciled with
    hydrated preferences.
 3. `useDataInit` waits for hydration and chooses cache, foreground load, or source configuration.
 4. A usable cache starts the app immediately. Stale data refreshes in the background.
-5. The loader fetches, validates, parses, normalizes, and indexes the configured source.
-6. A successful complete result replaces memory/cache atomically. Failed or superseded loads do not.
+5. Each configured source is fetched, validated, parsed, and normalized independently. Parsed
+   collections are composed by canonical identity and lookups are rebuilt from the result.
+6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads
+   do not.
 
 The bundled manifest is read through a fixed Electron capability. Packaged builds admit only a
 manifest marked `approved-for-distribution`. Unpackaged development builds may use the ignored
 `.tmp/srd-review` snapshot so the bundled workflow can be tested before provenance approval; this
 path is never packaged. Bundled cache entries are immutable for their pack version and are never
-background-refreshed. “Revert to Included SRD” loads and validates the admitted catalog before
-replacing an external source; failure keeps the existing data, cache, and external configuration
-while exposing a diagnostic. For an active bundled source, the same action rebuilds parsed data
-without first making the application content-free.
+background-refreshed. “Remove Additional Content” loads and validates the admitted bundled catalog
+before removing the saved external connection; failure keeps the existing data, cache, and external
+configuration while exposing a diagnostic. The rebuild is atomic and never makes the application
+content-free.
 
 After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
 available offline. Continuing requires no source setup; “Add Additional Content” opens the existing
-external-source controls and explains that user-supplied content replaces the bundled catalog. A
-Back action returns to the Included SRD introduction without dismissing or acknowledging it.
-When external game data is active, “Change Game Data” opens the same chooser and offers “Revert to
-Included SRD” alongside online and local options; the action is not shown as a separate active-state
-action. The Included SRD summary shows its SRD document versions, supported character rules, and
-offline availability rather than internal pack or cache status.
+external-source controls and explains that user-supplied content expands the bundled catalog. A Back
+action returns to the Included SRD introduction without dismissing or acknowledging it. When
+external content is active, “Change Additional Content” opens the same chooser and offers “Remove
+Additional Content” alongside online and local options; the action is not shown as a separate
+active-state action. The Included SRD summary shows its SRD document versions, supported character
+rules, and offline availability rather than internal pack or cache status.
 
 Bundled transport and version-aware cache identity are implemented. While the generated pack has
 `provenance-review-required` status, bundled-first startup is available only in unpackaged
@@ -40,8 +43,9 @@ development after `npm run review:srd`; existing local/remote startup remains th
 behavior until the reviewed pack is committed and included in release resources.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
-parsed content fingerprint changes. Background refreshes never replace a more complete catalog
-with partial or empty data.
+composed content fingerprint changes. Layered cache identity includes both the bundled pack and the
+external source, so either source changing invalidates the effective catalog. Background refreshes
+never replace a more complete catalog with partial or empty data.
 
 ## Character draft and save
 

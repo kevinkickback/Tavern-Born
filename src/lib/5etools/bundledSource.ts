@@ -1,5 +1,6 @@
-import type { DataSourceConfig } from '@/types/5etools'
-export type BundledDataSourceConfig = Extract<DataSourceConfig, { type: 'bundled' }>
+import type { BundledDataSourceConfig } from '@/types/5etools'
+
+export type { BundledDataSourceConfig } from '@/types/5etools'
 
 export async function resolveDefaultBundledSource(): Promise<BundledDataSourceConfig | null> {
   const getBundledManifest = window.electronAPI?.getBundledManifest
