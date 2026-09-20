@@ -129,16 +129,16 @@ bundled fixture and a matching local fixture.
   or versions through UI code.
 - [ ] When hydration finds neither a configured source nor a compatible cache, load the bundled
   source automatically. Remove `unconfigured` as a normal fresh-install terminal state.
-- [ ] Preserve existing local/remote choices during migration; do not silently replace a working
+- [x] Preserve existing local/remote choices during migration; do not silently replace a working
   external source for an existing user.
-- [ ] Include bundled pack ID/version in cache identity so an app update invalidates only an older
+- [x] Include bundled pack ID/version in cache identity so an app update invalidates only an older
   snapshot cache. Keep parsed-content fingerprints deterministic.
 - [ ] Keep foreground/background replacement atomic. A failed external refresh retains the
   last-known-good external cache; if no usable external cache exists, offer an explicit bundled
   fallback and record diagnostics without deleting the external configuration.
 - [ ] Change “Clear Data” into “Restore bundled SRD” for external sources. For the bundled source,
   allow rebuilding its parsed cache without making the app content-free.
-- [ ] Do not auto-refresh immutable bundled data. It changes only with an application release.
+- [x] Do not auto-refresh immutable bundled data. It changes only with an application release.
 
 Exit gate: first launch, cache reuse, app upgrade, external-source failure, source switching, and
 cache clearing all end with a complete usable catalog.

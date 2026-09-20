@@ -187,7 +187,7 @@ export const useGameDataStore = create<GameDataState>()(
             await loadGameData(dataSourceConfig)
             return {}
           }
-          if (isCacheStale(cache.cachedAt)) {
+          if (dataSourceConfig.type !== 'bundled' && isCacheStale(cache.cachedAt)) {
             setGameData(cache.data)
             setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
             setLastContentFingerprint(cache.contentFingerprint ?? null)
@@ -206,7 +206,7 @@ export const useGameDataStore = create<GameDataState>()(
             : Number.NaN
           const checkedRecently =
             Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
-          if (opts?.forceCheck || !checkedRecently) {
+          if (dataSourceConfig.type !== 'bundled' && (opts?.forceCheck || !checkedRecently)) {
             return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
           }
           return {}

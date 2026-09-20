@@ -229,6 +229,50 @@ describe('useDataInit', () => {
     expect(toast.info).not.toHaveBeenCalled()
   })
 
+  test('treats a matching bundled cache as immutable regardless of age or refresh preference', async () => {
+    const config: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '0.1.0-dev',
+      isValid: true,
+    }
+    const cacheData = makeGameData()
+    const loadGameDataMock = vi.fn(async () => false)
+
+    vi.mocked(readGameDataCache).mockResolvedValue({
+      data: cacheData,
+      cachedAt: '2020-01-01T00:00:00.000Z',
+      sourceSnapshot: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '0.1.0-dev',
+      },
+      lastDataChangedAt: '2020-01-01T00:00:00.000Z',
+    })
+    vi.mocked(isCacheForSource).mockReturnValue(true)
+    vi.mocked(isCacheStale).mockReturnValue(true)
+    useAppPreferencesStore.setState({ autoRefreshGameData: true })
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: config,
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(useGameDataStore.getState().cacheStatus).toBe('fresh')
+    })
+    expect(useGameDataStore.getState().gameData).toBe(cacheData)
+    expect(isCacheStale).not.toHaveBeenCalled()
+    expect(loadGameDataMock).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
   test('loads from source directly when no cache exists', async () => {
     const config: DataSourceConfig = {
       type: 'remote',
