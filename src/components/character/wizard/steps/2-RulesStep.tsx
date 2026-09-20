@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import { getSourceCompatibility, normalizeAllowedSources } from '@/lib/sourceCompatibility'
 import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
@@ -20,7 +21,10 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   const battleragerAnyRaceId = useId()
 
   const preferNewerPrintingsId = useId()
-  const allowedSources = data.allowedSources || []
+  const configuredSources = data.allowedSources || []
+  const allowedSources = data.originSystem
+    ? normalizeAllowedSources(configuredSources, data.originSystem, sources)
+    : configuredSources
   const availableSourceSet = new Set(sources.map((source) => source.abbreviation))
 
   const sourcesByGroup = sources.reduce<Record<string, SourceBook[]>>((acc, source) => {
@@ -43,21 +47,27 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
   const toggleSource = (sourceAbbr: string) => {
-    const currentSources = data.allowedSources || []
-    if (currentSources.includes(sourceAbbr)) {
-      onChange({
-        allowedSources: currentSources.filter((s: string) => s !== sourceAbbr),
-      })
-    } else {
-      onChange({ allowedSources: [...currentSources, sourceAbbr] })
-    }
+    const source = sources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
+    if (data.originSystem && !getSourceCompatibility(source, data.originSystem).compatible) return
+    const currentSources = allowedSources
+    const nextSources = currentSources.includes(sourceAbbr)
+      ? currentSources.filter((source) => source !== sourceAbbr)
+      : [...currentSources, sourceAbbr]
+    const normalizedSources = data.originSystem
+      ? normalizeAllowedSources(nextSources, data.originSystem, sources)
+      : nextSources
+    onChange({ allowedSources: normalizedSources })
   }
 
   const applySourcePreset = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
     )
-    onChange({ allowedSources: presetSources })
+    onChange({
+      allowedSources: data.originSystem
+        ? normalizeAllowedSources(presetSources, data.originSystem, sources)
+        : presetSources,
+    })
   }
 
   const selectNoneSources = () => {
@@ -80,7 +90,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   const hasNonPresetSourcesSelected = allowedSources.some(
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
-  const preferNewerPrintingsEnabled = data.variantRules?.preferNewerPrintings ?? false
+  const preferNewerPrintingsEnabled =
+    data.originSystem === '2024' || (data.variantRules?.preferNewerPrintings ?? false)
 
   const abilityScoreMethods = getAbilityScoreMethodOptions(
     data.originSystem === '2024' ? '2024' : '2014',
@@ -139,7 +150,24 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => onChange({ originSystem: option.value })}
+                  onClick={() =>
+                    onChange({
+                      originSystem: option.value,
+                      allowedSources: normalizeAllowedSources(
+                        configuredSources,
+                        option.value,
+                        sources,
+                      ),
+                      ...(option.value === '2024'
+                        ? {
+                            variantRules: {
+                              ...data.variantRules,
+                              preferNewerPrintings: true,
+                            },
+                          }
+                        : {}),
+                    })
+                  }
                   className={cn(
                     'relative rounded-md border px-4 py-3 pl-10 text-left transition-colors',
                     selected
@@ -260,7 +288,12 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                   </div>
                   <Switch
                     id={id}
-                    checked={data.variantRules?.[key] || false}
+                    checked={
+                      key === 'preferNewerPrintings'
+                        ? preferNewerPrintingsEnabled
+                        : data.variantRules?.[key] || false
+                    }
+                    disabled={key === 'preferNewerPrintings' && data.originSystem === '2024'}
                     onCheckedChange={(checked) =>
                       onChange({
                         variantRules: { ...data.variantRules, [key]: checked },
@@ -343,35 +376,49 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                         {groupLabels[group]}
                       </h5>
                       <div className="grid grid-cols-2 gap-2">
-                        {groupSources.map((source) => (
-                          <button
-                            type="button"
-                            key={source.abbreviation}
-                            onClick={() => toggleSource(source.abbreviation)}
-                            className={cn(
-                              'px-3 py-2.5 rounded-md border text-left transition-all text-sm flex items-start gap-2',
-                              data.allowedSources?.includes(source.abbreviation)
-                                ? 'border-accent bg-accent/10 text-foreground'
-                                : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
-                            )}
-                          >
-                            <BookOpen
+                        {groupSources.map((source) => {
+                          const compatibility = data.originSystem
+                            ? getSourceCompatibility(source, data.originSystem)
+                            : { compatible: true as const, reason: undefined }
+                          return (
+                            <button
+                              type="button"
+                              key={source.abbreviation}
+                              onClick={() => toggleSource(source.abbreviation)}
+                              disabled={!compatibility.compatible}
+                              title={compatibility.reason}
                               className={cn(
-                                'h-4 w-4 flex-shrink-0 mt-0.5',
-                                data.allowedSources?.includes(source.abbreviation)
-                                  ? 'text-primary'
-                                  : 'text-muted-foreground',
+                                'px-3 py-2.5 rounded-md border text-left transition-all text-sm flex items-start gap-2',
+                                !compatibility.compatible &&
+                                  'cursor-not-allowed opacity-50 hover:border-border hover:text-muted-foreground',
+                                allowedSources.includes(source.abbreviation)
+                                  ? 'border-accent bg-accent/10 text-foreground'
+                                  : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
                               )}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold truncate">{source.name}</div>
-                              <div className="text-xs font-mono text-muted-foreground">
-                                {source.abbreviation}
-                                {source.year && ` (${source.year})`}
+                            >
+                              <BookOpen
+                                className={cn(
+                                  'h-4 w-4 flex-shrink-0 mt-0.5',
+                                  allowedSources.includes(source.abbreviation)
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground',
+                                )}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold truncate">{source.name}</div>
+                                <div className="text-xs font-mono text-muted-foreground">
+                                  {source.abbreviation}
+                                  {source.year && ` (${source.year})`}
+                                </div>
+                                {!compatibility.compatible && (
+                                  <div className="mt-0.5 text-[11px] text-warning">
+                                    {compatibility.reason}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )
@@ -394,8 +441,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                     <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
                     <span>
                       {preferNewerPrintingsEnabled
-                        ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
-                        : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
+                        ? 'Revised replacements are always used. Compatible older options remain available when no revised version exists.'
+                        : ''}
                     </span>
                   </div>
                 )}

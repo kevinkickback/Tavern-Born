@@ -1,4 +1,13 @@
 <details>
+<summary><strong>v0.5.0</strong></summary>
+
+## ✨ Changes
+
+* Fixed source selection allowing incompatible 2014 and 2024 rulebooks to be combined; revised characters can still use compatible legacy options when no revised replacement exists
+
+</details>
+
+<details>
 <summary><strong>v0.4.1</strong></summary>
 
 ## ✨ Changes

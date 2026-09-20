@@ -138,6 +138,29 @@ export const FEAT_CATEGORY_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
 
 export const NON_STANDARD_FEAT_SELECTION_CATEGORIES = new Set(['O', 'EB', 'FS:P', 'FS:R'])
 
+/**
+ * 2014 PHB options that the 2024 PHB explicitly leaves available because it
+ * does not contain a replacement. These are compatibility metadata, not
+ * duplicated entity definitions; the entities still come from parsed data.
+ */
+export const XPHB_LEGACY_RACE_KEYS = new Set(['Half-Elf|PHB', 'Half-Orc|PHB'])
+
+export const XPHB_LEGACY_FEAT_KEYS = new Set([
+  'Dungeon Delver|PHB',
+  'Linguist|PHB',
+  'Martial Adept|PHB',
+])
+
+export const XPHB_LEGACY_SUBCLASS_KEYS = new Set([
+  'Cleric|XPHB|Knowledge Domain|PHB',
+  'Cleric|XPHB|Nature Domain|PHB',
+  'Cleric|XPHB|Tempest Domain|PHB',
+  'Wizard|XPHB|School of Conjuration|PHB',
+  'Wizard|XPHB|School of Enchantment|PHB',
+  'Wizard|XPHB|School of Necromancy|PHB',
+  'Wizard|XPHB|School of Transmutation|PHB',
+])
+
 export const LEGACY_SUBCLASS_PREREQUISITE_FIXUPS = {
   'Wizard|PHB|Bladesinger|SCAG': {
     variantOverride: 'bladesingerAnyRace',

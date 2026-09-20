@@ -372,14 +372,20 @@ describe('5etools/parsers', () => {
   })
 
   test('buildSourcesList builds and sorts core sources with PHB before DMG', () => {
-    const list = buildSourcesList(['DMG', 'XPHB'], {
-      book: [
-        { id: 'DMG', name: 'Dungeon Master Guide', group: 'core' },
-        { id: 'XPHB', name: 'Players Handbook', group: 'core' },
-      ],
-    })
+    const list = buildSourcesList(
+      ['DMG', 'XPHB'],
+      {
+        book: [
+          { id: 'DMG', name: 'Dungeon Master Guide', group: 'core' },
+          { id: 'XPHB', name: 'Players Handbook', group: 'core' },
+        ],
+      },
+      undefined,
+      new Set(['XPHB']),
+    )
 
     expect(list.map((s) => s.abbreviation)).toEqual(['XPHB', 'DMG'])
+    expect(list[0]?.minimumRuleset).toBe('2024')
   })
 
   test('buildSourcesList is deterministic for mixed dates and equal names', () => {

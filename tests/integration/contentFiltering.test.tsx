@@ -165,7 +165,7 @@ describe('Content Filtering (allowedSources)', () => {
 
     test('preferNewerPrintings suppresses nested class reprints', () => {
       const character = makeCharacterFixture({
-        allowedSources: ['PHB', 'XPHB'],
+        allowedSources: ['PHB', 'TCE'],
         variantRules: { preferNewerPrintings: true },
       })
       useCharacterStore.setState({ activeCharacter: character, characters: [character] })
@@ -180,9 +180,9 @@ describe('Content Filtering (allowedSources)', () => {
                 {
                   name: 'Legacy Training',
                   source: 'PHB',
-                  reprintedAs: ['Legacy Training|XPHB'],
+                  reprintedAs: ['Legacy Training|TCE'],
                 },
-                { name: 'Legacy Training', source: 'XPHB' },
+                { name: 'Legacy Training', source: 'TCE' },
               ],
               subclasses: [
                 {
@@ -190,12 +190,12 @@ describe('Content Filtering (allowedSources)', () => {
                   shortName: 'Legacy',
                   source: 'PHB',
                   className: 'Wizard',
-                  reprintedAs: ['Current School|Wizard|XPHB|XPHB'],
+                  reprintedAs: ['Current School|Wizard|TCE|TCE'],
                 },
                 {
                   name: 'Current School',
                   shortName: 'Current',
-                  source: 'XPHB',
+                  source: 'TCE',
                   className: 'Wizard',
                 },
               ],
@@ -207,7 +207,7 @@ describe('Content Filtering (allowedSources)', () => {
       const { result } = renderHook(() => useFilteredGameData())
 
       expect(result.current.classes[0]?.classFeatures).toEqual([
-        { name: 'Legacy Training', source: 'XPHB' },
+        { name: 'Legacy Training', source: 'TCE' },
       ])
       expect(result.current.classes[0]?.subclasses?.map((subclass) => subclass.shortName)).toEqual([
         'Current',
@@ -242,6 +242,118 @@ describe('Content Filtering (allowedSources)', () => {
       const { result } = renderHook(() => useFilteredGameData())
 
       expect(result.current.spells.length).toBe(4)
+    })
+  })
+
+  describe('Ruleset compatibility', () => {
+    test('2014 characters ignore revised-only sources and revised core counterparts', () => {
+      const character = makeCharacterFixture({
+        originSystem: '2014',
+        allowedSources: ['DMG', 'XDMG', 'EFA'],
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          sources: [
+            { abbreviation: 'PHB', name: 'PHB', group: 'core' },
+            { abbreviation: 'DMG', name: 'DMG', group: 'core' },
+            { abbreviation: 'XDMG', name: 'XDMG', group: 'core', minimumRuleset: '2024' },
+            { abbreviation: 'EFA', name: 'EFA', group: 'setting', minimumRuleset: '2024' },
+          ],
+          backgrounds: [
+            { name: 'Sage', source: 'PHB' },
+            { name: 'Revised Inventor', source: 'EFA', edition: 'one' },
+          ],
+          items: [
+            { name: 'Legacy Relic', source: 'DMG', type: 'wondrous item' },
+            { name: 'Revised Relic', source: 'XDMG', type: 'wondrous item' },
+          ],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.backgrounds.map((background) => background.name)).toEqual(['Sage'])
+      expect(result.current.items.map((item) => item.name)).toEqual(['Legacy Relic'])
+    })
+
+    test('2024 characters use revised replacements and retain explicit legacy exceptions', () => {
+      const character = makeCharacterFixture({
+        originSystem: '2024',
+        allowedSources: ['TCE', 'DMG', 'XDMG'],
+        variantRules: { preferNewerPrintings: false },
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          sources: [
+            { abbreviation: 'XPHB', name: 'XPHB', group: 'core', minimumRuleset: '2024' },
+            { abbreviation: 'DMG', name: 'DMG', group: 'core' },
+            { abbreviation: 'XDMG', name: 'XDMG', group: 'core', minimumRuleset: '2024' },
+            { abbreviation: 'TCE', name: 'TCE', group: 'supplement' },
+          ],
+          races: [
+            { name: 'Half-Orc', source: 'PHB' },
+            { name: 'Human', source: 'PHB', reprintedAs: ['Human|XPHB'] },
+            { name: 'Human', source: 'XPHB', edition: 'one' },
+          ],
+          feats: [
+            { name: 'Martial Adept', source: 'PHB' },
+            { name: 'Alert', source: 'TCE', reprintedAs: ['Alert|XPHB'] },
+            { name: 'Alert', source: 'XPHB' },
+          ],
+          classes: [
+            {
+              name: 'Cleric',
+              source: 'XPHB',
+              subclasses: [
+                {
+                  name: 'Knowledge Domain',
+                  shortName: 'Knowledge',
+                  source: 'PHB',
+                  className: 'Cleric',
+                  classSource: 'XPHB',
+                  subclassFeatures: [
+                    {
+                      name: 'Blessings of Knowledge',
+                      source: 'PHB',
+                    },
+                  ],
+                },
+                {
+                  name: 'Life Domain',
+                  shortName: 'Life',
+                  source: 'PHB',
+                  className: 'Cleric',
+                  classSource: 'XPHB',
+                },
+              ],
+            },
+          ],
+          items: [
+            { name: 'Legacy Relic', source: 'DMG', type: 'wondrous item' },
+            { name: 'Revised Relic', source: 'XDMG', type: 'wondrous item' },
+          ],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.races.map((race) => `${race.name}|${race.source}`)).toEqual([
+        'Half-Orc|PHB',
+        'Human|XPHB',
+      ])
+      expect(result.current.feats.map((feat) => `${feat.name}|${feat.source}`)).toEqual([
+        'Martial Adept|PHB',
+        'Alert|XPHB',
+      ])
+      expect(result.current.classes[0]?.subclasses?.map((subclass) => subclass.name)).toEqual([
+        'Knowledge Domain',
+      ])
+      expect(result.current.classes[0]?.subclasses?.[0].subclassFeatures).toEqual([
+        { name: 'Blessings of Knowledge', source: 'PHB' },
+      ])
+      expect(result.current.items.map((item) => item.name)).toEqual(['Revised Relic'])
     })
   })
 
