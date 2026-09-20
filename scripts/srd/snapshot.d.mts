@@ -64,6 +64,27 @@ export interface SrdSnapshot {
       exclusions: Record<string, number>
       exclusionReasons: Record<string, string>
       strippedMetadata: Record<string, number>
+      records: Array<
+        | {
+            relativePath: string
+            collection: string
+            identity: string
+            recordSha256: string
+            provenanceType: 'root-marker'
+            marker: 'srd' | 'srd52'
+            srdVersion: string
+          }
+        | {
+            relativePath: string
+            collection: string
+            identity: string
+            recordSha256: string
+            provenanceType: 'approved-dependency'
+            srdVersion: string
+            officialSection: string
+            reason: string
+          }
+      >
     }
     files: Record<string, string>
   }

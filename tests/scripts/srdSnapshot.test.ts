@@ -241,6 +241,38 @@ describe('bundled SRD snapshot generator', () => {
       'G|PHB',
       'M|PHB',
     ])
+    expect(first.manifest.coverage.records).toHaveLength(8)
+    expect(first.manifest.coverage.records).toContainEqual({
+      relativePath: 'data/items.json',
+      collection: 'item',
+      identity: 'Rope|PHB',
+      recordSha256: sha256(
+        stableJson(JSON.parse(first.files.get('data/items.json') ?? '{}').item[0]),
+      ),
+      provenanceType: 'root-marker',
+      marker: 'srd',
+      srdVersion: '5.1',
+    })
+    expect(first.manifest.coverage.records).toContainEqual(
+      expect.objectContaining({
+        relativePath: 'data/spells/spells-xphb.json',
+        collection: 'spell',
+        identity: 'Light|XPHB',
+        provenanceType: 'root-marker',
+        marker: 'srd52',
+        srdVersion: '5.2.1',
+      }),
+    )
+    expect(first.manifest.coverage.records).toContainEqual(
+      expect.objectContaining({
+        relativePath: 'data/items-base.json',
+        collection: 'itemType',
+        identity: 'G|PHB',
+        provenanceType: 'approved-dependency',
+        srdVersion: '5.1',
+        officialSection: 'Equipment',
+      }),
+    )
     expect(first.manifest.coverage.references['class/class-wizard.json#classFeatures']).toEqual({
       resolved: 1,
       excluded: 1,
@@ -307,6 +339,22 @@ describe('bundled SRD snapshot generator', () => {
         upstreamRevision: 'fixture-revision',
       }),
     ).rejects.toThrow('Prohibited presentation field images in data/actions.json')
+  })
+
+  test('rejects roots with ambiguous SRD version markers', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'actions.json', {
+      action: [{ name: 'Attack', source: 'PHB', srd: true, srd52: true }],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Ambiguous SRD markers on data/actions.json#action:Attack|PHB: srd, srd52')
   })
 
   test('rejects source-qualified data outside the audited source set', async () => {

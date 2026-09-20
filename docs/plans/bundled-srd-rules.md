@@ -51,6 +51,10 @@ rules engine.
 - [x] Record the exact attribution statements supplied by both SRDs and the CC BY 4.0 license URL.
 - [ ] Confirm that the planned structured representation contains only material licensed by those
   documents. Do not assume a 5etools repository's code license also licenses its data.
+  - [x] Emit a deterministic per-record review inventory that binds each transformed row to its
+    source-qualified identity, content hash, and either one SRD marker/version or one explicit
+    dependency approval. Reject ambiguous markers and unexplained output; human content review is
+    still required before changing distribution status.
 - [x] Define a transformation notice stating that Tavern Born converted and structured the SRD
   material. Keep it separate from the prescribed Wizards attribution statements.
 - [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
@@ -100,6 +104,8 @@ Authoritative references:
     rejects dangling structural references and stale audit approvals.
 - [x] Add corpus tests proving that every root record has the appropriate SRD marker and every
   dependency is covered by the provenance manifest.
+  - [x] Require the per-record inventory to cover every emitted top-level entity row and reject
+    duplicate identities across generated files.
   - [x] Run the generated snapshot through the real loader/parser and capability report with no
     required or optional resource failures and no capability issues.
 

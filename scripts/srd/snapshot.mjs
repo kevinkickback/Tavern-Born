@@ -24,6 +24,10 @@ const ROOT_COLLECTIONS = {
 
 const CLASS_COLLECTIONS = ['class', 'subclass', 'classFeature', 'subclassFeature']
 const ALLOWED_SPELL_CLASS_SOURCES = new Set(['PHB', 'XPHB'])
+const SRD_MARKER_VERSIONS = new Map([
+  ['srd', '5.1'],
+  ['srd52', '5.2.1'],
+])
 const STRIPPED_METADATA_KEYS = new Set([
   'additionalEntries',
   'additionalSources',
@@ -587,6 +591,107 @@ function filterSpellLookup(payload, spellsBySource) {
   return output
 }
 
+function recordInventoryIdentity(record, collection, fallback) {
+  if (
+    (collection === 'itemProperty' || collection === 'itemType') &&
+    typeof record?.abbreviation === 'string' &&
+    typeof record?.source === 'string'
+  ) {
+    return supportIdentity(record)
+  }
+  return auditIdentity(record, collection, fallback)
+}
+
+function buildDistributedRecordInventory(files, coverage, provenance) {
+  const documentVersions = new Set(provenance.documents.map((document) => document.version))
+  const dependencies = new Map(
+    coverage.dependencies.map((dependency) => [
+      `${dependency.collection}:${dependency.identity}`,
+      dependency,
+    ]),
+  )
+  const usedDependencies = new Set()
+  const seenIdentities = new Set()
+  const records = []
+
+  for (const [relativePath, contents] of [...files.entries()].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    if (!relativePath.startsWith('data/')) continue
+    const payload = JSON.parse(contents)
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) continue
+
+    for (const [collection, candidates] of Object.entries(payload).sort(([left], [right]) =>
+      left.localeCompare(right),
+    )) {
+      if (!Array.isArray(candidates)) continue
+      for (const [index, record] of candidates.entries()) {
+        if (!record || typeof record !== 'object' || Array.isArray(record)) {
+          throw new Error(`Invalid distributed record in ${relativePath}#${collection}[${index}]`)
+        }
+        const identity = recordInventoryIdentity(record, collection, `${collection}[${index}]`)
+        const identityKey = `${collection}:${identity}`
+        if (seenIdentities.has(identityKey)) {
+          throw new Error(`Duplicate distributed identity ${identityKey}`)
+        }
+        seenIdentities.add(identityKey)
+
+        const markers = [...SRD_MARKER_VERSIONS.keys()].filter((marker) => record[marker] === true)
+        const base = {
+          relativePath,
+          collection,
+          identity,
+          recordSha256: sha256(stableJson(record)),
+        }
+
+        if (markers.length > 0) {
+          if (markers.length !== 1) {
+            throw new Error(
+              `Ambiguous SRD markers on ${relativePath}#${collection}:${identity}: ${markers.join(', ')}`,
+            )
+          }
+          const marker = markers[0]
+          const srdVersion = SRD_MARKER_VERSIONS.get(marker)
+          if (!documentVersions.has(srdVersion)) {
+            throw new Error(
+              `Distributed record ${relativePath}#${collection}:${identity} references unknown SRD ${srdVersion}`,
+            )
+          }
+          records.push({
+            ...base,
+            provenanceType: 'root-marker',
+            marker,
+            srdVersion,
+          })
+          continue
+        }
+
+        const dependency = dependencies.get(identityKey)
+        if (!dependency) {
+          throw new Error(`Unprovenanced distributed record ${relativePath}#${identityKey}`)
+        }
+        if (usedDependencies.has(identityKey)) {
+          throw new Error(`Duplicate distributed dependency ${identityKey}`)
+        }
+        usedDependencies.add(identityKey)
+        records.push({
+          ...base,
+          provenanceType: 'approved-dependency',
+          srdVersion: dependency.srdVersion,
+          officialSection: dependency.officialSection,
+          reason: dependency.reason,
+        })
+      }
+    }
+  }
+
+  const missingDependencies = [...dependencies.keys()].filter((key) => !usedDependencies.has(key))
+  if (missingDependencies.length > 0) {
+    throw new Error(`Approved dependencies missing from output: ${missingDependencies.join(', ')}`)
+  }
+  return records
+}
+
 function buildManifest({ files, coverage, provenance, upstreamRevision }) {
   const checksums = Object.fromEntries(
     [...files.entries()]
@@ -788,6 +893,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
   })
 
   assertAuditPolicyConsumed(auditPolicy)
+  coverage.records = buildDistributedRecordInventory(files, coverage, provenance)
   const manifest = buildManifest({ files, coverage, provenance, upstreamRevision })
   addFile(files, 'manifest.json', manifest)
   return { files, manifest }

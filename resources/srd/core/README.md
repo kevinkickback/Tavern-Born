@@ -28,5 +28,8 @@ The generator reads the source root but never writes to it. It also closes struc
 subclass, inline subclass-feature, and base-item references before output is accepted. It strips
 known publication, catalog, supplemental, and presentation metadata; rejects image payloads and
 unexpected source-qualified fields; and reports stripped-field counts in the manifest. Mechanical
-structures such as `_versions` remain intact. Verification reports missing, stale, and unexpected
-managed files together.
+structures such as `_versions` remain intact. The manifest also inventories every distributed row
+with its file, collection, source-qualified identity, SRD marker/version or dependency approval,
+and a hash of the transformed record. Ambiguous markers, unexplained rows, cross-file identity
+collisions, and missing approved dependencies fail generation. Verification reports missing,
+stale, and unexpected managed files together.

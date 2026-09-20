@@ -93,6 +93,33 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
       ),
     ).toBeGreaterThan(0)
 
+    const emittedRecordCount = [...first.files.entries()].reduce(
+      (total, [relativePath, contents]) => {
+        if (!relativePath.startsWith('data/')) return total
+        const payload = JSON.parse(contents) as Record<string, unknown>
+        return (
+          total +
+          Object.values(payload).reduce<number>(
+            (fileTotal, value) => fileTotal + (Array.isArray(value) ? value.length : 0),
+            0,
+          )
+        )
+      },
+      0,
+    )
+    expect(first.manifest.coverage.records).toHaveLength(emittedRecordCount)
+    expect(
+      first.manifest.coverage.records.filter(
+        (record) => record.provenanceType === 'approved-dependency',
+      ),
+    ).toHaveLength(first.manifest.coverage.dependencies.length)
+    expect(
+      first.manifest.coverage.records.every(
+        (record) =>
+          /^[a-f0-9]{64}$/.test(record.recordSha256) && documentVersions.has(record.srdVersion),
+      ),
+    ).toBe(true)
+
     const allowedSources = new Set(
       (allowlist.allowedSources as string[]).map((source) => source.toUpperCase()),
     )
