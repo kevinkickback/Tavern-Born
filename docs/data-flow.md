@@ -16,21 +16,23 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
 5. The loader fetches, validates, parses, normalizes, and indexes the configured source.
 6. A successful complete result replaces memory/cache atomically. Failed or superseded loads do not.
 
-The bundled manifest is read through a fixed Electron capability. Only a manifest marked
-`approved-for-distribution` can become the automatic/default source. Bundled cache entries are
-immutable for their pack version and are never background-refreshed. “Restore bundled SRD” loads
-and validates the packaged catalog before replacing an external source; failure keeps the existing
-data, cache, and external configuration while exposing a diagnostic. For an active bundled source,
-the same action rebuilds parsed data without first making the application content-free.
+The bundled manifest is read through a fixed Electron capability. Packaged builds admit only a
+manifest marked `approved-for-distribution`. Unpackaged development builds may use the ignored
+`.tmp/srd-review` snapshot so the bundled workflow can be tested before provenance approval; this
+path is never packaged. Bundled cache entries are immutable for their pack version and are never
+background-refreshed. “Restore bundled SRD” loads and validates the admitted catalog before
+replacing an external source; failure keeps the existing data, cache, and external configuration
+while exposing a diagnostic. For an active bundled source, the same action rebuilds parsed data
+without first making the application content-free.
 
 After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
 available offline. Continuing requires no source setup; “Add More Content” opens the existing
 external-source controls and explains that user-supplied content replaces the bundled catalog.
 
-Bundled transport and version-aware cache identity are implemented, but bundled-first startup stays
-disabled while the generated pack has `provenance-review-required` status. Until the reviewed pack
-is committed and included in release resources, existing local/remote startup behavior remains the
-release behavior.
+Bundled transport and version-aware cache identity are implemented. While the generated pack has
+`provenance-review-required` status, bundled-first startup is available only in unpackaged
+development after `npm run review:srd`; existing local/remote startup remains the packaged release
+behavior until the reviewed pack is committed and included in release resources.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 parsed content fingerprint changes. Background refreshes never replace a more complete catalog

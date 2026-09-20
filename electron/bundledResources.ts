@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { extname, isAbsolute, join, normalize } from 'node:path'
 import { isPathWithinRoot } from './security'
 
 const MAX_BUNDLED_JSON_BYTES = 50 * 1024 * 1024
+const APPROVED_DISTRIBUTION_STATUS = 'approved-for-distribution'
 
 export interface BundledSrdManifestSummary {
   schemaVersion: number
@@ -21,6 +23,32 @@ export interface BundledSrdManifestSummary {
     url: string
   }
   transformationNotice: string
+}
+
+export function resolveBundledPackRoot({
+  isPackaged,
+  resourcesPath,
+  repositoryRoot,
+}: {
+  isPackaged: boolean
+  resourcesPath: string
+  repositoryRoot: string
+}): string {
+  if (isPackaged) return join(resourcesPath, 'srd/core')
+
+  const managedRoot = join(repositoryRoot, 'resources/srd/core')
+  return existsSync(join(managedRoot, 'manifest.json'))
+    ? managedRoot
+    : join(repositoryRoot, '.tmp/srd-review')
+}
+
+export function assertBundledManifestAllowed(
+  manifest: BundledSrdManifestSummary,
+  isPackaged: boolean,
+): void {
+  if (isPackaged && manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) {
+    throw new Error('Bundled SRD manifest is not approved for distribution')
+  }
 }
 
 function requireNonEmptyString(value: unknown, label: string): string {

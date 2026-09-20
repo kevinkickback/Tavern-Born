@@ -21,9 +21,12 @@ to JSON below that root, and size-limited by Electron. Remote production sources
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.
 
 Bundled reads use a separate, read-only IPC capability. The renderer supplies only a normalized
-relative JSON path; Electron resolves it below `resources/srd/core/data` in development and
-`process.resourcesPath/srd/core/data` when packaged. Absolute paths, backslashes, empty/dot/parent
-segments, non-JSON files, symlink escapes, non-files, and JSON larger than 50 MB are rejected.
+relative JSON path. Electron resolves approved managed data below `resources/srd/core/data`, uses
+ignored `.tmp/srd-review/data` for an unpackaged development review when no managed manifest
+exists, and uses only `process.resourcesPath/srd/core/data` when packaged. Packaged reads fail
+closed unless the fixed manifest is `approved-for-distribution`. Absolute paths, backslashes,
+empty/dot/parent segments, non-JSON files, symlink escapes, non-files, and JSON larger than 50 MB
+are rejected.
 Bundled, local, and remote resources all pass through the same loader and parser pipeline.
 Source validation uses the same resource readers, so path construction, remote normalization,
 timeouts, and Electron capability checks cannot drift between validation and ingestion.

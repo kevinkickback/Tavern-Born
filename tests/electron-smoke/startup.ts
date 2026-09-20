@@ -1,4 +1,11 @@
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { _electron as electron, expect, test } from '@playwright/test'
+
+const HAS_DEVELOPMENT_SRD = [
+  resolve('resources/srd/core/manifest.json'),
+  resolve('.tmp/srd-review/manifest.json'),
+].some(existsSync)
 
 test('starts the compiled desktop shell with a sandboxed renderer and working bridge', async ({
   browserName: _browserName,
@@ -78,6 +85,18 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     })
     expect(bundledBoundaryMessages[0]).toContain('invalid segment')
     expect(bundledBoundaryMessages[1]).toContain('Only bundled JSON files may be read')
+
+    if (HAS_DEVELOPMENT_SRD) {
+      const bundledRuntime = await page.evaluate(async () => ({
+        manifest: await window.electronAPI.getBundledManifest(),
+        classIndex: await window.electronAPI.readBundledJson('class/index.json'),
+      }))
+      expect(bundledRuntime.manifest.packId).toBe('tavern-born-srd-core')
+      expect(bundledRuntime.manifest.packVersion).toBeTruthy()
+      expect(bundledRuntime.classIndex).toEqual(
+        expect.objectContaining({ wizard: expect.any(String) }),
+      )
+    }
   } finally {
     await electronApp.close()
   }

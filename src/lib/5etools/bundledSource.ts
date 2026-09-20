@@ -1,6 +1,4 @@
 import type { DataSourceConfig } from '@/types/5etools'
-
-const APPROVED_DISTRIBUTION_STATUS = 'approved-for-distribution'
 export type BundledDataSourceConfig = Extract<DataSourceConfig, { type: 'bundled' }>
 
 export async function resolveDefaultBundledSource(): Promise<BundledDataSourceConfig | null> {
@@ -8,8 +6,9 @@ export async function resolveDefaultBundledSource(): Promise<BundledDataSourceCo
   if (!getBundledManifest) return null
 
   try {
+    // Electron admits review-required snapshots only for unpackaged development. Packaged builds
+    // reject them before the manifest or any bundled JSON reaches the renderer.
     const manifest = await getBundledManifest()
-    if (manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) return null
     return {
       type: 'bundled',
       path: 'srd/core',

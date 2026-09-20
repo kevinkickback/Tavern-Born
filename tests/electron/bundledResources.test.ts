@@ -3,8 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
 import {
+  assertBundledManifestAllowed,
   readBundledJsonFromRoot,
   readBundledManifestFromRoot,
+  resolveBundledPackRoot,
   validateBundledResourcePath,
 } from '../../electron/bundledResources'
 
@@ -16,6 +18,56 @@ afterEach(async () => {
 })
 
 describe('bundled resource boundary', () => {
+  test('uses review output only for unpackaged development', async () => {
+    const repositoryRoot = await mkdtemp(join(tmpdir(), 'tavern-born-repository-'))
+    roots.push(repositoryRoot)
+    const managedRoot = join(repositoryRoot, 'resources', 'srd', 'core')
+    const reviewRoot = join(repositoryRoot, '.tmp', 'srd-review')
+    await mkdir(managedRoot, { recursive: true })
+    await mkdir(reviewRoot, { recursive: true })
+
+    expect(
+      resolveBundledPackRoot({
+        isPackaged: false,
+        resourcesPath: join(repositoryRoot, 'packaged-resources'),
+        repositoryRoot,
+      }),
+    ).toBe(reviewRoot)
+
+    await writeFile(join(managedRoot, 'manifest.json'), '{}', 'utf8')
+    expect(
+      resolveBundledPackRoot({
+        isPackaged: false,
+        resourcesPath: join(repositoryRoot, 'packaged-resources'),
+        repositoryRoot,
+      }),
+    ).toBe(managedRoot)
+    expect(
+      resolveBundledPackRoot({
+        isPackaged: true,
+        resourcesPath: join(repositoryRoot, 'packaged-resources'),
+        repositoryRoot,
+      }),
+    ).toBe(join(repositoryRoot, 'packaged-resources', 'srd', 'core'))
+  })
+
+  test('allows review data in development but rejects it in a packaged build', () => {
+    const manifest = {
+      schemaVersion: 1,
+      packId: 'tavern-born-srd-core',
+      packVersion: '0.1.0-dev',
+      distributionStatus: 'provenance-review-required',
+      documents: [],
+      license: { name: 'CC BY 4.0', identifier: 'CC-BY-4.0', url: 'https://example.com' },
+      transformationNotice: 'Test transformation.',
+    }
+
+    expect(() => assertBundledManifestAllowed(manifest, false)).not.toThrow()
+    expect(() => assertBundledManifestAllowed(manifest, true)).toThrow(
+      'Bundled SRD manifest is not approved for distribution',
+    )
+  })
+
   test('reads JSON below the configured immutable root', async () => {
     const root = await mkdtemp(join(tmpdir(), 'tavern-born-bundled-'))
     roots.push(root)
