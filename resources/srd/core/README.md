@@ -35,14 +35,16 @@ npm run verify:srd -- --source-root data --output-root <reviewed-snapshot> --ups
 ```
 
 The generator reads the source root but never writes to it. It also closes structural class,
-subclass, inline subclass-feature, and base-item references before output is accepted. It strips
-known publication, catalog, supplemental, and presentation metadata; rejects image payloads and
-unexpected source-qualified fields; and reports stripped-field counts in the manifest. Mechanical
-structures such as `_versions` remain intact. The manifest also inventories every distributed row
-with its file, collection, source-qualified identity, SRD marker/version or dependency approval,
-and a hash of the transformed record. Ambiguous markers, unexplained rows, cross-file identity
-collisions, and missing approved dependencies fail generation. Verification reports missing,
-stale, and unexpected managed files together.
+subclass, inline subclass-feature, base-item, and source-qualified equipment references before
+output is accepted. Unmarked equipment groups are admitted only through explicit dependency
+approvals, and their concrete item links must also resolve. It strips known publication, catalog,
+supplemental, and presentation metadata; rejects image payloads and unexpected source-qualified
+fields; and reports stripped-field counts in the manifest. Mechanical structures such as
+`_versions` remain intact. The manifest also inventories every distributed row with its file,
+collection, source-qualified identity, SRD marker/version or dependency approval, and a hash of the
+transformed record. Ambiguous markers, unexplained rows, cross-file identity collisions, and
+missing approved dependencies fail generation. Verification reports missing, stale, and
+unexpected managed files together.
 
 Release packaging includes only `data/`, `manifest.json`, and `THIRD_PARTY_NOTICES.md` from this
 directory. The distribution command fails unless both provenance and manifest are marked

@@ -96,6 +96,16 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
         0,
       ),
     ).toBeGreaterThan(0)
+    expect(first.manifest.coverage.references['distributed-data#itemReferences']).toEqual({
+      resolved: 88,
+      excluded: 0,
+    })
+    expect(
+      first.manifest.coverage.dependencies
+        .filter((dependency) => dependency.collection === 'itemGroup')
+        .map((dependency) => dependency.identity)
+        .sort(),
+    ).toEqual(['Druidic Focus|XPHB', 'Holy Symbol|PHB', 'Holy Symbol|XPHB'])
 
     const emittedRecordCount = [...first.files.entries()].reduce(
       (total, [relativePath, contents]) => {

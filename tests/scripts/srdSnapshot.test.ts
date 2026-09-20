@@ -325,6 +325,91 @@ describe('bundled SRD snapshot generator', () => {
     ).rejects.toThrow('Missing classFeature dependency Missing Feature|Wizard||2')
   })
 
+  test('closes source-qualified item references through audited item groups', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'backgrounds.json', {
+      background: [
+        {
+          name: 'Acolyte',
+          source: 'PHB',
+          srd: true,
+          startingEquipment: [{ a: [{ item: 'Holy Symbol|PHB' }] }],
+        },
+      ],
+    })
+    await writeJson(sourceRoot, 'items.json', {
+      ...ROOT_FIXTURES['items.json'],
+      itemGroup: [
+        {
+          name: 'Holy Symbol',
+          source: 'PHB',
+          items: ['Amulet|PHB'],
+        },
+      ],
+      item: [
+        ...(ROOT_FIXTURES['items.json'] as { item: unknown[] }).item,
+        { name: 'Amulet', source: 'PHB', srd: true },
+      ],
+    })
+    const allowlist = createAllowlist()
+    allowlist.dependencies.push({
+      collection: 'itemGroup',
+      srdVersion: '5.1',
+      officialSection: 'Equipment — Adventuring Gear — Holy Symbol',
+      reason: 'Fixture equipment group.',
+      identities: ['Holy Symbol|PHB'],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist,
+      upstreamRevision: 'fixture-revision',
+    })
+
+    expect(JSON.parse(snapshot.files.get('data/items.json') ?? '{}').itemGroup).toEqual([
+      expect.objectContaining({ name: 'Holy Symbol', source: 'PHB' }),
+    ])
+    expect(snapshot.manifest.coverage.references['distributed-data#itemReferences']).toEqual({
+      resolved: 2,
+      excluded: 0,
+    })
+    expect(snapshot.manifest.coverage.dependencies).toContainEqual(
+      expect.objectContaining({
+        collection: 'itemGroup',
+        identity: 'Holy Symbol|PHB',
+        reference: 'Holy Symbol|PHB',
+      }),
+    )
+  })
+
+  test('fails closed when an item reference needs an unaudited dependency', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'backgrounds.json', {
+      background: [
+        {
+          name: 'Acolyte',
+          source: 'PHB',
+          srd: true,
+          startingEquipment: [{ a: [{ item: 'Holy Symbol|PHB' }] }],
+        },
+      ],
+    })
+    await writeJson(sourceRoot, 'items.json', {
+      ...ROOT_FIXTURES['items.json'],
+      itemGroup: [{ name: 'Holy Symbol', source: 'PHB' }],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Unapproved itemGroup dependency Holy Symbol|PHB')
+  })
+
   test('closes embedded feature references and removes only audited non-SRD options', async () => {
     const sourceRoot = await createFixture()
     await writeJson(sourceRoot, 'optionalfeatures.json', {

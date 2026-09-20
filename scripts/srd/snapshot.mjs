@@ -24,6 +24,7 @@ const ROOT_COLLECTIONS = {
 
 const CLASS_COLLECTIONS = ['class', 'subclass', 'classFeature', 'subclassFeature']
 const REFERENCE_DEPENDENCY_FILES = ['feats.json', 'optionalfeatures.json']
+const DEFERRED_ROOT_FILES = new Set([...REFERENCE_DEPENDENCY_FILES, 'items.json'])
 const ALLOWED_SPELL_CLASS_SOURCES = new Set(['PHB', 'XPHB'])
 const SRD_MARKER_VERSIONS = new Map([
   ['srd', '5.1'],
@@ -455,6 +456,103 @@ function findNamedRecord(records, reference) {
   )
 }
 
+function isSourceQualifiedItemReference(value) {
+  if (typeof value !== 'string' || value.includes('{@')) return false
+  const [name, source] = value.split('|')
+  return Boolean(name?.trim() && source?.trim() && /^[a-z0-9-]+$/i.test(source.trim()))
+}
+
+function collectItemReferences(value, references, includeItemArrays = false) {
+  if (Array.isArray(value)) {
+    for (const entry of value) collectItemReferences(entry, references, includeItemArrays)
+    return
+  }
+  if (!value || typeof value !== 'object') return
+
+  if (isSourceQualifiedItemReference(value.item)) references.add(value.item)
+  if (includeItemArrays && Array.isArray(value.items)) {
+    for (const entry of value.items) {
+      if (isSourceQualifiedItemReference(entry)) references.add(entry)
+    }
+  }
+  for (const entry of Object.values(value)) {
+    collectItemReferences(entry, references, includeItemArrays)
+  }
+}
+
+function parseItemReference(reference) {
+  const [name, source] = reference.split('|')
+  if (!name?.trim() || !source?.trim()) {
+    throw new Error(`Invalid source-qualified item reference ${reference}`)
+  }
+  return { reference, name, source }
+}
+
+function findItemReferenceMatches(collections, reference) {
+  return collections.flatMap(({ collection, records }) =>
+    records
+      .filter(
+        (record) =>
+          normalized(record?.name) === normalized(reference.name) &&
+          normalized(record?.source) === normalized(reference.source),
+      )
+      .map((record) => ({ collection, record })),
+  )
+}
+
+function closeItemReferences({
+  payloads,
+  outputCollections,
+  sourceCollections,
+  auditPolicy,
+  coverage,
+}) {
+  const references = new Set()
+  for (const payload of payloads) collectItemReferences(payload, references)
+  const processed = new Set()
+
+  while (processed.size < references.size) {
+    const rawReference = [...references].filter((entry) => !processed.has(entry)).sort()[0]
+    processed.add(rawReference)
+    const reference = parseItemReference(rawReference)
+    const outputMatches = findItemReferenceMatches(outputCollections, reference)
+    if (outputMatches.length > 1) {
+      throw new Error(`Ambiguous item dependency ${rawReference}`)
+    }
+    if (outputMatches.length === 1) continue
+
+    const sourceMatches = findItemReferenceMatches(sourceCollections, reference)
+    if (sourceMatches.length === 0) throw new Error(`Missing item dependency ${rawReference}`)
+    if (sourceMatches.length > 1) throw new Error(`Ambiguous item dependency ${rawReference}`)
+
+    const dependency = sourceMatches[0]
+    const identity = entityIdentity(dependency.record, dependency.collection, rawReference)
+    const approvalKey = `${dependency.collection}:${identity}`
+    const approval = auditPolicy.dependencies.get(approvalKey)
+    if (!approval) {
+      throw new Error(
+        `Unapproved ${dependency.collection} dependency ${identity} (referenced as ${rawReference})`,
+      )
+    }
+
+    auditPolicy.usedDependencies.add(approvalKey)
+    outputCollections
+      .find(({ collection }) => collection === dependency.collection)
+      .records.push(dependency.record)
+    coverage.dependencies.push({
+      collection: dependency.collection,
+      identity,
+      reason: approval.reason,
+      reference: rawReference,
+      srdVersion: approval.srdVersion,
+      officialSection: approval.officialSection,
+    })
+    collectItemReferences(dependency.record, references, true)
+  }
+
+  recordReferenceCoverage(coverage, 'distributed-data#itemReferences', processed.size, 0)
+}
+
 function recordReferenceCoverage(coverage, key, resolved, excluded) {
   coverage.references[key] = { resolved, excluded }
 }
@@ -856,13 +954,15 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
   }
   const rootOutputs = new Map()
   const rootInputs = new Map()
+  const itemReferencePayloads = []
 
   for (const [relativePath, collections] of Object.entries(ROOT_COLLECTIONS)) {
     const input = await readJson(sourceRoot, relativePath)
     const output = filterCollections(input, collections, relativePath, coverage, auditPolicy)
     rootInputs.set(relativePath, input)
     rootOutputs.set(relativePath, output)
-    if (!REFERENCE_DEPENDENCY_FILES.includes(relativePath)) {
+    itemReferencePayloads.push(output)
+    if (!DEFERRED_ROOT_FILES.has(relativePath)) {
       addDataFile(`data/${relativePath}`, output)
     }
   }
@@ -966,6 +1066,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       output[collection] = filteredClassRecords.slice(recordOffset, nextOffset)
       recordOffset = nextOffset
     }
+    itemReferencePayloads.push(output)
     bundledClassIndex[slug] = filename
     addDataFile(`data/${relativePath}`, output)
     addDataFile(`data/class/${filename.replace(/^class-/, 'fluff-class-')}`, {
@@ -990,6 +1091,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     coverage.roots[`${relativePath}#spell`] = spells.length
     bundledSpellIndex[source] = filename
     spellsBySource.set(source, spells)
+    itemReferencePayloads.push({ spell: spells })
     addDataFile(`data/${relativePath}`, { spell: spells })
   }
   addDataFile('data/spells/index.json', bundledSpellIndex)
@@ -1009,6 +1111,23 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
   coverage.roots['items-base.json#itemMastery'] = itemMasteries.length
 
   const itemOutput = rootOutputs.get('items.json')
+  itemReferencePayloads.push({ baseitem: baseitems, itemMastery: itemMasteries })
+  closeItemReferences({
+    payloads: itemReferencePayloads,
+    outputCollections: [
+      { collection: 'item', records: itemOutput?.item ?? [] },
+      { collection: 'itemGroup', records: itemOutput?.itemGroup ?? [] },
+      { collection: 'baseitem', records: baseitems },
+    ],
+    sourceCollections: [
+      { collection: 'item', records: rootInputs.get('items.json')?.item ?? [] },
+      { collection: 'itemGroup', records: rootInputs.get('items.json')?.itemGroup ?? [] },
+      { collection: 'baseitem', records: itemsBase.baseitem ?? [] },
+    ],
+    auditPolicy,
+    coverage,
+  })
+  addDataFile('data/items.json', itemOutput)
   validateBaseItemReferences(
     [...(itemOutput?.item ?? []), ...(itemOutput?.itemGroup ?? [])],
     baseitems,

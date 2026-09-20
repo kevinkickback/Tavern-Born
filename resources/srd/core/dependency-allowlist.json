@@ -67,6 +67,20 @@
       ]
     },
     {
+      "collection": "itemGroup",
+      "srdVersion": "5.1",
+      "officialSection": "Equipment — Adventuring Gear — Holy Symbol",
+      "reason": "SRD starting-equipment records reference this 5etools equipment-group representation.",
+      "identities": ["Holy Symbol|PHB"]
+    },
+    {
+      "collection": "itemGroup",
+      "srdVersion": "5.2.1",
+      "officialSection": "Equipment — Adventuring Gear — Druidic Focus and Holy Symbol",
+      "reason": "SRD starting-equipment records reference these 5etools equipment-group representations.",
+      "identities": ["Druidic Focus|XPHB", "Holy Symbol|XPHB"]
+    },
+    {
       "collection": "itemType",
       "srdVersion": "5.1",
       "officialSection": "Equipment",
