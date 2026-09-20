@@ -39,7 +39,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:progression": "vitest run tests/unit/characterProgressionMatrix.test.ts",
     "test:electron": "playwright test --config playwright.electron.config.ts",
-    "dist": "npm run build && npm run check:bundle && electron-builder"
+    "dist": "npm run build && npm run check:bundle -- --require-srd && electron-builder"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "^2.6.5",
@@ -131,7 +131,9 @@
         "from": "resources/srd/core",
         "to": "srd/core",
         "filter": [
-          "**/*"
+          "data/**/*",
+          "manifest.json",
+          "THIRD_PARTY_NOTICES.md"
         ]
       }
     ],

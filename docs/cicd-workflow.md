@@ -175,6 +175,14 @@ Electron Builder copies the managed `resources/srd/core/**` tree to `srd/core` b
 application archive so the restricted bundled-resource reader can resolve it through
 `process.resourcesPath`. The external development-only `data/` tree remains excluded.
 
+The bundle report measures the packaged SRD resources separately and includes them in the total
+distribution budget. Normal pull-request builds can measure a review snapshot without treating it
+as releasable. `npm run dist` uses the stricter release mode: it requires matching
+`approved-for-distribution` provenance and manifest metadata, complete packaged notices, an exact
+manifest/data file set, and a valid SHA-256 checksum for every SRD JSON file before Electron Builder
+runs. Only `data/`, `manifest.json`, and `THIRD_PARTY_NOTICES.md` from the managed SRD root enter an
+installer or portable build.
+
 Publish an approved draft with:
 
 ```bash

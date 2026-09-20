@@ -165,9 +165,10 @@ describe('trusted workflow policy', () => {
     expect(packageJson.build.extraResources).toContainEqual({
       from: 'resources/srd/core',
       to: 'srd/core',
-      filter: ['**/*'],
+      filter: ['data/**/*', 'manifest.json', 'THIRD_PARTY_NOTICES.md'],
     })
     expect(packageJson.build.files).toContain('!data/**/*')
+    expect(packageJson.scripts.dist).toContain('npm run check:bundle -- --require-srd')
   })
 
   test('pins every official action to an immutable commit', async () => {

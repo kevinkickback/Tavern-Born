@@ -174,12 +174,12 @@ an advanced user can configure, refresh, replace, and leave an external source.
 
 ## Phase 5 — Notices, Documentation, and Release Packaging
 
-- [ ] Add the two official attribution statements, CC BY 4.0 link, transformation notice, source
+- [x] Add the two official attribution statements, CC BY 4.0 link, transformation notice, source
   URLs, and bundled manifest version to repository and packaged third-party notices.
-- [ ] Surface the same information in Settings/About without loading it from the network.
-- [ ] Update `docs/data-flow.md` and `docs/data-ingestion.md` with the bundled reader, default-source
+- [x] Surface the same information in Settings/About without loading it from the network.
+- [x] Update `docs/data-flow.md` and `docs/data-ingestion.md` with the bundled reader, default-source
   selection, fallback rules, and cache identity.
-- [ ] Update release and bundle-budget checks so the SRD pack is required in installers and
+- [x] Update release and bundle-budget checks so the SRD pack is required in installers and
   portable builds, forbidden from development-only output, and measured as its own category.
 - [ ] Verify Windows installer/portable, macOS, and Linux resource paths before release.
 
