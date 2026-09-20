@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { loadDataFromSource } from '@/lib/5etools'
+import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   clearGameDataCache,
   isCacheForSource,
@@ -178,6 +179,11 @@ export const useGameDataStore = create<GameDataState>()(
         const cache = await readGameDataCache()
 
         if (!cache && !dataSourceConfig) {
+          const bundledSource = await resolveDefaultBundledSource()
+          if (bundledSource) {
+            await loadGameData(bundledSource)
+            return {}
+          }
           setCacheStatus('unconfigured')
           return {}
         }

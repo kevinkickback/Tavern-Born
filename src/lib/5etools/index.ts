@@ -1,3 +1,4 @@
+export * from './bundledSource'
 export * from './capabilityReport'
 export * from './classData'
 export * from './constants'

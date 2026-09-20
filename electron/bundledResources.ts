@@ -4,6 +4,13 @@ import { isPathWithinRoot } from './security'
 
 const MAX_BUNDLED_JSON_BYTES = 50 * 1024 * 1024
 
+export interface BundledSrdManifestSummary {
+  schemaVersion: number
+  packId: string
+  packVersion: string
+  distributionStatus: string
+}
+
 export function validateBundledResourcePath(relativePath: unknown): string[] {
   if (typeof relativePath !== 'string' || relativePath.length === 0) {
     throw new Error('Bundled resource path must be a non-empty string')
@@ -38,4 +45,31 @@ export async function readBundledJsonFromRoot(
     throw new Error('Bundled JSON file exceeds the 50 MB safety limit')
   }
   return JSON.parse(await readFile(canonicalTarget, 'utf-8'))
+}
+
+export async function readBundledManifestFromRoot(
+  rootPath: string,
+): Promise<BundledSrdManifestSummary> {
+  const value = await readBundledJsonFromRoot(rootPath, 'manifest.json')
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Bundled SRD manifest must be a JSON object')
+  }
+  const manifest = value as Record<string, unknown>
+  if (
+    manifest.schemaVersion !== 1 ||
+    typeof manifest.packId !== 'string' ||
+    manifest.packId.length === 0 ||
+    typeof manifest.packVersion !== 'string' ||
+    manifest.packVersion.length === 0 ||
+    typeof manifest.distributionStatus !== 'string' ||
+    manifest.distributionStatus.length === 0
+  ) {
+    throw new Error('Bundled SRD manifest has incomplete pack identity')
+  }
+  return {
+    schemaVersion: manifest.schemaVersion,
+    packId: manifest.packId,
+    packVersion: manifest.packVersion,
+    distributionStatus: manifest.distributionStatus,
+  }
 }

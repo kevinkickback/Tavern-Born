@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
 import {
   readBundledJsonFromRoot,
+  readBundledManifestFromRoot,
   validateBundledResourcePath,
 } from '../../electron/bundledResources'
 
@@ -36,5 +37,42 @@ describe('bundled resource boundary', () => {
     'class/index.txt',
   ])('rejects unsafe path %s', (path) => {
     expect(() => validateBundledResourcePath(path)).toThrow()
+  })
+
+  test('reads and validates the fixed bundled manifest identity', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'tavern-born-bundled-'))
+    roots.push(root)
+    await writeFile(
+      join(root, 'manifest.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        distributionStatus: 'approved-for-distribution',
+        files: {},
+      }),
+      'utf8',
+    )
+
+    await expect(readBundledManifestFromRoot(root)).resolves.toEqual({
+      schemaVersion: 1,
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      distributionStatus: 'approved-for-distribution',
+    })
+  })
+
+  test('rejects a bundled manifest without stable pack identity', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'tavern-born-bundled-'))
+    roots.push(root)
+    await writeFile(
+      join(root, 'manifest.json'),
+      JSON.stringify({ schemaVersion: 1, distributionStatus: 'approved-for-distribution' }),
+      'utf8',
+    )
+
+    await expect(readBundledManifestFromRoot(root)).rejects.toThrow(
+      'Bundled SRD manifest has incomplete pack identity',
+    )
   })
 })

@@ -125,9 +125,10 @@ bundled fixture and a matching local fixture.
 
 ## Phase 3 — Startup, Cache, and Fallback Semantics
 
-- [ ] Define one `DEFAULT_BUNDLED_SOURCE` from the packaged manifest rather than scattering paths
-  or versions through UI code.
-- [ ] When hydration finds neither a configured source nor a compatible cache, load the bundled
+- [x] Resolve the default bundled source from one fixed, validated packaged manifest rather than
+  scattering pack IDs or versions through UI code. Only an `approved-for-distribution` manifest is
+  eligible for automatic selection.
+- [x] When hydration finds neither a configured source nor a compatible cache, load the bundled
   source automatically. Remove `unconfigured` as a normal fresh-install terminal state.
 - [x] Preserve existing local/remote choices during migration; do not silently replace a working
   external source for an existing user.
