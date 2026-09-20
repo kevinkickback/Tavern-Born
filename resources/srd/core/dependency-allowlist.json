@@ -16,9 +16,21 @@
       "collection": "subclassFeature",
       "source": "TCE",
       "reason": "Later optional subclass features embedded in SRD-marked 2014 subclass records are not part of SRD 5.1."
+    },
+    {
+      "collection": "optionalfeature",
+      "source": "TCE",
+      "reason": "Later fighting-style and pact-boon options embedded in SRD-marked 2014 class features are not part of SRD 5.1."
     }
   ],
   "dependencies": [
+    {
+      "collection": "feat",
+      "srdVersion": "5.2.1",
+      "officialSection": "Character Classes — Paladin and Ranger — Fighting Style options",
+      "reason": "SRD class features reference these fighting-style option records through the 5etools feat representation.",
+      "identities": ["Blessed Warrior|XPHB", "Druidic Warrior|XPHB"]
+    },
     {
       "collection": "itemProperty",
       "srdVersion": "5.1",
@@ -122,6 +134,23 @@
       "officialSection": "Magic Items — Magic item categories",
       "reason": "SRD magic items use these compact magic-item category definitions.",
       "identities": ["GV|XDMG", "RD|XDMG", "RG|XDMG", "TG|XDMG", "WD|XDMG"]
+    },
+    {
+      "collection": "optionalfeature",
+      "srdVersion": "5.2.1",
+      "officialSection": "Character Classes — Sorcerer and Warlock — class feature options",
+      "reason": "SRD class features reference these option records through the 5etools optional-feature representation.",
+      "identities": [
+        "Devouring Blade|XPHB",
+        "Eldritch Mind|XPHB",
+        "Eldritch Smite|XPHB",
+        "Gift of the Depths|XPHB",
+        "Gift of the Protectors|XPHB",
+        "Investment of the Chain Master|XPHB",
+        "Lessons of the First Ones|XPHB",
+        "Seeking Spell|XPHB",
+        "Transmuted Spell|XPHB"
+      ]
     }
   ]
 }

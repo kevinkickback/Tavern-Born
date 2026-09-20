@@ -23,6 +23,7 @@ const ROOT_COLLECTIONS = {
 }
 
 const CLASS_COLLECTIONS = ['class', 'subclass', 'classFeature', 'subclassFeature']
+const REFERENCE_DEPENDENCY_FILES = ['feats.json', 'optionalfeatures.json']
 const ALLOWED_SPELL_CLASS_SOURCES = new Set(['PHB', 'XPHB'])
 const SRD_MARKER_VERSIONS = new Map([
   ['srd', '5.1'],
@@ -434,6 +435,26 @@ function findSubclassFeatureRecord(records, reference) {
   )
 }
 
+function parseNamedReference(rawReference, owner, field) {
+  if (typeof rawReference !== 'string' || rawReference.length === 0) {
+    throw new Error(`Invalid ${field} reference on ${owner.name}|${owner.source}`)
+  }
+  const [name, source] = rawReference.split('|')
+  return {
+    reference: rawReference,
+    name,
+    source: source || owner.source || '',
+  }
+}
+
+function findNamedRecord(records, reference) {
+  return records.find(
+    (record) =>
+      normalized(record?.name) === normalized(reference.name) &&
+      normalized(record?.source) === normalized(reference.source),
+  )
+}
+
 function recordReferenceCoverage(coverage, key, resolved, excluded) {
   coverage.references[key] = { resolved, excluded }
 }
@@ -489,27 +510,108 @@ function filterAuditedFeatureReferences({
   return output
 }
 
-function validateInlineSubclassReferences(value, records, owner, relativePath) {
-  let resolved = 0
-  function visit(candidate) {
+const OMIT_REFERENCE = Symbol('omit-reference')
+
+function filterAuditedInlineReferences({
+  records,
+  relativePath,
+  referenceCollections,
+  auditPolicy,
+  coverage,
+}) {
+  const counts = new Map(
+    [...referenceCollections.values()].map(({ collection }) => [
+      collection,
+      { resolved: 0, excluded: 0, reasons: new Set() },
+    ]),
+  )
+
+  function visit(candidate, owner) {
     if (Array.isArray(candidate)) {
-      for (const entry of candidate) visit(entry)
-      return
+      return candidate
+        .map((entry) => visit(entry, owner))
+        .filter((entry) => entry !== OMIT_REFERENCE)
     }
-    if (!candidate || typeof candidate !== 'object') return
-    if (candidate.type === 'refSubclassFeature') {
-      const reference = parseSubclassFeatureReference(candidate.subclassFeature, owner)
-      if (!findSubclassFeatureRecord(records, reference)) {
-        throw new Error(
-          `Missing subclassFeature dependency ${reference.reference} in ${relativePath}`,
-        )
+    if (!candidate || typeof candidate !== 'object') return candidate
+
+    const referenceCollection = referenceCollections.get(candidate.type)
+    if (referenceCollection) {
+      const reference = referenceCollection.parse(candidate[referenceCollection.field], owner)
+      const count = counts.get(referenceCollection.collection)
+      let resolvedRecord = referenceCollection.find(referenceCollection.records, reference)
+      let unapprovedIdentity
+      if (!resolvedRecord && referenceCollection.sourceRecords) {
+        const dependency = referenceCollection.find(referenceCollection.sourceRecords, reference)
+        if (dependency) {
+          const identity = auditIdentity(
+            dependency,
+            referenceCollection.collection,
+            reference.reference,
+          )
+          const approvalKey = `${referenceCollection.collection}:${identity}`
+          const approval = auditPolicy.dependencies.get(approvalKey)
+          if (approval) {
+            auditPolicy.usedDependencies.add(approvalKey)
+            referenceCollection.records.push(dependency)
+            coverage.dependencies.push({
+              collection: referenceCollection.collection,
+              identity,
+              reason: approval.reason,
+              reference: reference.reference,
+              srdVersion: approval.srdVersion,
+              officialSection: approval.officialSection,
+            })
+            resolvedRecord = dependency
+          } else {
+            unapprovedIdentity = identity
+          }
+        }
       }
-      resolved += 1
+      if (resolvedRecord) {
+        count.resolved += 1
+      } else {
+        const exclusionKey = `${referenceCollection.collection}:${reference.source.toUpperCase()}`
+        const exclusion = auditPolicy.referenceExclusions.get(exclusionKey)
+        if (!exclusion) {
+          if (unapprovedIdentity) {
+            throw new Error(
+              `Unapproved ${referenceCollection.collection} dependency ${unapprovedIdentity} (referenced as ${reference.reference})`,
+            )
+          }
+          throw new Error(
+            `Missing ${referenceCollection.collection} dependency ${reference.reference} in ${relativePath}`,
+          )
+        }
+        exclusion.used += 1
+        count.excluded += 1
+        count.reasons.add(exclusion.reason)
+        coverage.referenceExclusions.push({
+          collection: referenceCollection.collection,
+          reference: reference.reference,
+          owner: `${owner.name}|${owner.source}`,
+          reason: exclusion.reason,
+        })
+        return OMIT_REFERENCE
+      }
     }
-    for (const entry of Object.values(candidate)) visit(entry)
+
+    return Object.fromEntries(
+      Object.entries(candidate)
+        .map(([key, entry]) => [key, visit(entry, owner)])
+        .filter(([, entry]) => entry !== OMIT_REFERENCE),
+    )
   }
-  visit(value)
-  return resolved
+
+  const output = records.map((record) => visit(record, record))
+  for (const [collection, count] of counts) {
+    const coverageKey = `${relativePath}#inline${collection[0].toUpperCase()}${collection.slice(1)}`
+    recordReferenceCoverage(coverage, coverageKey, count.resolved, count.excluded)
+    if (count.excluded > 0) {
+      coverage.exclusions[coverageKey] = count.excluded
+      coverage.exclusionReasons[coverageKey] = [...count.reasons].sort().join(' ')
+    }
+  }
+  return output
 }
 
 function validateBaseItemReferences(items, baseitems, coverage) {
@@ -753,17 +855,16 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     addFile(files, relativePath, sanitized)
   }
   const rootOutputs = new Map()
+  const rootInputs = new Map()
 
   for (const [relativePath, collections] of Object.entries(ROOT_COLLECTIONS)) {
-    const output = filterCollections(
-      await readJson(sourceRoot, relativePath),
-      collections,
-      relativePath,
-      coverage,
-      auditPolicy,
-    )
+    const input = await readJson(sourceRoot, relativePath)
+    const output = filterCollections(input, collections, relativePath, coverage, auditPolicy)
+    rootInputs.set(relativePath, input)
     rootOutputs.set(relativePath, output)
-    addDataFile(`data/${relativePath}`, output)
+    if (!REFERENCE_DEPENDENCY_FILES.includes(relativePath)) {
+      addDataFile(`data/${relativePath}`, output)
+    }
   }
 
   addDataFile('data/books.json', { book: [] })
@@ -807,21 +908,64 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       auditPolicy,
       coverage,
     })
-    let inlineSubclassReferences = 0
-    for (const feature of [...output.classFeature, ...output.subclassFeature]) {
-      inlineSubclassReferences += validateInlineSubclassReferences(
-        feature,
-        output.subclassFeature,
-        feature,
-        relativePath,
-      )
-    }
-    recordReferenceCoverage(
+    const referenceCollections = new Map([
+      [
+        'refClassFeature',
+        {
+          collection: 'classFeature',
+          field: 'classFeature',
+          records: output.classFeature,
+          parse: parseClassFeatureReference,
+          find: findClassFeatureRecord,
+        },
+      ],
+      [
+        'refSubclassFeature',
+        {
+          collection: 'subclassFeature',
+          field: 'subclassFeature',
+          records: output.subclassFeature,
+          parse: parseSubclassFeatureReference,
+          find: findSubclassFeatureRecord,
+        },
+      ],
+      [
+        'refOptionalfeature',
+        {
+          collection: 'optionalfeature',
+          field: 'optionalfeature',
+          records: rootOutputs.get('optionalfeatures.json')?.optionalfeature ?? [],
+          sourceRecords: rootInputs.get('optionalfeatures.json')?.optionalfeature ?? [],
+          parse: (reference, owner) => parseNamedReference(reference, owner, 'optionalfeature'),
+          find: findNamedRecord,
+        },
+      ],
+      [
+        'refFeat',
+        {
+          collection: 'feat',
+          field: 'feat',
+          records: rootOutputs.get('feats.json')?.feat ?? [],
+          sourceRecords: rootInputs.get('feats.json')?.feat ?? [],
+          parse: (reference, owner) => parseNamedReference(reference, owner, 'feat'),
+          find: findNamedRecord,
+        },
+      ],
+    ])
+    const classRecordCounts = CLASS_COLLECTIONS.map((collection) => output[collection].length)
+    const filteredClassRecords = filterAuditedInlineReferences({
+      records: CLASS_COLLECTIONS.flatMap((collection) => output[collection]),
+      relativePath,
+      referenceCollections,
+      auditPolicy,
       coverage,
-      `${relativePath}#inlineSubclassFeature`,
-      inlineSubclassReferences,
-      0,
-    )
+    })
+    let recordOffset = 0
+    for (const [index, collection] of CLASS_COLLECTIONS.entries()) {
+      const nextOffset = recordOffset + classRecordCounts[index]
+      output[collection] = filteredClassRecords.slice(recordOffset, nextOffset)
+      recordOffset = nextOffset
+    }
     bundledClassIndex[slug] = filename
     addDataFile(`data/${relativePath}`, output)
     addDataFile(`data/class/${filename.replace(/^class-/, 'fluff-class-')}`, {
@@ -829,6 +973,10 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     })
   }
   addDataFile('data/class/index.json', bundledClassIndex)
+
+  for (const relativePath of REFERENCE_DEPENDENCY_FILES) {
+    addDataFile(`data/${relativePath}`, rootOutputs.get(relativePath))
+  }
 
   const spellIndex = await readJson(sourceRoot, 'spells/index.json')
   const bundledSpellIndex = {}

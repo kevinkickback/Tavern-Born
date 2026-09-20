@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
-import { buildSrdSnapshot, isSrdRoot } from '../../scripts/srd/snapshot.mjs'
+import { buildSrdSnapshot } from '../../scripts/srd/snapshot.mjs'
 
 const PROJECT_ROOT = process.cwd()
 const DATA_ROOT = resolve(PROJECT_ROOT, 'data')
@@ -49,7 +49,7 @@ async function readJson(path: string) {
 }
 
 describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', () => {
-  test('closes audited references and emits only marked roots', async () => {
+  test('closes audited references and emits only provenanced records', async () => {
     const provenance = await readJson(
       resolve(PROJECT_ROOT, 'resources', 'srd', 'core', 'provenance.json'),
     )
@@ -75,7 +75,11 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
       itemProperty?: unknown[]
       itemType?: unknown[]
     }
-    expect(first.manifest.coverage.dependencies).toHaveLength(
+    expect(
+      first.manifest.coverage.dependencies.filter((dependency) =>
+        ['itemProperty', 'itemType'].includes(dependency.collection),
+      ),
+    ).toHaveLength(
       (supportPayload.itemProperty?.length ?? 0) + (supportPayload.itemType?.length ?? 0),
     )
     const documentVersions = new Set(
@@ -128,11 +132,6 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
       if (!relativePath.startsWith('data/')) continue
       const payload = JSON.parse(contents) as Record<string, unknown>
       assertSanitizedPayload(payload, allowedSources)
-      if (relativePath === 'data/items-base.json') continue
-      for (const records of Object.values(payload)) {
-        if (!Array.isArray(records)) continue
-        expect(records.every(isSrdRoot), `${relativePath} contains an unmarked root`).toBe(true)
-      }
     }
 
     const reader: JsonResourceReader = {

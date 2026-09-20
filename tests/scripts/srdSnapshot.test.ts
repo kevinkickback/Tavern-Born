@@ -325,6 +325,149 @@ describe('bundled SRD snapshot generator', () => {
     ).rejects.toThrow('Missing classFeature dependency Missing Feature|Wizard||2')
   })
 
+  test('closes embedded feature references and removes only audited non-SRD options', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'optionalfeatures.json', {
+      optionalfeature: [{ name: 'Archery', source: 'PHB', srd: true }],
+    })
+    await writeJson(sourceRoot, 'feats.json', {
+      feat: [{ name: 'Alert', source: 'PHB' }],
+    })
+    await writeJson(sourceRoot, 'class/class-wizard.json', {
+      class: [
+        {
+          name: 'Wizard',
+          source: 'PHB',
+          srd: true,
+          classFeatures: ['Fighting Style|Wizard||1'],
+        },
+      ],
+      subclass: [],
+      classFeature: [
+        {
+          name: 'Fighting Style',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          srd: true,
+          entries: [
+            { type: 'refClassFeature', classFeature: 'Helper|Wizard||2' },
+            { type: 'refOptionalfeature', optionalfeature: 'Archery' },
+            { type: 'refOptionalfeature', optionalfeature: 'Blind Fighting|TCE' },
+            { type: 'refFeat', feat: 'Alert|PHB' },
+          ],
+        },
+        {
+          name: 'Helper',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 2,
+          srd: true,
+        },
+      ],
+      subclassFeature: [],
+    })
+    const allowlist = createAllowlist()
+    allowlist.referenceExclusions = [
+      {
+        collection: 'optionalfeature',
+        source: 'TCE',
+        reason: 'Fixture non-SRD fighting style.',
+      },
+    ]
+    allowlist.dependencies.push({
+      collection: 'feat',
+      srdVersion: '5.1',
+      officialSection: 'Feats',
+      reason: 'Fixture referenced feat.',
+      identities: ['Alert|PHB'],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist,
+      upstreamRevision: 'fixture-revision',
+    })
+    const classPayload = JSON.parse(snapshot.files.get('data/class/class-wizard.json') ?? '{}')
+
+    expect(classPayload.classFeature[0].entries).toEqual([
+      { type: 'refClassFeature', classFeature: 'Helper|Wizard||2' },
+      { type: 'refOptionalfeature', optionalfeature: 'Archery' },
+      { type: 'refFeat', feat: 'Alert|PHB' },
+    ])
+    expect(
+      snapshot.manifest.coverage.references['class/class-wizard.json#inlineClassFeature'],
+    ).toEqual({ resolved: 1, excluded: 0 })
+    expect(
+      snapshot.manifest.coverage.references['class/class-wizard.json#inlineOptionalfeature'],
+    ).toEqual({ resolved: 1, excluded: 1 })
+    expect(snapshot.manifest.coverage.references['class/class-wizard.json#inlineFeat']).toEqual({
+      resolved: 1,
+      excluded: 0,
+    })
+    expect(JSON.parse(snapshot.files.get('data/feats.json') ?? '{}').feat).toEqual([
+      expect.objectContaining({ name: 'Alert', source: 'PHB' }),
+    ])
+    expect(snapshot.manifest.coverage.dependencies).toContainEqual({
+      collection: 'feat',
+      identity: 'Alert|PHB',
+      reason: 'Fixture referenced feat.',
+      reference: 'Alert|PHB',
+      srdVersion: '5.1',
+      officialSection: 'Feats',
+    })
+    expect(snapshot.manifest.coverage.referenceExclusions).toContainEqual({
+      collection: 'optionalfeature',
+      reference: 'Blind Fighting|TCE',
+      owner: 'Fighting Style|PHB',
+      reason: 'Fixture non-SRD fighting style.',
+    })
+  })
+
+  test('fails closed on an unaudited unflagged embedded dependency', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'optionalfeatures.json', {
+      optionalfeature: [{ name: 'Missing Option', source: 'PHB' }],
+    })
+    await writeJson(sourceRoot, 'class/class-wizard.json', {
+      class: [
+        {
+          name: 'Wizard',
+          source: 'PHB',
+          srd: true,
+          classFeatures: ['Fighting Style|Wizard||1'],
+        },
+      ],
+      subclass: [],
+      classFeature: [
+        {
+          name: 'Fighting Style',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          srd: true,
+          entries: [{ type: 'refOptionalfeature', optionalfeature: 'Missing Option' }],
+        },
+      ],
+      subclassFeature: [],
+    })
+    const allowlist = createAllowlist()
+    allowlist.referenceExclusions = []
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist,
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Unapproved optionalfeature dependency Missing Option|PHB')
+  })
+
   test('rejects presentation assets in selected records', async () => {
     const sourceRoot = await createFixture()
     await writeJson(sourceRoot, 'actions.json', {

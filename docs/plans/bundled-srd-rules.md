@@ -89,6 +89,9 @@ Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-revi
   skills, languages, and rule tables.
   - [x] Close class-feature, subclass-feature, inline subclass-feature, and base-item references;
     prune embedded non-SRD optional features only through explicit audited source rules.
+  - [x] Resolve structured inline class-feature, subclass-feature, optional-feature, and feat
+    references; include explicitly approved unflagged option records and reject every other
+    dangling or unapproved dependency.
 - [x] Preserve the exact file layout, collection keys, indexes, and generated spell-source lookup
   expected by the existing loader. Emit both rules generations into one catalog.
 - [ ] Reject unflagged dependencies unless an audited allowlist entry records the reference,
