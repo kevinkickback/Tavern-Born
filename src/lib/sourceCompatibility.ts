@@ -11,7 +11,6 @@ const CORE_SOURCE_RULESETS: Readonly<Record<string, OriginSystem>> = {
   XMM: '2024',
 }
 
-const LEGACY_CORE_SOURCES = new Set(['PHB', 'DMG', 'MM'])
 const REVISED_CORE_SOURCES = new Set(['XPHB', 'XDMG', 'XMM'])
 
 type SourceDescriptor = Pick<SourceBook, 'abbreviation' | 'minimumRuleset'>
@@ -104,13 +103,4 @@ export function collectRevisedSourceAbbreviations(gameData: GameData): Set<strin
   }
 
   return revised
-}
-
-export function isImplicitSource(source: string, originSystem: OriginSystem): boolean {
-  return normalizeSource(source) === getImplicitSource(originSystem)
-}
-
-export function isCoreSource(source: string): boolean {
-  const abbreviation = normalizeSource(source)
-  return LEGACY_CORE_SOURCES.has(abbreviation) || REVISED_CORE_SOURCES.has(abbreviation)
 }
