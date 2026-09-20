@@ -23,6 +23,10 @@ and validates the packaged catalog before replacing an external source; failure 
 data, cache, and external configuration while exposing a diagnostic. For an active bundled source,
 the same action rebuilds parsed data without first making the application content-free.
 
+After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
+available offline. Continuing requires no source setup; “Add More Content” opens the existing
+external-source controls and explains that user-supplied content replaces the bundled catalog.
+
 Bundled transport and version-aware cache identity are implemented, but bundled-first startup stays
 disabled while the generated pack has `provenance-review-required` status. Until the reviewed pack
 is committed and included in release resources, existing local/remote startup behavior remains the

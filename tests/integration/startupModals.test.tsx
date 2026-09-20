@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
@@ -96,8 +97,108 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<DataSourceStartupModal />)
 
-    expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
+    expect(screen.getByText('Choose a Game Data Source')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
+  })
+
+  test('introduces an approved bundled source once and continues without setup', async () => {
+    const user = userEvent.setup()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: {
+        races: [],
+        classes: [],
+        backgrounds: [],
+        spells: [],
+        feats: [],
+        items: [],
+        itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
+        classFeatures: [],
+        actions: [],
+        conditions: [],
+        deities: [],
+        skills: [],
+        senses: [],
+        languages: [],
+        optionalfeatures: [],
+        variantrules: [],
+        trapHazards: [],
+        rewards: [],
+        cultsBoons: [],
+        organizations: [],
+        sources: [],
+      },
+      dataSourceConfig: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+      isLoading: false,
+      cacheStatus: 'fetched',
+    })
+
+    render(<DataSourceStartupModal />)
+
+    expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
+    expect(screen.getByText('Bundled SRD 5.1 + 5.2.1')).toBeTruthy()
+    expect(screen.queryByText('Data Source Configurator')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Continue with Bundled SRD' }))
+
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('tb:bundled-srd-intro:v1', '1')
+    expect(screen.queryByText('Welcome to Tavern Born')).toBeNull()
+  })
+
+  test('opens optional external setup from the bundled introduction', async () => {
+    const user = userEvent.setup()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: {
+        races: [],
+        classes: [],
+        backgrounds: [],
+        spells: [],
+        feats: [],
+        items: [],
+        itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
+        classFeatures: [],
+        actions: [],
+        conditions: [],
+        deities: [],
+        skills: [],
+        senses: [],
+        languages: [],
+        optionalfeatures: [],
+        variantrules: [],
+        trapHazards: [],
+        rewards: [],
+        cultsBoons: [],
+        organizations: [],
+        sources: [],
+      },
+      dataSourceConfig: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+      isLoading: false,
+      cacheStatus: 'fetched',
+    })
+
+    render(<DataSourceStartupModal />)
+    await user.click(screen.getByRole('button', { name: 'Add More Content' }))
+
+    expect(screen.getByText('Choose a Game Data Source')).toBeTruthy()
+    expect(screen.getByText('Data Source Configurator')).toBeTruthy()
+    expect(screen.getByText(/External content is supplied by you/)).toBeTruthy()
   })
 
   test('DataSourceStartupModal remains closed when game data already exists', () => {

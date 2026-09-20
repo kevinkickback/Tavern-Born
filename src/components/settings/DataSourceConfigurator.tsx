@@ -28,13 +28,17 @@ type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
 
 type DataSourceConfiguratorProps = {
   selectorOnly?: boolean
+  onSourceLoaded?: () => void
 }
 
 export function isValidatableRemoteUrl(value: string): boolean {
   return parseRemoteDataSourceUrl(value).kind !== 'invalid'
 }
 
-export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfiguratorProps) {
+export function DataSourceConfigurator({
+  selectorOnly = false,
+  onSourceLoaded,
+}: DataSourceConfiguratorProps) {
   const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
   const gameData = useGameDataStore((state) => state.gameData)
   const isLoading = useGameDataStore((state) => state.isLoading)
@@ -215,6 +219,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       setSourcePath('')
       setValidationStatus('idle')
       setValidationResult(null)
+      onSourceLoaded?.()
     } catch (error) {
       toast.error('Failed to load game data', {
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -263,6 +268,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       toast.success(wasBundled ? 'Bundled SRD data rebuilt' : 'Bundled SRD data restored', {
         description: 'SRD 5.1 and 5.2.1 rules are ready to use.',
       })
+      onSourceLoaded?.()
     } catch (restoreError) {
       toast.error('Unable to load bundled SRD data', {
         description: restoreError instanceof Error ? restoreError.message : 'Unknown error',
@@ -303,7 +309,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
         title={selectorOnly ? 'Choose a data source' : 'Data Source Configuration'}
         description={
           selectorOnly
-            ? 'Use a remote repository or a local 5etools data directory.'
+            ? 'Use the included SRD or replace it with a user-supplied external 5etools source.'
             : 'Configure where to load game data from.'
         }
         className="pt-0"

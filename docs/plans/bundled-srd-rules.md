@@ -148,7 +148,7 @@ cache clearing all end with a complete usable catalog.
 
 ## Phase 4 — First-Run and Settings Experience
 
-- [ ] Replace the blocking data-source setup prompt with a short first-run message that says SRD
+- [x] Replace the blocking data-source setup prompt with a short first-run message that says SRD
   content is included. Its primary action continues with bundled content; a secondary “Add more
   content” action opens the existing external local/remote controls.
 - [ ] Rework `DataSourceConfigurator` into two clear states:
@@ -158,9 +158,9 @@ cache clearing all end with a complete usable catalog.
   Settings. Show external-path details only for external sources.
 - [ ] Update the status bar and empty states to describe “Bundled SRD” or “External source” instead
   of reporting no data on a normal installation.
-- [ ] Explain that external data is user supplied, replaces the bundled presentation catalog, and
+- [x] Explain that external data is user supplied, replaces the bundled presentation catalog, and
   is not distributed by Tavern Born.
-- [ ] Preserve forced setup as a recoverable settings flow, but never require network access or a
+- [x] Preserve forced setup as a recoverable settings flow, but never require network access or a
   folder selection to enter the app.
 
 Exit gate: a first-time user can remain offline and reach character creation with one confirmation;

@@ -63,6 +63,7 @@ describe('data source refresh feedback', () => {
 
   test('restores bundled SRD data without clearing the current source first', async () => {
     const user = userEvent.setup()
+    const onSourceLoaded = vi.fn()
     const restoreBundledData = vi.fn(() => {
       useGameDataStore.setState({
         dataSourceConfig: {
@@ -77,7 +78,7 @@ describe('data source refresh feedback', () => {
       return Promise.resolve(true)
     })
     useGameDataStore.setState({ restoreBundledData })
-    render(<DataSourceConfigurator />)
+    render(<DataSourceConfigurator onSourceLoaded={onSourceLoaded} />)
 
     await user.click(screen.getByRole('button', { name: 'Restore Bundled SRD' }))
 
@@ -85,6 +86,7 @@ describe('data source refresh feedback', () => {
     expect(toast.success).toHaveBeenCalledWith('Bundled SRD data restored', {
       description: 'SRD 5.1 and 5.2.1 rules are ready to use.',
     })
+    expect(onSourceLoaded).toHaveBeenCalledTimes(1)
   })
 
   test('shows bundled pack identity and rebuild controls for the active bundled source', () => {
