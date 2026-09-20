@@ -1,5 +1,5 @@
 import { BookOpen, Books, Warning } from '@phosphor-icons/react'
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -7,6 +7,11 @@ import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { isSourceReadinessFocus } from '@/lib/navigation/readinessFocus'
+import {
+  getSourceCompatibility,
+  normalizeAllowedSources,
+  getEffectiveSources as resolveEffectiveSources,
+} from '@/lib/sourceCompatibility'
 import {
   countRemovedSpells,
   detectSourceConflicts,
@@ -59,14 +64,31 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     () => allSources.filter((s) => s.hasCharacterOptions !== false),
     [allSources],
   )
-  const allowedSources = character?.allowedSources ?? []
+  const configuredSources = character?.allowedSources ?? []
+  const allowedSources = useMemo(
+    () =>
+      character
+        ? normalizeAllowedSources(configuredSources, character.originSystem, sources)
+        : configuredSources,
+    [character, configuredSources, sources],
+  )
   const availableSourceSet = new Set(sources.map((s) => s.abbreviation))
 
   const effectiveSources = useMemo(() => {
     if (!character) return allowedSources
-    const implicit = getImplicitSource(character.originSystem)
-    return allowedSources.includes(implicit) ? allowedSources : [...allowedSources, implicit]
-  }, [allowedSources, character])
+    return resolveEffectiveSources(allowedSources, character.originSystem, sources)
+  }, [allowedSources, character, sources])
+
+  useEffect(() => {
+    if (!character) return
+    if (
+      configuredSources.length === allowedSources.length &&
+      configuredSources.every((source, index) => source === allowedSources[index])
+    ) {
+      return
+    }
+    updateCharacter(character.id, { allowedSources })
+  }, [allowedSources, character, configuredSources, updateCharacter])
 
   const sourcesByGroup = useMemo(
     () =>
@@ -98,7 +120,8 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     )
   }
 
-  const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
+  const preferNewerPrintings =
+    character?.originSystem === '2024' || (character?.variantRules?.preferNewerPrintings ?? false)
 
   if (!character) {
     return <NoCharCard icon={<Books weight="duotone" />} noun="manage sources" />
@@ -109,8 +132,8 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const printingNotice =
     character.originSystem === '2024'
       ? preferNewerPrintings
-        ? 'Older options are hidden when newer versions exist. Disable Prefer Newer Printings to show every version.'
-        : 'Legacy and Revised content can overlap. Enable Prefer Newer Printings to hide older versions when replacements exist.'
+        ? 'Revised replacements are always used. Compatible older options remain available when no revised version exists.'
+        : ''
       : preferNewerPrintings
         ? 'Older printings are hidden where a newer version exists in the selected sources.'
         : 'Some selected books contain multiple printings of the same option. Prefer Newer Printings can remove those duplicates.'
@@ -119,10 +142,8 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
 
   const allSpells = gameData?.spells ?? []
 
-  const getEffectiveSources = (nextAllowed: string[]): string[] => {
-    const implicit = getImplicitSource(character.originSystem)
-    return nextAllowed.includes(implicit) ? nextAllowed : [...nextAllowed, implicit]
-  }
+  const getEffectiveSourcesForCharacter = (nextAllowed: string[]): string[] =>
+    resolveEffectiveSources(nextAllowed, character.originSystem, sources)
 
   const applySpellPrune = (
     updates: Partial<typeof character>,
@@ -130,7 +151,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   ): Partial<typeof character> => {
     const prune = pruneSpellsForDisabledSources(
       character,
-      getEffectiveSources(nextAllowed),
+      getEffectiveSourcesForCharacter(nextAllowed),
       allSpells,
     )
     if (!prune) return updates
@@ -142,14 +163,24 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   }
 
   const toggleSource = (abbr: string) => {
+    const source = sources.find((candidate) => candidate.abbreviation === abbr) ?? abbr
+    if (!getSourceCompatibility(source, character.originSystem).compatible) return
     const isRemoving = allowedSources.includes(abbr)
-    const next = isRemoving ? allowedSources.filter((s) => s !== abbr) : [...allowedSources, abbr]
+    const next = normalizeAllowedSources(
+      isRemoving ? allowedSources.filter((s) => s !== abbr) : [...allowedSources, abbr],
+      character.originSystem,
+      sources,
+    )
     const updates: Partial<typeof character> = { allowedSources: next }
     patch(isRemoving ? applySpellPrune(updates, next) : updates)
   }
 
   const applyPreset = (preset: SourcePreset) => {
-    const next = preset.abbreviations.filter((a) => availableSourceSet.has(a))
+    const next = normalizeAllowedSources(
+      preset.abbreviations.filter((a) => availableSourceSet.has(a)),
+      character.originSystem,
+      sources,
+    )
     patch(applySpellPrune({ allowedSources: next }, next))
   }
 
@@ -158,6 +189,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   }
 
   const setPreferNewerPrintings = (checked: boolean) => {
+    if (character.originSystem === '2024') return
     patch({ variantRules: { ...character.variantRules, preferNewerPrintings: checked } })
   }
 
@@ -276,6 +308,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                   id={preferNewerId}
                   checked={preferNewerPrintings}
                   onCheckedChange={setPreferNewerPrintings}
+                  disabled={character.originSystem === '2024'}
                 />
               </div>
             </aside>
@@ -294,14 +327,19 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                       {groupSources.map((source) => {
                         const enabled = allowedSources.includes(source.abbreviation)
+                        const compatibility = getSourceCompatibility(source, character.originSystem)
                         return (
                           <button
                             type="button"
                             key={source.abbreviation}
                             onClick={() => toggleSource(source.abbreviation)}
                             aria-pressed={enabled}
+                            disabled={!compatibility.compatible}
+                            title={compatibility.reason}
                             className={cn(
                               'flex min-h-14 cursor-pointer items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition-colors',
+                              !compatibility.compatible &&
+                                'cursor-not-allowed opacity-50 hover:border-border hover:text-muted-foreground',
                               enabled
                                 ? 'border-accent bg-accent/10 text-foreground'
                                 : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
@@ -319,6 +357,11 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                                 {source.abbreviation}
                                 {source.year && ` (${source.year})`}
                               </div>
+                              {!compatibility.compatible && (
+                                <div className="mt-0.5 text-[11px] text-warning">
+                                  {compatibility.reason}
+                                </div>
+                              )}
                             </div>
                           </button>
                         )

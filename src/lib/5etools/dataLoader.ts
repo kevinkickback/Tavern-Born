@@ -7,6 +7,7 @@ import { mapWithConcurrency } from '@/lib/async'
 import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
+import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
 import {
@@ -353,7 +354,12 @@ export class FiveEToolsDataLoader {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
 
-    gameData.sources = buildSourcesList(Array.from(sourcesSet), booksData, adventuresData)
+    gameData.sources = buildSourcesList(
+      Array.from(sourcesSet),
+      booksData,
+      adventuresData,
+      collectRevisedSourceAbbreviations(gameData),
+    )
     gameData.lookups = buildGameDataLookups(gameData)
 
     if (import.meta.env.DEV) {

@@ -2,7 +2,7 @@ import { del, get, set } from 'idb-keyval'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 7
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 8
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 export interface GameDataCacheEntry {

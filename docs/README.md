@@ -22,6 +22,11 @@ the authority for implementation details; avoid turning this folder into a file-
 - [PDF Generation](pdf-generation.md): template and export boundaries.
 - [Changelog](changelog.md): user-facing release notes.
 
+## Active implementation plans
+
+- [Character Data Compatibility](plans/character-data-compatibility.md): preserve pre-1.0 user
+  characters at the 1.0 boundary without committing to unsafe automatic conversion.
+
 ## Before changing code
 
 - Choose the owning layer before coding: page/component, hook, pure domain library, store, or parser.

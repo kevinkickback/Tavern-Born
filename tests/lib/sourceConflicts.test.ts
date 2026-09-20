@@ -112,6 +112,63 @@ describe('detectSourceConflicts', () => {
       ]),
     )
   })
+
+  test('does not flag permitted 2014 PHB options on a 2024 character', () => {
+    const char = makeCharacterFixture({
+      originSystem: '2024',
+      race: 'Half-Elf',
+      raceSource: 'PHB',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+      classProgression: [
+        {
+          name: 'Cleric',
+          levels: 3,
+          source: 'XPHB',
+          subclass: 'Knowledge Domain',
+          subclassSource: 'PHB',
+        },
+      ],
+      feats: [{ id: 'f1', name: 'Dungeon Delver', source: 'PHB', description: '' }],
+      specialFeats: [{ id: 'f2', name: 'Linguist', source: 'PHB', description: '' }],
+      classFeatChoices: [
+        {
+          id: 'fighter-feat',
+          className: 'Fighter',
+          classSource: 'XPHB',
+          progressionName: 'Ability Score Improvement',
+          categories: [],
+          feats: [{ id: 'f3', name: 'Martial Adept', source: 'PHB', description: '' }],
+        },
+      ],
+    })
+
+    expect(detectSourceConflicts(char, ['XPHB'])).toEqual([])
+  })
+
+  test('still flags replaced 2014 PHB options on a 2024 character', () => {
+    const char = makeCharacterFixture({
+      originSystem: '2024',
+      race: 'Elf',
+      raceSource: 'PHB',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+      classProgression: [
+        {
+          name: 'Cleric',
+          levels: 3,
+          source: 'XPHB',
+          subclass: 'Life Domain',
+          subclassSource: 'PHB',
+        },
+      ],
+      feats: [{ id: 'f1', name: 'Alert', source: 'PHB', description: '' }],
+    })
+
+    expect(detectSourceConflicts(char, ['XPHB'])).toEqual([
+      { source: 'PHB', items: ['Elf', 'Life Domain (subclass)', 'Alert'] },
+    ])
+  })
 })
 
 // ── pruneSpellsForDisabledSources ────────────────────────────────────────────

@@ -230,12 +230,14 @@ export function buildSourcesList(
   sourceAbbreviations: string[],
   booksData: unknown,
   adventuresData?: unknown,
+  revisedSources: ReadonlySet<string> = new Set(),
 ): Array<{
   abbreviation: string
   name: string
   group: string
   year?: number
   hasCharacterOptions: boolean
+  minimumRuleset?: '2024'
 }> {
   const booksList = parseBooks(booksData)
   const adventuresList = adventuresData ? parseBooks(adventuresData) : []
@@ -269,11 +271,14 @@ export function buildSourcesList(
         booksMap.get(abbr) ??
         (SOURCE_FALLBACKS[abbr] ? { id: abbr, source: abbr, ...SOURCE_FALLBACKS[abbr] } : null)
       if (!book) {
+        const abbreviation = abbr.toUpperCase()
         return {
-          abbreviation: abbr,
+          abbreviation,
           name: abbr,
           group: 'other',
+          year: undefined,
           hasCharacterOptions: true,
+          ...(revisedSources.has(abbreviation) ? { minimumRuleset: '2024' as const } : {}),
         }
       }
       const bookObj = asObject(book)
@@ -289,13 +294,15 @@ export function buildSourcesList(
       const hasCharacterOptions = characterRelevantGroups.includes(rawGroup)
       const published = typeof bookObj.published === 'string' ? bookObj.published : undefined
 
+      const abbreviation = abbr.toUpperCase()
       return {
         // Uppercase to match the sourceSchema transform — character.allowedSources is always uppercase
-        abbreviation: abbr.toUpperCase(),
+        abbreviation,
         name: typeof bookObj.name === 'string' ? bookObj.name : abbr,
         group,
         year: published ? Number.parseInt(published, 10) : undefined,
         hasCharacterOptions,
+        ...(revisedSources.has(abbreviation) ? { minimumRuleset: '2024' as const } : {}),
       }
     })
     .sort((a, b) => {

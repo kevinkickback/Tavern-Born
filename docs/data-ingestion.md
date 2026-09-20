@@ -73,6 +73,18 @@ Lookup keys are case-normalized `name|source`. Exact resolution checks the filte
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Persisted references without a source are rejected rather than matched to the first printing.
 
+## Ruleset compatibility
+
+The character's `originSystem` owns the core rules foundation. PHB/XPHB, DMG/XDMG, and MM/XMM
+are replacement families; only the printing matching that foundation is effective. Parsed sources
+whose entities explicitly carry revised-edition metadata are unavailable to 2014 characters.
+
+2024 characters may use older supplements, adventures, and the explicit unreplaced PHB character
+options recorded in `rulesetMetadata.ts`. A revised replacement always wins for a 2024 character,
+regardless of the optional same-edition reprint preference. Source compatibility is normalized in
+the shared domain helper before filtering and in both source-selection surfaces; components must not
+recreate this policy.
+
 Downstream UI uses `useFilteredGameData()`, `useWizardGameData()`, or named hooks from
 `useGameData.ts`. Use lookup maps for exact references rather than repeated array scans.
 

@@ -2,7 +2,12 @@ import { useMemo } from 'react'
 import { DataFilter } from '@/lib/5etools/filters'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
-import { getImplicitSource } from '@/lib/sourcePresets'
+import {
+  XPHB_LEGACY_FEAT_KEYS,
+  XPHB_LEGACY_RACE_KEYS,
+  XPHB_LEGACY_SUBCLASS_KEYS,
+} from '@/lib/5etools/rulesetMetadata'
+import { getEffectiveSources, normalizeAllowedSources } from '@/lib/sourceCompatibility'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
@@ -71,8 +76,12 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const classFeatures = gameData.classFeatures ?? []
     const optionalfeatures = gameData.optionalfeatures ?? []
     const sources = gameData.sources ?? []
+    const compatibleAllowedSources =
+      allowedSources && originSystem
+        ? normalizeAllowedSources(allowedSources, originSystem, sources)
+        : allowedSources
 
-    if (!allowedSources || allowedSources.length === 0) {
+    if (!compatibleAllowedSources || compatibleAllowedSources.length === 0) {
       return {
         ...gameData,
         races,
@@ -104,83 +113,92 @@ export function useFilteredGameDataParams(params: FilterParams) {
         ...(subclass.levelFeatures ?? []).flatMap((group) => group.features),
       ]),
     ])
-    const suppressedKeys = preferNewerPrintings
-      ? buildSuppressedKeys(
-          [
-            ...races,
-            ...classes,
-            ...nestedClassEntities,
-            ...backgrounds,
-            ...spells,
-            ...feats,
-            ...items,
-            ...itemsBase,
-            ...classFeatures,
-            ...(optionalfeatures as Array<{
-              name?: unknown
-              source?: unknown
-              reprintedAs?: unknown
-            }>),
-          ],
-          new Set(allowedSources),
-        )
-      : undefined
+    const suppressedKeys =
+      preferNewerPrintings || originSystem === '2024'
+        ? buildSuppressedKeys(
+            [
+              ...races,
+              ...classes,
+              ...nestedClassEntities,
+              ...backgrounds,
+              ...spells,
+              ...feats,
+              ...items,
+              ...itemsBase,
+              ...classFeatures,
+              ...(optionalfeatures as Array<{
+                name?: unknown
+                source?: unknown
+                reprintedAs?: unknown
+              }>),
+            ],
+            new Set(compatibleAllowedSources),
+          )
+        : undefined
+    const legacyRaceKeys = originSystem === '2024' ? XPHB_LEGACY_RACE_KEYS : undefined
+    const legacyFeatKeys = originSystem === '2024' ? XPHB_LEGACY_FEAT_KEYS : undefined
+    const legacySubclassKeys = originSystem === '2024' ? XPHB_LEGACY_SUBCLASS_KEYS : undefined
 
     return {
       ...gameData,
       races: DataFilter.filterRaces(races, {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
         suppressedKeys,
+        allowedKeys: legacyRaceKeys,
       }),
       classes: DataFilter.filterClasses(classes, {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
         suppressedKeys,
+        allowedSubclassKeys: legacySubclassKeys,
       }),
       backgrounds: DataFilter.filterBackgrounds(backgrounds, {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
         suppressedKeys,
       }),
       // Organizations are reference/flavor content (like deities) — not gated by sourcebook.
       organizations,
       spells: DataFilter.filterSpells(spells, {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
         suppressedKeys,
       }),
       feats: DataFilter.filterFeats(feats, {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
         suppressedKeys,
+        allowedKeys: legacyFeatKeys,
       }),
       items: filterCharacterItems(items, {
-        allowedSources,
+        allowedSources: compatibleAllowedSources,
         originSystem,
         itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
       itemsBase: filterCharacterItems(itemsBase, {
-        allowedSources,
+        allowedSources: compatibleAllowedSources,
         originSystem,
         itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
       itemMasteries: itemMasteries.filter((mastery) =>
-        allowedSources.some((source) => source.toUpperCase() === mastery.source.toUpperCase()),
+        compatibleAllowedSources.some(
+          (source) => source.toUpperCase() === mastery.source.toUpperCase(),
+        ),
       ),
       classFeatures: classFeatures.filter(
         (cf) =>
-          allowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
+          compatibleAllowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
       optionalfeatures: optionalfeatures.filter((of: unknown) => {
         const optionalFeature = of as { name?: string; source?: string }
         const source = optionalFeature.source ?? ''
-        if (!allowedSources.some((s) => s.toUpperCase() === source.toUpperCase())) {
+        if (!compatibleAllowedSources.some((s) => s.toUpperCase() === source.toUpperCase())) {
           return false
         }
         return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)
       }),
       sources,
       languages: DataFilter.filterLanguages(gameData.languages ?? [], {
-        sources: allowedSources,
+        sources: compatibleAllowedSources,
       }),
     }
   }, [gameData, allowedSources, preferNewerPrintings, originSystem])
@@ -202,9 +220,7 @@ export function useFilteredGameData() {
 
   const effectiveSources = useMemo(() => {
     if (!allowedSources) return undefined
-    const implicit = getImplicitSource(originSystem ?? '2014')
-    if (allowedSources.includes(implicit)) return allowedSources
-    return [...allowedSources, implicit]
+    return getEffectiveSources(allowedSources, originSystem ?? '2014')
   }, [allowedSources, originSystem])
 
   return useFilteredGameDataParams({

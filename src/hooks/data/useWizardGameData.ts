@@ -8,8 +8,9 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
+import { XPHB_LEGACY_RACE_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
-import { getImplicitSource } from '@/lib/sourcePresets'
+import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useFilteredGameDataParams } from './useFilteredGameData'
 import { useBackgroundLookup, useClassLookup, useRaceLookup } from './useGameData'
 
@@ -26,8 +27,7 @@ export function useWizardGameData({
 }: WizardGameDataParams) {
   const effectiveSources = useMemo(() => {
     if (!allowedSources) return undefined
-    const implicit = getImplicitSource(originSystem || '2014')
-    return allowedSources.includes(implicit) ? allowedSources : [...allowedSources, implicit]
+    return getEffectiveSources(allowedSources, originSystem || '2014')
   }, [allowedSources, originSystem])
   const filteredData = useFilteredGameDataParams({
     allowedSources: effectiveSources,
@@ -42,20 +42,23 @@ export function useWizardGameData({
     if (!effectiveSources || effectiveSources.length === 0) return filteredData.races
     const allowed = new Set(effectiveSources.map((source) => source.toUpperCase()))
     const entities = filteredData.races.flatMap((race) => [race, ...(race.subraces ?? [])])
-    const suppressed = preferNewerPrintings
-      ? buildSuppressedKeys(entities, new Set(effectiveSources))
-      : undefined
+    const suppressed =
+      preferNewerPrintings || originSystem === '2024'
+        ? buildSuppressedKeys(entities, new Set(effectiveSources))
+        : undefined
     return filteredData.races.map((race) => ({
       ...race,
       subraces: (race.subraces ?? []).filter((subrace) => {
         const source = subrace.source ?? race.source
         return (
-          allowed.has(source.toUpperCase()) &&
+          (allowed.has(source.toUpperCase()) ||
+            (originSystem === '2024' &&
+              XPHB_LEGACY_RACE_KEYS.has(`${race.name}|${race.source}`))) &&
           !(suppressed?.has(`${subrace.name}|${source}`) ?? false)
         )
       }),
     }))
-  }, [effectiveSources, filteredData.races, preferNewerPrintings])
+  }, [effectiveSources, filteredData.races, originSystem, preferNewerPrintings])
   const classes = useMemo(
     () => filteredData.classes.filter((classEntity) => !classEntity.isSidekick),
     [filteredData.classes],

@@ -1,3 +1,8 @@
+import {
+  XPHB_LEGACY_FEAT_KEYS,
+  XPHB_LEGACY_RACE_KEYS,
+  XPHB_LEGACY_SUBCLASS_KEYS,
+} from '@/lib/5etools/rulesetMetadata'
 import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
@@ -15,32 +20,68 @@ export function detectSourceConflicts(
 ): SourceConflict[] {
   const allowed = new Set(allowedSources.map((source) => source.toUpperCase()))
   const bySource = new Map<string, string[]>()
+  const permitsLegacyExceptions = character.originSystem === '2024'
 
-  const flag = (label: string, source?: string) => {
-    if (!source || allowed.has(source.toUpperCase())) return
+  const flag = (label: string, source?: string, isCompatibilityException = false) => {
+    if (!source || allowed.has(source.toUpperCase()) || isCompatibilityException) return
     if (!bySource.has(source)) bySource.set(source, [])
     const items = bySource.get(source)
     if (!items?.includes(label)) items?.push(label)
   }
 
-  flag(character.race, character.raceSource)
-  if (character.subrace) flag(character.subrace, character.subraceSource)
+  const selectedRaceIsLegacyException = Boolean(
+    permitsLegacyExceptions &&
+      character.race &&
+      character.raceSource &&
+      XPHB_LEGACY_RACE_KEYS.has(`${character.race}|${character.raceSource}`),
+  )
+  flag(character.race, character.raceSource, selectedRaceIsLegacyException)
+  if (character.subrace) {
+    flag(
+      character.subrace,
+      character.subraceSource,
+      selectedRaceIsLegacyException && character.subraceSource === character.raceSource,
+    )
+  }
 
   for (const cls of character.classProgression) {
     flag(cls.name, cls.source)
-    if (cls.subclass) flag(`${cls.subclass} (subclass)`, cls.subclassSource)
+    if (cls.subclass) {
+      const subclassIsLegacyException = Boolean(
+        permitsLegacyExceptions &&
+          cls.subclassSource &&
+          XPHB_LEGACY_SUBCLASS_KEYS.has(
+            `${cls.name}|${cls.source}|${cls.subclass}|${cls.subclassSource}`,
+          ),
+      )
+      flag(`${cls.subclass} (subclass)`, cls.subclassSource, subclassIsLegacyException)
+    }
   }
 
   flag(character.background, character.backgroundSource)
 
   for (const feat of character.feats) {
-    flag(feat.name, feat.source)
+    flag(
+      feat.name,
+      feat.source,
+      permitsLegacyExceptions && XPHB_LEGACY_FEAT_KEYS.has(`${feat.name}|${feat.source}`),
+    )
   }
   for (const feat of character.specialFeats ?? []) {
-    flag(feat.name, feat.source)
+    flag(
+      feat.name,
+      feat.source,
+      permitsLegacyExceptions && XPHB_LEGACY_FEAT_KEYS.has(`${feat.name}|${feat.source}`),
+    )
   }
   for (const choice of character.classFeatChoices ?? []) {
-    for (const feat of choice.feats) flag(feat.name, feat.source)
+    for (const feat of choice.feats) {
+      flag(
+        feat.name,
+        feat.source,
+        permitsLegacyExceptions && XPHB_LEGACY_FEAT_KEYS.has(`${feat.name}|${feat.source}`),
+      )
+    }
   }
   for (const choice of character.classChoiceSelections ?? []) {
     for (const option of choice.selected) flag(option.name, option.source)

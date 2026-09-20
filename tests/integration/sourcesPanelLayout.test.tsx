@@ -17,7 +17,15 @@ vi.mock('@/store/gameDataStore', () => ({
       gameData: {
         sources: [
           { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
+          { name: "Dungeon Master's Guide", abbreviation: 'DMG', group: 'core' },
+          { name: "Dungeon Master's Guide (2024)", abbreviation: 'XDMG', group: 'core' },
           { name: "Xanathar's Guide to Everything", abbreviation: 'XGE', group: 'supplement' },
+          {
+            name: 'Eberron: Forge of the Artificer',
+            abbreviation: 'EFA',
+            group: 'setting',
+            minimumRuleset: '2024',
+          },
         ],
         spells: [],
       },
@@ -93,5 +101,47 @@ describe('Rules Sources panel layout', () => {
     expect(useCharacterStore.getState().activeCharacter?.variantRules?.preferNewerPrintings).toBe(
       true,
     )
+  })
+
+  test('disables revised core and revised-only sources for a 2014 character', () => {
+    render(<SourcesPanel />)
+
+    expect(
+      screen.getByRole('button', { name: /Dungeon Master's Guide DMG/ }).hasAttribute('disabled'),
+    ).toBe(false)
+    expect(
+      screen
+        .getByRole('button', { name: /Dungeon Master's Guide \(2024\).*XDMG/ })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('button', { name: /Eberron: Forge of the Artificer.*EFA/ })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+  })
+
+  test('disables legacy core counterparts for a 2024 character', () => {
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: ['DMG', 'XDMG'],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<SourcesPanel />)
+
+    expect(
+      screen.getByRole('button', { name: /Dungeon Master's Guide DMG/ }).hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('button', { name: /Dungeon Master's Guide \(2024\).*XDMG/ })
+        .hasAttribute('disabled'),
+    ).toBe(false)
+    expect(screen.getByLabelText('Prefer Newer Printings').hasAttribute('disabled')).toBe(true)
   })
 })
