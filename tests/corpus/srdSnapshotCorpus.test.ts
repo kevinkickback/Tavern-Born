@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
+import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
+import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
 import { buildSrdSnapshot } from '../../scripts/srd/snapshot.mjs'
 
 const PROJECT_ROOT = process.cwd()
@@ -172,5 +174,50 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
     expect(gameData.spells.some((entry) => entry.source === 'PHB')).toBe(true)
     expect(gameData.spells.some((entry) => entry.source === 'XPHB')).toBe(true)
     expect(createCorpusCapabilityReport(gameData).issues).toEqual([])
+    expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{8}$/)
+
+    const externalFailures: Array<{ resource: string; required: boolean }> = []
+    const externalData = await new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: DATA_ROOT,
+        isValid: true,
+      },
+      {
+        type: 'local',
+        readJson(relativePath) {
+          return readJson(resolve(DATA_ROOT, ...relativePath.split('/')))
+        },
+      },
+    ).loadAllData({
+      onResourceFailure: (resource, failure) => externalFailures.push({ resource, ...failure }),
+    })
+    const composed = composeGameDataLayers([gameData, externalData])
+
+    expect(externalFailures.filter((failure) => failure.required)).toEqual([])
+    expect(findLayerDependencyIssues(composed, externalData)).toEqual([])
+    expect(computeGameDataFingerprint(composed)).toMatch(/^[a-f0-9]{8}$/)
+
+    const assertUniqueAndLayered = <T extends { name: string; source: string }>(
+      base: T[],
+      external: T[],
+      effective: T[],
+    ) => {
+      const key = (value: T) =>
+        `${value.name.trim().toLowerCase()}|${value.source.trim().toLowerCase()}`
+      expect(new Set(effective.map(key)).size).toBe(effective.length)
+      const effectiveByKey = new Map(effective.map((value) => [key(value), value]))
+      const externalByKey = new Map(external.map((value) => [key(value), value]))
+      for (const value of base) {
+        expect(effectiveByKey.get(key(value))).toEqual(externalByKey.get(key(value)) ?? value)
+      }
+    }
+
+    assertUniqueAndLayered(gameData.classes, externalData.classes, composed.classes)
+    assertUniqueAndLayered(gameData.races, externalData.races, composed.races)
+    assertUniqueAndLayered(gameData.backgrounds, externalData.backgrounds, composed.backgrounds)
+    assertUniqueAndLayered(gameData.feats, externalData.feats, composed.feats)
+    assertUniqueAndLayered(gameData.spells, externalData.spells, composed.spells)
+    assertUniqueAndLayered(gameData.items, externalData.items, composed.items)
   })
 })

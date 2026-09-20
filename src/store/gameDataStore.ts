@@ -1,9 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { type DataLoaderOptions, loadDataFromSource, loadGameDataSourceStack } from '@/lib/5etools'
+import {
+  type DataSourceStackLoaderOptions,
+  loadDataFromSource,
+  loadGameDataSourceStack,
+} from '@/lib/5etools'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   clearGameDataCache,
+  computeGameDataFingerprint,
+  type GameDataLayerCacheMetadataByRole,
   isCacheForSource,
   isCacheStale,
   readGameDataCache,
@@ -267,7 +273,8 @@ export const useGameDataStore = create<GameDataState>()(
           const failedRequiredResources = new Set<string>()
           const sourceStack = await resolveSourceStack(config)
           const cacheIdentity = sourceStack ?? config
-          const loaderOptions: DataLoaderOptions = {
+          const layerMetadata: GameDataLayerCacheMetadataByRole = {}
+          const loaderOptions: DataSourceStackLoaderOptions = {
             onProgress: background
               ? undefined
               : (current, total, resource) => {
@@ -280,6 +287,12 @@ export const useGameDataStore = create<GameDataState>()(
               if (failure.required) failedRequiredResources.add(resource)
             },
             signal: controller.signal,
+            onLayerLoaded: (role, layerData) => {
+              layerMetadata[role] = {
+                contentFingerprint: computeGameDataFingerprint(layerData),
+                entityCount: getCatalogEntityCount(layerData),
+              }
+            },
           }
           const data = sourceStack
             ? await loadGameDataSourceStack(sourceStack, loaderOptions)
@@ -321,6 +334,7 @@ export const useGameDataStore = create<GameDataState>()(
             writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
+              ...(sourceStack ? { layerMetadata } : {}),
             }),
           )
 

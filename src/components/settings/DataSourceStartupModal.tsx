@@ -156,11 +156,11 @@ export function DataSourceStartupModal() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="mt-0.5 size-5 shrink-0 text-primary" weight="fill" />
                   <div>
-                    <p className="text-sm font-medium">SRD Rules Included</p>
+                    <p className="text-sm font-medium">Content & Options</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      Tavern Born includes the SRD content for both 2014 and 2024 characters. Please
-                      note that the SRD provides a limited selection of character options. You can
-                      add additional game data now or later in Settings.
+                      Tavern Born includes SRD content for both 5e 2014 and 5.5e 2024, offering a
+                      limited selection of character choices. You can add more now or anytime later
+                      from Settings.
                     </p>
                   </div>
                 </div>

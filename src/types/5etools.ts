@@ -489,7 +489,7 @@ interface DataSourceConfigBase {
   lastLoaded?: string
 }
 
-export type ExternalDataSourceConfig = DataSourceConfigBase & {
+type ExternalDataSourceConfig = DataSourceConfigBase & {
   type: 'local' | 'remote'
   /** Top-level resources confirmed during source validation. Missing unlisted families are absent. */
   availableResources?: string[]

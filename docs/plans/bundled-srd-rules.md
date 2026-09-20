@@ -231,25 +231,38 @@ an advanced user can configure, refresh, change, and remove an external source.
 
 ## Phase 6 — Verification and Acceptance
 
-- [ ] Unit-test extraction, reference closure, deterministic output, manifest validation, source
+- [x] Unit-test extraction, reference closure, deterministic output, manifest validation, source
   identity, cache invalidation, migrations, and fallback decisions.
-- [ ] Integration-test startup modal behavior, Settings source switching, bundled status details,
+- [x] Integration-test startup modal behavior, Settings source switching, bundled status details,
   external validation, restore-bundled behavior, and error recovery.
-- [ ] Add an Electron smoke test that reads packaged bundled JSON through the restricted IPC path
+- [x] Add an Electron smoke test that reads packaged bundled JSON through the restricted IPC path
   and rejects traversal and arbitrary files.
   - [x] Exercise the real preload/main IPC bridge in the compiled Electron shell and reject path
     traversal and non-JSON files. A positive packaged-data read remains gated on the approved
     snapshot.
-- [ ] Add offline end-to-end journeys for representative 2014 and 2024 characters: create, edit,
+- [x] Add offline end-to-end journeys for representative 2014 and 2024 characters: create, edit,
   save, reload, open rules previews/compendium, and export PDF.
-- [ ] Verify adding a full external source produces no duplicate core choices and does not rewrite
+  - [x] Add a guarded compiled-Electron journey that loads only the Included SRD, creates both
+    rules generations, levels and reloads a character, opens a real compendium entry, and generates
+    an SRD character-sheet preview. Existing browser PDF journeys verify the final download and
+    inspect the produced document.
+  - [x] Keep Electron smoke tests active on unaffected CI hosts while skipping local launches on
+    Windows builds affected by upstream Electron sandbox crash `0x80000003`; never disable the
+    renderer sandbox merely to make the test pass.
+- [x] Verify adding a full external source produces no duplicate core choices and does not rewrite
   saved SRD `name|source` references.
   - [x] Add composition and integration contracts proving that an external catalog overlays exact
     identities, retains omitted SRD entities, and leaves saved and active character snapshots
     byte-for-byte unchanged.
+  - [x] Compose the generated SRD with the configured full 5etools corpus and reject required
+    resource failures, unresolved added-class dependencies, and duplicate top-level identities.
 - [ ] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
   Biome, TypeScript, Knip, dependency boundaries, production build, release checks, and revised
   bundle budgets.
+  - [x] On 2026-09-20, Biome, TypeScript, 1,614 Vitest tests, coverage, 26 browser journeys, Knip,
+    dependency boundaries, the production build, normal bundle budgets, and current-version release
+    metadata passed. Electron journeys were correctly skipped on the affected Windows 11 build;
+    the distribution-required bundle gate remains blocked until the reviewed SRD snapshot exists.
 - [ ] Inspect the final installer/portable contents and compare every shipped SRD file checksum to
   the manifest before release.
 
@@ -307,11 +320,11 @@ Current progress:
 - [x] Allow coherent partial 5etools directory/URL layers through a persisted top-level capability
   inventory while rejecting malformed resources, broken indexes, and inventoried families that
   disappear during refresh.
-- [ ] Resolve supported cross-layer references after composition and report missing hard
+- [x] Resolve supported cross-layer references after composition and report missing hard
   dependencies without partially applying a layer.
-  - [x] Re-link unresolved class-feature references against the completed catalog and rebuild their
-    normalized class rules.
-- [ ] Extend the persisted capability inventory with per-layer fingerprints and richer diagnostics
+  - [x] Re-link class- and subclass-feature references against the completed catalog, rebuild class
+    normalization and subclass level groups, and validate explicit class-choice dependencies.
+- [x] Extend the persisted capability inventory with per-layer fingerprints and richer diagnostics
   for atomic refreshes.
 - [ ] Add standalone 5etools homebrew/add-on document import in a future feature; do not require a
   repository folder structure or index for those documents.

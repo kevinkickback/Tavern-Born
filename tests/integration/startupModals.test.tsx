@@ -154,9 +154,9 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
     expect(screen.getByText('Your adventure starts here.')).toBeTruthy()
-    expect(screen.getByText('SRD Rules Included')).toBeTruthy()
-    expect(screen.getByText(/SRD content for both 2014 and 2024 characters/)).toBeTruthy()
-    expect(screen.getByText(/add additional game data now or later in Settings/)).toBeTruthy()
+    expect(screen.getByText('Content & Options')).toBeTruthy()
+    expect(screen.getByText(/includes SRD content for both 5e 2014 and 5.5e 2024/)).toBeTruthy()
+    expect(screen.getByText(/add more now or anytime later from Settings/)).toBeTruthy()
     expect(screen.queryByText('Data Source Configurator')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Continue with Included SRD' }))

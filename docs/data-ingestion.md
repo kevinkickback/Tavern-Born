@@ -40,7 +40,10 @@ configured, both sources are loaded and parsed independently. `contentLayers.ts`
 external normalized collections on the SRD collections: an exact external identity wins, while an
 SRD identity omitted by the external source remains available. Raw source JSON is never
 concatenated. Unresolved class-feature references are re-linked against the completed catalog and
-their normalized class rules are rebuilt before the final lookups are constructed.
+their normalized class rules are rebuilt before the final lookups are constructed. Subclass-feature
+references are re-linked the same way and their level groupings are rebuilt. Explicit class-choice
+references are checked against the completed class-feature, feat, item, and optional-feature
+catalogs.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names
@@ -55,6 +58,8 @@ configuration and becomes the layer's loading contract. Unlisted families are in
 and fall back to the SRD. An inventoried family that later disappears is a required failure, and an
 indexed class or spell family still fails if one of its referenced files is missing. Adding a new
 top-level family requires reselecting/revalidating the source so the inventory change is explicit.
+An added class with unresolved class features, subclass features, or explicit choice records is
+rejected as an incomplete layer. The previously active catalog and cache remain unchanged.
 
 Future standalone add-ons should use the published 5etools homebrew document shape and a separate
 document adapter, not imitate a full data tree.
@@ -189,7 +194,9 @@ schema changes are a separate concern and follow [State Management](state-manage
 
 Layered cache identity includes the stable bundled pack ID/version and the selected external source.
 An application update therefore invalidates a composition built on an older bundled snapshot, while
-changing or removing external content selects a different cache identity.
+changing or removing external content selects a different cache identity. Successful layered loads
+also persist each layer's normalized-content fingerprint and entity count, allowing diagnostics to
+identify which layer changed without weakening source-identity cache matching.
 
 ## Adding a data family
 

@@ -31,6 +31,7 @@ vi.mock('@/lib/5etools/bundledSource', () => ({
 vi.mock('@/lib/storage/dataCache', () => ({
   writeGameDataCache: writeGameDataCacheMock,
   clearGameDataCache: clearGameDataCacheMock,
+  computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -126,7 +127,11 @@ describe('gameDataStore', () => {
       isValid: true,
     }
     resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
-    loadGameDataSourceStackMock.mockResolvedValue(data)
+    loadGameDataSourceStackMock.mockImplementation((_stack, options) => {
+      options?.onLayerLoaded?.('base', data)
+      options?.onLayerLoaded?.('additional', data)
+      return Promise.resolve(data)
+    })
 
     await useGameDataStore.getState().loadGameData(config)
 
@@ -139,7 +144,14 @@ describe('gameDataStore', () => {
     expect(writeGameDataCacheMock).toHaveBeenCalledWith(
       data,
       expectedStack,
-      expect.objectContaining({ fingerprint: null, lastDataChangedAt: null }),
+      expect.objectContaining({
+        fingerprint: null,
+        lastDataChangedAt: null,
+        layerMetadata: {
+          base: { contentFingerprint: 'layer-fingerprint', entityCount: 0 },
+          additional: { contentFingerprint: 'layer-fingerprint', entityCount: 0 },
+        },
+      }),
     )
   })
 

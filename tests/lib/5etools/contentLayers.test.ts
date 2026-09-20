@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
@@ -127,5 +127,176 @@ describe('game-data content layers', () => {
     ])
 
     expect(composed.classes[0].classFeatureRefs?.[0].feature).toBe(additionalFeature)
+  })
+
+  test('resolves subclass feature references across layers and rebuilds level groups', () => {
+    const sharedFeature = {
+      name: 'Inventive Method',
+      source: 'TEST',
+      className: 'Inventor',
+      classSource: 'TEST',
+      subclassShortName: 'Smith',
+      subclassSource: 'TEST',
+      level: 3,
+      entries: ['Provided by the base layer.'],
+    }
+    const baseClass = makeClassFixture({
+      name: 'Inventor',
+      source: 'TEST',
+      classFeatureRefs: [],
+      subclasses: [
+        {
+          name: 'The Smith',
+          shortName: 'Smith',
+          source: 'TEST',
+          className: 'Inventor',
+          classSource: 'TEST',
+          subclassFeatureRefs: [
+            {
+              ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
+              name: 'Inventive Method',
+              source: 'TEST',
+              className: 'Inventor',
+              classSource: 'TEST',
+              subclassShortName: 'Smith',
+              subclassSource: 'TEST',
+              level: 3,
+              feature: sharedFeature,
+            },
+          ],
+        },
+      ],
+    })
+    const additionalClass = makeClassFixture({
+      name: 'Inventor',
+      source: 'TEST',
+      classFeatureRefs: [],
+      subclasses: [
+        {
+          name: 'The Smith',
+          shortName: 'Smith',
+          source: 'TEST',
+          className: 'Inventor',
+          classSource: 'TEST',
+          subclassFeatureRefs: [
+            {
+              ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
+              name: 'Inventive Method',
+              source: 'TEST',
+              className: 'Inventor',
+              classSource: 'TEST',
+              subclassShortName: 'Smith',
+              subclassSource: 'TEST',
+              level: 3,
+            },
+          ],
+        },
+      ],
+    })
+
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ classes: [baseClass] }),
+      makeGameDataFixture({ classes: [additionalClass] }),
+    ])
+
+    const subclass = composed.classes[0].subclasses?.[0]
+    expect(subclass?.subclassFeatureRefs?.[0].feature).toBe(sharedFeature)
+    expect(subclass?.levelFeatures).toEqual([{ level: 3, features: [sharedFeature] }])
+    expect(
+      findLayerDependencyIssues(composed, makeGameDataFixture({ classes: [additionalClass] })),
+    ).toEqual([])
+  })
+
+  test('reports unresolved hard references introduced by additional classes', () => {
+    const additionalClass = makeClassFixture({
+      name: 'Inventor',
+      source: 'TEST',
+      classFeatureRefs: [
+        {
+          ref: 'Missing Feature|Inventor|TEST|1|TEST',
+          name: 'Missing Feature',
+          source: 'TEST',
+          className: 'Inventor',
+          classSource: 'TEST',
+          level: 1,
+        },
+      ],
+    })
+    const additional = makeGameDataFixture({ classes: [additionalClass] })
+    const composed = composeGameDataLayers([makeGameDataFixture(), additional])
+
+    expect(findLayerDependencyIssues(composed, additional)).toEqual([
+      {
+        owner: 'Inventor|TEST',
+        path: 'classFeatureRefs[0]',
+        reference: 'Missing Feature|Inventor|TEST|1|TEST',
+      },
+    ])
+  })
+
+  test('reports unresolved subclass features and explicit class-choice options', () => {
+    const additionalClass = makeClassFixture({
+      name: 'Inventor',
+      source: 'TEST',
+      classFeatureRefs: [],
+      subclasses: [
+        {
+          name: 'The Smith',
+          shortName: 'Smith',
+          source: 'TEST',
+          className: 'Inventor',
+          classSource: 'TEST',
+          subclassFeatureRefs: [
+            {
+              ref: 'Missing Method|Inventor|TEST|Smith|TEST|3|TEST',
+              name: 'Missing Method',
+              source: 'TEST',
+              className: 'Inventor',
+              classSource: 'TEST',
+              subclassShortName: 'Smith',
+              subclassSource: 'TEST',
+              level: 3,
+            },
+          ],
+        },
+      ],
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [
+          {
+            id: 'inventor-specialty',
+            label: 'Inventor Specialty',
+            kind: 'feat',
+            owner: { type: 'class', name: 'Inventor', source: 'TEST' },
+            level: 1,
+            minimumSelections: 1,
+            maximumSelections: 1,
+            selectionCountByLevel: [1],
+            options: [{ entityType: 'feat', name: 'Missing Specialty', source: 'TEST' }],
+            repeatable: false,
+            replacement: { cadence: 'never' },
+            source: { kind: 'class-feature-options', field: 'test.options' },
+          },
+        ],
+        choiceDiagnostics: [],
+      },
+    })
+    const additional = makeGameDataFixture({ classes: [additionalClass] })
+    const composed = composeGameDataLayers([makeGameDataFixture(), additional])
+
+    expect(findLayerDependencyIssues(composed, additional)).toEqual([
+      {
+        owner: 'Inventor|TEST/The Smith|TEST',
+        path: 'subclasses[0].subclassFeatureRefs[0]',
+        reference: 'Missing Method|Inventor|TEST|Smith|TEST|3|TEST',
+      },
+      {
+        owner: 'Inventor|TEST',
+        path: 'normalizedRules.choices[0].options[0]',
+        reference: 'Missing Specialty|TEST',
+      },
+    ])
   })
 })

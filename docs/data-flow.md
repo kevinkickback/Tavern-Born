@@ -44,8 +44,10 @@ behavior until the reviewed pack is committed and included in release resources.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 composed content fingerprint changes. Layered cache identity includes both the bundled pack and the
-external source, so either source changing invalidates the effective catalog. Background refreshes
-never replace a more complete catalog with partial or empty data.
+external source, so either source changing invalidates the effective catalog. The cache records a
+separate normalized-content fingerprint and entity count for each successfully loaded layer.
+Background refreshes never replace a more complete catalog with partial or empty data, and an added
+class with unresolved required feature or choice references is rejected before cache replacement.
 
 ## Character draft and save
 

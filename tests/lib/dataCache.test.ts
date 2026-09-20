@@ -13,6 +13,7 @@ vi.mock('idb-keyval', () => ({
 }))
 
 import {
+  computeGameDataFingerprint,
   GAME_DATA_CACHE_SCHEMA_VERSION,
   isCacheForSource,
   readGameDataCache,
@@ -53,6 +54,16 @@ describe('writeGameDataCache', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     idbGetMock.mockResolvedValue(null)
+  })
+
+  test('preserves the established JSON hash while ignoring runtime lookups', () => {
+    const data = makeGameData('fingerprint')
+    const fingerprint = computeGameDataFingerprint(data)
+    data.lookups = { classes: new Map([['ignored', {} as never]]) } as never
+
+    expect(computeGameDataFingerprint(data)).toBe(fingerprint)
+    data.races.push({ name: 'Different', source: 'TEST' } as never)
+    expect(computeGameDataFingerprint(data)).not.toBe(fingerprint)
   })
 
   test('sets lastDataChangedAt to now on first write (no previous cache, no fallback)', async () => {
@@ -257,9 +268,26 @@ describe('isCacheForSource', () => {
       additional: { ...config, availableResources: ['feats.json'] },
     }
 
-    const entry = await writeGameDataCache(makeGameData(), stack)
+    const entry = await writeGameDataCache(makeGameData(), stack, {
+      layerMetadata: {
+        base: { contentFingerprint: 'base-fingerprint', entityCount: 42 },
+        additional: { contentFingerprint: 'additional-fingerprint', entityCount: 7 },
+      },
+    })
 
     expect(entry.sourceSnapshot.layers).toHaveLength(2)
+    expect(entry.sourceSnapshot.layers).toEqual([
+      expect.objectContaining({
+        role: 'base',
+        contentFingerprint: 'base-fingerprint',
+        entityCount: 42,
+      }),
+      expect.objectContaining({
+        role: 'additional',
+        contentFingerprint: 'additional-fingerprint',
+        entityCount: 7,
+      }),
+    ])
     expect(isCacheForSource(entry, stack)).toBe(true)
     expect(
       isCacheForSource(entry, {
