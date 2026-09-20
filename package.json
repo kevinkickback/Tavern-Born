@@ -21,6 +21,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "generate:srd": "node scripts/build-srd-snapshot.mjs",
+    "review:srd": "node scripts/build-srd-snapshot.mjs --review",
     "verify:srd": "node scripts/build-srd-snapshot.mjs --verify",
     "generate:test-fixtures": "node scripts/generate-full-coverage-character-fixtures.mjs",
     "check:bundle": "node scripts/check-bundle-budget.mjs",

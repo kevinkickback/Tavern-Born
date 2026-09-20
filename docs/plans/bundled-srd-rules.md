@@ -55,6 +55,9 @@ rules engine.
     source-qualified identity, content hash, and either one SRD marker/version or one explicit
     dependency approval. Reject ambiguous markers and unexplained output; human content review is
     still required before changing distribution status.
+  - [x] Provide an ignored review-snapshot command and CSV checklist; prevent review-required
+    output from entering managed release resources or any output from entering the source `data/`
+    tree.
 - [x] Define a transformation notice stating that Tavern Born converted and structured the SRD
   material. Keep it separate from the prescribed Wizards attribution statements.
 - [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
@@ -72,6 +75,8 @@ Authoritative references:
 - <https://www.dndbeyond.com/srd>
 - <https://www.dndbeyond.com/creator-faq>
 - <https://creativecommons.org/licenses/by/4.0/>
+
+Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-review.md).
 
 ## Phase 1 — Reproducible Combined Snapshot
 

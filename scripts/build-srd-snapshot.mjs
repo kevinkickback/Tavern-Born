@@ -3,15 +3,21 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
+import { assertSnapshotOutputLocation } from './srd/outputPolicy.mjs'
 import { findUnexpectedSnapshotFiles, verifySnapshotFiles } from './srd/outputVerification.mjs'
+import { buildSrdReviewInventory } from './srd/reviewReport.mjs'
 import { buildSrdSnapshot, describeSnapshot } from './srd/snapshot.mjs'
 
 function parseArguments(argv) {
-  const options = { verify: false }
+  const options = { review: false, verify: false }
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (argument === '--verify') {
       options.verify = true
+      continue
+    }
+    if (argument === '--review') {
+      options.review = true
       continue
     }
     const value = argv[index + 1]
@@ -50,29 +56,46 @@ async function main() {
   const args = parseArguments(process.argv.slice(2))
   if (!args.sourceRoot) throw new Error('--source-root is required')
   if (!args.upstreamRevision) throw new Error('--upstream-revision is required')
+  if (args.review && args.verify) throw new Error('--review and --verify cannot be combined')
 
   const projectRoot = resolve(import.meta.dirname, '..')
-  const outputRoot = resolve(projectRoot, args.outputRoot ?? 'resources/srd/core')
+  const managedDataRoot = resolve(projectRoot, 'data')
+  const managedResourceRoot = resolve(projectRoot, 'resources/srd/core')
+  const outputRoot = resolve(
+    projectRoot,
+    args.outputRoot ?? (args.review ? '.tmp/srd-review' : 'resources/srd/core'),
+  )
   const sourceRoot = resolve(projectRoot, args.sourceRoot)
   const provenance = await readJson(resolve(projectRoot, 'resources/srd/core/provenance.json'))
   const allowlist = await readJson(
     resolve(projectRoot, 'resources/srd/core/dependency-allowlist.json'),
   )
+  assertSnapshotOutputLocation({
+    sourceRoot,
+    outputRoot,
+    managedDataRoot,
+    managedResourceRoot,
+    distributionStatus: provenance.distributionStatus,
+  })
   const snapshot = await buildSrdSnapshot({
     sourceRoot,
     provenance,
     allowlist,
     upstreamRevision: args.upstreamRevision,
   })
+  const outputFiles = new Map(snapshot.files)
+  if (args.review) {
+    outputFiles.set('review-inventory.csv', buildSrdReviewInventory(snapshot.manifest))
+  }
 
-  await rejectUnexpectedDataFiles(outputRoot, snapshot.files)
+  await rejectUnexpectedDataFiles(outputRoot, outputFiles)
 
-  if (args.verify) await verifySnapshotFiles(outputRoot, snapshot.files)
-  else await writeFiles(outputRoot, snapshot.files)
+  if (args.verify) await verifySnapshotFiles(outputRoot, outputFiles)
+  else await writeFiles(outputRoot, outputFiles)
 
   const summary = describeSnapshot(snapshot)
   console.log(
-    `${args.verify ? 'Verified' : 'Generated'} SRD ${summary.packVersion}: ${summary.rootCount} roots, ${summary.dependencyCount} dependencies, ${summary.fileCount} files.`,
+    `${args.verify ? 'Verified' : args.review ? 'Generated review for' : 'Generated'} SRD ${summary.packVersion}: ${summary.rootCount} roots, ${summary.dependencyCount} dependencies, ${summary.fileCount} files.`,
   )
 }
 
