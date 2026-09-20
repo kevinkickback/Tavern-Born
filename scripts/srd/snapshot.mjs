@@ -664,6 +664,8 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
   addDataFile('data/books.json', { book: [] })
   addDataFile('data/adventures.json', { adventure: [] })
   addDataFile('data/magicvariants.json', { magicvariant: [] })
+  addDataFile('data/fluff-races.json', { raceFluff: [] })
+  addDataFile('data/fluff-backgrounds.json', { backgroundFluff: [] })
 
   const classIndex = await readJson(sourceRoot, 'class/index.json')
   const bundledClassIndex = {}
@@ -717,6 +719,9 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     )
     bundledClassIndex[slug] = filename
     addDataFile(`data/${relativePath}`, output)
+    addDataFile(`data/class/${filename.replace(/^class-/, 'fluff-class-')}`, {
+      classFluff: [],
+    })
   }
   addDataFile('data/class/index.json', bundledClassIndex)
 

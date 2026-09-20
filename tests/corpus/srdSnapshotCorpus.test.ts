@@ -2,6 +2,9 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
+import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
 import { buildSrdSnapshot, isSrdRoot } from '../../scripts/srd/snapshot.mjs'
 
 const PROJECT_ROOT = process.cwd()
@@ -104,5 +107,34 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
         expect(records.every(isSrdRoot), `${relativePath} contains an unmarked root`).toBe(true)
       }
     }
+
+    const reader: JsonResourceReader = {
+      type: 'bundled',
+      readJson(relativePath) {
+        const contents = first.files.get(`data/${relativePath}`)
+        if (!contents) throw new Error(`Missing snapshot resource data/${relativePath}`)
+        return Promise.resolve(JSON.parse(contents))
+      },
+    }
+    const failures: Array<{ resource: string; required: boolean }> = []
+    const gameData = await new FiveEToolsDataLoader(
+      {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: first.manifest.packId,
+        packVersion: first.manifest.packVersion,
+        isValid: true,
+      },
+      reader,
+    ).loadAllData({
+      onResourceFailure: (resource, failure) => failures.push({ resource, ...failure }),
+    })
+
+    expect(failures).toEqual([])
+    expect(gameData.classes.some((entry) => entry.source === 'PHB')).toBe(true)
+    expect(gameData.classes.some((entry) => entry.source === 'XPHB')).toBe(true)
+    expect(gameData.spells.some((entry) => entry.source === 'PHB')).toBe(true)
+    expect(gameData.spells.some((entry) => entry.source === 'XPHB')).toBe(true)
+    expect(createCorpusCapabilityReport(gameData).issues).toEqual([])
   })
 })

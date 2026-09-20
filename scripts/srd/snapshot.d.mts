@@ -41,6 +41,7 @@ export interface SrdSnapshotOptions {
 export interface SrdSnapshot {
   files: Map<string, string>
   manifest: {
+    packId: string
     packVersion: string
     generatedAt: string
     coverage: {

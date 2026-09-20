@@ -226,6 +226,13 @@ describe('bundled SRD snapshot generator', () => {
         classFeatures: ['Spellcasting|Wizard||1'],
       }),
     ])
+    expect(JSON.parse(first.files.get('data/fluff-races.json') ?? '{}')).toEqual({ raceFluff: [] })
+    expect(JSON.parse(first.files.get('data/fluff-backgrounds.json') ?? '{}')).toEqual({
+      backgroundFluff: [],
+    })
+    expect(JSON.parse(first.files.get('data/class/fluff-class-wizard.json') ?? '{}')).toEqual({
+      classFluff: [],
+    })
     expect(
       JSON.parse(first.files.get('data/generated/gendata-spell-source-lookup.json') ?? '{}').phb
         .light.class,

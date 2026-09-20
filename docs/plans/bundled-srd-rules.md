@@ -87,9 +87,9 @@ Authoritative references:
   - [x] Require complete, unique item-support approvals and fail when an approval becomes unused.
 - [ ] Strip unused books, adventures, fluff, images, and non-SRD metadata. Optional resources may
   be empty only where the existing loader already accepts that shape.
-  - [x] Emit empty optional book/adventure/magic-variant indexes, recursively remove known
-    non-mechanical metadata, retain structured mechanics such as `_versions`, and record every
-    stripped field in manifest coverage.
+  - [x] Emit empty optional book/adventure/magic-variant indexes and loader-compatible fluff
+    resources, recursively remove known non-mechanical metadata, retain structured mechanics such
+    as `_versions`, and record every stripped field in manifest coverage.
 - [x] Emit `resources/srd/core/data/`, a coverage report, and `manifest.json` containing:
   pack ID/version, the two SRD versions, source checksums, upstream revision, extractor version,
   attribution, transformation notice, entity counts, file checksums, and generation timestamp.
@@ -100,6 +100,8 @@ Authoritative references:
     rejects dangling structural references and stale audit approvals.
 - [x] Add corpus tests proving that every root record has the appropriate SRD marker and every
   dependency is covered by the provenance manifest.
+  - [x] Run the generated snapshot through the real loader/parser and capability report with no
+    required or optional resource failures and no capability issues.
 
 Exit gate: the generated catalog passes the existing loader, validator, capability report, and
 source-qualified lookup collision tests without any SRD-only parser branch.
