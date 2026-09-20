@@ -1,12 +1,28 @@
 {
   "rootExclusions": {
-    "deities.json#deity": ["Oghma|PHB|Forgotten Realms", "Silvanus|PHB|Forgotten Realms"]
+    "deities.json#deity": {
+      "reason": "Forgotten Realms setting records are outside the setting-neutral SRD corpus.",
+      "identities": ["Oghma|PHB|Forgotten Realms", "Silvanus|PHB|Forgotten Realms"]
+    }
   },
+  "referenceExclusions": [
+    {
+      "collection": "classFeature",
+      "source": "TCE",
+      "reason": "Later optional class features embedded in SRD-marked 2014 class records are not part of SRD 5.1."
+    },
+    {
+      "collection": "subclassFeature",
+      "source": "TCE",
+      "reason": "Later optional subclass features embedded in SRD-marked 2014 subclass records are not part of SRD 5.1."
+    }
+  ],
   "dependencies": [
     {
       "collection": "itemProperty",
       "srdVersion": "5.1",
       "officialSection": "Equipment — Weapons and weapon properties",
+      "reason": "SRD equipment records use these compact weapon-property definitions.",
       "identities": [
         "2H|PHB",
         "A|PHB",
@@ -24,6 +40,7 @@
       "collection": "itemProperty",
       "srdVersion": "5.2.1",
       "officialSection": "Equipment — Weapons and weapon properties",
+      "reason": "SRD equipment records use these compact weapon-property definitions.",
       "identities": [
         "2H|XPHB",
         "A|XPHB",
@@ -40,6 +57,7 @@
       "collection": "itemType",
       "srdVersion": "5.1",
       "officialSection": "Equipment",
+      "reason": "SRD equipment records use these compact equipment-category definitions.",
       "identities": [
         "A|PHB",
         "AT|PHB",
@@ -66,12 +84,14 @@
       "collection": "itemType",
       "srdVersion": "5.1",
       "officialSection": "Magic Items — Magic item categories",
+      "reason": "SRD magic items use these compact magic-item category definitions.",
       "identities": ["RD|DMG", "RG|DMG", "SC|DMG", "SHP|DMG", "WD|DMG"]
     },
     {
       "collection": "itemType",
       "srdVersion": "5.2.1",
       "officialSection": "Equipment",
+      "reason": "SRD equipment records use these compact equipment-category definitions.",
       "identities": [
         "A|XPHB",
         "AT|XPHB",
@@ -99,6 +119,7 @@
       "collection": "itemType",
       "srdVersion": "5.2.1",
       "officialSection": "Magic Items — Magic item categories",
+      "reason": "SRD magic items use these compact magic-item category definitions.",
       "identities": ["GV|XDMG", "RD|XDMG", "RG|XDMG", "TG|XDMG", "WD|XDMG"]
     }
   ]

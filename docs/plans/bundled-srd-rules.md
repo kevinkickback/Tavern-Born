@@ -75,10 +75,13 @@ Authoritative references:
 - [ ] Follow source-qualified references needed by selected classes, subclasses, class features,
   optional features, races/species, backgrounds, feats, spells, equipment, actions, conditions,
   skills, languages, and rule tables.
+  - [x] Close class-feature, subclass-feature, inline subclass-feature, and base-item references;
+    prune embedded non-SRD optional features only through explicit audited source rules.
 - [x] Preserve the exact file layout, collection keys, indexes, and generated spell-source lookup
   expected by the existing loader. Emit both rules generations into one catalog.
 - [ ] Reject unflagged dependencies unless an audited allowlist entry records the reference,
   reason, official-SRD location, and owning pack.
+  - [x] Require complete, unique item-support approvals and fail when an approval becomes unused.
 - [ ] Strip unused books, adventures, fluff, images, and non-SRD metadata. Optional resources may
   be empty only where the existing loader already accepts that shape.
 - [x] Emit `resources/srd/core/data/`, a coverage report, and `manifest.json` containing:
@@ -87,7 +90,9 @@ Authoritative references:
 - [ ] Make generation byte-for-byte deterministic and add a verification mode that fails on stale
   output, missing references, duplicate `name|source` identities, unapproved records, or checksum
   drift.
-- [ ] Add corpus tests proving that every root record has the appropriate SRD marker and every
+  - [x] Verify missing, changed, and unexpected managed files in one pass; corpus construction now
+    rejects dangling structural references and stale audit approvals.
+- [x] Add corpus tests proving that every root record has the appropriate SRD marker and every
   dependency is covered by the provenance manifest.
 
 Exit gate: the generated catalog passes the existing loader, validator, capability report, and

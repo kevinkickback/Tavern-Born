@@ -76,11 +76,25 @@ async function createFixture() {
   await writeJson(root, 'class/index.json', { wizard: 'class-wizard.json' })
   await writeJson(root, 'class/class-wizard.json', {
     class: [
-      { name: 'Wizard', source: 'PHB', srd: true },
+      {
+        name: 'Wizard',
+        source: 'PHB',
+        srd: true,
+        classFeatures: ['Spellcasting|Wizard||1', 'Cantrip Formulas|Wizard||3|TCE'],
+      },
       { name: 'Private Class', source: 'PRIVATE' },
     ],
     subclass: [],
-    classFeature: [],
+    classFeature: [
+      {
+        name: 'Spellcasting',
+        source: 'PHB',
+        className: 'Wizard',
+        classSource: 'PHB',
+        level: 1,
+        srd: true,
+      },
+    ],
     subclassFeature: [],
   })
   await writeJson(root, 'spells/index.json', {
@@ -108,6 +122,27 @@ async function createFixture() {
   return root
 }
 
+function createAllowlist() {
+  return {
+    referenceExclusions: [
+      {
+        collection: 'classFeature',
+        source: 'TCE',
+        reason: 'Fixture non-SRD optional feature.',
+      },
+    ],
+    dependencies: [
+      {
+        collection: 'itemType',
+        srdVersion: '5.1',
+        officialSection: 'Equipment',
+        reason: 'Fixture item type.',
+        identities: ['G|PHB', 'M|PHB'],
+      },
+    ],
+  }
+}
+
 afterEach(async () => {
   await Promise.all(temporaryRoots.map((root) => rm(root, { recursive: true, force: true })))
   temporaryRoots = []
@@ -131,16 +166,7 @@ describe('bundled SRD snapshot generator', () => {
     const options = {
       sourceRoot,
       provenance,
-      allowlist: {
-        dependencies: [
-          {
-            collection: 'itemType',
-            srdVersion: '5.1',
-            officialSection: 'Equipment',
-            identities: ['G|PHB', 'M|PHB'],
-          },
-        ],
-      },
+      allowlist: createAllowlist(),
       upstreamRevision: 'fixture-revision',
     }
 
@@ -152,7 +178,11 @@ describe('bundled SRD snapshot generator', () => {
       expect.objectContaining({ name: 'Rope', source: 'PHB' }),
     ])
     expect(JSON.parse(first.files.get('data/class/class-wizard.json') ?? '{}').class).toEqual([
-      expect.objectContaining({ name: 'Wizard', source: 'PHB' }),
+      expect.objectContaining({
+        name: 'Wizard',
+        source: 'PHB',
+        classFeatures: ['Spellcasting|Wizard||1'],
+      }),
     ])
     expect(
       JSON.parse(first.files.get('data/generated/gendata-spell-source-lookup.json') ?? '{}').phb
@@ -162,9 +192,56 @@ describe('bundled SRD snapshot generator', () => {
       'G|PHB',
       'M|PHB',
     ])
+    expect(first.manifest.coverage.references['class/class-wizard.json#classFeatures']).toEqual({
+      resolved: 1,
+      excluded: 1,
+    })
+    expect(first.manifest.coverage.referenceExclusions).toEqual([
+      {
+        collection: 'classFeature',
+        reference: 'Cantrip Formulas|Wizard||3|TCE',
+        owner: 'Wizard|PHB',
+        reason: 'Fixture non-SRD optional feature.',
+      },
+    ])
     expect(first.manifest.files['data/items.json']).toBe(
       sha256(first.files.get('data/items.json') ?? ''),
     )
+
+    for (const [relativePath, contents] of first.files) {
+      if (!relativePath.startsWith('data/') || relativePath === 'data/items-base.json') continue
+      const payload = JSON.parse(contents) as Record<string, unknown>
+      for (const records of Object.values(payload)) {
+        if (!Array.isArray(records)) continue
+        expect(records.every(isSrdRoot), `${relativePath} contains an unmarked root`).toBe(true)
+      }
+    }
+  })
+
+  test('fails closed when a selected record has an unaudited missing feature reference', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'class/class-wizard.json', {
+      class: [
+        {
+          name: 'Wizard',
+          source: 'PHB',
+          srd: true,
+          classFeatures: ['Missing Feature|Wizard||2'],
+        },
+      ],
+      subclass: [],
+      classFeature: [],
+      subclassFeature: [],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Missing classFeature dependency Missing Feature|Wizard||2')
   })
 
   test('fails closed when an untagged support dependency is not approved', async () => {
@@ -173,9 +250,33 @@ describe('bundled SRD snapshot generator', () => {
       buildSrdSnapshot({
         sourceRoot,
         provenance,
-        allowlist: { dependencies: [] },
+        allowlist: {
+          ...createAllowlist(),
+          dependencies: [],
+        },
         upstreamRevision: 'fixture-revision',
       }),
     ).rejects.toThrow('Unapproved itemType dependency')
+  })
+
+  test('rejects stale audit approvals that no longer match the source corpus', async () => {
+    const sourceRoot = await createFixture()
+    const allowlist = createAllowlist()
+    allowlist.dependencies.push({
+      collection: 'itemType',
+      srdVersion: '5.1',
+      officialSection: 'Equipment',
+      reason: 'Stale fixture approval.',
+      identities: ['UNUSED|PHB'],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist,
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Unused dependency approvals: itemType:UNUSED|PHB')
   })
 })

@@ -14,12 +14,24 @@ export interface SrdSnapshotOptions {
     transformationNotice: string
   }
   allowlist: {
-    rootExclusions?: Record<string, string[]>
+    rootExclusions?: Record<
+      string,
+      {
+        reason: string
+        identities: string[]
+      }
+    >
+    referenceExclusions?: Array<{
+      collection: string
+      source: string
+      reason: string
+    }>
     dependencies?: Array<{
       collection: string
       identities: string[]
       srdVersion: string
       officialSection: string
+      reason: string
     }>
   }
   upstreamRevision: string
@@ -36,10 +48,19 @@ export interface SrdSnapshot {
         collection: string
         identity: string
         reason: string
+        reference: string
         srdVersion: string
         officialSection: string
       }>
+      references: Record<string, { resolved: number; excluded: number }>
+      referenceExclusions: Array<{
+        collection: string
+        reference: string
+        owner: string
+        reason: string
+      }>
       exclusions: Record<string, number>
+      exclusionReasons: Record<string, string>
     }
     files: Record<string, string>
   }

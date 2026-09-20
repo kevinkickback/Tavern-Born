@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
+import { findUnexpectedSnapshotFiles, verifySnapshotFiles } from './srd/outputVerification.mjs'
 import { buildSrdSnapshot, describeSnapshot } from './srd/snapshot.mjs'
 
 function parseArguments(argv) {
@@ -28,46 +29,8 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'))
 }
 
-async function verifyFiles(outputRoot, files) {
-  const mismatches = []
-  for (const [relativePath, expected] of files) {
-    const path = resolve(outputRoot, ...relativePath.split('/'))
-    let actual
-    try {
-      actual = await readFile(path, 'utf8')
-    } catch {
-      mismatches.push(`${relativePath} is missing`)
-      continue
-    }
-    if (actual !== expected) mismatches.push(`${relativePath} is stale`)
-  }
-  if (mismatches.length > 0) {
-    throw new Error(`Bundled SRD snapshot verification failed:\n- ${mismatches.join('\n- ')}`)
-  }
-}
-
-async function listFiles(root, relativeDirectory) {
-  const directory = resolve(root, ...relativeDirectory.split('/'))
-  let entries
-  try {
-    entries = await readdir(directory, { withFileTypes: true })
-  } catch (error) {
-    if (error && typeof error === 'object' && error.code === 'ENOENT') return []
-    throw error
-  }
-
-  const files = []
-  for (const entry of entries) {
-    const relativePath = `${relativeDirectory}/${entry.name}`
-    if (entry.isDirectory()) files.push(...(await listFiles(root, relativePath)))
-    else files.push(relativePath)
-  }
-  return files
-}
-
 async function rejectUnexpectedDataFiles(outputRoot, expectedFiles) {
-  const expected = new Set(expectedFiles.keys())
-  const unexpected = (await listFiles(outputRoot, 'data')).filter((path) => !expected.has(path))
+  const unexpected = await findUnexpectedSnapshotFiles(outputRoot, expectedFiles)
   if (unexpected.length > 0) {
     throw new Error(
       `Bundled SRD output contains unexpected files; remove them before continuing:\n- ${unexpected.join('\n- ')}`,
@@ -104,7 +67,7 @@ async function main() {
 
   await rejectUnexpectedDataFiles(outputRoot, snapshot.files)
 
-  if (args.verify) await verifyFiles(outputRoot, snapshot.files)
+  if (args.verify) await verifySnapshotFiles(outputRoot, snapshot.files)
   else await writeFiles(outputRoot, snapshot.files)
 
   const summary = describeSnapshot(snapshot)

@@ -85,6 +85,91 @@ function auditIdentity(record, collection, fallback) {
   return identity
 }
 
+function normalized(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+function requireNonEmptyString(value, label) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${label} must be a non-empty string`)
+  }
+  return value
+}
+
+function prepareAuditPolicy(allowlist, provenance) {
+  const documentVersions = new Set(provenance.documents.map((document) => document.version))
+  const rootExclusions = new Map()
+  const dependencies = new Map()
+  const referenceExclusions = new Map()
+
+  for (const [key, rule] of Object.entries(allowlist?.rootExclusions ?? {})) {
+    const reason = requireNonEmptyString(rule?.reason, `rootExclusions.${key}.reason`)
+    if (!Array.isArray(rule?.identities) || rule.identities.length === 0) {
+      throw new Error(`rootExclusions.${key}.identities must contain at least one identity`)
+    }
+    const identities = new Set()
+    for (const identity of rule.identities) {
+      requireNonEmptyString(identity, `rootExclusions.${key}.identities[]`)
+      if (identities.has(identity)) throw new Error(`Duplicate root exclusion ${key}:${identity}`)
+      identities.add(identity)
+    }
+    rootExclusions.set(key, { identities, reason, used: new Set() })
+  }
+
+  for (const [index, rule] of (allowlist?.dependencies ?? []).entries()) {
+    const collection = requireNonEmptyString(rule?.collection, `dependencies[${index}].collection`)
+    const srdVersion = requireNonEmptyString(rule?.srdVersion, `dependencies[${index}].srdVersion`)
+    if (!documentVersions.has(srdVersion)) {
+      throw new Error(`dependencies[${index}] references unknown SRD ${srdVersion}`)
+    }
+    const officialSection = requireNonEmptyString(
+      rule?.officialSection,
+      `dependencies[${index}].officialSection`,
+    )
+    const reason = requireNonEmptyString(rule?.reason, `dependencies[${index}].reason`)
+    if (!Array.isArray(rule?.identities) || rule.identities.length === 0) {
+      throw new Error(`dependencies[${index}].identities must contain at least one identity`)
+    }
+    for (const identity of rule.identities) {
+      requireNonEmptyString(identity, `dependencies[${index}].identities[]`)
+      const key = `${collection}:${identity}`
+      if (dependencies.has(key)) throw new Error(`Duplicate dependency approval ${key}`)
+      dependencies.set(key, { collection, identity, srdVersion, officialSection, reason })
+    }
+  }
+
+  for (const [index, rule] of (allowlist?.referenceExclusions ?? []).entries()) {
+    const collection = requireNonEmptyString(
+      rule?.collection,
+      `referenceExclusions[${index}].collection`,
+    )
+    const source = requireNonEmptyString(rule?.source, `referenceExclusions[${index}].source`)
+    const reason = requireNonEmptyString(rule?.reason, `referenceExclusions[${index}].reason`)
+    const key = `${collection}:${source.toUpperCase()}`
+    if (referenceExclusions.has(key)) throw new Error(`Duplicate reference exclusion ${key}`)
+    referenceExclusions.set(key, { collection, source: source.toUpperCase(), reason, used: 0 })
+  }
+
+  return { rootExclusions, dependencies, referenceExclusions, usedDependencies: new Set() }
+}
+
+function assertAuditPolicyConsumed(policy) {
+  for (const [key, rule] of policy.rootExclusions) {
+    const unused = [...rule.identities].filter((identity) => !rule.used.has(identity))
+    if (unused.length > 0)
+      throw new Error(`Unused root exclusions for ${key}: ${unused.join(', ')}`)
+  }
+  const unusedDependencies = [...policy.dependencies.keys()].filter(
+    (key) => !policy.usedDependencies.has(key),
+  )
+  if (unusedDependencies.length > 0) {
+    throw new Error(`Unused dependency approvals: ${unusedDependencies.join(', ')}`)
+  }
+  for (const [key, rule] of policy.referenceExclusions) {
+    if (rule.used === 0) throw new Error(`Unused reference exclusion ${key}`)
+  }
+}
+
 function assertUniqueIdentities(relativePath, collection, records) {
   const seen = new Set()
   for (const [index, record] of records.entries()) {
@@ -96,21 +181,25 @@ function assertUniqueIdentities(relativePath, collection, records) {
   }
 }
 
-function filterCollections(payload, collections, relativePath, coverage, rootExclusions = {}) {
+function filterCollections(payload, collections, relativePath, coverage, auditPolicy) {
   const output = {}
   for (const collection of collections) {
     const exclusionKey = `${relativePath}#${collection}`
-    const exclusions = new Set(rootExclusions[exclusionKey] ?? [])
+    const exclusionRule = auditPolicy.rootExclusions.get(exclusionKey)
+    const exclusions = exclusionRule?.identities ?? new Set()
     const candidates = selectedArray(payload, collection)
-    const records = candidates.filter(
-      (record, index) =>
-        !exclusions.has(auditIdentity(record, collection, `${collection}[${index}]`)),
-    )
+    const records = candidates.filter((record, index) => {
+      const identity = auditIdentity(record, collection, `${collection}[${index}]`)
+      if (!exclusions.has(identity)) return true
+      exclusionRule.used.add(identity)
+      return false
+    })
     assertUniqueIdentities(relativePath, collection, records)
     output[collection] = records
     coverage.roots[`${relativePath}#${collection}`] = records.length
     if (candidates.length !== records.length) {
       coverage.exclusions[exclusionKey] = candidates.length - records.length
+      coverage.exclusionReasons[exclusionKey] = exclusionRule.reason
     }
   }
   return output
@@ -156,12 +245,7 @@ function collectItemSupportReferences(items) {
   return { itemType, itemProperty }
 }
 
-function selectApprovedSupport(records, references, collection, allowlist, coverage) {
-  const approvals = new Map()
-  for (const approval of allowlist.dependencies ?? []) {
-    if (approval?.collection !== collection || !Array.isArray(approval.identities)) continue
-    for (const identity of approval.identities) approvals.set(identity, approval)
-  }
+function selectApprovedSupport(records, references, collection, auditPolicy, coverage) {
   const selected = []
   const seen = new Set()
 
@@ -169,25 +253,193 @@ function selectApprovedSupport(records, references, collection, allowlist, cover
     const record = findSupportRecord(records, reference)
     if (!record) throw new Error(`Missing ${collection} dependency for ${reference}`)
     const identity = supportIdentity(record)
-    const approval = approvals.get(identity)
+    const approvalKey = `${collection}:${identity}`
+    const approval = auditPolicy.dependencies.get(approvalKey)
     if (!approval) {
       throw new Error(
         `Unapproved ${collection} dependency ${identity} (referenced as ${reference})`,
       )
     }
+    auditPolicy.usedDependencies.add(approvalKey)
     if (seen.has(identity)) continue
     seen.add(identity)
     selected.push(record)
     coverage.dependencies.push({
       collection,
       identity,
-      reason: `Referenced by an SRD item as ${reference}`,
+      reason: approval.reason,
+      reference,
       srdVersion: approval.srdVersion,
       officialSection: approval.officialSection,
     })
   }
 
   return selected.sort((left, right) => supportIdentity(left).localeCompare(supportIdentity(right)))
+}
+
+function parseClassFeatureReference(rawReference, owner) {
+  const reference =
+    typeof rawReference === 'string'
+      ? rawReference
+      : rawReference && typeof rawReference === 'object'
+        ? rawReference.classFeature
+        : undefined
+  if (typeof reference !== 'string' || reference.length === 0) {
+    throw new Error(`Invalid classFeature reference on ${owner.name}|${owner.source}`)
+  }
+  const parts = reference.split('|')
+  const level = Number.parseInt(parts[3] ?? '', 10)
+  return {
+    reference,
+    name: parts[0] ?? '',
+    className: parts[1] || owner.name || '',
+    classSource: parts[2] || owner.source || '',
+    level: Number.isNaN(level) ? undefined : level,
+    source: parts[4] || parts[2] || owner.source || '',
+  }
+}
+
+function parseSubclassFeatureReference(reference, owner) {
+  if (typeof reference !== 'string' || reference.length === 0) {
+    throw new Error(`Invalid subclassFeature reference on ${owner.name}|${owner.source}`)
+  }
+  const parts = reference.split('|')
+  const level = Number.parseInt(parts[5] ?? '', 10)
+  return {
+    reference,
+    name: parts[0] ?? '',
+    className: parts[1] || owner.className || '',
+    classSource: parts[2] || owner.classSource || owner.source || '',
+    subclassShortName: parts[3] || owner.shortName || owner.subclassShortName || '',
+    subclassSource: parts[4] || owner.source || '',
+    level: Number.isNaN(level) ? undefined : level,
+    source: parts[6] || parts[4] || owner.source || '',
+  }
+}
+
+function matchesReference(record, reference, fields) {
+  return fields.every((field) => {
+    if (field === 'level') return reference.level === undefined || record?.level === reference.level
+    return normalized(record?.[field]) === normalized(reference[field])
+  })
+}
+
+function findClassFeatureRecord(records, reference) {
+  return records.find((record) =>
+    matchesReference(record, reference, ['name', 'source', 'className', 'classSource', 'level']),
+  )
+}
+
+function findSubclassFeatureRecord(records, reference) {
+  return records.find((record) =>
+    matchesReference(record, reference, [
+      'name',
+      'source',
+      'className',
+      'classSource',
+      'subclassShortName',
+      'subclassSource',
+      'level',
+    ]),
+  )
+}
+
+function recordReferenceCoverage(coverage, key, resolved, excluded) {
+  coverage.references[key] = { resolved, excluded }
+}
+
+function filterAuditedFeatureReferences({
+  owners,
+  records,
+  field,
+  collection,
+  relativePath,
+  parseReference,
+  findRecord,
+  auditPolicy,
+  coverage,
+}) {
+  let resolved = 0
+  let excluded = 0
+  const exclusionReasons = new Set()
+  const output = owners.map((owner) => {
+    if (!Array.isArray(owner?.[field])) return owner
+    const references = owner[field].filter((rawReference) => {
+      const reference = parseReference(rawReference, owner)
+      if (findRecord(records, reference)) {
+        resolved += 1
+        return true
+      }
+      const exclusionKey = `${collection}:${reference.source.toUpperCase()}`
+      const exclusion = auditPolicy.referenceExclusions.get(exclusionKey)
+      if (!exclusion) {
+        throw new Error(
+          `Missing ${collection} dependency ${reference.reference} in ${relativePath}`,
+        )
+      }
+      exclusion.used += 1
+      excluded += 1
+      exclusionReasons.add(exclusion.reason)
+      coverage.referenceExclusions.push({
+        collection,
+        reference: reference.reference,
+        owner: `${owner.name}|${owner.source}`,
+        reason: exclusion.reason,
+      })
+      return false
+    })
+    return { ...owner, [field]: references }
+  })
+  const coverageKey = `${relativePath}#${field}`
+  recordReferenceCoverage(coverage, coverageKey, resolved, excluded)
+  if (excluded > 0) {
+    coverage.exclusions[coverageKey] = excluded
+    coverage.exclusionReasons[coverageKey] = [...exclusionReasons].sort().join(' ')
+  }
+  return output
+}
+
+function validateInlineSubclassReferences(value, records, owner, relativePath) {
+  let resolved = 0
+  function visit(candidate) {
+    if (Array.isArray(candidate)) {
+      for (const entry of candidate) visit(entry)
+      return
+    }
+    if (!candidate || typeof candidate !== 'object') return
+    if (candidate.type === 'refSubclassFeature') {
+      const reference = parseSubclassFeatureReference(candidate.subclassFeature, owner)
+      if (!findSubclassFeatureRecord(records, reference)) {
+        throw new Error(
+          `Missing subclassFeature dependency ${reference.reference} in ${relativePath}`,
+        )
+      }
+      resolved += 1
+    }
+    for (const entry of Object.values(candidate)) visit(entry)
+  }
+  visit(value)
+  return resolved
+}
+
+function validateBaseItemReferences(items, baseitems, coverage) {
+  let resolved = 0
+  for (const item of items) {
+    if (typeof item?.baseItem !== 'string') continue
+    const [name, source] = item.baseItem.split('|')
+    const matches = baseitems.filter(
+      (baseitem) =>
+        normalized(baseitem?.name) === normalized(name) &&
+        (!source || normalized(baseitem?.source) === normalized(source)),
+    )
+    if (matches.length !== 1) {
+      throw new Error(
+        `${matches.length === 0 ? 'Missing' : 'Ambiguous'} baseitem dependency ${item.baseItem} for ${item.name}|${item.source}`,
+      )
+    }
+    resolved += 1
+  }
+  recordReferenceCoverage(coverage, 'items.json#baseItem', resolved, 0)
 }
 
 function filterSpellLookupEntry(entry) {
@@ -293,8 +545,16 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     }
   }
 
+  const auditPolicy = prepareAuditPolicy(allowlist, provenance)
   const files = new Map()
-  const coverage = { roots: {}, dependencies: [], exclusions: {} }
+  const coverage = {
+    roots: {},
+    dependencies: [],
+    references: {},
+    referenceExclusions: [],
+    exclusions: {},
+    exclusionReasons: {},
+  }
   const rootOutputs = new Map()
 
   for (const [relativePath, collections] of Object.entries(ROOT_COLLECTIONS)) {
@@ -303,7 +563,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       collections,
       relativePath,
       coverage,
-      allowlist.rootExclusions,
+      auditPolicy,
     )
     rootOutputs.set(relativePath, output)
     addFile(files, `data/${relativePath}`, output)
@@ -323,9 +583,46 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       CLASS_COLLECTIONS,
       relativePath,
       coverage,
-      allowlist.rootExclusions,
+      auditPolicy,
     )
     if (output.class.length === 0 && output.subclass.length === 0) continue
+    output.class = filterAuditedFeatureReferences({
+      owners: output.class,
+      records: output.classFeature,
+      field: 'classFeatures',
+      collection: 'classFeature',
+      relativePath,
+      parseReference: parseClassFeatureReference,
+      findRecord: findClassFeatureRecord,
+      auditPolicy,
+      coverage,
+    })
+    output.subclass = filterAuditedFeatureReferences({
+      owners: output.subclass,
+      records: output.subclassFeature,
+      field: 'subclassFeatures',
+      collection: 'subclassFeature',
+      relativePath,
+      parseReference: parseSubclassFeatureReference,
+      findRecord: findSubclassFeatureRecord,
+      auditPolicy,
+      coverage,
+    })
+    let inlineSubclassReferences = 0
+    for (const feature of [...output.classFeature, ...output.subclassFeature]) {
+      inlineSubclassReferences += validateInlineSubclassReferences(
+        feature,
+        output.subclassFeature,
+        feature,
+        relativePath,
+      )
+    }
+    recordReferenceCoverage(
+      coverage,
+      `${relativePath}#inlineSubclassFeature`,
+      inlineSubclassReferences,
+      0,
+    )
     bundledClassIndex[slug] = filename
     addFile(files, `data/${relativePath}`, output)
   }
@@ -363,6 +660,11 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
   coverage.roots['items-base.json#itemMastery'] = itemMasteries.length
 
   const itemOutput = rootOutputs.get('items.json')
+  validateBaseItemReferences(
+    [...(itemOutput?.item ?? []), ...(itemOutput?.itemGroup ?? [])],
+    baseitems,
+    coverage,
+  )
   const supportReferences = collectItemSupportReferences([
     ...baseitems,
     ...(itemOutput?.item ?? []),
@@ -372,14 +674,14 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     itemsBase.itemProperty ?? [],
     supportReferences.itemProperty,
     'itemProperty',
-    allowlist,
+    auditPolicy,
     coverage,
   )
   const itemTypes = selectApprovedSupport(
     itemsBase.itemType ?? [],
     supportReferences.itemType,
     'itemType',
-    allowlist,
+    auditPolicy,
     coverage,
   )
   addFile(files, 'data/items-base.json', {
@@ -389,6 +691,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     itemType: itemTypes,
   })
 
+  assertAuditPolicyConsumed(auditPolicy)
   const manifest = buildManifest({ files, coverage, provenance, upstreamRevision })
   addFile(files, 'manifest.json', manifest)
   return { files, manifest }
