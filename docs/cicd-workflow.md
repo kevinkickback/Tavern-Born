@@ -171,6 +171,9 @@ and macOS users may need to approve the application under Privacy & Security.
 
 `npm run dist` runs the production build and bundle-budget check before packaging. A deliberate
 bundle increase requires an explicit budget review rather than silently growing release artifacts.
+Electron Builder copies the managed `resources/srd/core/**` tree to `srd/core` beside the packaged
+application archive so the restricted bundled-resource reader can resolve it through
+`process.resourcesPath`. The external development-only `data/` tree remains excluded.
 
 Publish an approved draft with:
 

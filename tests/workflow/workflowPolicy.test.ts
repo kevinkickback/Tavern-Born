@@ -159,6 +159,17 @@ describe('trusted workflow policy', () => {
     expect(packageJson.build.nsis.artifactName).toBe(expectedArtifactName)
   })
 
+  test('packages only the managed bundled SRD resource root outside the application archive', async () => {
+    const packageJson = JSON.parse(await readFile(resolve(process.cwd(), 'package.json'), 'utf8'))
+
+    expect(packageJson.build.extraResources).toContainEqual({
+      from: 'resources/srd/core',
+      to: 'srd/core',
+      filter: ['**/*'],
+    })
+    expect(packageJson.build.files).toContain('!data/**/*')
+  })
+
   test('pins every official action to an immutable commit', async () => {
     const workflows = await Promise.all(['ci.yml', 'release.yml'].map((name) => readWorkflow(name)))
     const actionUses = workflows.flatMap((workflow) =>

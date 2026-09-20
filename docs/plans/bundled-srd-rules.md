@@ -117,7 +117,7 @@ source-qualified lookup collision tests without any SRD-only parser branch.
 - [x] Resolve the development root from the repository and the packaged root from
   `process.resourcesPath`; canonicalize both root and target, reject traversal/symlink escapes,
   and retain the existing JSON size limit.
-- [ ] Configure Electron Builder `extraResources` for `resources/srd/core/**`. Do not place the
+- [x] Configure Electron Builder `extraResources` for `resources/srd/core/**`. Do not place the
   snapshot in the renderer bundle or expose arbitrary packaged-file reads.
 - [x] Extend `DataSourceConfig` with `type: 'bundled'`, a stable pack ID, and version. Keep a
   compatibility migration for persisted local/remote configurations.

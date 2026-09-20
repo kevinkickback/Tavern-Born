@@ -126,6 +126,15 @@
       "dist-electron/**/*",
       "!data/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "resources/srd/core",
+        "to": "srd/core",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
