@@ -151,10 +151,10 @@ cache clearing all end with a complete usable catalog.
 - [x] Replace the blocking data-source setup prompt with a short first-run message that says SRD
   content is included. Its primary action continues with bundled content; a secondary “Add more
   content” action opens the existing external local/remote controls.
-- [ ] Rework `DataSourceConfigurator` into two clear states:
+- [x] Rework `DataSourceConfigurator` into two clear states:
   “Bundled SRD 5.1 + 5.2.1” and “External 5etools source.” Reuse the current remote validation,
   local folder picker, load progress, cancellation, and error feedback.
-- [ ] Show the active source, bundled version, last data change, validation status, and license in
+- [x] Show the active source, bundled version, last data change, validation status, and license in
   Settings. Show external-path details only for external sources.
 - [ ] Update the status bar and empty states to describe “Bundled SRD” or “External source” instead
   of reporting no data on a normal installation.

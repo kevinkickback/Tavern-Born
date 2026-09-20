@@ -1,4 +1,5 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
+import type { BundledSrdManifestSummary } from './bundledResources'
 
 function onIpcEvent(channel: string, callback: () => void): () => void {
   const listener = () => callback()
@@ -81,12 +82,7 @@ declare global {
       selectFolder: () => Promise<string | null>
       readLocalJson: (filePath: string) => Promise<unknown>
       readBundledJson: (relativePath: string) => Promise<unknown>
-      getBundledManifest: () => Promise<{
-        schemaVersion: number
-        packId: string
-        packVersion: string
-        distributionStatus: string
-      }>
+      getBundledManifest: () => Promise<BundledSrdManifestSummary>
       setUnsavedChanges?: (value: boolean) => void
       onConfirmClose: (callback: () => void) => void
       removeConfirmCloseListener: (callback: () => void) => void

@@ -25,6 +25,7 @@ import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
+type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
 
 type DataSourceConfiguratorProps = {
   selectorOnly?: boolean
@@ -60,6 +61,7 @@ export function DataSourceConfigurator({
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
   const [isValidating, setIsValidating] = useState(false)
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
+  const [bundledManifest, setBundledManifest] = useState<BundledManifest | null>(null)
   const remotePathId = useId()
   const localPathId = useId()
   const [validationResult, setValidationResult] = useState<{
@@ -92,6 +94,32 @@ export function DataSourceConfigurator({
       }
     }
   }, [])
+
+  useEffect(() => {
+    const getBundledManifest = window.electronAPI?.getBundledManifest
+    if (dataSourceConfig?.type !== 'bundled' || !getBundledManifest) {
+      setBundledManifest(null)
+      return
+    }
+
+    let active = true
+    getBundledManifest()
+      .then((manifest) => {
+        if (
+          active &&
+          manifest.packId === dataSourceConfig.packId &&
+          manifest.packVersion === dataSourceConfig.packVersion
+        ) {
+          setBundledManifest(manifest)
+        }
+      })
+      .catch(() => {
+        if (active) setBundledManifest(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [dataSourceConfig])
 
   useEffect(() => {
     if (!hasActiveDataSource) {
@@ -350,7 +378,7 @@ export function DataSourceConfigurator({
               </div>
 
               <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Last updated:</span>
+                <span className="text-xs text-muted-foreground min-w-24">Last data change:</span>
                 <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
               </div>
 
@@ -365,6 +393,27 @@ export function DataSourceConfigurator({
                 <span className="text-xs text-muted-foreground min-w-24">Status:</span>
                 <span className="text-xs">{getStatusLabel()}</span>
               </div>
+
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground min-w-24">Validation:</span>
+                <span className="text-xs">
+                  {dataSourceConfig.isValid ? 'Validated' : 'Needs validation'}
+                </span>
+              </div>
+
+              {dataSourceConfig.type === 'bundled' && bundledManifest && (
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-muted-foreground min-w-24">License:</span>
+                  <a
+                    href={bundledManifest.license.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline underline-offset-2"
+                  >
+                    {bundledManifest.license.identifier}
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -554,6 +603,28 @@ export function DataSourceConfigurator({
               )}
             </div>
           </div>
+
+          {!selectorOnly && dataSourceConfig?.type === 'bundled' && bundledManifest && (
+            <details className="rounded-md border border-border bg-workspace-pane p-4 text-sm">
+              <summary className="cursor-pointer font-medium">SRD attribution and sources</summary>
+              <div className="mt-3 space-y-3 text-xs leading-relaxed text-muted-foreground">
+                <p>{bundledManifest.transformationNotice}</p>
+                {bundledManifest.documents.map((document) => (
+                  <div key={document.version} className="space-y-1">
+                    <p>{document.attribution}</p>
+                    <a
+                      href={document.landingPage}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      Official SRD {document.version} source
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       </Section>
 

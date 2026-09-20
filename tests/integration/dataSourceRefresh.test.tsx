@@ -45,6 +45,7 @@ describe('data source refresh feedback', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   test('reports a local-directory refresh failure instead of saying data is current', async () => {
@@ -89,7 +90,29 @@ describe('data source refresh feedback', () => {
     expect(onSourceLoaded).toHaveBeenCalledTimes(1)
   })
 
-  test('shows bundled pack identity and rebuild controls for the active bundled source', () => {
+  test('shows bundled pack identity, validation, license, and rebuild controls', async () => {
+    vi.stubGlobal('electronAPI', {
+      getBundledManifest: vi.fn(async () => ({
+        schemaVersion: 1,
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        distributionStatus: 'approved-for-distribution',
+        documents: [
+          {
+            version: '5.1',
+            landingPage: 'https://example.com/srd',
+            downloadUrl: 'https://example.com/srd-5.1.pdf',
+            attribution: 'Official test attribution.',
+          },
+        ],
+        license: {
+          name: 'Creative Commons Attribution 4.0 International',
+          identifier: 'CC-BY-4.0',
+          url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+        },
+        transformationNotice: 'Test transformation notice.',
+      })),
+    })
     useGameDataStore.setState({
       dataSourceConfig: {
         type: 'bundled',
@@ -104,6 +127,10 @@ describe('data source refresh feedback', () => {
 
     expect(screen.getByText('Bundled SRD 5.1 + 5.2.1')).toBeTruthy()
     expect(screen.getByText('1.0.0')).toBeTruthy()
+    expect(screen.getByText('Validated')).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole('link', { name: 'CC-BY-4.0' })).toBeTruthy())
+    expect(screen.getByText('Test transformation notice.')).toBeTruthy()
+    expect(screen.getByText('Official test attribution.')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Rebuild Bundled SRD' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Update Data' })).toBeNull()
     expect(screen.queryByText('Auto-refresh on Launch')).toBeNull()

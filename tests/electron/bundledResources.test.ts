@@ -49,6 +49,20 @@ describe('bundled resource boundary', () => {
         packId: 'tavern-born-srd-core',
         packVersion: '1.0.0',
         distributionStatus: 'approved-for-distribution',
+        documents: [
+          {
+            version: '5.1',
+            landingPage: 'https://example.com/srd',
+            downloadUrl: 'https://example.com/srd-5.1.pdf',
+            attribution: 'Test attribution.',
+          },
+        ],
+        license: {
+          name: 'Creative Commons Attribution 4.0 International',
+          identifier: 'CC-BY-4.0',
+          url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+        },
+        transformationNotice: 'Test transformation notice.',
         files: {},
       }),
       'utf8',
@@ -59,6 +73,20 @@ describe('bundled resource boundary', () => {
       packId: 'tavern-born-srd-core',
       packVersion: '1.0.0',
       distributionStatus: 'approved-for-distribution',
+      documents: [
+        {
+          version: '5.1',
+          landingPage: 'https://example.com/srd',
+          downloadUrl: 'https://example.com/srd-5.1.pdf',
+          attribution: 'Test attribution.',
+        },
+      ],
+      license: {
+        name: 'Creative Commons Attribution 4.0 International',
+        identifier: 'CC-BY-4.0',
+        url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+      },
+      transformationNotice: 'Test transformation notice.',
     })
   })
 
@@ -73,6 +101,39 @@ describe('bundled resource boundary', () => {
 
     await expect(readBundledManifestFromRoot(root)).rejects.toThrow(
       'Bundled SRD manifest has incomplete pack identity',
+    )
+  })
+
+  test('rejects unsafe or incomplete notice metadata', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'tavern-born-bundled-'))
+    roots.push(root)
+    await writeFile(
+      join(root, 'manifest.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        distributionStatus: 'approved-for-distribution',
+        documents: [
+          {
+            version: '5.1',
+            landingPage: 'javascript:alert(1)',
+            downloadUrl: 'https://example.com/srd.pdf',
+            attribution: 'Test attribution.',
+          },
+        ],
+        license: {
+          name: 'Creative Commons Attribution 4.0 International',
+          identifier: 'CC-BY-4.0',
+          url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+        },
+        transformationNotice: 'Test transformation notice.',
+      }),
+      'utf8',
+    )
+
+    await expect(readBundledManifestFromRoot(root)).rejects.toThrow(
+      'Bundled SRD manifest has invalid documents[0].landingPage',
     )
   })
 })
