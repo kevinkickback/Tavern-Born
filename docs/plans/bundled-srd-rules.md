@@ -134,10 +134,10 @@ bundled fixture and a matching local fixture.
   external source for an existing user.
 - [x] Include bundled pack ID/version in cache identity so an app update invalidates only an older
   snapshot cache. Keep parsed-content fingerprints deterministic.
-- [ ] Keep foreground/background replacement atomic. A failed external refresh retains the
+- [x] Keep foreground/background replacement atomic. A failed external refresh retains the
   last-known-good external cache; if no usable external cache exists, offer an explicit bundled
   fallback and record diagnostics without deleting the external configuration.
-- [ ] Change “Clear Data” into “Restore bundled SRD” for external sources. For the bundled source,
+- [x] Change “Clear Data” into “Restore bundled SRD” for external sources. For the bundled source,
   allow rebuilding its parsed cache without making the app content-free.
 - [x] Do not auto-refresh immutable bundled data. It changes only with an application release.
 

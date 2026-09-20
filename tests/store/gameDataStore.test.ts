@@ -11,9 +11,16 @@ const { loadDataFromSourceMock, writeGameDataCacheMock, clearGameDataCacheMock }
     clearGameDataCacheMock: vi.fn(async () => undefined),
   }),
 )
+const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
+  resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
+}))
 
 vi.mock('@/lib/5etools', () => ({
   loadDataFromSource: loadDataFromSourceMock,
+}))
+
+vi.mock('@/lib/5etools/bundledSource', () => ({
+  resolveDefaultBundledSource: resolveDefaultBundledSourceMock,
 }))
 
 vi.mock('@/lib/storage/dataCache', () => ({
@@ -60,6 +67,7 @@ describe('gameDataStore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resolveDefaultBundledSourceMock.mockResolvedValue(null)
     useGameDataStore.setState({
       gameData: null,
       dataSourceConfig: null,
@@ -276,6 +284,70 @@ describe('gameDataStore', () => {
     await useGameDataStore.getState().refreshGameData()
 
     expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+  })
+
+  test('restores the bundled source only after its data loads successfully', async () => {
+    const existingData = makeGameDataFixture()
+    const bundledData = makeGameDataFixture()
+    bundledData.classes = [{ name: 'Wizard', source: 'PHB' }] as GameData['classes']
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadDataFromSourceMock.mockResolvedValue(bundledData)
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    expect(restored).toBe(true)
+    expect(useGameDataStore.getState().gameData).toBe(bundledData)
+    expect(useGameDataStore.getState().dataSourceConfig).toEqual(
+      expect.objectContaining({
+        type: 'bundled',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+      }),
+    )
+  })
+
+  test('keeps external data and configuration when bundled restore is unavailable', async () => {
+    const existingData = makeGameDataFixture()
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    const state = useGameDataStore.getState()
+    expect(restored).toBe(false)
+    expect(state.gameData).toBe(existingData)
+    expect(state.dataSourceConfig).toBe(config)
+    expect(state.error).toContain('unavailable or has not been approved')
+    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+  })
+
+  test('keeps external data and configuration when bundled loading fails', async () => {
+    const existingData = makeGameDataFixture()
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadDataFromSourceMock.mockRejectedValue(new Error('bundled files are damaged'))
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    const state = useGameDataStore.getState()
+    expect(restored).toBe(false)
+    expect(state.gameData).toBe(existingData)
+    expect(state.dataSourceConfig).toBe(config)
+    expect(state.error).toBe('bundled files are damaged')
   })
 
   test('persist partialize keeps only config and timestamp fields', () => {

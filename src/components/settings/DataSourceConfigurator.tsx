@@ -5,7 +5,6 @@ import {
   CloudArrowDown,
   Database,
   FolderOpen,
-  Trash,
   Warning,
   XCircle,
 } from '@phosphor-icons/react'
@@ -45,7 +44,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
   const loadGameData = useGameDataStore((state) => state.loadGameData)
-  const clearGameData = useGameDataStore((state) => state.clearGameData)
+  const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
   const autoRefreshGameData = useAppPreferencesStore((state) => state.autoRefreshGameData)
   const setAutoRefreshGameData = useAppPreferencesStore((state) => state.setAutoRefreshGameData)
@@ -245,18 +244,28 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
     }
   }
 
-  const handleClear = async () => {
-    autoOpenedSelectorRef.current = true
-    setIsSelectingDataSource(true)
-    setSourcePath('')
-    setValidationStatus('idle')
-    setValidationResult(null)
+  const handleRestoreBundled = async () => {
+    const wasBundled = dataSourceConfig?.type === 'bundled'
     try {
-      await clearGameData()
-      toast.info('Game data cleared')
-    } catch (clearError) {
-      toast.error('Failed to clear cached game data', {
-        description: clearError instanceof Error ? clearError.message : 'Unknown error',
+      const restored = await restoreBundledData()
+      if (!restored) {
+        toast.error('Unable to load bundled SRD data', {
+          description:
+            useGameDataStore.getState().error ?? 'The bundled rules pack is unavailable.',
+        })
+        return
+      }
+
+      setIsSelectingDataSource(false)
+      setSourcePath('')
+      setValidationStatus('idle')
+      setValidationResult(null)
+      toast.success(wasBundled ? 'Bundled SRD data rebuilt' : 'Bundled SRD data restored', {
+        description: 'SRD 5.1 and 5.2.1 rules are ready to use.',
+      })
+    } catch (restoreError) {
+      toast.error('Unable to load bundled SRD data', {
+        description: restoreError instanceof Error ? restoreError.message : 'Unknown error',
       })
     }
   }
@@ -307,19 +316,31 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                 Active
               </Badge>
               <div className="flex items-center gap-2">
-                {dataSourceConfig.type === 'remote' ? (
+                {dataSourceConfig.type === 'bundled' ? (
+                  <Database className="size-[1.125rem] text-muted-foreground" />
+                ) : dataSourceConfig.type === 'remote' ? (
                   <CloudArrowDown className="size-[1.125rem] text-muted-foreground" />
                 ) : (
                   <FolderOpen className="size-[1.125rem] text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium capitalize">
-                  {dataSourceConfig.type === 'remote' ? 'Remote URL' : 'Local Directory'}
+                  {dataSourceConfig.type === 'bundled'
+                    ? 'Bundled SRD 5.1 + 5.2.1'
+                    : dataSourceConfig.type === 'remote'
+                      ? 'External Remote URL'
+                      : 'External Local Directory'}
                 </span>
               </div>
 
               <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Source:</span>
-                <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
+                <span className="text-xs text-muted-foreground min-w-24">
+                  {dataSourceConfig.type === 'bundled' ? 'Pack version:' : 'Source:'}
+                </span>
+                <span className="text-xs font-mono break-all">
+                  {dataSourceConfig.type === 'bundled'
+                    ? dataSourceConfig.packVersion
+                    : dataSourceConfig.path}
+                </span>
               </div>
 
               <div className="flex items-start gap-2">
@@ -327,10 +348,12 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                 <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
               </div>
 
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-muted-foreground min-w-24">Last checked:</span>
-                <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
-              </div>
+              {dataSourceConfig.type !== 'bundled' && (
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-muted-foreground min-w-24">Last checked:</span>
+                  <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
+                </div>
+              )}
 
               <div className="flex items-start gap-2">
                 <span className="text-xs text-muted-foreground min-w-24">Status:</span>
@@ -457,15 +480,19 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
           )}
 
           <div className="flex gap-2">
-            {!selectorOnly && (
+            {(selectorOnly || hasActiveDataSource) && (
               <Button
-                onClick={handleClear}
-                disabled={isLoading || !hasActiveDataSource}
-                variant="destructive"
+                onClick={handleRestoreBundled}
+                disabled={isLoading}
+                variant="outline"
                 className="gap-2"
               >
-                <Trash className="size-4" />
-                Clear Data
+                <Database className="size-4" />
+                {dataSourceConfig?.type === 'bundled'
+                  ? 'Rebuild Bundled SRD'
+                  : selectorOnly
+                    ? 'Use Bundled SRD'
+                    : 'Restore Bundled SRD'}
               </Button>
             )}
             <div className="flex gap-2 ml-auto">
@@ -497,7 +524,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                   Cancel
                 </Button>
               )}
-              {!selectorOnly && !isSelectingDataSource && (
+              {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
                 <Button
                   onClick={handleRefresh}
                   disabled={isLoading || !hasActiveDataSource}
@@ -524,7 +551,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
         </div>
       </Section>
 
-      {!selectorOnly && (
+      {!selectorOnly && dataSourceConfig?.type !== 'bundled' && (
         <Section
           title="Auto-refresh on Launch"
           description="Automatically check for game data updates when the app starts."

@@ -137,6 +137,7 @@ interface GameDataState {
    */
   loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
   refreshGameData: () => Promise<void>
+  restoreBundledData: () => Promise<boolean>
   clearGameData: () => Promise<void>
 }
 
@@ -369,6 +370,27 @@ export const useGameDataStore = create<GameDataState>()(
         if (dataSourceConfig) {
           await get().loadGameData(dataSourceConfig)
         }
+      },
+
+      restoreBundledData: async () => {
+        const bundledSource = await resolveDefaultBundledSource()
+        if (!bundledSource) {
+          set({
+            error:
+              'Bundled SRD data is unavailable or has not been approved for distribution in this build.',
+          })
+          return false
+        }
+
+        await get().loadGameData(bundledSource)
+        const state = get()
+        return (
+          !state.error &&
+          state.gameData !== null &&
+          state.dataSourceConfig?.type === 'bundled' &&
+          state.dataSourceConfig.packId === bundledSource.packId &&
+          state.dataSourceConfig.packVersion === bundledSource.packVersion
+        )
       },
 
       clearGameData: async () => {

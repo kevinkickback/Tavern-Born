@@ -1,8 +1,9 @@
 import type { DataSourceConfig } from '@/types/5etools'
 
 const APPROVED_DISTRIBUTION_STATUS = 'approved-for-distribution'
+export type BundledDataSourceConfig = Extract<DataSourceConfig, { type: 'bundled' }>
 
-export async function resolveDefaultBundledSource(): Promise<DataSourceConfig | null> {
+export async function resolveDefaultBundledSource(): Promise<BundledDataSourceConfig | null> {
   const getBundledManifest = window.electronAPI?.getBundledManifest
   if (!getBundledManifest) return null
 

@@ -116,6 +116,16 @@ export function AppStatusBar() {
     [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress],
   )
   const DataStatusIcon = dataStatus.icon
+  const dataSourceLabel =
+    dataSourceConfig?.type === 'bundled'
+      ? 'Bundled SRD'
+      : dataSourceConfig?.type === 'local'
+        ? 'External local source'
+        : 'External remote source'
+  const dataSourceTitle =
+    dataSourceConfig?.type === 'bundled'
+      ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
+      : dataSourceConfig?.path
 
   return (
     <div
@@ -152,11 +162,7 @@ export function AppStatusBar() {
       </div>
 
       <div className="ml-3 flex shrink-0 items-center gap-2">
-        {dataSourceConfig && (
-          <span title={dataSourceConfig.path}>
-            {dataSourceConfig.type === 'local' ? 'Local source' : 'Remote source'}
-          </span>
-        )}
+        {dataSourceConfig && <span title={dataSourceTitle}>{dataSourceLabel}</span>}
         {dataSourceConfig && appVersion && (
           <span className="h-3 w-px bg-border" aria-hidden="true" />
         )}

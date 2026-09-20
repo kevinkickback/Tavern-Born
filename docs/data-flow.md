@@ -16,6 +16,13 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
 5. The loader fetches, validates, parses, normalizes, and indexes the configured source.
 6. A successful complete result replaces memory/cache atomically. Failed or superseded loads do not.
 
+The bundled manifest is read through a fixed Electron capability. Only a manifest marked
+`approved-for-distribution` can become the automatic/default source. Bundled cache entries are
+immutable for their pack version and are never background-refreshed. “Restore bundled SRD” loads
+and validates the packaged catalog before replacing an external source; failure keeps the existing
+data, cache, and external configuration while exposing a diagnostic. For an active bundled source,
+the same action rebuilds parsed data without first making the application content-free.
+
 Bundled transport and version-aware cache identity are implemented, but bundled-first startup stays
 disabled while the generated pack has `provenance-review-required` status. Until the reviewed pack
 is committed and included in release resources, existing local/remote startup behavior remains the

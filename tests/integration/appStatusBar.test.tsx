@@ -31,7 +31,24 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     expect(screen.getByTestId('game-data-status').textContent).toContain('Game data ready')
-    expect(screen.getByText('Local source')).toBeTruthy()
+    expect(screen.getByText('External local source')).toBeTruthy()
+  })
+
+  test('identifies the bundled SRD pack without exposing a filesystem path', () => {
+    useGameDataStore.setState({
+      dataSourceConfig: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+    })
+
+    render(<AppStatusBar />)
+
+    const source = screen.getByText('Bundled SRD')
+    expect(source.getAttribute('title')).toBe('tavern-born-srd-core 1.0.0')
   })
 
   test('shows loading progress and the current resource', () => {
