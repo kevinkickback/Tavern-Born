@@ -14,6 +14,7 @@ export interface SrdSnapshotOptions {
     transformationNotice: string
   }
   allowlist: {
+    allowedSources: string[]
     rootExclusions?: Record<
       string,
       {
@@ -61,6 +62,7 @@ export interface SrdSnapshot {
       }>
       exclusions: Record<string, number>
       exclusionReasons: Record<string, string>
+      strippedMetadata: Record<string, number>
     }
     files: Record<string, string>
   }

@@ -1,4 +1,5 @@
 {
+  "allowedSources": ["PHB", "DMG", "MM", "XPHB", "XDMG", "XMM"],
   "rootExclusions": {
     "deities.json#deity": {
       "reason": "Forgotten Realms setting records are outside the setting-neutral SRD corpus.",

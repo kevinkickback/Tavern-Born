@@ -24,6 +24,27 @@ const ROOT_COLLECTIONS = {
 
 const CLASS_COLLECTIONS = ['class', 'subclass', 'classFeature', 'subclassFeature']
 const ALLOWED_SPELL_CLASS_SOURCES = new Set(['PHB', 'XPHB'])
+const STRIPPED_METADATA_KEYS = new Set([
+  'additionalEntries',
+  'additionalSources',
+  'basicRules',
+  'basicRules2024',
+  'hasFluff',
+  'hasFluffImages',
+  'otherSources',
+  'page',
+  'reprintedAs',
+  'soundClip',
+])
+const PROHIBITED_PRESENTATION_KEYS = new Set([
+  'fluff',
+  'fluffimages',
+  'foundryimg',
+  'image',
+  'images',
+  'token',
+  'tokenurl',
+])
 
 export function isSrdRoot(record) {
   return Boolean(
@@ -63,6 +84,54 @@ function addFile(files, relativePath, payload) {
   files.set(relativePath, stableJson(payload))
 }
 
+function sanitizeDataPayload(value, coverage) {
+  if (Array.isArray(value)) return value.map((entry) => sanitizeDataPayload(entry, coverage))
+  if (!value || typeof value !== 'object') return value
+
+  const output = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (STRIPPED_METADATA_KEYS.has(key)) {
+      coverage.strippedMetadata[key] = (coverage.strippedMetadata[key] ?? 0) + 1
+      continue
+    }
+    output[key] = sanitizeDataPayload(entry, coverage)
+  }
+  return output
+}
+
+function assertBundledDataPolicy(value, relativePath, allowedSources, path = '$') {
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries()) {
+      assertBundledDataPolicy(entry, relativePath, allowedSources, `${path}[${index}]`)
+    }
+    return
+  }
+  if (!value || typeof value !== 'object') {
+    if (typeof value === 'string' && /\{@(?:image|img)\b/i.test(value)) {
+      throw new Error(`Prohibited presentation reference in ${relativePath} at ${path}`)
+    }
+    return
+  }
+
+  if (typeof value.type === 'string' && value.type.toLowerCase() === 'image') {
+    throw new Error(`Prohibited image payload in ${relativePath} at ${path}`)
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase()
+    if (PROHIBITED_PRESENTATION_KEYS.has(normalizedKey)) {
+      throw new Error(`Prohibited presentation field ${key} in ${relativePath} at ${path}`)
+    }
+    if (
+      normalizedKey.endsWith('source') &&
+      typeof entry === 'string' &&
+      !allowedSources.has(entry.toUpperCase())
+    ) {
+      throw new Error(`Unexpected source ${entry} in ${relativePath} at ${path}.${key}`)
+    }
+    assertBundledDataPolicy(entry, relativePath, allowedSources, `${path}.${key}`)
+  }
+}
+
 function entityIdentity(record, collection, fallback) {
   if (!record || typeof record !== 'object') return fallback
   const name = typeof record.name === 'string' ? record.name : fallback
@@ -98,6 +167,17 @@ function requireNonEmptyString(value, label) {
 
 function prepareAuditPolicy(allowlist, provenance) {
   const documentVersions = new Set(provenance.documents.map((document) => document.version))
+  if (!Array.isArray(allowlist?.allowedSources) || allowlist.allowedSources.length === 0) {
+    throw new Error('allowedSources must contain at least one source')
+  }
+  const allowedSources = new Set()
+  for (const source of allowlist.allowedSources) {
+    const normalizedSource = requireNonEmptyString(source, 'allowedSources[]').toUpperCase()
+    if (allowedSources.has(normalizedSource)) {
+      throw new Error(`Duplicate allowed source ${normalizedSource}`)
+    }
+    allowedSources.add(normalizedSource)
+  }
   const rootExclusions = new Map()
   const dependencies = new Map()
   const referenceExclusions = new Map()
@@ -150,7 +230,13 @@ function prepareAuditPolicy(allowlist, provenance) {
     referenceExclusions.set(key, { collection, source: source.toUpperCase(), reason, used: 0 })
   }
 
-  return { rootExclusions, dependencies, referenceExclusions, usedDependencies: new Set() }
+  return {
+    allowedSources,
+    rootExclusions,
+    dependencies,
+    referenceExclusions,
+    usedDependencies: new Set(),
+  }
 }
 
 function assertAuditPolicyConsumed(policy) {
@@ -554,6 +640,12 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     referenceExclusions: [],
     exclusions: {},
     exclusionReasons: {},
+    strippedMetadata: {},
+  }
+  const addDataFile = (relativePath, payload) => {
+    const sanitized = sanitizeDataPayload(payload, coverage)
+    assertBundledDataPolicy(sanitized, relativePath, auditPolicy.allowedSources)
+    addFile(files, relativePath, sanitized)
   }
   const rootOutputs = new Map()
 
@@ -566,12 +658,12 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       auditPolicy,
     )
     rootOutputs.set(relativePath, output)
-    addFile(files, `data/${relativePath}`, output)
+    addDataFile(`data/${relativePath}`, output)
   }
 
-  addFile(files, 'data/books.json', { book: [] })
-  addFile(files, 'data/adventures.json', { adventure: [] })
-  addFile(files, 'data/magicvariants.json', { magicvariant: [] })
+  addDataFile('data/books.json', { book: [] })
+  addDataFile('data/adventures.json', { adventure: [] })
+  addDataFile('data/magicvariants.json', { magicvariant: [] })
 
   const classIndex = await readJson(sourceRoot, 'class/index.json')
   const bundledClassIndex = {}
@@ -624,9 +716,9 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
       0,
     )
     bundledClassIndex[slug] = filename
-    addFile(files, `data/${relativePath}`, output)
+    addDataFile(`data/${relativePath}`, output)
   }
-  addFile(files, 'data/class/index.json', bundledClassIndex)
+  addDataFile('data/class/index.json', bundledClassIndex)
 
   const spellIndex = await readJson(sourceRoot, 'spells/index.json')
   const bundledSpellIndex = {}
@@ -640,13 +732,12 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     coverage.roots[`${relativePath}#spell`] = spells.length
     bundledSpellIndex[source] = filename
     spellsBySource.set(source, spells)
-    addFile(files, `data/${relativePath}`, { spell: spells })
+    addDataFile(`data/${relativePath}`, { spell: spells })
   }
-  addFile(files, 'data/spells/index.json', bundledSpellIndex)
+  addDataFile('data/spells/index.json', bundledSpellIndex)
 
   const lookup = await readJson(sourceRoot, 'generated/gendata-spell-source-lookup.json')
-  addFile(
-    files,
+  addDataFile(
     'data/generated/gendata-spell-source-lookup.json',
     filterSpellLookup(lookup, spellsBySource),
   )
@@ -684,7 +775,7 @@ export async function buildSrdSnapshot({ sourceRoot, provenance, allowlist, upst
     auditPolicy,
     coverage,
   )
-  addFile(files, 'data/items-base.json', {
+  addDataFile('data/items-base.json', {
     baseitem: baseitems,
     itemMastery: itemMasteries,
     itemProperty: itemProperties,

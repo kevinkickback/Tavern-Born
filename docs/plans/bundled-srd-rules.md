@@ -55,6 +55,9 @@ rules engine.
   material. Keep it separate from the prescribed Wizards attribution statements.
 - [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
   setting material, and records that cannot be traced to an official SRD.
+  - [x] Add a technical output gate that strips Basic Rules/catalog flags, supplemental entries,
+    page/reprint metadata, and audio references; reject image payloads and source-bearing fields
+    outside the audited 2014/2024 core-book source set.
 
 Exit gate: do not commit a distributable snapshot until the provenance and notices have been
 reviewed. The official SRD page confirms that SRD 5.1 and SRD 5.2.1 are available under CC BY 4.0;
@@ -84,6 +87,9 @@ Authoritative references:
   - [x] Require complete, unique item-support approvals and fail when an approval becomes unused.
 - [ ] Strip unused books, adventures, fluff, images, and non-SRD metadata. Optional resources may
   be empty only where the existing loader already accepts that shape.
+  - [x] Emit empty optional book/adventure/magic-variant indexes, recursively remove known
+    non-mechanical metadata, retain structured mechanics such as `_versions`, and record every
+    stripped field in manifest coverage.
 - [x] Emit `resources/srd/core/data/`, a coverage report, and `manifest.json` containing:
   pack ID/version, the two SRD versions, source checksums, upstream revision, extractor version,
   attribution, transformation notice, entity counts, file checksums, and generation timestamp.

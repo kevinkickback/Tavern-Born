@@ -13,7 +13,30 @@ const ROOT_FIXTURES: Record<string, object> = {
   'feats.json': { feat: [] },
   'items.json': {
     item: [
-      { name: 'Rope', source: 'PHB', type: 'G', srd: true },
+      {
+        name: 'Rope',
+        source: 'PHB',
+        type: 'G',
+        srd: true,
+        page: 145,
+        basicRules: true,
+        basicRules2024: true,
+        hasFluff: true,
+        hasFluffImages: true,
+        reprintedAs: ['Rope|XPHB'],
+        otherSources: [{ source: 'XGE', page: 9 }],
+        additionalSources: [{ source: 'TCE', page: 10 }],
+        entries: [{ type: 'entries', name: 'Rope', entries: ['Useful cord.'], page: 146 }],
+        additionalEntries: [{ source: 'MOT', entries: ['Non-SRD supplement text.'] }],
+        soundClip: 'audio/rope.mp3',
+        _versions: [
+          {
+            name: 'Rope Variant',
+            source: 'PHB',
+            _mod: { entries: { mode: 'appendArr', items: ['Mechanical variant.'] } },
+          },
+        ],
+      },
       { name: 'Private Item', source: 'PRIVATE', type: 'G' },
     ],
     itemGroup: [],
@@ -124,6 +147,7 @@ async function createFixture() {
 
 function createAllowlist() {
   return {
+    allowedSources: ['PHB', 'DMG', 'MM', 'XPHB', 'XDMG', 'XMM'],
     referenceExclusions: [
       {
         collection: 'classFeature',
@@ -177,6 +201,24 @@ describe('bundled SRD snapshot generator', () => {
     expect(JSON.parse(first.files.get('data/items.json') ?? '{}').item).toEqual([
       expect.objectContaining({ name: 'Rope', source: 'PHB' }),
     ])
+    expect(first.files.get('data/items.json')).not.toMatch(
+      /additionalEntries|basicRules|hasFluff|reprintedAs|otherSources|additionalSources|soundClip|"page"/,
+    )
+    expect(JSON.parse(first.files.get('data/items.json') ?? '{}').item[0]._versions).toEqual([
+      expect.objectContaining({ name: 'Rope Variant', source: 'PHB' }),
+    ])
+    expect(first.manifest.coverage.strippedMetadata).toEqual({
+      additionalEntries: 1,
+      additionalSources: 1,
+      basicRules: 1,
+      basicRules2024: 1,
+      hasFluff: 1,
+      hasFluffImages: 1,
+      otherSources: 1,
+      page: 2,
+      reprintedAs: 1,
+      soundClip: 1,
+    })
     expect(JSON.parse(first.files.get('data/class/class-wizard.json') ?? '{}').class).toEqual([
       expect.objectContaining({
         name: 'Wizard',
@@ -242,6 +284,45 @@ describe('bundled SRD snapshot generator', () => {
         upstreamRevision: 'fixture-revision',
       }),
     ).rejects.toThrow('Missing classFeature dependency Missing Feature|Wizard||2')
+  })
+
+  test('rejects presentation assets in selected records', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'actions.json', {
+      action: [{ name: 'Attack', source: 'PHB', srd: true, images: [] }],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Prohibited presentation field images in data/actions.json')
+  })
+
+  test('rejects source-qualified data outside the audited source set', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'actions.json', {
+      action: [
+        {
+          name: 'Attack',
+          source: 'PHB',
+          srd: true,
+          entries: [{ type: 'entries', source: 'TCE', entries: ['Not SRD content.'] }],
+        },
+      ],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow('Unexpected source TCE in data/actions.json')
   })
 
   test('fails closed when an untagged support dependency is not approved', async () => {
