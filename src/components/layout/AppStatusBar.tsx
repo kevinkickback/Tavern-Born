@@ -24,6 +24,7 @@ function getDataStatus(
   isBackgroundRefreshing: boolean,
   error: string | null,
   progress: { current: number; total: number; resource: string } | null,
+  sourceDescription: string | null,
 ): DataStatusPresentation {
   if (error) {
     return {
@@ -58,7 +59,7 @@ function getDataStatus(
   if (cacheStatus === 'offline') {
     return {
       label: 'Using cached game data',
-      detail: 'No game data source is currently configured',
+      detail: 'Saved game data remains available, but its source is no longer configured',
       icon: CloudSlash,
       tone: 'text-warning-foreground',
     }
@@ -67,7 +68,7 @@ function getDataStatus(
   if (cacheStatus === 'unconfigured') {
     return {
       label: 'Game data not configured',
-      detail: 'Choose a game data source in Settings',
+      detail: 'Restore the bundled SRD or choose an external source in Settings',
       icon: WarningCircle,
       tone: 'text-warning-foreground',
     }
@@ -86,7 +87,7 @@ function getDataStatus(
     label: 'Game data ready',
     detail:
       cacheStatus === 'fetched'
-        ? 'Game data loaded from the configured source'
+        ? `${sourceDescription ?? 'Game data'} loaded successfully`
         : 'Game data loaded from cache',
     icon: CheckCircle,
     tone: 'text-success',
@@ -103,6 +104,14 @@ export function AppStatusBar() {
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
+  const sourceDescription =
+    dataSourceConfig?.type === 'bundled'
+      ? `Bundled SRD ${dataSourceConfig.packVersion}`
+      : dataSourceConfig?.type === 'local'
+        ? 'External local source'
+        : dataSourceConfig?.type === 'remote'
+          ? 'External remote source'
+          : null
 
   useEffect(() => {
     window.electronAPI
@@ -112,16 +121,19 @@ export function AppStatusBar() {
   }, [])
 
   const dataStatus = useMemo(
-    () => getDataStatus(cacheStatus, isLoading, isBackgroundRefreshing, error, loadProgress),
-    [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress],
+    () =>
+      getDataStatus(
+        cacheStatus,
+        isLoading,
+        isBackgroundRefreshing,
+        error,
+        loadProgress,
+        sourceDescription,
+      ),
+    [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress, sourceDescription],
   )
   const DataStatusIcon = dataStatus.icon
-  const dataSourceLabel =
-    dataSourceConfig?.type === 'bundled'
-      ? 'Bundled SRD'
-      : dataSourceConfig?.type === 'local'
-        ? 'External local source'
-        : 'External remote source'
+  const dataSourceLabel = dataSourceConfig?.type === 'bundled' ? 'Bundled SRD' : sourceDescription
   const dataSourceTitle =
     dataSourceConfig?.type === 'bundled'
       ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`

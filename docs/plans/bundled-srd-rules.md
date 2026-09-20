@@ -156,7 +156,7 @@ cache clearing all end with a complete usable catalog.
   local folder picker, load progress, cancellation, and error feedback.
 - [x] Show the active source, bundled version, last data change, validation status, and license in
   Settings. Show external-path details only for external sources.
-- [ ] Update the status bar and empty states to describe “Bundled SRD” or “External source” instead
+- [x] Update the status bar and empty states to describe “Bundled SRD” or “External source” instead
   of reporting no data on a normal installation.
 - [x] Explain that external data is user supplied, replaces the bundled presentation catalog, and
   is not distributed by Tavern Born.

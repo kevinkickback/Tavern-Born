@@ -160,4 +160,16 @@ describe('data source refresh feedback', () => {
       description: 'Bundled pack is unavailable',
     })
   })
+
+  test('offers the bundled SRD from Settings when no source is active', () => {
+    useGameDataStore.setState({
+      gameData: null,
+      dataSourceConfig: null,
+    })
+
+    render(<DataSourceConfigurator />)
+
+    expect(screen.getByRole('button', { name: 'Use Bundled SRD' })).toBeTruthy()
+    expect(screen.getByText(/Use the included bundled SRD/)).toBeTruthy()
+  })
 })

@@ -424,8 +424,8 @@ export function DataSourceConfigurator({
                     <span className="text-sm font-medium">None</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    No data source configured. Configure a remote URL or local directory below to
-                    load game data.
+                    No data source is active. Use the included bundled SRD or configure a
+                    user-supplied external source below.
                   </p>
                 </div>
               )}
@@ -535,21 +535,19 @@ export function DataSourceConfigurator({
           )}
 
           <div className="flex gap-2">
-            {(selectorOnly || hasActiveDataSource) && (
-              <Button
-                onClick={handleRestoreBundled}
-                disabled={isLoading}
-                variant="outline"
-                className="gap-2"
-              >
-                <Database className="size-4" />
-                {dataSourceConfig?.type === 'bundled'
-                  ? 'Rebuild Bundled SRD'
-                  : selectorOnly
-                    ? 'Use Bundled SRD'
-                    : 'Restore Bundled SRD'}
-              </Button>
-            )}
+            <Button
+              onClick={handleRestoreBundled}
+              disabled={isLoading}
+              variant="outline"
+              className="gap-2"
+            >
+              <Database className="size-4" />
+              {dataSourceConfig?.type === 'bundled'
+                ? 'Rebuild Bundled SRD'
+                : hasActiveDataSource
+                  ? 'Restore Bundled SRD'
+                  : 'Use Bundled SRD'}
+            </Button>
             <div className="flex gap-2 ml-auto">
               {!selectorOnly && hasActiveDataSource && !isSelectingDataSource && (
                 <Button
