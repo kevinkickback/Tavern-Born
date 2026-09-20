@@ -93,7 +93,9 @@ async function authorizeLocalDataRoot(folderPath: string): Promise<string> {
 }
 
 function getBundledPackRoot(): string {
-  return isDev ? join(__dirname, '../resources/srd/core') : join(process.resourcesPath, 'srd/core')
+  return app.isPackaged
+    ? join(process.resourcesPath, 'srd/core')
+    : join(__dirname, '../resources/srd/core')
 }
 
 function getBundledDataRoot(): string {

@@ -199,10 +199,16 @@ an advanced user can configure, refresh, replace, and leave an external source.
   external validation, restore-bundled behavior, and error recovery.
 - [ ] Add an Electron smoke test that reads packaged bundled JSON through the restricted IPC path
   and rejects traversal and arbitrary files.
+  - [x] Exercise the real preload/main IPC bridge in the compiled Electron shell and reject path
+    traversal and non-JSON files. A positive packaged-data read remains gated on the approved
+    snapshot.
 - [ ] Add offline end-to-end journeys for representative 2014 and 2024 characters: create, edit,
   save, reload, open rules previews/compendium, and export PDF.
 - [ ] Verify switching to a full external source produces no duplicate core choices and does not
   rewrite saved SRD `name|source` references.
+  - [x] Add an integration contract proving that an external catalog replaces rather than merges
+    the bundled catalog and that the saved and active character snapshots remain byte-for-byte
+    unchanged across the switch.
 - [ ] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
   Biome, TypeScript, Knip, dependency boundaries, production build, release checks, and revised
   bundle budgets.

@@ -64,6 +64,20 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
       }
     })
     expect(rejectedPathMessage).toContain('Path must be absolute')
+
+    const bundledBoundaryMessages = await page.evaluate(() => {
+      const readError = async (relativePath: string) => {
+        try {
+          await window.electronAPI.readBundledJson(relativePath)
+          return null
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error)
+        }
+      }
+      return Promise.all([readError('../manifest.json'), readError('THIRD_PARTY_NOTICES.md')])
+    })
+    expect(bundledBoundaryMessages[0]).toContain('invalid segment')
+    expect(bundledBoundaryMessages[1]).toContain('Only bundled JSON files may be read')
   } finally {
     await electronApp.close()
   }
