@@ -1,6 +1,7 @@
+import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { _electron as electron, expect, type Page, test } from '@playwright/test'
+import { chromium, _electron as electron, expect, type Page, test } from '@playwright/test'
 import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
 const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/core/manifest.json'))
@@ -12,6 +13,86 @@ interface CharacterOptions {
   race: RegExp
   className: RegExp
   background: RegExp
+}
+
+interface AppSession {
+  page: Page
+  close: () => Promise<void>
+}
+
+function waitForDevToolsEndpoint(child: ReturnType<typeof spawn>): Promise<string> {
+  return new Promise((resolveEndpoint, rejectEndpoint) => {
+    let output = ''
+    const timeout = setTimeout(() => {
+      cleanup()
+      rejectEndpoint(new Error(`Packaged app did not expose DevTools.\n${output}`))
+    }, 30_000)
+    const cleanup = () => {
+      clearTimeout(timeout)
+      child.stdout?.off('data', onData)
+      child.stderr?.off('data', onData)
+      child.off('exit', onExit)
+    }
+    const onData = (chunk: Buffer) => {
+      output = `${output}${chunk.toString()}`.slice(-8_000)
+      const match = output.match(/DevTools listening on (ws:\/\/\S+)/)
+      if (!match) return
+      cleanup()
+      resolveEndpoint(match[1])
+    }
+    const onExit = (code: number | null) => {
+      cleanup()
+      rejectEndpoint(
+        new Error(`Packaged app exited before DevTools was ready (${code}).\n${output}`),
+      )
+    }
+
+    child.stdout?.on('data', onData)
+    child.stderr?.on('data', onData)
+    child.once('exit', onExit)
+  })
+}
+
+async function launchApp(
+  userDataArgument: string,
+  environment: Record<string, string>,
+): Promise<AppSession> {
+  if (!PACKAGED_EXECUTABLE) {
+    const electronApp = await electron.launch({ args: ['.', userDataArgument], env: environment })
+    return {
+      page: await electronApp.firstWindow(),
+      close: async () => {
+        if (electronApp.process().exitCode === null) await electronApp.close()
+      },
+    }
+  }
+
+  // Hardened release packages intentionally disable Electron's Node inspector fuse, which the
+  // Playwright Electron launcher requires. Exercise the real packaged UI through Chromium's
+  // loopback-only DevTools endpoint without changing the fuses that ship to users.
+  const child = spawn(
+    PACKAGED_EXECUTABLE,
+    [userDataArgument, '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0'],
+    { env: environment, stdio: ['ignore', 'pipe', 'pipe'] },
+  )
+
+  try {
+    const endpoint = await waitForDevToolsEndpoint(child)
+    const browser = await chromium.connectOverCDP(endpoint)
+    const context = browser.contexts()[0]
+    if (!context) throw new Error('Packaged app did not expose a browser context')
+    const page = context.pages()[0] ?? (await context.waitForEvent('page'))
+    return {
+      page,
+      close: async () => {
+        await browser.close().catch(() => undefined)
+        if (child.exitCode === null) child.kill()
+      },
+    }
+  } catch (error) {
+    if (child.exitCode === null) child.kill()
+    throw error
+  }
 }
 
 async function createCharacter(page: Page, options: CharacterOptions) {
@@ -52,6 +133,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
   browserName: _browserName,
 }, testInfo) => {
   test.setTimeout(180_000)
+  const reportProgress = (message: string) => console.info(`[bundled-srd-journey] ${message}`)
   const environment = Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] =>
@@ -59,14 +141,13 @@ test('creates and reloads both rules generations using only the Included SRD', a
     ),
   )
   const userDataArgument = `--user-data-dir=${testInfo.outputPath('bundled-srd-user-data')}`
-  const electronApp = await electron.launch({
-    ...(PACKAGED_EXECUTABLE ? { executablePath: PACKAGED_EXECUTABLE } : {}),
-    args: PACKAGED_EXECUTABLE ? [userDataArgument] : ['.', userDataArgument],
-    env: environment,
-  })
+  reportProgress('launching application')
+  const appSession = await launchApp(userDataArgument, environment)
+  reportProgress('application launched')
 
   try {
-    const page = await electronApp.firstWindow()
+    const { page } = appSession
+    reportProgress('first window opened')
     page.setDefaultTimeout(20_000)
     await test.step('load the Included SRD and dismiss the first-run introduction', async () => {
       const welcomeHeading = page.getByRole('heading', { name: 'Welcome to Tavern Born' })
@@ -76,6 +157,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await page.getByRole('button', { name: 'Get Started' }).dispatchEvent('click')
       await expect(welcomeHeading).toBeHidden()
     })
+    reportProgress('first-run introduction dismissed')
 
     await test.step('create representative 2014 and 2024 characters', async () => {
       await createCharacter(page, {
@@ -93,6 +175,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
         background: /Soldier\s+XPHB/,
       })
     })
+    reportProgress('representative characters created')
 
     await test.step('edit, save, and reload the revised character', async () => {
       await openCharacter(page, 'SRD Revised')
@@ -110,6 +193,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await page.getByRole('button', { name: 'Characters' }).click()
       await expect(page.locator('h3').filter({ hasText: 'SRD Legacy' })).toBeVisible()
     })
+    reportProgress('revised character saved and reloaded')
 
     await test.step('open a real SRD compendium entry', async () => {
       await page.getByRole('button', { name: 'Compendium' }).click()
@@ -119,6 +203,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
         page.getByRole('heading', { level: 2, name: 'Fireball', exact: true }),
       ).toBeVisible()
     })
+    reportProgress('compendium entry opened')
 
     await test.step('generate the revised character sheet preview', async () => {
       await page.getByRole('button', { name: 'Characters' }).click()
@@ -128,9 +213,10 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await page.getByRole('button', { name: 'Generate Preview' }).click()
       await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 60_000 })
     })
+    reportProgress('character sheet preview generated')
   } finally {
-    if (electronApp.process().exitCode === null) {
-      await electronApp.close()
-    }
+    reportProgress('closing application')
+    await appSession.close()
+    reportProgress('application closed')
   }
 })
