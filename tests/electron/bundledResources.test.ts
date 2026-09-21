@@ -51,8 +51,44 @@ describe('bundled resource boundary', () => {
       transformationNotice: 'Test transformation.',
     }
 
-    expect(() => assertBundledManifestAllowed(manifest)).toThrow(
+    expect(() => assertBundledManifestAllowed(manifest, { isPackaged: true })).toThrow(
       'Bundled SRD manifest is not approved for distribution',
+    )
+  })
+
+  test('allows review snapshots only in unpackaged development', () => {
+    const manifest = {
+      schemaVersion: 1,
+      packId: 'tavern-born-srd-core',
+      packVersion: '0.1.0-dev',
+      distributionStatus: 'provenance-review-required',
+      documents: [],
+      license: { name: 'CC BY 4.0', identifier: 'CC-BY-4.0', url: 'https://example.com' },
+      transformationNotice: 'Test transformation.',
+    }
+
+    expect(() => assertBundledManifestAllowed(manifest, { isPackaged: false })).not.toThrow()
+    expect(() => assertBundledManifestAllowed(manifest, { isPackaged: true })).toThrow(
+      'Bundled SRD manifest is not approved for distribution',
+    )
+  })
+
+  test('rejects a different pack identity in development and packaged builds', () => {
+    const manifest = {
+      schemaVersion: 1,
+      packId: 'another-srd-pack',
+      packVersion: '1.0.0',
+      distributionStatus: 'approved-for-distribution',
+      documents: [],
+      license: { name: 'CC BY 4.0', identifier: 'CC-BY-4.0', url: 'https://example.com' },
+      transformationNotice: 'Test transformation.',
+    }
+
+    expect(() => assertBundledManifestAllowed(manifest, { isPackaged: false })).toThrow(
+      'Bundled SRD manifest has an unexpected pack identity',
+    )
+    expect(() => assertBundledManifestAllowed(manifest, { isPackaged: true })).toThrow(
+      'Bundled SRD manifest has an unexpected pack identity',
     )
   })
 

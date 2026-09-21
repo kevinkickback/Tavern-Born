@@ -46,8 +46,15 @@ export function migrateGameDataPersistedState(persistedState: unknown): unknown 
       candidate.packId.length > 0 &&
       typeof candidate.packVersion === 'string' &&
       candidate.packVersion.length > 0)
+  const hasValidAvailableResources =
+    candidate.type === 'bundled' ||
+    candidate.availableResources === undefined ||
+    (Array.isArray(candidate.availableResources) &&
+      candidate.availableResources.every((resource) => typeof resource === 'string'))
 
-  return hasBaseFields && hasBundledIdentity ? state : { ...state, dataSourceConfig: null }
+  return hasBaseFields && hasBundledIdentity && hasValidAvailableResources
+    ? state
+    : { ...state, dataSourceConfig: null }
 }
 
 function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {

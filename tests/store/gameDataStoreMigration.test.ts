@@ -14,6 +14,19 @@ describe('game data source persistence migration', () => {
     expect(migrateGameDataPersistedState(remoteState)).toBe(remoteState)
   })
 
+  test('preserves valid external resource inventories', () => {
+    const state = {
+      dataSourceConfig: {
+        type: 'remote',
+        path: 'https://example.com/5etools',
+        isValid: true,
+        availableResources: ['feats.json', 'class/index.json'],
+      },
+    }
+
+    expect(migrateGameDataPersistedState(state)).toBe(state)
+  })
+
   test('preserves bundled sources only when stable pack identity is present', () => {
     const bundledState = {
       dataSourceConfig: {
@@ -37,6 +50,27 @@ describe('game data source persistence migration', () => {
     expect(
       migrateGameDataPersistedState({
         dataSourceConfig: { type: 'local', path: 42, isValid: true },
+        lastLoadedAt: '2026-09-19T00:00:00.000Z',
+      }),
+    ).toEqual({
+      dataSourceConfig: null,
+      lastLoadedAt: '2026-09-19T00:00:00.000Z',
+    })
+  })
+
+  test.each([
+    42,
+    null,
+    ['feats.json', 42],
+  ])('drops malformed external resource inventory %j', (availableResources) => {
+    expect(
+      migrateGameDataPersistedState({
+        dataSourceConfig: {
+          type: 'remote',
+          path: 'https://example.com/5etools',
+          isValid: true,
+          availableResources,
+        },
         lastLoadedAt: '2026-09-19T00:00:00.000Z',
       }),
     ).toEqual({

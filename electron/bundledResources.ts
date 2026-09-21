@@ -4,6 +4,7 @@ import { isPathWithinRoot } from './security'
 
 const MAX_BUNDLED_JSON_BYTES = 50 * 1024 * 1024
 const APPROVED_DISTRIBUTION_STATUS = 'approved-for-distribution'
+const INCLUDED_SRD_PACK_ID = 'tavern-born-srd-core'
 
 export interface BundledSrdManifestSummary {
   schemaVersion: number
@@ -37,8 +38,14 @@ export function resolveBundledPackRoot({
   return join(repositoryRoot, 'resources/srd/core')
 }
 
-export function assertBundledManifestAllowed(manifest: BundledSrdManifestSummary): void {
-  if (manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) {
+export function assertBundledManifestAllowed(
+  manifest: BundledSrdManifestSummary,
+  { isPackaged }: { isPackaged: boolean },
+): void {
+  if (manifest.packId !== INCLUDED_SRD_PACK_ID) {
+    throw new Error('Bundled SRD manifest has an unexpected pack identity')
+  }
+  if (isPackaged && manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) {
     throw new Error('Bundled SRD manifest is not approved for distribution')
   }
 }

@@ -20,12 +20,13 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
    do not.
 
 The bundled manifest is read through a fixed Electron capability. Development and packaged builds
-admit only the committed manifest marked `approved-for-distribution`; packaged builds read the
-same reviewed files from `process.resourcesPath`. Bundled cache entries are immutable for their
-pack version and are never background-refreshed. “Remove Additional Content” loads and validates the admitted bundled catalog
-before removing the saved external connection; failure keeps the existing data, cache, and external
-configuration while exposing a diagnostic. The rebuild is atomic and never makes the application
-content-free.
+require the committed `tavern-born-srd-core` identity; packaged builds also require
+`approved-for-distribution` and read the reviewed files from `process.resourcesPath`. Unpackaged
+development may load a review-status snapshot without weakening the release boundary. Bundled
+cache entries are immutable for their pack version and are never background-refreshed. “Remove
+Additional Content” loads and validates the admitted bundled catalog before removing the saved
+external connection; failure keeps the existing data, cache, and external configuration while
+exposing a diagnostic. The rebuild is atomic and never makes the application content-free.
 
 After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
 available offline. Continuing requires no source setup; “Add Additional Content” opens the existing

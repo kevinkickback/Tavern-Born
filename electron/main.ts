@@ -118,7 +118,7 @@ async function getAllowedBundledManifest(): Promise<{
   const rootPath = getBundledPackRoot()
   if (bundledManifestCache?.rootPath !== rootPath) {
     const promise = readBundledManifestFromRoot(rootPath).then((manifest) => {
-      assertBundledManifestAllowed(manifest)
+      assertBundledManifestAllowed(manifest, { isPackaged: app.isPackaged })
       return manifest
     })
     bundledManifestCache = { rootPath, promise }
