@@ -65,16 +65,6 @@ Developers can run those groups independently with `npm run test:e2e:golden` and
 `npm run test:e2e:focused`; `npm run test:e2e:release` runs the complete suite serially for local
 release validation.
 
-### Temporary native SRD package verification
-
-The bundled-SRD feature branch temporarily includes `verify-srd-packaging.yml`. On its non-draft
-pull request, GitHub builds an unpublished native package on Windows, macOS, and Linux, verifies the
-packaged SRD file set and checksums, confirms that development-only game data was excluded, and
-exercises the Included SRD through each packaged application. After one successful three-platform
-run, record the run in the implementation plan and remove the temporary workflow, verifier, and
-its focused tests before merging. Repeat this one-time check only after changing the SRD resource
-path, Electron Builder version, packaging targets, or `extraResources` configuration.
-
 ---
 
 ## Releasing a version

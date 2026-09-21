@@ -171,26 +171,8 @@ describe('trusted workflow policy', () => {
     expect(packageJson.scripts.dist).toContain('npm run check:bundle -- --require-srd')
   })
 
-  test('runs the one-time native SRD package verification without publishing', async () => {
-    const workflow = await readWorkflow('verify-srd-packaging.yml')
-
-    expect(workflow).toContain('name: Temporary SRD Package Verification')
-    expect(workflow).toContain('pull_request:')
-    expect(workflow).toContain('branches: [main]')
-    expect(workflow).toContain("if: '!github.event.pull_request.draft'")
-    expect(workflow).toContain('os: [windows-latest, macos-latest, ubuntu-26.04]')
-    expect(workflow).toContain('permissions:\n  contents: read')
-    expect(workflow).toContain('run: npm run dist -- --publish never')
-    expect(workflow).toContain('run: node scripts/verify-packaged-srd.mjs')
-    expect(workflow).toContain('npm run test:electron -- bundledSrdJourney.ts')
-    expect(workflow).not.toContain('gh release')
-    expect(workflow).not.toContain('contents: write')
-  })
-
   test('pins every official action to an immutable commit', async () => {
-    const workflows = await Promise.all(
-      ['ci.yml', 'release.yml', 'verify-srd-packaging.yml'].map((name) => readWorkflow(name)),
-    )
+    const workflows = await Promise.all(['ci.yml', 'release.yml'].map((name) => readWorkflow(name)))
     const actionUses = workflows.flatMap((workflow) =>
       [...workflow.matchAll(/uses:\s+(actions\/[^@\s]+)@([^\s#]+)/g)].map((match) => ({
         action: match[1],
@@ -203,9 +185,7 @@ describe('trusted workflow policy', () => {
   })
 
   test('uses Node 24 for every repository-run Node step', async () => {
-    const workflows = await Promise.all(
-      ['ci.yml', 'release.yml', 'verify-srd-packaging.yml'].map((name) => readWorkflow(name)),
-    )
+    const workflows = await Promise.all(['ci.yml', 'release.yml'].map((name) => readWorkflow(name)))
     const nodeVersions = workflows.flatMap((workflow) =>
       [
         ...workflow.matchAll(/uses: actions\/setup-node@[^\n]+\n\s+with:\n\s+node-version: (\d+)/g),

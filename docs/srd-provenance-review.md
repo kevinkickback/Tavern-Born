@@ -31,6 +31,13 @@ unapproved bundled files and verifies that the packaged legal notices match the 
 provenance. The committed corpus test also loads the pack through Tavern Born's production parser
 and checks its normalized capabilities.
 
+The one-time native packaging verification completed successfully on 2026-09-21 for commit
+`bb3e3a7`. [GitHub Actions run 35570457115](https://github.com/kevinkickback/Tavern-Born/actions/runs/35570457115)
+built unpublished Windows, macOS, and Linux packages, verified the exact 50-file SRD manifest and
+checksums, confirmed that development-only `data/` files were absent, and completed the Included
+SRD application journey on every platform. The temporary verification workflow and its supporting
+code were removed after this successful run.
+
 This technical provenance review is not a substitute for legal advice. The retained authoritative
 references are:
 
