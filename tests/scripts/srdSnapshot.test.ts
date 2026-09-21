@@ -23,10 +23,34 @@ const ROOT_FIXTURES: Record<string, object> = {
         basicRules2024: true,
         hasFluff: true,
         hasFluffImages: true,
+        origin: 'Non-SRD origin detail',
         reprintedAs: ['Rope|XPHB'],
         otherSources: [{ source: 'XGE', page: 9 }],
+        referenceSources: ['XGE'],
         additionalSources: [{ source: 'TCE', page: 10 }],
-        entries: [{ type: 'entries', name: 'Rope', entries: ['Useful cord.'], page: 146 }],
+        classFeatures: ['replicate magic item|artificer|efa|2|efa'],
+        lootTables: ['Magic Item Table A'],
+        miscTags: ['CNS'],
+        reqAttuneTags: [{ spellcasting: true }],
+        tier: 'minor',
+        entries: [
+          {
+            type: 'entries',
+            name: 'Rope',
+            entries: ["The DM's useful cord is stored beside the DMG."],
+            page: 146,
+          },
+          {
+            type: 'inset',
+            name: "A Bard's Repertoire",
+            entries: ['Non-SRD sidebar text.'],
+          },
+          {
+            type: 'entries',
+            name: 'A Question of Enmity',
+            entries: ['Non-SRD sidebar text.'],
+          },
+        ],
         additionalEntries: [{ source: 'MOT', entries: ['Non-SRD supplement text.'] }],
         soundClip: 'audio/rope.mp3',
         _versions: [
@@ -185,6 +209,470 @@ describe('bundled SRD snapshot generator', () => {
     )
   })
 
+  test('applies official wording corrections only to the exact reviewed source text', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'actions.json', {
+      action: [
+        {
+          name: 'Activate an Item',
+          source: 'DMG',
+          srd: true,
+          entries: [
+            'Some items are used up when they are activated. A potion or elixir must be swallowed, or an oil applied to the body. The writing vanishes from a scroll when it is read. Once used, a consumable item loses its magic and no longer functions.',
+            'A potion or elixir in unrelated text remains unchanged.',
+            'See {@book chapter 7|XPHB|7} for details.',
+            'Intro. See {@book chapter 10|PHB|10} for the general rules of spellcasting and {@book chapter 11|PHB|11} for the {@filter wizard spell list|spells|class=wizard}.',
+            'The table shows slots to cast your wizard spells.',
+            'Choose spells from any classes.',
+            'See the {@book Monster Manual|XMM} for details.',
+            "A familiar can see appendix B for the familiar's stat block.",
+            "Statistics appear in the {@book Player's Handbook|XPHB}.",
+            "see the {@book Player's Handbook|XPHB} for the {@item Net|XPHB|Net's} statistics.",
+            'The condition is described as explained in the appendix.',
+            'Choose {@creature Skeleton|XMM}, {@creature Slaad Tadpole|XMM}, or {@creature Sprite|XMM}.',
+            'If your DM allows the use of feats, you may instead take a {@5etools feat|feats.html}.',
+            'You gain the {@feat Ability Score Improvement|XPHB} feat or another {@5etools feat|feats.html} of your choice.',
+            'You gain an {@filter Epic Boon feat|feats|category=EB} or another {@5etools feat|feats.html} of your choice.',
+            "A Lance requires two hands to wield when you aren't mounted.",
+            'This weapon requires two hands to use. This property is relevant only when you attack with the weapon, not when you simply hold it.',
+            'The familiar has the statistics of the chosen form, though it remains a spirit.',
+            'If your wish would undo the multiverse itself, threaten the City of Sigil, or affect the Lady of Pain in any way, you see an image of her in your mind for a moment; she shakes her head, and your wish fails.',
+            "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you appear in or near that destination. If you are trying to reach the City of Brass, for example, you might arrive in its Street of Steel, before its Gate of Ashes, or looking at the city from across the Sea of Fire, at the DM's discretion.",
+            'You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you appear in or near that destination, as determined by the DM.',
+            'Some spells and other effects require Concentration to remain active, as specified in their descriptions. You can end Concentration at any time (no action required).',
+            '{@note Additionally, the Help action may be used to {@book stabilize a creature|XPHB|1|Stabilizing a Character}.}',
+            "With the Hide action, you try to conceal yourself. To do so, you must succeed on a {@dc 15} Dexterity ({@skill Stealth|XPHB}) check while you're {@variantrule Heavily Obscured|XPHB} or behind {@variantrule Cover|XPHB|Three-Quarters Cover or Total Cover}, and you must be out of any enemy's line of sight; if you can see a creature, you can discern whether it can see you.",
+            'In a fight, everyone is constantly watching for enemies to drop their guard. You can rarely move heedlessly past your foes without putting yourself in danger; doing so provokes an opportunity attack.',
+            "You can make an opportunity attack when a hostile creature that you can see moves out of your reach. To make the opportunity attack, you use your reaction to make one melee attack against the provoking creature. The attack interrupts the provoking creature's movement, occurring right before the creature leaves your reach.",
+            "When you ready a spell, holding onto the spell's magic requires {@status concentration} (explained in {@book chapter 10|phb|10|concentration}).",
+            'You have until the start of your next turn to use a readied action.',
+          ],
+        },
+      ],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist: createAllowlist(),
+      upstreamRevision: 'fixture-revision',
+    })
+    const actions = JSON.parse(snapshot.files.get('data/actions.json') ?? '{}').action
+
+    expect(actions[0].entries).toEqual([
+      'Some items are used up when they are activated. A potion or an elixir must be swallowed, or an oil applied to the body. The writing vanishes from a scroll when it is read. Once used, a consumable item loses its magic.',
+      'A potion or elixir in unrelated text remains unchanged.',
+      'See Spells for details.',
+      'Intro.',
+      'The table shows slots to cast your spells.',
+      'Choose spells from any class.',
+      'See Monsters for details.',
+      'A familiar can see "Monsters" for the familiar\'s stat block.',
+      'Statistics appear in "Equipment".',
+      'see "Adventuring Gear" for the Net\'s statistics.',
+      'The condition is described as explained in appendix A.',
+      'Choose {@creature Skeleton|XMM}, or {@creature Sprite|XMM}.',
+      'Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead.',
+      'You gain the {@feat Ability Score Improvement|XPHB} feat (see "Feats") or another feat of your choice.',
+      'You gain an Epic Boon feat (see "Feats") or another feat of your choice.',
+      'This weapon requires two hands when you attack with it.',
+      'The familiar has the statistics of the chosen form (see "Monsters"), though it remains a spirit.',
+      'If your wish would undo the multiverse itself, your wish fails.',
+      "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you appear in or near that destination. If you are trying to reach the City of Brass, for example, you might arrive in its Street of Steel, before its Gate of Ashes, or looking at the city from across the Sea of Fire, at the GM's discretion.",
+      'You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as a specific city on the Elemental Plane of Fire or palace on the second level of the Nine Hells, and you appear in or near that destination, as determined by the GM.',
+      'The creator can end Concentration at any time (no action required).',
+      'You can take the Help action to try to stabilize a creature with 0 Hit Points, which requires a successful {@dc 10} Wisdom ({@skill Medicine|XPHB}) check.',
+      "With the Hide action, you try to hide yourself. To do so, you must succeed on a {@dc 15} Dexterity ({@skill Stealth|XPHB}) check while you're {@variantrule Heavily Obscured|XPHB} or behind {@variantrule Cover|XPHB|Three-Quarters Cover or Total Cover}, and you must be out of any enemy's line of sight; if you can see a creature, you can discern whether it can see you.",
+      'In a fight, everyone is constantly watching for a chance to strike an enemy who is fleeing or passing by. Such a strike is called an opportunity attack.',
+      'You can make an opportunity attack when a hostile creature that you can see moves out of your reach. To make the opportunity attack, you use your reaction to make one melee attack against the provoking creature. The attack occurs right before the creature leaves your reach.',
+      "When you ready a spell, holding onto the spell's magic requires {@status concentration}.",
+    ])
+    expect(snapshot.manifest.coverage.textCorrections).toEqual({
+      activateItemConsumables: 1,
+      abilityScoreImprovementFeatReference2014: 1,
+      abilityScoreImprovementFeatReference2024: 1,
+      appendixAReference: 1,
+      endConcentrationSrdText2024: 1,
+      fallingNetSrdSectionReference: 1,
+      epicBoonFeatReference2024: 1,
+      familiarSrdSectionReference: 1,
+      findFamiliarMonstersReference2024: 1,
+      foldingBoatSrdSectionReference: 1,
+      gameMasterAbbreviation: 3,
+      helpStabilizeSrdText2024: 1,
+      hideSrdText2024: 1,
+      magicalSecretsClassGrammar: 1,
+      monsterManualSrdSectionReference: 1,
+      opportunityAttackIntroduction2014: 1,
+      opportunityAttackTiming2014: 1,
+      planeShiftSrdExample2024: 1,
+      remove2014SpellcastingChapterReferences: 1,
+      removeReadyConcentrationChapterReference2014: 1,
+      removeNonSrdFamiliarForm: 1,
+      spellsSectionReference: 1,
+      spellSlotClassQualifier: 1,
+      twoHandedPropertySrdText: 1,
+      wishSrdScope2024: 1,
+    })
+    expect(snapshot.manifest.coverage.strippedContent).toEqual(
+      expect.objectContaining({
+        lanceBookOnlyDescription: 1,
+        readyActionExpiryOutsideSrd51: 1,
+      }),
+    )
+  })
+
+  test('removes full-book ammunition descriptions from SRD table records', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'items-base.json', {
+      baseitem: [
+        { name: 'Club', source: 'PHB', type: 'M', srd: true },
+        {
+          name: 'Bolt',
+          source: 'XPHB',
+          type: 'A|XPHB',
+          srd52: true,
+          value: 5,
+          weight: 0.075,
+          entries: ['Full-book convenience text that is not present in the SRD ammunition table.'],
+        },
+      ],
+      itemMastery: [],
+      itemProperty: [],
+      itemType: [
+        { name: 'Adventuring Gear', abbreviation: 'G', source: 'PHB' },
+        { name: 'Melee Weapon', abbreviation: 'M', source: 'PHB' },
+        { name: 'Ammunition', abbreviation: 'A', source: 'XPHB' },
+      ],
+    })
+    const allowlist = createAllowlist()
+    allowlist.dependencies.push({
+      collection: 'itemType',
+      srdVersion: '5.2.1',
+      officialSection: 'Equipment — Ammunition',
+      reason: 'Fixture ammunition item type.',
+      identities: ['A|XPHB'],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist,
+      upstreamRevision: 'fixture-revision',
+    })
+    const bolt = JSON.parse(snapshot.files.get('data/items-base.json') ?? '{}').baseitem.find(
+      (record: { name?: string }) => record.name === 'Bolt',
+    )
+
+    expect(bolt).not.toHaveProperty('entries')
+    expect(snapshot.manifest.coverage.strippedContent).toEqual(
+      expect.objectContaining({ xphbAmmunitionBookDescriptions: 1 }),
+    )
+  })
+
+  test('removes supplemental domains merged into SRD deity rows', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'deities.json', {
+      deity: [
+        {
+          name: 'Anubis',
+          title: 'God of judgment and death',
+          source: 'PHB',
+          srd: true,
+          pantheon: 'Egyptian',
+          alignment: ['L', 'N'],
+          domains: ['Death', 'Grave', 'Order'],
+          symbol: 'Black jackal',
+        },
+      ],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist: createAllowlist(),
+      upstreamRevision: 'fixture-revision',
+    })
+    const deity = JSON.parse(snapshot.files.get('data/deities.json') ?? '{}').deity[0]
+
+    expect(deity.domains).toEqual(['Death'])
+    expect(snapshot.manifest.coverage.strippedContent).toEqual(
+      expect.objectContaining({ deitySupplementalDomains: 2 }),
+    )
+  })
+
+  test('corrects reviewed structured values that differ from the official SRD', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'items.json', {
+      item: [
+        {
+          name: 'Stabling (per day)',
+          source: 'XPHB',
+          srd52: true,
+          type: 'TAH|XPHB',
+          rarity: 'none',
+          value: 5,
+        },
+        {
+          name: "Lolth's Sting",
+          source: 'XDMG',
+          srd52: true,
+          entries: ["A creature subjected to Lolth's Sting uses the wrong upstream name."],
+        },
+        {
+          name: 'Staff of Withering',
+          source: 'XDMG',
+          srd52: true,
+          reqAttune: 'by a cleric, druid, or warlock',
+        },
+        { name: 'Iron Flask', source: 'DMG', srd: true, entries: ['Full-book table.'] },
+        { name: 'Iron Flask', source: 'XDMG', srd52: true, entries: ['Full-book table.'] },
+      ],
+      itemGroup: [],
+    })
+    await writeJson(sourceRoot, 'items-base.json', {
+      baseitem: [{ name: 'Club', source: 'PHB', type: 'M', srd: true }],
+      itemMastery: [],
+      itemProperty: [],
+      itemType: [
+        { name: 'Melee Weapon', abbreviation: 'M', source: 'PHB' },
+        { name: 'Tack and Harness', abbreviation: 'TAH', source: 'XPHB' },
+      ],
+    })
+    const allowlist = createAllowlist()
+    allowlist.dependencies = [
+      {
+        collection: 'itemType',
+        srdVersion: '5.1',
+        officialSection: 'Equipment',
+        reason: 'Fixture item type.',
+        identities: ['M|PHB'],
+      },
+      {
+        collection: 'itemType',
+        srdVersion: '5.2.1',
+        officialSection: 'Equipment',
+        reason: 'Fixture item type.',
+        identities: ['TAH|XPHB'],
+      },
+    ]
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist,
+      upstreamRevision: 'fixture-revision',
+    })
+    const items = JSON.parse(snapshot.files.get('data/items.json') ?? '{}').item
+    const stabling = items.find((item: { name: string }) => item.name === 'Stabling (per day)')
+    const spidersSting = items.find((item: { name: string }) => item.name === "Spider's Sting")
+    const staff = items.find((item: { name: string }) => item.name === 'Staff of Withering')
+    const ironFlask2014 = items.find(
+      (item: { name: string; source: string }) =>
+        item.name === 'Iron Flask' && item.source === 'DMG',
+    )
+    const ironFlask2024 = items.find(
+      (item: { name: string; source: string }) =>
+        item.name === 'Iron Flask' && item.source === 'XDMG',
+    )
+
+    expect(stabling.value).toBe(50)
+    expect(spidersSting.entries).toEqual([
+      "A creature subjected to Spider's Sting must succeed on a {@dc 13} Constitution saving throw or have the {@condition Poisoned|XPHB} condition for 1 hour. If the creature fails the save by 5 or more, the creature also has the {@condition Unconscious|XPHB} condition while {@condition Poisoned|XPHB} in this way. The creature wakes up if it takes damage or if another creature takes an action to shake it awake.",
+    ])
+    expect(staff.reqAttune).toBe(true)
+    expect(ironFlask2014.entries[3].rows).toContainEqual(['51-54', 'Demon (type 1)'])
+    expect(ironFlask2014.entries[3].rows).toContainEqual(['100', '{@creature Xorn}'])
+    expect(ironFlask2024.entries).toHaveLength(3)
+    expect(JSON.stringify(ironFlask2024.entries)).not.toContain('determined randomly')
+    expect(snapshot.manifest.coverage.structuredCorrections).toEqual({
+      ironFlask2014: 1,
+      ironFlask2024: 1,
+      spidersSting2024: 2,
+      staffOfWitheringAttunement2024: 1,
+      stablingCost2024: 1,
+    })
+  })
+
+  test('replaces reviewed full-book magic-item wording with the official SRD text', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'items.json', {
+      item: [
+        {
+          name: 'Amulet of Health',
+          source: 'DMG',
+          srd: true,
+          type: 'G',
+          entries: [
+            'Your Constitution score is 19 while you wear this amulet. It has no effect on you if your Constitution score is already 19 or higher without it.',
+          ],
+        },
+        {
+          name: 'Mace of Smiting',
+          source: 'DMG',
+          srd: true,
+          entries: [
+            "When you roll a 20 on an attack roll made with this weapon, the target takes an extra 7 bludgeoning damage, or an extra 14 bludgeoning damage if it's a construct. If a construct has 25 hit points or fewer after taking this damage, it is destroyed.",
+            '{@note Note: According to the SRD, it is an extra {@damage 2d6} and {@damage 4d6} bludgeoning damage, although {@link this is incorrect|https://rpg.stackexchange.com/a/174522/53884}}.',
+          ],
+        },
+        {
+          name: 'Quarterstaff of the Acrobat',
+          source: 'XDMG',
+          srd52: true,
+          entries: [
+            'This weapon has {@itemProperty T|XPHB|Thrown} with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand.',
+          ],
+        },
+      ],
+      itemGroup: [],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist: createAllowlist(),
+      upstreamRevision: 'fixture-revision',
+    })
+    const items = JSON.parse(snapshot.files.get('data/items.json') ?? '{}').item
+
+    expect(
+      items.find((item: { name: string }) => item.name === 'Amulet of Health').entries,
+    ).toEqual([
+      'Your Constitution score is 19 while you wear this amulet. It has no effect on you if your Constitution is already 19 or higher.',
+    ])
+    expect(items.find((item: { name: string }) => item.name === 'Mace of Smiting').entries).toEqual(
+      [
+        "When you roll a 20 on an attack roll made with this weapon, the target takes an extra {@damage 2d6} bludgeoning damage, or {@damage 4d6} bludgeoning damage if it's a construct. If a construct has 25 hit points or fewer after taking this damage, it is destroyed.",
+      ],
+    )
+    expect(
+      items.find((item: { name: string }) => item.name === 'Quarterstaff of the Acrobat').entries,
+    ).toEqual([
+      'This weapon has the {@itemProperty T|XPHB|Thrown} property with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand.',
+    ])
+    expect(snapshot.manifest.coverage.textCorrections).toEqual({
+      amuletOfHealth2014: 1,
+      maceOfSmiting2014: 1,
+      quarterstaffOfTheAcrobat2024: 1,
+    })
+    expect(snapshot.manifest.coverage.strippedContent).toEqual({
+      maceOfSmitingBookCorrectionNote: 1,
+    })
+  })
+
+  test('materializes shared SRD item-entry templates into distributable item text', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'items.json', {
+      item: [
+        {
+          name: 'Potion of Acid Resistance',
+          source: 'XDMG',
+          srd52: true,
+          type: 'G|PHB',
+          resist: ['acid'],
+          hasRefs: true,
+          entries: ['{#itemEntry Potion of Resistance|XDMG}'],
+        },
+      ],
+      itemGroup: [],
+    })
+    await writeJson(sourceRoot, 'items-base.json', {
+      baseitem: [{ name: 'Club', source: 'PHB', type: 'M', srd: true }],
+      itemMastery: [],
+      itemProperty: [],
+      itemType: [
+        { name: 'Adventuring Gear', abbreviation: 'G', source: 'PHB' },
+        { name: 'Melee Weapon', abbreviation: 'M', source: 'PHB' },
+      ],
+      itemEntry: [
+        {
+          name: 'Potion of Resistance',
+          source: 'XDMG',
+          entriesTemplate: [
+            'When you drink this potion, you have resistance to {{getFullImmRes item.resist}} damage for 1 hour.',
+          ],
+        },
+      ],
+    })
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist: createAllowlist(),
+      upstreamRevision: 'fixture-revision',
+    })
+    const potion = JSON.parse(snapshot.files.get('data/items.json') ?? '{}').item[0]
+
+    expect(potion.entries).toEqual([
+      'When you drink this potion, you have resistance to acid damage for 1 hour.',
+    ])
+    expect(potion).not.toHaveProperty('hasRefs')
+    expect(snapshot.manifest.coverage.materializedItemEntries).toEqual({
+      'potion of resistance|xdmg': 1,
+    })
+  })
+
+  test('fails closed when a selected SRD item has an unresolved shared entry', async () => {
+    const sourceRoot = await createFixture()
+    await writeJson(sourceRoot, 'items.json', {
+      item: [
+        {
+          name: 'Potion of Acid Resistance',
+          source: 'DMG',
+          srd: true,
+          entries: ['{#itemEntry Potion of Resistance}'],
+        },
+      ],
+      itemGroup: [],
+    })
+
+    await expect(
+      buildSrdSnapshot({
+        sourceRoot,
+        provenance,
+        allowlist: createAllowlist(),
+        upstreamRevision: 'fixture-revision',
+      }),
+    ).rejects.toThrow(
+      'Missing item-entry template Potion of Resistance for Potion of Acid Resistance|DMG',
+    )
+  })
+
+  test('records reviewed exclusions for incorrectly marked SRD roots', async () => {
+    const sourceRoot = await createFixture()
+    const allowlist = {
+      ...createAllowlist(),
+      dependencies: createAllowlist().dependencies.map((rule) => ({
+        ...rule,
+        identities: rule.identities.filter((identity) => identity !== 'G|PHB'),
+      })),
+      rootExclusions: {
+        'items.json#item': {
+          reason: 'The fixture record is not present in the official SRD.',
+          identities: ['Rope|PHB'],
+        },
+      },
+    }
+
+    const snapshot = await buildSrdSnapshot({
+      sourceRoot,
+      provenance,
+      allowlist,
+      upstreamRevision: 'fixture-revision',
+    })
+
+    expect(JSON.parse(snapshot.files.get('data/items.json') ?? '{}').item).toEqual([])
+    expect(snapshot.manifest.coverage.exclusions).toEqual(
+      expect.objectContaining({ 'items.json#item': 1 }),
+    )
+    expect(snapshot.manifest.coverage.exclusionReasons).toEqual(
+      expect.objectContaining({
+        'items.json#item': 'The fixture record is not present in the official SRD.',
+      }),
+    )
+  })
+
   test('filters roots and spell associations while recording approved dependencies', async () => {
     const sourceRoot = await createFixture()
     const options = {
@@ -201,6 +689,13 @@ describe('bundled SRD snapshot generator', () => {
     expect(JSON.parse(first.files.get('data/items.json') ?? '{}').item).toEqual([
       expect.objectContaining({ name: 'Rope', source: 'PHB' }),
     ])
+    expect(JSON.parse(first.files.get('data/items.json') ?? '{}').item[0].entries).toEqual([
+      {
+        type: 'entries',
+        name: 'Rope',
+        entries: ["The GM's useful cord is stored beside the DMG."],
+      },
+    ])
     expect(first.files.get('data/items.json')).not.toMatch(
       /additionalEntries|basicRules|hasFluff|reprintedAs|otherSources|additionalSources|soundClip|"page"/,
     )
@@ -212,12 +707,24 @@ describe('bundled SRD snapshot generator', () => {
       additionalSources: 1,
       basicRules: 1,
       basicRules2024: 1,
+      classFeatures: 1,
       hasFluff: 1,
       hasFluffImages: 1,
+      lootTables: 1,
+      miscTags: 1,
+      origin: 1,
       otherSources: 1,
       page: 2,
+      referenceSources: 1,
       reprintedAs: 1,
+      reqAttuneTags: 1,
       soundClip: 1,
+      tier: 1,
+    })
+    expect(first.manifest.coverage.textCorrections).toEqual({ gameMasterAbbreviation: 1 })
+    expect(first.manifest.coverage.strippedContent).toEqual({
+      bardRepertoireSidebar: 1,
+      deckEnmitySidebar: 1,
     })
     expect(JSON.parse(first.files.get('data/class/class-wizard.json') ?? '{}').class).toEqual([
       expect.objectContaining({

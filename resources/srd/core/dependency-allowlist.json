@@ -4,6 +4,34 @@
     "deities.json#deity": {
       "reason": "Forgotten Realms setting records are outside the setting-neutral SRD corpus.",
       "identities": ["Oghma|PHB|Forgotten Realms", "Silvanus|PHB|Forgotten Realms"]
+    },
+    "items.json#item": {
+      "reason": "5etools marks these 2024 trade-goods records as SRD, but the SRD 5.2.1 equipment section does not contain the trade-goods table.",
+      "identities": [
+        "Canvas (1 sq. yd.)|XDMG",
+        "Chicken|XDMG",
+        "Cinnamon|XDMG",
+        "Cloves|XDMG",
+        "Copper|XDMG",
+        "Cotton Cloth (1 sq. yd.)|XDMG",
+        "Cow|XDMG",
+        "Flour|XDMG",
+        "Ginger|XDMG",
+        "Goat|XDMG",
+        "Gold|XDMG",
+        "Iron|XDMG",
+        "Linen (1 sq. yd.)|XDMG",
+        "Ox|XDMG",
+        "Pepper|XDMG",
+        "Pig|XDMG",
+        "Platinum|XDMG",
+        "Saffron|XDMG",
+        "Salt|XDMG",
+        "Sheep|XDMG",
+        "Silk|XDMG",
+        "Silver|XDMG",
+        "Wheat|XDMG"
+      ]
     }
   },
   "referenceExclusions": [
@@ -147,7 +175,7 @@
       "srdVersion": "5.2.1",
       "officialSection": "Magic Items — Magic item categories",
       "reason": "SRD magic items use these compact magic-item category definitions.",
-      "identities": ["GV|XDMG", "RD|XDMG", "RG|XDMG", "TG|XDMG", "WD|XDMG"]
+      "identities": ["GV|XDMG", "RD|XDMG", "RG|XDMG", "WD|XDMG"]
     },
     {
       "collection": "optionalfeature",

@@ -73,7 +73,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await expect(welcomeHeading).toBeVisible({
         timeout: 60_000,
       })
-      await page.getByRole('button', { name: 'Continue with Included SRD' }).dispatchEvent('click')
+      await page.getByRole('button', { name: 'Get Started' }).dispatchEvent('click')
       await expect(welcomeHeading).toBeHidden()
     })
 

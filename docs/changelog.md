@@ -3,8 +3,8 @@
 
 ## ✨ Changes
 
-* Tavern Born now includes the limited free D&D rules available through the SRD
-* Additional content is now ruleset-aware, and characters that need content not included with Tavern Born are clearly marked
+* Tavern Born now comes bundled with the free D&D rules available through the SRD
+* Additional content is now ruleset-aware
 
 </details>
 

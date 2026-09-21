@@ -18,7 +18,9 @@ Generate a non-distributable review snapshot and CSV checklist from an explicit 
 5etools-format checkout:
 
 ```text
-npm run review:srd -- --source-root data --upstream-revision <pinned-revision>
+npm run review:srd -- \
+  --source-root .tmp/5etools-src-v2.35.1/data \
+  --upstream-revision e5d052071b635f58cc8006e9727053eaf78ea8f9
 ```
 
 Review output is written to the ignored `.tmp/srd-review/` directory. The CSV has one row per
@@ -31,7 +33,10 @@ changes.
 Verify that a checked snapshot matches the same input:
 
 ```text
-npm run verify:srd -- --source-root data --output-root <reviewed-snapshot> --upstream-revision <pinned-revision>
+npm run verify:srd -- \
+  --source-root .tmp/5etools-src-v2.35.1/data \
+  --output-root <reviewed-snapshot> \
+  --upstream-revision e5d052071b635f58cc8006e9727053eaf78ea8f9
 ```
 
 The generator reads the source root but never writes to it. It also closes structural class,
@@ -39,7 +44,8 @@ subclass, inline subclass-feature, base-item, and source-qualified equipment ref
 output is accepted. Unmarked equipment groups are admitted only through explicit dependency
 approvals, and their concrete item links must also resolve. It strips known publication, catalog,
 supplemental, and presentation metadata; rejects image payloads and unexpected source-qualified
-fields; and reports stripped-field counts in the manifest. Mechanical structures such as
+fields; expands selected shared item-entry templates into complete distributable descriptions; and
+reports stripped-field counts in the manifest. Mechanical structures such as
 `_versions` remain intact. The manifest also inventories every distributed row with its file,
 collection, source-qualified identity, SRD marker/version or dependency approval, and a hash of the
 transformed record. Ambiguous markers, unexplained rows, cross-file identity collisions, and

@@ -184,6 +184,27 @@ describe('data source refresh feedback', () => {
     })
   })
 
+  test('places first-run source guidance beside the selector controls', () => {
+    useGameDataStore.setState({
+      dataSourceConfig: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+    })
+
+    render(<DataSourceConfigurator selectorOnly showAdditionalContentGuidance />)
+
+    expect(screen.getByText('Choose a Source')).toBeTruthy()
+    expect(screen.getByText(/Select 5etools compatible JSON data/)).toBeTruthy()
+    expect(screen.getByText(/Not sure where to begin/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5etools community wiki' }).getAttribute('href')).toBe(
+      'https://wiki.tercept.net/en/5eTools/InstallGuide',
+    )
+  })
+
   test('offers the bundled SRD from Settings when no source is active', () => {
     useGameDataStore.setState({
       gameData: null,

@@ -32,10 +32,17 @@ rules engine.
    selectors, not sufficient provenance by themselves. Every distributed field must be traceable
    to the corresponding official SRD, and every unflagged supporting record must be explicitly
    justified or omitted.
-6. **Included content is the safe default.** Existing users keep their configured external source,
+6. **Treat provenance review as one-time release preparation.** The PDF audit, exception queue, and
+   source-corpus conversion/correction helpers exist only to establish the first distributable
+   bundled snapshot. After that snapshot is approved and materialized, remove temporary generation
+   corrections, review commands, reports, and exception infrastructure; retain only the bundled
+   data, required notices and provenance, and checks that protect the shipped bytes. A future SRD
+   correction or revision can be handled as a deliberate manual bundle edit rather than a
+   maintained update pipeline.
+7. **Included content is the safe default.** Existing users keep their configured external source,
    which is added above the immutable bundled source after migration. New users start with only the
    Included SRD. Removing additional content never removes the base catalog.
-7. **Additional-content warnings use exact saved identities.** While the Included SRD is active,
+8. **Additional-content warnings use exact saved identities.** While the Included SRD is active,
    character cards compare source-qualified saved races/species, classes, subclasses,
    backgrounds, feats, spells, equipment, and structured choices with the loaded SRD catalog.
    Book abbreviations alone are not sufficient because both SRD and non-SRD options can use
@@ -67,6 +74,36 @@ rules engine.
   - [x] Provide an ignored review-snapshot command and CSV checklist; prevent review-required
     output from entering managed release resources or any output from entering the source `data/`
     tree.
+  - [x] Add a PDF-backed provenance audit that verifies the pinned document hashes, normalizes
+    5etools markup and PDF typography, matches user-facing evidence to official pages, and emits
+    only unmatched passages or short structured records for review. Bind any reviewed exception to
+    the document, transformed record, and fragment hashes; reject stale approvals.
+  - [ ] Resolve the generated exception queue by correcting non-SRD differences or recording narrow
+    reviewed representation exceptions, then pass the audit with `--require-clean`.
+    - The initial development-corpus audit matched 9,200 evidence fragments automatically and
+      isolated 3,730 exceptions across 1,929 records. This baseline is diagnostic only because the
+      local corpus is not yet tied to the final immutable upstream revision.
+    - The pinned 5etools v2.35.1 corpus at commit
+      `e5d052071b635f58cc8006e9727053eaf78ea8f9` matches the former local development input. The
+      current pass fully clears 2,486 of 3,039 records, leaving 769 evidence decisions across 553
+      records. Exact SRD wording corrections,
+      confirmed removal of book-only sidebars and action text, accurate 5etools display-tag
+      rendering, and deterministic weapon, armor, equipment, vehicle, trade-goods, and language
+      table reconstruction produced this reduction. The pass also excludes 23 records incorrectly
+      marked as SRD 5.2.1 trade goods, removes non-SRD language origins, supplemental deity domains,
+      full-book ammunition details, and item-catalog metadata; corrects the 2024 stabling price and
+      the upstream `Lolth's Sting`/official `Spider's Sting` mismatch; and materializes 5etools'
+      internal shared-item templates so bundled magic-item descriptions are complete. Exact
+      parent-entry/table adapters now validate generated resistance, dragon-scale, healing-potion,
+      Wand of the War Mage, and spell-scroll variants. The item-name inventory found no basis for bulk magic-item
+      removal: the large catalog is present in the official SRDs, while generated variant names are
+      represented by their official parent entries and tables. The item pass did remove full-book
+      Iron Flask tables, setting-only Orb of Dragonkind wording, non-SRD catalog/search metadata,
+      and an upstream editorial correction note; it also reconciled narrower item wording and
+      attunement differences to the official documents. The 82 remaining DMG/XDMG item records are
+      all members of known table-driven SRD families awaiting the same exact-representation check,
+      not unexplained candidates for removal. Review output is generated from that immutable tagged
+      checkout rather than the unversioned local `data/` copy.
 - [x] Define a transformation notice stating that Tavern Born converted and structured the SRD
   material. Keep it separate from the prescribed Wizards attribution statements.
 - [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
@@ -180,6 +217,8 @@ cache clearing all end with a complete usable catalog.
   content is included. Its primary action continues with the Included SRD; a secondary “Add
   Additional Content” action opens the existing online/local controls and points users who need a
   starting place to the 5etools wiki.
+  - [x] Keep the modal header concise, place source guidance beside the selector, and present the
+    5etools wiki hint as a distinct help note beneath those controls.
 - [x] Rework `DataSourceConfigurator` into clear Included SRD and additional-content states. Reuse
   the current remote validation, local folder picker, load progress, cancellation, and error
   feedback.

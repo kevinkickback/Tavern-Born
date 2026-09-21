@@ -1,4 +1,4 @@
-import { CheckCircle, Database, PlusCircle } from '@phosphor-icons/react'
+import { ArrowRight, CheckCircle, Database, PlusCircle } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -120,32 +120,22 @@ export function DataSourceStartupModal() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {showBundledIntro
                   ? 'Your adventure starts here.'
-                  : 'Expand the ruleset and character options.'}
+                  : showExternalSetup
+                    ? 'Expand your character choices.'
+                    : 'Expand the ruleset and character options.'}
               </p>
             </div>
           </div>
-          <DialogDescription className={showBundledIntro ? 'sr-only' : 'pt-1 leading-relaxed'}>
-            {isForced ? (
-              'Choose the game data Tavern Born should use. Close when done.'
-            ) : showBundledIntro ? (
-              'Tavern Born is ready to use with the included rules.'
-            ) : showExternalSetup ? (
-              <>
-                Want more character options? Tavern Born supports 5etools-compatible JSON data from
-                the web or your computer. The{' '}
-                <a
-                  href="https://wiki.tercept.net/en/5eTools/InstallGuide"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline underline-offset-2"
-                >
-                  5etools community wiki
-                </a>{' '}
-                might know a thing or two about finding the files and getting set up.
-              </>
-            ) : (
-              'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'
-            )}
+          <DialogDescription
+            className={showBundledIntro || showExternalSetup ? 'sr-only' : 'pt-1 leading-relaxed'}
+          >
+            {isForced
+              ? 'Choose the game data Tavern Born should use. Close when done.'
+              : showBundledIntro
+                ? 'Tavern Born is ready to use with the included rules.'
+                : showExternalSetup
+                  ? 'Add compatible 5etools data from the web or your computer.'
+                  : 'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -156,11 +146,11 @@ export function DataSourceStartupModal() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="mt-0.5 size-5 shrink-0 text-primary" weight="fill" />
                   <div>
-                    <p className="text-sm font-medium">Content & Options</p>
+                    <p className="text-sm font-medium">Ready to Create</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      Tavern Born includes SRD content for both 5e 2014 and 5.5e 2024, offering a
-                      limited selection of character choices. You can add more now or anytime later
-                      from Settings.
+                      Tavern Born includes the 2014 and 2024 5e SRDs, offering a limited selection
+                      of character options. You can expand your options with additional content now
+                      or anytime later from Settings.
                     </p>
                   </div>
                 </div>
@@ -171,14 +161,15 @@ export function DataSourceStartupModal() {
                   Add Additional Content
                 </Button>
                 <Button className="gap-2" onClick={handleContinueWithBundled}>
-                  <Database className="size-4" />
-                  Continue with Included SRD
+                  <ArrowRight className="size-4" />
+                  Get Started
                 </Button>
               </div>
             </div>
           ) : (
             <DataSourceConfigurator
               selectorOnly={shouldShowSelectorOnly}
+              showAdditionalContentGuidance={showExternalSetup}
               onSourceLoaded={handleSourceLoaded}
               onCancel={showExternalSetup ? handleReturnToBundledIntro : undefined}
             />

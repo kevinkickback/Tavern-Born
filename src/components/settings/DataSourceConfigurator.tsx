@@ -2,6 +2,7 @@ import {
   ArrowClockwise,
   ArrowLeft,
   ArrowsLeftRight,
+  BookOpen,
   CheckCircle,
   CloudArrowDown,
   Database,
@@ -40,6 +41,7 @@ type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManif
 
 type DataSourceConfiguratorProps = {
   selectorOnly?: boolean
+  showAdditionalContentGuidance?: boolean
   onSourceLoaded?: () => void
   onCancel?: () => void
 }
@@ -50,6 +52,7 @@ export function isValidatableRemoteUrl(value: string): boolean {
 
 export function DataSourceConfigurator({
   selectorOnly = false,
+  showAdditionalContentGuidance = false,
   onSourceLoaded,
   onCancel,
 }: DataSourceConfiguratorProps) {
@@ -352,11 +355,19 @@ export function DataSourceConfigurator({
   return (
     <div className="min-w-0">
       <Section
-        title={selectorOnly ? 'Choose Game Data' : 'Game Data'}
+        title={
+          showAdditionalContentGuidance
+            ? 'Choose a Source'
+            : selectorOnly
+              ? 'Choose Game Data'
+              : 'Game Data'
+        }
         description={
-          selectorOnly
-            ? 'Enter a web address or select a folder containing 5etools-compatible JSON files.'
-            : 'The Included SRD is always available. Add compatible content to expand your options.'
+          showAdditionalContentGuidance
+            ? 'Select 5etools compatible JSON data from the web or your computer.'
+            : selectorOnly
+              ? 'Enter a web address or select a folder containing 5etools-compatible JSON files.'
+              : 'The Included SRD is always available. Add compatible content to expand your options.'
         }
         className="pt-0"
       >
@@ -540,6 +551,23 @@ export function DataSourceConfigurator({
                   </div>
                 </TabsContent>
               </Tabs>
+              {showAdditionalContentGuidance && (
+                <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Not sure where to begin? The{' '}
+                    <a
+                      href="https://wiki.tercept.net/en/5eTools/InstallGuide"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      5etools community wiki
+                    </a>{' '}
+                    might know a thing or two about finding compatible files and getting set up.
+                  </p>
+                </div>
+              )}
             </>
           )}
 

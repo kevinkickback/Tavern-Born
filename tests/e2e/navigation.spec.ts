@@ -18,16 +18,14 @@ test('startup data source modal supports remote/local setup flow', async ({ page
   await page.reload()
 
   await expect(page.getByRole('heading', { name: 'Welcome to Tavern Born' })).toBeVisible()
-  await expect(page.getByText(/SRD content for both 2014 and 2024 characters/)).toBeVisible()
+  await expect(page.getByText(/includes the 2014 and 2024 5e SRDs/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Add Additional Content' }).click()
   await expect(page.getByRole('heading', { name: 'Add Additional Content' })).toBeVisible()
+  await expect(page.getByText('Expand your character choices.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Choose a Source' })).toBeVisible()
   await expect(page.getByRole('link', { name: '5etools community wiki' })).toBeVisible()
-  await expect(
-    page.getByText(
-      'Enter a web address or select a folder containing 5etools-compatible JSON files.',
-    ),
-  ).toBeVisible()
+  await expect(page.getByText(/Select 5etools compatible JSON data/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Back' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome to Tavern Born' })).toBeVisible()

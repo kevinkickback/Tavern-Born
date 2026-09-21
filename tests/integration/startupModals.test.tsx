@@ -154,12 +154,14 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
     expect(screen.getByText('Your adventure starts here.')).toBeTruthy()
-    expect(screen.getByText('Content & Options')).toBeTruthy()
-    expect(screen.getByText(/includes SRD content for both 5e 2014 and 5.5e 2024/)).toBeTruthy()
-    expect(screen.getByText(/add more now or anytime later from Settings/)).toBeTruthy()
+    expect(screen.getByText('Ready to Create')).toBeTruthy()
+    expect(screen.getByText(/includes the 2014 and 2024 5e SRDs/)).toBeTruthy()
+    expect(
+      screen.getByText(/expand your options with additional content now or anytime later/),
+    ).toBeTruthy()
     expect(screen.queryByText('Data Source Configurator')).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: 'Continue with Included SRD' }))
+    await user.click(screen.getByRole('button', { name: 'Get Started' }))
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith('tb:bundled-srd-intro:v1', '1')
     expect(screen.queryByText('Welcome to Tavern Born')).toBeNull()
@@ -210,10 +212,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Add Additional Content')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
-    expect(screen.getByText(/Want more character options/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: '5etools community wiki' }).getAttribute('href')).toBe(
-      'https://wiki.tercept.net/en/5eTools/InstallGuide',
-    )
+    expect(screen.getByText('Expand your character choices.')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
 

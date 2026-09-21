@@ -64,6 +64,10 @@ export interface SrdSnapshot {
       exclusions: Record<string, number>
       exclusionReasons: Record<string, string>
       strippedMetadata: Record<string, number>
+      strippedContent: Record<string, number>
+      materializedItemEntries: Record<string, number>
+      structuredCorrections: Record<string, number>
+      textCorrections: Record<string, number>
       records: Array<
         | {
             relativePath: string
