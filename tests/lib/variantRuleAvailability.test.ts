@@ -35,6 +35,7 @@ describe('variant rule content availability', () => {
       optionalClassFeatures: false,
       bladesingerAnyRace: false,
       battleragerAnyRace: false,
+      preferNewerPrintings: false,
     })
   })
 
@@ -53,11 +54,13 @@ describe('variant rule content availability', () => {
         ],
         classFeatures: [classFeatureVariant],
         optionalFeatures: [],
+        preferNewerPrintingsAvailable: true,
       }),
     ).toEqual({
       optionalClassFeatures: true,
       bladesingerAnyRace: true,
       battleragerAnyRace: true,
+      preferNewerPrintings: true,
     })
   })
 

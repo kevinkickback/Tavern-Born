@@ -5,12 +5,14 @@ export interface VariantRuleContentAvailability {
   optionalClassFeatures: boolean
   bladesingerAnyRace: boolean
   battleragerAnyRace: boolean
+  preferNewerPrintings: boolean
 }
 
 interface VariantRuleContent {
   classes: readonly Class5e[]
   classFeatures: readonly ClassFeature[]
   optionalFeatures: readonly unknown[]
+  preferNewerPrintingsAvailable?: boolean
 }
 
 type RestrictedSubclassRule = 'bladesingerAnyRace' | 'battleragerAnyRace'
@@ -41,11 +43,13 @@ export function getVariantRuleContentAvailability({
   classes,
   classFeatures,
   optionalFeatures,
+  preferNewerPrintingsAvailable = false,
 }: VariantRuleContent): VariantRuleContentAvailability {
   return {
     optionalClassFeatures:
       classFeatures.some(isClassFeatureVariant) || optionalFeatures.some(isClassFeatureVariant),
     bladesingerAnyRace: hasRestrictedSubclass(classes, 'bladesingerAnyRace'),
     battleragerAnyRace: hasRestrictedSubclass(classes, 'battleragerAnyRace'),
+    preferNewerPrintings: preferNewerPrintingsAvailable,
   }
 }

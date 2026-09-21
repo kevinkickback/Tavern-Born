@@ -1,9 +1,10 @@
 import { Warning } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
+import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
 import {
   makeDefaultAbilityScores,
   makeDefaultStandardArrayAssignment,
@@ -12,6 +13,7 @@ import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
+import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -47,6 +49,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
+  const gameData = useGameDataStore((state) => state.gameData)
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -56,10 +59,20 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     originSystem: characterData.originSystem,
     preferNewerPrintings: characterData.variantRules?.preferNewerPrintings,
   })
+  const preferNewerPrintingsAvailable = useMemo(() => {
+    if (!gameData) return false
+    const effectiveSources = getEffectiveSources(
+      characterData.allowedSources ?? [],
+      characterData.originSystem || '2014',
+      wizardData.sources,
+    )
+    return hasAvailableReprintPair(gameData, effectiveSources)
+  }, [characterData.allowedSources, characterData.originSystem, gameData, wizardData.sources])
   const variantRuleAvailability = getVariantRuleContentAvailability({
     classes: wizardData.classes,
     classFeatures: wizardData.classFeatures,
     optionalFeatures: wizardData.optionalfeatures,
+    preferNewerPrintingsAvailable,
   })
 
   useEffect(() => {

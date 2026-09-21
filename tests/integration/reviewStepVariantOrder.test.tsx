@@ -75,7 +75,16 @@ describe('RulesStep average hit-points toggle', () => {
   })
 
   test('disables content-specific rules whose records are unavailable', () => {
-    render(<RulesStep data={INITIAL_CHARACTER_DATA} onChange={vi.fn()} sources={[]} />)
+    render(
+      <RulesStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, preferNewerPrintings: false },
+        }}
+        onChange={vi.fn()}
+        sources={[]}
+      />,
+    )
 
     expect(
       (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
@@ -87,7 +96,11 @@ describe('RulesStep average hit-points toggle', () => {
     expect(
       (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
     ).toBe(true)
-    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
+    expect(
+      (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(4)
   })
 
   test('enables a content-specific rule when its matching record is available', () => {
@@ -100,6 +113,7 @@ describe('RulesStep average hit-points toggle', () => {
           optionalClassFeatures: true,
           bladesingerAnyRace: true,
           battleragerAnyRace: false,
+          preferNewerPrintings: true,
         }}
       />,
     )
@@ -114,6 +128,27 @@ describe('RulesStep average hit-points toggle', () => {
     expect(
       (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
     ).toBe(true)
+    expect(
+      (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+  })
+
+  test('explains that newer printings are always preferred for 2024 characters', () => {
+    render(
+      <RulesStep
+        data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
+        onChange={vi.fn()}
+        sources={[]}
+      />,
+    )
+
+    const preferNewerPrintings = screen.getByRole('switch', {
+      name: 'Prefer Newer Printings',
+    }) as HTMLButtonElement
+    expect(preferNewerPrintings.disabled).toBe(true)
+    expect(preferNewerPrintings.getAttribute('data-state')).toBe('checked')
+    expect(screen.getByText('Always on for 2024 characters')).toBeTruthy()
   })
 
   test('allows a saved unavailable rule to be switched off', async () => {
@@ -123,7 +158,11 @@ describe('RulesStep average hit-points toggle', () => {
       <RulesStep
         data={{
           ...INITIAL_CHARACTER_DATA,
-          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, bladesingerAnyRace: true },
+          variantRules: {
+            ...INITIAL_CHARACTER_DATA.variantRules,
+            bladesingerAnyRace: true,
+            preferNewerPrintings: false,
+          },
         }}
         onChange={onChange}
         sources={[]}
@@ -159,6 +198,7 @@ describe('RulesStep average hit-points toggle', () => {
           optionalClassFeatures: false,
           bladesingerAnyRace: false,
           battleragerAnyRace: false,
+          preferNewerPrintings: false,
         }}
       />,
     )

@@ -165,8 +165,9 @@ export function ReviewStep({
     },
     {
       label: 'Prefer Newer Printings',
-      enabled: data.variantRules?.preferNewerPrintings,
-      available: true,
+      enabled: data.originSystem === '2024' || data.variantRules?.preferNewerPrintings,
+      available:
+        data.originSystem === '2024' || (variantRuleAvailability?.preferNewerPrintings ?? true),
     },
   ]
 

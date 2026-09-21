@@ -25,6 +25,7 @@ const NO_CONTENT_SPECIFIC_RULES: VariantRuleContentAvailability = {
   optionalClassFeatures: false,
   bladesingerAnyRace: false,
   battleragerAnyRace: false,
+  preferNewerPrintings: false,
 }
 
 export function RulesStep({
@@ -140,6 +141,7 @@ export function RulesStep({
       'No optional or replacement class features are available from your selected content.',
     bladesingerAnyRace: 'The Bladesinger subclass is not available from your selected content.',
     battleragerAnyRace: 'The Battlerager subclass is not available from your selected content.',
+    preferNewerPrintings: 'No alternate printings are available from your selected content.',
   }
 
   return (
@@ -295,10 +297,13 @@ export function RulesStep({
                     id: preferNewerPrintingsId,
                     key: 'preferNewerPrintings' as const,
                     label: 'Prefer Newer Printings',
-                    available: true,
+                    available:
+                      data.originSystem === '2024' || contentAvailability.preferNewerPrintings,
                   },
                 ] as const
               ).map(({ id, key, label, available }) => {
+                const lockedByRuleset =
+                  key === 'preferNewerPrintings' && data.originSystem === '2024'
                 const checked =
                   key === 'preferNewerPrintings'
                     ? preferNewerPrintingsEnabled
@@ -308,9 +313,11 @@ export function RulesStep({
                     ? CONTENT_REQUIREMENTS[key as keyof VariantRuleContentAvailability]
                     : undefined
                 const unavailable = !available && Boolean(contentRequirement)
-                const unavailableText = checked
-                  ? `Currently inactive. ${contentRequirement}`
-                  : contentRequirement
+                const unavailableText = lockedByRuleset
+                  ? 'Revised replacements are always preferred for 2024 characters.'
+                  : checked
+                    ? `Currently inactive. ${contentRequirement}`
+                    : contentRequirement
 
                 return (
                   <div
@@ -340,23 +347,26 @@ export function RulesStep({
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-[220px] text-wrap">
                             <p>{VARIANT_RULE_DESCRIPTIONS[key]}</p>
-                            {unavailable && <p className="mt-1">{unavailableText}</p>}
+                            {(unavailable || lockedByRuleset) && (
+                              <p className="mt-1">{unavailableText}</p>
+                            )}
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      {unavailable && (
+                      {(unavailable || lockedByRuleset) && (
                         <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
-                          {checked ? 'Currently inactive' : 'Unavailable with selected content'}
+                          {lockedByRuleset
+                            ? 'Always on for 2024 characters'
+                            : checked
+                              ? 'Currently inactive'
+                              : 'Unavailable with selected content'}
                         </p>
                       )}
                     </div>
                     <Switch
                       id={id}
                       checked={checked}
-                      disabled={
-                        (key === 'preferNewerPrintings' && data.originSystem === '2024') ||
-                        (unavailable && !checked)
-                      }
+                      disabled={lockedByRuleset || (unavailable && !checked)}
                       onCheckedChange={(checked) =>
                         onChange({
                           variantRules: { ...data.variantRules, [key]: checked },
