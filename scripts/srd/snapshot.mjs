@@ -115,6 +115,28 @@ const SRD_521_IRON_FLASK_ENTRIES = [
   "You can take a {@action Magic|XPHB} action to remove the flask's stopper and release the creature in the flask. The creature then obeys your commands for 1 hour, understanding those commands even if it doesn't know the language in which the commands are given. If you issue no commands or give the creature a command that is likely to result in its death or imprisonment, it defends itself but otherwise takes no actions. At the end of the duration, the creature acts in accordance with its normal disposition and alignment.",
   'An {@spell Identify|XPHB} spell reveals if the flask contains a creature, but the only way to determine the type of creature is to open the flask. A newly discovered Iron Flask might already contain a creature chosen by the GM.',
 ]
+const SRD_521_GIANT_STRENGTH_POTIONS = [
+  ['Hill', 21],
+  ['Frost', 23],
+  ['Stone', 23],
+  ['Fire', 25],
+  ['Cloud', 27],
+  ['Storm', 29],
+]
+const SRD_51_HORN_OF_VALHALLA_VARIANTS = [
+  ['Silver', '2d4 + 2', undefined],
+  ['Brass', '3d4 + 3', 'proficient with all simple weapons'],
+  ['Bronze', '4d4 + 4', 'proficient with all medium armor'],
+  ['Iron', '5d4 + 5', 'proficient with all martial weapons'],
+]
+const SRD_51_HORN_OF_VALHALLA_ENTRY =
+  "You can use an action to blow this horn. In response, warrior spirits from the Valhalla appear within 60 feet of you. They use the statistics of a {@creature berserker}. They return to Valhalla after 1 hour or when they drop to 0 hit points. Once you use the horn, it can't be used again until 7 days have passed."
+const SRD_521_MANUAL_OF_GOLEMS_VARIANTS = [
+  ['Clay', 30, '65,000'],
+  ['Flesh', 60, '50,000'],
+  ['Iron', 120, '100,000'],
+  ['Stone', 90, '80,000'],
+]
 const STRUCTURED_SRD_RECORD_CORRECTIONS = new Map([
   [
     'Stabling (per day)|XPHB',
@@ -156,6 +178,53 @@ const STRUCTURED_SRD_RECORD_CORRECTIONS = new Map([
       fields: { entries: SRD_521_IRON_FLASK_ENTRIES },
     },
   ],
+  ...SRD_521_GIANT_STRENGTH_POTIONS.map(([giant, strength]) => [
+    `Potion of ${giant} Giant Strength|XDMG`,
+    {
+      id: 'giantStrengthPotionText2024',
+      fields: {
+        entries: [
+          `When you drink this potion, your Strength score changes to ${strength} for 1 hour. The potion has no effect on you if your Strength is equal to or greater than that score.`,
+          `This potion's transparent liquid has floating in it a sliver of light resembling a ${String(giant).toLowerCase()} giant's fingernail.`,
+        ],
+      },
+    },
+  ]),
+  ...SRD_51_HORN_OF_VALHALLA_VARIANTS.map(([metal, dice, requirement]) => {
+    const lowerMetal = String(metal).toLowerCase()
+    const article = metal === 'Silver' || metal === 'Iron' ? 'The' : 'A'
+    return [
+      `Horn of Valhalla, ${metal}|DMG`,
+      {
+        id: 'hornOfValhallaText2014',
+        fields: {
+          entries: [
+            SRD_51_HORN_OF_VALHALLA_ENTRY,
+            `${article} ${lowerMetal} horn summons {@dice ${dice}} {@creature berserker||berserkers}.${requirement ? ` To use the ${lowerMetal} horn, you must be ${requirement}.` : ''}`,
+            requirement
+              ? 'If you blow the horn without meeting its requirement, the summoned {@creature berserker||berserkers} attack you. If you meet the requirement, they are friendly to you and your companions and follow your commands.'
+              : 'The {@creature berserker||berserkers} are friendly to you and your companions and follow your commands.',
+          ],
+        },
+      },
+    ]
+  }),
+  ...SRD_521_MANUAL_OF_GOLEMS_VARIANTS.map(([material, days, cost]) => {
+    const golem = `${String(material).toLowerCase()} golem`
+    return [
+      `Manual of ${material} Golems|XDMG`,
+      {
+        id: 'manualOfGolemsText2024',
+        fields: {
+          entries: [
+            `This tome contains information and incantations necessary to make a {@creature ${golem}|XMM}. To decipher and use the manual, you must be a spellcaster with at least two level 5 spell slots. A creature that can't use a {@i Manual of Golems} and attempts to read it takes {@damage 6d6} Psychic damage.`,
+            `To create a ${golem}, you must spend ${days} days, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay ${cost} gp to purchase supplies.`,
+            "Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. See Monsters for the golem's stat block. The golem is under your control, and it understands and obeys your commands.",
+          ],
+        },
+      },
+    ]
+  }),
 ])
 
 const ITEM_ENTRY_REFERENCE_PATTERN = /^\{#itemEntry ([^}]+)}$/
@@ -1603,9 +1672,17 @@ function materializeItemEntryReferences(items, itemEntries, coverage) {
   }
 
   return items.map((record) => {
-    const { classFeatures: _classFeatures, ...distributedRecord } = record
+    const {
+      classFeatures: _classFeatures,
+      optionalfeatures: _optionalfeatures,
+      ...distributedRecord
+    } = record
     if (Object.hasOwn(record, 'classFeatures')) {
       coverage.strippedMetadata.classFeatures = (coverage.strippedMetadata.classFeatures ?? 0) + 1
+    }
+    if (Object.hasOwn(record, 'optionalfeatures')) {
+      coverage.strippedMetadata.optionalfeatures =
+        (coverage.strippedMetadata.optionalfeatures ?? 0) + 1
     }
     return {
       ...distributedRecord,

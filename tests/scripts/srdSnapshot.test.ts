@@ -29,6 +29,7 @@ const ROOT_FIXTURES: Record<string, object> = {
         referenceSources: ['XGE'],
         additionalSources: [{ source: 'TCE', page: 10 }],
         classFeatures: ['replicate magic item|artificer|efa|2|efa'],
+        optionalfeatures: ['replicate magic item|tce'],
         lootTables: ['Magic Item Table A'],
         miscTags: ['CNS'],
         reqAttuneTags: [{ spellcasting: true }],
@@ -427,6 +428,24 @@ describe('bundled SRD snapshot generator', () => {
         },
         { name: 'Iron Flask', source: 'DMG', srd: true, entries: ['Full-book table.'] },
         { name: 'Iron Flask', source: 'XDMG', srd52: true, entries: ['Full-book table.'] },
+        {
+          name: 'Potion of Cloud Giant Strength',
+          source: 'XDMG',
+          srd52: true,
+          entries: ['Upstream prose.', 'A literal giant fingernail.'],
+        },
+        {
+          name: 'Horn of Valhalla, Silver',
+          source: 'DMG',
+          srd: true,
+          entries: ['Warriors from Ysgard.'],
+        },
+        {
+          name: 'Manual of Clay Golems',
+          source: 'XDMG',
+          srd52: true,
+          entries: ['Full-book wording.'],
+        },
       ],
       itemGroup: [],
     })
@@ -475,6 +494,15 @@ describe('bundled SRD snapshot generator', () => {
       (item: { name: string; source: string }) =>
         item.name === 'Iron Flask' && item.source === 'XDMG',
     )
+    const giantStrengthPotion = items.find(
+      (item: { name: string }) => item.name === 'Potion of Cloud Giant Strength',
+    )
+    const hornOfValhalla = items.find(
+      (item: { name: string }) => item.name === 'Horn of Valhalla, Silver',
+    )
+    const manualOfGolems = items.find(
+      (item: { name: string }) => item.name === 'Manual of Clay Golems',
+    )
 
     expect(stabling.value).toBe(50)
     expect(spidersSting.entries).toEqual([
@@ -485,9 +513,20 @@ describe('bundled SRD snapshot generator', () => {
     expect(ironFlask2014.entries[3].rows).toContainEqual(['100', '{@creature Xorn}'])
     expect(ironFlask2024.entries).toHaveLength(3)
     expect(JSON.stringify(ironFlask2024.entries)).not.toContain('determined randomly')
+    expect(giantStrengthPotion.entries).toEqual([
+      'When you drink this potion, your Strength score changes to 27 for 1 hour. The potion has no effect on you if your Strength is equal to or greater than that score.',
+      "This potion's transparent liquid has floating in it a sliver of light resembling a cloud giant's fingernail.",
+    ])
+    expect(hornOfValhalla.entries[0]).toContain('spirits from the Valhalla')
+    expect(hornOfValhalla.entries[1]).toContain('2d4 + 2')
+    expect(manualOfGolems.entries[0]).toContain('two level 5 spell slots')
+    expect(manualOfGolems.entries[2]).toContain("See Monsters for the golem's stat block")
     expect(snapshot.manifest.coverage.structuredCorrections).toEqual({
+      giantStrengthPotionText2024: 1,
+      hornOfValhallaText2014: 1,
       ironFlask2014: 1,
       ironFlask2024: 1,
+      manualOfGolemsText2024: 1,
       spidersSting2024: 2,
       staffOfWitheringAttunement2024: 1,
       stablingCost2024: 1,
@@ -713,6 +752,7 @@ describe('bundled SRD snapshot generator', () => {
       lootTables: 1,
       miscTags: 1,
       origin: 1,
+      optionalfeatures: 1,
       otherSources: 1,
       page: 2,
       referenceSources: 1,

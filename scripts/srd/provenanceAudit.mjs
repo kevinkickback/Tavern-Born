@@ -303,11 +303,218 @@ const SPELL_SCROLL_VARIANTS = new Map([
   [8, { rarity: 'very rare', saveDc: 18, attackBonus: 10 }],
   [9, { rarity: 'legendary', saveDc: 19, attackBonus: 11 }],
 ])
+const GIANT_STRENGTH_VARIANTS = new Map([
+  [
+    'Hill',
+    {
+      beltRarity: 'rare',
+      potionRarity: 'uncommon',
+      score: 21,
+      tableName51: 'Hill giant',
+      tableName521: 'hill',
+    },
+  ],
+  [
+    'Frost',
+    {
+      beltRarity: 'very rare',
+      potionRarity: 'rare',
+      score: 23,
+      tableName51: 'Stone/frost giant',
+      tableName521: 'frost or stone',
+    },
+  ],
+  [
+    'Stone',
+    {
+      beltRarity: 'very rare',
+      potionRarity: 'rare',
+      score: 23,
+      tableName51: 'Stone/frost giant',
+      tableName521: 'frost or stone',
+    },
+  ],
+  [
+    'Fire',
+    {
+      beltRarity: 'very rare',
+      potionRarity: 'rare',
+      score: 25,
+      tableName51: 'Fire giant',
+      tableName521: 'fire',
+    },
+  ],
+  [
+    'Cloud',
+    {
+      beltRarity: 'legendary',
+      potionRarity: 'very rare',
+      score: 27,
+      tableName51: 'Cloud giant',
+      tableName521: 'cloud',
+    },
+  ],
+  [
+    'Storm',
+    {
+      beltRarity: 'legendary',
+      potionRarity: 'legendary',
+      score: 29,
+      tableName51: 'Storm giant',
+      tableName521: 'storm',
+    },
+  ],
+])
+const FLYING_CARPET_VARIANTS = new Map([
+  ['3 ft. × 5 ft.', { capacity: 200, roll: '01-20', speed: 80 }],
+  ['4 ft. × 6 ft.', { capacity: 400, roll: '21-55', speed: 60 }],
+  ['5 ft. × 7 ft.', { capacity: 600, roll: '56-80', speed: 40 }],
+  ['6 ft. × 9 ft.', { capacity: 800, roll: '81-100', roll521: '81-00', speed: 30 }],
+])
+const ELEMENTAL_GEM_VARIANTS = new Map([
+  ['Blue Sapphire', { article: 'an', elemental: 'air', tableGem: 'Blue sapphire' }],
+  ['Emerald', { article: 'a', elemental: 'water', tableGem: 'Emerald' }],
+  ['Red Corundum', { article: 'a', elemental: 'fire', tableGem: 'Red corundum' }],
+  ['Yellow Diamond', { article: 'an', elemental: 'earth', tableGem: 'Yellow diamond' }],
+])
+const BAG_OF_TRICKS_VARIANTS = new Map([
+  [
+    'Gray',
+    {
+      creatures51: [
+        'Weasel',
+        'Giant rat',
+        'Badger',
+        'Boar',
+        'Panther',
+        'Giant badger',
+        'Dire wolf',
+        'Giant elk',
+      ],
+      creatures521: [
+        'Weasel',
+        'Giant Rat',
+        'Badger',
+        'Boar',
+        'Panther',
+        'Giant Badger',
+        'Dire Wolf',
+        'Giant Elk',
+      ],
+    },
+  ],
+  [
+    'Rust',
+    {
+      creatures51: [
+        'Rat',
+        'Owl',
+        'Mastiff',
+        'Goat',
+        'Giant goat',
+        'Giant boar',
+        'Lion',
+        'Brown bear',
+      ],
+      creatures521: [
+        'Rat',
+        'Owl',
+        'Mastiff',
+        'Goat',
+        'Giant Goat',
+        'Giant Boar',
+        'Lion',
+        'Brown Bear',
+      ],
+    },
+  ],
+  [
+    'Tan',
+    {
+      creatures51: [
+        'Jackal',
+        'Ape',
+        'Baboon',
+        'Axe beak',
+        'Black bear',
+        'Giant weasel',
+        'Giant hyena',
+        'Tiger',
+      ],
+      creatures521: [
+        'Jackal',
+        'Ape',
+        'Baboon',
+        'Axe Beak',
+        'Black Bear',
+        'Giant Weasel',
+        'Giant Hyena',
+        'Tiger',
+      ],
+    },
+  ],
+])
+const PHYSICAL_DAMAGE_TYPES = ['bludgeoning', 'piercing', 'slashing']
+const HORN_OF_VALHALLA_VARIANTS = new Map([
+  ['Silver', { count: 2, dice: '2d4 + 2', rarity: 'rare', roll: '01-40', requirement: undefined }],
+  [
+    'Brass',
+    {
+      count: 3,
+      dice: '3d4 + 3',
+      rarity: 'rare',
+      roll: '41-75',
+      requirement: 'Proficiency with all simple weapons',
+      requirement521: 'have {@variantrule Proficiency|XPHB} with all Simple weapons',
+    },
+  ],
+  [
+    'Bronze',
+    {
+      count: 4,
+      dice: '4d4 + 4',
+      rarity: 'very rare',
+      roll: '76-90',
+      requirement: 'Proficiency with all medium armor',
+      requirement521: 'have training with all Medium armor',
+    },
+  ],
+  [
+    'Iron',
+    {
+      count: 5,
+      dice: '5d4 + 5',
+      rarity: 'legendary',
+      roll: '91-00',
+      requirement: 'Proficiency with all martial weapons',
+      requirement521: 'have {@variantrule Proficiency|XPHB} with all Martial weapons',
+    },
+  ],
+])
+const MANUAL_OF_GOLEMS_VARIANTS = new Map([
+  ['Clay', { article: 'a', cost: '65,000', days: 30, roll: '1-5' }],
+  ['Flesh', { article: 'a', cost: '50,000', days: 60, roll: '6-17' }],
+  ['Iron', { article: 'an', cost: '100,000', days: 120, roll: '18' }],
+  ['Stone', { article: 'a', cost: '80,000', days: 90, roll: '19-20' }],
+])
 const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
   5.1: {
+    armorOfVulnerability:
+      'Armor of Vulnerability Armor (plate), rare (requires attunement) While wearing this armor, you have resistance to one of the following damage types: bludgeoning, piercing, or slashing. The GM chooses the type or determines it randomly. Curse. This armor is cursed, a fact that is revealed only when an identify spell is cast on the armor or you attune to it. Attuning to the armor curses you until you are targeted by the remove curse spell or similar magic; removing the armor fails to end the curse. While cursed, you have vulnerability to two of the three damage types associated with the armor (not the one to which it grants resistance).',
+    bagOfTricks:
+      "Bag of Tricks Wondrous item, uncommon This ordinary bag, made from gray, rust, or tan cloth, appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object. The bag weighs 1/2 pound. You can use an action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling a d8 and consulting the table that corresponds to the bag's color. The creature vanishes at the next dawn or when it is reduced to 0 hit points. The creature is friendly to you and your companions, and it acts on your turn. You can use a bonus action to command how the creature moves and what action it takes on its next turn, or to give it general orders, such as to attack your enemies. In the absence of such orders, the creature acts in a fashion appropriate to its nature. Once three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.",
+    belt: "Belt of Giant Strength Wondrous item, rarity varies (requires attunement) While wearing this belt, your Strength score changes to a score granted by the belt. If your Strength is already equal to or greater than the belt's score, the item has no effect on you. Six varieties of this belt exist, corresponding with and having rarity according to the six kinds of true giants. The belt of stone giant strength and the belt of frost giant strength look different, but they have the same effect.",
     wand: "Wand of the War Mage, +1, +2, or +3 Wand, uncommon (+1), rare (+2), or very rare (+3) (requires attunement by a spellcaster) While holding this wand, you gain a bonus to spell attack rolls determined by the wand's rarity. In addition, you ignore half cover when making a spell attack.",
     healing:
       "Potion of Healing Potion, rarity varies You regain hit points when you drink this potion. The number of hit points depends on the potion's rarity, as shown in the Potions of Healing table. Whatever its potency, the potion's red liquid glimmers when agitated.",
+    giantPotion:
+      "Potion of Giant Strength Potion, rarity varies When you drink this potion, your Strength score changes for 1 hour. The type of giant determines the score (see the table below). The potion has no effect on you if your Strength is equal to or greater than that score. This potion's transparent liquid has floating in it a sliver of fingernail from a giant of the appropriate type. The potion of frost giant strength and the potion of stone giant strength have the same effect.",
+    hornOfValhalla:
+      "Horn of Valhalla Wondrous item, rare (silver or brass), very rare (bronze), or legendary (iron) You can use an action to blow this horn. In response, warrior spirits from the Valhalla appear within 60 feet of you. They use the statistics of a berserker. They return to Valhalla after 1 hour or when they drop to 0 hit points. Once you use the horn, it can't be used again until 7 days have passed. Four types of horn of Valhalla are known to exist, each made of a different metal. The horn's type determines how many berserkers answer its summons, as well as the requirement for its use. The GM chooses the horn's type or determines it randomly.",
+    manualOfGolems:
+      "Manual of Golems Wondrous item, very rare This tome contains information and incantations necessary to make a particular type of golem. The GM chooses the type or determines it randomly. To decipher and use the manual, you must be a spellcaster with at least two 5th-level spell slots. A creature that can't use a manual of golems and attempts to read it takes 6d6 psychic damage.",
+    manualOfGolemsCreation:
+      'To create a golem, you must spend the time shown on the table, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay the specified cost to purchase supplies. Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. It is under your control, and it understands and obeys your spoken commands.',
     scroll:
       "Spell Scroll Scroll, varies A spell scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.",
     potion:
@@ -315,11 +522,24 @@ const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
     ring: 'Ring of Resistance Ring, rare (requires attunement) You have resistance to one damage type while wearing this ring. The gem in the ring indicates the type, which the GM chooses or determines randomly.',
     dragon:
       "Dragon Scale Mail Armor (scale mail), very rare (requires attunement) Dragon scale mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them to humanoids. Other times, hunters carefully skin and preserve the hide of a dead dragon. In either case, dragon scale mail is highly valued. While wearing this armor, you gain a +1 bonus to AC, you have advantage on saving throws against the Frightful Presence and breath weapons of dragons, and you have resistance to one damage type that is determined by the kind of dragon that provided the scales (see the table). Additionally, you can focus your senses as an action to magically discern the distance and direction to the closest dragon within 30 miles of you that is of the same type as the armor. This special action can't be used again until the next dawn.",
+    carpet:
+      "Carpet of Flying Wondrous item, very rare You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it. Four sizes of carpet of flying exist. The GM chooses the size of a given carpet or determines it randomly.",
+    elementalGem:
+      "Elemental Gem Wondrous item, uncommon This gem contains a mote of elemental energy. When you use an action to break the gem, an elemental is summoned as if you had cast the conjure elemental spell, and the gem's magic is lost. The type of gem determines the elemental summoned by the spell.",
   },
   '5.2.1': {
+    bagOfTricks:
+      "Bag of Tricks Wondrous Item, Uncommon This bag made from gray, rust, or tan cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object. You can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table that corresponds to the bag's color. See “Monsters” for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points. The creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature. Once three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.",
+    belt: "Belt of Giant Strength Wondrous Item, Rarity Varies (Requires Attunement) While wearing this belt, your Strength changes to a score granted by the belt. The type of giant determines the score (see the table below). The item has no effect on you if your Strength without the belt is equal to or greater than the belt's score.",
     wand: "Wand of the War Mage, +1, +2, or +3 Wand, Uncommon (+1), Rare (+2), or Very Rare (+3) (Requires Attunement by a Spellcaster) While holding this wand, you gain a bonus to spell attack rolls determined by the wand's rarity. In addition, you ignore Half Cover when making a spell attack roll.",
     healing:
       "Potions of Healing Potion, Rarity Varies You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below. Whatever its potency, the potion's red liquid glimmers when agitated.",
+    giantPotion:
+      "Potion of Giant Strength Potion, Rarity Varies When you drink this potion, your Strength score changes for 1 hour. The type of giant determines the score (see the table below). The potion has no effect on you if your Strength is equal to or greater than that score. This potion's transparent liquid has floating in it a sliver of light resembling a giant's fingernail.",
+    hornOfValhalla:
+      "Horn of Valhalla Wondrous Item, Rare (Silver or Brass), Very Rare (Bronze), or Legendary (Iron) You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed. Four types of Horn of Valhalla are known to exist, each made of a different metal. The horn's type determines how many spirits it summons, as well as the requirement for its use. The GM chooses the horn's type or determines it randomly by rolling on the following table.",
+    manualOfGolems:
+      "Manual of Golems Wondrous Item, Very Rare This tome contains information and incantations necessary to make a particular type of golem. The GM chooses the type or determines it randomly by rolling on the accompanying table. To decipher and use the manual, you must be a spellcaster with at least two level 5 spell slots. A creature that can't use a Manual of Golems and attempts to read it takes 6d6 Psychic damage. To create a golem, you must spend the time shown on the table, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay the specified cost to purchase supplies. Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. See “Monsters” for the golem's stat block. The golem is under your control, and it understands and obeys your commands.",
     scroll:
       "Spell Scroll Scroll, Rarity Varies A Spell Scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your spell list, you can read the scroll and cast its spell without Material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the scroll crumbles to dust. If the casting is interrupted, the scroll isn't lost.",
     potion:
@@ -327,6 +547,10 @@ const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
     ring: 'Ring of Resistance Ring, Rare You have Resistance to one damage type while wearing this ring. The gemstone in the ring indicates the type, which the GM chooses or determines randomly by rolling on the following table.',
     dragon:
       "Dragon Scale Mail Armor (Scale Mail), Very Rare (Requires Attunement) Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued. While wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to one damage type determined by the kind of dragon that provided the scales (see the accompanying table). Additionally, you can focus your senses as a Magic action to discern the distance and direction to the closest dragon within 30 miles of yourself that is of the same type as the armor. This action can't be used again until the next dawn.",
+    carpet:
+      "Carpet of Flying Wondrous Item, Very Rare You can make this carpet hover and fly by taking a Magic action and using the carpet's command word. It moves according to your directions if you are within 30 feet of it. Four sizes of Carpet of Flying exist. The GM chooses the size of a given carpet or determines it randomly by rolling on the following table. A carpet can carry up to twice the weight shown on the table, but its Fly Speed is halved if it carries more than its normal capacity.",
+    elementalGem:
+      'Elemental Gem Wondrous Item, Uncommon This gem contains a mote of elemental energy. When you take a Utilize action to break the gem, an elemental is summoned (see “Monsters” for its stat block), and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your Initiative count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a Bonus Action. The type of gem determines the elemental, as shown in the following table.',
   },
 }
 const EXACT_TEXT_REPRESENTATIONS = new Map([
@@ -606,6 +830,153 @@ function collectStructuredEvidence(record, collection, srdVersion) {
 function exactGeneratedMagicItemEvidence(record, srdVersion) {
   if (!GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion]) return undefined
 
+  const vulnerabilityMatch = record?.name?.match(/^Armor of Vulnerability \((.+)\)$/)
+  const resistedDamage = vulnerabilityMatch?.[1]?.toLowerCase()
+  if (srdVersion === '5.1' && PHYSICAL_DAMAGE_TYPES.includes(resistedDamage)) {
+    const vulnerable = PHYSICAL_DAMAGE_TYPES.filter((damage) => damage !== resistedDamage)
+    const expected = {
+      ac: 18,
+      baseItem: 'plate armor|phb',
+      curse: true,
+      entries: [
+        `While wearing this armor, you have resistance to ${resistedDamage} damage.`,
+        {
+          entries: [
+            `This armor is cursed, a fact that is revealed only when an {@spell identify} spell is cast on the armor or you attune to it. Attuning to the armor curses you until you are targeted by the {@spell remove curse} spell or similar magic; removing the armor fails to end the curse. While cursed you have vulnerability to ${vulnerable[0]} and ${vulnerable[1]} damage.`,
+          ],
+          name: 'Curse',
+          type: 'entries',
+        },
+      ],
+      name: record.name,
+      rarity: 'rare',
+      reqAttune: true,
+      resist: [resistedDamage],
+      source: 'DMG',
+      srd: true,
+      stealth: true,
+      strength: '15',
+      type: 'HA',
+      vulnerable,
+      weight: 65,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].armorOfVulnerability),
+      },
+    ]
+  }
+
+  const hornMatch = record?.name?.match(/^Horn of Valhalla, (Silver|Brass|Bronze|Iron)$/)
+  const hornVariant = hornMatch && HORN_OF_VALHALLA_VARIANTS.get(hornMatch[1])
+  if (hornVariant) {
+    const metal = hornMatch[1].toLowerCase()
+    const commonEntry =
+      srdVersion === '5.1'
+        ? "You can use an action to blow this horn. In response, warrior spirits from the Valhalla appear within 60 feet of you. They use the statistics of a {@creature berserker}. They return to Valhalla after 1 hour or when they drop to 0 hit points. Once you use the horn, it can't be used again until 7 days have passed."
+        : "You can take a {@action Magic|XPHB} action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the {@creature Berserker|XMM} stat block and returns to Ysgard after 1 hour or when it drops to 0 {@variantrule Hit Points|XPHB}. The spirits look like living, breathing warriors, and they have {@variantrule Immunity|XPHB} to the {@condition Charmed|XPHB} and {@condition Frightened|XPHB} conditions. Once you use the horn, it can't be used again until 7 days have passed."
+    const entries =
+      srdVersion === '5.1'
+        ? [
+            commonEntry,
+            `${hornMatch[1] === 'Silver' || hornMatch[1] === 'Iron' ? 'The' : 'A'} ${metal} horn summons {@dice ${hornVariant.dice}} {@creature berserker||berserkers}.${hornVariant.requirement ? ` To use the ${metal} horn, you must be ${hornVariant.requirement.replace(/^Proficiency/, 'proficient').toLowerCase()}.` : ''}`,
+            hornVariant.requirement
+              ? 'If you blow the horn without meeting its requirement, the summoned {@creature berserker||berserkers} attack you. If you meet the requirement, they are friendly to you and your companions and follow your commands.'
+              : 'The {@creature berserker||berserkers} are friendly to you and your companions and follow your commands.',
+          ]
+        : hornVariant.requirement521
+          ? [
+              commonEntry,
+              `${hornMatch[1] === 'Iron' ? 'An' : 'A'} ${metal} horn summons ${hornVariant.count} {@creature Berserker|XMM|Berserkers}. To meet the requirements of the ${metal} horn, you must ${hornVariant.requirement521}.`,
+              'If you blow the horn without meeting its requirement, the summoned {@creature Berserker|XMM|Berserkers} attack you. If you meet the requirement, they are {@variantrule Friendly [Attitude]|XPHB|Friendly} to you and your allies and follow your commands.',
+            ]
+          : [
+              commonEntry,
+              'A silver horn summons 2 {@creature Berserker|XMM|Berserkers}. They are {@variantrule Friendly [Attitude]|XPHB|Friendly} to you and your allies and follow your commands.',
+            ]
+    const expected = {
+      baseItem: srdVersion === '5.1' ? 'horn|phb' : 'horn|xphb',
+      entries,
+      name: record.name,
+      rarity: hornVariant.rarity,
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1'
+        ? { srd: true, type: 'INS', weight: 2 }
+        : { srd52: true, type: 'INS|XPHB' }),
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    const requirement =
+      srdVersion === '5.1'
+        ? (hornVariant.requirement ?? 'None')
+        : hornVariant.requirement521
+          ? toAuditText(hornVariant.requirement521).replace(/^have /i, '')
+          : 'None'
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].hornOfValhalla),
+      },
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(
+          `${hornVariant.roll} ${hornMatch[1]} ${srdVersion === '5.1' ? hornVariant.dice : hornVariant.count} ${requirement}`,
+        ),
+      },
+    ]
+  }
+
+  const manualMatch = record?.name?.match(/^Manual of (Clay|Flesh|Iron|Stone) Golems$/)
+  const manualVariant = manualMatch && MANUAL_OF_GOLEMS_VARIANTS.get(manualMatch[1])
+  if (manualVariant) {
+    const golem = `${manualMatch[1].toLowerCase()} golem`
+    const entries =
+      srdVersion === '5.1'
+        ? [
+            "This tome contains information and incantations necessary to make a particular type of golem. The GM chooses the type or determines it randomly. To decipher and use the manual, you must be a spellcaster with at least two 5th-level spell slots. A creature that can't use a manual of golems and attempts to read it takes {@damage 6d6} psychic damage.",
+            `To create ${manualVariant.article} {@creature ${golem}}, you must spend ${manualVariant.days} days, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay ${manualVariant.cost} gp to purchase supplies. Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. It is under your control, and it understands and obeys your spoken commands.`,
+          ]
+        : [
+            `This tome contains information and incantations necessary to make a {@creature ${golem}|XMM}. To decipher and use the manual, you must be a spellcaster with at least two level 5 spell slots. A creature that can't use a {@i Manual of Golems} and attempts to read it takes {@damage 6d6} Psychic damage.`,
+            `To create a ${golem}, you must spend ${manualVariant.days} days, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay ${manualVariant.cost} gp to purchase supplies.`,
+            "Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. See Monsters for the golem's stat block. The golem is under your control, and it understands and obeys your commands.",
+          ]
+    const expected = {
+      entries,
+      name: record.name,
+      rarity: 'very rare',
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true } : { srd52: true }),
+      weight: 5,
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].manualOfGolems),
+      },
+      ...(srdVersion === '5.1'
+        ? [
+            {
+              path: '$.__exactGeneratedMagicItemCreation',
+              text: normalizeAuditText(
+                GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].manualOfGolemsCreation,
+              ),
+            },
+          ]
+        : []),
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(
+          `${manualVariant.roll} ${manualMatch[1]}${srdVersion === '5.2.1' ? ' Golem' : ''} ${manualVariant.days} days ${manualVariant.cost} GP`,
+        ),
+      },
+    ]
+  }
+
   const wandMatch = record?.name?.match(/^\+(\d) Wand of the War Mage$/)
   const wandBonus = wandMatch ? Number(wandMatch[1]) : undefined
   const wandRarity = MAGIC_ITEM_BONUS_RARITIES.get(wandBonus)
@@ -631,6 +1002,191 @@ function exactGeneratedMagicItemEvidence(record, srdVersion) {
         path: '$.__exactGeneratedMagicItemParent',
         text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].wand),
       },
+    ]
+  }
+
+  const beltMatch = record?.name?.match(/^Belt of (.+) Giant Strength$/)
+  const beltVariant = beltMatch && GIANT_STRENGTH_VARIANTS.get(beltMatch[1])
+  if (beltVariant) {
+    const expected = {
+      ability: { static: { str: beltVariant.score } },
+      entries: [
+        `While wearing this belt, your Strength score changes to ${beltVariant.score}. The item has no effect on you if your Strength without the belt is equal to or greater than the belt's score.`,
+      ],
+      name: record.name,
+      rarity: beltVariant.beltRarity,
+      reqAttune: true,
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true } : { srd52: true }),
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    const row =
+      srdVersion === '5.1'
+        ? `${beltVariant.tableName51} ${beltVariant.score} ${beltVariant.beltRarity}`
+        : `Belt of Giant Strength (${beltVariant.tableName521}) ${beltVariant.score} ${beltVariant.beltRarity}`
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].belt),
+      },
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(row),
+      },
+    ]
+  }
+
+  const giantPotionMatch = record?.name?.match(/^Potion of (.+) Giant Strength$/)
+  const giantPotionVariant = giantPotionMatch && GIANT_STRENGTH_VARIANTS.get(giantPotionMatch[1])
+  if (giantPotionVariant) {
+    const giant = giantPotionMatch[1].toLowerCase()
+    const expected = {
+      ability: { static: { str: giantPotionVariant.score } },
+      entries: [
+        `When you drink this potion, your Strength score changes to ${giantPotionVariant.score} for 1 hour. The potion has no effect on you if your Strength is equal to or greater than that score.`,
+        srdVersion === '5.1'
+          ? `This potion's transparent liquid has floating in it a sliver of fingernail from a {@creature ${giant} giant}.`
+          : `This potion's transparent liquid has floating in it a sliver of light resembling a ${giant} giant's fingernail.`,
+      ],
+      name: record.name,
+      rarity: giantPotionVariant.potionRarity,
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true, type: 'P' } : { srd52: true, type: 'P|XPHB' }),
+      ...(srdVersion === '5.2.1' ? { weight: 0.5 } : {}),
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    const row =
+      srdVersion === '5.1'
+        ? `${giantPotionMatch[1] === 'Frost' || giantPotionMatch[1] === 'Stone' ? 'Frost/stone giant' : giantPotionVariant.tableName51} ${giantPotionVariant.score} ${giantPotionVariant.potionRarity}`
+        : `Potion of Giant Strength (${giantPotionVariant.tableName521}) ${giantPotionVariant.score} ${giantPotionVariant.potionRarity}`
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].giantPotion),
+      },
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(row),
+      },
+    ]
+  }
+
+  const carpetMatch = record?.name?.match(/^Carpet of Flying, (.+)$/)
+  const carpetVariant = carpetMatch && FLYING_CARPET_VARIANTS.get(carpetMatch[1])
+  if (carpetVariant) {
+    const expected = {
+      entries: [
+        srdVersion === '5.1'
+          ? "You can speak the carpet's command word as an action to make the carpet hover and fly. It moves according to your spoken directions, provided that you are within 30 feet of it."
+          : "You can make this carpet hover and fly by taking a {@action Magic|XPHB} action and using the carpet's command word. It moves according to your directions if you are within 30 feet of it.",
+        srdVersion === '5.1'
+          ? `A ${carpetMatch[1]} carpet can carry up to ${carpetVariant.capacity} lb. at a fly speed of ${carpetVariant.speed} feet. A carpet can carry up to twice this weight, but it flies at half speed if it carries more than its normal capacity.`
+          : `A ${carpetMatch[1]} carpet can carry up to ${carpetVariant.capacity} lb. at a fly speed of ${carpetVariant.speed} feet. A carpet can carry up to twice the weight shown on the table, but its {@variantrule Fly Speed|XPHB} is halved if it carries more than its normal capacity.`,
+      ],
+      name: record.name,
+      rarity: 'very rare',
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true } : { srd52: true }),
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].carpet),
+      },
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(
+          `${srdVersion === '5.2.1' ? (carpetVariant.roll521 ?? carpetVariant.roll) : carpetVariant.roll} ${carpetMatch[1]} ${carpetVariant.capacity} lb. ${carpetVariant.speed} feet`,
+        ),
+      },
+    ]
+  }
+
+  const elementalGemMatch = record?.name?.match(/^Elemental Gem, (.+)$/)
+  const elementalGemVariant = elementalGemMatch && ELEMENTAL_GEM_VARIANTS.get(elementalGemMatch[1])
+  if (elementalGemVariant) {
+    const creature = `${elementalGemVariant.elemental} elemental`
+    const expected = {
+      ...(srdVersion === '5.1'
+        ? { attachedSpells: { limited: { 1: ['conjure elemental'] } } }
+        : {}),
+      entries: [
+        srdVersion === '5.1'
+          ? `This gem contains a mote of elemental energy. When you use an action to break the gem, ${elementalGemVariant.article} {@creature ${creature}} is summoned as if you had cast the {@spell conjure elemental} spell, and the gem's magic is lost.`
+          : `This gem contains a mote of elemental energy. When you take a {@action Utilize|XPHB} action to break the gem, ${elementalGemVariant.article} {@creature ${elementalGemVariant.elemental.replace(/^./, (letter) => letter.toUpperCase())} Elemental|XMM} is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your {@variantrule Initiative|XPHB} count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a {@variantrule Bonus Action|XPHB}.`,
+      ],
+      name: record.name,
+      rarity: 'uncommon',
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true } : { srd52: true }),
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].elementalGem),
+      },
+      {
+        path: '$.__exactGeneratedMagicItemRow',
+        text: normalizeAuditText(`${elementalGemVariant.tableGem} ${creature}`),
+      },
+    ]
+  }
+
+  const bagMatch = record?.name?.match(/^Bag of Tricks, (Gray|Rust|Tan)$/)
+  const bagVariant = bagMatch && BAG_OF_TRICKS_VARIANTS.get(bagMatch[1])
+  if (bagVariant) {
+    const color = bagMatch[1].toLowerCase()
+    const creatures = srdVersion === '5.1' ? bagVariant.creatures51 : bagVariant.creatures521
+    const expected = {
+      entries: [
+        srdVersion === '5.1'
+          ? `This ordinary bag, made from ${color} cloth, appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.`
+          : `This bag made from ${color} cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.`,
+        srdVersion === '5.1'
+          ? 'You can use an action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling a {@dice d8} and consulting the table. The creature vanishes at the next dawn or when it is reduced to 0 hit points.'
+          : "You can take a {@action Magic|XPHB} action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See Monsters for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 {@variantrule Hit Points|XPHB}.",
+        srdVersion === '5.1'
+          ? 'The creature is friendly to you and your companions, and it acts on your turn. You can use a bonus action to command how the creature moves and what action it takes on its next turn, or to give it general orders, such as to attack your enemies. In the absence of such orders, the creature acts in a fashion appropriate to its nature.'
+          : 'The creature is {@variantrule Friendly [Attitude]|XPHB|Friendly} to you and your allies, and it acts immediately after you on your {@variantrule Initiative|XPHB} count. You can take a {@variantrule Bonus Action|XPHB} to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.',
+        "Once three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.",
+        {
+          colLabels: srdVersion === '5.1' ? ['{@dice d8}', 'Creature'] : ['1d8', 'Creature'],
+          colStyles:
+            srdVersion === '5.1'
+              ? ['col-1 text-center', 'col-11']
+              : ['col-2 text-center', 'col-10'],
+          rows: creatures.map((creatureName, index) => [
+            String(index + 1),
+            `{@creature ${creatureName}${srdVersion === '5.1' ? '' : '|XMM'}}`,
+          ]),
+          type: 'table',
+        },
+      ],
+      name: record.name,
+      rarity: 'uncommon',
+      recharge: 'dawn',
+      source: srdVersion === '5.1' ? 'DMG' : 'XDMG',
+      ...(srdVersion === '5.1' ? { srd: true, weight: 0.5 } : { srd52: true }),
+      wondrous: true,
+    }
+    if (stableJson(record) !== stableJson(expected)) return undefined
+    const rowOrder = srdVersion === '5.1' ? [0, 1, 2, 3, 4, 5, 6, 7] : [0, 4, 1, 5, 2, 6, 3, 7]
+    const table = [
+      `${bagMatch[1]} Bag of Tricks`,
+      ...(srdVersion === '5.1' ? ['d8', 'Creature'] : ['1d8', 'Creature', '1d8', 'Creature']),
+      ...rowOrder.flatMap((index) => [String(index + 1), creatures[index]]),
+    ].join(' ')
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].bagOfTricks),
+      },
+      { path: '$.__exactGeneratedMagicItemTable', text: normalizeAuditText(table) },
     ]
   }
 

@@ -485,6 +485,133 @@ describe('SRD provenance audit', () => {
       type: 'P|XPHB',
       weight: 0.5,
     }
+    const giantStrengthBelt = {
+      ability: { static: { str: 23 } },
+      entries: [
+        "While wearing this belt, your Strength score changes to 23. The item has no effect on you if your Strength without the belt is equal to or greater than the belt's score.",
+      ],
+      name: 'Belt of Frost Giant Strength',
+      rarity: 'very rare',
+      reqAttune: true,
+      source: 'XDMG',
+      srd52: true,
+      wondrous: true,
+    }
+    const giantStrengthPotion = {
+      ability: { static: { str: 27 } },
+      entries: [
+        'When you drink this potion, your Strength score changes to 27 for 1 hour. The potion has no effect on you if your Strength is equal to or greater than that score.',
+        "This potion's transparent liquid has floating in it a sliver of light resembling a cloud giant's fingernail.",
+      ],
+      name: 'Potion of Cloud Giant Strength',
+      rarity: 'very rare',
+      source: 'XDMG',
+      srd52: true,
+      type: 'P|XPHB',
+      weight: 0.5,
+    }
+    const flyingCarpet = {
+      entries: [
+        "You can make this carpet hover and fly by taking a {@action Magic|XPHB} action and using the carpet's command word. It moves according to your directions if you are within 30 feet of it.",
+        'A 3 ft. × 5 ft. carpet can carry up to 200 lb. at a fly speed of 80 feet. A carpet can carry up to twice the weight shown on the table, but its {@variantrule Fly Speed|XPHB} is halved if it carries more than its normal capacity.',
+      ],
+      name: 'Carpet of Flying, 3 ft. × 5 ft.',
+      rarity: 'very rare',
+      source: 'XDMG',
+      srd52: true,
+      wondrous: true,
+    }
+    const elementalGem = {
+      entries: [
+        'This gem contains a mote of elemental energy. When you take a {@action Utilize|XPHB} action to break the gem, an {@creature Air Elemental|XMM} is summoned, and the gem ceases to be magical. The elemental appears in an unoccupied space as close to the broken gem as possible, understands your languages, obeys your commands, and takes its turn immediately after you on your {@variantrule Initiative|XPHB} count. The elemental disappears after 1 hour, when it dies, or when you dismiss it as a {@variantrule Bonus Action|XPHB}.',
+      ],
+      name: 'Elemental Gem, Blue Sapphire',
+      rarity: 'uncommon',
+      source: 'XDMG',
+      srd52: true,
+      wondrous: true,
+    }
+    const bagOfTricks = {
+      entries: [
+        'This bag made from gray cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.',
+        "You can take a {@action Magic|XPHB} action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See Monsters for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 {@variantrule Hit Points|XPHB}.",
+        'The creature is {@variantrule Friendly [Attitude]|XPHB|Friendly} to you and your allies, and it acts immediately after you on your {@variantrule Initiative|XPHB} count. You can take a {@variantrule Bonus Action|XPHB} to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.',
+        "Once three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.",
+        {
+          colLabels: ['1d8', 'Creature'],
+          colStyles: ['col-2 text-center', 'col-10'],
+          rows: [
+            ['1', '{@creature Weasel|XMM}'],
+            ['2', '{@creature Giant Rat|XMM}'],
+            ['3', '{@creature Badger|XMM}'],
+            ['4', '{@creature Boar|XMM}'],
+            ['5', '{@creature Panther|XMM}'],
+            ['6', '{@creature Giant Badger|XMM}'],
+            ['7', '{@creature Dire Wolf|XMM}'],
+            ['8', '{@creature Giant Elk|XMM}'],
+          ],
+          type: 'table',
+        },
+      ],
+      name: 'Bag of Tricks, Gray',
+      rarity: 'uncommon',
+      recharge: 'dawn',
+      source: 'XDMG',
+      srd52: true,
+      wondrous: true,
+    }
+    const armorOfVulnerability = {
+      ac: 18,
+      baseItem: 'plate armor|phb',
+      curse: true,
+      entries: [
+        'While wearing this armor, you have resistance to bludgeoning damage.',
+        {
+          entries: [
+            'This armor is cursed, a fact that is revealed only when an {@spell identify} spell is cast on the armor or you attune to it. Attuning to the armor curses you until you are targeted by the {@spell remove curse} spell or similar magic; removing the armor fails to end the curse. While cursed you have vulnerability to piercing and slashing damage.',
+          ],
+          name: 'Curse',
+          type: 'entries',
+        },
+      ],
+      name: 'Armor of Vulnerability (Bludgeoning)',
+      rarity: 'rare',
+      reqAttune: true,
+      resist: ['bludgeoning'],
+      source: 'DMG',
+      srd: true,
+      stealth: true,
+      strength: '15',
+      type: 'HA',
+      vulnerable: ['piercing', 'slashing'],
+      weight: 65,
+    }
+    const hornOfValhalla = {
+      baseItem: 'horn|xphb',
+      entries: [
+        "You can take a {@action Magic|XPHB} action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the {@creature Berserker|XMM} stat block and returns to Ysgard after 1 hour or when it drops to 0 {@variantrule Hit Points|XPHB}. The spirits look like living, breathing warriors, and they have {@variantrule Immunity|XPHB} to the {@condition Charmed|XPHB} and {@condition Frightened|XPHB} conditions. Once you use the horn, it can't be used again until 7 days have passed.",
+        'A silver horn summons 2 {@creature Berserker|XMM|Berserkers}. They are {@variantrule Friendly [Attitude]|XPHB|Friendly} to you and your allies and follow your commands.',
+      ],
+      name: 'Horn of Valhalla, Silver',
+      rarity: 'rare',
+      source: 'XDMG',
+      srd52: true,
+      type: 'INS|XPHB',
+      wondrous: true,
+    }
+    const manualOfGolems = {
+      entries: [
+        "This tome contains information and incantations necessary to make a {@creature clay golem|XMM}. To decipher and use the manual, you must be a spellcaster with at least two level 5 spell slots. A creature that can't use a {@i Manual of Golems} and attempts to read it takes {@damage 6d6} Psychic damage.",
+        'To create a clay golem, you must spend 30 days, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay 65,000 gp to purchase supplies.',
+        "Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. See Monsters for the golem's stat block. The golem is under your control, and it understands and obeys your commands.",
+      ],
+      name: 'Manual of Clay Golems',
+      rarity: 'very rare',
+      source: 'XDMG',
+      srd52: true,
+      weight: 5,
+      wondrous: true,
+    }
     const spellScroll = {
       entries: [
         "A Spell Scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your spell list, you can read the scroll and cast its spell without Material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the scroll crumbles to dust. If the casting is interrupted, the scroll isn't lost.",
@@ -512,6 +639,14 @@ describe('SRD provenance audit', () => {
       [armor, '5.2.1'],
       [wand, '5.1'],
       [healingPotion, '5.2.1'],
+      [giantStrengthBelt, '5.2.1'],
+      [giantStrengthPotion, '5.2.1'],
+      [flyingCarpet, '5.2.1'],
+      [elementalGem, '5.2.1'],
+      [bagOfTricks, '5.2.1'],
+      [armorOfVulnerability, '5.1'],
+      [hornOfValhalla, '5.2.1'],
+      [manualOfGolems, '5.2.1'],
       [spellScroll, '5.2.1'],
     ] as const) {
       expect(collectRecordEvidence(record, { collection: 'item', srdVersion })).toContainEqual(

@@ -45,8 +45,10 @@ output is accepted. Unmarked equipment groups are admitted only through explicit
 approvals, and their concrete item links must also resolve. It strips known publication, catalog,
 supplemental, and presentation metadata; rejects image payloads and unexpected source-qualified
 fields; expands selected shared item-entry templates into complete distributable descriptions; and
-reports stripped-field counts in the manifest. Mechanical structures such as
-`_versions` remain intact. The manifest also inventories every distributed row with its file,
+reports stripped-field counts in the manifest. Item-only class and optional-feature catalog links
+are also removed because they describe full-book integrations rather than the distributed SRD
+item. Mechanical expansion structures such as `_versions` remain intact. The manifest also
+inventories every distributed row with its file,
 collection, source-qualified identity, SRD marker/version or dependency approval, and a hash of the
 transformed record. Ambiguous markers, unexplained rows, cross-file identity collisions, and
 missing approved dependencies fail generation. Verification reports missing, stale, and
