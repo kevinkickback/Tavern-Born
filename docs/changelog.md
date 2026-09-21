@@ -5,6 +5,7 @@
 
 * Tavern Born now comes bundled with the free D&D rules available through the SRD
 * Additional content is now ruleset-aware
+* One-time hints no longer block nearby controls
 
 </details>
 

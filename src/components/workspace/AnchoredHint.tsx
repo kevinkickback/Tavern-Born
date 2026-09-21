@@ -106,7 +106,7 @@ function AnchoredHintContent({
     >
       <div
         className={cn(
-          'pointer-events-auto relative rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20',
+          'pointer-events-none relative rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20',
           animate && 'animate-hint-bounce',
           className,
         )}
@@ -121,7 +121,7 @@ function AnchoredHintContent({
         />
         <button
           type="button"
-          className="absolute top-1.5 right-1.5 inline-flex size-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          className="pointer-events-auto absolute top-1.5 right-1.5 inline-flex size-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           onClick={onDismiss}
           aria-label={dismissLabel}
         >
