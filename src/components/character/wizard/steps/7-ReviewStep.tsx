@@ -18,6 +18,7 @@ import {
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
 import { getSpeedDisplay } from '@/lib/calculations/raceUtils'
+import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
 import type { Race5e, SourceBook } from '@/types/5etools'
 import type { CharacterWizardData } from '../types'
@@ -26,6 +27,7 @@ interface ReviewStepProps {
   data: CharacterWizardData
   raceResolution: ResolvedRaceReference
   sources: SourceBook[]
+  variantRuleAvailability?: VariantRuleContentAvailability
 }
 
 type RaceWithOverwrite = Race5e & {
@@ -77,7 +79,12 @@ function InfoRow({ label, value, warn }: { label: string; value?: string; warn?:
   )
 }
 
-export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
+export function ReviewStep({
+  data,
+  raceResolution,
+  sources,
+  variantRuleAvailability,
+}: ReviewStepProps) {
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
   )
@@ -139,22 +146,23 @@ export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
     {
       label: 'Optional Class Features',
       enabled: data.variantRules?.optionalClassFeatures,
+      available: variantRuleAvailability?.optionalClassFeatures ?? true,
     },
     {
-      label: 'Bladesinger Any Race',
-      enabled: data.variantRules?.bladesingerAnyRace,
-    },
-    {
-      label: 'Battlerager Any Race',
-      enabled: data.variantRules?.battleragerAnyRace,
+      label: 'Any-Race Subclasses',
+      enabled: data.variantRules?.anyRaceSubclasses,
+      available: variantRuleAvailability?.anyRaceSubclasses ?? true,
     },
     {
       label: 'Average Hit Points',
       enabled: data.variantRules?.averageHitPoints,
+      available: true,
     },
     {
       label: 'Prefer Newer Printings',
-      enabled: data.variantRules?.preferNewerPrintings,
+      enabled: data.originSystem === '2024' || data.variantRules?.preferNewerPrintings,
+      available:
+        data.originSystem === '2024' || (variantRuleAvailability?.preferNewerPrintings ?? true),
     },
   ]
 
@@ -271,23 +279,26 @@ export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
                 <h4 className="text-sm font-semibold">Variant Rules</h4>
               </div>
               <div className="space-y-1">
-                {variantRuleRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0"
-                  >
-                    <span className="text-xs text-muted-foreground">{row.label}</span>
-                    <Badge
-                      variant={row.enabled ? 'default' : 'outline'}
-                      className={cn(
-                        'text-[11px]',
-                        row.enabled && 'bg-accent text-accent-foreground',
-                      )}
+                {variantRuleRows.map((row) => {
+                  const inactive = Boolean(row.enabled) && !row.available
+                  return (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0"
                     >
-                      {row.enabled ? 'On' : 'Off'}
-                    </Badge>
-                  </div>
-                ))}
+                      <span className="text-xs text-muted-foreground">{row.label}</span>
+                      <Badge
+                        variant={row.enabled && !inactive ? 'default' : 'outline'}
+                        className={cn(
+                          'text-[11px]',
+                          row.enabled && !inactive && 'bg-accent text-accent-foreground',
+                        )}
+                      >
+                        {inactive ? 'Inactive' : row.enabled ? 'On' : 'Off'}
+                      </Badge>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

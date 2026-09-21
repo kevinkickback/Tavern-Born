@@ -1,0 +1,88 @@
+import { describe, expect, test } from 'vitest'
+import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
+import type { Class5e, ClassFeature } from '@/types/5etools'
+import { makeClassFixture } from '../fixtures/gameDataFixtures'
+
+function makeSubclassClass(
+  className: string,
+  subclassName: string,
+  subclassSource: string,
+): Class5e {
+  return makeClassFixture({
+    name: className,
+    source: 'PHB',
+    subclasses: [
+      {
+        name: subclassName,
+        shortName: subclassName,
+        source: subclassSource,
+        className,
+        classSource: 'PHB',
+      },
+    ],
+  })
+}
+
+describe('variant rule content availability', () => {
+  test('marks content-specific rules unavailable when their records are absent', () => {
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [makeClassFixture()],
+        classFeatures: [],
+        optionalFeatures: [],
+      }),
+    ).toEqual({
+      optionalClassFeatures: false,
+      anyRaceSubclasses: false,
+      preferNewerPrintings: false,
+    })
+  })
+
+  test('detects class feature variants and exact restricted subclasses', () => {
+    const classFeatureVariant: ClassFeature = {
+      name: 'Cantrip Formulas',
+      source: 'TCE',
+      isClassFeatureVariant: true,
+    }
+
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [
+          makeSubclassClass('Wizard', 'Bladesinger', 'SCAG'),
+          makeSubclassClass('Barbarian', 'Battlerager', 'SCAG'),
+        ],
+        classFeatures: [classFeatureVariant],
+        optionalFeatures: [],
+        preferNewerPrintingsAvailable: true,
+      }),
+    ).toEqual({
+      optionalClassFeatures: true,
+      anyRaceSubclasses: true,
+      preferNewerPrintings: true,
+    })
+  })
+
+  test('does not activate a restriction for a similarly named homebrew subclass', () => {
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [makeSubclassClass('Wizard', 'Bladesinger', 'HB')],
+        classFeatures: [],
+        optionalFeatures: [],
+      }).anyRaceSubclasses,
+    ).toBe(false)
+  })
+
+  test('recognizes a legacy restriction attached to a 2024 parent class', () => {
+    const battlerager = makeSubclassClass('Barbarian', 'Battlerager', 'SCAG')
+    battlerager.source = 'XPHB'
+    if (battlerager.subclasses?.[0]) battlerager.subclasses[0].classSource = 'XPHB'
+
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [battlerager],
+        classFeatures: [],
+        optionalFeatures: [],
+      }).anyRaceSubclasses,
+    ).toBe(true)
+  })
+})

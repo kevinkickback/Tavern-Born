@@ -38,7 +38,7 @@ describe('isSubclassEligible', () => {
         className: 'Wizard',
         character: makeCharacterFixture({
           race: 'Human',
-          variantRules: { bladesingerAnyRace: true },
+          variantRules: { anyRaceSubclasses: true },
         }),
       }),
     ).toBe(true)
@@ -67,7 +67,7 @@ describe('isSubclassEligible', () => {
         className: 'Barbarian',
         character: makeCharacterFixture({
           race: 'Human',
-          variantRules: { battleragerAnyRace: true },
+          variantRules: { anyRaceSubclasses: true },
         }),
       }),
     ).toBe(true)
@@ -100,6 +100,33 @@ describe('isSubclassEligible', () => {
         subclass: subclass('Bladesinger', { source: 'FRHoF', classSource: 'XPHB' }),
         className: 'Wizard',
         character: makeCharacterFixture({ race: 'Human' }),
+      }),
+    ).toBe(true)
+  })
+
+  test('applies the legacy restriction to a Battlerager using the 2024 parent class', () => {
+    const battlerager = subclass('Battlerager', {
+      className: 'Barbarian',
+      classSource: 'XPHB',
+      source: 'SCAG',
+    })
+
+    expect(
+      isSubclassEligible({
+        subclass: battlerager,
+        className: 'Barbarian',
+        character: makeCharacterFixture({ race: 'Human', originSystem: '2024' }),
+      }),
+    ).toBe(false)
+    expect(
+      isSubclassEligible({
+        subclass: battlerager,
+        className: 'Barbarian',
+        character: makeCharacterFixture({
+          race: 'Human',
+          originSystem: '2024',
+          variantRules: { anyRaceSubclasses: true },
+        }),
       }),
     ).toBe(true)
   })

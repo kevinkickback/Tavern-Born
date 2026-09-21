@@ -43,8 +43,7 @@ const baseData = {
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: true,
-    bladesingerAnyRace: false,
-    battleragerAnyRace: false,
+    anyRaceSubclasses: false,
     preferNewerPrintings: false,
   },
 }

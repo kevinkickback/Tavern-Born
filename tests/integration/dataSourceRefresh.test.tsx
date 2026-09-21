@@ -62,6 +62,29 @@ describe('data source refresh feedback', () => {
     expect(toast.info).not.toHaveBeenCalledWith('Data is already up to date')
   })
 
+  test('shows external source details without exposing the internal base layer', () => {
+    render(<DataSourceConfigurator />)
+
+    expect(screen.getByText('Additional Content on This Computer')).toBeTruthy()
+    expect(screen.getByText('C:/5etools/data')).toBeTruthy()
+    expect(screen.queryByText('Base content:')).toBeNull()
+  })
+
+  test('keeps the startup update preference on the main Game Data view', async () => {
+    const user = userEvent.setup()
+    render(<DataSourceConfigurator />)
+
+    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+
+    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+  })
+
   test('removes additional content without clearing the current source first', async () => {
     const user = userEvent.setup()
     const onSourceLoaded = vi.fn()

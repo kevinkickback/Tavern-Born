@@ -92,8 +92,9 @@ header, Builder, prerequisites, and readiness consume the same calculation bound
 
 ## Rules and source settings
 
-Character Rules owns ruleset metadata, advancement, and options. Additional Content owns allowed
-source books and the newer-printing preference. Its stable route remains `/sources`.
+Character Rules owns ruleset metadata and a combined Character Options view for creation,
+advancement, and restriction settings. Additional Content owns allowed source books and the
+newer-printing preference. Its stable route remains `/sources`.
 
 - The character's PHB/XPHB rules source is implicit.
 - Filtering affects selection catalogs; exact raw fallback keeps existing saved references

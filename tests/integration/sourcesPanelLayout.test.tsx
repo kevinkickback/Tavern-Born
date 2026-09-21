@@ -11,7 +11,10 @@ vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: () => null,
 }))
 
-const dataSourceFixture = vi.hoisted(() => ({ type: 'local' as 'local' | 'bundled' }))
+const dataSourceFixture = vi.hoisted(() => ({
+  type: 'local' as 'local' | 'bundled',
+  hasReprints: true,
+}))
 
 vi.mock('@/store/gameDataStore', () => ({
   useGameDataStore: (selector: (state: unknown) => unknown) =>
@@ -36,7 +39,20 @@ vi.mock('@/store/gameDataStore', () => ({
             minimumRuleset: '2024',
           },
         ],
+        races: dataSourceFixture.hasReprints
+          ? [
+              { name: 'Legacy Race', source: 'PHB', reprintedAs: ['Updated Race|XGE'] },
+              { name: 'Updated Race', source: 'XGE' },
+            ]
+          : [],
+        classes: [],
+        backgrounds: [],
         spells: [],
+        feats: [],
+        items: [],
+        itemsBase: [],
+        classFeatures: [],
+        optionalfeatures: [],
       },
     }),
 }))
@@ -44,6 +60,7 @@ vi.mock('@/store/gameDataStore', () => ({
 describe('Rules Additional Content panel layout', () => {
   beforeEach(() => {
     dataSourceFixture.type = 'local'
+    dataSourceFixture.hasReprints = true
     const character = makeCharacterFixture({ allowedSources: ['PHB', 'XGE'] })
     useCharacterStore.setState({
       characters: [character],
@@ -150,6 +167,41 @@ describe('Rules Additional Content panel layout', () => {
     expect(screen.getByText(/Older printings are hidden where a newer version exists/)).toBeTruthy()
     expect(useCharacterStore.getState().activeCharacter?.variantRules?.preferNewerPrintings).toBe(
       true,
+    )
+  })
+
+  test('disables newer-printing preference when no alternate printing is available', () => {
+    dataSourceFixture.hasReprints = false
+    render(<SourcesPanel />)
+
+    expect(
+      screen.getByText('No alternate printings are available from the selected content.'),
+    ).toBeTruthy()
+    expect(screen.getByLabelText('Prefer Newer Printings').hasAttribute('disabled')).toBe(true)
+  })
+
+  test('allows a saved unavailable newer-printing preference to be switched off', async () => {
+    const user = userEvent.setup()
+    dataSourceFixture.hasReprints = false
+    const character = makeCharacterFixture({
+      allowedSources: ['PHB', 'XGE'],
+      variantRules: { preferNewerPrintings: true },
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    render(<SourcesPanel />)
+
+    const toggle = screen.getByLabelText('Prefer Newer Printings')
+    expect(toggle.hasAttribute('disabled')).toBe(false)
+    expect(screen.getByText(/saved but currently inactive/)).toBeTruthy()
+
+    await user.click(toggle)
+
+    expect(useCharacterStore.getState().activeCharacter?.variantRules?.preferNewerPrintings).toBe(
+      false,
     )
   })
 

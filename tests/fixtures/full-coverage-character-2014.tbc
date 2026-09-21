@@ -2021,8 +2021,7 @@
     "optionalClassFeatures": true,
     "averageHitPoints": false,
     "abilityScoreMethod": "custom",
-    "bladesingerAnyRace": true,
-    "battleragerAnyRace": true,
+    "anyRaceSubclasses": true,
     "preferNewerPrintings": false,
     "ignoreEquipRestrictions": true
   },
