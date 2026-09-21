@@ -497,6 +497,58 @@ const MANUAL_OF_GOLEMS_VARIANTS = new Map([
   ['Iron', { article: 'an', cost: '100,000', days: 120, roll: '18' }],
   ['Stone', { article: 'a', cost: '80,000', days: 90, roll: '19-20' }],
 ])
+const REVIEWED_ELEMENTAL_COMMAND_HASHES = new Map([
+  [
+    'Ring of Air Elemental Command|DMG',
+    'ab7e2d4860d9818bf1e6af575d00519d15fd2e51ccc8881a91db9e4270af3854',
+  ],
+  [
+    'Ring of Earth Elemental Command|DMG',
+    'ad2954344dbd8064a2d04e934e09755126ed2021ece854946f9cb39f6d66ff62',
+  ],
+  [
+    'Ring of Fire Elemental Command|DMG',
+    '0ac78441f05fad3243321684b24fdb8a55baba887d0b15d05cd918d89ef88832',
+  ],
+  [
+    'Ring of Water Elemental Command|DMG',
+    'b0f06dc3a52ab09da0b8fcc083550d4e787e6f905ab357e4f067f0a4b13c0482',
+  ],
+  [
+    'Ring of Elemental Command (Air)|XDMG',
+    '89c09826c65462cb2cb0be76312bc25956ec7879ad8121659813bb0218dd081e',
+  ],
+  [
+    'Ring of Elemental Command (Earth)|XDMG',
+    '1f96a91af14e06ab896e5c6c65bfd10e6efee946808ade3b2ba3d2700d068dce',
+  ],
+  [
+    'Ring of Elemental Command (Fire)|XDMG',
+    '970128cce1c914211f75b1ff3cd0bb425d7e0fb2f2b0fb7240b0eba32c7a7f78',
+  ],
+  [
+    'Ring of Elemental Command (Water)|XDMG',
+    'c88b305340a882222ce7f6c8811913b3dc7a1d2400b7cffd00ddd35d8396fad0',
+  ],
+])
+const ELEMENTAL_COMMAND_ROWS_521 = new Map([
+  [
+    'Air',
+    'Air Chain Lightning (3 charges), Feather Fall (0 charges), Gust of Wind (2 charges), Wind Wall (1 charge)',
+  ],
+  [
+    'Earth',
+    'Earth Earthquake (5 charges), Stone Shape (2 charges), Stoneskin (3 charges), Wall of Stone (3 charges)',
+  ],
+  [
+    'Fire',
+    'Fire Burning Hands (1 charge), Fireball (2 charges), Fire Storm (4 charges), Wall of Fire (3 charges)',
+  ],
+  [
+    'Water',
+    'Water Create or Destroy Water (1 charge), Ice Storm (2 charges), Tsunami (5 charges), Wall of Ice (3 charges), Water Walk (2 charges)',
+  ],
+])
 const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
   5.1: {
     armorOfVulnerability:
@@ -515,6 +567,8 @@ const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
       "Manual of Golems Wondrous item, very rare This tome contains information and incantations necessary to make a particular type of golem. The GM chooses the type or determines it randomly. To decipher and use the manual, you must be a spellcaster with at least two 5th-level spell slots. A creature that can't use a manual of golems and attempts to read it takes 6d6 psychic damage.",
     manualOfGolemsCreation:
       'To create a golem, you must spend the time shown on the table, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay the specified cost to purchase supplies. Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. It is under your control, and it understands and obeys your spoken commands.',
+    ringOfElementalCommand:
+      'Ring of Elemental Command Ring, legendary (requires attunement) This ring is linked to one of the four Elemental Planes. The GM chooses or randomly determines the linked plane. While wearing this ring, you have advantage on attack rolls against elementals from the linked plane, and they have disadvantage on attack rolls against you. In addition, you have access to properties based on the linked plane. The ring has 5 charges. It regains 1d4 + 1 expended charges daily at dawn. Spells cast from the ring have a save DC of 17.',
     scroll:
       "Spell Scroll Scroll, varies A spell scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.",
     potion:
@@ -540,6 +594,8 @@ const GENERATED_MAGIC_ITEM_PARENT_TEXT = {
       "Horn of Valhalla Wondrous Item, Rare (Silver or Brass), Very Rare (Bronze), or Legendary (Iron) You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed. Four types of Horn of Valhalla are known to exist, each made of a different metal. The horn's type determines how many spirits it summons, as well as the requirement for its use. The GM chooses the horn's type or determines it randomly by rolling on the following table.",
     manualOfGolems:
       "Manual of Golems Wondrous Item, Very Rare This tome contains information and incantations necessary to make a particular type of golem. The GM chooses the type or determines it randomly by rolling on the accompanying table. To decipher and use the manual, you must be a spellcaster with at least two level 5 spell slots. A creature that can't use a Manual of Golems and attempts to read it takes 6d6 Psychic damage. To create a golem, you must spend the time shown on the table, working without interruption with the manual at hand and resting no more than 8 hours per day. You must also pay the specified cost to purchase supplies. Once you finish creating the golem, the book is consumed in eldritch flames. The golem becomes animate when the ashes of the manual are sprinkled on it. See “Monsters” for the golem's stat block. The golem is under your control, and it understands and obeys your commands.",
+    ringOfElementalCommand:
+      'Ring of Elemental Command Ring, Legendary (Requires Attunement) Each Ring of Elemental Command is linked to one of the four Elemental Planes. The GM chooses or randomly determines the linked plane. For example, a Ring of Elemental Command (air) is linked to the Elemental Plane of Air. Every Ring of Elemental Command has the following two properties: Elemental Bane. While wearing the ring, you have Advantage on attack rolls against Elementals and they have Disadvantage on attack rolls against you. Elemental Compulsion. While wearing the ring, you can take a Magic action to try to compel an Elemental you see within 60 feet of yourself. The Elemental makes a DC 18 Wisdom saving throw. On a failed save, the Elemental has the Charmed condition until the start your next turn, and you determine what it does with its move and action on its next turn.',
     scroll:
       "Spell Scroll Scroll, Rarity Varies A Spell Scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your spell list, you can read the scroll and cast its spell without Material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the scroll crumbles to dust. If the casting is interrupted, the scroll isn't lost.",
     potion:
@@ -974,6 +1030,39 @@ function exactGeneratedMagicItemEvidence(record, srdVersion) {
           `${manualVariant.roll} ${manualMatch[1]}${srdVersion === '5.2.1' ? ' Golem' : ''} ${manualVariant.days} days ${manualVariant.cost} GP`,
         ),
       },
+    ]
+  }
+
+  const elementalCommandIdentity = `${record?.name ?? ''}|${record?.source ?? ''}`
+  const elementalCommandHash = REVIEWED_ELEMENTAL_COMMAND_HASHES.get(elementalCommandIdentity)
+  if (elementalCommandHash && sha256(stableJson(record)) === elementalCommandHash) {
+    const plane =
+      record.source === 'DMG'
+        ? record.name.match(/^Ring of (Air|Earth|Fire|Water) Elemental Command$/)?.[1]
+        : record.name.match(/^Ring of Elemental Command \((Air|Earth|Fire|Water)\)$/)?.[1]
+    if (!plane) return undefined
+    const retainedEvidence = []
+    collectLongStrings(
+      { entries: record.entries.slice(1, record.source === 'DMG' ? undefined : 3) },
+      '$.__exactGeneratedMagicItemDetails',
+      retainedEvidence,
+    )
+    return [
+      {
+        path: '$.__exactGeneratedMagicItemParent',
+        text: normalizeAuditText(
+          GENERATED_MAGIC_ITEM_PARENT_TEXT[srdVersion].ringOfElementalCommand,
+        ),
+      },
+      ...(record.source === 'XDMG'
+        ? [
+            {
+              path: '$.__exactGeneratedMagicItemRow',
+              text: normalizeAuditText(ELEMENTAL_COMMAND_ROWS_521.get(plane)),
+            },
+          ]
+        : []),
+      ...retainedEvidence,
     ]
   }
 

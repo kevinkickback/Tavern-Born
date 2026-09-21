@@ -85,7 +85,7 @@ rules engine.
       local corpus is not yet tied to the final immutable upstream revision.
     - The pinned 5etools v2.35.1 corpus at commit
       `e5d052071b635f58cc8006e9727053eaf78ea8f9` matches the former local development input. The
-      current pass fully clears 2,551 of 3,039 records, leaving 637 evidence decisions across 488
+      current pass fully clears 2,568 of 3,039 records, leaving 607 evidence decisions across 471
       records. Exact SRD wording corrections,
       confirmed removal of book-only sidebars and action text, accurate 5etools display-tag
       rendering, and deterministic weapon, armor, equipment, vehicle, trade-goods, and language
@@ -96,18 +96,21 @@ rules engine.
       internal shared-item templates so bundled magic-item descriptions are complete. Exact
       parent-entry/table adapters now validate generated resistance, dragon-scale, healing-potion,
       giant-strength, flying-carpet, elemental-gem, Bag of Tricks, Armor of Vulnerability, Horn of
-      Valhalla, Manual of Golems, Wand of the War Mage, and spell-scroll variants. The item-name
+      Valhalla, Manual of Golems, Figurine of Wondrous Power, Ring of Elemental Command, Wand of
+      the War Mage, and spell-scroll variants. The item-name
       inventory found no basis for bulk
       magic-item removal: the large catalog is present in the official SRDs, while generated variant
       names are represented by their official parent entries and tables. The item pass did remove
       full-book Iron Flask tables, setting-only Orb of Dragonkind wording, non-SRD catalog/search
       metadata and Artificer integration links, and an upstream editorial correction note; it also
-      reconciled narrower item wording, attunement differences, Horn of Valhalla requirements, and
-      Manual of Golems construction text to the official documents. Only 17 magic-item records
-      remain under review, all in two known table-driven SRD families: Figurines of Wondrous Power
-      and Rings of Elemental Command. They are not unexplained candidates for removal. Review output
-      is generated from that immutable tagged checkout rather than the unversioned local `data/`
-      copy.
+      reconciled narrower item wording, attunement differences, Horn of Valhalla requirements,
+      Manual of Golems construction text, and two 2024 figurine wording differences to the official
+      documents. The magic-item review is complete: none of the remaining 53 item records are magic
+      items; they are mundane equipment descriptions or table rows awaiting the same provenance
+      treatment. The expanded elemental-command rings are bound to their exact transformed-record
+      hashes and official parent/table evidence, so any later field change returns them to review.
+      Review output is generated from that immutable tagged checkout rather than the unversioned
+      local `data/` copy.
 - [x] Define a transformation notice stating that Tavern Born converted and structured the SRD
   material. Keep it separate from the prescribed Wizards attribution statements.
 - [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,

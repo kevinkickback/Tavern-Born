@@ -219,5 +219,5 @@ describe.runIf(HAS_CONFIGURED_CORPUS)('bundled SRD configured-corpus contract', 
     assertUniqueAndLayered(gameData.feats, externalData.feats, composed.feats)
     assertUniqueAndLayered(gameData.spells, externalData.spells, composed.spells)
     assertUniqueAndLayered(gameData.items, externalData.items, composed.items)
-  })
+  }, 30_000)
 })

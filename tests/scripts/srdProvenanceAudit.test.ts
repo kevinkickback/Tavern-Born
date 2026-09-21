@@ -612,6 +612,40 @@ describe('SRD provenance audit', () => {
       weight: 5,
       wondrous: true,
     }
+    const elementalCommandRing = {
+      attachedSpells: {
+        charges: {
+          1: ['wind wall'],
+          2: ['dominate monster', 'gust of wind'],
+          3: ['chain lightning'],
+        },
+      },
+      charges: 5,
+      entries: [
+        'While wearing this ring, you have advantage on attack rolls against elementals from the Elemental Plane of Air, and they have disadvantage on attack rolls against you. In addition, you have access to properties based on the Elemental Plane of Air.',
+        'The ring has 5 charges. It regains {@dice 1d4 + 1} expended charges daily at dawn. Spells cast from the ring have a save DC of 17.',
+        "You can expend 2 of the ring's charges to cast {@spell dominate monster} on an {@creature air elemental}. In addition, when you fall, you descend 60 feet per round and take no damage from falling. You can also speak and understand Auran.",
+        'If you help slay an {@creature air elemental} while attuned to the ring, you gain access to the following additional properties:',
+        {
+          items: [
+            'You have resistance to lightning damage.',
+            'You have a flying speed equal to your walking speed and can hover.',
+            'You can cast the following spells from the ring, expending the necessary number of charges: {@spell chain lightning} (3 charges), {@spell gust of wind} (2 charges), or {@spell wind wall} (1 charge).',
+          ],
+          type: 'list',
+        },
+      ],
+      modifySpeed: { equal: { fly: 'walk' } },
+      name: 'Ring of Air Elemental Command',
+      rarity: 'legendary',
+      recharge: 'dawn',
+      rechargeAmount: '{@dice 1d4 + 1}',
+      reqAttune: true,
+      resist: ['lightning'],
+      source: 'DMG',
+      srd: true,
+      type: 'RG|DMG',
+    }
     const spellScroll = {
       entries: [
         "A Spell Scroll bears the words of a single spell, written in a mystical cipher. If the spell is on your spell list, you can read the scroll and cast its spell without Material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the scroll crumbles to dust. If the casting is interrupted, the scroll isn't lost.",
@@ -647,6 +681,7 @@ describe('SRD provenance audit', () => {
       [armorOfVulnerability, '5.1'],
       [hornOfValhalla, '5.2.1'],
       [manualOfGolems, '5.2.1'],
+      [elementalCommandRing, '5.1'],
       [spellScroll, '5.2.1'],
     ] as const) {
       expect(collectRecordEvidence(record, { collection: 'item', srdVersion })).toContainEqual(
@@ -658,6 +693,12 @@ describe('SRD provenance audit', () => {
       collectRecordEvidence(
         { ...potion, resist: ['fire'] },
         { collection: 'item', srdVersion: '5.2.1' },
+      ),
+    ).not.toContainEqual(expect.objectContaining({ path: '$.__exactGeneratedMagicItemParent' }))
+    expect(
+      collectRecordEvidence(
+        { ...elementalCommandRing, charges: 4 },
+        { collection: 'item', srdVersion: '5.1' },
       ),
     ).not.toContainEqual(expect.objectContaining({ path: '$.__exactGeneratedMagicItemParent' }))
   })

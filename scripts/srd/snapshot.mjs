@@ -232,6 +232,22 @@ const ITEM_ENTRY_TEMPLATE_PATTERN = /\{\{(?:(getFullImmRes) )?item\.([a-zA-Z0-9]
 
 const EXACT_SRD_TEXT_CORRECTIONS = new Map([
   [
+    "The creature exists for a duration specific to each figurine. At the end of the duration, the creature reverts to its figurine form. It reverts to a figurine early if its creature form drops to 0 {@variantrule Hit Points|XPHB} or if you take a {@action Magic|XPHB} action while touching the creature to make it revert to figurine form. When the creature becomes a figurine again, its property can't be used again until a certain amount of time has passed, as specified below.",
+    {
+      id: 'figurineReuseDescription2024',
+      replacement:
+        "The creature exists for a duration specific to each figurine. At the end of the duration, the creature reverts to its figurine form. It reverts to a figurine early if its creature form drops to 0 {@variantrule Hit Points|XPHB} or if you take a {@action Magic|XPHB} action while touching the creature to make it revert to figurine form. When the creature becomes a figurine again, its property can't be used again until a certain amount of time has passed, as specified in the figurine's description.",
+    },
+  ],
+  [
+    "This ebony statuette, carved in the likeness of a horsefly, can become a {@creature Giant Fly|XDMG} for up to 12 hours and can be ridden as a mount. Once it has been used, it can't be used again until 2 days have passed.",
+    {
+      id: 'ebonyFlyStatBlock2024',
+      replacement:
+        "This ebony statuette, carved in the likeness of a horsefly, can become a {@creature Giant Fly|XDMG} (see the accompanying stat block) for up to 12 hours and can be ridden as a mount. Once it has been used, it can't be used again until 2 days have passed.",
+    },
+  ],
+  [
     'Activating some magic items requires a user to do something in particular, such as holding the item and uttering a command word, reading the item if it is a scroll, or drinking it if it is a potion. The description of each item category or individual item details how an item is activated. Certain items use one or more of the following rules related to their activation.',
     {
       id: 'activateItemIntroduction',

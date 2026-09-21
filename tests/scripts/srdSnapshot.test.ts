@@ -446,6 +446,22 @@ describe('bundled SRD snapshot generator', () => {
           srd52: true,
           entries: ['Full-book wording.'],
         },
+        {
+          name: 'Figurine of Wondrous Power, Bronze Griffon',
+          source: 'XDMG',
+          srd52: true,
+          entries: [
+            "The creature exists for a duration specific to each figurine. At the end of the duration, the creature reverts to its figurine form. It reverts to a figurine early if its creature form drops to 0 {@variantrule Hit Points|XPHB} or if you take a {@action Magic|XPHB} action while touching the creature to make it revert to figurine form. When the creature becomes a figurine again, its property can't be used again until a certain amount of time has passed, as specified below.",
+          ],
+        },
+        {
+          name: 'Figurine of Wondrous Power, Ebony Fly',
+          source: 'XDMG',
+          srd52: true,
+          entries: [
+            "This ebony statuette, carved in the likeness of a horsefly, can become a {@creature Giant Fly|XDMG} for up to 12 hours and can be ridden as a mount. Once it has been used, it can't be used again until 2 days have passed.",
+          ],
+        },
       ],
       itemGroup: [],
     })
@@ -521,6 +537,12 @@ describe('bundled SRD snapshot generator', () => {
     expect(hornOfValhalla.entries[1]).toContain('2d4 + 2')
     expect(manualOfGolems.entries[0]).toContain('two level 5 spell slots')
     expect(manualOfGolems.entries[2]).toContain("See Monsters for the golem's stat block")
+    expect(JSON.stringify(items)).toContain("as specified in the figurine's description")
+    expect(JSON.stringify(items)).toContain('(see the accompanying stat block)')
+    expect(snapshot.manifest.coverage.textCorrections).toEqual({
+      ebonyFlyStatBlock2024: 1,
+      figurineReuseDescription2024: 1,
+    })
     expect(snapshot.manifest.coverage.structuredCorrections).toEqual({
       giantStrengthPotionText2024: 1,
       hornOfValhallaText2014: 1,
