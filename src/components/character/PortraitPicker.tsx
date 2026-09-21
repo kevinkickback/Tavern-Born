@@ -1,5 +1,5 @@
 import { Crop, Image, Images, Upload, X } from '@phosphor-icons/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,20 @@ export function PortraitPicker({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
-  const t = transform ?? DEFAULT_PORTRAIT_TRANSFORM
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null)
+  const [draftTransform, setDraftTransform] = useState<PortraitTransform>(
+    () => transform ?? DEFAULT_PORTRAIT_TRANSFORM,
+  )
+  const t = draftTransform
+
+  useEffect(() => {
+    setDraftTransform(transform ?? DEFAULT_PORTRAIT_TRANSFORM)
+  }, [transform])
+
+  const resetTransform = () => {
+    setDraftTransform(DEFAULT_PORTRAIT_TRANSFORM)
+    onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)
+  }
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -63,7 +76,7 @@ export function PortraitPicker({
     const reader = new FileReader()
     reader.onloadend = () => {
       onPortraitChange(reader.result as string)
-      onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)
+      resetTransform()
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -73,7 +86,7 @@ export function PortraitPicker({
 
   const handleClear = () => {
     onPortraitChange(null)
-    onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)
+    resetTransform()
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -81,11 +94,17 @@ export function PortraitPicker({
 
   const handlePlaceholder = (src: string) => {
     onPortraitChange(src)
-    onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)
+    resetTransform()
   }
 
-  const handleTransformChange = (updates: Partial<PortraitTransform>) => {
-    onTransformChange({ ...t, ...updates })
+  const handleTransformPreview = (updates: Partial<PortraitTransform>) => {
+    setDraftTransform((current) => ({ ...current, ...updates }))
+  }
+
+  const handleTransformCommit = (updates: Partial<PortraitTransform>) => {
+    const next = { ...t, ...updates }
+    setDraftTransform(next)
+    onTransformChange(next)
   }
 
   return (
@@ -118,7 +137,15 @@ export function PortraitPicker({
               icon={<Image className="size-4 text-primary" weight="duotone" />}
               className={cn(collapsible && 'pr-20')}
             />
-            <div className="space-y-4 p-4">
+            <div
+              data-slot="portrait-preview-content"
+              className={cn(
+                'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4 p-4',
+                libraryCollapsed
+                  ? 'grid-rows-[minmax(0,1fr)_auto] overflow-hidden'
+                  : 'content-start grid-rows-[auto_auto] overflow-y-auto',
+              )}
+            >
               <PortraitCardPreview
                 image={portrait}
                 name={name}
@@ -128,10 +155,18 @@ export function PortraitPicker({
                 gender={gender}
                 lastModified={lastModified}
                 transform={t}
+                fit={libraryCollapsed ? 'contain' : 'width'}
+                onWidthChange={setPreviewWidth}
               />
 
               {/* Image Controls — inline below preview */}
-              <div className="space-y-3 border-t border-border pt-3">
+              <div
+                data-slot="portrait-image-controls"
+                className="mx-auto min-w-0 w-full space-y-3 border-t border-border pt-3"
+                style={
+                  previewWidth === null ? undefined : { width: previewWidth, maxWidth: '100%' }
+                }
+              >
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Crop className="h-3.5 w-3.5" weight="duotone" />
                   <span className="text-[11px] font-bold uppercase tracking-wider">
@@ -143,7 +178,8 @@ export function PortraitPicker({
                     <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
                     <Slider
                       value={[t.zoom]}
-                      onValueChange={(value) => handleTransformChange({ zoom: value[0] })}
+                      onValueChange={(value) => handleTransformPreview({ zoom: value[0] })}
+                      onValueCommit={(value) => handleTransformCommit({ zoom: value[0] })}
                       min={50}
                       max={400}
                       step={5}
@@ -158,7 +194,8 @@ export function PortraitPicker({
                     <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
                     <Slider
                       value={[t.panX]}
-                      onValueChange={(value) => handleTransformChange({ panX: value[0] })}
+                      onValueChange={(value) => handleTransformPreview({ panX: value[0] })}
+                      onValueCommit={(value) => handleTransformCommit({ panX: value[0] })}
                       min={-240}
                       max={240}
                       step={5}
@@ -173,7 +210,8 @@ export function PortraitPicker({
                     <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
                     <Slider
                       value={[t.panY]}
-                      onValueChange={(value) => handleTransformChange({ panY: value[0] })}
+                      onValueChange={(value) => handleTransformPreview({ panY: value[0] })}
+                      onValueCommit={(value) => handleTransformCommit({ panY: value[0] })}
                       min={-240}
                       max={240}
                       step={5}
@@ -189,7 +227,7 @@ export function PortraitPicker({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)}
+                  onClick={resetTransform}
                   disabled={!portrait}
                   className="h-8 w-full text-xs"
                 >

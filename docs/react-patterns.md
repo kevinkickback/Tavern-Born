@@ -115,6 +115,21 @@ using `accentOutline`.
 
 Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
 
+Portrait pan values use the character card's 360 x 240 logical coordinate space. Convert those
+values to card-relative percentages in the shared frame renderer so the portrait editor preview
+and finished card retain the same crop at different responsive widths. Do not apply persisted pan
+values directly as viewport pixels. Keep slider drag values local to the portrait editor and write
+the completed transform to the character store on commit; validating the full character on every
+pointer movement makes large uploaded portraits visibly stall. The expandable preview renders the
+entire card in that logical coordinate space and scales its canvas uniformly; text, icons, actions,
+padding, and portrait framing must enlarge together while editor controls outside the card retain
+their normal application size. In the portrait editor, contain that canvas within the space above
+the controls so expanding the preview pane never pushes those controls out of view. Keep the stacked
+image controls centered and constrained to the rendered card width rather than stretching them
+across an expanded pane. With both portrait panes open, keep the width-driven preview at the top
+with its controls immediately below it and allow that pane to scroll only when its height requires
+it. Use the height-constrained, no-scroll arrangement when the portrait library is collapsed.
+
 ---
 
 ## Feature Controller Hooks

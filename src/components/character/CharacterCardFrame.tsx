@@ -1,6 +1,6 @@
 import { Clock, Crown, Sword, User } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
-import { resolvePortraitSrc } from '@/lib/portraitConstants'
+import { getPortraitCssTransform, resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 
@@ -36,10 +36,6 @@ export function CharacterCardFrame({
   const sizeVariant = cardSize <= 300 ? 'small' : cardSize <= 380 ? 'medium' : 'large'
   const isSmall = sizeVariant === 'small'
   const isMedium = sizeVariant === 'medium'
-  const portraitZoom = (transform?.zoom ?? 100) / 100
-  const portraitPanX = transform?.panX ?? 0
-  const portraitPanY = transform?.panY ?? 0
-  const portraitRotation = transform?.rotation ?? 0
   const detailIconClass = cn('text-primary', isSmall ? 'size-3.5' : 'size-4')
 
   return (
@@ -50,7 +46,7 @@ export function CharacterCardFrame({
           alt={imageAlt}
           className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none select-none object-contain"
           style={{
-            transform: `translate(calc(-50% + ${portraitPanX - 92}px), calc(-50% + ${portraitPanY}px)) scale(${portraitZoom}) rotate(${portraitRotation}deg)`,
+            transform: getPortraitCssTransform(transform),
             ...(portraitTransition ? { transition: 'transform 0.2s ease-out' } : {}),
           }}
         />
