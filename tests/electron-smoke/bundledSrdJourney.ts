@@ -185,6 +185,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await expect(levelDialog.getByText('2', { exact: true })).toBeVisible()
       await levelDialog.getByRole('button', { name: 'Close' }).first().click()
       await page.getByRole('banner').getByRole('button', { name: 'Save character' }).click()
+      await expect(page.getByTestId('character-save-status')).toHaveText('Character saved')
 
       await page.reload()
       await page.getByRole('button', { name: 'Characters' }).click()

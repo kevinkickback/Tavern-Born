@@ -60,6 +60,13 @@ jobs:
             echo "Could not find the unpacked Linux executable." >&2
             exit 1
           fi
+          sandbox="$(dirname "$executable")/chrome-sandbox"
+          if [[ ! -f "$sandbox" ]]; then
+            echo "Could not find the packaged Chromium sandbox helper." >&2
+            exit 1
+          fi
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
           echo "TAVERN_BORN_PACKAGED_EXECUTABLE=$PWD/$executable" >> "$GITHUB_ENV"
           echo "PACKAGED_RESOURCES_DIR=$PWD/$(dirname "$executable")/resources" >> "$GITHUB_ENV"
       - name: Verify packaged SRD files and application contents
