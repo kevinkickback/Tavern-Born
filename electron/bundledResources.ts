@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { extname, isAbsolute, join, normalize } from 'node:path'
 import { isPathWithinRoot } from './security'
@@ -35,18 +34,11 @@ export function resolveBundledPackRoot({
   repositoryRoot: string
 }): string {
   if (isPackaged) return join(resourcesPath, 'srd/core')
-
-  const managedRoot = join(repositoryRoot, 'resources/srd/core')
-  return existsSync(join(managedRoot, 'manifest.json'))
-    ? managedRoot
-    : join(repositoryRoot, '.tmp/srd-review')
+  return join(repositoryRoot, 'resources/srd/core')
 }
 
-export function assertBundledManifestAllowed(
-  manifest: BundledSrdManifestSummary,
-  isPackaged: boolean,
-): void {
-  if (isPackaged && manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) {
+export function assertBundledManifestAllowed(manifest: BundledSrdManifestSummary): void {
+  if (manifest.distributionStatus !== APPROVED_DISTRIBUTION_STATUS) {
     throw new Error('Bundled SRD manifest is not approved for distribution')
   }
 }

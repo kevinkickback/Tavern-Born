@@ -1,8 +1,19 @@
 {
   "schemaVersion": 1,
-  "packVersion": "0.1.0-dev",
-  "distributionStatus": "provenance-review-required",
-  "snapshotGeneratedAt": "2026-09-19T00:00:00.000Z",
+  "packVersion": "1.0.0",
+  "distributionStatus": "approved-for-distribution",
+  "snapshotGeneratedAt": "2026-09-20T00:00:00.000Z",
+  "review": {
+    "completed": "2026-09-20",
+    "upstreamRevision": "e5d052071b635f58cc8006e9727053eaf78ea8f9",
+    "totalRecords": 3102,
+    "exactMatches": 2672,
+    "approvedRepresentations": 430,
+    "unresolvedRecords": 0,
+    "approvedEvidenceExceptions": 530,
+    "staleApprovals": 0,
+    "auditReportSha256": "9348df6e2bb205c5533b9409fb6fb22b599a4d3b6e1b2f678fdaeb531e8e58a2"
+  },
   "documents": [
     {
       "version": "5.1",

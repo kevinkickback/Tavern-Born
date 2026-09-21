@@ -1,0 +1,1830 @@
+{
+  "class": [
+    {
+      "classFeatures": [
+        "Expertise|Rogue||1",
+        "Sneak Attack|Rogue||1",
+        "Thieves' Cant|Rogue||1",
+        "Cunning Action|Rogue||2",
+        {
+          "classFeature": "Roguish Archetype|Rogue||3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Rogue||4",
+        "Uncanny Dodge|Rogue||5",
+        "Expertise|Rogue||6",
+        "Evasion|Rogue||7",
+        "Ability Score Improvement|Rogue||8",
+        {
+          "classFeature": "Roguish Archetype feature|Rogue||9",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Rogue||10",
+        "Reliable Talent|Rogue||11",
+        "Ability Score Improvement|Rogue||12",
+        {
+          "classFeature": "Roguish Archetype feature|Rogue||13",
+          "gainSubclassFeature": true
+        },
+        "Blindsense|Rogue||14",
+        "Slippery Mind|Rogue||15",
+        "Ability Score Improvement|Rogue||16",
+        {
+          "classFeature": "Roguish Archetype feature|Rogue||17",
+          "gainSubclassFeature": true
+        },
+        "Elusive|Rogue||18",
+        "Ability Score Improvement|Rogue||19",
+        "Stroke of Luck|Rogue||20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Sneak Attack"
+          ],
+          "rows": [
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 2
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 2
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 3
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 3
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 4
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 4
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 5
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 5
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 6
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 6
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 7
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 7
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 8
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 8
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 9
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 9
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 10
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 10
+                  }
+                ],
+                "type": "dice"
+              }
+            ]
+          ]
+        }
+      ],
+      "edition": "classic",
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "light"
+          ],
+          "armorProficiencies": [
+            {
+              "light": true
+            }
+          ],
+          "skills": [
+            {
+              "choose": {
+                "count": 1,
+                "from": [
+                  "acrobatics",
+                  "athletics",
+                  "deception",
+                  "insight",
+                  "intimidation",
+                  "investigation",
+                  "perception",
+                  "performance",
+                  "persuasion",
+                  "sleight of hand",
+                  "stealth"
+                ]
+              }
+            }
+          ],
+          "toolProficiencies": [
+            {
+              "thieves' tools": true
+            }
+          ],
+          "tools": [
+            "{@item thieves' tools|PHB}"
+          ]
+        },
+        "requirements": {
+          "dex": 13
+        }
+      },
+      "name": "Rogue",
+      "proficiency": [
+        "dex",
+        "int"
+      ],
+      "source": "PHB",
+      "srd": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "default": [
+          "(a) a {@item rapier|phb} or (b) a {@item shortsword|phb}",
+          "(a) a {@item shortbow|phb} and {@item quiver|phb} of {@item arrows (20)|phb|20 arrows} or (b) a {@item shortsword|phb}",
+          "(a) a {@item burglar's pack|phb}, (b) a {@item dungeoneer's pack|phb}, or (c) an {@item explorer's pack|phb}",
+          "{@item Leather armor|phb}, two {@item dagger|phb|daggers}, and {@item thieves' tools|phb}"
+        ],
+        "defaultData": [
+          {
+            "a": [
+              "rapier|phb"
+            ],
+            "b": [
+              "shortsword|phb"
+            ]
+          },
+          {
+            "a": [
+              "shortbow|phb",
+              "arrows (20)|phb"
+            ],
+            "b": [
+              "shortsword|phb"
+            ]
+          },
+          {
+            "a": [
+              "burglar's pack|phb"
+            ],
+            "b": [
+              "dungeoneer's pack|phb"
+            ],
+            "c": [
+              "explorer's pack|phb"
+            ]
+          },
+          {
+            "_": [
+              "leather armor|phb",
+              {
+                "item": "dagger|phb",
+                "quantity": 2
+              },
+              "thieves' tools|phb"
+            ]
+          }
+        ],
+        "goldAlternative": "{@dice 4d4 × 10|4d4 × 10|Starting Gold}"
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 4,
+              "from": [
+                "acrobatics",
+                "athletics",
+                "deception",
+                "insight",
+                "intimidation",
+                "investigation",
+                "perception",
+                "performance",
+                "persuasion",
+                "sleight of hand",
+                "stealth"
+              ]
+            }
+          }
+        ],
+        "toolProficiencies": [
+          {
+            "thieves' tools": true
+          }
+        ],
+        "tools": [
+          "{@item thieves' tools|PHB}"
+        ],
+        "weapons": [
+          "simple",
+          "{@item hand crossbow|phb|hand crossbows}",
+          "{@item longsword|phb|longswords}",
+          "{@item rapier|phb|rapiers}",
+          "{@item shortsword|phb|shortswords}"
+        ]
+      },
+      "subclassTitle": "Roguish Archetype"
+    },
+    {
+      "classFeatures": [
+        "Expertise|Rogue|XPHB|1",
+        "Sneak Attack|Rogue|XPHB|1",
+        "Thieves' Cant|Rogue|XPHB|1",
+        "Weapon Mastery|Rogue|XPHB|1",
+        "Cunning Action|Rogue|XPHB|2",
+        {
+          "classFeature": "Rogue Subclass|Rogue|XPHB|3",
+          "gainSubclassFeature": true
+        },
+        "Steady Aim|Rogue|XPHB|3",
+        "Ability Score Improvement|Rogue|XPHB|4",
+        "Cunning Strike|Rogue|XPHB|5",
+        "Uncanny Dodge|Rogue|XPHB|5",
+        "Expertise|Rogue|XPHB|6",
+        "Evasion|Rogue|XPHB|7",
+        "Reliable Talent|Rogue|XPHB|7",
+        "Ability Score Improvement|Rogue|XPHB|8",
+        {
+          "classFeature": "Subclass Feature|Rogue|XPHB|9",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Rogue|XPHB|10",
+        "Improved Cunning Strike|Rogue|XPHB|11",
+        "Ability Score Improvement|Rogue|XPHB|12",
+        {
+          "classFeature": "Subclass Feature|Rogue|XPHB|13",
+          "gainSubclassFeature": true
+        },
+        "Devious Strikes|Rogue|XPHB|14",
+        "Slippery Mind|Rogue|XPHB|15",
+        "Ability Score Improvement|Rogue|XPHB|16",
+        {
+          "classFeature": "Subclass Feature|Rogue|XPHB|17",
+          "gainSubclassFeature": true
+        },
+        "Elusive|Rogue|XPHB|18",
+        "Epic Boon|Rogue|XPHB|19",
+        "Stroke of Luck|Rogue|XPHB|20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Sneak Attack"
+          ],
+          "rows": [
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 2
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 2
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 3
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 3
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 4
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 4
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 5
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 5
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 6
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 6
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 7
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 7
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 8
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 8
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 9
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 9
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 10
+                  }
+                ],
+                "type": "dice"
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 10
+                  }
+                ],
+                "type": "dice"
+              }
+            ]
+          ]
+        }
+      ],
+      "edition": "one",
+      "featProgression": [
+        {
+          "category": [
+            "EB"
+          ],
+          "name": "Epic Boon",
+          "progression": {
+            "19": 1
+          }
+        }
+      ],
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "light"
+          ],
+          "armorProficiencies": [
+            {
+              "light": true
+            }
+          ],
+          "skills": [
+            {
+              "choose": {
+                "count": 1,
+                "from": [
+                  "acrobatics",
+                  "athletics",
+                  "deception",
+                  "insight",
+                  "intimidation",
+                  "investigation",
+                  "perception",
+                  "persuasion",
+                  "sleight of hand",
+                  "stealth"
+                ]
+              }
+            }
+          ],
+          "toolProficiencies": [
+            {
+              "thieves' tools": true
+            }
+          ],
+          "tools": [
+            "{@item Thieves' Tools|XPHB}"
+          ]
+        }
+      },
+      "name": "Rogue",
+      "primaryAbility": [
+        {
+          "dex": true
+        }
+      ],
+      "proficiency": [
+        "dex",
+        "int"
+      ],
+      "source": "XPHB",
+      "srd52": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "defaultData": [
+          {
+            "A": [
+              {
+                "item": "leather armor|xphb"
+              },
+              {
+                "item": "dagger|xphb",
+                "quantity": 2
+              },
+              {
+                "item": "shortsword|xphb"
+              },
+              {
+                "item": "shortbow|xphb"
+              },
+              {
+                "item": "arrows (20)|xphb"
+              },
+              {
+                "item": "quiver|xphb"
+              },
+              {
+                "item": "thieves' tools|xphb"
+              },
+              {
+                "item": "burglar's pack|xphb"
+              },
+              {
+                "value": 800
+              }
+            ],
+            "B": [
+              {
+                "value": 10000
+              }
+            ]
+          }
+        ],
+        "entries": [
+          "{@i Choose A or B:} (A) {@item Leather Armor|XPHB}, 2 {@item Dagger|XPHB|Daggers}, {@item Shortsword|XPHB}, {@item Shortbow|XPHB}, {@item Arrows (20)|XPHB|20 Arrows}, {@item Quiver|XPHB}, {@item Thieves' Tools|XPHB}, {@item Burglar's Pack|XPHB}, and 8 GP; or (B) 100 GP"
+        ]
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 4,
+              "from": [
+                "acrobatics",
+                "athletics",
+                "deception",
+                "insight",
+                "intimidation",
+                "investigation",
+                "perception",
+                "persuasion",
+                "sleight of hand",
+                "stealth"
+              ]
+            }
+          }
+        ],
+        "toolProficiencies": [
+          {
+            "thieves' tools": true
+          }
+        ],
+        "tools": [
+          "{@item Thieves' Tools|XPHB}"
+        ],
+        "weaponProficiencies": [
+          {
+            "all": {
+              "fromFilter": "type=martial weapon|property=light;finesse"
+            },
+            "simple": true
+          }
+        ],
+        "weapons": [
+          "simple",
+          "Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property"
+        ]
+      },
+      "subclassTitle": "Rogue Subclass"
+    }
+  ],
+  "classFeature": [
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 1st level, choose two of your skill proficiencies, or one of your skill proficiencies and your proficiency with {@item thieves' tools|phb}. Your proficiency bonus is doubled for any ability check you make that uses either of the chosen proficiencies.",
+        "At 6th level, you can choose two more of your proficiencies (in skills or with {@item thieves' tools|phb}) to gain this benefit."
+      ],
+      "level": 1,
+      "name": "Expertise",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 1st level, you know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra {@damage 1d6} damage to one creature you hit with an attack if you have advantage on the attack roll. The attack must use a finesse or a ranged weapon.",
+        "You don't need advantage on the attack roll if another enemy of the target is within 5 feet of it, that enemy isn't {@condition incapacitated}, and you don't have disadvantage on the attack roll.",
+        "The amount of the extra damage increases as you gain levels in this class, as shown in the Sneak Attack column of the Rogue table."
+      ],
+      "level": 1,
+      "name": "Sneak Attack",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "During your rogue training you learned thieves' cant, a secret mix of dialect, jargon, and code that allows you to hide messages in seemingly normal conversation. Only another creature that knows thieves' cant understands such messages. It takes four times longer to convey such a message than it does to speak the same idea plainly.",
+        "In addition, you understand a set of secret signs and symbols used to convey short, simple messages, such as whether an area is dangerous or the territory of a thieves' guild, whether loot is nearby, or whether the people in an area are easy marks or will provide a safe house for thieves on the run."
+      ],
+      "level": 1,
+      "name": "Thieves' Cant",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 2nd level, your quick thinking and agility allow you to move and act quickly. You can take a bonus action on each of your turns in combat. This action can be used only to take the {@action Dash}, {@action Disengage}, or {@action Hide} action."
+      ],
+      "level": 2,
+      "name": "Cunning Action",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 3rd level, you choose an archetype that you emulate in the exercise of your rogue abilities from the list of available archetypes. Your archetype choice grants you features at 3rd level and then again at 9th, 13th, and 17th level."
+      ],
+      "level": 3,
+      "name": "Roguish Archetype",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 5th level, when an attacker that you can see hits you with an attack, you can use your reaction to halve the attack's damage against you."
+      ],
+      "level": 5,
+      "name": "Uncanny Dodge",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 6th level, you can choose two more of your proficiencies (in skills or with {@item thieves' tools|phb}) to gain the benefit of Expertise."
+      ],
+      "level": 6,
+      "name": "Expertise",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 7th level, you can nimbly dodge out of the way of certain area effects, such as a red dragon's fiery breath or an {@spell ice storm} spell. When you are subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw, and only half damage if you fail."
+      ],
+      "level": 7,
+      "name": "Evasion",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 9th level, you gain a feature granted by your Roguish Archetype."
+      ],
+      "level": 9,
+      "name": "Roguish Archetype feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 10th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 10,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "By 11th level, you have refined your chosen skills until they approach perfection. Whenever you make an ability check that lets you add your proficiency bonus, you can treat a {@dice d20} roll of 9 or lower as a 10."
+      ],
+      "level": 11,
+      "name": "Reliable Talent",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 13th level, you gain a feature granted by your Roguish Archetype."
+      ],
+      "level": 13,
+      "name": "Roguish Archetype feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 14th level, if you are able to hear, you are aware of the location of any hidden or {@condition invisible} creature within 10 feet of you."
+      ],
+      "level": 14,
+      "name": "Blindsense",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "By 15th level, you have acquired greater mental strength. You gain proficiency in Wisdom saving throws."
+      ],
+      "level": 15,
+      "name": "Slippery Mind",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 17th level, you gain a feature granted by your Roguish Archetype."
+      ],
+      "level": 17,
+      "name": "Roguish Archetype feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 18th level, you are so evasive that attackers rarely gain the upper hand against you. No attack roll has advantage against you while you aren't {@condition incapacitated}."
+      ],
+      "level": 18,
+      "name": "Elusive",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 19,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "At 20th level, you have an uncanny knack for succeeding when you need to. If your attack misses a target within range, you can turn the miss into a hit. Alternatively, if you fail an ability check, you can treat the {@dice d20} roll as a 20.",
+        "Once you use this feature, you can't use it again until you finish a short or long rest."
+      ],
+      "level": 20,
+      "name": "Stroke of Luck",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain {@variantrule Expertise|XPHB} in two of your skill proficiencies of your choice. {@skill Sleight of Hand|XPHB} and {@skill Stealth|XPHB} are recommended if you have proficiency in them.",
+        "At Rogue level 6, you gain {@variantrule Expertise|XPHB} in two more of your skill proficiencies of your choice."
+      ],
+      "level": 1,
+      "name": "Expertise",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra {@damage 1d6} damage to one creature you hit with an attack roll if you have {@variantrule Advantage|XPHB} on the roll and the attack uses a Finesse or a Ranged weapon. The extra damage's type is the same as the weapon's type.",
+        "You don't need {@variantrule Advantage|XPHB} on the attack roll if at least one of your allies is within 5 feet of the target, the ally doesn't have the {@condition Incapacitated|XPHB} condition, and you don't have {@variantrule Disadvantage|XPHB} on the attack roll.",
+        "The extra damage increases as you gain Rogue levels, as shown in the Sneak Attack column of the Rogue Features table."
+      ],
+      "level": 1,
+      "name": "Sneak Attack",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You picked up various languages in the communities where you plied your roguish talents. You know Thieves' Cant and one other language of your choice, which you choose from the language tables in {@book chapter 2|XPHB|2|Choose Languages}."
+      ],
+      "level": 1,
+      "name": "Thieves' Cant",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "Your training with weapons allows you to use the {@variantrule weapon mastery properties|XPHB|mastery properties} of two kinds of {@filter weapons|items|type=simple weapon;martial weapon} of your choice with which you have proficiency, such as {@item Dagger|XPHB|Daggers} and {@item Shortbow|XPHB|Shortbows}.",
+        "Whenever you finish a {@variantrule Long Rest|XPHB}, you can change the kinds of weapons you chose. For example, you could switch to using the {@variantrule weapon mastery properties|XPHB|mastery properties} of {@item Scimitar|XPHB|Scimitars} and {@item Shortsword|XPHB|Shortswords}."
+      ],
+      "level": 1,
+      "name": "Weapon Mastery",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "Your quick thinking and agility allow you to move and act quickly. On your turn, you can take one of the following actions as a {@variantrule Bonus Action|XPHB}: {@action Dash|XPHB}, {@action Disengage|XPHB}, or {@action Hide|XPHB}."
+      ],
+      "level": 2,
+      "name": "Cunning Action",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a Rogue subclass of your choice. A subclass is a specialization that grants you features at certain Rogue levels. For the rest of your career, you gain each of your subclass's features that are of your Rogue level or lower."
+      ],
+      "level": 3,
+      "name": "Rogue Subclass",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "As a {@variantrule Bonus Action|XPHB}, you give yourself {@variantrule Advantage|XPHB} on your next attack roll on the current turn. You can use this feature only if you haven't moved during this turn, and after you use it, your {@variantrule Speed|XPHB} is 0 until the end of the current turn."
+      ],
+      "level": 3,
+      "name": "Steady Aim",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Rogue levels 8, 10, 12, and 16."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You've developed cunning ways to use your Sneak Attack. When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects. Each effect has a die cost, which is the number of Sneak Attack damage dice you must forgo to add the effect. You remove the die before rolling, and the effect occurs immediately after the attack's damage is dealt. For example, if you add the Poison effect, remove {@dice 1d6} from the Sneak Attack's damage before rolling.",
+        "If a Cunning Strike effect requires a saving throw, the DC equals 8 plus your Dexterity modifier and {@variantrule Proficiency|XPHB|Proficiency Bonus}.",
+        {
+          "entries": [
+            {
+              "classFeature": "Poison (Cost: 1d6)|Rogue|XPHB|5|XPHB",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Trip (Cost: 1d6)|Rogue|XPHB|5|XPHB",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Withdraw (Cost: 1d6)|Rogue|XPHB|5|XPHB",
+              "type": "refClassFeature"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 5,
+      "name": "Cunning Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You add a toxin to your strike, forcing the target to make a Constitution saving throw. On a failed save, the target has the {@condition Poisoned|XPHB} condition for 1 minute. At the end of each of its turns, the {@condition Poisoned|XPHB} target repeats the save, ending the effect on itself on a success.",
+        "To use this effect, you must have a {@item Poisoner's Kit|XPHB} on your person."
+      ],
+      "level": 5,
+      "name": "Poison (Cost: 1d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "If the target is Large or smaller, it must succeed on a Dexterity saving throw or have the {@condition Prone|XPHB} condition."
+      ],
+      "level": 5,
+      "name": "Trip (Cost: 1d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "When an attacker that you can see hits you with an attack roll, you can take a {@variantrule Reaction|XPHB} to halve the attack's damage against you (round down)."
+      ],
+      "level": 5,
+      "name": "Uncanny Dodge",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "Immediately after the attack, you move up to half your {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+      ],
+      "level": 5,
+      "name": "Withdraw (Cost: 1d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain {@variantrule Expertise|XPHB} in two of your Skill Proficiencies of your choice."
+      ],
+      "level": 6,
+      "name": "Expertise",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You can nimbly dodge out of the way of certain dangers. When you're subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail. You can't use this feature if you have the {@condition Incapacitated|XPHB} condition."
+      ],
+      "level": 7,
+      "name": "Evasion",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a {@dice d20} roll of 9 or lower as a 10."
+      ],
+      "level": 7,
+      "name": "Reliable Talent",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Rogue Subclass."
+      ],
+      "level": 9,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 10,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect."
+      ],
+      "level": 11,
+      "name": "Improved Cunning Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Rogue Subclass."
+      ],
+      "level": 13,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "The target must succeed on a Constitution saving throw, or on its next turn, it can do only one of the following: move or take an action or a {@variantrule Bonus Action|XPHB}."
+      ],
+      "level": 14,
+      "name": "Daze (Cost: 2d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You've practiced new ways to use your Sneak Attack deviously. The following effects are now among your Cunning Strike options.",
+        {
+          "entries": [
+            {
+              "classFeature": "Daze (Cost: 2d6)|Rogue|XPHB|14|XPHB",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Knock Out (Cost: 6d6)|Rogue|XPHB|14|XPHB",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Obscure (Cost: 3d6)|Rogue|XPHB|14|XPHB",
+              "type": "refClassFeature"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 14,
+      "name": "Devious Strikes",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "The target must succeed on a Constitution saving throw, or it has the {@condition Unconscious|XPHB} condition for 1 minute or until it takes any damage. The {@condition Unconscious|XPHB} target repeats the save at the end of each of its turns, ending the effect on itself on a success."
+      ],
+      "level": 14,
+      "name": "Knock Out (Cost: 6d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "The target must succeed on a Dexterity saving throw, or it has the {@condition Blinded|XPHB} condition until the end of its next turn."
+      ],
+      "level": 14,
+      "name": "Obscure (Cost: 3d6)",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "Your cunning mind is exceptionally difficult to control. You gain proficiency in Wisdom and Charisma saving throws."
+      ],
+      "level": 15,
+      "name": "Slippery Mind",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Rogue Subclass."
+      ],
+      "level": 17,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You're so evasive that attackers rarely gain the upper hand against you. No attack roll can have {@variantrule Advantage|XPHB} against you unless you have the {@condition Incapacitated|XPHB} condition."
+      ],
+      "level": 18,
+      "name": "Elusive",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an Epic Boon feat (see \"Feats\") or another feat of your choice for which you qualify. {@feat Boon of the Night Spirit|XPHB} is recommended."
+      ],
+      "level": 19,
+      "name": "Epic Boon",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You have a marvelous knack for succeeding when you need to. If you fail a {@variantrule D20 Test|XPHB}, you can turn the roll into a 20.",
+        "Once you use this feature, you can't use it again until you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}."
+      ],
+      "level": 20,
+      "name": "Stroke of Luck",
+      "source": "XPHB",
+      "srd52": true
+    }
+  ],
+  "subclass": [
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "edition": "classic",
+      "name": "Thief",
+      "shortName": "Thief",
+      "source": "PHB",
+      "srd": true,
+      "subclassFeatures": [
+        "Thief|Rogue||Thief||3",
+        "Supreme Sneak|Rogue||Thief||9",
+        "Use Magic Device|Rogue||Thief||13",
+        "Thief's Reflexes|Rogue||Thief||17"
+      ]
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "edition": "one",
+      "name": "Thief",
+      "shortName": "Thief",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassFeatures": [
+        "Thief|Rogue|XPHB|Thief|XPHB|3",
+        "Supreme Sneak|Rogue|XPHB|Thief|XPHB|9",
+        "Use Magic Device|Rogue|XPHB|Thief|XPHB|13",
+        "Thief's Reflexes|Rogue|XPHB|Thief|XPHB|17"
+      ]
+    }
+  ],
+  "subclassFeature": [
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "You hone your skills in the larcenous arts. Burglars, bandits, cutpurses, and other criminals typically follow this archetype, but so do rogues who prefer to think of themselves as professional treasure seekers, explorers, delvers, and investigators. In addition to improving your agility and stealth, you learn skills useful for delving into ancient ruins, reading unfamiliar languages, and using magic items you normally couldn't employ.",
+        {
+          "subclassFeature": "Fast Hands|Rogue||Thief||3",
+          "type": "refSubclassFeature"
+        },
+        {
+          "subclassFeature": "Second-Story Work|Rogue||Thief||3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Thief",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 3rd level, you can use the bonus action granted by your Cunning Action to make a Dexterity ({@skill Sleight of Hand}) check, use your {@item thieves' tools|phb} to disarm a trap or open a lock, or take the {@action Use an Object} action."
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Fast Hands",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you choose this archetype at 3rd level, you gain the ability to climb faster than normal; climbing no longer costs you extra movement.",
+        "In addition, when you make a running jump, the distance you cover increases by a number of feet equal to your Dexterity modifier."
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Second-Story Work",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 9th level, you have advantage on a Dexterity ({@skill Stealth}) check if you move no more than half your speed on the same turn."
+      ],
+      "header": 2,
+      "level": 9,
+      "name": "Supreme Sneak",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "By 13th level, you have learned enough about the workings of magic that you can improvise the use of items even when they are not intended for you. You ignore all class, race, and level requirements on the use of magic items."
+      ],
+      "header": 2,
+      "level": 13,
+      "name": "Use Magic Device",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 17th level, you have become adept at laying ambushes and quickly escaping danger. You can take two turns during the first round of any combat. You take your first turn at your normal initiative and your second turn at your initiative minus 10. You can't use this feature when you are {@status surprised}."
+      ],
+      "header": 2,
+      "level": 17,
+      "name": "Thief's Reflexes",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "As a {@variantrule Bonus Action|XPHB}, you can do one of the following.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "Make a Dexterity ({@skill Sleight of Hand|XPHB}) check to pick a lock or disarm a trap with {@item Thieves' Tools|XPHB} or to pick a pocket."
+              ],
+              "name": "Sleight of Hand",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Take the {@action Utilize|XPHB} action, or take the {@action Magic|XPHB} action to use a magic item that requires that action."
+              ],
+              "name": "Use an Object",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 3,
+      "name": "Fast Hands",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You've trained to get into especially hard-to-reach places, granting you these benefits.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "You gain a {@variantrule Climb Speed|XPHB} equal to your {@variantrule Speed|XPHB}."
+              ],
+              "name": "Climber",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You can determine your jump distance using your Dexterity rather than your Strength."
+              ],
+              "name": "Jumper",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 3,
+      "name": "Second-Story Work",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "{@i Hunt for Treasure as a Classic Adventurer}",
+        "A mix of burglar, treasure hunter, and explorer, you are the epitome of an adventurer. In addition to improving your agility and stealth, you gain abilities useful for delving into ruins and getting maximum benefit from the magic items you find there.",
+        {
+          "subclassFeature": "Fast Hands|Rogue|XPHB|Thief|XPHB|3",
+          "type": "refSubclassFeature"
+        },
+        {
+          "subclassFeature": "Second-Story Work|Rogue|XPHB|Thief|XPHB|3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Thief",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the following Cunning Strike option.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "If you have the {@action Hide|XPHB} action's {@condition Invisible|XPHB} condition, this attack doesn't end that condition on you if you end the turn behind {@variantrule Cover|XPHB|Three-Quarters Cover} or {@variantrule Cover|XPHB|Total Cover}."
+              ],
+              "name": "Stealth Attack (Cost: 1d6)",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "header": 2,
+      "level": 9,
+      "name": "Supreme Sneak",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You've learned how to maximize use of magic items, granting you the following benefits.",
+        {
+          "entries": [
+            "You can attune to up to four magic items at once."
+          ],
+          "name": "Attunement",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Whenever you use a magic item property that expends charges, roll {@dice 1d6}. On a roll of 6, you use the property without expending the charges."
+          ],
+          "name": "Charges",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can use any {@item Spell Scroll|XDMG}, using Intelligence as your spellcasting ability for the spell. If the spell is a cantrip or a level 1 spell, you can cast it reliably. If the scroll contains a higher-level spell, you must first succeed on an Intelligence ({@skill Arcana|XPHB}) check ({@dc 10} plus the spell's level). On a successful check, you cast the spell from the scroll. On a failed check, the scroll disintegrates."
+          ],
+          "name": "Scrolls",
+          "type": "entries"
+        }
+      ],
+      "header": 2,
+      "level": 13,
+      "name": "Use Magic Device",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "entries": [
+        "You are adept at laying ambushes and quickly escaping danger. You can take two turns during the first round of any combat. You take your first turn at your normal {@variantrule Initiative|XPHB} and your second turn at your {@variantrule Initiative|XPHB} minus 10."
+      ],
+      "header": 2,
+      "level": 17,
+      "name": "Thief's Reflexes",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Thief",
+      "subclassSource": "XPHB"
+    }
+  ]
+}

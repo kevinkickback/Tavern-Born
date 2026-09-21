@@ -19,11 +19,10 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
 6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads
    do not.
 
-The bundled manifest is read through a fixed Electron capability. Packaged builds admit only a
-manifest marked `approved-for-distribution`. Unpackaged development builds may use the ignored
-`.tmp/srd-review` snapshot so the bundled workflow can be tested before provenance approval; this
-path is never packaged. Bundled cache entries are immutable for their pack version and are never
-background-refreshed. “Remove Additional Content” loads and validates the admitted bundled catalog
+The bundled manifest is read through a fixed Electron capability. Development and packaged builds
+admit only the committed manifest marked `approved-for-distribution`; packaged builds read the
+same reviewed files from `process.resourcesPath`. Bundled cache entries are immutable for their
+pack version and are never background-refreshed. “Remove Additional Content” loads and validates the admitted bundled catalog
 before removing the saved external connection; failure keeps the existing data, cache, and external
 configuration while exposing a diagnostic. The rebuild is atomic and never makes the application
 content-free.
@@ -37,10 +36,8 @@ Additional Content” alongside online and local options; the action is not show
 active-state action. The Included SRD summary shows its SRD document versions, supported character
 rules, and offline availability rather than internal pack or cache status.
 
-Bundled transport and version-aware cache identity are implemented. While the generated pack has
-`provenance-review-required` status, bundled-first startup is available only in unpackaged
-development after `npm run review:srd`; existing local/remote startup remains the packaged release
-behavior until the reviewed pack is committed and included in release resources.
+Bundled transport and version-aware cache identity use the approved committed pack in every
+environment. A fresh packaged or development startup therefore has the same Included SRD base.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 composed content fingerprint changes. Layered cache identity includes both the bundled pack and the

@@ -1,6 +1,8 @@
 # Bundled SRD Rules Implementation Plan
 
-Status: in progress on `feature/bundled-srd-rules` (updated 2026-09-20).
+Status: implementation and the one-time provenance audit are complete on
+`feature/bundled-srd-rules`; final release-candidate checks on macOS and Linux remain release tasks
+(updated 2026-09-20).
 
 ## Outcome
 
@@ -65,7 +67,7 @@ rules engine.
 - [x] Pin the official English SRD 5.1 and SRD 5.2.1 documents, publication dates, download URLs,
   and SHA-256 checksums in a machine-readable provenance file.
 - [x] Record the exact attribution statements supplied by both SRDs and the CC BY 4.0 license URL.
-- [ ] Confirm that the planned structured representation contains only material licensed by those
+- [x] Confirm that the planned structured representation contains only material licensed by those
   documents. Do not assume a 5etools repository's code license also licenses its data.
   - [x] Emit a deterministic per-record review inventory that binds each transformed row to its
     source-qualified identity, content hash, and either one SRD marker/version or one explicit
@@ -78,42 +80,18 @@ rules engine.
     5etools markup and PDF typography, matches user-facing evidence to official pages, and emits
     only unmatched passages or short structured records for review. Bind any reviewed exception to
     the document, transformed record, and fragment hashes; reject stale approvals.
-  - [ ] Resolve the generated exception queue by correcting non-SRD differences or recording narrow
+  - [x] Resolve the generated exception queue by correcting non-SRD differences or recording narrow
     reviewed representation exceptions, then pass the audit with `--require-clean`.
-    - The initial development-corpus audit matched 9,200 evidence fragments automatically and
-      isolated 3,730 exceptions across 1,929 records. This baseline is diagnostic only because the
-      local corpus is not yet tied to the final immutable upstream revision.
-    - The pinned 5etools v2.35.1 corpus at commit
-      `e5d052071b635f58cc8006e9727053eaf78ea8f9` matches the former local development input. The
-      current pass fully clears 2,568 of 3,039 records, leaving 607 evidence decisions across 471
-      records. Exact SRD wording corrections,
-      confirmed removal of book-only sidebars and action text, accurate 5etools display-tag
-      rendering, and deterministic weapon, armor, equipment, vehicle, trade-goods, and language
-      table reconstruction produced this reduction. The pass also excludes 23 records incorrectly
-      marked as SRD 5.2.1 trade goods, removes non-SRD language origins, supplemental deity domains,
-      full-book ammunition details, and item-catalog metadata; corrects the 2024 stabling price and
-      the upstream `Lolth's Sting`/official `Spider's Sting` mismatch; and materializes 5etools'
-      internal shared-item templates so bundled magic-item descriptions are complete. Exact
-      parent-entry/table adapters now validate generated resistance, dragon-scale, healing-potion,
-      giant-strength, flying-carpet, elemental-gem, Bag of Tricks, Armor of Vulnerability, Horn of
-      Valhalla, Manual of Golems, Figurine of Wondrous Power, Ring of Elemental Command, Wand of
-      the War Mage, and spell-scroll variants. The item-name
-      inventory found no basis for bulk
-      magic-item removal: the large catalog is present in the official SRDs, while generated variant
-      names are represented by their official parent entries and tables. The item pass did remove
-      full-book Iron Flask tables, setting-only Orb of Dragonkind wording, non-SRD catalog/search
-      metadata and Artificer integration links, and an upstream editorial correction note; it also
-      reconciled narrower item wording, attunement differences, Horn of Valhalla requirements,
-      Manual of Golems construction text, and two 2024 figurine wording differences to the official
-      documents. The magic-item review is complete: none of the remaining 53 item records are magic
-      items; they are mundane equipment descriptions or table rows awaiting the same provenance
-      treatment. The expanded elemental-command rings are bound to their exact transformed-record
-      hashes and official parent/table evidence, so any later field change returns them to review.
-      Review output is generated from that immutable tagged checkout rather than the unversioned
-      local `data/` copy.
+    - The final pinned audit covered 3,102 records: 2,672 exact normalized matches, 430 records with
+      530 reviewed representation exceptions, and no unresolved evidence or stale approvals.
+      String-valued SRD markers were included and renamed to their official generic names, restoring
+      63 records missed by the earlier boolean-only selector. Book-only, setting-only, catalog,
+      supplemental, and presentation material was corrected or removed rather than approved.
+      The approved 1.0.0 pack was then reproduced byte-for-byte and materialized under
+      `resources/srd/core`; the one-time converter, PDF audit, and exception queue were removed.
 - [x] Define a transformation notice stating that Tavern Born converted and structured the SRD
   material. Keep it separate from the prescribed Wizards attribution statements.
-- [ ] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
+- [x] Explicitly exclude D&D Beyond Basic Rules, non-SRD books, product art, logos, trade dress,
   setting material, and records that cannot be traced to an official SRD.
   - [x] Add a technical output gate that strips Basic Rules/catalog flags, supplemental entries,
     page/reprint metadata, and audio references; reject image payloads and source-bearing fields
@@ -129,7 +107,7 @@ Authoritative references:
 - <https://www.dndbeyond.com/creator-faq>
 - <https://creativecommons.org/licenses/by/4.0/>
 
-Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-review.md).
+Completed audit record: [Bundled SRD Provenance Record](../srd-provenance-review.md).
 
 ## Phase 1 — Reproducible Combined Snapshot
 
@@ -137,7 +115,7 @@ Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-revi
   and pinned upstream revision. It may read `data/`, but must never modify it.
 - [x] Select candidate roots carrying `srd: true` or `srd52: true` across the entity collections
   already consumed by `FiveEToolsDataLoader`.
-- [ ] Follow source-qualified references needed by selected classes, subclasses, class features,
+- [x] Follow source-qualified references needed by selected classes, subclasses, class features,
   optional features, races/species, backgrounds, feats, spells, equipment, actions, conditions,
   skills, languages, and rule tables.
   - [x] Close class-feature, subclass-feature, inline subclass-feature, and base-item references;
@@ -149,10 +127,10 @@ Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-revi
     explicitly approved unflagged item groups, and close references introduced by those groups.
 - [x] Preserve the exact file layout, collection keys, indexes, and generated spell-source lookup
   expected by the existing loader. Emit both rules generations into one catalog.
-- [ ] Reject unflagged dependencies unless an audited allowlist entry records the reference,
+- [x] Reject unflagged dependencies unless an audited allowlist entry records the reference,
   reason, official-SRD location, and owning pack.
   - [x] Require complete, unique item-support approvals and fail when an approval becomes unused.
-- [ ] Strip unused books, adventures, fluff, images, and non-SRD metadata. Optional resources may
+- [x] Strip unused books, adventures, fluff, images, and non-SRD metadata. Optional resources may
   be empty only where the existing loader already accepts that shape.
   - [x] Emit empty optional book/adventure/magic-variant indexes and loader-compatible fluff
     resources, recursively remove known non-mechanical metadata, retain structured mechanics such
@@ -160,7 +138,7 @@ Human approval procedure: [Bundled SRD Provenance Review](../srd-provenance-revi
 - [x] Emit `resources/srd/core/data/`, a coverage report, and `manifest.json` containing:
   pack ID/version, the two SRD versions, source checksums, upstream revision, extractor version,
   attribution, transformation notice, entity counts, file checksums, and generation timestamp.
-- [ ] Make generation byte-for-byte deterministic and add a verification mode that fails on stale
+- [x] Make generation byte-for-byte deterministic and add a verification mode that fails on stale
   output, missing references, duplicate `name|source` identities, unapproved records, or checksum
   drift.
   - [x] Verify missing, changed, and unexpected managed files in one pass; corpus construction now
@@ -197,8 +175,8 @@ bundled fixture and a matching local fixture.
 ## Phase 3 — Startup, Cache, and Fallback Semantics
 
 - [x] Resolve the default bundled source from one fixed, validated manifest rather than scattering
-  pack IDs or versions through UI code. Packaged builds require `approved-for-distribution`;
-  unpackaged development may use the ignored review snapshot without weakening release policy.
+  pack IDs or versions through UI code. Packaged and development builds require the committed
+  `approved-for-distribution` manifest.
 - [x] When hydration finds neither a configured source nor a compatible cache, load the bundled
   source automatically. Remove `unconfigured` as a normal fresh-install terminal state.
 - [x] Preserve existing local/remote choices during migration; do not silently replace a working
@@ -274,11 +252,16 @@ an advanced user can configure, refresh, change, and remove an external source.
 - [x] Update release and bundle-budget checks so the SRD pack is required in installers and
   portable builds, forbidden from development-only output, and measured as its own category.
 - [ ] Verify Windows installer/portable, macOS, and Linux resource paths before release.
+  - [x] Build the Windows installer and portable app from this branch, confirm their embedded
+    application payloads are identical, and verify every one of the 50 packaged SRD data files
+    against the approved manifest. Repeat on the versioned release candidate before publishing.
+  - [ ] Verify the packaged resource path and checksums on macOS and Linux release hosts.
 
 ## Phase 6 — Verification and Acceptance
 
-- [x] Unit-test extraction, reference closure, deterministic output, manifest validation, source
-  identity, cache invalidation, migrations, and fallback decisions.
+- [x] Unit-test approved manifest/checksum validation, production-parser loading, source identity,
+  cache invalidation, migrations, and fallback decisions. Temporary extractor/audit tests were
+  removed with the one-time tooling after the approved snapshot was materialized.
 - [x] Integration-test startup modal behavior, Settings source switching, bundled status details,
   external validation, restore-bundled behavior, and error recovery.
 - [x] Add an Electron smoke test that reads packaged bundled JSON through the restricted IPC path
@@ -302,15 +285,17 @@ an advanced user can configure, refresh, change, and remove an external source.
     byte-for-byte unchanged.
   - [x] Compose the generated SRD with the configured full 5etools corpus and reject required
     resource failures, unresolved added-class dependencies, and duplicate top-level identities.
-- [ ] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
+- [x] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
   Biome, TypeScript, Knip, dependency boundaries, production build, release checks, and revised
   bundle budgets.
-  - [x] On 2026-09-20, Biome, TypeScript, 1,614 Vitest tests, coverage, 26 browser journeys, Knip,
-    dependency boundaries, the production build, normal bundle budgets, and current-version release
-    metadata passed. Electron journeys were correctly skipped on the affected Windows 11 build;
-    the distribution-required bundle gate remains blocked until the reviewed SRD snapshot exists.
+  - [x] On 2026-09-20, Biome, TypeScript, all 1,594 Vitest tests with coverage, all 26 browser
+    journeys, Knip, dependency boundaries, the production build, the distribution-required SRD
+    bundle budget, and current-version release metadata passed. Electron journeys were correctly
+    skipped on the affected Windows 11 build and remain active on unaffected CI hosts.
 - [ ] Inspect the final installer/portable contents and compare every shipped SRD file checksum to
   the manifest before release.
+  - [x] The development Windows packages were extracted and all 50 files matched; repeat this check
+    on the final versioned release artifacts.
 
 ## Suggested Pull-Request Slices
 

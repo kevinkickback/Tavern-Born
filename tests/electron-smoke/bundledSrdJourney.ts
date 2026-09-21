@@ -3,10 +3,7 @@ import { resolve } from 'node:path'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
 import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
-const HAS_DEVELOPMENT_SRD = [
-  resolve('resources/srd/core/manifest.json'),
-  resolve('.tmp/srd-review/manifest.json'),
-].some(existsSync)
+const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/core/manifest.json'))
 
 interface CharacterOptions {
   name: string

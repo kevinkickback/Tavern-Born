@@ -1,0 +1,2109 @@
+{
+  "class": [
+    {
+      "classFeatures": [
+        "Unarmored Defense|Monk||1",
+        "Martial Arts|Monk||1",
+        "Ki|Monk||2",
+        "Unarmored Movement|Monk||2",
+        "Deflect Missiles|Monk||3",
+        {
+          "classFeature": "Monastic Tradition|Monk||3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Monk||4",
+        "Slow Fall|Monk||4",
+        "Extra Attack|Monk||5",
+        "Stunning Strike|Monk||5",
+        "Ki-Empowered Strikes|Monk||6",
+        {
+          "classFeature": "Monastic Tradition feature|Monk||6",
+          "gainSubclassFeature": true
+        },
+        "Evasion|Monk||7",
+        "Stillness of Mind|Monk||7",
+        "Ability Score Improvement|Monk||8",
+        "Unarmored Movement improvement|Monk||9",
+        "Purity of Body|Monk||10",
+        {
+          "classFeature": "Monastic Tradition feature|Monk||11",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Monk||12",
+        "Tongue of the Sun and Moon|Monk||13",
+        "Diamond Soul|Monk||14",
+        "Timeless Body|Monk||15",
+        "Ability Score Improvement|Monk||16",
+        {
+          "classFeature": "Monastic Tradition feature|Monk||17",
+          "gainSubclassFeature": true
+        },
+        "Empty Body|Monk||18",
+        "Ability Score Improvement|Monk||19",
+        "Perfect Self|Monk||20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Martial Arts",
+            "Ki Points",
+            "Unarmored Movement"
+          ],
+          "rows": [
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 4,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              0,
+              {
+                "type": "bonusSpeed",
+                "value": 0
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 4,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              2,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 4,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              3,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 4,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              4,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              5,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              6,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              7,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              8,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              9,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              10,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              11,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              12,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              13,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              14,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              15,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              16,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              17,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              18,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              19,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              20,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ]
+          ]
+        }
+      ],
+      "edition": "classic",
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "weapons": [
+            "simple",
+            "{@item shortsword|phb|shortswords}"
+          ]
+        },
+        "requirements": {
+          "dex": 13,
+          "wis": 13
+        }
+      },
+      "name": "Monk",
+      "proficiency": [
+        "str",
+        "dex"
+      ],
+      "source": "PHB",
+      "srd": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "default": [
+          "(a) a {@item shortsword|phb} or (b) any {@filter simple weapon|items|source=phb|category=basic|type=simple weapon}",
+          "(a) a {@item dungeoneer's pack|phb} or (b) an {@item explorer's pack|phb}",
+          "10 {@item dart|phb|darts}"
+        ],
+        "defaultData": [
+          {
+            "a": [
+              "shortsword|phb"
+            ],
+            "b": [
+              {
+                "equipmentType": "weaponSimple"
+              }
+            ]
+          },
+          {
+            "a": [
+              "dungeoneer's pack|phb"
+            ],
+            "b": [
+              "explorer's pack|phb"
+            ]
+          },
+          {
+            "_": [
+              {
+                "item": "dart|phb",
+                "quantity": 10
+              }
+            ]
+          }
+        ],
+        "goldAlternative": "{@dice 5d4|5d4|Starting Gold}"
+      },
+      "startingProficiencies": {
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "acrobatics",
+                "athletics",
+                "history",
+                "insight",
+                "religion",
+                "stealth"
+              ]
+            }
+          }
+        ],
+        "toolProficiencies": [
+          {
+            "anyArtisansTool": 1
+          },
+          {
+            "anyMusicalInstrument": 1
+          }
+        ],
+        "tools": [
+          "any one type of {@item artisan's tools|PHB} or any one {@item musical instrument|PHB} of your choice"
+        ],
+        "weapons": [
+          "simple",
+          "{@item shortsword|phb|shortswords}"
+        ]
+      },
+      "subclassTitle": "Monastic Tradition"
+    },
+    {
+      "classFeatures": [
+        "Martial Arts|Monk|XPHB|1",
+        "Unarmored Defense|Monk|XPHB|1",
+        "Monk's Focus|Monk|XPHB|2",
+        "Unarmored Movement|Monk|XPHB|2",
+        "Uncanny Metabolism|Monk|XPHB|2",
+        "Deflect Attacks|Monk|XPHB|3",
+        {
+          "classFeature": "Monk Subclass|Monk|XPHB|3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Monk|XPHB|4",
+        "Slow Fall|Monk|XPHB|4",
+        "Extra Attack|Monk|XPHB|5",
+        "Stunning Strike|Monk|XPHB|5",
+        "Empowered Strikes|Monk|XPHB|6",
+        {
+          "classFeature": "Subclass Feature|Monk|XPHB|6",
+          "gainSubclassFeature": true
+        },
+        "Evasion|Monk|XPHB|7",
+        "Ability Score Improvement|Monk|XPHB|8",
+        "Acrobatic Movement|Monk|XPHB|9",
+        "Heightened Focus|Monk|XPHB|10",
+        "Self-Restoration|Monk|XPHB|10",
+        {
+          "classFeature": "Subclass Feature|Monk|XPHB|11",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Monk|XPHB|12",
+        "Deflect Energy|Monk|XPHB|13",
+        "Disciplined Survivor|Monk|XPHB|14",
+        "Perfect Focus|Monk|XPHB|15",
+        "Ability Score Improvement|Monk|XPHB|16",
+        {
+          "classFeature": "Subclass Feature|Monk|XPHB|17",
+          "gainSubclassFeature": true
+        },
+        "Superior Defense|Monk|XPHB|18",
+        "Epic Boon|Monk|XPHB|19",
+        "Body and Mind|Monk|XPHB|20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Martial Arts",
+            "Focus Points",
+            "Unarmored Movement"
+          ],
+          "rows": [
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              0,
+              {
+                "type": "bonusSpeed",
+                "value": 0
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              2,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              3,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 6,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              4,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              5,
+              {
+                "type": "bonusSpeed",
+                "value": 10
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              6,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              7,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              8,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              9,
+              {
+                "type": "bonusSpeed",
+                "value": 15
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 8,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              10,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              11,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              12,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              13,
+              {
+                "type": "bonusSpeed",
+                "value": 20
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              14,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              15,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 10,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              16,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 12,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              17,
+              {
+                "type": "bonusSpeed",
+                "value": 25
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 12,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              18,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 12,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              19,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ],
+            [
+              {
+                "rollable": true,
+                "toRoll": [
+                  {
+                    "faces": 12,
+                    "number": 1
+                  }
+                ],
+                "type": "dice"
+              },
+              20,
+              {
+                "type": "bonusSpeed",
+                "value": 30
+              }
+            ]
+          ]
+        }
+      ],
+      "edition": "one",
+      "featProgression": [
+        {
+          "category": [
+            "EB"
+          ],
+          "name": "Epic Boon",
+          "progression": {
+            "19": 1
+          }
+        }
+      ],
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {},
+      "name": "Monk",
+      "primaryAbility": [
+        {
+          "dex": true,
+          "wis": true
+        }
+      ],
+      "proficiency": [
+        "str",
+        "dex"
+      ],
+      "source": "XPHB",
+      "srd52": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "defaultData": [
+          {
+            "A": [
+              {
+                "item": "spear|xphb"
+              },
+              {
+                "item": "dagger|xphb",
+                "quantity": 5
+              },
+              {
+                "equipmentTypes": [
+                  "instrumentMusical",
+                  "toolArtisan"
+                ]
+              },
+              {
+                "item": "explorer's pack|xphb"
+              },
+              {
+                "value": 1100
+              }
+            ],
+            "B": [
+              {
+                "value": 5000
+              }
+            ]
+          }
+        ],
+        "entries": [
+          "{@i Choose A or B:} (A) {@item Spear|XPHB}, 5 {@item Dagger|XPHB|Daggers}, {@item Artisan's Tools|XPHB} or {@item Musical Instrument|XPHB} chosen for the tool proficiency above, {@item Explorer's Pack|XPHB}, and 11 GP; or (B) 50 GP"
+        ]
+      },
+      "startingProficiencies": {
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "acrobatics",
+                "athletics",
+                "history",
+                "insight",
+                "religion",
+                "stealth"
+              ]
+            }
+          }
+        ],
+        "toolProficiencies": [
+          {
+            "anyArtisansTool": 1
+          },
+          {
+            "anyMusicalInstrument": 1
+          }
+        ],
+        "tools": [
+          "Choose one type of {@item Artisan's Tools|XPHB} or {@item Musical Instrument|XPHB}"
+        ],
+        "weaponProficiencies": [
+          {
+            "all": {
+              "fromFilter": "type=martial weapon|property=light"
+            },
+            "simple": true
+          }
+        ],
+        "weapons": [
+          "simple",
+          "Martial weapons that have the {@filter Light|items|type=martial weapon|property=light} property"
+        ]
+      },
+      "subclassTitle": "Monk Subclass"
+    }
+  ],
+  "classFeature": [
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Your practice of martial arts gives you mastery of combat styles that use unarmed strikes and monk weapons, which are {@item shortsword|phb|shortswords} and any {@filter simple melee weapons that don't have the two-handed or heavy property|items|source=phb|category=basic|type=simple weapon;melee weapon=sand|property=!heavy;!two-handed}.",
+        "You gain the following benefits while you are unarmed or wielding only monk weapons and you aren't wearing armor or wielding a {@item shield|phb}.",
+        {
+          "items": [
+            "You can use Dexterity instead of Strength for the attack and damage rolls of your unarmed strikes and monk weapons.",
+            "You can roll a {@dice d4} in place of the normal damage of your unarmed strike or monk weapon. This die changes as you gain monk levels, as shown in the Martial Arts column of the Monk table.",
+            "When you use the {@action Attack} action with an unarmed strike or a monk weapon on your turn, you can make one unarmed strike as a bonus action. For example, if you take the {@action Attack} action and attack with a quarterstaff, you can also make an unarmed strike as a bonus action, assuming you haven't already taken a bonus action this turn."
+          ],
+          "type": "list"
+        },
+        "Certain monasteries use specialized forms of the monk weapons. For example, you might use a club that is two lengths of wood connected by a short chain (called a nunchaku) or a sickle with a shorter, straighter blade (called a kama)."
+      ],
+      "level": 1,
+      "name": "Martial Arts",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 1st level, while you are wearing no armor and not wielding a shield, your AC equals 10 + your Dexterity modifier + your Wisdom modifier."
+      ],
+      "level": 1,
+      "name": "Unarmored Defense",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "name": "Ki"
+      },
+      "entries": [
+        "Immediately after you take the {@action Attack} action on your turn, you can spend 1 ki point to make two unarmed strikes as a bonus action."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Flurry of Blows",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 2nd level, your training allows you to harness the mystic energy of ki. Your access to this energy is represented by a number of ki points. Your monk level determines the number of points you have, as shown in the Ki Points column of the Monk table.",
+        "You can spend these points to fuel various ki features. You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind. You learn more ki features as you gain levels in this class.",
+        "When you spend a ki point, it is unavailable until you finish a short or long rest, at the end of which you draw all of your expended ki back into yourself. You must spend at least 30 minutes of the rest meditating to regain your ki points.",
+        "Some of your ki features require your target to make a saving throw to resist the feature's effects. The saving throw DC is calculated as follows:",
+        {
+          "attributes": [
+            "wis"
+          ],
+          "name": "Ki",
+          "type": "abilityDc"
+        },
+        {
+          "entries": [
+            {
+              "classFeature": "Flurry of Blows|Monk||2",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Patient Defense|Monk||2",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Step of the Wind|Monk||2",
+              "type": "refClassFeature"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 2,
+      "name": "Ki",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "name": "Ki"
+      },
+      "entries": [
+        "You can spend 1 ki point to take the {@action Dodge} action as a bonus action on your turn."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Patient Defense",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "name": "Ki"
+      },
+      "entries": [
+        "You can spend 1 ki point to take the {@action Disengage} or {@action Dash} action as a bonus action on your turn, and your jump distance is doubled for the turn."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Step of the Wind",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 2nd level, your speed increases by 10 feet while you are not wearing armor or wielding a shield. This bonus increases when you reach certain monk levels, as shown in the Monk table.",
+        "At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
+      ],
+      "level": 2,
+      "name": "Unarmored Movement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 3rd level, you can use your reaction to deflect or catch the missile when you are hit by a ranged weapon attack. When you do so, the damage you take from the attack is reduced by {@dice 1d10} + your Dexterity modifier + your monk level.",
+        "If you reduce the damage to 0, you can catch the missile if it is small enough for you to hold in one hand and you have at least one hand free. If you catch a missile in this way, you can spend 1 ki point to make a ranged attack (range 20/60 feet) with the weapon or piece of ammunition you just caught, as part of the same reaction. You make this attack with proficiency, regardless of your weapon proficiencies, and the missile counts as a monk weapon for the attack."
+      ],
+      "level": 3,
+      "name": "Deflect Missiles",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 3rd level, you commit yourself to a monastic tradition, chosen from the list of available traditions. Your tradition grants you features at 3rd level and again at 6th, 11th, and 17th level."
+      ],
+      "level": 3,
+      "name": "Monastic Tradition",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 4th level, you can use your reaction when you fall to reduce any falling damage you take by an amount equal to five times your monk level."
+      ],
+      "level": 4,
+      "name": "Slow Fall",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 5th level, you can attack twice, instead of once, whenever you take the {@action Attack} action on your turn."
+      ],
+      "level": 5,
+      "name": "Extra Attack",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "amount": 1,
+        "name": "Ki"
+      },
+      "entries": [
+        "Starting at 5th level, you can interfere with the flow of ki in an opponent's body. When you hit another creature with a melee weapon attack, you can spend 1 ki point to attempt a stunning strike. The target must succeed on a Constitution saving throw or be {@condition stunned} until the end of your next turn."
+      ],
+      "level": 5,
+      "name": "Stunning Strike",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 6th level, your unarmed strikes count as magical for the purpose of overcoming resistance and immunity to nonmagical attacks and damage."
+      ],
+      "level": 6,
+      "name": "Ki-Empowered Strikes",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 6th level, you gain one feature granted by your Monastic Tradition."
+      ],
+      "level": 6,
+      "name": "Monastic Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 7th level, your instinctive agility lets you dodge out of the way of certain area effects, such as a blue dragon's lightning breath or a {@spell fireball} spell. When you are subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw, and only half damage if you fail."
+      ],
+      "level": 7,
+      "name": "Evasion",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 7th level, you can use your action to end one effect on yourself that is causing you to be {@condition charmed} or {@condition frightened}."
+      ],
+      "level": 7,
+      "name": "Stillness of Mind",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
+      ],
+      "level": 9,
+      "name": "Unarmored Movement improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 10th level, your mastery of the ki flowing through you makes you immune to disease and poison."
+      ],
+      "level": 10,
+      "name": "Purity of Body",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 11th level, you gain one feature granted by your Monastic Tradition."
+      ],
+      "level": 11,
+      "name": "Monastic Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 13th level, you learn to touch the ki of other minds so that you understand all spoken languages. Moreover, any creature that can understand a language can understand what you say."
+      ],
+      "level": 13,
+      "name": "Tongue of the Sun and Moon",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "amount": 1,
+        "name": "Ki"
+      },
+      "entries": [
+        "Beginning at 14th level, your mastery of ki grants you proficiency in all saving throws.",
+        "Additionally, whenever you make a saving throw and fail, you can spend 1 ki point to reroll it and take the second result."
+      ],
+      "level": 14,
+      "name": "Diamond Soul",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 15th level, your ki sustains you so that you suffer none of the frailty of old age, and you can't be aged magically. You can still die of old age, however. In addition, you no longer need food or water."
+      ],
+      "level": 15,
+      "name": "Timeless Body",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 17th level, you gain one feature granted by your Monastic Tradition."
+      ],
+      "level": 17,
+      "name": "Monastic Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "amount": 4,
+        "name": "Ki"
+      },
+      "entries": [
+        "Beginning at 18th level, you can use your action to spend 4 ki points to become {@condition invisible} for 1 minute. During that time, you also have resistance to all damage but force damage.",
+        "Additionally, you can spend 8 ki points to cast the {@spell astral projection} spell, without needing material components. When you do so, you can't take any other creatures with you."
+      ],
+      "level": 18,
+      "name": "Empty Body",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 19,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "At 20th level, when you roll for initiative and have no ki points remaining, you regain 4 ki points."
+      ],
+      "level": 20,
+      "name": "Perfect Self",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can make an {@variantrule Unarmed Strike|XPHB} as a {@variantrule Bonus Action|XPHB}."
+      ],
+      "header": 2,
+      "level": 1,
+      "name": "Bonus Unarmed Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can use your Dexterity modifier instead of your Strength modifier for the attack and damage rolls of your Unarmed Strikes and Monk weapons. In addition, when you use the Grapple or Shove option of your {@variantrule Unarmed Strike|XPHB}, you can use your Dexterity modifier instead of your Strength modifier to determine the save DC."
+      ],
+      "header": 2,
+      "level": 1,
+      "name": "Dexterous Attacks",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Your practice of martial arts gives you mastery of combat styles that use your {@variantrule Unarmed Strike|XPHB} and Monk weapons, which are the following:",
+        {
+          "items": [
+            "{@filter Simple Melee Weapons|items|type=simple weapon;melee weapon=sand}",
+            "{@filter Martial Melee Weapons that have the Light property|items|type=martial weapon;melee weapon=sand|property=light}"
+          ],
+          "type": "list"
+        },
+        "You gain the following benefits while you are unarmed or wielding only Monk weapons and you aren't wearing armor or wielding a {@item Shield|XPHB}.",
+        {
+          "entries": [
+            {
+              "classFeature": "Bonus Unarmed Strike|Monk|XPHB|1",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Martial Arts Die|Monk|XPHB|1",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Dexterous Attacks|Monk|XPHB|1",
+              "type": "refClassFeature"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 1,
+      "name": "Martial Arts",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can roll {@damage 1d6} in place of the normal damage of your {@variantrule Unarmed Strike|XPHB} or Monk weapons. This die changes as you gain Monk levels, as shown in the Martial Arts column of the Monk Features table."
+      ],
+      "header": 2,
+      "level": 1,
+      "name": "Martial Arts Die",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "While you aren't wearing armor or wielding a {@item Shield|XPHB}, your base {@variantrule Armor Class|XPHB} equals 10 plus your Dexterity and Wisdom modifiers."
+      ],
+      "level": 1,
+      "name": "Unarmored Defense",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "You can expend 1 Focus Point to make two Unarmed Strikes as a {@variantrule Bonus Action|XPHB}."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Flurry of Blows",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Your focus and martial training allow you to harness a well of extraordinary energy within yourself. This energy is represented by Focus Points. Your Monk level determines the number of points you have, as shown in the Focus Points column of the Monk Features table.",
+        "You can expend these points to enhance or fuel certain Monk features. You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind, each of which is detailed below.",
+        "When you expend a Focus Point, it is unavailable until you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}, at the end of which you regain all your expended points.",
+        "Some features that use Focus Points require your target to make a saving throw. The save DC equals 8 plus your Wisdom modifier and {@variantrule Proficiency|XPHB|Proficiency Bonus}.",
+        {
+          "entries": [
+            {
+              "classFeature": "Flurry of Blows|Monk|XPHB|2",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Patient Defense|Monk|XPHB|2",
+              "type": "refClassFeature"
+            },
+            {
+              "classFeature": "Step of the Wind|Monk|XPHB|2",
+              "type": "refClassFeature"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 2,
+      "name": "Monk's Focus",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "You can take the {@action Disengage|XPHB} action as a {@variantrule Bonus Action|XPHB}. Alternatively, you can expend 1 Focus Point to take both the {@action Disengage|XPHB} and the {@action Dodge|XPHB} actions as a {@variantrule Bonus Action|XPHB}."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Patient Defense",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "You can take the {@action Dash|XPHB} action as a {@variantrule Bonus Action|XPHB}. Alternatively, you can expend 1 Focus Point to take both the {@action Disengage|XPHB} and {@action Dash|XPHB} actions as a {@variantrule Bonus Action|XPHB}, and your jump distance is doubled for the turn."
+      ],
+      "header": 2,
+      "level": 2,
+      "name": "Step of the Wind",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Your speed increases by 10 feet while you aren't wearing armor or wielding a {@item Shield|XPHB}. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table."
+      ],
+      "level": 2,
+      "name": "Unarmored Movement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "When you roll {@variantrule Initiative|XPHB}, you can regain all expended Focus Points. When you do so, roll your Martial Arts die, and regain a number of {@variantrule Hit Points|XPHB} equal to your Monk level plus the number rolled.",
+        "Once you use this feature, you can't use it again until you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "level": 2,
+      "name": "Uncanny Metabolism",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "When an attack roll hits you and its damage includes Bludgeoning, Piercing, or Slashing damage, you can take a {@variantrule Reaction|XPHB} to reduce the attack's total damage against you. The reduction equals {@dice 1d10} plus your Dexterity modifier and Monk level.",
+        "If you reduce the damage to 0, you can expend 1 Focus Point to redirect some of the attack's force. If you do so, choose a creature you can see within 5 feet of yourself if the attack was a melee attack or a creature you can see within 60 feet of yourself that isn't behind {@variantrule Cover|XPHB|Total Cover} if the attack was a ranged attack. That creature must succeed on a Dexterity saving throw or take damage equal to two rolls of your Martial Arts die plus your Dexterity modifier. The damage is the same type dealt by the attack."
+      ],
+      "level": 3,
+      "name": "Deflect Attacks",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a Monk subclass of your choice. A subclass is a specialization that grants you features at certain Monk levels. For the rest of your career, you gain each of your subclass's features that are of your Monk level or lower."
+      ],
+      "level": 3,
+      "name": "Monk Subclass",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Monk levels 8, 12, and 16."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can take a {@variantrule Reaction|XPHB} when you fall to reduce any damage you take from the fall by an amount equal to five times your Monk level."
+      ],
+      "level": 4,
+      "name": "Slow Fall",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can attack twice instead of once whenever you take the {@action Attack|XPHB} action on your turn."
+      ],
+      "level": 5,
+      "name": "Extra Attack",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "Once per turn when you hit a creature with a Monk weapon or an {@variantrule Unarmed Strike|XPHB}, you can expend 1 Focus Point to attempt a stunning strike. The target must make a Constitution saving throw. On a failed save, the target has the {@condition Stunned|XPHB} condition until the start of your next turn. On a successful save, the target's {@variantrule Speed|XPHB} is halved until the start of your next turn, and the next attack roll made against the target before then has {@variantrule Advantage|XPHB}."
+      ],
+      "level": 5,
+      "name": "Stunning Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Whenever you deal damage with your {@variantrule Unarmed Strike|XPHB}, it can deal your choice of Force damage or its normal damage type."
+      ],
+      "level": 6,
+      "name": "Empowered Strikes",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Monk subclass."
+      ],
+      "level": 6,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "When you're subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail.",
+        "You don't benefit from this feature if you have the {@condition Incapacitated|XPHB} condition."
+      ],
+      "level": 7,
+      "name": "Evasion",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "While you aren't wearing armor or wielding a {@item Shield|XPHB}, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the movement."
+      ],
+      "level": 9,
+      "name": "Acrobatic Movement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Your Flurry of Blows, Patient Defense, and Step of the Wind gain the following benefits.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "You can expend 1 Focus Point to use Flurry of Blows and make three Unarmed Strikes with it instead of two."
+              ],
+              "name": "Flurry of Blows",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "When you expend a Focus Point to use Patient Defense, you gain a number of {@variantrule Temporary Hit Points|XPHB} equal to two rolls of your Martial Arts die."
+              ],
+              "name": "Patient Defense",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "When you expend a Focus Point to use Step of the Wind, you can choose a willing creature within 5 feet of yourself that is Large or smaller. You move the creature with you until the end of your turn. The creature's movement doesn't provoke {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+              ],
+              "name": "Step of the Wind",
+              "type": "entries"
+            }
+          ],
+          "name": "",
+          "type": "entries"
+        }
+      ],
+      "level": 10,
+      "name": "Heightened Focus",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Through sheer force of will, you can remove one of the following conditions from yourself at the end of each of your turns: {@condition Charmed|XPHB}, {@condition Frightened|XPHB}, or {@condition Poisoned|XPHB}.",
+        "In addition, forgoing food and drink doesn't give you levels of {@condition Exhaustion|XPHB}."
+      ],
+      "level": 10,
+      "name": "Self-Restoration",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Monk subclass."
+      ],
+      "level": 11,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You can now use your Deflect Attacks feature against attacks that deal any damage type, not just Bludgeoning, Piercing, or Slashing."
+      ],
+      "level": 13,
+      "name": "Deflect Energy",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "name": "Focus Point"
+      },
+      "entries": [
+        "Your physical and mental discipline grant you proficiency in all saving throws.",
+        "Additionally, whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it, and you must use the new roll."
+      ],
+      "level": 14,
+      "name": "Disciplined Survivor",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "When you roll {@variantrule Initiative|XPHB} and don't use Uncanny Metabolism, you regain expended Focus Points until you have 4 if you have 3 or fewer."
+      ],
+      "level": 15,
+      "name": "Perfect Focus",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Monk subclass."
+      ],
+      "level": 17,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "amount": 3,
+        "name": "Focus Point"
+      },
+      "entries": [
+        "At the start of your turn, you can expend 3 Focus Points to bolster yourself against harm for 1 minute or until you have the {@condition Incapacitated|XPHB} condition. During that time, you have {@variantrule Resistance|XPHB} to all damage except Force damage."
+      ],
+      "level": 18,
+      "name": "Superior Defense",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an Epic Boon feat (see \"Feats\") or another feat of your choice for which you qualify. {@feat Boon of Irresistible Offense|XPHB} is recommended."
+      ],
+      "level": 19,
+      "name": "Epic Boon",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You have developed your body and mind to new heights. Your Dexterity and Wisdom scores increase by 4, to a maximum of 25."
+      ],
+      "level": 20,
+      "name": "Body and Mind",
+      "source": "XPHB",
+      "srd52": true
+    }
+  ],
+  "subclass": [
+    {
+      "additionalSpells": [
+        {
+          "ability": "wis",
+          "innate": {
+            "11": {
+              "daily": {
+                "1": [
+                  "sanctuary"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "className": "Monk",
+      "classSource": "PHB",
+      "edition": "classic",
+      "name": "Way of the Open Hand",
+      "shortName": "Open Hand",
+      "source": "PHB",
+      "srd": true,
+      "subclassFeatures": [
+        "Way of the Open Hand|Monk||Open Hand||3",
+        "Wholeness of Body|Monk||Open Hand||6",
+        "Tranquility|Monk||Open Hand||11",
+        "Quivering Palm|Monk||Open Hand||17"
+      ]
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "edition": "one",
+      "name": "Warrior of the Open Hand",
+      "shortName": "Open Hand",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassFeatures": [
+        "Warrior of the Open Hand|Monk|XPHB|Open Hand|XPHB|3",
+        "Wholeness of Body|Monk|XPHB|Open Hand|XPHB|6",
+        "Fleet Step|Monk|XPHB|Open Hand|XPHB|11",
+        "Quivering Palm|Monk|XPHB|Open Hand|XPHB|17"
+      ]
+    }
+  ],
+  "subclassFeature": [
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Monks of the Way of the Open Hand are the ultimate masters of martial arts combat, whether armed or unarmed. They learn techniques to push and trip their opponents, manipulate ki to heal damage to their bodies, and practice advanced meditation that can protect them from harm.",
+        {
+          "subclassFeature": "Open Hand Technique|Monk||Open Hand||3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Way of the Open Hand",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "You can manipulate your enemy's ki when you harness your own. Whenever you hit a creature with one of the attacks granted by your Flurry of Blows, you can impose one of the following effects on that target.",
+        {
+          "items": [
+            "It must succeed on a Dexterity saving throw or be knocked {@condition prone}.",
+            "It must make a Strength saving throw. If it fails, you can push it up to 15 feet away from you.",
+            "It can't take reactions until the end of your next turn."
+          ],
+          "type": "list"
+        }
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Open Hand Technique",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "You gain the ability to heal yourself. As an action, you can regain hit points equal to three times your monk level. You must finish a long rest before you can use this feature again."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Wholeness of Body",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 11th level, you can enter a special meditation that surrounds you with an aura of peace. At the end of a long rest, you gain the effect of a {@spell sanctuary} spell that lasts until the start of your next long rest (the spell can end early as normal). The saving throw DC for the spell equals 8 + your Wisdom modifier + your proficiency bonus."
+      ],
+      "header": 2,
+      "level": 11,
+      "name": "Tranquility",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "PHB",
+      "consumes": {
+        "amount": 3,
+        "name": "Ki"
+      },
+      "entries": [
+        "You gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an unarmed strike, you can spend 3 ki points to start these imperceptible vibrations, which last for a number of days equal to your monk level. The vibrations are harmless unless you use your action to end them. To do so, you and the target must be on the same plane of existence. When you use this action, the creature must make a Constitution saving throw. If it fails, it is reduced to 0 hit points. If it succeeds, it takes {@damage 10d10} necrotic damage.",
+        "You can have only one creature under the effect of this feature at a time. You can choose to end the vibrations harmlessly without using an action."
+      ],
+      "header": 2,
+      "level": 17,
+      "name": "Quivering Palm",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "Whenever you hit a creature with an attack granted by your Flurry of Blows, you can impose one of the following effects on that target.",
+        {
+          "entries": [
+            "The target can't make {@action Opportunity Attack|XPHB|Opportunity Attacks} until the start of its next turn."
+          ],
+          "name": "Addle",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The target must succeed on a Strength saving throw or be pushed up to 15 feet away from you."
+          ],
+          "name": "Push",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The target must succeed on a Dexterity saving throw or have the {@condition Prone|XPHB} condition."
+          ],
+          "name": "Topple",
+          "type": "entries"
+        }
+      ],
+      "level": 3,
+      "name": "Open Hand Technique",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "{@i Master Unarmed Combat Techniques}",
+        "Warriors of the Open Hand are masters of unarmed combat. They learn techniques to push and trip their opponents and manipulate their own energy to protect themselves from harm.",
+        {
+          "subclassFeature": "Open Hand Technique|Monk|XPHB|Open Hand|XPHB|3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Warrior of the Open Hand",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the ability to heal yourself. As a {@variantrule Bonus Action|XPHB}, you can roll your Martial Arts die. You regain a number of {@variantrule Hit Points|XPHB} equal to the number rolled plus your Wisdom modifier (minimum of 1 {@variantrule Hit Points|XPHB|Hit Point} regained).",
+        "You can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Wholeness of Body",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "entries": [
+        "When you take a {@variantrule Bonus Action|XPHB} other than Step of the Wind, you can also use Step of the Wind immediately after that {@variantrule Bonus Action|XPHB}."
+      ],
+      "header": 2,
+      "level": 11,
+      "name": "Fleet Step",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Monk",
+      "classSource": "XPHB",
+      "consumes": {
+        "amount": 4,
+        "name": "Focus Point"
+      },
+      "entries": [
+        "You gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an {@variantrule Unarmed Strike|XPHB}, you can expend 4 Focus Points to start these imperceptible vibrations, which last for a number of days equal to your Monk level. The vibrations are harmless unless you take an action to end them. Alternatively, when you take the {@action Attack|XPHB} action on your turn, you can forgo one of the attacks to end the vibrations. To end them, you and the target must be on the same plane of existence. When you end them, the target must make a Constitution saving throw, taking {@damage 10d12} Force damage on a failed save or half as much damage on a successful one.",
+        "You can have only one creature under the effect of this feature at a time. You can end the vibrations harmlessly (no action required)."
+      ],
+      "header": 2,
+      "level": 17,
+      "name": "Quivering Palm",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Open Hand",
+      "subclassSource": "XPHB"
+    }
+  ]
+}

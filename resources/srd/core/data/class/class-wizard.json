@@ -1,0 +1,1789 @@
+{
+  "class": [
+    {
+      "cantripProgression": [
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "casterProgression": "full",
+      "classFeatures": [
+        "Arcane Recovery|Wizard||1",
+        "Spellcasting|Wizard||1",
+        {
+          "classFeature": "Arcane Tradition|Wizard||2",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard||4",
+        {
+          "classFeature": "Arcane Tradition feature|Wizard||6",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard||8",
+        {
+          "classFeature": "Arcane Tradition feature|Wizard||10",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard||12",
+        {
+          "classFeature": "Arcane Tradition feature|Wizard||14",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard||16",
+        "Spell Mastery|Wizard||18",
+        "Ability Score Improvement|Wizard||19",
+        "Signature Spells|Wizard||20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "{@filter Cantrips Known|spells|level=0|class=Wizard}"
+          ],
+          "rows": [
+            [
+              3
+            ],
+            [
+              3
+            ],
+            [
+              3
+            ],
+            [
+              4
+            ],
+            [
+              4
+            ],
+            [
+              4
+            ],
+            [
+              4
+            ],
+            [
+              4
+            ],
+            [
+              4
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ],
+            [
+              5
+            ]
+          ]
+        },
+        {
+          "colLabels": [
+            "{@filter 1st|spells|level=1|class=Wizard}",
+            "{@filter 2nd|spells|level=2|class=Wizard}",
+            "{@filter 3rd|spells|level=3|class=Wizard}",
+            "{@filter 4th|spells|level=4|class=Wizard}",
+            "{@filter 5th|spells|level=5|class=Wizard}",
+            "{@filter 6th|spells|level=6|class=Wizard}",
+            "{@filter 7th|spells|level=7|class=Wizard}",
+            "{@filter 8th|spells|level=8|class=Wizard}",
+            "{@filter 9th|spells|level=9|class=Wizard}"
+          ],
+          "rowsSpellProgression": [
+            [
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              2,
+              2,
+              1,
+              1
+            ]
+          ],
+          "title": "Spell Slots per Spell Level"
+        }
+      ],
+      "edition": "classic",
+      "hd": {
+        "faces": 6,
+        "number": 1
+      },
+      "multiclassing": {
+        "requirements": {
+          "int": 13
+        }
+      },
+      "name": "Wizard",
+      "preparedSpells": "<$level$> + <$int_mod$>",
+      "proficiency": [
+        "int",
+        "wis"
+      ],
+      "source": "PHB",
+      "spellcastingAbility": "int",
+      "spellsKnownProgressionFixed": [
+        6,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "spellsKnownProgressionFixedAllowLowerLevel": true,
+      "srd": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "default": [
+          "(a) a {@item quarterstaff|phb} or (b) a {@item dagger|phb}",
+          "(a) a {@item component pouch|phb} or (b) an {@item arcane focus|phb}",
+          "(a) a {@item scholar's pack|phb} or (b) an {@item explorer's pack|phb}",
+          "A {@item spellbook|phb}"
+        ],
+        "defaultData": [
+          {
+            "a": [
+              "quarterstaff|phb"
+            ],
+            "b": [
+              "dagger|phb"
+            ]
+          },
+          {
+            "a": [
+              "component pouch|phb"
+            ],
+            "b": [
+              {
+                "equipmentType": "focusSpellcastingArcane"
+              }
+            ]
+          },
+          {
+            "a": [
+              "scholar's pack|phb"
+            ],
+            "b": [
+              "explorer's pack|phb"
+            ]
+          },
+          {
+            "_": [
+              "spellbook|phb"
+            ]
+          }
+        ],
+        "goldAlternative": "{@dice 4d4 × 10|4d4 × 10|Starting Gold}"
+      },
+      "startingProficiencies": {
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "arcana",
+                "history",
+                "insight",
+                "investigation",
+                "medicine",
+                "religion"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "{@item dagger|phb|daggers}",
+          "{@item dart|phb|darts}",
+          "{@item sling|phb|slings}",
+          "{@item quarterstaff|phb|quarterstaffs}",
+          "{@item light crossbow|phb|light crossbows}"
+        ]
+      },
+      "subclassTitle": "Arcane Tradition"
+    },
+    {
+      "cantripProgression": [
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "casterProgression": "full",
+      "classFeatures": [
+        "Spellcasting|Wizard|XPHB|1",
+        "Ritual Adept|Wizard|XPHB|1",
+        "Arcane Recovery|Wizard|XPHB|1",
+        "Scholar|Wizard|XPHB|2",
+        {
+          "classFeature": "Wizard Subclass|Wizard|XPHB|3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard|XPHB|4",
+        "Memorize Spell|Wizard|XPHB|5",
+        {
+          "classFeature": "Subclass Feature|Wizard|XPHB|6",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard|XPHB|8",
+        {
+          "classFeature": "Subclass Feature|Wizard|XPHB|10",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard|XPHB|12",
+        {
+          "classFeature": "Subclass Feature|Wizard|XPHB|14",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Wizard|XPHB|16",
+        "Spell Mastery|Wizard|XPHB|18",
+        "Epic Boon|Wizard|XPHB|19",
+        "Signature Spells|Wizard|XPHB|20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "{@filter Cantrips|spells|level=0|class=Wizard}",
+            "{@filter Prepared Spells|spells|level=!0|class=Wizard}"
+          ],
+          "rows": [
+            [
+              3,
+              4
+            ],
+            [
+              3,
+              5
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              4,
+              7
+            ],
+            [
+              4,
+              9
+            ],
+            [
+              4,
+              10
+            ],
+            [
+              4,
+              11
+            ],
+            [
+              4,
+              12
+            ],
+            [
+              4,
+              14
+            ],
+            [
+              5,
+              15
+            ],
+            [
+              5,
+              16
+            ],
+            [
+              5,
+              16
+            ],
+            [
+              5,
+              17
+            ],
+            [
+              5,
+              18
+            ],
+            [
+              5,
+              19
+            ],
+            [
+              5,
+              21
+            ],
+            [
+              5,
+              22
+            ],
+            [
+              5,
+              23
+            ],
+            [
+              5,
+              24
+            ],
+            [
+              5,
+              25
+            ]
+          ]
+        },
+        {
+          "colLabels": [
+            "{@filter 1st|spells|level=1|class=Wizard}",
+            "{@filter 2nd|spells|level=2|class=Wizard}",
+            "{@filter 3rd|spells|level=3|class=Wizard}",
+            "{@filter 4th|spells|level=4|class=Wizard}",
+            "{@filter 5th|spells|level=5|class=Wizard}",
+            "{@filter 6th|spells|level=6|class=Wizard}",
+            "{@filter 7th|spells|level=7|class=Wizard}",
+            "{@filter 8th|spells|level=8|class=Wizard}",
+            "{@filter 9th|spells|level=9|class=Wizard}"
+          ],
+          "rowsSpellProgression": [
+            [
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              2,
+              1,
+              1,
+              1
+            ],
+            [
+              4,
+              3,
+              3,
+              3,
+              3,
+              2,
+              2,
+              1,
+              1
+            ]
+          ],
+          "title": "Spell Slots per Spell Level"
+        }
+      ],
+      "edition": "one",
+      "featProgression": [
+        {
+          "category": [
+            "EB"
+          ],
+          "name": "Epic Boon",
+          "progression": {
+            "19": 1
+          }
+        }
+      ],
+      "hd": {
+        "faces": 6,
+        "number": 1
+      },
+      "multiclassing": {},
+      "name": "Wizard",
+      "preparedSpellsChange": "restLong",
+      "preparedSpellsProgression": [
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        14,
+        15,
+        16,
+        16,
+        17,
+        18,
+        19,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "primaryAbility": [
+        {
+          "int": true
+        }
+      ],
+      "proficiency": [
+        "int",
+        "wis"
+      ],
+      "source": "XPHB",
+      "spellcastingAbility": "int",
+      "spellsKnownProgressionFixed": [
+        6,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "spellsKnownProgressionFixedAllowLowerLevel": true,
+      "srd52": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "defaultData": [
+          {
+            "A": [
+              {
+                "item": "dagger|xphb",
+                "quantity": 2
+              },
+              {
+                "item": "quarterstaff|xphb"
+              },
+              {
+                "item": "robe|xphb"
+              },
+              {
+                "special": "Spellbook"
+              },
+              {
+                "item": "scholar's pack|xphb"
+              },
+              {
+                "value": 500
+              }
+            ],
+            "B": [
+              {
+                "value": 5500
+              }
+            ]
+          }
+        ],
+        "entries": [
+          "{@i Choose A or B:} (A) 2 {@item Dagger|XPHB|Daggers}, {@item Arcane Focus|XPHB} ({@item Quarterstaff|XPHB}), {@item Robe|XPHB}, Spellbook, {@item Scholar's Pack|XPHB}, and 5 GP; or (B) 55 GP"
+        ]
+      },
+      "startingProficiencies": {
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "arcana",
+                "history",
+                "insight",
+                "investigation",
+                "medicine",
+                "nature",
+                "religion"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "simple"
+        ]
+      },
+      "subclassTitle": "Wizard Subclass"
+    }
+  ],
+  "classFeature": [
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "You have learned to regain some of your magical energy by studying your spellbook. Once per day when you finish a short rest, you can choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your wizard level (rounded up), and none of the slots can be 6th level or higher.",
+        "For example, if you're a 4th-level wizard, you can recover up to two levels worth of spell slots. You can recover either a 2nd-level spell slot or two 1st-level spell slots."
+      ],
+      "level": 1,
+      "name": "Arcane Recovery",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "As a student of arcane magic, you have a spellbook containing spells that show the first glimmerings of your true power.",
+        {
+          "entries": [
+            "At 1st level, you know three cantrips of your choice from the wizard spell list. You learn additional wizard cantrips of your choice at higher levels, as shown in the Cantrips Known column of the Wizard table."
+          ],
+          "name": "Cantrips",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "At 1st level, you have a spellbook containing six 1st-level {@filter wizard spells|spells|class=wizard} of your choice. Your spellbook is the repository of the wizard spells you know, except your cantrips, which are fixed in your mind."
+          ],
+          "name": "Spellbook",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The Wizard table shows how many spell slots you have to cast your spells of 1st level and higher. To cast one of these spells, you must expend a slot of the spell's level or higher. You regain all expended spell slots when you finish a long rest.",
+            "You prepare the list of wizard spells that are available for you to cast. To do so, choose a number of wizard spells from your spellbook equal to your Intelligence modifier + your wizard level (minimum of one spell). The spells must be of a level for which you have spell slots.",
+            "For example, if you're a 3rd-level wizard, you have four 1st-level and two 2nd-level spell slots. With an Intelligence of 16, your list of prepared spells can include six spells of 1st or 2nd level, in any combination, chosen from your spellbook. If you prepare the 1st-level spell {@spell magic missile}, you can cast it using a 1st-level or a 2nd-level slot. Casting the spell doesn't remove it from your list of prepared spells.",
+            "You can change your list of prepared spells when you finish a long rest. Preparing a new list of wizard spells requires time spent studying your spellbook and memorizing the incantations and gestures you must make to cast the spell: at least 1 minute per spell level for each spell on your list."
+          ],
+          "name": "Preparing and Casting Spells",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Intelligence is your spellcasting ability for your wizard spells, since you learn your spells through dedicated study and memorization. You use your Intelligence whenever a spell refers to your spellcasting ability. In addition, you use your Intelligence modifier when setting the saving throw DC for a wizard spell you cast and when making an attack roll with one.",
+            {
+              "attributes": [
+                "int"
+              ],
+              "name": "Spell",
+              "type": "abilityDc"
+            },
+            {
+              "attributes": [
+                "int"
+              ],
+              "name": "Spell",
+              "type": "abilityAttackMod"
+            }
+          ],
+          "name": "Spellcasting Ability",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can cast a wizard spell as a ritual if that spell has the ritual tag and you have the spell in your spellbook. You don't need to have the spell prepared."
+          ],
+          "name": "Ritual Casting",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can use an {@item arcane focus|phb} as a spellcasting focus for your wizard spells."
+          ],
+          "name": "Spellcasting Focus",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Each time you gain a wizard level, you can add two wizard spells of your choice to your spellbook. Each of these spells must be of a level for which you have spell slots, as shown on the Wizard table. On your adventures, you might find other spells that you can add to your spellbook (see \"Your Spellbook\")."
+          ],
+          "name": "Learning Spells of 1st Level and Higher",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The spells that you add to your spellbook as you gain levels reflect the arcane research you conduct on your own, as well as intellectual breakthroughs you have had about the nature of the multiverse. You might find other spells during your adventures. You could discover a spell recorded on a scroll in an evil wizard's chest, for example, or in a dusty tome in an ancient library.",
+            "A spellbook doesn't contain cantrips.",
+            {
+              "entries": [
+                {
+                  "entries": [
+                    "When you find a wizard spell of 1st level or higher, you can add it to your spellbook if it is of a spell level you can prepare and if you can spare the time to decipher and copy it.",
+                    "Copying a spell into your spellbook involves reproducing the basic form of the spell, then deciphering the unique system of notation used by the wizard who wrote it. You must practice the spell until you understand the sounds or gestures required, then transcribe it into your spellbook using your own notation.",
+                    "For each level of the spell, the process takes 2 hours and costs 50 gp. The cost represents material components you expend as you experiment with the spell to master it, as well as the fine inks you need to record it. Once you have spent this time and money, you can prepare the spell just like your other spells.",
+                    {
+                      "entries": [
+                        "A wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When you copy a spell from a spell scroll, you must succeed on an Intelligence ({@skill Arcana}) check with a DC equal to 10 + the spell's level. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed."
+                      ],
+                      "name": "Copying from a Spell Scroll",
+                      "source": "DMG",
+                      "type": "entries"
+                    }
+                  ],
+                  "name": "Copying a Spell into the Book",
+                  "type": "entries"
+                }
+              ],
+              "type": "entries"
+            },
+            {
+              "entries": [
+                {
+                  "entries": [
+                    "You can copy a spell from your own spellbook into another book—for example, if you want to make a backup copy of your spellbook. This is just like copying a new spell into your spellbook, but faster and easier, since you understand your own notation and already know how to cast the spell. You need spend only 1 hour and 10 gp for each level of the copied spell.",
+                    "If you lose your spellbook, you can use the same procedure to transcribe the spells that you have prepared into a new spellbook. Filling out the remainder of your spellbook requires you to find new spells to do so, as normal. For this reason, many wizards keep backup spellbooks in a safe place."
+                  ],
+                  "name": "Replacing the Book",
+                  "type": "entries"
+                }
+              ],
+              "type": "entries"
+            },
+            {
+              "entries": [
+                {
+                  "entries": [
+                    "Your spellbook is a unique compilation of spells, with its own decorative flourishes and margin notes. It might be a plain, functional leather volume that you received as a gift from your master, a finely bound gilt-edged tome you found in an ancient library, or even a loose collection of notes scrounged together after you lost your previous spellbook in a mishap."
+                  ],
+                  "name": "The Book's Appearance",
+                  "type": "entries"
+                }
+              ],
+              "type": "entries"
+            }
+          ],
+          "name": "Your Spellbook",
+          "type": "inset"
+        }
+      ],
+      "level": 1,
+      "name": "Spellcasting",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 2nd level, you choose an arcane tradition from the list of available traditions, shaping your practice of magic. Your choice grants you features at 2nd level and again at 6th, 10th, and 14th level."
+      ],
+      "level": 2,
+      "name": "Arcane Tradition",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "At 6th level, you gain a feature granted by your Arcane Tradition."
+      ],
+      "level": 6,
+      "name": "Arcane Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "At 10th level, you gain a feature granted by your Arcane Tradition."
+      ],
+      "level": 10,
+      "name": "Arcane Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "At 14th level, you gain a feature granted by your Arcane Tradition."
+      ],
+      "level": 14,
+      "name": "Arcane Tradition feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "At 18th level, you have achieved such mastery over certain spells that you can cast them at will. Choose a 1st-level wizard spell and a 2nd-level wizard spell that are in your spellbook. You can cast those spells at their lowest level without expending a spell slot when you have them prepared. If you want to cast either spell at a higher level, you must expend a spell slot as normal.",
+        "By spending 8 hours in study, you can exchange one or both of the spells you chose for different spells of the same levels."
+      ],
+      "level": 18,
+      "name": "Spell Mastery",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 19,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 20th level, you gain mastery over two powerful spells and can cast them with little effort. Choose two 3rd-level wizard spells in your spellbook as your signature spells. You always have these spells prepared, they don't count against the number of spells you have prepared, and you can cast each of them once at 3rd level without expending a spell slot. When you do so, you can't do so again until you finish a short or long rest.",
+        "If you want to cast either spell at a higher level, you must expend a spell slot as normal."
+      ],
+      "level": 20,
+      "name": "Signature Spells",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You can regain some of your magical energy by studying your spellbook. When you finish a {@variantrule Short Rest|XPHB}, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. For example, if you're a level 4 Wizard, you can recover up to two levels' worth of spell slots, regaining either one level 2 spell slot or two level 1 spell slots.",
+        "Once you use this feature, you can't do so again until you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "level": 1,
+      "name": "Arcane Recovery",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You can cast any spell as a {@variantrule Ritual|XPHB} if that spell has the {@variantrule Ritual|XPHB} tag and the spell is in your spellbook. You needn't have the spell prepared, but you must read from the book to cast a spell in this way."
+      ],
+      "level": 1,
+      "name": "Ritual Adept",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "As a student of arcane magic, you have learned to cast spells. See Spells for the rules on spellcasting. The information below details how you use those rules with Wizard spells, which appear in the {@filter Wizard spell list|spells|class=Wizard} later in the class's description.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "You know three Wizard cantrips of your choice. {@spell Light|XPHB}, {@spell Mage Hand|XPHB}, and {@spell Ray of Frost|XPHB} are recommended. Whenever you finish a {@variantrule Long Rest|XPHB}, you can replace one of your cantrips from this feature with another Wizard cantrip of your choice.",
+                "When you reach Wizard levels 4 and 10, you learn another Wizard cantrip of your choice, as shown in the Cantrips column of the Wizard Features table."
+              ],
+              "name": "Cantrips",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Your wizardly apprenticeship culminated in the creation of a unique book: your spellbook. It is a Tiny object that weighs 3 pounds, contains 100 pages, and can be read only by you or someone casting {@spell Identify|XPHB}. You determine the book's appearance and materials, such as a gilt-edged tome or a collection of vellum bound with twine.",
+                "The book contains the level 1+ spells you know. It starts with six level 1 Wizard spells of your choice. {@spell Detect Magic|XPHB}, {@spell Feather Fall|XPHB}, {@spell Mage Armor|XPHB}, {@spell Magic Missile|XPHB}, {@spell Sleep|XPHB}, and {@spell Thunderwave|XPHB} are recommended.",
+                "Whenever you gain a Wizard level after 1, add two Wizard spells of your choice to your spellbook. Each of these spells must be of a level for which you have spell slots, as shown in the Wizard Features table. The spells are the culmination of arcane research you do regularly."
+              ],
+              "name": "Spellbook",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "The Wizard Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a {@variantrule Long Rest|XPHB}."
+              ],
+              "name": "Spell Slots",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You prepare the list of level 1+ spells that are available for you to cast with this feature. To do so, choose four spells from your spellbook. The chosen spells must be of a level for which you have spell slots.",
+                "The number of spells on your list increases as you gain Wizard levels, as shown in the Prepared Spells column of the Wizard Features table. Whenever that number increases, choose additional Wizard spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level for which you have spell slots. For example, if you're a level 3 Wizard, your list of prepared spells can include six spells of levels 1 and 2 in any combination, chosen from your spellbook.",
+                "If another Wizard feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare with this feature, but those spells otherwise count as Wizard spells for you."
+              ],
+              "name": "Prepared Spells of Level 1+",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Whenever you finish a {@variantrule Long Rest|XPHB}, you can change your list of prepared spells, replacing any of the spells there with spells from your spellbook."
+              ],
+              "name": "Changing Your Prepared Spells",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Intelligence is your spellcasting ability for your Wizard spells."
+              ],
+              "name": "Spellcasting Ability",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You can use an {@item Arcane Focus|XPHB} or your spellbook as a {@variantrule Spellcasting Focus|XPHB} for your Wizard spells."
+              ],
+              "name": "Spellcasting Focus",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "The spells you add to your spellbook as you gain levels reflect your ongoing magical research, but you might find other spells during your adventures that you can add to the book. You could discover a Wizard spell on a {@item Spell Scroll|XDMG}, for example, and then copy it into your spellbook.",
+                {
+                  "entries": [
+                    "When you find a level 1+ Wizard spell, you can copy it into your spellbook if it's of a level you can prepare and if you have time to copy it. For each level of the spell, the transcription takes 2 hours and costs 50 GP. Afterward you can prepare the spell like the other spells in your spellbook."
+                  ],
+                  "name": "Copying a Spell into the Book",
+                  "type": "entries"
+                },
+                {
+                  "entries": [
+                    "You can copy a spell from your spellbook into another book. This is like copying a new spell into your spellbook but faster, since you already know how to cast the spell. You need spend only 1 hour and 10 GP for each level of the copied spell.",
+                    "If you lose your spellbook, you can use the same procedure to transcribe the Wizard spells that you have prepared into a new spellbook. Filling out the remainder of the new book requires you to find new spells to do so. For this reason, many wizards keep a backup spellbook."
+                  ],
+                  "name": "Copying the Book",
+                  "type": "entries"
+                }
+              ],
+              "name": "Expanding and Replacing a Spellbook",
+              "type": "inset"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 1,
+      "name": "Spellcasting",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "While studying magic, you also specialized in another field of study. Choose one of the following skills in which you have proficiency: {@skill Arcana|XPHB}, {@skill History|XPHB}, {@skill Investigation|XPHB}, {@skill Medicine|XPHB}, {@skill Nature|XPHB}, or {@skill Religion|XPHB}. You have {@variantrule Expertise|XPHB} in the chosen skill."
+      ],
+      "level": 2,
+      "name": "Scholar",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a Wizard subclass of your choice. A subclass is a specialization that grants you features at certain Wizard levels. For the rest of your career, you gain each of your subclass's features that are of your Wizard level or lower."
+      ],
+      "level": 3,
+      "name": "Wizard Subclass",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Wizard levels 8, 12, and 16."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "Whenever you finish a {@variantrule Short Rest|XPHB}, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book."
+      ],
+      "level": 5,
+      "name": "Memorize Spell",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Wizard Subclass."
+      ],
+      "level": 6,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Wizard Subclass."
+      ],
+      "level": 10,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Wizard Subclass."
+      ],
+      "level": 14,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You have achieved such mastery over certain spells that you can cast them at will. Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an action. You always have those spells prepared, and you can cast them at their lowest level without expending a spell slot. To cast either spell at a higher level, you must expend a spell slot.",
+        "Whenever you finish a {@variantrule Long Rest|XPHB}, you can study your spellbook and replace one of those spells with an eligible spell of the same level from the book."
+      ],
+      "level": 18,
+      "name": "Spell Mastery",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an Epic Boon feat (see \"Feats\") or another feat of your choice for which you qualify. {@feat Boon of Spell Recall|XPHB} is recommended."
+      ],
+      "level": 19,
+      "name": "Epic Boon",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. When you do so, you can't cast them in this way again until you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}. To cast either spell at a higher level, you must expend a spell slot."
+      ],
+      "level": 20,
+      "name": "Signature Spells",
+      "source": "XPHB",
+      "srd52": true
+    }
+  ],
+  "subclass": [
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "edition": "classic",
+      "name": "School of Evocation",
+      "shortName": "Evocation",
+      "source": "PHB",
+      "srd": true,
+      "subclassFeatures": [
+        "School of Evocation|Wizard||Evocation||2",
+        "Potent Cantrip|Wizard||Evocation||6",
+        "Empowered Evocation|Wizard||Evocation||10",
+        "Overchannel|Wizard||Evocation||14"
+      ]
+    },
+    {
+      "additionalSpells": [
+        {
+          "known": {
+            "3": [
+              {
+                "choose": "level=0;1;2|class=Wizard|school=V"
+              },
+              {
+                "choose": "level=0;1;2|class=Wizard|school=V"
+              }
+            ],
+            "5": [
+              {
+                "choose": "level=0;1;2;3|class=Wizard|school=V"
+              }
+            ],
+            "7": [
+              {
+                "choose": "level=0;1;2;3;4|class=Wizard|school=V"
+              }
+            ],
+            "9": [
+              {
+                "choose": "level=0;1;2;3;4;5|class=Wizard|school=V"
+              }
+            ],
+            "11": [
+              {
+                "choose": "level=0;1;2;3;4;5;6|class=Wizard|school=V"
+              }
+            ],
+            "13": [
+              {
+                "choose": "level=0;1;2;3;4;5;6;7|class=Wizard|school=V"
+              }
+            ],
+            "15": [
+              {
+                "choose": "level=0;1;2;3;4;5;6;7;8|class=Wizard|school=V"
+              }
+            ],
+            "17": [
+              {
+                "choose": "level=0;1;2;3;4;5;6;7;8;9|class=Wizard|school=V"
+              }
+            ]
+          }
+        }
+      ],
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "edition": "one",
+      "name": "Evoker",
+      "shortName": "Evoker",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassFeatures": [
+        "Evoker|Wizard|XPHB|Evoker|XPHB|3",
+        "Sculpt Spells|Wizard|XPHB|Evoker|XPHB|6",
+        "Empowered Evocation|Wizard|XPHB|Evoker|XPHB|10",
+        "Overchannel|Wizard|XPHB|Evoker|XPHB|14"
+      ]
+    }
+  ],
+  "subclassFeature": [
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "You focus your study on magic that creates powerful elemental effects such as bitter cold, searing flame, rolling thunder, crackling lightning, and burning acid. Some evokers find employment in military forces, serving as artillery to blast enemy armies from afar. Others use their spectacular power to protect the weak, while some seek their own gain as bandits, adventurers, or aspiring tyrants.",
+        {
+          "subclassFeature": "Evocation Savant|Wizard||Evocation||2",
+          "type": "refSubclassFeature"
+        },
+        {
+          "subclassFeature": "Sculpt Spells|Wizard||Evocation||2",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 2,
+      "name": "School of Evocation",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning when you select this school at 2nd level, the gold and time you must spend to copy an evocation spell into your spellbook is halved."
+      ],
+      "header": 1,
+      "level": 2,
+      "name": "Evocation Savant",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 2nd level, you can create pockets of relative safety within the effects of your evocation spells. When you cast an evocation spell that affects other creatures that you can see, you can choose a number of them equal to 1 + the spell's level. The chosen creatures automatically succeed on their saving throws against the spell, and they take no damage if they would normally take half damage on a successful save."
+      ],
+      "header": 1,
+      "level": 2,
+      "name": "Sculpt Spells",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 6th level, your damaging cantrips affect even creatures that avoid the brunt of the effect. When a creature succeeds on a saving throw against your cantrip, the creature takes half the cantrip's damage (if any) but suffers no additional effect from the cantrip."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Potent Cantrip",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 10th level, you can add your Intelligence modifier to one damage roll of any wizard evocation spell you cast."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Empowered Evocation",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 14th level, you can increase the power of your simpler spells. When you cast a wizard spell of 1st through 5th-level that deals damage, you can deal maximum damage with that spell.",
+        "The first time you do so, you suffer no adverse effect. If you use this feature again before you finish a long rest, you take {@damage 2d12} necrotic damage for each level of the spell, immediately after you cast it. Each time you use this feature again before finishing a long rest, the necrotic damage per spell level increases by {@damage 1d12}. This damage ignores resistance and immunity."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Overchannel",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "{@i Create Explosive Elemental Effects}",
+        "Your studies focus on magic that creates powerful elemental effects such as bitter cold, searing flame, rolling thunder, crackling lightning, and burning acid. Some Evokers find employment in military forces, serving as artillery to blast armies from afar. Others use their power to protect others, while some seek their own gain.",
+        {
+          "subclassFeature": "Evocation Savant|Wizard|XPHB|Evoker|XPHB|3",
+          "type": "refSubclassFeature"
+        },
+        {
+          "subclassFeature": "Potent Cantrip|Wizard|XPHB|Evoker|XPHB|3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Evoker",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "Choose two {@filter Wizard spells from the Evocation school|spells|level=0;1;2|class=Wizard|school=V}, each of which must be no higher than level 2, and add them to your spellbook for free.",
+        "In addition, whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell from the Evocation school to your spellbook for free. The chosen spell must be of a level for which you have spell slots."
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Evocation Savant",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "Your damaging cantrips affect even creatures that avoid the brunt of the effect. When you cast a cantrip at a creature and you miss with the attack roll or the target succeeds on a saving throw against the cantrip, the target takes half the cantrip's damage (if any) but suffers no additional effect from the cantrip."
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Potent Cantrip",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You can create pockets of relative safety within the effects of your evocations. When you cast an Evocation spell that affects other creatures that you can see, you can choose a number of them equal to 1 plus the spell's level. The chosen creatures automatically succeed on their saving throws against the spell, and they take no damage if they would normally take half damage on a successful save."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Sculpt Spells",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "Whenever you cast a Wizard spell from the Evocation school, you can add your Intelligence modifier to one damage roll of that spell."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Empowered Evocation",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "entries": [
+        "You can increase the power of your spells. When you cast a Wizard spell with a spell slot of levels 1–5 that deals damage, you can deal maximum damage with that spell on the turn you cast it.",
+        "The first time you do so, you suffer no adverse effect. If you use this feature again before you finish a {@variantrule Long Rest|XPHB}, you take {@damage 2d12} Necrotic damage for each level of the spell slot immediately after you cast it. This damage ignores {@variantrule Resistance|XPHB} and {@variantrule Immunity|XPHB}.",
+        "Each time you use this feature again before finishing a {@variantrule Long Rest|XPHB}, the Necrotic damage per spell level increases by {@damage 1d12}."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Overchannel",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Evoker",
+      "subclassSource": "XPHB"
+    }
+  ]
+}

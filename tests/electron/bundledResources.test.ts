@@ -18,23 +18,12 @@ afterEach(async () => {
 })
 
 describe('bundled resource boundary', () => {
-  test('uses review output only for unpackaged development', async () => {
+  test('uses the committed bundle in development and packaged resources in release builds', async () => {
     const repositoryRoot = await mkdtemp(join(tmpdir(), 'tavern-born-repository-'))
     roots.push(repositoryRoot)
     const managedRoot = join(repositoryRoot, 'resources', 'srd', 'core')
-    const reviewRoot = join(repositoryRoot, '.tmp', 'srd-review')
     await mkdir(managedRoot, { recursive: true })
-    await mkdir(reviewRoot, { recursive: true })
 
-    expect(
-      resolveBundledPackRoot({
-        isPackaged: false,
-        resourcesPath: join(repositoryRoot, 'packaged-resources'),
-        repositoryRoot,
-      }),
-    ).toBe(reviewRoot)
-
-    await writeFile(join(managedRoot, 'manifest.json'), '{}', 'utf8')
     expect(
       resolveBundledPackRoot({
         isPackaged: false,
@@ -51,7 +40,7 @@ describe('bundled resource boundary', () => {
     ).toBe(join(repositoryRoot, 'packaged-resources', 'srd', 'core'))
   })
 
-  test('allows review data in development but rejects it in a packaged build', () => {
+  test('rejects a bundled manifest that has not been approved', () => {
     const manifest = {
       schemaVersion: 1,
       packId: 'tavern-born-srd-core',
@@ -62,8 +51,7 @@ describe('bundled resource boundary', () => {
       transformationNotice: 'Test transformation.',
     }
 
-    expect(() => assertBundledManifestAllowed(manifest, false)).not.toThrow()
-    expect(() => assertBundledManifestAllowed(manifest, true)).toThrow(
+    expect(() => assertBundledManifestAllowed(manifest)).toThrow(
       'Bundled SRD manifest is not approved for distribution',
     )
   })

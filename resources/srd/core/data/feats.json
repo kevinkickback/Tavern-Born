@@ -1,0 +1,886 @@
+{
+  "feat": [
+    {
+      "ability": [
+        {
+          "choose": {
+            "amount": 2,
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "hidden": true
+        },
+        {
+          "choose": {
+            "count": 2,
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "hidden": true
+        }
+      ],
+      "category": "G",
+      "entries": [
+        "Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20.",
+        {
+          "entries": [
+            "You can take this feat more than once."
+          ],
+          "name": "Repeatable",
+          "type": "entries"
+        }
+      ],
+      "name": "Ability Score Improvement",
+      "prerequisite": [
+        {
+          "level": 4
+        }
+      ],
+      "repeatable": true,
+      "repeatableHidden": true,
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "O",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "When you roll {@variantrule Initiative|XPHB}, you can add your {@variantrule Proficiency|XPHB|Proficiency Bonus} to the roll."
+          ],
+          "name": "Initiative Proficiency",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Immediately after you roll {@variantrule Initiative|XPHB}, you can swap your {@variantrule Initiative|XPHB} with the {@variantrule Initiative|XPHB} of one willing ally in the same combat. You can't make this swap if you or the ally has the {@condition Incapacitated|XPHB} condition."
+          ],
+          "name": "Initiative Swap",
+          "type": "entries"
+        }
+      ],
+      "name": "Alert",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "FS",
+      "entries": [
+        "You gain a +2 bonus to attack rolls you make with Ranged weapons."
+      ],
+      "name": "Archery",
+      "prerequisite": [
+        {
+          "feature": [
+            "Fighting Style"
+          ]
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
+          ],
+          "name": "Peerless Aim",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Combat Prowess",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "Immediately after you take the {@action Attack|XPHB} action or the {@action Magic|XPHB} action, you can teleport up to 30 feet to an unoccupied space you can see."
+          ],
+          "name": "Blink Steps",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Dimensional Travel",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "When you or another creature within 60 feet of you succeeds on or fails a {@variantrule D20 Test|XPHB}, you can roll {@dice 2d4} and apply the total rolled as a bonus or penalty to the {@dice d20} roll. Once you use this benefit, you can't use it again until you roll {@variantrule Initiative|XPHB} or finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}."
+          ],
+          "name": "Improve Fate",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Fate",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "The Bludgeoning, Piercing, and Slashing damage you deal always ignores {@variantrule Resistance|XPHB}."
+          ],
+          "name": "Overcome Defenses",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "When you roll a 20 on the {@dice d20} for an attack roll, you can deal extra damage to the target equal to the ability score increased by this feat. The extra damage's type is the same as the attack's type."
+          ],
+          "name": "Overwhelming Strike",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Irresistible Offense",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "Whenever you cast a spell with a level 1-4 spell slot, roll {@dice 1d4}. If the number you roll is the same as the slot's level, the slot isn't expended."
+          ],
+          "name": "Free Casting",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Spell Recall",
+      "prerequisite": [
+        {
+          "level": 19,
+          "spellcasting2020": true
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "While within {@variantrule Dim Light|XPHB} or {@variantrule Darkness|XPHB}, you can give yourself the {@condition Invisible|XPHB} condition as a {@variantrule Bonus Action|XPHB}. The condition ends on you immediately after you take an action, a {@variantrule Bonus Action|XPHB}, or a {@variantrule Reaction|XPHB}."
+          ],
+          "name": "Merge with Shadows",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "While within {@variantrule Dim Light|XPHB} or {@variantrule Darkness|XPHB}, you have {@variantrule Resistance|XPHB} to all damage except Psychic and Radiant."
+          ],
+          "name": "Shadowy Form",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of the Night Spirit",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "max": 30
+        }
+      ],
+      "category": "EB",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "You have {@sense Truesight|XPHB} with a range of 60 feet."
+          ],
+          "name": "Truesight",
+          "type": "entries"
+        }
+      ],
+      "name": "Boon of Truesight",
+      "prerequisite": [
+        {
+          "level": 19
+        }
+      ],
+      "senses": [
+        {
+          "truesight": 60
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "FS",
+      "entries": [
+        "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}."
+      ],
+      "name": "Defense",
+      "prerequisite": [
+        {
+          "feature": [
+            "Fighting Style"
+          ]
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "entries": [
+        "You've developed the skills necessary to hold your own in close-quarters grappling. You gain the following benefits:",
+        {
+          "items": [
+            "You have advantage on attack rolls against a creature you are grappling.",
+            "You can use your action to try to pin a creature {@condition grappled} by you. To do so, make another grapple check. If you succeed, you and the creature are both {@condition restrained} until the grapple ends."
+          ],
+          "type": "list"
+        }
+      ],
+      "name": "Grappler",
+      "prerequisite": [
+        {
+          "ability": [
+            {
+              "str": 13
+            }
+          ]
+        }
+      ],
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "ability": [
+        {
+          "choose": {
+            "from": [
+              "str",
+              "dex"
+            ]
+          }
+        }
+      ],
+      "category": "G",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "When you hit a creature with an {@variantrule Unarmed Strike|XPHB} as part of the {@action Attack|XPHB} action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn."
+          ],
+          "name": "Punch and Grab",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You have {@variantrule Advantage|XPHB} on attack rolls against a creature {@condition Grappled|XPHB} by you."
+          ],
+          "name": "Attack Advantage",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You don't have to spend extra movement to move a creature {@condition Grappled|XPHB} by you if the creature is your size or smaller."
+          ],
+          "name": "Fast Wrestler",
+          "type": "entries"
+        }
+      ],
+      "name": "Grappler",
+      "prerequisite": [
+        {
+          "ability": [
+            {
+              "str": 13
+            }
+          ],
+          "level": 4
+        },
+        {
+          "ability": [
+            {
+              "dex": 13
+            }
+          ],
+          "level": 4
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "FS",
+      "entries": [
+        "When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3. The weapon must have the {@itemProperty 2h|XPHB|Two-Handed} or {@itemProperty V|XPHB|Versatile} property to gain this benefit."
+      ],
+      "name": "Great Weapon Fighting",
+      "prerequisite": [
+        {
+          "feature": [
+            "Fighting Style"
+          ]
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "_versions": [
+        {
+          "_mod": {
+            "entries": [
+              {
+                "items": {
+                  "entries": [
+                    "You learn two cantrips of your choice from the {@filter Cleric|spells|level=0;1|class=Cleric} spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat)."
+                  ],
+                  "name": "Two Cantrips"
+                },
+                "mode": "replaceArr",
+                "replace": "Two Cantrips"
+              },
+              {
+                "items": {
+                  "entries": [
+                    "Choose a level 1 spell from the {@filter Cleric|spells|level=0;1|class=Cleric} spell list. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a {@variantrule Long Rest|XPHB}. You can also cast the spell using any spell slots you have."
+                  ],
+                  "name": "Level 1 Spell"
+                },
+                "mode": "replaceArr",
+                "replace": "Level 1 Spell"
+              }
+            ]
+          },
+          "additionalSpells": [
+            {
+              "ability": {
+                "choose": [
+                  "int",
+                  "wis",
+                  "cha"
+                ]
+              },
+              "innate": {
+                "_": {
+                  "daily": {
+                    "1": [
+                      {
+                        "choose": "level=1|class=Cleric"
+                      }
+                    ]
+                  }
+                }
+              },
+              "known": {
+                "_": [
+                  {
+                    "choose": "level=0|class=Cleric",
+                    "count": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Magic Initiate; Cleric",
+          "source": "XPHB"
+        },
+        {
+          "_mod": {
+            "entries": [
+              {
+                "items": {
+                  "entries": [
+                    "You learn two cantrips of your choice from the {@filter Druid|spells|level=0;1|class=Druid} spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat)."
+                  ],
+                  "name": "Two Cantrips"
+                },
+                "mode": "replaceArr",
+                "replace": "Two Cantrips"
+              },
+              {
+                "items": {
+                  "entries": [
+                    "Choose a level 1 spell from the {@filter Druid|spells|level=0;1|class=Druid} spell list. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a {@variantrule Long Rest|XPHB}. You can also cast the spell using any spell slots you have."
+                  ],
+                  "name": "Level 1 Spell"
+                },
+                "mode": "replaceArr",
+                "replace": "Level 1 Spell"
+              }
+            ]
+          },
+          "additionalSpells": [
+            {
+              "ability": {
+                "choose": [
+                  "int",
+                  "wis",
+                  "cha"
+                ]
+              },
+              "innate": {
+                "_": {
+                  "daily": {
+                    "1": [
+                      {
+                        "choose": "level=1|class=Druid"
+                      }
+                    ]
+                  }
+                }
+              },
+              "known": {
+                "_": [
+                  {
+                    "choose": "level=0|class=Druid",
+                    "count": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Magic Initiate; Druid",
+          "source": "XPHB"
+        },
+        {
+          "_mod": {
+            "entries": [
+              {
+                "items": {
+                  "entries": [
+                    "You learn two cantrips of your choice from the {@filter Wizard|spells|level=0;1|class=Wizard} spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat)."
+                  ],
+                  "name": "Two Cantrips"
+                },
+                "mode": "replaceArr",
+                "replace": "Two Cantrips"
+              },
+              {
+                "items": {
+                  "entries": [
+                    "Choose a level 1 spell from the {@filter Wizard|spells|level=0;1|class=Wizard} spell list. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a {@variantrule Long Rest|XPHB}. You can also cast the spell using any spell slots you have."
+                  ],
+                  "name": "Level 1 Spell"
+                },
+                "mode": "replaceArr",
+                "replace": "Level 1 Spell"
+              }
+            ]
+          },
+          "additionalSpells": [
+            {
+              "ability": {
+                "choose": [
+                  "int",
+                  "wis",
+                  "cha"
+                ]
+              },
+              "innate": {
+                "_": {
+                  "daily": {
+                    "1": [
+                      {
+                        "choose": "level=1|class=Wizard"
+                      }
+                    ]
+                  }
+                }
+              },
+              "known": {
+                "_": [
+                  {
+                    "choose": "level=0|class=Wizard",
+                    "count": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Magic Initiate; Wizard",
+          "source": "XPHB"
+        }
+      ],
+      "additionalSpells": [
+        {
+          "ability": {
+            "choose": [
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "innate": {
+            "_": {
+              "daily": {
+                "1": [
+                  {
+                    "choose": "level=1|class=Cleric"
+                  }
+                ]
+              }
+            }
+          },
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=Cleric",
+                "count": 2
+              }
+            ]
+          },
+          "name": "Cleric Spells"
+        },
+        {
+          "ability": {
+            "choose": [
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "innate": {
+            "_": {
+              "daily": {
+                "1": [
+                  {
+                    "choose": "level=1|class=Druid"
+                  }
+                ]
+              }
+            }
+          },
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=Druid",
+                "count": 2
+              }
+            ]
+          },
+          "name": "Druid Spells"
+        },
+        {
+          "ability": {
+            "choose": [
+              "int",
+              "wis",
+              "cha"
+            ]
+          },
+          "innate": {
+            "_": {
+              "daily": {
+                "1": [
+                  {
+                    "choose": "level=1|class=Wizard"
+                  }
+                ]
+              }
+            }
+          },
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=Wizard",
+                "count": 2
+              }
+            ]
+          },
+          "name": "Wizard Spells"
+        }
+      ],
+      "category": "O",
+      "entries": [
+        "You gain the following benefits.",
+        {
+          "entries": [
+            "You learn two cantrips of your choice from the {@filter Cleric|spells|level=0;1|class=Cleric}, {@filter Druid|spells|level=0;1|class=Druid}, or {@filter Wizard|spells|level=0;1|class=Wizard} spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat)."
+          ],
+          "name": "Two Cantrips",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Choose a level 1 spell from the same list you selected for this feat's cantrips. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a {@variantrule Long Rest|XPHB}. You can also cast the spell using any spell slots you have."
+          ],
+          "name": "Level 1 Spell",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Whenever you gain a new level, you can replace one of the spells you chose for this feat with a different spell of the same level from the chosen spell list."
+          ],
+          "name": "Spell Change",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can take this feat more than once, but you must choose a different spell list each time."
+          ],
+          "name": "Repeatable",
+          "type": "entries"
+        }
+      ],
+      "name": "Magic Initiate",
+      "repeatable": true,
+      "repeatableHidden": true,
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "O",
+      "entries": [
+        "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target."
+      ],
+      "name": "Savage Attacker",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "O",
+      "entries": [
+        "You gain proficiency in any combination of three skills or tools of your choice."
+      ],
+      "name": "Skilled",
+      "repeatable": true,
+      "repeatableHidden": true,
+      "skillToolLanguageProficiencies": [
+        {
+          "choose": [
+            {
+              "count": 3,
+              "from": [
+                "anySkill",
+                "anyTool"
+              ]
+            }
+          ]
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "category": "FS",
+      "entries": [
+        "When you make an extra attack as a result of using a weapon that has the {@itemProperty L|XPHB|Light} property, you can add your ability modifier to the damage of that attack if you aren't already adding it to the damage."
+      ],
+      "name": "Two-Weapon Fighting",
+      "prerequisite": [
+        {
+          "feature": [
+            "Fighting Style"
+          ]
+        }
+      ],
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "additionalSpells": [
+        {
+          "ability": "cha",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=cleric",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "category": "FS:P",
+      "entries": [
+        "You learn two {@filter Cleric cantrips|spells|level=0|class=Cleric} of your choice. {@spell Guidance|XPHB} and {@spell Sacred Flame|XPHB} are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip."
+      ],
+      "name": "Blessed Warrior",
+      "prerequisite": [
+        {
+          "otherSummary": {
+            "entry": "When Gaining the Level 2 Paladin \"Fighting Style\" Feature",
+            "entrySummary": "Special"
+          }
+        }
+      ],
+      "source": "XPHB"
+    },
+    {
+      "additionalSpells": [
+        {
+          "ability": "wis",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=druid",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "category": "FS:R",
+      "entries": [
+        "You learn two {@filter Druid cantrips|spells|level=0|class=druid} of your choice. {@spell Guidance|XPHB} and {@spell Starry Wisp|XPHB} are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip."
+      ],
+      "name": "Druidic Warrior",
+      "prerequisite": [
+        {
+          "otherSummary": {
+            "entry": "When Gaining the Level 2 Ranger \"Fighting Style\" Feature",
+            "entrySummary": "Special"
+          }
+        }
+      ],
+      "source": "XPHB"
+    }
+  ]
+}
