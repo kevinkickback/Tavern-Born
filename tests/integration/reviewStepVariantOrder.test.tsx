@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
@@ -72,6 +72,100 @@ describe('RulesStep average hit-points toggle', () => {
     expect(onChange).toHaveBeenCalledWith({
       variantRules: expect.objectContaining({ averageHitPoints: false }),
     })
+  })
+
+  test('disables content-specific rules whose records are unavailable', () => {
+    render(<RulesStep data={INITIAL_CHARACTER_DATA} onChange={vi.fn()} sources={[]} />)
+
+    expect(
+      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(
+      (screen.getByRole('switch', { name: 'Bladesinger Any Race' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(
+      (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
+  })
+
+  test('enables a content-specific rule when its matching record is available', () => {
+    render(
+      <RulesStep
+        data={INITIAL_CHARACTER_DATA}
+        onChange={vi.fn()}
+        sources={[]}
+        contentAvailability={{
+          optionalClassFeatures: true,
+          bladesingerAnyRace: true,
+          battleragerAnyRace: false,
+        }}
+      />,
+    )
+
+    expect(
+      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+    expect(
+      (screen.getByRole('switch', { name: 'Bladesinger Any Race' }) as HTMLButtonElement).disabled,
+    ).toBe(false)
+    expect(
+      (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+  })
+
+  test('allows a saved unavailable rule to be switched off', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <RulesStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, bladesingerAnyRace: true },
+        }}
+        onChange={onChange}
+        sources={[]}
+      />,
+    )
+
+    const bladesingerRule = screen.getByRole('switch', { name: 'Bladesinger Any Race' })
+    expect((bladesingerRule as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByText('Currently inactive')).toBeTruthy()
+
+    await user.click(bladesingerRule)
+
+    expect(onChange).toHaveBeenCalledWith({
+      variantRules: expect.objectContaining({ bladesingerAnyRace: false }),
+    })
+  })
+
+  test('marks a saved unavailable rule inactive during review', () => {
+    render(
+      <ReviewStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, bladesingerAnyRace: true },
+        }}
+        raceResolution={{
+          parentRace: undefined,
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
+        sources={[]}
+        variantRuleAvailability={{
+          optionalClassFeatures: false,
+          bladesingerAnyRace: false,
+          battleragerAnyRace: false,
+        }}
+      />,
+    )
+
+    const bladesingerRow = screen.getByText('Bladesinger Any Race').parentElement
+    expect(bladesingerRow).not.toBeNull()
+    expect(within(bladesingerRow as HTMLElement).getByText('Inactive')).toBeTruthy()
   })
 
   test('normalizes core sources when the ruleset changes', async () => {

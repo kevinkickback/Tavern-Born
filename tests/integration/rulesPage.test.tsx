@@ -4,7 +4,38 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { RulesPage } from '@/pages/rules/RulesPage'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+
+const contentAwareClasses = [
+  makeClassFixture({
+    name: 'Wizard',
+    source: 'PHB',
+    subclasses: [
+      {
+        name: 'Bladesinger',
+        shortName: 'Bladesinger',
+        source: 'SCAG',
+        className: 'Wizard',
+        classSource: 'PHB',
+      },
+    ],
+  }),
+  makeClassFixture({
+    name: 'Barbarian',
+    source: 'PHB',
+    subclasses: [
+      {
+        name: 'Battlerager',
+        shortName: 'Battlerager',
+        source: 'SCAG',
+        className: 'Barbarian',
+        classSource: 'PHB',
+      },
+    ],
+  }),
+]
 
 describe('RulesPage', () => {
   const renderPage = () =>
@@ -17,6 +48,7 @@ describe('RulesPage', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({
       originSystem: '2014',
+      allowedSources: ['PHB', 'SCAG', 'TCE'],
       variantRules: {
         abilityScoreMethod: 'point-buy',
         averageHitPoints: true,
@@ -32,11 +64,24 @@ describe('RulesPage', () => {
       activeCharacterId: character.id,
       activeCharacter: character,
     })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        classes: contentAwareClasses,
+        classFeatures: [
+          {
+            name: 'Cantrip Formulas',
+            source: 'TCE',
+            isClassFeatureVariant: true,
+          },
+        ],
+      }),
+    })
   })
 
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    useGameDataStore.setState({ gameData: null })
   })
 
   test('shows each Character Rules section in a settings-style tab', async () => {
@@ -88,5 +133,27 @@ describe('RulesPage', () => {
         abilityScoreMethod: 'custom',
       }),
     )
+  })
+
+  test('disables rules that have no matching content', async () => {
+    const user = userEvent.setup()
+    useGameDataStore.setState({ gameData: makeGameDataFixture() })
+    renderPage()
+
+    await user.click(screen.getByRole('tab', { name: 'Advancement' }))
+
+    expect((screen.getByLabelText('Optional Class Features') as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(
+      screen.getByText(
+        'No optional or replacement class features are available from your selected content.',
+      ),
+    ).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
+
+    expect((screen.getByLabelText('Bladesinger Any Race') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Battlerager Any Race') as HTMLButtonElement).disabled).toBe(true)
   })
 })

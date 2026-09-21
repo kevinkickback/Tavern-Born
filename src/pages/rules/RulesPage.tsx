@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -31,24 +33,47 @@ interface RuleRowProps {
   label: string
   description: string
   checked: boolean
+  available?: boolean
+  unavailableDescription?: string
   onCheckedChange: (checked: boolean) => void
 }
 
-function RuleRow({ label, description, checked, onCheckedChange }: RuleRowProps) {
+function RuleRow({
+  label,
+  description,
+  checked,
+  available = true,
+  unavailableDescription,
+  onCheckedChange,
+}: RuleRowProps) {
   const id = useId()
+  const unavailable = !available
   return (
     <div className="flex items-start justify-between gap-5 border-b border-border-subtle py-3 last:border-b-0">
       <div className="min-w-0">
-        <Label htmlFor={id} className="cursor-pointer text-sm font-medium">
+        <Label
+          htmlFor={id}
+          className={cn(
+            'cursor-pointer text-sm font-medium',
+            unavailable && !checked && 'cursor-not-allowed text-muted-foreground',
+          )}
+        >
           {label}
         </Label>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
           {description}
         </p>
+        {unavailable && unavailableDescription && (
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            {checked ? 'Currently inactive. ' : ''}
+            {unavailableDescription}
+          </p>
+        )}
       </div>
       <Switch
         id={id}
         checked={checked}
+        disabled={unavailable && !checked}
         onCheckedChange={onCheckedChange}
         className="mt-0.5 shrink-0"
       />
@@ -90,6 +115,12 @@ export function RulesPage() {
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
+  const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
+  const contentAvailability = getVariantRuleContentAvailability({
+    classes,
+    classFeatures,
+    optionalFeatures: optionalfeatures,
+  })
 
   const setActivePanel = (panel: RulesPanel) => {
     setSearchParams(panel === 'ruleset' ? {} : { section: panel }, { replace: true })
@@ -251,6 +282,8 @@ export function RulesPage() {
                   label="Optional Class Features"
                   description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
                   checked={rules.optionalClassFeatures ?? false}
+                  available={contentAvailability.optionalClassFeatures}
+                  unavailableDescription="No optional or replacement class features are available from your selected content."
                   onCheckedChange={(checked) => updateBooleanRule('optionalClassFeatures', checked)}
                 />
               </RulesSection>
@@ -266,12 +299,16 @@ export function RulesPage() {
                   label="Bladesinger Any Race"
                   description="Allow characters of any race to choose the Bladesinger Wizard subclass."
                   checked={rules.bladesingerAnyRace ?? false}
+                  available={contentAvailability.bladesingerAnyRace}
+                  unavailableDescription="The Bladesinger subclass is not available from your selected content."
                   onCheckedChange={(checked) => updateBooleanRule('bladesingerAnyRace', checked)}
                 />
                 <RuleRow
                   label="Battlerager Any Race"
                   description="Allow characters of any race to choose the Battlerager Barbarian subclass."
                   checked={rules.battleragerAnyRace ?? false}
+                  available={contentAvailability.battleragerAnyRace}
+                  unavailableDescription="The Battlerager subclass is not available from your selected content."
                   onCheckedChange={(checked) => updateBooleanRule('battleragerAnyRace', checked)}
                 />
                 <RuleRow

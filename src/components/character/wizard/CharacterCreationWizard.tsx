@@ -9,6 +9,7 @@ import {
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
+import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
@@ -54,6 +55,11 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     allowedSources: characterData.allowedSources,
     originSystem: characterData.originSystem,
     preferNewerPrintings: characterData.variantRules?.preferNewerPrintings,
+  })
+  const variantRuleAvailability = getVariantRuleContentAvailability({
+    classes: wizardData.classes,
+    classFeatures: wizardData.classFeatures,
+    optionalFeatures: wizardData.optionalfeatures,
   })
 
   useEffect(() => {
@@ -215,6 +221,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   data={characterData}
                   onChange={updateCharacterData}
                   sources={wizardData.sources}
+                  contentAvailability={variantRuleAvailability}
                   isBundledSrd={isBundledSrd}
                   invalidFields={invalidFields}
                 />
@@ -252,6 +259,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   data={characterData}
                   raceResolution={raceResolution}
                   sources={wizardData.sources}
+                  variantRuleAvailability={variantRuleAvailability}
                 />
               )}
             </div>

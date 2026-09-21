@@ -4,6 +4,7 @@
 ## ✨ Changes
 
 * Tavern Born now includes the free D&D rules provided through the SRD
+* Character rule options now indicate when they require additional content
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
 

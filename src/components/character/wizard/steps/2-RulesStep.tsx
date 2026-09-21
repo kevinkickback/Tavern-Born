@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import {
   getSourceCompatibility,
   normalizeAllowedSources,
@@ -16,13 +17,21 @@ import type { StepProps } from '../types'
 
 interface RulesStepProps extends StepProps {
   sources?: SourceBook[]
+  contentAvailability?: VariantRuleContentAvailability
   isBundledSrd?: boolean
+}
+
+const NO_CONTENT_SPECIFIC_RULES: VariantRuleContentAvailability = {
+  optionalClassFeatures: false,
+  bladesingerAnyRace: false,
+  battleragerAnyRace: false,
 }
 
 export function RulesStep({
   data,
   onChange,
   sources = [],
+  contentAvailability = NO_CONTENT_SPECIFIC_RULES,
   isBundledSrd = false,
   invalidFields,
 }: RulesStepProps) {
@@ -112,7 +121,6 @@ export function RulesStep({
   const abilityScoreMethods = getAbilityScoreMethodOptions(
     data.originSystem === '2024' ? '2024' : '2014',
   )
-
   const VARIANT_RULE_DESCRIPTIONS: Record<string, string> = {
     optionalClassFeatures:
       "Unlocks Tasha's optional class features for your class, such as additional spells, feature replacements, and expanded options from TCE.",
@@ -125,6 +133,13 @@ export function RulesStep({
 
     preferNewerPrintings:
       'When enabled, older printings are hidden when a newer reprint exists in your selected sources. This reduces duplicate races, classes, feats, and spells.',
+  }
+
+  const CONTENT_REQUIREMENTS: Record<keyof VariantRuleContentAvailability, string> = {
+    optionalClassFeatures:
+      'No optional or replacement class features are available from your selected content.',
+    bladesingerAnyRace: 'The Bladesinger subclass is not available from your selected content.',
+    battleragerAnyRace: 'The Battlerager subclass is not available from your selected content.',
   }
 
   return (
@@ -256,68 +271,101 @@ export function RulesStep({
                     id: optionalClassFeaturesId,
                     key: 'optionalClassFeatures' as const,
                     label: 'Optional Class Features',
+                    available: contentAvailability.optionalClassFeatures,
                   },
                   {
                     id: bladesingerAnyRaceId,
                     key: 'bladesingerAnyRace' as const,
                     label: 'Bladesinger Any Race',
+                    available: contentAvailability.bladesingerAnyRace,
                   },
                   {
                     id: battleragerAnyRaceId,
                     key: 'battleragerAnyRace' as const,
                     label: 'Battlerager Any Race',
+                    available: contentAvailability.battleragerAnyRace,
                   },
                   {
                     id: averageHitPointsId,
                     key: 'averageHitPoints' as const,
                     label: 'Average Hit Points',
+                    available: true,
                   },
                   {
                     id: preferNewerPrintingsId,
                     key: 'preferNewerPrintings' as const,
                     label: 'Prefer Newer Printings',
+                    available: true,
                   },
                 ] as const
-              ).map(({ id, key, label }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between py-1.5 break-inside-avoid gap-2"
-                >
-                  <div className="flex items-center gap-1 min-w-0">
-                    <Label htmlFor={id} className="text-sm cursor-pointer">
-                      {label}
-                    </Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                          aria-label={`Info: ${label}`}
+              ).map(({ id, key, label, available }) => {
+                const checked =
+                  key === 'preferNewerPrintings'
+                    ? preferNewerPrintingsEnabled
+                    : data.variantRules?.[key] || false
+                const contentRequirement =
+                  key in contentAvailability
+                    ? CONTENT_REQUIREMENTS[key as keyof VariantRuleContentAvailability]
+                    : undefined
+                const unavailable = !available && Boolean(contentRequirement)
+                const unavailableText = checked
+                  ? `Currently inactive. ${contentRequirement}`
+                  : contentRequirement
+
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between py-1.5 break-inside-avoid gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1">
+                        <Label
+                          htmlFor={id}
+                          className={cn(
+                            'text-sm cursor-pointer',
+                            unavailable && !checked && 'cursor-not-allowed text-muted-foreground',
+                          )}
                         >
-                          <Question className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[220px] text-wrap">
-                        {VARIANT_RULE_DESCRIPTIONS[key]}
-                      </TooltipContent>
-                    </Tooltip>
+                          {label}
+                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                              aria-label={`Info: ${label}`}
+                            >
+                              <Question className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[220px] text-wrap">
+                            <p>{VARIANT_RULE_DESCRIPTIONS[key]}</p>
+                            {unavailable && <p className="mt-1">{unavailableText}</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      {unavailable && (
+                        <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
+                          {checked ? 'Currently inactive' : 'Unavailable with selected content'}
+                        </p>
+                      )}
+                    </div>
+                    <Switch
+                      id={id}
+                      checked={checked}
+                      disabled={
+                        (key === 'preferNewerPrintings' && data.originSystem === '2024') ||
+                        (unavailable && !checked)
+                      }
+                      onCheckedChange={(checked) =>
+                        onChange({
+                          variantRules: { ...data.variantRules, [key]: checked },
+                        })
+                      }
+                    />
                   </div>
-                  <Switch
-                    id={id}
-                    checked={
-                      key === 'preferNewerPrintings'
-                        ? preferNewerPrintingsEnabled
-                        : data.variantRules?.[key] || false
-                    }
-                    disabled={key === 'preferNewerPrintings' && data.originSystem === '2024'}
-                    onCheckedChange={(checked) =>
-                      onChange({
-                        variantRules: { ...data.variantRules, [key]: checked },
-                      })
-                    }
-                  />
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         </div>
