@@ -53,8 +53,7 @@ describe('RulesPage', () => {
         abilityScoreMethod: 'point-buy',
         averageHitPoints: true,
         optionalClassFeatures: false,
-        bladesingerAnyRace: false,
-        battleragerAnyRace: false,
+        anyRaceSubclasses: false,
         preferNewerPrintings: true,
         ignoreEquipRestrictions: false,
       },
@@ -93,7 +92,6 @@ describe('RulesPage', () => {
     expect(screen.getByRole('tablist', { name: 'Rules category' })).toBeTruthy()
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Ruleset',
-      'Advancement',
       'Character Options',
     ])
     expect(screen.getByRole('tab', { name: 'Ruleset' }).getAttribute('aria-selected')).toBe('true')
@@ -104,32 +102,33 @@ describe('RulesPage', () => {
     expect(screen.getByText('5e Legacy (2014)')).toBeTruthy()
     expect(screen.getByText('Fixed').className).toContain('bg-accent')
 
-    await user.click(screen.getByRole('tab', { name: 'Advancement' }))
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
 
     expect(screen.getByLabelText('Average Hit Points')).toBeTruthy()
     expect(screen.getByLabelText('Optional Class Features')).toBeTruthy()
-
-    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
-
-    expect(screen.getByLabelText('Bladesinger Any Race')).toBeTruthy()
-    expect(screen.getByLabelText('Battlerager Any Race')).toBeTruthy()
+    expect(screen.getByLabelText('Any-Race Subclasses')).toBeTruthy()
     expect(screen.getByLabelText('Ignore Equipment Restrictions')).toBeTruthy()
+    expect(screen.getByText('Creation & Advancement')).toBeTruthy()
+    expect(screen.getByText('Option Restrictions')).toBeTruthy()
+    expect(container.querySelectorAll('[data-slot="rules-section"]')).toHaveLength(2)
   })
 
   test('updates rules on the active character without replacing existing choices', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('tab', { name: 'Advancement' }))
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
 
     await user.click(screen.getByLabelText('Average Hit Points'))
     await user.click(screen.getByLabelText('Optional Class Features'))
+    await user.click(screen.getByLabelText('Any-Race Subclasses'))
     await user.click(screen.getByRole('button', { name: /Custom/ }))
 
     expect(useCharacterStore.getState().activeCharacter?.variantRules).toEqual(
       expect.objectContaining({
         averageHitPoints: false,
         optionalClassFeatures: true,
+        anyRaceSubclasses: true,
         abilityScoreMethod: 'custom',
       }),
     )
@@ -140,7 +139,7 @@ describe('RulesPage', () => {
     useGameDataStore.setState({ gameData: makeGameDataFixture() })
     renderPage()
 
-    await user.click(screen.getByRole('tab', { name: 'Advancement' }))
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
 
     expect((screen.getByLabelText('Optional Class Features') as HTMLButtonElement).disabled).toBe(
       true,
@@ -151,9 +150,9 @@ describe('RulesPage', () => {
       ),
     ).toBeTruthy()
 
-    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
-
-    expect((screen.getByLabelText('Bladesinger Any Race') as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByLabelText('Battlerager Any Race') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Any-Race Subclasses') as HTMLButtonElement).disabled).toBe(true)
+    expect(
+      screen.getByText('No race-restricted subclasses are available from your selected content.'),
+    ).toBeTruthy()
   })
 })

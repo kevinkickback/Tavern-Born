@@ -30,8 +30,7 @@ export interface CharacterWizardData {
   variantRules: {
     optionalClassFeatures: boolean
     averageHitPoints: boolean
-    bladesingerAnyRace: boolean
-    battleragerAnyRace: boolean
+    anyRaceSubclasses: boolean
     preferNewerPrintings: boolean
   }
 }

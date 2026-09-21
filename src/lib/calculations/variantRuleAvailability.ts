@@ -3,8 +3,7 @@ import type { Class5e, ClassFeature } from '@/types/5etools'
 
 export interface VariantRuleContentAvailability {
   optionalClassFeatures: boolean
-  bladesingerAnyRace: boolean
-  battleragerAnyRace: boolean
+  anyRaceSubclasses: boolean
   preferNewerPrintings: boolean
 }
 
@@ -15,8 +14,6 @@ interface VariantRuleContent {
   preferNewerPrintingsAvailable?: boolean
 }
 
-type RestrictedSubclassRule = 'bladesingerAnyRace' | 'battleragerAnyRace'
-
 function isClassFeatureVariant(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false
   const feature = value as { isClassFeatureVariant?: unknown; name?: unknown }
@@ -26,15 +23,15 @@ function isClassFeatureVariant(value: unknown): boolean {
   )
 }
 
-function hasRestrictedSubclass(classes: readonly Class5e[], rule: RestrictedSubclassRule): boolean {
+function hasRestrictedSubclass(classes: readonly Class5e[]): boolean {
   const restrictions = LEGACY_SUBCLASS_PREREQUISITE_FIXUPS as Readonly<
-    Record<string, { variantOverride: RestrictedSubclassRule }>
+    Record<string, { allowedRaceKeyword: string }>
   >
 
   return classes.some((classEntity) =>
     classEntity.subclasses?.some((subclass) => {
       const key = `${subclass.className || classEntity.name}|${subclass.classSource || classEntity.source}|${subclass.shortName}|${subclass.source}`
-      return restrictions[key]?.variantOverride === rule
+      return key in restrictions
     }),
   )
 }
@@ -48,8 +45,7 @@ export function getVariantRuleContentAvailability({
   return {
     optionalClassFeatures:
       classFeatures.some(isClassFeatureVariant) || optionalFeatures.some(isClassFeatureVariant),
-    bladesingerAnyRace: hasRestrictedSubclass(classes, 'bladesingerAnyRace'),
-    battleragerAnyRace: hasRestrictedSubclass(classes, 'battleragerAnyRace'),
+    anyRaceSubclasses: hasRestrictedSubclass(classes),
     preferNewerPrintings: preferNewerPrintingsAvailable,
   }
 }

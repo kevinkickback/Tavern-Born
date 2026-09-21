@@ -149,14 +149,9 @@ export function ReviewStep({
       available: variantRuleAvailability?.optionalClassFeatures ?? true,
     },
     {
-      label: 'Bladesinger Any Race',
-      enabled: data.variantRules?.bladesingerAnyRace,
-      available: variantRuleAvailability?.bladesingerAnyRace ?? true,
-    },
-    {
-      label: 'Battlerager Any Race',
-      enabled: data.variantRules?.battleragerAnyRace,
-      available: variantRuleAvailability?.battleragerAnyRace ?? true,
+      label: 'Any-Race Subclasses',
+      enabled: data.variantRules?.anyRaceSubclasses,
+      available: variantRuleAvailability?.anyRaceSubclasses ?? true,
     },
     {
       label: 'Average Hit Points',

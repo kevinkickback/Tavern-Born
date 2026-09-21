@@ -31,21 +31,16 @@ describe('ReviewStep variant rule ordering', () => {
     )
 
     const optionalClassFeatures = screen.getByText('Optional Class Features')
-    const bladesingerAnyRace = screen.getByText('Bladesinger Any Race')
-    const battleragerAnyRace = screen.getByText('Battlerager Any Race')
+    const anyRaceSubclasses = screen.getByText('Any-Race Subclasses')
     const averageHitPoints = screen.getByText('Average Hit Points')
     const preferNewerPrintings = screen.getByText('Prefer Newer Printings')
 
     expect(
-      optionalClassFeatures.compareDocumentPosition(bladesingerAnyRace) &
+      optionalClassFeatures.compareDocumentPosition(anyRaceSubclasses) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
-      bladesingerAnyRace.compareDocumentPosition(battleragerAnyRace) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(
-      battleragerAnyRace.compareDocumentPosition(averageHitPoints) &
+      anyRaceSubclasses.compareDocumentPosition(averageHitPoints) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
@@ -91,16 +86,13 @@ describe('RulesStep average hit-points toggle', () => {
         .disabled,
     ).toBe(true)
     expect(
-      (screen.getByRole('switch', { name: 'Bladesinger Any Race' }) as HTMLButtonElement).disabled,
-    ).toBe(true)
-    expect(
-      (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
+      (screen.getByRole('switch', { name: 'Any-Race Subclasses' }) as HTMLButtonElement).disabled,
     ).toBe(true)
     expect(
       (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true)
-    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(4)
+    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
   })
 
   test('enables a content-specific rule when its matching record is available', () => {
@@ -111,8 +103,7 @@ describe('RulesStep average hit-points toggle', () => {
         sources={[]}
         contentAvailability={{
           optionalClassFeatures: true,
-          bladesingerAnyRace: true,
-          battleragerAnyRace: false,
+          anyRaceSubclasses: true,
           preferNewerPrintings: true,
         }}
       />,
@@ -123,11 +114,8 @@ describe('RulesStep average hit-points toggle', () => {
         .disabled,
     ).toBe(false)
     expect(
-      (screen.getByRole('switch', { name: 'Bladesinger Any Race' }) as HTMLButtonElement).disabled,
+      (screen.getByRole('switch', { name: 'Any-Race Subclasses' }) as HTMLButtonElement).disabled,
     ).toBe(false)
-    expect(
-      (screen.getByRole('switch', { name: 'Battlerager Any Race' }) as HTMLButtonElement).disabled,
-    ).toBe(true)
     expect(
       (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
         .disabled,
@@ -160,7 +148,7 @@ describe('RulesStep average hit-points toggle', () => {
           ...INITIAL_CHARACTER_DATA,
           variantRules: {
             ...INITIAL_CHARACTER_DATA.variantRules,
-            bladesingerAnyRace: true,
+            anyRaceSubclasses: true,
             preferNewerPrintings: false,
           },
         }}
@@ -169,14 +157,14 @@ describe('RulesStep average hit-points toggle', () => {
       />,
     )
 
-    const bladesingerRule = screen.getByRole('switch', { name: 'Bladesinger Any Race' })
-    expect((bladesingerRule as HTMLButtonElement).disabled).toBe(false)
+    const anyRaceRule = screen.getByRole('switch', { name: 'Any-Race Subclasses' })
+    expect((anyRaceRule as HTMLButtonElement).disabled).toBe(false)
     expect(screen.getByText('Currently inactive')).toBeTruthy()
 
-    await user.click(bladesingerRule)
+    await user.click(anyRaceRule)
 
     expect(onChange).toHaveBeenCalledWith({
-      variantRules: expect.objectContaining({ bladesingerAnyRace: false }),
+      variantRules: expect.objectContaining({ anyRaceSubclasses: false }),
     })
   })
 
@@ -185,7 +173,7 @@ describe('RulesStep average hit-points toggle', () => {
       <ReviewStep
         data={{
           ...INITIAL_CHARACTER_DATA,
-          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, bladesingerAnyRace: true },
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, anyRaceSubclasses: true },
         }}
         raceResolution={{
           parentRace: undefined,
@@ -196,16 +184,15 @@ describe('RulesStep average hit-points toggle', () => {
         sources={[]}
         variantRuleAvailability={{
           optionalClassFeatures: false,
-          bladesingerAnyRace: false,
-          battleragerAnyRace: false,
+          anyRaceSubclasses: false,
           preferNewerPrintings: false,
         }}
       />,
     )
 
-    const bladesingerRow = screen.getByText('Bladesinger Any Race').parentElement
-    expect(bladesingerRow).not.toBeNull()
-    expect(within(bladesingerRow as HTMLElement).getByText('Inactive')).toBeTruthy()
+    const anyRaceRow = screen.getByText('Any-Race Subclasses').parentElement
+    expect(anyRaceRow).not.toBeNull()
+    expect(within(anyRaceRow as HTMLElement).getByText('Inactive')).toBeTruthy()
   })
 
   test('normalizes core sources when the ruleset changes', async () => {

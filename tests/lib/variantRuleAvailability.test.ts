@@ -33,8 +33,7 @@ describe('variant rule content availability', () => {
       }),
     ).toEqual({
       optionalClassFeatures: false,
-      bladesingerAnyRace: false,
-      battleragerAnyRace: false,
+      anyRaceSubclasses: false,
       preferNewerPrintings: false,
     })
   })
@@ -58,8 +57,7 @@ describe('variant rule content availability', () => {
       }),
     ).toEqual({
       optionalClassFeatures: true,
-      bladesingerAnyRace: true,
-      battleragerAnyRace: true,
+      anyRaceSubclasses: true,
       preferNewerPrintings: true,
     })
   })
@@ -70,7 +68,21 @@ describe('variant rule content availability', () => {
         classes: [makeSubclassClass('Wizard', 'Bladesinger', 'HB')],
         classFeatures: [],
         optionalFeatures: [],
-      }).bladesingerAnyRace,
+      }).anyRaceSubclasses,
     ).toBe(false)
+  })
+
+  test('recognizes a legacy restriction attached to a 2024 parent class', () => {
+    const battlerager = makeSubclassClass('Barbarian', 'Battlerager', 'SCAG')
+    battlerager.source = 'XPHB'
+    if (battlerager.subclasses?.[0]) battlerager.subclasses[0].classSource = 'XPHB'
+
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [battlerager],
+        classFeatures: [],
+        optionalFeatures: [],
+      }).anyRaceSubclasses,
+    ).toBe(true)
   })
 })

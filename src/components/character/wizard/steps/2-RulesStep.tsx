@@ -23,8 +23,7 @@ interface RulesStepProps extends StepProps {
 
 const NO_CONTENT_SPECIFIC_RULES: VariantRuleContentAvailability = {
   optionalClassFeatures: false,
-  bladesingerAnyRace: false,
-  battleragerAnyRace: false,
+  anyRaceSubclasses: false,
   preferNewerPrintings: false,
 }
 
@@ -38,8 +37,7 @@ export function RulesStep({
 }: RulesStepProps) {
   const optionalClassFeaturesId = useId()
   const averageHitPointsId = useId()
-  const bladesingerAnyRaceId = useId()
-  const battleragerAnyRaceId = useId()
+  const anyRaceSubclassesId = useId()
 
   const preferNewerPrintingsId = useId()
   const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
@@ -127,10 +125,8 @@ export function RulesStep({
       "Unlocks Tasha's optional class features for your class, such as additional spells, feature replacements, and expanded options from TCE.",
     averageHitPoints:
       'Choose whether later levels use the fixed average automatically or ask you to roll or enter the hit-die result.',
-    bladesingerAnyRace:
-      'By default Bladesinger (Wizard) is restricted to elves. Enable this to allow any race to take the Bladesinger subclass.',
-    battleragerAnyRace:
-      'By default Battlerager (Barbarian) is restricted to dwarves. Enable this to allow any race to take the Battlerager subclass.',
+    anyRaceSubclasses:
+      'Allow any character to choose a subclass even when its source limits that subclass to a particular race.',
 
     preferNewerPrintings:
       'When enabled, older printings are hidden when a newer reprint exists in your selected sources. This reduces duplicate races, classes, feats, and spells.',
@@ -139,8 +135,7 @@ export function RulesStep({
   const CONTENT_REQUIREMENTS: Record<keyof VariantRuleContentAvailability, string> = {
     optionalClassFeatures:
       'No optional or replacement class features are available from your selected content.',
-    bladesingerAnyRace: 'The Bladesinger subclass is not available from your selected content.',
-    battleragerAnyRace: 'The Battlerager subclass is not available from your selected content.',
+    anyRaceSubclasses: 'No race-restricted subclasses are available from your selected content.',
     preferNewerPrintings: 'No alternate printings are available from your selected content.',
   }
 
@@ -276,16 +271,10 @@ export function RulesStep({
                     available: contentAvailability.optionalClassFeatures,
                   },
                   {
-                    id: bladesingerAnyRaceId,
-                    key: 'bladesingerAnyRace' as const,
-                    label: 'Bladesinger Any Race',
-                    available: contentAvailability.bladesingerAnyRace,
-                  },
-                  {
-                    id: battleragerAnyRaceId,
-                    key: 'battleragerAnyRace' as const,
-                    label: 'Battlerager Any Race',
-                    available: contentAvailability.battleragerAnyRace,
+                    id: anyRaceSubclassesId,
+                    key: 'anyRaceSubclasses' as const,
+                    label: 'Any-Race Subclasses',
+                    available: contentAvailability.anyRaceSubclasses,
                   },
                   {
                     id: averageHitPointsId,
