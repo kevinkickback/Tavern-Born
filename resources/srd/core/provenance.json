@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "1.0.0",
+  "distributionStatus": "approved-for-distribution",
+  "snapshotGeneratedAt": "2026-09-20T00:00:00.000Z",
+  "review": {
+    "completed": "2026-09-20",
+    "upstreamRevision": "e5d052071b635f58cc8006e9727053eaf78ea8f9",
+    "totalRecords": 3102,
+    "exactMatches": 2672,
+    "approvedRepresentations": 430,
+    "unresolvedRecords": 0,
+    "approvedEvidenceExceptions": 530,
+    "staleApprovals": 0,
+    "auditReportSha256": "9348df6e2bb205c5533b9409fb6fb22b599a4d3b6e1b2f678fdaeb531e8e58a2"
+  },
+  "documents": [
+    {
+      "version": "5.1",
+      "language": "en",
+      "published": "2023-01",
+      "retrieved": "2026-09-19",
+      "landingPage": "https://www.dndbeyond.com/srd",
+      "downloadUrl": "https://media.dndbeyond.com/compendium-images/srd/5.1/SRD_CC_v5.1.pdf",
+      "sha256": "2504d2a0abb0a4d491a939be4f17910a2dde0312570ab8d208080225ccf0a1f0",
+      "attribution": "This work includes material taken from the System Reference Document 5.1 (\"SRD 5.1\") by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    },
+    {
+      "version": "5.2.1",
+      "language": "en",
+      "published": "2025-05-01",
+      "retrieved": "2026-09-19",
+      "landingPage": "https://www.dndbeyond.com/srd",
+      "downloadUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+      "sha256": "8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (\"SRD 5.2.1\") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  ],
+  "license": {
+    "name": "Creative Commons Attribution 4.0 International",
+    "identifier": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/legalcode"
+  },
+  "transformationNotice": "Tavern Born converts selected SRD material into a structured, 5etools-compatible data snapshot and may omit SRD material that the application does not consume."
+}

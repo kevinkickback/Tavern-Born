@@ -391,7 +391,7 @@ export function ItemSelectionModal({
             className="cursor-pointer font-semibold text-primary underline-offset-2 hover:underline"
             onClick={onManageSources}
           >
-            Manage sources
+            Manage additional content
           </button>
         ) : undefined
       }

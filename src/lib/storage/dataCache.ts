@@ -1,8 +1,8 @@
 import { del, get, set } from 'idb-keyval'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 8
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 10
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 export interface GameDataCacheEntry {
@@ -11,7 +11,92 @@ export interface GameDataCacheEntry {
   cachedAt: string
   contentFingerprint?: string
   lastDataChangedAt?: string
-  sourceSnapshot: { type: string; path: string }
+  sourceSnapshot: DataSourceSnapshot
+}
+
+interface SourceLayerSnapshot {
+  role: 'base' | 'additional'
+  type: DataSourceConfig['type']
+  path: string
+  packId?: string
+  packVersion?: string
+  resources?: string[]
+  contentFingerprint?: string
+  entityCount?: number
+}
+
+interface DataSourceSnapshot {
+  type: string
+  path: string
+  packId?: string
+  packVersion?: string
+  resources?: string[]
+  layers?: SourceLayerSnapshot[]
+}
+
+export type GameDataCacheIdentity = DataSourceConfig | GameDataSourceStack
+
+interface GameDataLayerCacheMetadata {
+  contentFingerprint: string
+  entityCount: number
+}
+
+export type GameDataLayerCacheMetadataByRole = Partial<
+  Record<SourceLayerSnapshot['role'], GameDataLayerCacheMetadata>
+>
+
+function isSourceStack(identity: GameDataCacheIdentity): identity is GameDataSourceStack {
+  return 'base' in identity
+}
+
+function snapshotConfig(
+  config: DataSourceConfig,
+  role: SourceLayerSnapshot['role'],
+  metadata?: GameDataLayerCacheMetadata,
+): SourceLayerSnapshot {
+  return {
+    role,
+    type: config.type,
+    path: config.path,
+    ...(config.type === 'bundled'
+      ? { packId: config.packId, packVersion: config.packVersion }
+      : config.availableResources
+        ? { resources: [...new Set(config.availableResources)].sort() }
+        : {}),
+    ...metadata,
+  }
+}
+
+function createSourceSnapshot(
+  identity: GameDataCacheIdentity,
+  layerMetadata?: GameDataLayerCacheMetadataByRole,
+): DataSourceSnapshot {
+  if (!isSourceStack(identity)) {
+    return {
+      type: identity.type,
+      path: identity.path,
+      ...(identity.type === 'bundled'
+        ? { packId: identity.packId, packVersion: identity.packVersion }
+        : identity.availableResources
+          ? { resources: [...new Set(identity.availableResources)].sort() }
+          : {}),
+    }
+  }
+
+  const active = identity.additional ?? identity.base
+  return {
+    type: active.type,
+    path: active.path,
+    ...(active.type === 'bundled'
+      ? { packId: active.packId, packVersion: active.packVersion }
+      : {}),
+    layers: [
+      snapshotConfig(identity.base, 'base', layerMetadata?.base),
+      ...(identity.additional
+        ? [snapshotConfig(identity.additional, 'additional', layerMetadata?.additional)]
+        : []),
+    ],
+  }
 }
 
 function hashStringFnv1a(value: string): string {
@@ -23,7 +108,7 @@ function hashStringFnv1a(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function computeContentFingerprint(data: GameData): string {
+export function computeGameDataFingerprint(data: GameData): string {
   // Exclude runtime-only lookups from fingerprint. Sort top-level keys before
   // serializing to guard against insertion-order differences across parser versions.
   const { lookups: _lookups, ...fingerprintData } = data as GameData & {
@@ -46,15 +131,19 @@ export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
 
 export async function writeGameDataCache(
   data: GameData,
-  config: DataSourceConfig,
-  fallback?: { fingerprint?: string | null; lastDataChangedAt?: string | null },
+  identity: GameDataCacheIdentity,
+  options?: {
+    fingerprint?: string | null
+    lastDataChangedAt?: string | null
+    layerMetadata?: GameDataLayerCacheMetadataByRole
+  },
 ): Promise<GameDataCacheEntry> {
   const now = new Date().toISOString()
-  const contentFingerprint = computeContentFingerprint(data)
+  const contentFingerprint = computeGameDataFingerprint(data)
   const previous = await readGameDataCache()
   const previousFingerprint =
-    previous && isCacheForSource(previous, config)
-      ? (previous.contentFingerprint ?? computeContentFingerprint(previous.data))
+    previous && isCacheForSource(previous, identity)
+      ? (previous.contentFingerprint ?? computeGameDataFingerprint(previous.data))
       : null
 
   let lastDataChangedAt: string
@@ -63,18 +152,17 @@ export async function writeGameDataCache(
     lastDataChangedAt = previous.lastDataChangedAt ?? previous.cachedAt
   } else if (
     isCacheForSource(
-      previous ??
-        ({ sourceSnapshot: { type: config.type, path: config.path } } as GameDataCacheEntry),
-      config,
+      previous ?? ({ sourceSnapshot: createSourceSnapshot(identity) } as GameDataCacheEntry),
+      identity,
     ) &&
-    fallback?.fingerprint != null &&
-    fallback.fingerprint === contentFingerprint &&
-    fallback.lastDataChangedAt != null
+    options?.fingerprint != null &&
+    options.fingerprint === contentFingerprint &&
+    options.lastDataChangedAt != null
   ) {
     // Either: cache was cleared (no previous), or previous cache exists but lacks a
     // fingerprint (pre-fingerprinting cache). In both cases the store's persisted
     // fingerprint matches the new content — data hasn't actually changed.
-    lastDataChangedAt = fallback.lastDataChangedAt
+    lastDataChangedAt = options.lastDataChangedAt
   } else {
     lastDataChangedAt = now
   }
@@ -85,7 +173,7 @@ export async function writeGameDataCache(
     cachedAt: now,
     contentFingerprint,
     lastDataChangedAt,
-    sourceSnapshot: { type: config.type, path: config.path },
+    sourceSnapshot: createSourceSnapshot(identity, options?.layerMetadata),
   }
 
   await set(CACHE_KEY, entry)
@@ -100,6 +188,38 @@ export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > MAX_AGE_MS
 }
 
-export function isCacheForSource(entry: GameDataCacheEntry, config: DataSourceConfig): boolean {
-  return entry.sourceSnapshot.type === config.type && entry.sourceSnapshot.path === config.path
+export function isCacheForSource(
+  entry: GameDataCacheEntry,
+  identity: GameDataCacheIdentity,
+): boolean {
+  const expected = createSourceSnapshot(identity)
+  if (entry.sourceSnapshot.type !== expected.type || entry.sourceSnapshot.path !== expected.path) {
+    return false
+  }
+  if (
+    entry.sourceSnapshot.packId !== expected.packId ||
+    entry.sourceSnapshot.packVersion !== expected.packVersion ||
+    JSON.stringify(entry.sourceSnapshot.resources) !== JSON.stringify(expected.resources)
+  ) {
+    return false
+  }
+
+  if (!expected.layers) return entry.sourceSnapshot.layers == null
+  if (
+    !entry.sourceSnapshot.layers ||
+    entry.sourceSnapshot.layers.length !== expected.layers.length
+  ) {
+    return false
+  }
+  return expected.layers.every((layer, index) => {
+    const cachedLayer = entry.sourceSnapshot.layers?.[index]
+    return (
+      cachedLayer?.role === layer.role &&
+      cachedLayer.type === layer.type &&
+      cachedLayer.path === layer.path &&
+      cachedLayer.packId === layer.packId &&
+      cachedLayer.packVersion === layer.packVersion &&
+      JSON.stringify(cachedLayer.resources) === JSON.stringify(layer.resources)
+    )
+  })
 }

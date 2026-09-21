@@ -57,6 +57,8 @@ export function AppLoadingOverlay() {
 
   return (
     <div
+      data-testid="app-loading-overlay"
+      data-phase={phase}
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}
     >
       <div className="mb-14 text-center select-none">

@@ -1,0 +1,626 @@
+{
+  "hazard": [],
+  "trap": [
+    {
+      "entries": [
+        "This trap uses a trip wire to collapse the supports keeping an unstable section of a ceiling in place.",
+        "The trip wire is 3 inches off the ground and stretches between two support beams. The DC to spot the trip wire is 10. A successful {@dc 15} Dexterity check using {@item thieves' tools|phb} disables the trip wire harmlessly. A character without {@item thieves' tools|phb} can attempt this check with disadvantage using any edged weapon or edged tool. On a failed check, the trap triggers.",
+        "Anyone who inspects the beams can easily determine that they are merely wedged in place. As an action, a character can knock over a beam, causing the trap to trigger.",
+        "The ceiling above the trip wire is in bad repair, and anyone who can see it can tell that it's in danger of collapse.",
+        "When the trap is triggered, the unstable ceiling collapses. Any creature in the area beneath the unstable section must succeed on a {@dc 15} Dexterity saving throw, taking 22 ({@damage 4d10}) bludgeoning damage on a failed save, or half as much damage on a successful one. Once the trap is triggered, the floor of the area is filled with rubble and becomes {@quickref difficult terrain||3}."
+      ],
+      "name": "Collapsing Roof",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "This trap uses a trip wire to collapse an unstable section of ceiling. The trip wire is 3 inches off the ground and stretches between two weak supports that topple when the trip wire is pulled.",
+        "The first creature that crosses the trip wire causes the supports to topple and the unstable section of ceiling to collapse. Each creature beneath the unstable section of ceiling must succeed on a {@dc 13} Dexterity saving throw, taking 11 ({@damage 2d10}) Bludgeoning damage on a failed save or half as much damage on a successful one. Rubble from the collapse turns the trapped area into {@variantrule Difficult Terrain|XPHB}.",
+        {
+          "entries": [
+            "As a {@action Search|XPHB} action, a creature can examine the trapped area and make a {@dc 11} Wisdom ({@skill Perception|XPHB}) check, detecting the trip wire and the unstable section of ceiling on a successful check. Once detected, the trip wire can be easily cut or avoided (no ability check required)."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the damage and the save DC, as shown in the following table.",
+            {
+              "colLabels": [
+                "Levels",
+                "Bludgeoning Damage",
+                "Save DC"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-5 text-center",
+                "col-5 text-center"
+              ],
+              "rows": [
+                [
+                  "5–10",
+                  "22 ({@damage 4d10})",
+                  "15"
+                ],
+                [
+                  "11–16",
+                  "55 ({@damage 10d10})",
+                  "17"
+                ],
+                [
+                  "17–20",
+                  "99 ({@damage 18d10})",
+                  "19"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Collapsing Roof",
+      "rating": [
+        {
+          "threat": "deadly"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature crosses a trip wire"
+      ]
+    },
+    {
+      "entries": [
+        "This trap uses a trip wire to release a net suspended from the ceiling.",
+        "The trip wire is 3 inches off the ground and stretches between two columns or trees. The net is hidden by cobwebs or foliage. The DC to spot the trip wire and net is 10. A successful {@dc 15} Dexterity check using thieves' tools breaks the trip wire harmlessly. A character without thieves' tools can attempt this check with disadvantage using any edged weapon or edged tool. On a failed check, the trap triggers.",
+        "When the trap is triggered, the net is released, covering a 10-foot-square area. Those in the area are trapped under the net and {@condition restrained}, and those that fail a {@dc 10} Strength saving throw are also knocked {@condition prone}.",
+        "A creature can use its action to make a {@dc 10} Strength check, freeing itself or another creature within its reach on a success. The net has AC 10 and 20 hit points.",
+        "Dealing 5 slashing damage to the net (AC 10) destroys a 5-foot-square section of it, freeing any creature trapped in that section."
+      ],
+      "name": "Falling Net",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "A falling net trap uses a trip wire to release a weighted, 10-foot-square {@item Net|XPHB} suspended from the ceiling. The trip wire is 3 inches off the ground and stretches between two columns or trees.",
+        "The first creature that crosses the trip wire causes the Net to fall on it. The target must succeed on a {@dc 10} Dexterity saving throw or have the {@condition Restrained|XPHB} condition until it escapes. The target succeeds automatically if it's Huge or larger. A creature can take an action to make a {@dc 10} Strength ({@skill Athletics|XPHB}) check, freeing itself or another creature within its reach from the Net on a successful check.",
+        {
+          "entries": [
+            "As a {@action Search|XPHB} action, a creature can examine the trapped area and make a {@dc 11} Wisdom ({@skill Perception|XPHB}) check, detecting the trip wire and the suspended Net on a successful check. Once detected, the trip wire can be easily cut or avoided (no ability check required)."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Reducing the Net to 0 Hit Points frees any creature trapped in it (see \"Adventuring Gear\" for the Net's statistics)."
+          ],
+          "name": "Destroy the Net",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "A creature that has {@item Thieves' Tools|XPHB} and all the trap's components (including a Net) can try to set a falling net trap, doing so with a successful {@dc 13} Dexterity ({@skill Sleight of Hand|XPHB}) check. Each attempt to set this trap takes 10 minutes."
+          ],
+          "name": "Set the Trap",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the weight of the Net, which increases the save DC and the DC of the Strength ({@skill Athletics|XPHB}) check as follows: {@dc 12} at levels 5–10, {@dc 14} at levels 11–16, or {@dc 16} at levels 17–20."
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Falling Net",
+      "rating": [
+        {
+          "threat": "nuisance"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature crosses a trip wire"
+      ]
+    },
+    {
+      "entries": [
+        "This trap is activated when an intruder steps on a hidden pressure plate, releasing a magical gout of flame from a nearby statue. The statue can be of anything, including a dragon or a wizard casting a spell.",
+        "The DC is 15 to spot the pressure plate, as well as faint scorch marks on the floor and walls. A spell or other effect that can sense the presence of magic, such as detect magic, reveals an aura of evocation magic around the statue.",
+        "The trap activates when more than 20 pounds of weight is placed on the pressure plate, causing the statue to release a 30-foot cone of fire. Each creature in the fire must make a {@dc 13} Dexterity saving throw, taking 22 ({@damage 4d10}) fire damage on a failed save, or half as much damage on a successful one.",
+        "Wedging an iron spike or other object under the pressure plate prevents the trap from activating. A successful {@spell dispel magic} ({@dc 13}) cast on the statue destroys the trap."
+      ],
+      "name": "Fire-Breathing Statue",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MAG"
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "When a creature moves onto this trap's pressure plate for the first time on a turn or starts its turn there, a nearby statue exhales a 15-foot {@variantrule Cone [Area of Effect]|XPHB|Cone} of magical flame. The statue can look like anything, such as a dragon or a wizard. Each creature in the Cone must succeed on a {@dc 15} Dexterity saving throw, taking 11 ({@damage 2d10}) Fire damage on a failed save or half as much damage on a successful one.",
+        {
+          "entries": [
+            "A {@spell Detect Magic|XPHB} spell reveals an aura of Evocation magic around the statue. As a {@action Search|XPHB} action, a creature within 5 feet of the statue can examine it and make a {@dc 10} Wisdom ({@skill Perception|XPHB}) check, detecting a tiny glyph on the statue on a successful check. Once the glyph is found, a character can take a {@action Study|XPHB} action to examine it and make a {@dc 15} Intelligence ({@skill Arcana|XPHB}) check, ascertaining that the glyph means \"fire\" on a successful check. As an action, a character can use a sharp tool to deface the glyph, which disarms the trap.",
+            "As a {@action Search|XPHB} action, a creature can examine the section of floor that forms the pressure plate and make a {@dc 15} Wisdom ({@skill Perception|XPHB}) check, detecting the pressure plate on a successful check. Wedging an {@item Iron Spikes|XPHB|Iron Spike} or similar object under the pressure plate prevents the trap from triggering."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the damage and the area of effect, as shown in the following table.",
+            {
+              "colLabels": [
+                "Levels",
+                "Fire Damage",
+                "Area of Effect"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-5 text-center",
+                "col-5 text-center"
+              ],
+              "rows": [
+                [
+                  "5–10",
+                  "22 ({@damage 4d10})",
+                  "30-foot Cone"
+                ],
+                [
+                  "11–16",
+                  "55 ({@damage 10d10})",
+                  "60-foot Cone"
+                ],
+                [
+                  "17–20",
+                  "99 ({@damage 18d10})",
+                  "120-foot Cone"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Fire-Casting Statue",
+      "rating": [
+        {
+          "threat": "deadly"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature moves onto a pressure plate"
+      ]
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "This 10-foot-deep pit has a hinged lid constructed from material identical to the surrounding floor. When a creature moves onto the lid, it swings open like a trapdoor, causing the creature to fall into the pit. The lid remains open thereafter.",
+        "A creature that falls into the pit takes 3 ({@damage 1d6}) Bludgeoning damage from the fall.",
+        {
+          "entries": [
+            "As a {@action Study|XPHB} action, a creature can examine the section of floor that forms the pit's lid and make a {@dc 15} Intelligence ({@skill Investigation|XPHB}) check, detecting the pit on a successful check. Once the pit is detected, an Iron Spike or a similar object can be wedged between the pit's lid and the surrounding floor to prevent the lid from opening, thereby making it safe to cross. The cover can also be held shut using {@spell Arcane Lock|XPHB} or similar magic."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "A creature needs a Climb Speed, climbing gear, or magic such as {@spell Spider Climb|XPHB} to scale the pit's smooth walls. (You can make the pit easier to escape by adding cracks in the walls big enough to serve as handholds and footholds.)"
+          ],
+          "name": "Escape",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the pit's depth and damage, as shown in the following table.",
+            {
+              "colLabels": [
+                "Levels",
+                "Pit Depth",
+                "Bludgeoning Damage"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-5 text-center",
+                "col-5 text-center"
+              ],
+              "rows": [
+                [
+                  "5–10",
+                  "30 feet",
+                  "10 ({@damage 3d6})"
+                ],
+                [
+                  "11–16",
+                  "60 feet",
+                  "21 ({@damage 6d6})"
+                ],
+                [
+                  "17–20",
+                  "120 feet",
+                  "42 ({@damage 12d6})"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Hidden Pit",
+      "rating": [
+        {
+          "threat": "nuisance"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature moves onto the pit's lid"
+      ]
+    },
+    {
+      "entries": [
+        {
+          "entries": [
+            "A simple pit trap is a hole dug in the ground. The hole is covered by a large cloth anchored on the pit's edge and camouflaged with dirt and debris.",
+            "The DC to spot the pit is 10. Anyone stepping on the cloth falls through and pulls the cloth down into the pit, taking damage based on the pit's depth (usually 10 feet, but some pits are deeper)."
+          ],
+          "name": "Simple Pit",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "A successful {@dc 15} Wisdom ({@skill Perception}) check discerns an absence of foot traffic over the section of floor that forms the pit's cover. A successful {@dc 15} Intelligence ({@skill Investigation}) check is necessary to confirm that the trapped section of floor is actually the cover of a pit.",
+            "When a creature steps on the cover, it swings open like a trapdoor, causing the intruder to spill into the pit below. The pit is usually 10 or 20 feet deep but can be deeper.",
+            "Once the pit trap is detected, an iron spike or similar object can be wedged between the pit's cover and the surrounding floor in such a way as to prevent the cover from opening, thereby making it safe to cross. The cover can also be magically held shut using the {@spell arcane lock} spell or similar magic."
+          ],
+          "name": "Hidden Pit",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "This pit trap is identical to a hidden pit trap, with one key exception: the trap door that covers the pit is spring-loaded. After a creature falls into the pit, the cover snaps shut to trap its victim inside.",
+            "A successful {@dc 20} Strength check is necessary to pry the cover open. The cover can also be smashed open. A character in the pit can also attempt to disable the spring mechanism from the inside with a {@dc 15} Dexterity check using thieves' tools, provided that the mechanism can be reached and the character can see.",
+            "In some cases, a mechanism (usually hidden behind a secret door nearby) opens the pit."
+          ],
+          "name": "Locking Pit",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "This pit trap is a simple, hidden, or locking pit trap with sharpened wooden or iron spikes at the bottom. A creature falling into the pit takes 11 ({@damage 2d10}) piercing damage from the spikes, in addition to any falling damage. Even nastier versions have poison smeared on the spikes. In that case, anyone taking piercing damage from the spikes must also make a {@dc 13} Constitution saving throw, taking an 22 ({@damage 4d10}) poison damage on a failed save, or half as much damage on a successful one."
+          ],
+          "name": "Spiked Pit",
+          "type": "entries"
+        }
+      ],
+      "name": "Pits",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "entries": [
+        "When a creature steps on a hidden pressure plate, poison-tipped darts shoot from spring-loaded or pressurized tubes cleverly embedded in the surrounding walls. An area might include multiple pressure plates, each one rigged to its own set of darts.",
+        "The tiny holes in the walls are obscured by dust and cobwebs, or cleverly hidden amid bas-reliefs, murals, or frescoes that adorn the walls. The DC to spot them is 15. With a successful {@dc 15} Intelligence ({@skill Investigation}) check, a character can deduce the presence of the pressure plate from variations in the mortar and stone used to create it, compared to the surrounding floor. Wedging an iron spike or other object under the pressure plate prevents the trap from activating. Stuffing the holes with cloth or wax prevents the darts contained within from launching.",
+        "The trap activates when more than 20 pounds of weight is placed on the pressure plate, releasing four darts. Each dart makes a ranged attack with a +8 bonus against a random target within 10 feet of the pressure plate (vision is irrelevant to this attack roll). (If there are no targets in the area, the darts don't hit anything.) A target that is hit takes 2 ({@damage 1d4}) piercing damage and must succeed on a {@dc 15} Constitution saving throw, taking 11 ({@damage 2d10}) poison damage on a failed save, or half as much damage on a successful one."
+      ],
+      "name": "Poison Darts",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "entries": [
+        "A poisoned needle is hidden within a treasure chest's lock, or in something else that a creature might open. Opening the chest without the proper key causes the needle to spring out, delivering a dose of poison.",
+        "When the trap is triggered, the needle extends 3 inches straight out from the lock. A creature within range takes 1 piercing damage and 11 ({@damage 2d10}) poison damage, and must succeed on a {@dc 15} Constitution saving throw or be {@condition poisoned} for 1 hour.",
+        "A successful {@dc 20} Intelligence ({@skill Investigation}) check allows a character to deduce the trap's presence from alterations made to the lock to accommodate the needle.",
+        "A successful {@dc 15} Dexterity check using {@item thieves' tools|phb} disarms the trap, removing the needle from the lock. Unsuccessfully attempting to pick the lock triggers the trap."
+      ],
+      "name": "Poison Needle",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "When a creature moves onto this trap's pressure plate for the first time on a turn, poisoned darts shoot from tubes embedded in the surrounding walls. The holes that house these tubes are obscured by dust and cobwebs, or skillfully hidden amid bas-reliefs, murals, or frescoes.",
+        "Each creature in the darts' path must succeed on a {@dc 13} Dexterity saving throw or be struck by {@dice 1d3} darts, taking 3 ({@damage 1d6}) Poison damage per dart.",
+        {
+          "entries": [
+            "As a {@action Search|XPHB} action, a creature can examine the walls and make a {@dc 15} Wisdom ({@skill Perception|XPHB}) check, detecting the holes on a successful check. Plugging all the holes with wax, cloth, or detritus prevents the darts from firing.",
+            "As a {@action Search|XPHB} action, a creature can examine the section of floor that forms the pressure plate and make a {@dc 15} Wisdom ({@skill Perception|XPHB}) check, detecting the pressure plate on a successful check. Wedging an {@item Iron Spikes|XPHB|Iron Spike} or a similar object under the pressure plate prevents the trap from triggering."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing each dart's Poison damage as follows: 7 ({@dice 2d6}) at levels 5–10, 14 ({@dice 4d6}) at levels 11–16, or 24 ({@dice 7d6}) at levels 17–20."
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Poisoned Darts",
+      "rating": [
+        {
+          "threat": "deadly"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature moves onto a pressure plate"
+      ]
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "A poisoned needle is hidden in a lock. When a creature opens the lock with any object other than the proper key, the needle springs out and stabs the creature. The creature makes a {@dc 11} Constitution saving throw. On a failed save, the creature takes 5 ({@damage 1d10}) Poison damage and has the {@condition Poisoned|XPHB} condition for 1 hour. On a successful save, the creature takes half as much damage only.",
+        {
+          "entries": [
+            "The trap doesn't trigger if the lock is opened using a {@spell Knock|XPHB} spell or similar magic."
+          ],
+          "name": "Avoid",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "As a {@action Search|XPHB} action, a creature can examine the trapped lock and make a {@dc 15} Wisdom ({@skill Perception|XPHB}) check, detecting the needle on a successful check. Once the trap is detected, a character can take an action to try to disarm the trap, doing so with a successful {@dc 15} Dexterity ({@skill Sleight of Hand|XPHB}) check. On a failed check, the creature triggers the trap."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the damage and the save DC, as shown in the following table.",
+            {
+              "colLabels": [
+                "Levels",
+                "Poison Damage",
+                "Save DC"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-5 text-center",
+                "col-5 text-center"
+              ],
+              "rows": [
+                [
+                  "5–10",
+                  "11 ({@damage 2d10})",
+                  "13"
+                ],
+                [
+                  "11–16",
+                  "22 ({@damage 4d10})",
+                  "15"
+                ],
+                [
+                  "17–20",
+                  "55 ({@damage 10d10})",
+                  "17"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Poisoned Needle",
+      "rating": [
+        {
+          "threat": "nuisance"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature opens the trap's lock improperly or fails to disarm the trap"
+      ]
+    },
+    {
+      "entries": [
+        "When 20 or more pounds of pressure are placed on this trap's pressure plate, a hidden trapdoor in the ceiling opens, releasing a 10-foot-diameter rolling sphere of solid stone.",
+        "With a successful {@dc 15} Wisdom ({@skill Perception}) check, a character can spot the trapdoor and pressure plate.",
+        "A search of the floor accompanied by a successful {@dc 15} Intelligence ({@skill Investigation}) check reveals variations in the mortar and stone that betray the pressure plate's presence. The same check made while inspecting the ceiling notes variations in the stonework that reveal the trapdoor. Wedging an iron spike or other object under the pressure plate prevents the trap from activating.",
+        "Activation of the sphere requires all creatures present to roll initiative. The sphere rolls initiative with a {@hit +8} bonus. On its turn, it moves 60 feet in a straight line.",
+        "The sphere can move through creatures' spaces, and creatures can move through its space, treating it as {@quickref difficult terrain||3}. Whenever the sphere enters a creature's space or a creature enters its space while it's rolling, that creature must succeed on a {@dc 15} Dexterity saving throw or take 55 ({@damage 10d10}) bludgeoning damage and be knocked {@condition prone}.",
+        "The sphere stops when it hits a wall or similar barrier. It can't go around corners, but smart dungeon builders incorporate gentle, curving turns into nearby passages that allow the sphere to keep moving.",
+        "As an action, a creature within 5 feet of the sphere can attempt to slow it down with a {@dc 20} Strength check. On a successful check, the sphere's speed is reduced by 15 feet. If the sphere's speed drops to 0, it stops moving and is no longer a threat."
+      ],
+      "name": "Rolling Sphere",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MECH"
+    },
+    {
+      "duration": [
+        {
+          "condition": "Until the stone stops rolling",
+          "type": "special"
+        }
+      ],
+      "entries": [
+        "When a creature moves onto a hidden pressure plate, a 5-foot-radius orb of solid stone is released from a secret compartment and begins to roll. The stone and all creatures nearby roll Initiative; the stone gets a +8 bonus on its Initiative roll.",
+        "On its turn, the stone moves 60 feet in one direction, changing course if redirected by an obstacle. The stone can move through creatures' spaces, and creatures can move through the stone's space, treating it as {@variantrule Difficult Terrain|XPHB}. Whenever the stone enters a creature's space for the first time on a turn or a creature enters the stone's space while the stone is rolling, that creature must succeed on a {@dc 15} Dexterity saving throw or take 55 ({@damage 10d10}) Bludgeoning damage and have the {@condition Prone|XPHB} condition.",
+        "The stone stops when it hits a wall or similar barrier. It can't go around corners, but creative dungeon builders incorporate curving turns into nearby passages that allow the stone to keep moving.",
+        {
+          "entries": [
+            "As a {@action Study|XPHB} action, a creature can examine the section of floor that forms the pressure plate and make a {@dc 15} Intelligence ({@skill Investigation|XPHB}) check, deducing the pressure plate's function on a successful check. Wedging an Iron Spike or a similar object under the pressure plate prevents the trap from triggering."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The stone is a Large object that has AC 17, HP 100, a {@variantrule Damage Threshold|XPHB} of 10, and {@variantrule Immunity|XPHB} to Poison and Psychic damage."
+          ],
+          "name": "Destroy the Stone",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "As an action, a creature can try to slow down the stone with a {@dc 20} Strength ({@skill Athletics|XPHB}) check. If the check is successful, the distance the stone moves on its turn is reduced by 15 feet. If that distance drops to 0, it stops moving and is no longer a threat."
+          ],
+          "name": "Slow the Stone",
+          "type": "entries"
+        }
+      ],
+      "name": "Rolling Stone",
+      "rating": [
+        {
+          "threat": "deadly"
+        },
+        {
+          "threat": "nuisance"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature moves onto a pressure plate"
+      ]
+    },
+    {
+      "entries": [
+        "Magical, impenetrable darkness fills the gaping mouth of a stone face carved into a wall. The mouth is 2 feet in diameter and roughly circular. No sound issues from it, no light can illuminate the inside of it, and any matter that enters it is instantly obliterated.",
+        "A successful {@dc 20} Intelligence ({@skill Arcana}) check reveals that the mouth contains a sphere of annihilation that can't be controlled or moved. It is otherwise identical to a normal {@item sphere of annihilation}. Some versions of the trap include an enchantment placed on the stone face, such that specified creatures feel an overwhelming urge to approach it and crawl inside its mouth. This effect is otherwise like the sympathy aspect of the {@spell antipathy/sympathy} spell.",
+        "A successful {@spell dispel magic} ({@dc 18}) removes this enchantment."
+      ],
+      "name": "Sphere of Annihilation",
+      "source": "DMG",
+      "srd": true,
+      "trapHazType": "MAG"
+    },
+    {
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ],
+      "entries": [
+        "A 10-foot-deep pit has a hinged lid constructed from material identical to the surrounding floor. When a creature moves onto the lid, it swings open like a trapdoor, causing the creature to fall into the pit, which has sharpened wooden or metal spikes at the bottom. The lid remains open thereafter.",
+        "A creature that falls into the pit lands at the bottom and takes 3 ({@damage 1d6}) Bludgeoning damage from the fall plus 9 ({@damage 2d8}) Piercing damage from the spikes.",
+        {
+          "entries": [
+            "As a {@action Study|XPHB} action, a creature can examine the section of floor that forms the pit's lid and make a {@dc 15} Intelligence ({@skill Investigation|XPHB}) check, detecting the pit on a successful check. Once the hidden pit is detected, an Iron Spike or a similar object can be wedged between the pit's lid and the surrounding floor to prevent the lid from opening, thereby making it safe to cross. The cover can also be held shut using an {@spell Arcane Lock|XPHB} spell or similar magic."
+          ],
+          "name": "Detect and Disarm",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "A creature needs a Climb Speed, climbing gear, or magic such as a {@spell Spider Climb|XPHB} spell to scale the pit's smooth walls. You can make the pit easier to escape by adding cracks in the walls big enough to serve as handholds and footholds."
+          ],
+          "name": "Escape",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can scale the trap for higher levels by increasing the pit's depth and damage, as shown in the following table.",
+            {
+              "colLabels": [
+                "Levels",
+                "Pit Depth",
+                "Damage"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-5 text-center",
+                "col-5 text-center"
+              ],
+              "rows": [
+                [
+                  "5–10",
+                  "30 feet",
+                  "10 ({@damage 3d6}) Bludgeoning plus 13 ({@damage 3d8}) Piercing"
+                ],
+                [
+                  "11–16",
+                  "60 feet",
+                  "21 ({@damage 6d6}) Bludgeoning plus 36 ({@damage 8d8}) Piercing"
+                ],
+                [
+                  "17–20",
+                  "120 feet",
+                  "42 ({@damage 12d6}) Bludgeoning plus 57 ({@damage 13d8}) Piercing"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "At Higher Levels",
+          "type": "entries"
+        }
+      ],
+      "name": "Spiked Pit",
+      "rating": [
+        {
+          "threat": "deadly"
+        }
+      ],
+      "source": "XDMG",
+      "srd52": true,
+      "trapHazType": "TRP",
+      "trigger": [
+        "A creature moves onto the pit's lid"
+      ]
+    }
+  ]
+}

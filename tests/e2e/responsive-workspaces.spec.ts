@@ -45,7 +45,11 @@ test('split workspaces remain usable at the minimum app width', async ({ page })
     ).toBeVisible()
 
     const dismissHint = page.getByRole('button', { name: /Dismiss .*hint/i }).first()
-    if (await dismissHint.isVisible().catch(() => false)) await dismissHint.click()
+    if (await dismissHint.isVisible().catch(() => false)) {
+      await dismissHint.click({ timeout: 2_000 }).catch(() => {
+        // The optional hint may finish its exit transition between detection and the click.
+      })
+    }
 
     const splitPane = page.locator('[data-slot="split-pane"]')
     const paneSwitcher = splitPane.getByRole('tablist', { name: 'Workspace pane' })

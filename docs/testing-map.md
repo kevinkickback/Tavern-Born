@@ -92,6 +92,13 @@ npm run check:bundle
 npm run check:release
 ```
 
+Electron smoke tests skip local launches on Windows 11 build 26200 through 26399 because those OS
+builds can terminate Electron's sandboxed child processes with `0x80000003` during initialization.
+Do not make the test green with `--no-sandbox`: the startup smoke test exists in part to verify the
+renderer sandbox. The tests remain active on unaffected CI hosts, and the packaged application is
+unchanged. Remove the skip after the pinned Electron/Chromium runtime no longer reproduces upstream
+Electron issue 52098 on those Windows builds.
+
 `npm run lint` writes formatting/fixes; use `npx biome ci .` for read-only validation.
 
 ## Coverage policy

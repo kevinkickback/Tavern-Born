@@ -4,7 +4,11 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
-import { getSourceCompatibility, normalizeAllowedSources } from '@/lib/sourceCompatibility'
+import {
+  getSourceCompatibility,
+  normalizeAllowedSources,
+  normalizeSelectableAllowedSources,
+} from '@/lib/sourceCompatibility'
 import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
@@ -12,22 +16,30 @@ import type { StepProps } from '../types'
 
 interface RulesStepProps extends StepProps {
   sources?: SourceBook[]
+  isBundledSrd?: boolean
 }
 
-export function RulesStep({ data, onChange, sources = [], invalidFields }: RulesStepProps) {
+export function RulesStep({
+  data,
+  onChange,
+  sources = [],
+  isBundledSrd = false,
+  invalidFields,
+}: RulesStepProps) {
   const optionalClassFeaturesId = useId()
   const averageHitPointsId = useId()
   const bladesingerAnyRaceId = useId()
   const battleragerAnyRaceId = useId()
 
   const preferNewerPrintingsId = useId()
+  const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
   const configuredSources = data.allowedSources || []
   const allowedSources = data.originSystem
-    ? normalizeAllowedSources(configuredSources, data.originSystem, sources)
+    ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
     : configuredSources
-  const availableSourceSet = new Set(sources.map((source) => source.abbreviation))
+  const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
-  const sourcesByGroup = sources.reduce<Record<string, SourceBook[]>>((acc, source) => {
+  const sourcesByGroup = selectableSources.reduce<Record<string, SourceBook[]>>((acc, source) => {
     if (!acc[source.group]) {
       acc[source.group] = []
     }
@@ -47,7 +59,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
   const toggleSource = (sourceAbbr: string) => {
-    const source = sources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
+    const source =
+      selectableSources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
     if (data.originSystem && !getSourceCompatibility(source, data.originSystem).compatible) return
     const currentSources = allowedSources
     const nextSources = currentSources.includes(sourceAbbr)
@@ -75,9 +88,12 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   }
 
   const isPresetActive = (preset: SourcePreset) => {
-    const presetSources = preset.abbreviations.filter((abbreviation) =>
+    const availablePresetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
     )
+    const presetSources = data.originSystem
+      ? normalizeSelectableAllowedSources(availablePresetSources, data.originSystem, sources)
+      : availablePresetSources
     if (presetSources.length !== allowedSources.length) {
       return false
     }
@@ -153,7 +169,7 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
                   onClick={() =>
                     onChange({
                       originSystem: option.value,
-                      allowedSources: normalizeAllowedSources(
+                      allowedSources: normalizeSelectableAllowedSources(
                         configuredSources,
                         option.value,
                         sources,
@@ -310,58 +326,71 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" weight="fill" />
-              <h4 className="font-semibold text-lg">Allowed Sources</h4>
-              {allowedSources.length > 0 && (
-                <span className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
+              <h4 className="font-semibold text-lg">Additional Content</h4>
+              {!isBundledSrd && allowedSources.length > 0 && (
+                <span
+                  data-allowed-sources-count
+                  className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]"
+                >
                   {allowedSources.length}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
-              {[
-                ...SOURCE_PRESETS.map((preset) => ({
-                  key: preset.id,
-                  label: preset.label,
-                  title: preset.description,
-                  onClick: () => applySourcePreset(preset),
-                  active: isPresetActive(preset),
-                })),
-                {
-                  key: 'none',
-                  label: 'None',
-                  title: 'Clear all selected sources',
-                  onClick: selectNoneSources,
-                  active: false,
-                },
-              ].map((action, index, allActions) => (
-                <div key={action.key} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={action.onClick}
-                    className={cn(
-                      'font-medium text-primary hover:underline',
-                      action.active && 'underline',
+            {!isBundledSrd && (
+              <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
+                {[
+                  ...SOURCE_PRESETS.map((preset) => ({
+                    key: preset.id,
+                    label: preset.label,
+                    title: preset.description,
+                    onClick: () => applySourcePreset(preset),
+                    active: isPresetActive(preset),
+                  })),
+                  {
+                    key: 'none',
+                    label: 'None',
+                    title: 'Clear all selected content',
+                    onClick: selectNoneSources,
+                    active: false,
+                  },
+                ].map((action, index, allActions) => (
+                  <div key={action.key} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={action.onClick}
+                      className={cn(
+                        'font-medium text-primary hover:underline',
+                        action.active && 'underline',
+                      )}
+                      title={action.title}
+                    >
+                      {action.label}
+                    </button>
+                    {index < allActions.length - 1 && (
+                      <span className="text-muted-foreground">|</span>
                     )}
-                    title={action.title}
-                  >
-                    {action.label}
-                  </button>
-                  {index < allActions.length - 1 && (
-                    <span className="text-muted-foreground">|</span>
-                  )}
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {sources.length === 0 ? (
+          {isBundledSrd ? (
+            <div className="px-5 py-6 text-center">
+              <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
+              <p className="mx-auto mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                The included SRD does not provide additional sourcebooks to enable. To add more
+                options, open Settings → Game Data and add compatible 5etools data.
+              </p>
+            </div>
+          ) : selectableSources.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
-              No sources available. Please load game data in Settings first.
+              No additional content is available. Load game data in Settings first.
             </div>
           ) : (
             <div className="flex-1 min-h-0 flex flex-col gap-2">
               <section
-                aria-label="Allowed sources"
+                aria-label="Additional Content"
                 className="flex-1 overflow-y-auto pr-1 space-y-4"
               >
                 {groupOrder.map((group) => {

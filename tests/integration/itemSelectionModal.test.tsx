@@ -75,7 +75,7 @@ describe('ItemSelectionModal', () => {
     expect(screen.getByText('PHB')).toBeTruthy()
     expect(screen.queryByText(/Core potions and spell scrolls are included/)).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Manage sources' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Manage additional content' }))
     expect(onManageSources).toHaveBeenCalledOnce()
   })
 })

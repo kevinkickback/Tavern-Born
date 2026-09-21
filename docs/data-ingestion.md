@@ -7,10 +7,12 @@ data. UI code consumes parsed results through hooks; it never imports source JSO
 
 | Stage | Owner | Contract |
 | --- | --- | --- |
-| Source validation | `urlUtils.ts`, Electron IPC | Accept authorized local folders or valid HTTPS sources. |
-| Resource loading | `dataLoader.ts` | Load known resources with cancellation, timeouts, and bounded concurrency. |
+| Source validation | `validator.ts`, `urlUtils.ts`, Electron IPC | Accept bundled resources, authorized local folders, or valid HTTPS sources. |
+| Resource transport | `resourceReader.ts` | Read normalized relative JSON paths from bundled, local, or remote sources. |
+| Resource loading | `dataLoader.ts` | Load each known source independently with cancellation, timeouts, and bounded concurrency. |
 | Validation | `validator.ts`, `schemas.ts` | Reject invalid required shapes; report optional degradation. |
 | Parsing/normalization | `parsers/`, rule normalizers | Produce stable application entities and diagnostics. |
+| Layer composition | `contentLayers.ts` | Overlay normalized collections by canonical identity and rebuild lookups. |
 | Lookup construction | `lookups.ts` | Build collision-safe `name|source` maps. |
 | Filtering/resolution | `filters.ts`, `entityResolvers.ts` | Filter catalogs while preserving exact saved-reference fallback. |
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
@@ -18,6 +20,61 @@ data. UI code consumes parsed results through hooks; it never imports source JSO
 Local reads are capability-scoped to a native-picker root, canonicalized against symlinks, limited
 to JSON below that root, and size-limited by Electron. Remote production sources are HTTPS. GitHub
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.
+GitHub repository release-page URLs are treated as links to that repository root.
+
+Bundled reads use a separate, read-only IPC capability. The renderer supplies only a normalized
+relative JSON path. Electron resolves managed data below `resources/srd/core/data` during
+development and `process.resourcesPath/srd/core/data` when packaged. Both environments require the
+fixed `tavern-born-srd-core` pack identity; packaged builds additionally require
+`approved-for-distribution`, while unpackaged development can exercise a review-status snapshot.
+Absolute paths, backslashes, empty/dot/parent segments, non-JSON files, symlink escapes, non-files,
+and JSON larger than 50 MB are rejected.
+Bundled, local, and remote resources all pass through the same loader and parser pipeline.
+Source validation uses the same resource readers, so path construction, remote normalization,
+timeouts, and Electron capability checks cannot drift between validation and ingestion.
+
+## Content layers
+
+The Included SRD is the permanent base catalog. When a local directory or remote 5etools root is
+configured, both sources are loaded and parsed independently. `contentLayers.ts` then overlays the
+external normalized collections on the SRD collections: an exact external identity wins, while an
+SRD identity omitted by the external source remains available. Raw source JSON is never
+concatenated. Unresolved class-feature references are re-linked against the completed catalog and
+their normalized class rules are rebuilt before the final lookups are constructed. Subclass-feature
+references are re-linked the same way and their level groupings are rebuilt. Explicit class-choice
+references are checked against the completed class-feature, feat, item, and optional-feature
+catalogs.
+
+Top-level entities use source-qualified identity. Nested or repeated definitions require their
+complete structural identity; class features include their parent class and level so repeated names
+such as Ability Score Improvement do not collapse during composition. External-source configuration
+remains persisted in its existing shape for upgrade compatibility, while the effective cache
+identity records both the bundled base and external layer.
+
+The external directory/URL validator inventories every recognized top-level resource it can validate.
+A partial source is accepted when it contains at least one valid supported family; readable malformed
+families are rejected rather than treated as absent. The inventory is persisted with the external
+configuration and becomes the layer's loading contract. Unlisted families are intentionally absent
+and fall back to the SRD. An inventoried family that later disappears is a required failure, and an
+indexed class or spell family still fails if one of its referenced files is missing. Adding a new
+top-level family requires reselecting/revalidating the source so the inventory change is explicit.
+An added class with unresolved class features, subclass features, or explicit choice records is
+rejected as an incomplete layer. The previously active catalog and cache remain unchanged.
+
+Future standalone add-ons should use the published 5etools homebrew document shape and a separate
+document adapter, not imitate a full data tree.
+
+The committed bundle is the approved output of a completed one-time source and PDF provenance
+audit. `manifest.json` inventories every distributed top-level record and every data-file SHA-256
+checksum; `provenance.json` pins the official documents, upstream revision, and final audit result.
+The temporary source converter, correction adapters, exception queue, and PDF-review commands were
+removed after pack 1.0.0 was reproduced byte-for-byte. The retained bundle validator rejects an
+unapproved manifest, mismatched provenance or notices, missing or extra data files, and checksum
+drift. The committed corpus test loads the reviewed files through the normal parser and capability
+report. See [Bundled SRD Provenance Record](srd-provenance-review.md).
+The restricted manifest IPC returns validated pack identity, HTTPS source links, attribution,
+license metadata, and the transformation notice for offline display in Settings. Renderer code does
+not read arbitrary files or construct legal metadata independently.
 
 ## Loading rules
 
@@ -25,11 +82,14 @@ URLs are normalized to a data root; ambiguous slash-containing refs require an e
   indexes. Do not replace it with unbounded `Promise.all`.
 - Every load has a request identity and abort signal. Superseded progress, success, and failure are
   ignored.
-- Entity files, indexes, and spell-source association data are required. Fluff/presentation data is
-  optional.
+- Bundled entity files, indexes, and spell-source association data are required. For an external
+  partial layer, every inventoried entity file and every file referenced by an inventoried index is
+  required; unlisted families are intentionally absent. Fluff/presentation data is optional.
 - Foreground loads reject required failures. Background refresh rejects any dropped resource so it
   cannot replace a more complete cache.
 - A remote source with no reachable top-level resources fails instead of producing an empty catalog.
+- A bundled source with no readable top-level resources also fails instead of producing an empty
+  catalog.
 - Parser output and source ordering must be deterministic to avoid cache fingerprint churn.
 
 ## Parsing policy
@@ -109,15 +169,24 @@ items. The character stores the selected concrete `name|source` separately from 
 `items-base.json` supplies base items and mastery definitions; mastery records are not ordinary
 inventory entries.
 
-Core SRD/Basic Rules potions and scrolls housed in DMG/XDMG may be admitted by the shared
-player-item policy without enabling the full source. This is a filtering rule, not duplicated item
-data.
+Public SRD items housed in DMG/XDMG are admitted by the shared player-item policy without enabling
+the full source. The Included SRD remains the base catalog when additional content is configured,
+so these items stay available in both the bundled-only and layered views without presenting DMG,
+MM, XDMG, or XMM as selectable books. Their original source-qualified identities remain intact for
+references and lookups. This is a filtering and source-catalog policy, not duplicated or relabeled
+item data.
 
 ## Cache compatibility
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
-output changes in a way that makes previous cached data unsafe. Character schema changes are a
-separate concern and follow [State Management](state-management.md).
+output or layer composition changes in a way that makes previous cached data unsafe. Character
+schema changes are a separate concern and follow [State Management](state-management.md).
+
+Layered cache identity includes the stable bundled pack ID/version and the selected external source.
+An application update therefore invalidates a composition built on an older bundled snapshot, while
+changing or removing external content selects a different cache identity. Successful layered loads
+also persist each layer's normalized-content fingerprint and entity count, allowing diagnostics to
+identify which layer changed without weakening source-identity cache matching.
 
 ## Adding a data family
 

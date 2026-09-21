@@ -1,24 +1,37 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
-const { loadDataFromSourceMock, writeGameDataCacheMock, clearGameDataCacheMock } = vi.hoisted(
-  () => ({
-    loadDataFromSourceMock: vi.fn(),
-    writeGameDataCacheMock: vi.fn(async () => ({
-      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
-      contentFingerprint: 'abc123ef',
-    })),
-    clearGameDataCacheMock: vi.fn(async () => undefined),
-  }),
-)
+const {
+  loadDataFromSourceMock,
+  loadGameDataSourceStackMock,
+  writeGameDataCacheMock,
+  clearGameDataCacheMock,
+} = vi.hoisted(() => ({
+  loadDataFromSourceMock: vi.fn(),
+  loadGameDataSourceStackMock: vi.fn(),
+  writeGameDataCacheMock: vi.fn(async () => ({
+    lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+    contentFingerprint: 'abc123ef',
+  })),
+  clearGameDataCacheMock: vi.fn(async () => undefined),
+}))
+const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
+  resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
+}))
 
 vi.mock('@/lib/5etools', () => ({
   loadDataFromSource: loadDataFromSourceMock,
+  loadGameDataSourceStack: loadGameDataSourceStackMock,
+}))
+
+vi.mock('@/lib/5etools/bundledSource', () => ({
+  resolveDefaultBundledSource: resolveDefaultBundledSourceMock,
 }))
 
 vi.mock('@/lib/storage/dataCache', () => ({
   writeGameDataCache: writeGameDataCacheMock,
   clearGameDataCache: clearGameDataCacheMock,
+  computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -60,6 +73,7 @@ describe('gameDataStore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resolveDefaultBundledSourceMock.mockResolvedValue(null)
     useGameDataStore.setState({
       gameData: null,
       dataSourceConfig: null,
@@ -103,6 +117,44 @@ describe('gameDataStore', () => {
     expect(contentChanged).toBe(true)
   })
 
+  test('loads external content above the Included SRD and caches both source identities', async () => {
+    const data = makeGameDataFixture()
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadGameDataSourceStackMock.mockImplementation((_stack, options) => {
+      options?.onLayerLoaded?.('base', data)
+      options?.onLayerLoaded?.('additional', data)
+      return Promise.resolve(data)
+    })
+
+    await useGameDataStore.getState().loadGameData(config)
+
+    const expectedStack = { base: bundledConfig, additional: config }
+    expect(loadGameDataSourceStackMock).toHaveBeenCalledWith(
+      expectedStack,
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
+    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+    expect(writeGameDataCacheMock).toHaveBeenCalledWith(
+      data,
+      expectedStack,
+      expect.objectContaining({
+        fingerprint: null,
+        lastDataChangedAt: null,
+        layerMetadata: {
+          base: { contentFingerprint: 'layer-fingerprint', entityCount: 0 },
+          additional: { contentFingerprint: 'layer-fingerprint', entityCount: 0 },
+        },
+      }),
+    )
+  })
+
   test('ignores progress reported by a superseded load', async () => {
     let firstProgress: ((current: number, total: number, resource: string) => void) | undefined
     let secondProgress: ((current: number, total: number, resource: string) => void) | undefined
@@ -124,6 +176,10 @@ describe('gameDataStore', () => {
 
     const firstLoad = useGameDataStore.getState().loadGameData(config)
     const secondLoad = useGameDataStore.getState().loadGameData({ ...config, path: '/new-data' })
+    await vi.waitFor(() => {
+      expect(firstProgress).toBeTypeOf('function')
+      expect(secondProgress).toBeTypeOf('function')
+    })
     secondProgress?.(1, 4, 'new/classes')
     firstProgress?.(9, 10, 'old/spells')
 
@@ -276,6 +332,70 @@ describe('gameDataStore', () => {
     await useGameDataStore.getState().refreshGameData()
 
     expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+  })
+
+  test('restores the bundled source only after its data loads successfully', async () => {
+    const existingData = makeGameDataFixture()
+    const bundledData = makeGameDataFixture()
+    bundledData.classes = [{ name: 'Wizard', source: 'PHB' }] as GameData['classes']
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadDataFromSourceMock.mockResolvedValue(bundledData)
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    expect(restored).toBe(true)
+    expect(useGameDataStore.getState().gameData).toBe(bundledData)
+    expect(useGameDataStore.getState().dataSourceConfig).toEqual(
+      expect.objectContaining({
+        type: 'bundled',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+      }),
+    )
+  })
+
+  test('keeps external data and configuration when bundled restore is unavailable', async () => {
+    const existingData = makeGameDataFixture()
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    const state = useGameDataStore.getState()
+    expect(restored).toBe(false)
+    expect(state.gameData).toBe(existingData)
+    expect(state.dataSourceConfig).toBe(config)
+    expect(state.error).toContain('Included SRD is unavailable')
+    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
+  })
+
+  test('keeps external data and configuration when bundled loading fails', async () => {
+    const existingData = makeGameDataFixture()
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    loadDataFromSourceMock.mockRejectedValue(new Error('bundled files are damaged'))
+    useGameDataStore.setState({ gameData: existingData, dataSourceConfig: config })
+
+    const restored = await useGameDataStore.getState().restoreBundledData()
+
+    const state = useGameDataStore.getState()
+    expect(restored).toBe(false)
+    expect(state.gameData).toBe(existingData)
+    expect(state.dataSourceConfig).toBe(config)
+    expect(state.error).toBe('bundled files are damaged')
   })
 
   test('persist partialize keeps only config and timestamp fields', () => {

@@ -12,6 +12,14 @@ import {
   session,
   shell,
 } from 'electron'
+import {
+  assertBundledManifestAllowed,
+  type BundledSrdManifestSummary,
+  readBundledJsonFromRoot,
+  readBundledManifestFromRoot,
+  resolveBundledPackRoot,
+  validateBundledResourcePath,
+} from './bundledResources'
 import { isPathWithinRoot, isTrustedRendererUrl } from './security'
 import {
   cancelDownload,
@@ -41,6 +49,10 @@ let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
 let forceClose = false
 let localDataRootPath: string | null = null
+let bundledManifestCache: {
+  rootPath: string
+  promise: Promise<BundledSrdManifestSummary>
+} | null = null
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 const LOCAL_DATA_AUTH_FILE = 'trusted-data-root.json'
@@ -89,6 +101,35 @@ async function authorizeLocalDataRoot(folderPath: string): Promise<string> {
   )
   localDataRootPath = canonicalPath
   return canonicalPath
+}
+
+function getBundledPackRoot(): string {
+  return resolveBundledPackRoot({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    repositoryRoot: join(__dirname, '..'),
+  })
+}
+
+async function getAllowedBundledManifest(): Promise<{
+  manifest: BundledSrdManifestSummary
+  rootPath: string
+}> {
+  const rootPath = getBundledPackRoot()
+  if (bundledManifestCache?.rootPath !== rootPath) {
+    const promise = readBundledManifestFromRoot(rootPath).then((manifest) => {
+      assertBundledManifestAllowed(manifest, { isPackaged: app.isPackaged })
+      return manifest
+    })
+    bundledManifestCache = { rootPath, promise }
+  }
+
+  try {
+    return { manifest: await bundledManifestCache.promise, rootPath }
+  } catch (error) {
+    if (bundledManifestCache?.rootPath === rootPath) bundledManifestCache = null
+    throw error
+  }
 }
 
 function isDevToolsShortcut(input: Electron.Input): boolean {
@@ -260,6 +301,16 @@ app.on('ready', async () => {
 
     const content = await readFile(canonicalTarget, 'utf-8')
     return JSON.parse(content)
+  })
+  ipcMain.handle('resources:readBundledJson', async (event, relativePath: unknown) => {
+    assertTrustedIpcSender(event)
+    validateBundledResourcePath(relativePath)
+    const { rootPath } = await getAllowedBundledManifest()
+    return readBundledJsonFromRoot(join(rootPath, 'data'), relativePath)
+  })
+  ipcMain.handle('resources:getBundledManifest', async (event) => {
+    assertTrustedIpcSender(event)
+    return (await getAllowedBundledManifest()).manifest
   })
   ipcMain.on('state:setUnsavedChanges', (event, value: unknown) => {
     if (!isTrustedIpcSender(event)) return

@@ -60,9 +60,9 @@ describe('desktop workspace navigation', () => {
       screen.getByRole('link', { name: 'Actions & Effects' }).getAttribute('aria-current'),
     ).toBe('page')
     expect(screen.queryByRole('link', { name: 'Rules' })).toBeNull()
-    expect(screen.queryByRole('link', { name: 'Sources' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Additional Content' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Additional Content' })).toBeNull()
   })
 
   test('places Review in a final section after Core and Details', () => {
@@ -141,15 +141,17 @@ describe('desktop workspace navigation', () => {
     ])
   })
 
-  test('uses separate Character Rules and Sources pages in the Rules navigation', () => {
+  test('uses separate Character Rules and Additional Content pages in the Rules navigation', () => {
     renderSidebar('/sources')
 
     expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('link', { name: 'Character Rules' }).getAttribute('aria-current')).toBe(
       null,
     )
-    expect(screen.getByRole('link', { name: 'Sources' }).getAttribute('aria-current')).toBe('page')
-    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
+    expect(
+      screen.getByRole('link', { name: 'Additional Content' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.queryByRole('button', { name: 'Additional Content' })).toBeNull()
   })
 
   test('renders the permanent context pane for the compendium', () => {

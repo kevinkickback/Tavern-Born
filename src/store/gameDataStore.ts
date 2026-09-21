@@ -1,19 +1,61 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { loadDataFromSource } from '@/lib/5etools'
+import {
+  type DataSourceStackLoaderOptions,
+  loadDataFromSource,
+  loadGameDataSourceStack,
+} from '@/lib/5etools'
+import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   clearGameDataCache,
+  computeGameDataFingerprint,
+  type GameDataLayerCacheMetadataByRole,
   isCacheForSource,
   isCacheStale,
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
 let cacheMutationQueue: Promise<void> = Promise.resolve()
+
+const GAME_DATA_STORE_VERSION = 1
+
+export function migrateGameDataPersistedState(persistedState: unknown): unknown {
+  if (!persistedState || typeof persistedState !== 'object' || Array.isArray(persistedState)) {
+    return persistedState
+  }
+  const state = persistedState as Record<string, unknown>
+  const config = state.dataSourceConfig
+  if (config == null) return state
+  if (typeof config !== 'object' || Array.isArray(config)) {
+    return { ...state, dataSourceConfig: null }
+  }
+
+  const candidate = config as Record<string, unknown>
+  const hasBaseFields =
+    typeof candidate.path === 'string' &&
+    typeof candidate.isValid === 'boolean' &&
+    (candidate.type === 'local' || candidate.type === 'remote' || candidate.type === 'bundled')
+  const hasBundledIdentity =
+    candidate.type !== 'bundled' ||
+    (typeof candidate.packId === 'string' &&
+      candidate.packId.length > 0 &&
+      typeof candidate.packVersion === 'string' &&
+      candidate.packVersion.length > 0)
+  const hasValidAvailableResources =
+    candidate.type === 'bundled' ||
+    candidate.availableResources === undefined ||
+    (Array.isArray(candidate.availableResources) &&
+      candidate.availableResources.every((resource) => typeof resource === 'string'))
+
+  return hasBaseFields && hasBundledIdentity && hasValidAvailableResources
+    ? state
+    : { ...state, dataSourceConfig: null }
+}
 
 function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {
   const operation = cacheMutationQueue.then(mutation)
@@ -53,6 +95,12 @@ interface LoadProgress {
   current: number
   total: number
   resource: string
+}
+
+async function resolveSourceStack(config: DataSourceConfig): Promise<GameDataSourceStack | null> {
+  if (config.type === 'bundled') return null
+  const bundled = await resolveDefaultBundledSource()
+  return bundled ? { base: bundled, additional: config } : null
 }
 
 /** How the current gameData was sourced this session. */
@@ -108,6 +156,7 @@ interface GameDataState {
    */
   loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
   refreshGameData: () => Promise<void>
+  restoreBundledData: () => Promise<boolean>
   clearGameData: () => Promise<void>
 }
 
@@ -148,18 +197,25 @@ export const useGameDataStore = create<GameDataState>()(
           setLastContentFingerprint,
         } = get()
         const cache = await readGameDataCache()
+        const configuredStack = dataSourceConfig ? await resolveSourceStack(dataSourceConfig) : null
+        const cacheIdentity = configuredStack ?? dataSourceConfig
 
         if (!cache && !dataSourceConfig) {
+          const bundledSource = await resolveDefaultBundledSource()
+          if (bundledSource) {
+            await loadGameData(bundledSource)
+            return {}
+          }
           setCacheStatus('unconfigured')
           return {}
         }
 
         if (cache && dataSourceConfig) {
-          if (!isCacheForSource(cache, dataSourceConfig)) {
+          if (!cacheIdentity || !isCacheForSource(cache, cacheIdentity)) {
             await loadGameData(dataSourceConfig)
             return {}
           }
-          if (isCacheStale(cache.cachedAt)) {
+          if (dataSourceConfig.type !== 'bundled' && isCacheStale(cache.cachedAt)) {
             setGameData(cache.data)
             setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
             setLastContentFingerprint(cache.contentFingerprint ?? null)
@@ -178,7 +234,7 @@ export const useGameDataStore = create<GameDataState>()(
             : Number.NaN
           const checkedRecently =
             Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
-          if (opts?.forceCheck || !checkedRecently) {
+          if (dataSourceConfig.type !== 'bundled' && (opts?.forceCheck || !checkedRecently)) {
             return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
           }
           return {}
@@ -222,7 +278,10 @@ export const useGameDataStore = create<GameDataState>()(
         try {
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
-          const data = await loadDataFromSource(config, {
+          const sourceStack = await resolveSourceStack(config)
+          const cacheIdentity = sourceStack ?? config
+          const layerMetadata: GameDataLayerCacheMetadataByRole = {}
+          const loaderOptions: DataSourceStackLoaderOptions = {
             onProgress: background
               ? undefined
               : (current, total, resource) => {
@@ -235,7 +294,16 @@ export const useGameDataStore = create<GameDataState>()(
               if (failure.required) failedRequiredResources.add(resource)
             },
             signal: controller.signal,
-          })
+            onLayerLoaded: (role, layerData) => {
+              layerMetadata[role] = {
+                contentFingerprint: computeGameDataFingerprint(layerData),
+                entityCount: getCatalogEntityCount(layerData),
+              }
+            },
+          }
+          const data = sourceStack
+            ? await loadGameDataSourceStack(sourceStack, loaderOptions)
+            : await loadDataFromSource(config, loaderOptions)
 
           const existingData = get().gameData
           if (background && failedResources.size > 0) {
@@ -270,9 +338,10 @@ export const useGameDataStore = create<GameDataState>()(
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
           const cacheEntry = await enqueueCacheMutation(() =>
-            writeGameDataCache(data, config, {
+            writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
+              ...(sourceStack ? { layerMetadata } : {}),
             }),
           )
 
@@ -337,6 +406,27 @@ export const useGameDataStore = create<GameDataState>()(
         }
       },
 
+      restoreBundledData: async () => {
+        const bundledSource = await resolveDefaultBundledSource()
+        if (!bundledSource) {
+          set({
+            error:
+              'The Included SRD is unavailable in this copy of Tavern Born. Reinstall the app or add compatible 5etools data in Settings.',
+          })
+          return false
+        }
+
+        await get().loadGameData(bundledSource)
+        const state = get()
+        return (
+          !state.error &&
+          state.gameData !== null &&
+          state.dataSourceConfig?.type === 'bundled' &&
+          state.dataSourceConfig.packId === bundledSource.packId &&
+          state.dataSourceConfig.packVersion === bundledSource.packVersion
+        )
+      },
+
       clearGameData: async () => {
         // Invalidate results even when the underlying operation (notably local IPC
         // reads or an IndexedDB write) cannot be cancelled by AbortController.
@@ -364,6 +454,8 @@ export const useGameDataStore = create<GameDataState>()(
     {
       name: 'game-data-storage',
       storage: createIdbStorage(),
+      version: GAME_DATA_STORE_VERSION,
+      migrate: migrateGameDataPersistedState,
       // Only persist the config — game data is cached separately in dataCache.ts.
       partialize: (state) => ({
         dataSourceConfig: state.dataSourceConfig,

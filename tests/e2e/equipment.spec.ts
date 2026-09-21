@@ -32,6 +32,13 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
         basicRules: true,
       },
       {
+        name: '+1 Wand of the War Mage',
+        source: 'DMG',
+        type: 'WD',
+        rarity: 'uncommon',
+        srd: true,
+      },
+      {
         name: 'Bag of Holding',
         source: 'DMG',
         type: 'W',
@@ -79,7 +86,8 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   const addItemDialog = page.getByRole('dialog', { name: 'Add Item' })
   await expect(addItemDialog.getByText('Potion of Healing')).toBeVisible()
   await expect(addItemDialog.getByText('Spell Scroll (1st Level)')).toBeVisible()
-  await expect(addItemDialog.getByText('Bag of Holding')).toHaveCount(0)
+  await expect(addItemDialog.getByText('+1 Wand of the War Mage')).toBeVisible()
+  await expect(addItemDialog.getByText('Bag of Holding')).toBeVisible()
   const leatherArmorOption = addItemDialog.getByRole('button', { name: /^Leather Armor\b/ })
   await expect(leatherArmorOption.getByText('Light Armor', { exact: true })).toBeVisible()
   await expect(leatherArmorOption.getByText('Armor', { exact: true })).toHaveCount(0)

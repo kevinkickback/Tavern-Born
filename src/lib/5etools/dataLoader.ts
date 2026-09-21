@@ -40,7 +40,9 @@ import {
   parseTrapHazards,
   parseVariantRules,
 } from './parsers/index'
-import { parseRemoteDataSourceUrl } from './urlUtils'
+import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
+
+export { DATA_REQUEST_TIMEOUT_MS } from './resourceReader'
 
 export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
@@ -61,8 +63,9 @@ interface ExtractIndexFilesOptions {
   treatObjectKeysAsSources?: boolean
 }
 
-export const DATA_REQUEST_TIMEOUT_MS = 15_000
 export const DATA_FETCH_CONCURRENCY = 6
+
+const BUNDLED_SRD_SELECTABLE_SOURCES = new Set(['PHB', 'XPHB'])
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
@@ -74,49 +77,21 @@ function throwIfAborted(signal?: AbortSignal): void {
   throw new DOMException('Data loading aborted', 'AbortError')
 }
 
-function createTimedSignal(parentSignal?: AbortSignal): {
-  signal: AbortSignal
-  cleanup: () => void
-} {
-  const controller = new AbortController()
-  const abortFromParent = () =>
-    controller.abort(
-      parentSignal?.reason instanceof Error && parentSignal.reason.name === 'AbortError'
-        ? parentSignal.reason
-        : new DOMException('Data loading aborted', 'AbortError'),
-    )
-  const timeout = setTimeout(() => {
-    controller.abort(new DOMException('Data request timed out', 'TimeoutError'))
-  }, DATA_REQUEST_TIMEOUT_MS)
-
-  if (parentSignal?.aborted) {
-    abortFromParent()
-  } else {
-    parentSignal?.addEventListener('abort', abortFromParent, { once: true })
-  }
-
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      clearTimeout(timeout)
-      parentSignal?.removeEventListener('abort', abortFromParent)
-    },
-  }
-}
-
 export class FiveEToolsDataLoader {
-  private baseUrl: string
-  private isRemote: boolean
+  private sourceType: DataSourceConfig['type']
+  private availableResources: Set<string> | null
+  private reader: JsonResourceReader
 
-  constructor(config: DataSourceConfig) {
-    this.isRemote = config.type === 'remote'
-    if (this.isRemote) {
-      const parsedUrl = parseRemoteDataSourceUrl(config.path)
-      if (parsedUrl.kind === 'invalid') throw new Error(parsedUrl.error)
-      this.baseUrl = parsedUrl.normalizedUrl
-    } else {
-      this.baseUrl = config.path
-    }
+  constructor(
+    config: DataSourceConfig,
+    reader: JsonResourceReader = createJsonResourceReader(config),
+  ) {
+    this.sourceType = config.type
+    this.availableResources =
+      config.type !== 'bundled' && config.availableResources
+        ? new Set(config.availableResources)
+        : null
+    this.reader = reader
   }
 
   async loadAllData(options?: DataLoaderOptions): Promise<GameData> {
@@ -149,6 +124,9 @@ export class FiveEToolsDataLoader {
       { key: 'rewards', file: 'rewards.json' },
       { key: 'cultsBoons', file: 'cultsboons.json' },
     ]
+    const configuredResources = this.availableResources
+      ? resources.filter((resource) => this.availableResources?.has(resource.file))
+      : resources
 
     const gameData: GameData = {
       races: [],
@@ -189,7 +167,7 @@ export class FiveEToolsDataLoader {
     let loadedTopLevelResources = 0
 
     let completedResources = 0
-    await mapWithConcurrency(resources, DATA_FETCH_CONCURRENCY, async (resource) => {
+    await mapWithConcurrency(configuredResources, DATA_FETCH_CONCURRENCY, async (resource) => {
       throwIfAborted(options?.signal)
 
       try {
@@ -313,14 +291,18 @@ export class FiveEToolsDataLoader {
       } finally {
         completedResources += 1
         if (options?.onProgress) {
-          options.onProgress(completedResources, resources.length, resource.file)
+          options.onProgress(completedResources, configuredResources.length, resource.file)
         }
       }
     })
 
-    if (this.isRemote && loadedTopLevelResources === 0) {
+    if (loadedTopLevelResources === 0) {
       throw new Error(
-        'Unable to load remote data source. Check internet connectivity and source URL.',
+        this.sourceType === 'bundled'
+          ? 'Unable to load the included SRD. Reinstall Tavern Born or restore the application files.'
+          : this.sourceType === 'remote'
+            ? 'Unable to load additional content. Check internet connectivity and the source address.'
+            : 'Unable to load additional content from the selected folder.',
       )
     }
 
@@ -354,12 +336,19 @@ export class FiveEToolsDataLoader {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
 
-    gameData.sources = buildSourcesList(
+    const sourceCatalog = buildSourcesList(
       Array.from(sourcesSet),
       booksData,
       adventuresData,
       collectRevisedSourceAbbreviations(gameData),
     )
+    gameData.sources =
+      this.sourceType === 'bundled'
+        ? sourceCatalog.map((source) => ({
+            ...source,
+            hasCharacterOptions: BUNDLED_SRD_SELECTABLE_SOURCES.has(source.abbreviation),
+          }))
+        : sourceCatalog
     gameData.lookups = buildGameDataLookups(gameData)
 
     if (import.meta.env.DEV) {
@@ -371,7 +360,7 @@ export class FiveEToolsDataLoader {
     }
 
     if (options?.onProgress) {
-      options.onProgress(resources.length, resources.length, 'Complete')
+      options.onProgress(configuredResources.length, configuredResources.length, 'Complete')
     }
 
     return gameData
@@ -580,35 +569,8 @@ export class FiveEToolsDataLoader {
     })
   }
 
-  private async loadResource(filename: string, signal?: AbortSignal): Promise<unknown> {
-    if (!this.isRemote) {
-      const sep = this.baseUrl.includes('\\') ? '\\' : '/'
-      const fullPath = `${this.baseUrl}${sep}${filename.replace(/\//g, sep)}`
-      const readLocalJson = window.electronAPI?.readLocalJson
-      if (!readLocalJson) {
-        throw new Error('Local data loading requires Electron runtime')
-      }
-      return readLocalJson(fullPath)
-    }
-
-    const url = this.buildUrl(filename)
-    const timedSignal = createTimedSignal(signal)
-    try {
-      const response = await fetch(url, { signal: timedSignal.signal })
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${filename}: ${response.statusText}`)
-      }
-      return await response.json()
-    } finally {
-      timedSignal.cleanup()
-    }
-  }
-
-  private buildUrl(filename: string): string {
-    if (!this.isRemote) {
-      return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}${filename}`
-    }
-    return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}data/${filename}`
+  private loadResource(filename: string, signal?: AbortSignal): Promise<unknown> {
+    return this.reader.readJson(filename, signal)
   }
 
   private addItemSources(items: readonly unknown[], sourcesSet: Set<string>): void {

@@ -211,15 +211,16 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     )
     expect(legacyCoreItems).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ name: '+1 Wand of the War Mage', source: 'DMG' }),
+        expect.objectContaining({ name: 'Bag of Holding', source: 'DMG' }),
         expect.objectContaining({ name: 'Potion of Healing', source: 'DMG' }),
         expect.objectContaining({ name: 'Spell Scroll (1st Level)', source: 'DMG' }),
       ]),
     )
-    expect(legacyCoreItems).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ name: 'Bag of Holding', source: 'DMG' })]),
-    )
     expect(revisedCoreItems).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ name: '+1 Wand of the War Mage', source: 'XDMG' }),
+        expect.objectContaining({ name: 'Bag of Holding', source: 'XDMG' }),
         expect.objectContaining({ name: 'Potion of Healing', source: 'XDMG' }),
         expect.objectContaining({ name: 'Spell Scroll (Level 1)', source: 'XDMG' }),
       ]),

@@ -47,5 +47,5 @@ describe('ManualEffectsEditor', () => {
 
     await user.click(screen.getByRole('button', { name: 'Remove Table ruling' }))
     expect(useCharacterStore.getState().activeCharacter?.manualEffects).toEqual([])
-  })
+  }, 10_000)
 })

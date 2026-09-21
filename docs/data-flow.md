@@ -7,17 +7,45 @@ guides and code, not duplicated here.
 
 Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dataCache`.
 
-1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB.
+1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB. The
+   immutable bundled SRD is the base source; an authorized local directory or remote HTTPS root can
+   be configured as one additional-content source.
 2. Theme bootstrap data is applied from local storage before React paints, then reconciled with
    hydrated preferences.
 3. `useDataInit` waits for hydration and chooses cache, foreground load, or source configuration.
 4. A usable cache starts the app immediately. Stale data refreshes in the background.
-5. The loader fetches, validates, parses, normalizes, and indexes the configured source.
-6. A successful complete result replaces memory/cache atomically. Failed or superseded loads do not.
+5. Each configured source is fetched, validated, parsed, and normalized independently. Parsed
+   collections are composed by canonical identity and lookups are rebuilt from the result.
+6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads
+   do not.
+
+The bundled manifest is read through a fixed Electron capability. Development and packaged builds
+require the committed `tavern-born-srd-core` identity; packaged builds also require
+`approved-for-distribution` and read the reviewed files from `process.resourcesPath`. Unpackaged
+development may load a review-status snapshot without weakening the release boundary. Bundled
+cache entries are immutable for their pack version and are never background-refreshed. “Remove
+Additional Content” loads and validates the admitted bundled catalog before removing the saved
+external connection; failure keeps the existing data, cache, and external configuration while
+exposing a diagnostic. The rebuild is atomic and never makes the application content-free.
+
+After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
+available offline. Continuing requires no source setup; “Add Additional Content” opens the existing
+external-source controls and explains that user-supplied content expands the bundled catalog. A Back
+action returns to the Included SRD introduction without dismissing or acknowledging it. When
+external content is active, “Change Additional Content” opens the same chooser and offers “Remove
+Additional Content” alongside online and local options; the action is not shown as a separate
+active-state action. The Included SRD summary shows its SRD document versions, supported character
+rules, and offline availability rather than internal pack or cache status.
+
+Bundled transport and version-aware cache identity use the approved committed pack in every
+environment. A fresh packaged or development startup therefore has the same Included SRD base.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
-parsed content fingerprint changes. Background refreshes never replace a more complete catalog
-with partial or empty data.
+composed content fingerprint changes. Layered cache identity includes both the bundled pack and the
+external source, so either source changing invalidates the effective catalog. The cache records a
+separate normalized-content fingerprint and entity count for each successfully loaded layer.
+Background refreshes never replace a more complete catalog with partial or empty data, and an added
+class with unresolved required feature or choice references is rejected before cache replacement.
 
 ## Character draft and save
 
@@ -64,8 +92,8 @@ header, Builder, prerequisites, and readiness consume the same calculation bound
 
 ## Rules and source settings
 
-Character Rules owns ruleset metadata, advancement, and options. Sources owns allowed source books
-and newer-printing preference.
+Character Rules owns ruleset metadata, advancement, and options. Additional Content owns allowed
+source books and the newer-printing preference. Its stable route remains `/sources`.
 
 - The character's PHB/XPHB rules source is implicit.
 - Filtering affects selection catalogs; exact raw fallback keeps existing saved references
@@ -74,6 +102,11 @@ and newer-printing preference.
   review rather than silently rewriting choices.
 - Core player potions and scrolls may be admitted from ruleset DMG records without enabling that
   entire book.
+- Bundled SRD provenance sources such as DMG, MM, XDMG, and XMM are not selectable books. Public
+  SRD items matching the character's ruleset remain available without enabling those sources.
+- Source-selection surfaces explain that the bundled SRD has no additional sourcebooks to enable
+  and direct users to Settings → Game Data when they want to add compatible 5etools data. Their
+  selected-source count is hidden because the bundled provenance sources are not user choices.
 
 The creation wizard uses `useWizardGameData`; edit pages use `useFilteredGameData`. Neither reads
 raw game-data collections directly.

@@ -5,6 +5,8 @@ export interface BundleFile {
 
 export interface BundleMeasurements {
   totalDistribution: number
+  bundledSrdPack: number
+  applicationBundle: number
   staticAssets: number
   rendererCode: number
   initialRendererScript: number
@@ -21,11 +23,22 @@ export interface BundleBudgetViolation {
 
 export const BUNDLE_BUDGETS: Readonly<BundleMeasurements>
 
-export function measureBundle(files: readonly BundleFile[]): BundleMeasurements
+export function measureBundle(
+  files: readonly BundleFile[],
+  bundledSrdFiles?: readonly BundleFile[],
+): BundleMeasurements
+
+export function validateBundledSrdPack(resourceDirectory?: string): Promise<BundleFile[]>
 
 export function evaluateBundleBudgets(
   measurements: BundleMeasurements,
   budgets?: Readonly<BundleMeasurements>,
 ): BundleBudgetViolation[]
 
-export function checkBundleBudget(distDirectory?: string): Promise<BundleMeasurements>
+export function checkBundleBudget(
+  distDirectory?: string,
+  options?: {
+    requireBundledSrd?: boolean
+    resourceDirectory?: string
+  },
+): Promise<BundleMeasurements>

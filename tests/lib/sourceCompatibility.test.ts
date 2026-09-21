@@ -4,7 +4,9 @@ import {
   getEffectiveSources,
   getSourceCompatibility,
   normalizeAllowedSources,
+  normalizeSelectableAllowedSources,
 } from '@/lib/sourceCompatibility'
+import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import type { GameData, SourceBook } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -23,6 +25,18 @@ const sources: SourceBook[] = [
 ]
 
 describe('source compatibility', () => {
+  test('keeps every current source preset compatible with both rulesets', () => {
+    for (const preset of SOURCE_PRESETS) {
+      expect(
+        preset.abbreviations.every(
+          (source) =>
+            getSourceCompatibility(source, '2014').compatible &&
+            getSourceCompatibility(source, '2024').compatible,
+        ),
+      ).toBe(true)
+    }
+  })
+
   test('keeps only the core printing that matches the character ruleset', () => {
     expect(normalizeAllowedSources(['PHB', 'XPHB', 'DMG', 'XDMG'], '2014', sources)).toEqual([
       'PHB',
@@ -46,6 +60,17 @@ describe('source compatibility', () => {
   test('adds exactly the matching Player’s Handbook as the implicit source', () => {
     expect(getEffectiveSources(['XGE', 'XPHB'], '2014', sources)).toEqual(['XGE', 'PHB'])
     expect(getEffectiveSources(['XGE', 'PHB'], '2024', sources)).toEqual(['XGE', 'XPHB'])
+  })
+
+  test('removes provenance-only catalog sources while preserving unknown external selections', () => {
+    const catalog = sources.map((source) =>
+      source.abbreviation === 'DMG' ? { ...source, hasCharacterOptions: false } : source,
+    )
+
+    expect(normalizeSelectableAllowedSources(['DMG', 'XGE', 'CUSTOM'], '2014', catalog)).toEqual([
+      'XGE',
+      'CUSTOM',
+    ])
   })
 
   test('detects revised-only sources from parsed entity metadata', () => {

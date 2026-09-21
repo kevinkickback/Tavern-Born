@@ -60,7 +60,7 @@ const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/equipment', 'Equipment', Backpack],
   ['/rules', 'Character Rules', SlidersHorizontal],
   ['/settings', 'Settings', Gear],
-  ['/sources', 'Sources', Books],
+  ['/sources', 'Additional Content', Books],
   ['/spells', 'Spells', MagicWand],
   ['/feats', 'Feats', Star],
   ['/', 'Characters', Users],

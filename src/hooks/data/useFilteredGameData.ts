@@ -169,13 +169,11 @@ export function useFilteredGameDataParams(params: FilterParams) {
       items: filterCharacterItems(items, {
         allowedSources: compatibleAllowedSources,
         originSystem,
-        itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
       itemsBase: filterCharacterItems(itemsBase, {
         allowedSources: compatibleAllowedSources,
         originSystem,
-        itemTypeByAbbr: gameData.lookups?.itemTypeByAbbr,
         suppressedKeys,
       }),
       itemMasteries: itemMasteries.filter((mastery) =>

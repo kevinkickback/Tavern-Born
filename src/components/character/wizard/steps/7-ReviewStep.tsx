@@ -295,7 +295,7 @@ export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
           <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-primary" weight="fill" />
-              <h4 className="text-sm font-semibold">Allowed Sources</h4>
+              <h4 className="text-sm font-semibold">Additional Content</h4>
               {hasRestrictedSources && (
                 <Badge variant="secondary" className="font-mono">
                   {allowedSources.length}
@@ -322,7 +322,7 @@ export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
               </div>
             ) : (
               <div className="rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground">
-                No source filter selected. All loaded sources are currently allowed.
+                No content filter selected. All loaded content is currently available.
               </div>
             )}
           </div>

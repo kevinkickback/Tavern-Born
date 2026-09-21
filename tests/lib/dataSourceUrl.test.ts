@@ -16,6 +16,7 @@ describe('remote data source URL validation threshold', () => {
   test.each([
     'https://testpage.com',
     'https://github.com/example/data',
+    'https://github.com/example/data/releases',
     'https://data.example.co.uk/repository',
   ])('allows validation once a secure HTTPS domain is complete: %s', (value) => {
     expect(isValidatableRemoteUrl(value)).toBe(true)

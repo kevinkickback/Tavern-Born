@@ -132,7 +132,7 @@ const workspaces: Workspace[] = [
         label: 'Character Configuration',
         items: [
           { label: 'Character Rules', path: '/rules', icon: SlidersHorizontal },
-          { label: 'Sources', path: '/sources', icon: Books },
+          { label: 'Additional Content', path: '/sources', icon: Books },
         ],
       },
     ],

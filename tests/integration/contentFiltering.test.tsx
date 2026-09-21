@@ -163,6 +163,31 @@ describe('Content Filtering (allowedSources)', () => {
       expect(result.current.items.map((i) => i.name)).not.toContain('Immovable Rod')
     })
 
+    test('useFilteredGameData retains Included SRD items when additional content is configured', () => {
+      const character = makeCharacterFixture({ allowedSources: ['PHB'] })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        dataSourceConfig: {
+          type: 'local',
+          path: 'additional-content',
+          isValid: true,
+        },
+        gameData: partialGameData({
+          items: [
+            { name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true },
+            { name: 'Private Item', source: 'DMG', type: 'W' },
+            { name: 'Revised Bag', source: 'XDMG', type: 'W', srd52: true },
+          ],
+        }),
+      })
+
+      const { result, unmount } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.items.map((item) => item.name)).toEqual(['Bag of Holding'])
+      unmount()
+      useGameDataStore.setState({ dataSourceConfig: null })
+    })
+
     test('preferNewerPrintings suppresses nested class reprints', () => {
       const character = makeCharacterFixture({
         allowedSources: ['PHB', 'TCE'],

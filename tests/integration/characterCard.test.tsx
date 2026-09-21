@@ -91,4 +91,28 @@ describe('CharacterCard', () => {
     expect(onToggleSelect).toHaveBeenCalledTimes(2)
     expect(onLoad).not.toHaveBeenCalled()
   })
+
+  test('shows compact information for saved choices outside the Included SRD', async () => {
+    const user = userEvent.setup()
+    render(
+      <CharacterCard
+        character={makeCharacterFixture({ name: 'Expanded Hero' })}
+        onLoad={vi.fn()}
+        onDelete={vi.fn()}
+        onExport={vi.fn()}
+        onDuplicate={vi.fn()}
+        usesAdditionalContent
+      />,
+    )
+
+    const indicator = screen.getByLabelText(/Additional content/)
+    expect(indicator.className).toContain('rounded-md')
+    expect(indicator.className).toContain('bg-primary/85')
+    expect(indicator.textContent).toBe('Additional content')
+
+    await user.hover(indicator)
+    expect((await screen.findByRole('tooltip')).textContent).toContain(
+      'not available in the Included SRD',
+    )
+  })
 })

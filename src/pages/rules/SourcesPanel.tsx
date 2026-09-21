@@ -1,5 +1,6 @@
-import { BookOpen, Books, Warning } from '@phosphor-icons/react'
+import { BookOpen, Books, Database, Warning } from '@phosphor-icons/react'
 import { useEffect, useId, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -10,6 +11,7 @@ import { isSourceReadinessFocus } from '@/lib/navigation/readinessFocus'
 import {
   getSourceCompatibility,
   normalizeAllowedSources,
+  normalizeSelectableAllowedSources,
   getEffectiveSources as resolveEffectiveSources,
 } from '@/lib/sourceCompatibility'
 import {
@@ -49,12 +51,13 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
+  const isBundledSrd = useGameDataStore((s) => s.dataSourceConfig?.type === 'bundled')
   const { ref: sourceControlsRef, highlighted: sourceControlsHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(isSourceReadinessFocus(readinessFocus))
 
   const [showHint, setShowHint] = useState(() => !isHintDismissed(HINT_ID))
   const hintPosition = useAnchoredHintPosition({
-    enabled: showHint,
+    enabled: showHint && !isBundledSrd,
     selector: ALLOWED_SOURCES_HEADER_SELECTOR,
     gap: 10,
   })
@@ -68,9 +71,9 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const allowedSources = useMemo(
     () =>
       character
-        ? normalizeAllowedSources(configuredSources, character.originSystem, sources)
+        ? normalizeSelectableAllowedSources(configuredSources, character.originSystem, allSources)
         : configuredSources,
-    [character, configuredSources, sources],
+    [allSources, character, configuredSources],
   )
   const availableSourceSet = new Set(sources.map((s) => s.abbreviation))
 
@@ -114,7 +117,11 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const hasNonPresetSourcesSelected = allowedSources.some((a) => !presetSourceAbbreviations.has(a))
 
   const isPresetActive = (preset: SourcePreset) => {
-    const filtered = preset.abbreviations.filter((a) => availableSourceSet.has(a))
+    const filtered = normalizeSelectableAllowedSources(
+      preset.abbreviations.filter((a) => availableSourceSet.has(a)),
+      character?.originSystem ?? '2014',
+      sources,
+    )
     return (
       filtered.length === allowedSources.length && filtered.every((a) => allowedSources.includes(a))
     )
@@ -124,7 +131,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     character?.originSystem === '2024' || (character?.variantRules?.preferNewerPrintings ?? false)
 
   if (!character) {
-    return <NoCharCard icon={<Books weight="duotone" />} noun="manage sources" />
+    return <NoCharCard icon={<Books weight="duotone" />} noun="manage additional content" />
   }
 
   const implicitSource = getImplicitSource(character.originSystem)
@@ -207,7 +214,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
       )}
     >
       <AnchoredHint
-        position={showHint ? hintPosition : null}
+        position={showHint && !isBundledSrd ? hintPosition : null}
         width={HINT_WIDTH}
         onDismiss={handleDismissHint}
       >
@@ -215,13 +222,13 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
         to your ruleset and can't be removed here.
       </AnchoredHint>
 
-      {/* Allowed Sources */}
+      {/* Additional Content */}
       <WorkspacePaneHeader
         icon={<BookOpen className="size-4 text-primary" weight="fill" />}
         title={
           <span className="inline-flex items-center gap-2">
-            <span data-allowed-sources-header>Allowed sources</span>
-            {allowedSources.length > 0 && (
+            <span data-allowed-sources-header>Additional Content</span>
+            {!isBundledSrd && allowedSources.length > 0 && (
               <span
                 data-allowed-sources-count
                 className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold tracking-normal text-primary"
@@ -232,44 +239,64 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
           </span>
         }
       >
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          {[
-            ...SOURCE_PRESETS.map((preset) => ({
-              key: preset.id,
-              label: preset.label,
-              title: preset.description,
-              onClick: () => applyPreset(preset),
-              active: isPresetActive(preset),
-            })),
-            {
-              key: 'none',
-              label: 'None',
-              title: 'Clear all selected sources',
-              onClick: clearSources,
-              active: false,
-            },
-          ].map((action) => (
-            <button
-              key={action.key}
-              type="button"
-              onClick={action.onClick}
-              title={action.title}
-              className={cn(
-                'h-8 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors',
-                action.active
-                  ? 'bg-surface-selected text-foreground'
-                  : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground',
-              )}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
+        {!isBundledSrd && (
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {[
+              ...SOURCE_PRESETS.map((preset) => ({
+                key: preset.id,
+                label: preset.label,
+                title: preset.description,
+                onClick: () => applyPreset(preset),
+                active: isPresetActive(preset),
+              })),
+              {
+                key: 'none',
+                label: 'None',
+                title: 'Clear all selected content',
+                onClick: clearSources,
+                active: false,
+              },
+            ].map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                onClick={action.onClick}
+                title={action.title}
+                className={cn(
+                  'h-8 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors',
+                  action.active
+                    ? 'bg-surface-selected text-foreground'
+                    : 'text-muted-foreground hover:bg-surface-hover hover:text-foreground',
+                )}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
       </WorkspacePaneHeader>
 
-      {sources.length === 0 ? (
+      {isBundledSrd ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="max-w-lg rounded-md border border-border bg-workspace-pane p-5 text-center">
+            <Database className="mx-auto size-7 text-primary" weight="duotone" />
+            <p className="mt-3 text-sm font-semibold text-foreground">Using the included SRD</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              The included SRD does not provide additional sourcebooks to enable. To add more
+              options, open{' '}
+              <Link
+                to="/settings?section=data"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                Settings → Game Data
+              </Link>{' '}
+              and add compatible 5etools data.
+            </p>
+          </div>
+        </div>
+      ) : sources.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          No sources available. Please load game data in Settings first.
+          No additional content is available. Load game data in Settings first.
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
