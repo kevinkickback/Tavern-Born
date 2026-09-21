@@ -1,8 +1,8 @@
 # Bundled SRD Rules Implementation Plan
 
 Status: implementation and the one-time provenance audit are complete on
-`feature/bundled-srd-rules`; final release-candidate checks on macOS and Linux remain release tasks
-(updated 2026-09-20).
+`feature/bundled-srd-rules`; one temporary GitHub-hosted native package verification remains before
+the temporary check is removed and final release-candidate packaging begins (updated 2026-09-20).
 
 ## Outcome
 
@@ -255,7 +255,13 @@ an advanced user can configure, refresh, change, and remove an external source.
   - [x] Build the Windows installer and portable app from this branch, confirm their embedded
     application payloads are identical, and verify every one of the 50 packaged SRD data files
     against the approved manifest. Repeat on the versioned release candidate before publishing.
-  - [ ] Verify the packaged resource path and checksums on macOS and Linux release hosts.
+  - [ ] Run the temporary pull-request package matrix on native Windows, macOS, and Linux GitHub
+    hosts. Verify the packaged resource path, all 50 checksums, exclusion of development-only data,
+    and a real Included SRD journey in each packaged application.
+  - [ ] After the three native jobs pass, record the run here and remove
+    `.github/workflows/verify-srd-packaging.yml`, `scripts/verify-packaged-srd.mjs`, its focused test,
+    and the packaged-executable test hook before merging. Do not retain recurring infrastructure;
+    repeat this verification only when relevant packaging configuration changes.
 
 ## Phase 6 — Verification and Acceptance
 

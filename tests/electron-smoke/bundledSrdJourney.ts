@@ -4,6 +4,7 @@ import { _electron as electron, expect, type Page, test } from '@playwright/test
 import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
 const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/core/manifest.json'))
+const PACKAGED_EXECUTABLE = process.env.TAVERN_BORN_PACKAGED_EXECUTABLE
 
 interface CharacterOptions {
   name: string
@@ -43,7 +44,7 @@ async function openCharacter(page: Page, name: string) {
 
 test.skip(!HAS_DEVELOPMENT_SRD, 'requires an approved or generated SRD snapshot')
 test.skip(
-  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION,
+  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION && !PACKAGED_EXECUTABLE,
   'Windows build has upstream Electron sandbox crash 0x80000003',
 )
 
@@ -57,8 +58,10 @@ test('creates and reloads both rules generations using only the Included SRD', a
         entry[0] !== 'ELECTRON_RUN_AS_NODE' && entry[1] !== undefined,
     ),
   )
+  const userDataArgument = `--user-data-dir=${testInfo.outputPath('bundled-srd-user-data')}`
   const electronApp = await electron.launch({
-    args: ['.', `--user-data-dir=${testInfo.outputPath('bundled-srd-user-data')}`],
+    ...(PACKAGED_EXECUTABLE ? { executablePath: PACKAGED_EXECUTABLE } : {}),
+    args: PACKAGED_EXECUTABLE ? [userDataArgument] : ['.', userDataArgument],
     env: environment,
   })
 
