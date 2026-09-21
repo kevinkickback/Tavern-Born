@@ -115,7 +115,9 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await page.getByRole('button', { name: 'Compendium' }).click()
       await page.getByLabel('Search compendium').fill('Fireball')
       await page.getByRole('button').filter({ hasText: 'Fireball' }).first().click()
-      await expect(page.getByRole('heading', { name: 'Fireball' })).toBeVisible()
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Fireball', exact: true }),
+      ).toBeVisible()
     })
 
     await test.step('generate the revised character sheet preview', async () => {
@@ -128,7 +130,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
     })
   } finally {
     if (electronApp.process().exitCode === null) {
-      await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => undefined)
+      await electronApp.close()
     }
   }
 })
