@@ -7,6 +7,8 @@
 * Additional content is now ruleset-aware
 * Included SRD magic items remain available when additional content is added
 * One-time hints no longer block nearby controls
+* Fixed source selection allowing incompatible 2014 and 2024 rulebooks to be combined; revised characters can still use compatible legacy options when no revised replacement exists
+* Fixed character portrait previews showing a different crop from the finished character card
 
 </details>
 
