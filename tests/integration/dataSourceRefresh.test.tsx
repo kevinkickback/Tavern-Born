@@ -70,6 +70,21 @@ describe('data source refresh feedback', () => {
     expect(screen.queryByText('Base content:')).toBeNull()
   })
 
+  test('keeps the startup update preference on the main Game Data view', async () => {
+    const user = userEvent.setup()
+    render(<DataSourceConfigurator />)
+
+    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+
+    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+  })
+
   test('removes additional content without clearing the current source first', async () => {
     const user = userEvent.setup()
     const onSourceLoaded = vi.fn()

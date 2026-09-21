@@ -658,7 +658,7 @@ export function DataSourceConfigurator({
         </div>
       </Section>
 
-      {!selectorOnly && dataSourceConfig?.type !== 'bundled' && (
+      {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
         <Section
           title="Check for Updates at Startup"
           description="Automatically check your selected game data for changes when Tavern Born starts."
