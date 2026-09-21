@@ -102,4 +102,51 @@ describe('RulesStep average hit-points toggle', () => {
       }),
     )
   })
+
+  test('does not offer provenance-only bundled sources', () => {
+    render(
+      <RulesStep
+        data={INITIAL_CHARACTER_DATA}
+        onChange={vi.fn()}
+        sources={[
+          { abbreviation: 'PHB', name: "Player's Handbook", group: 'core' },
+          {
+            abbreviation: 'DMG',
+            name: "Dungeon Master's Guide",
+            group: 'core',
+            hasCharacterOptions: false,
+          },
+          {
+            abbreviation: 'MM',
+            name: 'Monster Manual',
+            group: 'core',
+            hasCharacterOptions: false,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: /Dungeon Master's Guide/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Monster Manual/ })).toBeNull()
+  })
+
+  test('explains how to load more sources when using the bundled SRD', () => {
+    const { container } = render(
+      <RulesStep
+        data={{ ...INITIAL_CHARACTER_DATA, allowedSources: ['PHB'] }}
+        onChange={vi.fn()}
+        sources={[{ abbreviation: 'PHB', name: "Player's Handbook", group: 'core' }]}
+        isBundledSrd
+      />,
+    )
+
+    expect(screen.getByText('Using the included SRD')).toBeTruthy()
+    expect(screen.getByText(/open Settings → Game Data/)).toBeTruthy()
+    expect(screen.getByText(/add compatible 5etools data/)).toBeTruthy()
+    expect(screen.getByText('Using the included SRD').parentElement?.className).not.toContain(
+      'border',
+    )
+    expect(container.querySelector('[data-allowed-sources-count]')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
+  })
 })

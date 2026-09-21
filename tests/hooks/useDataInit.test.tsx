@@ -1,5 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import type { DataSourceConfig, GameData } from '@/types/5etools'
+
+const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
+  resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
+}))
+
+vi.mock('@/lib/5etools/bundledSource', () => ({
+  resolveDefaultBundledSource: resolveDefaultBundledSourceMock,
+}))
 
 vi.mock('@/lib/storage/dataCache', () => ({
   readGameDataCache: vi.fn(async () => null),
@@ -20,7 +29,6 @@ import { useDataInit } from '@/hooks/data/useDataInit'
 import { isCacheForSource, isCacheStale, readGameDataCache } from '@/lib/storage/dataCache'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 function makeGameData(): GameData {
   return {
@@ -69,6 +77,7 @@ function resetGameDataStore() {
 describe('useDataInit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resolveDefaultBundledSourceMock.mockResolvedValue(null)
     resetGameDataStore()
     useAppPreferencesStore.setState({ autoRefreshGameData: false })
   })
@@ -94,6 +103,32 @@ describe('useDataInit', () => {
       expect(useGameDataStore.getState().cacheStatus).toBe('unconfigured')
     })
     expect(loadGameDataMock).not.toHaveBeenCalled()
+  })
+
+  test('loads an approved bundled pack by default on a fresh install', async () => {
+    const bundledConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const loadGameDataMock = vi.fn(async () => true)
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundledConfig)
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: null,
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(loadGameDataMock).toHaveBeenCalledWith(bundledConfig)
+    })
+    expect(useGameDataStore.getState().cacheStatus).not.toBe('unconfigured')
   })
 
   test('serves stale cache immediately and triggers background refresh', async () => {
@@ -227,6 +262,50 @@ describe('useDataInit', () => {
     expect(useGameDataStore.getState().gameData).toEqual(cacheData)
     expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
     expect(toast.info).not.toHaveBeenCalled()
+  })
+
+  test('treats a matching bundled cache as immutable regardless of age or refresh preference', async () => {
+    const config: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '0.1.0-dev',
+      isValid: true,
+    }
+    const cacheData = makeGameData()
+    const loadGameDataMock = vi.fn(async () => false)
+
+    vi.mocked(readGameDataCache).mockResolvedValue({
+      data: cacheData,
+      cachedAt: '2020-01-01T00:00:00.000Z',
+      sourceSnapshot: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '0.1.0-dev',
+      },
+      lastDataChangedAt: '2020-01-01T00:00:00.000Z',
+    })
+    vi.mocked(isCacheForSource).mockReturnValue(true)
+    vi.mocked(isCacheStale).mockReturnValue(true)
+    useAppPreferencesStore.setState({ autoRefreshGameData: true })
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: config,
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(useGameDataStore.getState().cacheStatus).toBe('fresh')
+    })
+    expect(useGameDataStore.getState().gameData).toBe(cacheData)
+    expect(isCacheStale).not.toHaveBeenCalled()
+    expect(loadGameDataMock).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   test('loads from source directly when no cache exists', async () => {

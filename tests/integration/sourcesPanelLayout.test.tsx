@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -11,14 +11,23 @@ vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: () => null,
 }))
 
+const dataSourceFixture = vi.hoisted(() => ({ type: 'local' as 'local' | 'bundled' }))
+
 vi.mock('@/store/gameDataStore', () => ({
   useGameDataStore: (selector: (state: unknown) => unknown) =>
     selector({
+      dataSourceConfig: { type: dataSourceFixture.type },
       gameData: {
         sources: [
           { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
           { name: "Dungeon Master's Guide", abbreviation: 'DMG', group: 'core' },
           { name: "Dungeon Master's Guide (2024)", abbreviation: 'XDMG', group: 'core' },
+          {
+            name: 'Monster Manual',
+            abbreviation: 'MM',
+            group: 'core',
+            hasCharacterOptions: false,
+          },
           { name: "Xanathar's Guide to Everything", abbreviation: 'XGE', group: 'supplement' },
           {
             name: 'Eberron: Forge of the Artificer',
@@ -32,8 +41,9 @@ vi.mock('@/store/gameDataStore', () => ({
     }),
 }))
 
-describe('Rules Sources panel layout', () => {
+describe('Rules Additional Content panel layout', () => {
   beforeEach(() => {
+    dataSourceFixture.type = 'local'
     const character = makeCharacterFixture({ allowedSources: ['PHB', 'XGE'] })
     useCharacterStore.setState({
       characters: [character],
@@ -52,7 +62,7 @@ describe('Rules Sources panel layout', () => {
 
     const warning = screen.getByText('Source configuration notes').closest('aside')
     const sourceGroup = screen.getByText('Supplements')
-    const allowedSourcesHeader = screen.getByText('Allowed sources').closest('header')
+    const allowedSourcesHeader = screen.getByText('Additional Content').closest('header')
     const selectedCount = container.querySelector('[data-allowed-sources-count]')
     const preferNewerToggle = screen.getByLabelText('Prefer Newer Printings')
     expect(warning).toBeTruthy()
@@ -85,8 +95,48 @@ describe('Rules Sources panel layout', () => {
     )
 
     expect(container.querySelector('[data-slot="workspace-body"]')).toBeTruthy()
-    expect(screen.getByText('Allowed sources')).toBeTruthy()
+    expect(screen.getByText('Additional Content')).toBeTruthy()
     expect(screen.queryByRole('tablist', { name: 'Rules category' })).toBeNull()
+  })
+
+  test('does not render provenance-only sources', () => {
+    render(<SourcesPanel />)
+
+    expect(screen.queryByRole('button', { name: /Monster Manual MM/ })).toBeNull()
+  })
+
+  test('explains bundled SRD source limits and links to Game Data settings', () => {
+    dataSourceFixture.type = 'bundled'
+
+    render(
+      <MemoryRouter>
+        <SourcesPanel />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Using the included SRD')).toBeTruthy()
+    expect(screen.getByText(/does not provide additional sourcebooks/)).toBeTruthy()
+    expect(screen.getByText(/add compatible 5etools data/)).toBeTruthy()
+    expect(document.querySelector('[data-allowed-sources-count]')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Settings → Game Data' }).getAttribute('href')).toBe(
+      '/settings?section=data',
+    )
+    expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
+  })
+
+  test('removes a previously saved provenance-only source selection', async () => {
+    const character = makeCharacterFixture({ allowedSources: ['PHB', 'MM'] })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<SourcesPanel />)
+
+    await waitFor(() => {
+      expect(useCharacterStore.getState().activeCharacter?.allowedSources).toEqual(['PHB'])
+    })
   })
 
   test('updates the source note when newer printings are preferred', async () => {

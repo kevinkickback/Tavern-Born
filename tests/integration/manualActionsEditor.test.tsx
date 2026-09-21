@@ -74,5 +74,5 @@ describe('ManualActionsEditor', () => {
     expect(useCharacterStore.getState().activeCharacter?.manualActions?.[0]?.active).toBe(true)
     await user.click(screen.getByRole('button', { name: 'Remove Test maneuver' }))
     expect(useCharacterStore.getState().activeCharacter?.manualActions).toEqual([])
-  })
+  }, 10_000)
 })

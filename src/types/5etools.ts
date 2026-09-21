@@ -483,11 +483,34 @@ export interface Condition5e {
   [key: string]: unknown
 }
 
-export interface DataSourceConfig {
-  type: 'local' | 'remote'
+interface DataSourceConfigBase {
   path: string
   isValid: boolean
   lastLoaded?: string
+}
+
+type ExternalDataSourceConfig = DataSourceConfigBase & {
+  type: 'local' | 'remote'
+  /** Top-level resources confirmed during source validation. Missing unlisted families are absent. */
+  availableResources?: string[]
+}
+
+export type BundledDataSourceConfig = DataSourceConfigBase & {
+  type: 'bundled'
+  packId: string
+  packVersion: string
+}
+
+export type DataSourceConfig = ExternalDataSourceConfig | BundledDataSourceConfig
+
+/**
+ * Ordered sources used to build the effective catalog. The Included SRD is always the base when
+ * it is available; an external 5etools library enriches or replaces matching entities above it.
+ * Future add-on documents can extend this contract without changing the base/overlay boundary.
+ */
+export interface GameDataSourceStack {
+  base: BundledDataSourceConfig
+  additional?: ExternalDataSourceConfig
 }
 
 export interface GameData {

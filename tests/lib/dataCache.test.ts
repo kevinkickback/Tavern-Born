@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const { idbGetMock, idbSetMock } = vi.hoisted(() => ({
   idbGetMock: vi.fn<() => Promise<unknown>>(async () => null),
@@ -13,7 +13,9 @@ vi.mock('idb-keyval', () => ({
 }))
 
 import {
+  computeGameDataFingerprint,
   GAME_DATA_CACHE_SCHEMA_VERSION,
+  isCacheForSource,
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
@@ -52,6 +54,16 @@ describe('writeGameDataCache', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     idbGetMock.mockResolvedValue(null)
+  })
+
+  test('preserves the established JSON hash while ignoring runtime lookups', () => {
+    const data = makeGameData('fingerprint')
+    const fingerprint = computeGameDataFingerprint(data)
+    data.lookups = { classes: new Map([['ignored', {} as never]]) } as never
+
+    expect(computeGameDataFingerprint(data)).toBe(fingerprint)
+    data.races.push({ name: 'Different', source: 'TEST' } as never)
+    expect(computeGameDataFingerprint(data)).not.toBe(fingerprint)
   })
 
   test('sets lastDataChangedAt to now on first write (no previous cache, no fallback)', async () => {
@@ -216,5 +228,79 @@ describe('writeGameDataCache', () => {
 
     expect(entry.lastDataChangedAt).not.toBe(before)
     expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
+  })
+})
+
+describe('isCacheForSource', () => {
+  test('includes bundled pack identity and version in cache matching', () => {
+    const bundled: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const entry = {
+      data: makeGameData(),
+      cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+      },
+    }
+
+    expect(isCacheForSource(entry, bundled)).toBe(true)
+    expect(isCacheForSource(entry, { ...bundled, packVersion: '1.0.1' })).toBe(false)
+  })
+
+  test('keys a layered cache by both the Included SRD and additional source', async () => {
+    const stack: GameDataSourceStack = {
+      base: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: '1.0.0',
+        isValid: true,
+      },
+      additional: { ...config, availableResources: ['feats.json'] },
+    }
+
+    const entry = await writeGameDataCache(makeGameData(), stack, {
+      layerMetadata: {
+        base: { contentFingerprint: 'base-fingerprint', entityCount: 42 },
+        additional: { contentFingerprint: 'additional-fingerprint', entityCount: 7 },
+      },
+    })
+
+    expect(entry.sourceSnapshot.layers).toHaveLength(2)
+    expect(entry.sourceSnapshot.layers).toEqual([
+      expect.objectContaining({
+        role: 'base',
+        contentFingerprint: 'base-fingerprint',
+        entityCount: 42,
+      }),
+      expect.objectContaining({
+        role: 'additional',
+        contentFingerprint: 'additional-fingerprint',
+        entityCount: 7,
+      }),
+    ])
+    expect(isCacheForSource(entry, stack)).toBe(true)
+    expect(
+      isCacheForSource(entry, {
+        ...stack,
+        base: { ...stack.base, packVersion: '1.0.1' },
+      }),
+    ).toBe(false)
+    expect(isCacheForSource(entry, config)).toBe(false)
+    expect(
+      isCacheForSource(entry, {
+        ...stack,
+        additional: { ...config, availableResources: ['class/index.json'] },
+      }),
+    ).toBe(false)
   })
 })

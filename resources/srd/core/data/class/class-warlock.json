@@ -1,0 +1,1888 @@
+{
+  "class": [
+    {
+      "cantripProgression": [
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "casterProgression": "pact",
+      "classFeatures": [
+        "Pact Magic|Warlock||1",
+        {
+          "classFeature": "Otherworldly Patron|Warlock||1",
+          "gainSubclassFeature": true
+        },
+        "Eldritch Invocations|Warlock||2",
+        "Pact Boon|Warlock||3",
+        "Ability Score Improvement|Warlock||4",
+        {
+          "classFeature": "Otherworldly Patron feature|Warlock||6",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Warlock||8",
+        {
+          "classFeature": "Otherworldly Patron feature|Warlock||10",
+          "gainSubclassFeature": true
+        },
+        "Mystic Arcanum (6th level)|Warlock||11",
+        "Ability Score Improvement|Warlock||12",
+        "Mystic Arcanum (7th level)|Warlock||13",
+        {
+          "classFeature": "Otherworldly Patron feature|Warlock||14",
+          "gainSubclassFeature": true
+        },
+        "Mystic Arcanum (8th level)|Warlock||15",
+        "Ability Score Improvement|Warlock||16",
+        "Mystic Arcanum (9th level)|Warlock||17",
+        "Ability Score Improvement|Warlock||19",
+        "Eldritch Master|Warlock||20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "{@filter Cantrips Known|spells|level=0|class=Warlock}",
+            "{@filter Spells Known|spells|class=Warlock}",
+            "Spell Slots",
+            "Slot Level",
+            "{@filter Invocations Known|optionalfeatures|feature type=ei}"
+          ],
+          "rows": [
+            [
+              2,
+              2,
+              1,
+              "{@filter 1st|spells|level=1|class=Warlock}",
+              0
+            ],
+            [
+              2,
+              3,
+              2,
+              "{@filter 1st|spells|level=1|class=Warlock}",
+              2
+            ],
+            [
+              2,
+              4,
+              2,
+              "{@filter 2nd|spells|level=2|class=Warlock}",
+              2
+            ],
+            [
+              3,
+              5,
+              2,
+              "{@filter 2nd|spells|level=2|class=Warlock}",
+              2
+            ],
+            [
+              3,
+              6,
+              2,
+              "{@filter 3rd|spells|level=3|class=Warlock}",
+              3
+            ],
+            [
+              3,
+              7,
+              2,
+              "{@filter 3rd|spells|level=3|class=Warlock}",
+              3
+            ],
+            [
+              3,
+              8,
+              2,
+              "{@filter 4th|spells|level=4|class=Warlock}",
+              4
+            ],
+            [
+              3,
+              9,
+              2,
+              "{@filter 4th|spells|level=4|class=Warlock}",
+              4
+            ],
+            [
+              3,
+              10,
+              2,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              5
+            ],
+            [
+              4,
+              10,
+              2,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              5
+            ],
+            [
+              4,
+              11,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              5
+            ],
+            [
+              4,
+              11,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              6
+            ],
+            [
+              4,
+              12,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              6
+            ],
+            [
+              4,
+              12,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              6
+            ],
+            [
+              4,
+              13,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              7
+            ],
+            [
+              4,
+              13,
+              3,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              7
+            ],
+            [
+              4,
+              14,
+              4,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              7
+            ],
+            [
+              4,
+              14,
+              4,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              8
+            ],
+            [
+              4,
+              15,
+              4,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              8
+            ],
+            [
+              4,
+              15,
+              4,
+              "{@filter 5th|spells|level=5|class=Warlock}",
+              8
+            ]
+          ]
+        }
+      ],
+      "edition": "classic",
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "light"
+          ],
+          "armorProficiencies": [
+            {
+              "light": true
+            }
+          ],
+          "weapons": [
+            "simple"
+          ]
+        },
+        "requirements": {
+          "cha": 13
+        }
+      },
+      "name": "Warlock",
+      "optionalfeatureProgression": [
+        {
+          "featureType": [
+            "EI"
+          ],
+          "name": "Eldritch Invocations",
+          "progression": [
+            0,
+            2,
+            2,
+            2,
+            3,
+            3,
+            4,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            7,
+            7,
+            7,
+            8,
+            8,
+            8
+          ]
+        },
+        {
+          "featureType": [
+            "PB"
+          ],
+          "name": "Pact Boon",
+          "progression": {
+            "3": 1
+          }
+        }
+      ],
+      "proficiency": [
+        "wis",
+        "cha"
+      ],
+      "source": "PHB",
+      "spellcastingAbility": "cha",
+      "spellsKnownProgression": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        11,
+        11,
+        12,
+        12,
+        13,
+        13,
+        14,
+        14,
+        15,
+        15
+      ],
+      "spellsKnownProgressionFixedByLevel": {
+        "11": {
+          "6": 1
+        },
+        "13": {
+          "7": 1
+        },
+        "15": {
+          "8": 1
+        },
+        "17": {
+          "9": 1
+        }
+      },
+      "srd": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "default": [
+          "(a) a {@item light crossbow|phb} and {@item crossbow bolts (20)|phb|20 bolts} or (b) any {@filter simple weapon|items|source=phb|category=basic|type=simple weapon}",
+          "(a) a {@item component pouch|phb} or (b) an {@item arcane focus|phb}",
+          "(a) a {@item scholar's pack|phb} or (b) a {@item dungeoneer's pack|phb}",
+          "{@item Leather armor|phb}, any {@filter simple weapon|items|source=phb|category=basic|type=simple weapon}, and two {@item dagger|phb|daggers}"
+        ],
+        "defaultData": [
+          {
+            "a": [
+              "light crossbow|phb",
+              "crossbow bolts (20)|phb"
+            ],
+            "b": [
+              {
+                "equipmentType": "weaponSimple"
+              }
+            ]
+          },
+          {
+            "a": [
+              "component pouch|phb"
+            ],
+            "b": [
+              {
+                "equipmentType": "focusSpellcastingArcane"
+              }
+            ]
+          },
+          {
+            "a": [
+              "scholar's pack|phb"
+            ],
+            "b": [
+              "dungeoneer's pack|phb"
+            ]
+          },
+          {
+            "_": [
+              "leather armor|phb",
+              {
+                "equipmentType": "weaponSimple"
+              },
+              {
+                "item": "dagger|phb",
+                "quantity": 2
+              }
+            ]
+          }
+        ],
+        "goldAlternative": "{@dice 4d4 × 10|4d4 × 10|Starting Gold}"
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "arcana",
+                "deception",
+                "history",
+                "intimidation",
+                "investigation",
+                "nature",
+                "religion"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "simple"
+        ]
+      },
+      "subclassTitle": "Otherworldly Patron"
+    },
+    {
+      "additionalSpells": [
+        {
+          "prepared": {
+            "9": [
+              "contact other plane|xphb"
+            ]
+          }
+        }
+      ],
+      "cantripProgression": [
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "casterProgression": "pact",
+      "classFeatures": [
+        "Eldritch Invocations|Warlock|XPHB|1",
+        "Pact Magic|Warlock|XPHB|1",
+        "Eldritch Invocation Options|Warlock|XPHB|1",
+        "Magical Cunning|Warlock|XPHB|2",
+        {
+          "classFeature": "Warlock Subclass|Warlock|XPHB|3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Warlock|XPHB|4",
+        {
+          "classFeature": "Subclass Feature|Warlock|XPHB|6",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Warlock|XPHB|8",
+        "Contact Patron|Warlock|XPHB|9",
+        {
+          "classFeature": "Subclass Feature|Warlock|XPHB|10",
+          "gainSubclassFeature": true
+        },
+        "Mystic Arcanum|Warlock|XPHB|11",
+        "Ability Score Improvement|Warlock|XPHB|12",
+        "Mystic Arcanum|Warlock|XPHB|13",
+        {
+          "classFeature": "Subclass Feature|Warlock|XPHB|14",
+          "gainSubclassFeature": true
+        },
+        "Mystic Arcanum|Warlock|XPHB|15",
+        "Ability Score Improvement|Warlock|XPHB|16",
+        "Mystic Arcanum|Warlock|XPHB|17",
+        "Epic Boon|Warlock|XPHB|19",
+        "Eldritch Master|Warlock|XPHB|20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "{@filter Invocations|optionalfeatures|feature type=ei}",
+            "{@filter Cantrips|spells|level=0|class=Warlock}",
+            "{@filter Prepared Spells|spells|level=!0|class=Warlock}",
+            "Spell Slots",
+            "Slot Level"
+          ],
+          "rows": [
+            [
+              1,
+              2,
+              2,
+              1,
+              1
+            ],
+            [
+              3,
+              2,
+              3,
+              2,
+              1
+            ],
+            [
+              3,
+              2,
+              4,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              5,
+              2,
+              2
+            ],
+            [
+              5,
+              3,
+              6,
+              2,
+              3
+            ],
+            [
+              5,
+              3,
+              7,
+              2,
+              3
+            ],
+            [
+              6,
+              3,
+              8,
+              2,
+              4
+            ],
+            [
+              6,
+              3,
+              9,
+              2,
+              4
+            ],
+            [
+              7,
+              3,
+              10,
+              2,
+              5
+            ],
+            [
+              7,
+              4,
+              10,
+              2,
+              5
+            ],
+            [
+              7,
+              4,
+              11,
+              3,
+              5
+            ],
+            [
+              8,
+              4,
+              11,
+              3,
+              5
+            ],
+            [
+              8,
+              4,
+              12,
+              3,
+              5
+            ],
+            [
+              8,
+              4,
+              12,
+              3,
+              5
+            ],
+            [
+              9,
+              4,
+              13,
+              3,
+              5
+            ],
+            [
+              9,
+              4,
+              13,
+              3,
+              5
+            ],
+            [
+              9,
+              4,
+              14,
+              4,
+              5
+            ],
+            [
+              10,
+              4,
+              14,
+              4,
+              5
+            ],
+            [
+              10,
+              4,
+              15,
+              4,
+              5
+            ],
+            [
+              10,
+              4,
+              15,
+              4,
+              5
+            ]
+          ]
+        }
+      ],
+      "edition": "one",
+      "featProgression": [
+        {
+          "category": [
+            "EB"
+          ],
+          "name": "Epic Boon",
+          "progression": {
+            "19": 1
+          }
+        }
+      ],
+      "hd": {
+        "faces": 8,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "light"
+          ],
+          "armorProficiencies": [
+            {
+              "light": true
+            }
+          ]
+        }
+      },
+      "name": "Warlock",
+      "optionalfeatureProgression": [
+        {
+          "featureType": [
+            "EI"
+          ],
+          "name": "Eldritch Invocations",
+          "progression": [
+            1,
+            3,
+            3,
+            3,
+            5,
+            5,
+            6,
+            6,
+            7,
+            7,
+            7,
+            8,
+            8,
+            8,
+            9,
+            9,
+            9,
+            10,
+            10,
+            10
+          ]
+        }
+      ],
+      "preparedSpellsChange": "level",
+      "preparedSpellsProgression": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        11,
+        11,
+        12,
+        12,
+        13,
+        13,
+        14,
+        14,
+        15,
+        15
+      ],
+      "primaryAbility": [
+        {
+          "cha": true
+        }
+      ],
+      "proficiency": [
+        "wis",
+        "cha"
+      ],
+      "source": "XPHB",
+      "spellcastingAbility": "cha",
+      "spellsKnownProgressionFixedByLevel": {
+        "11": {
+          "6": 1
+        },
+        "13": {
+          "7": 1
+        },
+        "15": {
+          "8": 1
+        },
+        "17": {
+          "9": 1
+        }
+      },
+      "srd52": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "defaultData": [
+          {
+            "A": [
+              {
+                "item": "leather armor|xphb"
+              },
+              {
+                "item": "sickle|xphb"
+              },
+              {
+                "item": "dagger|xphb",
+                "quantity": 2
+              },
+              {
+                "item": "orb|xphb"
+              },
+              {
+                "item": "book|xphb"
+              },
+              {
+                "item": "scholar's pack|xphb"
+              },
+              {
+                "value": 1500
+              }
+            ],
+            "B": [
+              {
+                "value": 10000
+              }
+            ]
+          }
+        ],
+        "entries": [
+          "{@i Choose A or B:} (A) {@item Leather Armor|XPHB}, {@item Sickle|XPHB}, 2 {@item Dagger|XPHB|Daggers}, {@item Arcane Focus|XPHB} ({@item orb|XPHB}), {@item Book|XPHB} (occult lore), {@item Scholar's Pack|XPHB}, and 15 GP; or (B) 100 GP"
+        ]
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "arcana",
+                "deception",
+                "history",
+                "intimidation",
+                "investigation",
+                "nature",
+                "religion"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "simple"
+        ]
+      },
+      "subclassTitle": "Warlock Subclass"
+    }
+  ],
+  "classFeature": [
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 1st level, you have struck a bargain with an otherworldly being chosen from the list of available patrons. Your choice grants you features at 1st level and again at 6th, 10th, and 14th level."
+      ],
+      "level": 1,
+      "name": "Otherworldly Patron",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "Your arcane research and the magic bestowed on you by your patron have given you facility with spells.",
+        {
+          "entries": [
+            "You know two cantrips of your choice from the warlock spell list. You learn additional warlock cantrips of your choice at higher levels, as shown in the Cantrips Known column of the Warlock table."
+          ],
+          "name": "Cantrips",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "The Warlock table shows how many spell slots you have to cast your {@filter warlock spells|spells|class=warlock} of 1st through 5th level. The table also shows what the level of those slots is; all of your spell slots are the same level. To cast one of your warlock spells of 1st level or higher, you must expend a spell slot. You regain all expended spell slots when you finish a short or long rest.",
+            "For example, when you are 5th level, you have two 3rd-level spell slots. To cast the 1st-level spell {@spell witch bolt}, you must spend one of those slots, and you cast it as a 3rd-level spell."
+          ],
+          "name": "Spell Slots",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "At 1st level, you know two 1st-level spells of your choice from the warlock spell list.",
+            "The Spells Known column of the Warlock table shows when you learn more warlock spells of your choice of 1st level and higher. A spell you choose must be of a level no higher than what's shown in the table's Slot Level column for your level. When you reach 6th level, for example, you learn a new warlock spell, which can be 1st, 2nd, or 3rd level.",
+            "Additionally, when you gain a level in this class, you can choose one of the warlock spells you know and replace it with another spell from the warlock spell list, which also must be of a level for which you have spell slots."
+          ],
+          "name": "Spells Known of 1st Level and Higher",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "Charisma is your spellcasting ability for your warlock spells, so you use your Charisma whenever a spell refers to your spellcasting ability. In addition, you use your Charisma modifier when setting the saving throw DC for a warlock spell you cast and when making an attack roll with one.",
+            {
+              "attributes": [
+                "cha"
+              ],
+              "name": "Spell",
+              "type": "abilityDc"
+            },
+            {
+              "attributes": [
+                "cha"
+              ],
+              "name": "Spell",
+              "type": "abilityAttackMod"
+            }
+          ],
+          "name": "Spellcasting Ability",
+          "type": "entries"
+        },
+        {
+          "entries": [
+            "You can use an {@item arcane focus|phb} as a spellcasting focus for your warlock spells."
+          ],
+          "name": "Spellcasting Focus",
+          "type": "entries"
+        }
+      ],
+      "level": 1,
+      "name": "Pact Magic",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "In your study of occult lore, you have unearthed eldritch invocations, fragments of forbidden knowledge that imbue you with an abiding magical ability.",
+        "At 2nd level, you gain two eldritch invocations of your choice. A list of the available options can be found on the {@filter Optional Features|optionalfeatures|Feature Type=EI} page. When you gain certain warlock levels, you gain additional invocations of your choice, as shown in the Invocations Known column of the Warlock table.",
+        "Additionally, when you gain a level in this class, you can choose one of the invocations you know and replace it with another invocation that you could learn at that level.",
+        "If an eldritch invocation has prerequisites, you must meet them to learn it. You can learn the invocation at the same time that you meet its prerequisites. A level prerequisite refers to your level in this class."
+      ],
+      "level": 2,
+      "name": "Eldritch Invocations",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 3rd level, your otherworldly patron bestows a gift upon you for your loyal service. You gain one of the following features of your choice.",
+        {
+          "count": 1,
+          "entries": [
+            {
+              "optionalfeature": "Pact of the Chain",
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Pact of the Blade",
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Pact of the Tome",
+              "type": "refOptionalfeature"
+            }
+          ],
+          "type": "options"
+        }
+      ],
+      "level": 3,
+      "name": "Pact Boon",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 6th level, you gain a feature granted by your Otherworldly Patron."
+      ],
+      "level": 6,
+      "name": "Otherworldly Patron feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 10th level, you gain a feature granted by your Otherworldly Patron."
+      ],
+      "level": 10,
+      "name": "Otherworldly Patron feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 11th level, your patron bestows upon you a magical secret called an arcanum. Choose one {@filter 6th-level spell from the warlock spell list|spells|level=6|class=Warlock} as this arcanum.",
+        "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest before you can do so again.",
+        "At higher levels, you gain more warlock spells of your choice that can be cast in this way: one 7th-level spell at 13th level, one 8th-level spell at 15th level, and one 9th-level spell at 17th level. You regain all uses of your Mystic Arcanum when you finish a long rest."
+      ],
+      "level": 11,
+      "name": "Mystic Arcanum (6th level)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 13th level, your patron bestows upon you a magical secret called an arcanum. Choose one {@filter 7th-level spell from the warlock spell list|spells|level=7|class=Warlock} as this arcanum.",
+        "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest before you can do so again."
+      ],
+      "level": 13,
+      "name": "Mystic Arcanum (7th level)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 14th level, you gain a feature granted by your Otherworldly Patron."
+      ],
+      "level": 14,
+      "name": "Otherworldly Patron feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 15th level, your patron bestows upon you a magical secret called an arcanum. Choose one {@filter 8th-level spell from the warlock spell list|spells|level=8|class=Warlock} as this arcanum.",
+        "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest before you can do so again."
+      ],
+      "level": 15,
+      "name": "Mystic Arcanum (8th level)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 17th level, your patron bestows upon you a magical secret called an arcanum. Choose one {@filter 9th-level spell from the warlock spell list|spells|level=9|class=Warlock} as this arcanum.",
+        "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest before you can do so again."
+      ],
+      "level": 17,
+      "name": "Mystic Arcanum (9th level)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 19,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "At 20th level, you can draw on your inner reserve of mystical power while entreating your patron to regain expended spell slots. You can spend 1 minute entreating your patron for aid to regain all your expended spell slots from your Pact Magic feature. Once you regain spell slots with this feature, you must finish a long rest before you can do so again."
+      ],
+      "level": 20,
+      "name": "Eldritch Master",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "Eldritch Invocation options appear in alphabetical order.",
+        {
+          "count": 1,
+          "entries": [
+            {
+              "optionalfeature": "Agonizing Blast|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Armor of Shadows|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Ascendant Step|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Devil's Sight|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Devouring Blade|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Eldritch Mind|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Eldritch Smite|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Eldritch Spear|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Fiendish Vigor|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Gaze of Two Minds|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Gift of the Depths|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Gift of the Protectors|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Investment of the Chain Master|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Lessons of the First Ones|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Lifedrinker|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Mask of Many Faces|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Master of Myriad Forms|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Misty Visions|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "One with Shadows|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Otherworldly Leap|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Pact of the Blade|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Pact of the Chain|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Pact of the Tome|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Repelling Blast|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Thirsting Blade|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Visions of Distant Realms|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Whispers of the Grave|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            },
+            {
+              "optionalfeature": "Witch Sight|XPHB",
+              "preserve": {
+                "prerequisite": true
+              },
+              "type": "refOptionalfeature"
+            }
+          ],
+          "type": "options"
+        }
+      ],
+      "level": 1,
+      "name": "Eldritch Invocation Options",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You have unearthed Eldritch Invocations, pieces of forbidden knowledge that imbue you with an abiding magical ability or other lessons. You gain one invocation of your choice, such as Pact of the Tome. Invocations are described in the \"{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source=XPHB}\" section later in this class's description.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "If an invocation has a prerequisite, you must meet it to learn that invocation. For example, if an invocation requires you to be a level 5+ Warlock, you can select the invocation once you reach Warlock level 5."
+              ],
+              "name": "Prerequisites",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Whenever you gain a Warlock level, you can replace one of your invocations with another one for which you qualify. You can't replace an invocation if it's a prerequisite for another invocation that you have."
+              ],
+              "name": "Replacing and Gaining Invocations",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        },
+        "When you gain certain Warlock levels, you gain more invocations of your choice, as shown in the Invocations column of the Warlock Features table.",
+        "You can't pick the same invocation more than once unless its description says otherwise."
+      ],
+      "level": 1,
+      "name": "Eldritch Invocations",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "Through occult ceremony, you have formed a pact with a mysterious entity to gain magical powers. The entity is a voice in the shadows—its identity unclear—but its boon to you is concrete: the ability to cast spells. See Spells for the rules on spellcasting. The information below details how you use those rules with Warlock spells, which appear in the {@filter Warlock spell list|spells|class=Warlock} later in the class's description.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "You know two Warlock cantrips of your choice. {@spell Eldritch Blast|XPHB} and {@spell Prestidigitation|XPHB} are recommended. Whenever you gain a Warlock level, you can replace one of your cantrips from this feature with another Warlock cantrip of your choice.",
+                "When you reach Warlock levels 4 and 10, you learn another Warlock cantrip of your choice, as shown in the Cantrips column of the Warlock Features table."
+              ],
+              "name": "Cantrips",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "The Warlock Features table shows how many spell slots you have to cast your Warlock spells of levels 1–5. The table also shows the level of those slots, all of which are the same level. You regain all expended Pact Magic spell slots when you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}.",
+                "For example, when you're a level 5 Warlock, you have two level 3 spell slots. To cast the level 1 spell {@spell Witch Bolt|XPHB}, you must spend one of those slots, and you cast it as a level 3 spell."
+              ],
+              "name": "Spell Slots",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Warlock spells. {@spell Charm Person|XPHB} and {@spell Hex|XPHB} are recommended."
+              ],
+              "name": "Prepared Spells of Level 1+",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        },
+        "The number of spells on your list increases as you gain Warlock levels, as shown in the Prepared Spells column of the Warlock Features table. Whenever that number increases, choose additional Warlock spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level no higher than what's shown in the table's Slot Level column for your level. When you reach level 6, for example, you learn a new Warlock spell, which can be of levels 1–3.",
+        "If another Warlock feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare with this feature, but those spells otherwise count as Warlock spells for you.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "Whenever you gain a Warlock level, you can replace one spell on your list with another Warlock spell of an eligible level."
+              ],
+              "name": "Changing Your Prepared Spells",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Charisma is the spellcasting ability for your Warlock spells."
+              ],
+              "name": "Spellcasting Ability",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You can use an {@item Arcane Focus|XPHB} as a {@variantrule Spellcasting Focus|XPHB} for your Warlock spells."
+              ],
+              "name": "Spellcasting Focus",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 1,
+      "name": "Pact Magic",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You can perform an esoteric rite for 1 minute. At the end of it, you regain expended Pact Magic spell slots but no more than a number equal to half your maximum (round up). Once you use this feature, you can't do so again until you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "level": 2,
+      "name": "Magical Cunning",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a Warlock subclass of your choice. A subclass is a specialization that grants you features at certain Warlock levels. For the rest of your career, you gain each of your subclass's features that are of your Warlock level or lower."
+      ],
+      "level": 3,
+      "name": "Warlock Subclass",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Warlock levels 8, 12, and 16."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Warlock subclass."
+      ],
+      "level": 6,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "In the past, you usually contacted your patron through intermediaries. Now you can communicate directly; you always have the {@spell Contact Other Plane|XPHB} spell prepared. With this feature, you can cast the spell without expending a spell slot to contact your patron, and you automatically succeed on the spell's saving throw.",
+        "Once you cast the spell with this feature, you can't do so in this way again until you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "level": 9,
+      "name": "Contact Patron",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Warlock subclass."
+      ],
+      "level": 10,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "Your patron grants you a magical secret called an arcanum. Choose one level 6 Warlock spell as this arcanum.",
+        "You can cast your arcanum spell once without expending a spell slot, and you must finish a {@variantrule Long Rest|XPHB} before you can cast it in this way again.",
+        "As shown in the Warlock Features table, you gain another Warlock spell of your choice that can be cast in this way when you reach Warlock levels 13 (level 7 spell), 15 (level 8 spell), and 17 (level 9 spell). You regain all uses of your Mystic Arcanum when you finish a {@variantrule Long Rest|XPHB}.",
+        "Whenever you gain a Warlock level, you can replace one of your arcanum spells with another Warlock spell of the same level."
+      ],
+      "level": 11,
+      "name": "Mystic Arcanum",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a level 7 Warlock Spell of your choice."
+      ],
+      "level": 13,
+      "name": "Mystic Arcanum",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Warlock subclass."
+      ],
+      "level": 14,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a level 8 Warlock Spell of your choice."
+      ],
+      "level": 15,
+      "name": "Mystic Arcanum",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a level 9 Warlock Spell of your choice."
+      ],
+      "level": 17,
+      "name": "Mystic Arcanum",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an Epic Boon feat (see \"Feats\") or another feat of your choice for which you qualify. {@feat Boon of Fate|XPHB} is recommended."
+      ],
+      "level": 19,
+      "name": "Epic Boon",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "When you use your Magical Cunning feature, you regain all your expended Pact Magic spell slots."
+      ],
+      "level": 20,
+      "name": "Eldritch Master",
+      "source": "XPHB",
+      "srd52": true
+    }
+  ],
+  "subclass": [
+    {
+      "additionalSpells": [
+        {
+          "expanded": {
+            "s1": [
+              "burning hands",
+              "command"
+            ],
+            "s2": [
+              "blindness/deafness",
+              "scorching ray"
+            ],
+            "s3": [
+              "fireball",
+              "stinking cloud"
+            ],
+            "s4": [
+              "fire shield",
+              "wall of fire"
+            ],
+            "s5": [
+              "flame strike",
+              "hallow"
+            ]
+          }
+        }
+      ],
+      "className": "Warlock",
+      "classSource": "PHB",
+      "edition": "classic",
+      "name": "The Fiend",
+      "shortName": "Fiend",
+      "source": "PHB",
+      "srd": true,
+      "subclassFeatures": [
+        "The Fiend|Warlock||Fiend||1",
+        "Dark One's Own Luck|Warlock||Fiend||6",
+        "Fiendish Resilience|Warlock||Fiend||10",
+        "Hurl Through Hell|Warlock||Fiend||14"
+      ]
+    },
+    {
+      "additionalSpells": [
+        {
+          "prepared": {
+            "3": [
+              "burning hands|xphb",
+              "command|xphb",
+              "scorching ray|xphb",
+              "suggestion|xphb"
+            ],
+            "5": [
+              "fireball|xphb",
+              "stinking cloud|xphb"
+            ],
+            "7": [
+              "fire shield|xphb",
+              "wall of fire|xphb"
+            ],
+            "9": [
+              "geas|xphb",
+              "insect plague|xphb"
+            ]
+          }
+        }
+      ],
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "edition": "one",
+      "name": "Fiend Patron",
+      "shortName": "Fiend",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassFeatures": [
+        "Fiend Patron|Warlock|XPHB|Fiend|XPHB|3",
+        "Dark One's Own Luck|Warlock|XPHB|Fiend|XPHB|6",
+        "Fiendish Resilience|Warlock|XPHB|Fiend|XPHB|10",
+        "Hurl Through Hell|Warlock|XPHB|Fiend|XPHB|14"
+      ]
+    }
+  ],
+  "subclassFeature": [
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "You have made a pact with a fiend from the lower planes of existence, a being whose aims are evil, even if you strive against those aims. Such beings desire the corruption or destruction of all things, ultimately including you. Fiends powerful enough to forge a pact include demon lords such as Demogorgon, Orcus, Fraz-Urb'luu, and Baphomet; archdevils such as Asmodeus, Dispater, Mephistopheles, and Belial; pit fiends and balors that are especially mighty; and ultroloths and other lords of the yugoloths.",
+        {
+          "entries": [
+            "The Fiend lets you choose from an expanded list of spells when you learn a warlock spell. The following spells are added to the warlock spell list for you.",
+            {
+              "caption": "Fiend Expanded Spells",
+              "colLabels": [
+                "Spell Level",
+                "Spells"
+              ],
+              "colStyles": [
+                "col-2 text-center",
+                "col-10"
+              ],
+              "rows": [
+                [
+                  "1st",
+                  "{@spell burning hands}, {@spell command}"
+                ],
+                [
+                  "2nd",
+                  "{@spell blindness/deafness}, {@spell scorching ray}"
+                ],
+                [
+                  "3rd",
+                  "{@spell fireball}, {@spell stinking cloud}"
+                ],
+                [
+                  "4th",
+                  "{@spell fire shield}, {@spell wall of fire}"
+                ],
+                [
+                  "5th",
+                  "{@spell flame strike}, {@spell hallow}"
+                ]
+              ],
+              "type": "table"
+            }
+          ],
+          "name": "Expanded Spell List",
+          "type": "entries"
+        },
+        {
+          "subclassFeature": "Dark One's Blessing|Warlock||Fiend||1",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 1,
+      "name": "The Fiend",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 1st level, when you reduce a hostile creature to 0 hit points, you gain temporary hit points equal to your Charisma modifier + your warlock level (minimum of 1)."
+      ],
+      "header": 1,
+      "level": 1,
+      "name": "Dark One's Blessing",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 6th level, you can call on your patron to alter fate in your favor. When you make an ability check or a saving throw, you can use this feature to add a {@dice d10} to your roll. You can do so after seeing the initial roll but before any of the roll's effects occur.",
+        "Once you use this feature, you can't use it again until you finish a short or long rest."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Dark One's Own Luck",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 10th level, you can choose one damage type when you finish a short or long rest. You gain resistance to that damage type until you choose a different one with this feature. Damage from magical weapons or silver weapons ignores this resistance."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Fiendish Resilience",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 14th level, when you hit a creature with an attack, you can use this feature to instantly transport the target through the lower planes. The creature disappears and hurtles through a nightmare landscape.",
+        "At the end of your next turn, the target returns to the space it previously occupied, or the nearest unoccupied space. If the target is not a fiend, it takes {@damage 10d10} psychic damage as it reels from its horrific experience.",
+        "Once you use this feature, you can't use it again until you finish a long rest."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Hurl Through Hell",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "{@i Make a Deal with the Lower Planes}",
+        "Your pact draws on the Lower Planes, the realms of perdition. You might forge a bargain with a demon lord, an archdevil, or another Fiend that is especially mighty. That patron's aims are evil—the corruption or destruction of all things, ultimately including you—and your path is defined by the extent to which you strive against those aims.",
+        {
+          "subclassFeature": "Fiend Spells|Warlock|XPHB|Fiend|XPHB|3",
+          "type": "refSubclassFeature"
+        },
+        {
+          "subclassFeature": "Dark One's Blessing|Warlock|XPHB|Fiend|XPHB|3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Fiend Patron",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "When you reduce an enemy to 0 {@variantrule Hit Points|XPHB}, you gain {@variantrule Temporary Hit Points|XPHB} equal to your Charisma modifier plus your Warlock level (minimum of 1 {@variantrule Temporary Hit Points|XPHB|Temporary Hit Point}). You also gain this benefit if someone else reduces an enemy within 10 feet of you to 0 {@variantrule Hit Points|XPHB}."
+      ],
+      "header": 2,
+      "level": 3,
+      "name": "Dark One's Blessing",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "The magic of your patron ensures you always have certain spells ready; when you reach a Warlock level specified in the Fiend Spells table, you thereafter always have the listed spells prepared.",
+        {
+          "caption": "Fiend Spells",
+          "colLabels": [
+            "Warlock Level",
+            "Spells"
+          ],
+          "colStyles": [
+            "col-2 text-center",
+            "col-10"
+          ],
+          "rows": [
+            [
+              "3",
+              "{@spell Burning Hands|XPHB}, {@spell Command|XPHB}, {@spell Scorching Ray|XPHB}, {@spell Suggestion|XPHB}"
+            ],
+            [
+              "5",
+              "{@spell Fireball|XPHB}, {@spell Stinking Cloud|XPHB}"
+            ],
+            [
+              "7",
+              "{@spell Fire Shield|XPHB}, {@spell Wall of Fire|XPHB}"
+            ],
+            [
+              "9",
+              "{@spell Geas|XPHB}, {@spell Insect Plague|XPHB}"
+            ]
+          ],
+          "type": "table"
+        }
+      ],
+      "header": 2,
+      "level": 3,
+      "name": "Fiend Spells",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "You can call on your fiendish patron to alter fate in your favor. When you make an ability check or a saving throw, you can use this feature to add {@dice 1d10} to your roll. You can do so after seeing the roll but before any of the roll's effects occur.",
+        "You can use this feature a number of times equal to your Charisma modifier (minimum of once), but you can use it no more than once per roll. You regain all expended uses when you finish a {@variantrule Long Rest|XPHB}."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Dark One's Own Luck",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "Choose one damage type, other than Force, whenever you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}. You have {@variantrule Resistance|XPHB} to that damage type until you choose a different one with this feature."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Fiendish Resilience",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Warlock",
+      "classSource": "XPHB",
+      "entries": [
+        "Once per turn when you hit a creature with an attack roll, you can try to instantly transport the target through the Lower Planes. The target must succeed on a Charisma saving throw against your spell save DC, or the target disappears and hurtles through a nightmare landscape. The target takes {@damage 8d10} Psychic damage if it isn't a Fiend, and it has the {@condition Incapacitated|XPHB} condition until the end of your next turn, when it returns to the space it previously occupied or the nearest unoccupied space.",
+        "Once you use this feature, you can't use it again until you finish a {@variantrule Long Rest|XPHB} unless you expend a Pact Magic spell slot (no action required) to restore your use of it."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Hurl Through Hell",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Fiend",
+      "subclassSource": "XPHB"
+    }
+  ]
+}

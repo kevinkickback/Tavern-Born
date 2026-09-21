@@ -1,0 +1,1459 @@
+{
+  "class": [
+    {
+      "classFeatures": [
+        "Rage|Barbarian||1",
+        "Unarmored Defense|Barbarian||1",
+        "Danger Sense|Barbarian||2",
+        "Reckless Attack|Barbarian||2",
+        {
+          "classFeature": "Primal Path|Barbarian||3",
+          "gainSubclassFeature": true
+        },
+        "Ability Score Improvement|Barbarian||4",
+        "Extra Attack|Barbarian||5",
+        "Fast Movement|Barbarian||5",
+        {
+          "classFeature": "Path Feature|Barbarian||6",
+          "gainSubclassFeature": true
+        },
+        "Feral Instinct|Barbarian||7",
+        "Ability Score Improvement|Barbarian||8",
+        "Brutal Critical (1 die)|Barbarian||9",
+        {
+          "classFeature": "Path feature|Barbarian||10",
+          "gainSubclassFeature": true
+        },
+        "Relentless Rage|Barbarian||11",
+        "Ability Score Improvement|Barbarian||12",
+        "Brutal Critical (2 dice)|Barbarian||13",
+        {
+          "classFeature": "Path feature|Barbarian||14",
+          "gainSubclassFeature": true
+        },
+        "Persistent Rage|Barbarian||15",
+        "Ability Score Improvement|Barbarian||16",
+        "Brutal Critical (3 dice)|Barbarian||17",
+        "Indomitable Might|Barbarian||18",
+        "Ability Score Improvement|Barbarian||19",
+        "Primal Champion|Barbarian||20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Rages",
+            "Rage Damage"
+          ],
+          "rows": [
+            [
+              "2",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "2",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              }
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 4
+              }
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              }
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              }
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              }
+            ],
+            [
+              "Unlimited",
+              {
+                "type": "bonus",
+                "value": 4
+              }
+            ]
+          ]
+        }
+      ],
+      "edition": "classic",
+      "hd": {
+        "faces": 12,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "shield"
+          ],
+          "armorProficiencies": [
+            {
+              "shield": true
+            }
+          ],
+          "weapons": [
+            "simple",
+            "martial"
+          ]
+        },
+        "requirements": {
+          "str": 13
+        }
+      },
+      "name": "Barbarian",
+      "proficiency": [
+        "str",
+        "con"
+      ],
+      "source": "PHB",
+      "srd": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "default": [
+          "(a) a {@item greataxe|phb} or (b) any {@filter martial melee weapon|items|source=phb|category=basic|type=martial weapon;melee weapon=sand}",
+          "(a) two {@item handaxe|phb|handaxes} or (b) any {@filter simple weapon|items|source=phb|category=basic|type=simple weapon}",
+          "An {@item explorer's pack|phb}, and four {@item javelin|phb|javelins}"
+        ],
+        "defaultData": [
+          {
+            "a": [
+              "greataxe|phb"
+            ],
+            "b": [
+              {
+                "equipmentType": "weaponMartialMelee"
+              }
+            ]
+          },
+          {
+            "a": [
+              {
+                "item": "handaxe|phb",
+                "quantity": 2
+              }
+            ],
+            "b": [
+              {
+                "equipmentType": "weaponSimple"
+              }
+            ]
+          },
+          {
+            "_": [
+              "explorer's pack|phb",
+              {
+                "item": "javelin|phb",
+                "quantity": 4
+              }
+            ]
+          }
+        ],
+        "goldAlternative": "{@dice 2d4 × 10|2d4 × 10|Starting Gold}"
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true,
+            "medium": true,
+            "shield": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "animal handling",
+                "athletics",
+                "intimidation",
+                "nature",
+                "perception",
+                "survival"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "simple",
+          "martial"
+        ]
+      },
+      "subclassTitle": "Primal Path"
+    },
+    {
+      "classFeatures": [
+        "Rage|Barbarian|XPHB|1",
+        "Unarmored Defense|Barbarian|XPHB|1",
+        "Weapon Mastery|Barbarian|XPHB|1",
+        "Danger Sense|Barbarian|XPHB|2",
+        "Reckless Attack|Barbarian|XPHB|2",
+        {
+          "classFeature": "Barbarian Subclass|Barbarian|XPHB|3",
+          "gainSubclassFeature": true
+        },
+        "Primal Knowledge|Barbarian|XPHB|3",
+        "Ability Score Improvement|Barbarian|XPHB|4",
+        "Extra Attack|Barbarian|XPHB|5",
+        "Fast Movement|Barbarian|XPHB|5",
+        {
+          "classFeature": "Subclass Feature|Barbarian|XPHB|6",
+          "gainSubclassFeature": true
+        },
+        "Feral Instinct|Barbarian|XPHB|7",
+        "Instinctive Pounce|Barbarian|XPHB|7",
+        "Ability Score Improvement|Barbarian|XPHB|8",
+        "Brutal Strike|Barbarian|XPHB|9",
+        {
+          "classFeature": "Subclass Feature|Barbarian|XPHB|10",
+          "gainSubclassFeature": true
+        },
+        "Relentless Rage|Barbarian|XPHB|11",
+        "Ability Score Improvement|Barbarian|XPHB|12",
+        "Improved Brutal Strike|Barbarian|XPHB|13",
+        {
+          "classFeature": "Subclass Feature|Barbarian|XPHB|14",
+          "gainSubclassFeature": true
+        },
+        "Persistent Rage|Barbarian|XPHB|15",
+        "Ability Score Improvement|Barbarian|XPHB|16",
+        "Improved Brutal Strike|Barbarian|XPHB|17",
+        "Indomitable Might|Barbarian|XPHB|18",
+        "Epic Boon|Barbarian|XPHB|19",
+        "Primal Champion|Barbarian|XPHB|20"
+      ],
+      "classTableGroups": [
+        {
+          "colLabels": [
+            "Rages",
+            "Rage Damage",
+            "Weapon Mastery"
+          ],
+          "rows": [
+            [
+              "2",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "2"
+            ],
+            [
+              "2",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "2"
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "2"
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "3"
+            ],
+            [
+              "3",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "3"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "3"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "3"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 2
+              },
+              "3"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "3"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "4",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 3
+              },
+              "4"
+            ],
+            [
+              "5",
+              {
+                "type": "bonus",
+                "value": 4
+              },
+              "4"
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              },
+              "4"
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              },
+              "4"
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              },
+              "4"
+            ],
+            [
+              "6",
+              {
+                "type": "bonus",
+                "value": 4
+              },
+              "4"
+            ]
+          ]
+        }
+      ],
+      "edition": "one",
+      "featProgression": [
+        {
+          "category": [
+            "EB"
+          ],
+          "name": "Epic Boon",
+          "progression": {
+            "19": 1
+          }
+        }
+      ],
+      "hd": {
+        "faces": 12,
+        "number": 1
+      },
+      "multiclassing": {
+        "proficienciesGained": {
+          "armor": [
+            "shield"
+          ],
+          "armorProficiencies": [
+            {
+              "shield": true
+            }
+          ],
+          "weapons": [
+            "martial"
+          ]
+        }
+      },
+      "name": "Barbarian",
+      "primaryAbility": [
+        {
+          "str": true
+        }
+      ],
+      "proficiency": [
+        "str",
+        "con"
+      ],
+      "source": "XPHB",
+      "srd52": true,
+      "startingEquipment": {
+        "additionalFromBackground": true,
+        "defaultData": [
+          {
+            "A": [
+              {
+                "item": "greataxe|xphb"
+              },
+              {
+                "item": "handaxe|xphb",
+                "quantity": 4
+              },
+              {
+                "item": "explorer's pack|xphb"
+              },
+              {
+                "value": 1500
+              }
+            ],
+            "B": [
+              {
+                "value": 7500
+              }
+            ]
+          }
+        ],
+        "entries": [
+          "{@i Choose A or B:} (A) {@item Greataxe|XPHB}, 4 {@item Handaxe|XPHB|Handaxes}, {@item Explorer's Pack|XPHB}, and 15 GP; or (B) 75 GP"
+        ]
+      },
+      "startingProficiencies": {
+        "armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "armorProficiencies": [
+          {
+            "light": true,
+            "medium": true,
+            "shield": true
+          }
+        ],
+        "skills": [
+          {
+            "choose": {
+              "count": 2,
+              "from": [
+                "animal handling",
+                "athletics",
+                "intimidation",
+                "nature",
+                "perception",
+                "survival"
+              ]
+            }
+          }
+        ],
+        "weapons": [
+          "simple",
+          "martial"
+        ]
+      },
+      "subclassTitle": "Barbarian Subclass"
+    }
+  ],
+  "classFeature": [
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "In battle, you fight with primal ferocity. On your turn, you can enter a rage as a bonus action.",
+        "While raging, you gain the following benefits if you aren't wearing heavy armor:",
+        {
+          "items": [
+            "You have advantage on Strength checks and Strength saving throws.",
+            "When you make a melee weapon attack using Strength, you gain a +2 bonus to the damage roll. This bonus increases as you level.",
+            "You have resistance to bludgeoning, piercing, and slashing damage."
+          ],
+          "type": "list"
+        },
+        "If you are able to cast spells, you can't cast them or concentrate on them while raging.",
+        "Your rage lasts for 1 minute. It ends early if you are knocked {@condition unconscious} or if your turn ends and you haven't attacked a hostile creature since your last turn or taken damage since then. You can also end your rage on your turn as a bonus action.",
+        "Once you have raged the maximum number of times for your barbarian level, you must finish a long rest before you can rage again. You may rage 2 times at 1st level, 3 at 3rd, 4 at 6th, 5 at 12th, and 6 at 17th."
+      ],
+      "level": 1,
+      "name": "Rage",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "While you are not wearing any armor, your Armor Class equals 10 + your Dexterity modifier + your Constitution modifier. You can use a shield and still gain this benefit."
+      ],
+      "level": 1,
+      "name": "Unarmored Defense",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 2nd level, you gain an uncanny sense of when things nearby aren't as they should be, giving you an edge when you dodge away from danger. You have advantage on Dexterity saving throws against effects that you can see, such as traps and spells. To gain this benefit, you can't be {@condition blinded}, {@condition deafened}, or {@condition incapacitated}."
+      ],
+      "level": 2,
+      "name": "Danger Sense",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 2nd level, you can throw aside all concern for defense to attack with fierce desperation. When you make your first attack on your turn, you can decide to attack recklessly. Doing so gives you advantage on melee weapon attack rolls using Strength during this turn, but attack rolls against you have advantage until your next turn."
+      ],
+      "level": 2,
+      "name": "Reckless Attack",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 3rd level, you choose a path that shapes the nature of your rage from the list of available paths. Your choice grants you features at 3rd level and again at 6th, 10th, and 14th levels."
+      ],
+      "level": 3,
+      "name": "Primal Path",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 5th level, you can attack twice, instead of once, whenever you take the {@action Attack} action on your turn."
+      ],
+      "level": 5,
+      "name": "Extra Attack",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 5th level, your speed increases by 10 feet while you aren't wearing heavy armor."
+      ],
+      "level": 5,
+      "name": "Fast Movement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 6th level, you gain a feature from your Primal Path."
+      ],
+      "level": 6,
+      "name": "Path Feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "By 7th level, your instincts are so honed that you have advantage on initiative rolls.",
+        "Additionally, if you are {@status surprised} at the beginning of combat and aren't {@condition incapacitated}, you can act normally on your first turn, but only if you enter your rage before doing anything else on that turn."
+      ],
+      "level": 7,
+      "name": "Feral Instinct",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 9th level, you can roll one additional weapon damage die when determining the extra damage for a critical hit with a melee attack.",
+        "This increases to two additional dice at 13th level and three additional dice at 17th level."
+      ],
+      "level": 9,
+      "name": "Brutal Critical (1 die)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 10th level, you gain a feature from your Primal Path."
+      ],
+      "level": 10,
+      "name": "Path feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 11th level, your rage can keep you fighting despite grievous wounds. If you drop to 0 hit points while you're raging and don't die outright, you can make a {@dc 10} Constitution saving throw. If you succeed, you drop to 1 hit point instead.",
+        "Each time you use this feature after the first, the DC increases by 5. When you finish a short or long rest, the DC resets to 10."
+      ],
+      "level": 11,
+      "name": "Relentless Rage",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 13th level, you can roll two additional weapon damage dice when determining the extra damage for a critical hit with a melee attack.",
+        "This increases to three additional dice at 17th level."
+      ],
+      "level": 13,
+      "name": "Brutal Critical (2 dice)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 14th level, you gain a feature from your Primal Path."
+      ],
+      "level": 14,
+      "name": "Path feature",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 15th level, your rage is so fierce that it ends early only if you fall {@condition unconscious} or if you choose to end it."
+      ],
+      "level": 15,
+      "name": "Persistent Rage",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 17th level, you can roll three additional weapon damage dice when determining the extra damage for a critical hit with a melee attack."
+      ],
+      "level": 17,
+      "name": "Brutal Critical (3 dice)",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 18th level, if your total for a Strength check is less than your Strength score, you can use that score in place of the total."
+      ],
+      "level": 18,
+      "name": "Indomitable Might",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+        "Using the optional feats rule, you can forgo taking that feature to take a feat of your choice instead."
+      ],
+      "level": 19,
+      "name": "Ability Score Improvement",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "At 20th level, you embody the power of the wilds. Your Strength and Constitution scores increase by 4. Your maximum for those scores is now 24."
+      ],
+      "level": 20,
+      "name": "Primal Champion",
+      "source": "PHB",
+      "srd": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You can imbue yourself with a primal power called Rage, a force that grants you extraordinary might and resilience. You can enter it as a {@variantrule Bonus Action|XPHB} if you aren't wearing Heavy armor.",
+        "You can enter your Rage the number of times shown for your Barbarian level in the Rages column of the Barbarian Features table. You regain one expended use when you finish a {@variantrule Short Rest|XPHB}, and you regain all expended uses when you finish a {@variantrule Long Rest|XPHB}.",
+        "While active, your Rage follows the rules below.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "You have {@variantrule Resistance|XPHB} to Bludgeoning, Piercing, and Slashing damage."
+              ],
+              "name": "Damage Resistance",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "When you make an attack using Strength—with either a weapon or an {@variantrule Unarmed Strike|XPHB}—and deal damage to the target, you gain a bonus to the damage that increases as you gain levels as a Barbarian, as shown in the Rage Damage column of the Barbarian Features table."
+              ],
+              "name": "Rage Damage",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You have {@variantrule Advantage|XPHB} on Strength checks and Strength saving throws."
+              ],
+              "name": "Strength Advantage",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "You can't maintain {@status Concentration|XPHB}, and you can't cast spells."
+              ],
+              "name": "No Concentration or Spells",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "The Rage lasts until the end of your next turn, and it ends early if you don Heavy armor or have the {@condition Incapacitated|XPHB} condition. If your Rage is still active on your next turn, you can extend the Rage for another round by doing one of the following:",
+                {
+                  "items": [
+                    "Make an attack roll against an enemy.",
+                    "Force an enemy to make a saving throw.",
+                    "Take a {@variantrule Bonus Action|XPHB} to extend your Rage."
+                  ],
+                  "type": "list"
+                }
+              ],
+              "name": "Duration",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        },
+        "Each time the Rage is extended, it lasts until the end of your next turn. You can maintain a Rage for up to 10 minutes."
+      ],
+      "level": 1,
+      "name": "Rage",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "While you aren't wearing any armor, your base {@variantrule Armor Class|XPHB} equals 10 plus your Dexterity and Constitution modifiers. You can use a {@item Shield|XPHB} and still gain this benefit."
+      ],
+      "level": 1,
+      "name": "Unarmored Defense",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "Your training with weapons allows you to use the {@variantrule weapon mastery properties|XPHB|mastery properties} of two kinds of {@filter Simple|items|type=simple weapon;melee weapon=sand} or {@filter Martial Melee weapons|items|type=martial weapon;melee weapon=sand} of your choice, such as {@item Greataxe|XPHB|Greataxes} and {@item Handaxe|XPHB|Handaxes}. Whenever you finish a {@variantrule Long Rest|XPHB}, you can practice weapon drills and change one of those weapon choices.",
+        "When you reach certain Barbarian levels, you gain the ability to use the {@variantrule weapon mastery properties|XPHB|mastery properties} of more kinds of weapons, as shown in the Weapon Mastery column of the Barbarian Features table."
+      ],
+      "level": 1,
+      "name": "Weapon Mastery",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an uncanny sense of when things aren't as they should be, giving you an edge when you dodge perils. You have {@variantrule Advantage|XPHB} on Dexterity saving throws unless you have the {@condition Incapacitated|XPHB} condition."
+      ],
+      "level": 2,
+      "name": "Danger Sense",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You can throw aside all concern for defense to attack with increased ferocity. When you make your first attack roll on your turn, you can decide to attack recklessly. Doing so gives you {@variantrule Advantage|XPHB} on attack rolls using Strength until the start of your next turn, but attack rolls against you have {@variantrule Advantage|XPHB} during that time."
+      ],
+      "level": 2,
+      "name": "Reckless Attack",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a Barbarian subclass of your choice. A subclass is a specialization that grants you features at certain Barbarian levels. For the rest of your career, you gain each of your subclass's features that are of your Barbarian level or lower."
+      ],
+      "level": 3,
+      "name": "Barbarian Subclass",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain proficiency in another skill of your choice from the skill list available to Barbarians at level 1.",
+        "In addition, while your Rage is active, you can channel primal power when you attempt certain tasks; whenever you make an ability check using one of the following skills, you can make it as a Strength check even if it normally uses a different ability: {@skill Acrobatics|XPHB}, {@skill Intimidation|XPHB}, {@skill Perception|XPHB}, {@skill Stealth|XPHB}, or {@skill Survival|XPHB}. When you use this ability, your Strength represents primal power coursing through you, honing your agility, bearing, and senses."
+      ],
+      "level": 3,
+      "name": "Primal Knowledge",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Barbarian levels 8, 12, and 16."
+      ],
+      "level": 4,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You can attack twice instead of once whenever you take the {@action Attack|XPHB} action on your turn."
+      ],
+      "level": 5,
+      "name": "Extra Attack",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "Your speed increases by 10 feet while you aren't wearing Heavy armor."
+      ],
+      "level": 5,
+      "name": "Fast Movement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Barbarian subclass."
+      ],
+      "level": 6,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "Your instincts are so honed that you have {@variantrule Advantage|XPHB} on {@variantrule Initiative|XPHB} rolls."
+      ],
+      "level": 7,
+      "name": "Feral Instinct",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "As part of the {@variantrule Bonus Action|XPHB} you take to enter your Rage, you can move up to half your {@variantrule Speed|XPHB}."
+      ],
+      "level": 7,
+      "name": "Instinctive Pounce",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 8,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "If you use Reckless Attack, you can forgo any {@variantrule Advantage|XPHB} on one Strength-based attack roll of your choice on your turn. The chosen attack roll mustn't have {@variantrule Disadvantage|XPHB}. If the chosen attack roll hits, the target takes an extra {@damage 1d10} damage of the same type dealt by the weapon or {@variantrule Unarmed Strike|XPHB}, and you can cause one Brutal Strike effect of your choice. You have the following effect options.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "The target is pushed 15 feet straight away from you. You can then move up to half your {@variantrule Speed|XPHB} straight toward the target without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+              ],
+              "name": "Forceful Blow",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "The target's {@variantrule Speed|XPHB} is reduced by 15 feet until the start of your next turn. A target can be affected by only one Hamstring Blow at a time—the most recent one."
+              ],
+              "name": "Hamstring Blow",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 9,
+      "name": "Brutal Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Barbarian subclass."
+      ],
+      "level": 10,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "Your Rage can keep you fighting despite grievous wounds. If you drop to 0 {@variantrule Hit Points|XPHB} while your Rage is active and don't die outright, you can make a {@dc 10} Constitution saving throw. If you succeed, your {@variantrule Hit Points|XPHB} instead change to a number equal to twice your Barbarian level.",
+        "Each time you use this feature after the first, the DC increases by 5. When you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}, the DC resets to 10."
+      ],
+      "level": 11,
+      "name": "Relentless Rage",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 12,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You have honed new ways to attack furiously. The following effects are now among your Brutal Strike options.",
+        {
+          "entries": [
+            {
+              "entries": [
+                "The target has {@variantrule Disadvantage|XPHB} on the next saving throw it makes, and it can't make {@action Opportunity Attack|XPHB|Opportunity Attacks} until the start of your next turn."
+              ],
+              "name": "Staggering Blow",
+              "type": "entries"
+            },
+            {
+              "entries": [
+                "Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
+              ],
+              "name": "Sundering Blow",
+              "type": "entries"
+            }
+          ],
+          "type": "entries"
+        }
+      ],
+      "level": 13,
+      "name": "Improved Brutal Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain a feature from your Barbarian subclass."
+      ],
+      "level": 14,
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "When you roll {@variantrule Initiative|XPHB}, you can regain all expended uses of Rage. After you regain uses of Rage in this way, you can't do so again until you finish a {@variantrule Long Rest|XPHB}.",
+        "In addition, your Rage is so fierce that it now lasts for 10 minutes without you needing to do anything to extend it from round to round. Your Rage ends early if you have the {@condition Unconscious|XPHB} condition (not just the {@condition Incapacitated|XPHB} condition) or don Heavy armor."
+      ],
+      "level": 15,
+      "name": "Persistent Rage",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain the {@feat Ability Score Improvement|XPHB} feat (see \"Feats\") or another feat of your choice for which you qualify."
+      ],
+      "level": 16,
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "The extra damage of your Brutal Strike increases to {@damage 2d10}. In addition, you can use two different Brutal Strike effects whenever you use your Brutal Strike feature."
+      ],
+      "level": 17,
+      "name": "Improved Brutal Strike",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "If your total for a Strength check or Strength saving throw is less than your Strength score, you can use that score in place of the total."
+      ],
+      "level": 18,
+      "name": "Indomitable Might",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You gain an Epic Boon feat (see \"Feats\") or another feat of your choice for which you qualify. {@feat Boon of Irresistible Offense|XPHB} is recommended."
+      ],
+      "level": 19,
+      "name": "Epic Boon",
+      "source": "XPHB",
+      "srd52": true
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You embody primal power. Your Strength and Constitution scores increase by 4, to a maximum of 25."
+      ],
+      "level": 20,
+      "name": "Primal Champion",
+      "source": "XPHB",
+      "srd52": true
+    }
+  ],
+  "subclass": [
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "edition": "classic",
+      "name": "Path of the Berserker",
+      "shortName": "Berserker",
+      "source": "PHB",
+      "srd": true,
+      "subclassFeatures": [
+        "Path of the Berserker|Barbarian||Berserker||3",
+        "Mindless Rage|Barbarian||Berserker||6",
+        "Intimidating Presence|Barbarian||Berserker||10",
+        "Retaliation|Barbarian||Berserker||14"
+      ]
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "edition": "one",
+      "name": "Path of the Berserker",
+      "shortName": "Berserker",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassFeatures": [
+        "Path of the Berserker|Barbarian|XPHB|Berserker|XPHB|3",
+        "Mindless Rage|Barbarian|XPHB|Berserker|XPHB|6",
+        "Retaliation|Barbarian|XPHB|Berserker|XPHB|10",
+        "Intimidating Presence|Barbarian|XPHB|Berserker|XPHB|14"
+      ]
+    }
+  ],
+  "subclassFeature": [
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "For some barbarians, rage is a means to an end—that end being violence. The Path of the Berserker is a path of untrammeled fury, slick with blood. As you enter the berserker's rage, you thrill in the chaos of battle, heedless of your own health or well-being.",
+        {
+          "subclassFeature": "Frenzy|Barbarian||Berserker||3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Path of the Berserker",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Starting when you choose this path at 3rd level, you can go into a frenzy when you rage. If you do so, for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your turns after this one. When your rage ends, you suffer one level of {@condition exhaustion}."
+      ],
+      "header": 1,
+      "level": 3,
+      "name": "Frenzy",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 6th level, you can't be {@condition charmed} or {@condition frightened} while raging. If you are {@condition charmed} or {@condition frightened} when you enter your rage, the effect is suspended for the duration of the rage."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Mindless Rage",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Beginning at 10th level, you can use your action to frighten someone with your menacing presence. When you do so, choose one creature that you can see within 30 feet of you. If the creature can see or hear you, it must succeed on a Wisdom saving throw (DC equal to 8 + your proficiency bonus + your Charisma modifier) or be {@condition frightened} of you until the end of your next turn. On subsequent turns, you can use your action to extend the duration of this effect on the {@condition frightened} creature until the end of your next turn. This effect ends if the creature ends its turn out of line of sight or more than 60 feet away from you.",
+        "If the creature succeeds on its saving throw, you can't use this feature on that creature again for 24 hours."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Intimidating Presence",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "PHB",
+      "entries": [
+        "Starting at 14th level, when you take damage from a creature that is within 5 feet of you, you can use your reaction to make a melee weapon attack against that creature."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Retaliation",
+      "source": "PHB",
+      "srd": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "PHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "{@i Channel Rage into Violent Fury}",
+        "Barbarians who walk the Path of the Berserker direct their Rage primarily toward violence. Their path is one of untrammeled fury, and they thrill in the chaos of battle as they allow their Rage to seize and empower them.",
+        {
+          "subclassFeature": "Frenzy|Barbarian|XPHB|Berserker|XPHB|3",
+          "type": "refSubclassFeature"
+        }
+      ],
+      "level": 3,
+      "name": "Path of the Berserker",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "If you use Reckless Attack while your Rage is active, you deal extra damage to the first target you hit on your turn with a Strength-based attack. To determine the extra damage, roll a number of d6s equal to your Rage Damage bonus, and add them together. The damage has the same type as the weapon or {@variantrule Unarmed Strike|XPHB} used for the attack."
+      ],
+      "header": 2,
+      "level": 3,
+      "name": "Frenzy",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "You have {@variantrule Immunity|XPHB} to the {@condition Charmed|XPHB} and {@condition Frightened|XPHB} conditions while your Rage is active. If you're {@condition Charmed|XPHB} or {@condition Frightened|XPHB} when you enter your Rage, the condition ends on you."
+      ],
+      "header": 2,
+      "level": 6,
+      "name": "Mindless Rage",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "When you take damage from a creature that is within 5 feet of you, you can take a {@variantrule Reaction|XPHB} to make one melee attack against that creature, using a weapon or an {@variantrule Unarmed Strike|XPHB}."
+      ],
+      "header": 2,
+      "level": 10,
+      "name": "Retaliation",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "className": "Barbarian",
+      "classSource": "XPHB",
+      "entries": [
+        "As a {@variantrule Bonus Action|XPHB}, you can strike terror into others with your menacing presence and primal power. When you do so, each creature of your choice in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you must make a Wisdom saving throw ({@dc 8} plus your Strength modifier and {@variantrule Proficiency|XPHB|Proficiency Bonus}). On a failed save, a creature has the {@condition Frightened|XPHB} condition for 1 minute. At the end of each of the {@condition Frightened|XPHB} creature's turns, the creature repeats the save, ending the effect on itself on a success.",
+        "Once you use this feature, you can't use it again until you finish a {@variantrule Long Rest|XPHB} unless you expend a use of your Rage (no action required) to restore your use of it."
+      ],
+      "header": 2,
+      "level": 14,
+      "name": "Intimidating Presence",
+      "source": "XPHB",
+      "srd52": true,
+      "subclassShortName": "Berserker",
+      "subclassSource": "XPHB"
+    }
+  ]
+}

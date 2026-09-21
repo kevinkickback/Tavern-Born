@@ -1,4 +1,14 @@
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { _electron as electron, expect, test } from '@playwright/test'
+import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
+
+const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/core/manifest.json'))
+
+test.skip(
+  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION,
+  'Windows build has upstream Electron sandbox crash 0x80000003',
+)
 
 test('starts the compiled desktop shell with a sandboxed renderer and working bridge', async ({
   browserName: _browserName,
@@ -64,7 +74,35 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
       }
     })
     expect(rejectedPathMessage).toContain('Path must be absolute')
+
+    const bundledBoundaryMessages = await page.evaluate(() => {
+      const readError = async (relativePath: string) => {
+        try {
+          await window.electronAPI.readBundledJson(relativePath)
+          return null
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error)
+        }
+      }
+      return Promise.all([readError('../manifest.json'), readError('THIRD_PARTY_NOTICES.md')])
+    })
+    expect(bundledBoundaryMessages[0]).toContain('invalid segment')
+    expect(bundledBoundaryMessages[1]).toContain('Only bundled JSON files may be read')
+
+    if (HAS_DEVELOPMENT_SRD) {
+      const bundledRuntime = await page.evaluate(async () => ({
+        manifest: await window.electronAPI.getBundledManifest(),
+        classIndex: await window.electronAPI.readBundledJson('class/index.json'),
+      }))
+      expect(bundledRuntime.manifest.packId).toBe('tavern-born-srd-core')
+      expect(bundledRuntime.manifest.packVersion).toBeTruthy()
+      expect(bundledRuntime.classIndex).toEqual(
+        expect.objectContaining({ wizard: expect.any(String) }),
+      )
+    }
   } finally {
-    await electronApp.close()
+    if (electronApp.process().exitCode === null) {
+      await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => undefined)
+    }
   }
 })

@@ -4,6 +4,7 @@ import {
   DATA_REQUEST_TIMEOUT_MS,
   FiveEToolsDataLoader,
 } from '@/lib/5etools/dataLoader'
+import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
 
 function makeJsonResponse(jsonData: unknown, ok = true) {
   return new Response(JSON.stringify(jsonData), {
@@ -22,38 +23,81 @@ describe('5etools/dataLoader', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
-  test('buildUrl always resolves to data path in remote mode', () => {
+  test('reads bundled resources through the restricted Electron bridge', async () => {
+    const readBundledJson = vi.fn(async (relativePath: string) => ({ relativePath }))
+    vi.stubGlobal('electronAPI', { readBundledJson })
     const loader = new FiveEToolsDataLoader({
-      type: 'remote',
-      path: 'https://example.com/5etools-src/main',
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: 'test',
       isValid: true,
     })
+    const loadResource = (
+      loader as unknown as { loadResource: (filename: string) => Promise<unknown> }
+    ).loadResource.bind(loader)
 
-    const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
-
-    expect(buildUrl('class/class-wizard.json')).toBe(
-      'https://example.com/5etools-src/main/data/class/class-wizard.json',
-    )
-    expect(buildUrl('spells/spells-phb.json')).toBe(
-      'https://example.com/5etools-src/main/data/spells/spells-phb.json',
-    )
-    expect(buildUrl('books.json')).toBe('https://example.com/5etools-src/main/data/books.json')
+    await expect(loadResource('class/index.json')).resolves.toEqual({
+      relativePath: 'class/index.json',
+    })
+    expect(readBundledJson).toHaveBeenCalledWith('class/index.json')
   })
 
-  test('buildUrl does not inject data prefix in local mode', () => {
-    const loader = new FiveEToolsDataLoader({
-      type: 'local',
-      path: 'C:\\5etools',
-      isValid: true,
+  test('parses bundled and local readers through the same pipeline with bundled source policy', async () => {
+    const createReader = (type: JsonResourceReader['type']): JsonResourceReader => ({
+      type,
+      readJson: vi.fn((relativePath: string) => {
+        if (relativePath === 'races.json') {
+          return Promise.resolve({ race: [{ name: 'Human', source: 'PHB' }] })
+        }
+        if (relativePath === 'items.json') {
+          return Promise.resolve({
+            item: [
+              { name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true },
+              { name: 'Revised Bag of Holding', source: 'XDMG', type: 'W', srd52: true },
+            ],
+          })
+        }
+        if (relativePath === 'senses.json') {
+          return Promise.resolve({ sense: [{ name: 'Tremorsense', source: 'MM' }] })
+        }
+        return Promise.resolve({})
+      }),
     })
+    const bundled = new FiveEToolsDataLoader(
+      {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'tavern-born-srd-core',
+        packVersion: 'test',
+        isValid: true,
+      },
+      createReader('bundled'),
+    )
+    const local = new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:\\data', isValid: true },
+      createReader('local'),
+    )
 
-    const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
+    const [bundledData, localData] = await Promise.all([bundled.loadAllData(), local.loadAllData()])
 
-    expect(buildUrl('class/class-wizard.json')).toBe('C:\\5etools/class/class-wizard.json')
+    expect(bundledData.races).toEqual([expect.objectContaining({ name: 'Human', source: 'PHB' })])
+    expect(bundledData.items).toEqual(localData.items)
+    expect(bundledData.senses).toEqual(localData.senses)
+    expect(bundledData.sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ abbreviation: 'PHB', hasCharacterOptions: true }),
+        expect.objectContaining({ abbreviation: 'DMG', hasCharacterOptions: false }),
+        expect.objectContaining({ abbreviation: 'MM', hasCharacterOptions: false }),
+        expect.objectContaining({ abbreviation: 'XDMG', hasCharacterOptions: false }),
+      ]),
+    )
+    expect(localData.sources.find((source) => source.abbreviation === 'DMG')).toEqual(
+      expect.objectContaining({ hasCharacterOptions: true }),
+    )
   })
 
   test('times out a stalled remote request', async () => {
@@ -717,12 +761,62 @@ describe('5etools/dataLoader', () => {
     const onResourceFailure = vi.fn()
 
     await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
-      'Unable to load remote data source. Check internet connectivity and source URL.',
+      'Unable to load additional content. Check internet connectivity and the source address.',
     )
     expect(onResourceFailure).toHaveBeenCalledWith('books.json', { required: true })
     expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
     expect(onResourceFailure).toHaveBeenCalledWith('generated/gendata-spell-source-lookup.json', {
       required: true,
     })
+  })
+
+  test('loads an inventoried partial external source without reporting absent families', async () => {
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: vi.fn((relativePath: string) => {
+        if (relativePath === 'feats.json') {
+          return Promise.resolve({ feat: [{ name: 'Focused', source: 'TEST' }] })
+        }
+        return Promise.reject(new Error('missing'))
+      }),
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:partial-data',
+        isValid: true,
+        availableResources: ['feats.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    const gameData = await loader.loadAllData({ onResourceFailure })
+
+    expect(gameData.feats).toEqual([expect.objectContaining({ name: 'Focused', source: 'TEST' })])
+    expect(onResourceFailure).not.toHaveBeenCalled()
+  })
+
+  test('rejects a refresh when an inventoried partial-source family disappears', async () => {
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: vi.fn(() => Promise.reject(new Error('missing'))),
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:partial-data',
+        isValid: true,
+        availableResources: ['feats.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
+      'Unable to load additional content from the selected folder.',
+    )
+    expect(onResourceFailure).toHaveBeenCalledWith('feats.json', { required: true })
+    expect(onResourceFailure).not.toHaveBeenCalledWith('books.json', expect.anything())
   })
 })

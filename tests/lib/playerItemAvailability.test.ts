@@ -12,7 +12,7 @@ function item(overrides: Partial<Item5e>): Item5e {
 }
 
 describe('character item availability', () => {
-  test('includes public 2014 core potions and spell scrolls without enabling the DMG', () => {
+  test('includes public 2014 SRD items without enabling the DMG', () => {
     const potion = item({ name: 'Potion of Healing', source: 'DMG', type: 'P', srd: true })
     const scroll = item({
       name: 'Spell Scroll (1st Level)',
@@ -20,17 +20,17 @@ describe('character item availability', () => {
       type: 'SC',
       basicRules: true,
     })
+    const bag = item({ name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true })
 
     expect(
-      filterCharacterItems([potion, scroll], {
+      filterCharacterItems([potion, scroll, bag], {
         allowedSources: ['PHB'],
         originSystem: '2014',
       }),
-    ).toEqual([potion, scroll])
+    ).toEqual([potion, scroll, bag])
   })
 
-  test('does not expose unrelated, private, or wrong-edition DMG content', () => {
-    const bag = item({ name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true })
+  test('does not expose private or wrong-edition DMG content', () => {
     const privatePotion = item({ name: 'DM-only Potion', source: 'DMG', type: 'P' })
     const revisedPotion = item({
       name: 'Revised Potion',
@@ -40,7 +40,7 @@ describe('character item availability', () => {
     })
 
     expect(
-      filterCharacterItems([bag, privatePotion, revisedPotion], {
+      filterCharacterItems([privatePotion, revisedPotion], {
         allowedSources: ['PHB'],
         originSystem: '2014',
       }),
@@ -66,5 +66,29 @@ describe('character item availability', () => {
         originSystem: '2024',
       }),
     ).toEqual([revisedScroll, supplementPotion])
+  })
+
+  test('includes every matching public SRD item alongside additional content', () => {
+    const legacyBag = item({ name: 'Bag of Holding', source: 'DMG', type: 'W', srd: true })
+    const revisedBag = item({
+      name: 'Revised Bag of Holding',
+      source: 'XDMG',
+      type: 'W',
+      srd52: true,
+    })
+    const privateItem = item({ name: 'Private Item', source: 'DMG', type: 'W' })
+
+    expect(
+      filterCharacterItems([legacyBag, revisedBag, privateItem], {
+        allowedSources: ['PHB', 'XGE'],
+        originSystem: '2014',
+      }),
+    ).toEqual([legacyBag])
+    expect(
+      filterCharacterItems([legacyBag, revisedBag, privateItem], {
+        allowedSources: ['XPHB', 'XGE'],
+        originSystem: '2024',
+      }),
+    ).toEqual([revisedBag])
   })
 })

@@ -3,7 +3,8 @@
 
 ## ✨ Changes
 
-* Fixed source selection allowing incompatible 2014 and 2024 rulebooks to be combined; revised characters can still use compatible legacy options when no revised replacement exists
+* Tavern Born now includes the free D&D rules provided through the SRD
+* Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
 
 </details>

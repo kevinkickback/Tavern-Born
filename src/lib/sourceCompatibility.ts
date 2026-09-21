@@ -67,6 +67,28 @@ export function normalizeAllowedSources(
   return normalized
 }
 
+/**
+ * Removes catalog entries that are retained for provenance or lookup support but are not
+ * user-selectable character sources. Unknown entries remain intact so switching data catalogs
+ * does not silently discard a character's external-source configuration.
+ */
+export function normalizeSelectableAllowedSources(
+  allowedSources: readonly string[],
+  originSystem: OriginSystem,
+  sourceCatalog: readonly SourceBook[] = [],
+): string[] {
+  const nonSelectableSources = new Set(
+    sourceCatalog
+      .filter((source) => source.hasCharacterOptions === false)
+      .map((source) => normalizeSource(source.abbreviation)),
+  )
+  return normalizeAllowedSources(
+    allowedSources.filter((source) => !nonSelectableSources.has(normalizeSource(source))),
+    originSystem,
+    sourceCatalog,
+  )
+}
+
 export function getEffectiveSources(
   allowedSources: readonly string[],
   originSystem: OriginSystem,

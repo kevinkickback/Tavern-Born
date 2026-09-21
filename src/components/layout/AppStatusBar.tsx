@@ -24,6 +24,7 @@ function getDataStatus(
   isBackgroundRefreshing: boolean,
   error: string | null,
   progress: { current: number; total: number; resource: string } | null,
+  sourceDescription: string | null,
 ): DataStatusPresentation {
   if (error) {
     return {
@@ -58,7 +59,7 @@ function getDataStatus(
   if (cacheStatus === 'offline') {
     return {
       label: 'Using cached game data',
-      detail: 'No game data source is currently configured',
+      detail: 'Saved game data remains available, but its source is no longer configured',
       icon: CloudSlash,
       tone: 'text-warning-foreground',
     }
@@ -67,7 +68,7 @@ function getDataStatus(
   if (cacheStatus === 'unconfigured') {
     return {
       label: 'Game data not configured',
-      detail: 'Choose a game data source in Settings',
+      detail: 'Use the Included SRD or add compatible 5etools data in Settings',
       icon: WarningCircle,
       tone: 'text-warning-foreground',
     }
@@ -86,7 +87,7 @@ function getDataStatus(
     label: 'Game data ready',
     detail:
       cacheStatus === 'fetched'
-        ? 'Game data loaded from the configured source'
+        ? `${sourceDescription ?? 'Game data'} loaded successfully`
         : 'Game data loaded from cache',
     icon: CheckCircle,
     tone: 'text-success',
@@ -103,6 +104,14 @@ export function AppStatusBar() {
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
+  const sourceDescription =
+    dataSourceConfig?.type === 'bundled'
+      ? 'Included SRD'
+      : dataSourceConfig?.type === 'local'
+        ? 'Included SRD + Local Content'
+        : dataSourceConfig?.type === 'remote'
+          ? 'Included SRD + Online Content'
+          : null
 
   useEffect(() => {
     window.electronAPI
@@ -112,10 +121,23 @@ export function AppStatusBar() {
   }, [])
 
   const dataStatus = useMemo(
-    () => getDataStatus(cacheStatus, isLoading, isBackgroundRefreshing, error, loadProgress),
-    [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress],
+    () =>
+      getDataStatus(
+        cacheStatus,
+        isLoading,
+        isBackgroundRefreshing,
+        error,
+        loadProgress,
+        sourceDescription,
+      ),
+    [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress, sourceDescription],
   )
   const DataStatusIcon = dataStatus.icon
+  const dataSourceLabel = dataSourceConfig?.type === 'bundled' ? 'Included SRD' : sourceDescription
+  const dataSourceTitle =
+    dataSourceConfig?.type === 'bundled'
+      ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
+      : dataSourceConfig?.path
 
   return (
     <div
@@ -152,11 +174,7 @@ export function AppStatusBar() {
       </div>
 
       <div className="ml-3 flex shrink-0 items-center gap-2">
-        {dataSourceConfig && (
-          <span title={dataSourceConfig.path}>
-            {dataSourceConfig.type === 'local' ? 'Local source' : 'Remote source'}
-          </span>
-        )}
+        {dataSourceConfig && <span title={dataSourceTitle}>{dataSourceLabel}</span>}
         {dataSourceConfig && appVersion && (
           <span className="h-3 w-px bg-border" aria-hidden="true" />
         )}

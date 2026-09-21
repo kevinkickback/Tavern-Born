@@ -125,9 +125,9 @@ export function CompendiumPage() {
         <WorkspaceBody className="flex items-center justify-center p-8">
           <div className="max-w-sm text-center">
             <Book className="mx-auto size-10 text-muted-foreground" weight="duotone" />
-            <h2 className="mt-4 text-base font-semibold">No game data loaded</h2>
+            <h2 className="mt-4 text-base font-semibold">Rules catalog unavailable</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Configure a game-data source before browsing the compendium.
+              Use the Included SRD in Settings, or add compatible 5etools data.
             </p>
             <Button asChild size="sm" className="mt-4">
               <Link to="/settings">Open Settings</Link>
