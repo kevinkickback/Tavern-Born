@@ -43,8 +43,7 @@ export const INITIAL_CHARACTER_DATA = {
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: true,
-    bladesingerAnyRace: false,
-    battleragerAnyRace: false,
+    anyRaceSubclasses: false,
     preferNewerPrintings: true,
   },
 }

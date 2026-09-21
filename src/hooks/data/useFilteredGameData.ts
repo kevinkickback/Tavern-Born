@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { DataFilter } from '@/lib/5etools/filters'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
-import { buildSuppressedKeys } from '@/lib/5etools/reprints'
+import { buildSuppressedKeys, collectReprintableEntities } from '@/lib/5etools/reprints'
 import {
   XPHB_LEGACY_FEAT_KEYS,
   XPHB_LEGACY_RACE_KEYS,
@@ -99,39 +99,10 @@ export function useFilteredGameDataParams(params: FilterParams) {
       }
     }
 
-    const nestedClassEntities = classes.flatMap((classEntity) => [
-      ...(classEntity.classFeatures ?? []).filter((feature) => typeof feature !== 'string'),
-      ...(classEntity.classFeatureRefs ?? []).flatMap((reference) =>
-        reference.feature ? [reference.feature] : [],
-      ),
-      ...(classEntity.subclasses ?? []).flatMap((subclass) => [
-        subclass,
-        ...(subclass.subclassFeatures ?? []).filter((feature) => typeof feature !== 'string'),
-        ...(subclass.subclassFeatureRefs ?? []).flatMap((reference) =>
-          reference.feature ? [reference.feature] : [],
-        ),
-        ...(subclass.levelFeatures ?? []).flatMap((group) => group.features),
-      ]),
-    ])
     const suppressedKeys =
       preferNewerPrintings || originSystem === '2024'
         ? buildSuppressedKeys(
-            [
-              ...races,
-              ...classes,
-              ...nestedClassEntities,
-              ...backgrounds,
-              ...spells,
-              ...feats,
-              ...items,
-              ...itemsBase,
-              ...classFeatures,
-              ...(optionalfeatures as Array<{
-                name?: unknown
-                source?: unknown
-                reprintedAs?: unknown
-              }>),
-            ],
+            collectReprintableEntities(gameData),
             new Set(compatibleAllowedSources),
           )
         : undefined

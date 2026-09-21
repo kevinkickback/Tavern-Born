@@ -29,6 +29,21 @@ describe('characterPersistenceSchema', () => {
     expect(result.success ? [] : result.error.issues).toEqual([])
   })
 
+  test.each([
+    [{ bladesingerAnyRace: true, battleragerAnyRace: false }, true],
+    [{ bladesingerAnyRace: false, battleragerAnyRace: true }, true],
+    [{ bladesingerAnyRace: false, battleragerAnyRace: false }, false],
+  ])('migrates legacy subclass race settings into the combined rule', (legacyRules, expected) => {
+    const character = makeCharacterFixture() as unknown as Record<string, unknown>
+    character.variantRules = legacyRules
+
+    const result = characterPersistenceSchema.parse(character)
+
+    expect(result.variantRules?.anyRaceSubclasses).toBe(expected)
+    expect(result.variantRules).not.toHaveProperty('bladesingerAnyRace')
+    expect(result.variantRules).not.toHaveProperty('battleragerAnyRace')
+  })
+
   test('requires an exact source for every selected subclass', () => {
     const character = makeCharacterFixture({
       classProgression: [

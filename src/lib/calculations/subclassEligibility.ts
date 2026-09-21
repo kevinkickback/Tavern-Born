@@ -11,7 +11,6 @@ interface SubclassEligibilityParams {
 }
 
 interface LegacyRestriction {
-  variantOverride: 'bladesingerAnyRace' | 'battleragerAnyRace'
   allowedRaceKeyword: string
 }
 
@@ -35,6 +34,6 @@ export function isSubclassEligible({
     LEGACY_SUBCLASS_PREREQUISITE_FIXUPS as Readonly<Record<string, LegacyRestriction>>
   )[key]
   if (!restriction) return true
-  if (character.variantRules?.[restriction.variantOverride]) return true
+  if (character.variantRules?.anyRaceSubclasses) return true
   return (character.race ?? '').toLowerCase().includes(restriction.allowedRaceKeyword)
 }

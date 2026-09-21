@@ -7,23 +7,24 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import type { VariantRules } from '@/types/character'
 
 type BooleanRuleKey = Exclude<keyof VariantRules, 'abilityScoreMethod'>
-type RulesPanel = 'ruleset' | 'advancement' | 'character-options'
+type RulesPanel = 'ruleset' | 'character-options'
 
 const RULES_PANELS = [
   { value: 'ruleset', label: 'Ruleset', icon: Sparkle },
-  { value: 'advancement', label: 'Advancement', icon: DiceFive },
   { value: 'character-options', label: 'Character Options', icon: Sword },
 ] as const
 
 function getActivePanel(panel: string | null): RulesPanel {
-  if (panel === 'advancement' || panel === 'character-options') return panel
+  if (panel === 'advancement' || panel === 'character-options') return 'character-options'
   return 'ruleset'
 }
 
@@ -31,24 +32,47 @@ interface RuleRowProps {
   label: string
   description: string
   checked: boolean
+  available?: boolean
+  unavailableDescription?: string
   onCheckedChange: (checked: boolean) => void
 }
 
-function RuleRow({ label, description, checked, onCheckedChange }: RuleRowProps) {
+function RuleRow({
+  label,
+  description,
+  checked,
+  available = true,
+  unavailableDescription,
+  onCheckedChange,
+}: RuleRowProps) {
   const id = useId()
+  const unavailable = !available
   return (
     <div className="flex items-start justify-between gap-5 border-b border-border-subtle py-3 last:border-b-0">
       <div className="min-w-0">
-        <Label htmlFor={id} className="cursor-pointer text-sm font-medium">
+        <Label
+          htmlFor={id}
+          className={cn(
+            'cursor-pointer text-sm font-medium',
+            unavailable && !checked && 'cursor-not-allowed text-muted-foreground',
+          )}
+        >
           {label}
         </Label>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
           {description}
         </p>
+        {unavailable && unavailableDescription && (
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            {checked ? 'Currently inactive. ' : ''}
+            {unavailableDescription}
+          </p>
+        )}
       </div>
       <Switch
         id={id}
         checked={checked}
+        disabled={unavailable && !checked}
         onCheckedChange={onCheckedChange}
         className="mt-0.5 shrink-0"
       />
@@ -90,6 +114,12 @@ export function RulesPage() {
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
+  const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
+  const contentAvailability = getVariantRuleContentAvailability({
+    classes,
+    classFeatures,
+    optionalFeatures: optionalfeatures,
+  })
 
   const setActivePanel = (panel: RulesPanel) => {
     setSearchParams(panel === 'ruleset' ? {} : { section: panel }, { replace: true })
@@ -119,8 +149,8 @@ export function RulesPage() {
     }
     if (
       !checked &&
-      ((key === 'bladesingerAnyRace' && selectedSubclass?.toLowerCase() === 'bladesinger') ||
-        (key === 'battleragerAnyRace' && selectedSubclass?.toLowerCase() === 'battlerager'))
+      key === 'anyRaceSubclasses' &&
+      ['bladesinger', 'battlerager'].includes(selectedSubclass?.toLowerCase() ?? '')
     ) {
       toast.warning(`Your existing ${selectedSubclass} subclass will be kept.`, {
         description: 'This rule will apply the next time you choose a subclass.',
@@ -206,83 +236,83 @@ export function RulesPage() {
               </RulesSection>
             )}
 
-            {activePanel === 'advancement' && (
-              <RulesSection
-                icon={<DiceFive className="size-5" weight="fill" />}
-                title="Advancement"
-                description="Choose how ability scores and level-up options are handled."
-              >
-                <div className="py-4">
-                  <p className="text-sm font-medium">Ability Score Method</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Changing the method does not replace your existing scores.
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {abilityMethods.map((method) => {
-                      const selected = abilityMethod === method.value
-                      return (
-                        <Button
-                          key={method.value}
-                          type="button"
-                          variant="outline"
-                          aria-pressed={selected}
-                          onClick={() => updateRules({ abilityScoreMethod: method.value })}
-                          className={cn(
-                            'h-auto min-h-16 flex-col items-start gap-1 whitespace-normal px-3 py-2 text-left',
-                            selected && 'border-primary bg-surface-selected text-foreground',
-                          )}
-                        >
-                          <span className="font-semibold">{method.label}</span>
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {method.description}
-                          </span>
-                        </Button>
-                      )
-                    })}
-                  </div>
-                </div>
-                <RuleRow
-                  label="Average Hit Points"
-                  description="Use the fixed average automatically when leveling up. When disabled, each level asks you to roll or enter the hit-die result. Existing level-up HP is unchanged."
-                  checked={rules.averageHitPoints !== false}
-                  onCheckedChange={(checked) => updateBooleanRule('averageHitPoints', checked)}
-                />
-                <RuleRow
-                  label="Optional Class Features"
-                  description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
-                  checked={rules.optionalClassFeatures ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('optionalClassFeatures', checked)}
-                />
-              </RulesSection>
-            )}
-
             {activePanel === 'character-options' && (
-              <RulesSection
-                icon={<Sword className="size-5" weight="fill" />}
-                title="Character Options"
-                description="Adjust restrictions applied while choosing character options."
-              >
-                <RuleRow
-                  label="Bladesinger Any Race"
-                  description="Allow characters of any race to choose the Bladesinger Wizard subclass."
-                  checked={rules.bladesingerAnyRace ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('bladesingerAnyRace', checked)}
-                />
-                <RuleRow
-                  label="Battlerager Any Race"
-                  description="Allow characters of any race to choose the Battlerager Barbarian subclass."
-                  checked={rules.battleragerAnyRace ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('battleragerAnyRace', checked)}
-                />
-                <RuleRow
-                  label="Ignore Equipment Restrictions"
-                  description="Allow equipment to be used even when its normal proficiency or usage requirements are not met."
-                  checked={rules.ignoreEquipRestrictions ?? false}
-                  onCheckedChange={(checked) =>
-                    updateBooleanRule('ignoreEquipRestrictions', checked)
-                  }
-                />
-              </RulesSection>
+              <div className="space-y-5">
+                <RulesSection
+                  icon={<DiceFive className="size-5" weight="fill" />}
+                  title="Creation & Advancement"
+                  description="Choose how ability scores and level-up options are handled."
+                >
+                  <div className="py-4">
+                    <p className="text-sm font-medium">Ability Score Method</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Changing the method does not replace your existing scores.
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {abilityMethods.map((method) => {
+                        const selected = abilityMethod === method.value
+                        return (
+                          <Button
+                            key={method.value}
+                            type="button"
+                            variant="outline"
+                            aria-pressed={selected}
+                            onClick={() => updateRules({ abilityScoreMethod: method.value })}
+                            className={cn(
+                              'h-auto min-h-16 flex-col items-start gap-1 whitespace-normal px-3 py-2 text-left',
+                              selected && 'border-primary bg-surface-selected text-foreground',
+                            )}
+                          >
+                            <span className="font-semibold">{method.label}</span>
+                            <span className="text-xs font-normal text-muted-foreground">
+                              {method.description}
+                            </span>
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <RuleRow
+                    label="Average Hit Points"
+                    description="Use the fixed average automatically when leveling up. When disabled, each level asks you to roll or enter the hit-die result. Existing level-up HP is unchanged."
+                    checked={rules.averageHitPoints !== false}
+                    onCheckedChange={(checked) => updateBooleanRule('averageHitPoints', checked)}
+                  />
+                </RulesSection>
+
+                <RulesSection
+                  icon={<Sword className="size-5" weight="fill" />}
+                  title="Option Restrictions"
+                  description="Adjust restrictions applied while choosing character options."
+                >
+                  <RuleRow
+                    label="Optional Class Features"
+                    description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
+                    checked={rules.optionalClassFeatures ?? false}
+                    available={contentAvailability.optionalClassFeatures}
+                    unavailableDescription="No optional or replacement class features are available from your selected content."
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('optionalClassFeatures', checked)
+                    }
+                  />
+                  <RuleRow
+                    label="Any-Race Subclasses"
+                    description="Allow any character to choose a subclass even when its source limits that subclass to a particular race."
+                    checked={rules.anyRaceSubclasses ?? false}
+                    available={contentAvailability.anyRaceSubclasses}
+                    unavailableDescription="No race-restricted subclasses are available from your selected content."
+                    onCheckedChange={(checked) => updateBooleanRule('anyRaceSubclasses', checked)}
+                  />
+                  <RuleRow
+                    label="Ignore Equipment Restrictions"
+                    description="Allow equipment to be used even when its normal proficiency or usage requirements are not met."
+                    checked={rules.ignoreEquipRestrictions ?? false}
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('ignoreEquipRestrictions', checked)
+                    }
+                  />
+                </RulesSection>
+              </div>
             )}
           </div>
         </div>

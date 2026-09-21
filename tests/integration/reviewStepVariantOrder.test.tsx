@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
@@ -31,21 +31,16 @@ describe('ReviewStep variant rule ordering', () => {
     )
 
     const optionalClassFeatures = screen.getByText('Optional Class Features')
-    const bladesingerAnyRace = screen.getByText('Bladesinger Any Race')
-    const battleragerAnyRace = screen.getByText('Battlerager Any Race')
+    const anyRaceSubclasses = screen.getByText('Any-Race Subclasses')
     const averageHitPoints = screen.getByText('Average Hit Points')
     const preferNewerPrintings = screen.getByText('Prefer Newer Printings')
 
     expect(
-      optionalClassFeatures.compareDocumentPosition(bladesingerAnyRace) &
+      optionalClassFeatures.compareDocumentPosition(anyRaceSubclasses) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
-      bladesingerAnyRace.compareDocumentPosition(battleragerAnyRace) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(
-      battleragerAnyRace.compareDocumentPosition(averageHitPoints) &
+      anyRaceSubclasses.compareDocumentPosition(averageHitPoints) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
@@ -72,6 +67,132 @@ describe('RulesStep average hit-points toggle', () => {
     expect(onChange).toHaveBeenCalledWith({
       variantRules: expect.objectContaining({ averageHitPoints: false }),
     })
+  })
+
+  test('disables content-specific rules whose records are unavailable', () => {
+    render(
+      <RulesStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, preferNewerPrintings: false },
+        }}
+        onChange={vi.fn()}
+        sources={[]}
+      />,
+    )
+
+    expect(
+      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(
+      (screen.getByRole('switch', { name: 'Any-Race Subclasses' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(
+      (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
+  })
+
+  test('enables a content-specific rule when its matching record is available', () => {
+    render(
+      <RulesStep
+        data={INITIAL_CHARACTER_DATA}
+        onChange={vi.fn()}
+        sources={[]}
+        contentAvailability={{
+          optionalClassFeatures: true,
+          anyRaceSubclasses: true,
+          preferNewerPrintings: true,
+        }}
+      />,
+    )
+
+    expect(
+      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+    expect(
+      (screen.getByRole('switch', { name: 'Any-Race Subclasses' }) as HTMLButtonElement).disabled,
+    ).toBe(false)
+    expect(
+      (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+  })
+
+  test('explains that newer printings are always preferred for 2024 characters', () => {
+    render(
+      <RulesStep
+        data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
+        onChange={vi.fn()}
+        sources={[]}
+      />,
+    )
+
+    const preferNewerPrintings = screen.getByRole('switch', {
+      name: 'Prefer Newer Printings',
+    }) as HTMLButtonElement
+    expect(preferNewerPrintings.disabled).toBe(true)
+    expect(preferNewerPrintings.getAttribute('data-state')).toBe('checked')
+    expect(screen.getByText('Always on for 2024 characters')).toBeTruthy()
+  })
+
+  test('allows a saved unavailable rule to be switched off', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <RulesStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: {
+            ...INITIAL_CHARACTER_DATA.variantRules,
+            anyRaceSubclasses: true,
+            preferNewerPrintings: false,
+          },
+        }}
+        onChange={onChange}
+        sources={[]}
+      />,
+    )
+
+    const anyRaceRule = screen.getByRole('switch', { name: 'Any-Race Subclasses' })
+    expect((anyRaceRule as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByText('Currently inactive')).toBeTruthy()
+
+    await user.click(anyRaceRule)
+
+    expect(onChange).toHaveBeenCalledWith({
+      variantRules: expect.objectContaining({ anyRaceSubclasses: false }),
+    })
+  })
+
+  test('marks a saved unavailable rule inactive during review', () => {
+    render(
+      <ReviewStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, anyRaceSubclasses: true },
+        }}
+        raceResolution={{
+          parentRace: undefined,
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
+        sources={[]}
+        variantRuleAvailability={{
+          optionalClassFeatures: false,
+          anyRaceSubclasses: false,
+          preferNewerPrintings: false,
+        }}
+      />,
+    )
+
+    const anyRaceRow = screen.getByText('Any-Race Subclasses').parentElement
+    expect(anyRaceRow).not.toBeNull()
+    expect(within(anyRaceRow as HTMLElement).getByText('Inactive')).toBeTruthy()
   })
 
   test('normalizes core sources when the ruleset changes', async () => {

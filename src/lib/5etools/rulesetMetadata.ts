@@ -163,11 +163,15 @@ export const XPHB_LEGACY_SUBCLASS_KEYS = new Set([
 
 export const LEGACY_SUBCLASS_PREREQUISITE_FIXUPS = {
   'Wizard|PHB|Bladesinger|SCAG': {
-    variantOverride: 'bladesingerAnyRace',
+    allowedRaceKeyword: 'elf',
+  },
+  'Wizard|XPHB|Bladesinger|SCAG': {
     allowedRaceKeyword: 'elf',
   },
   'Barbarian|PHB|Battlerager|SCAG': {
-    variantOverride: 'battleragerAnyRace',
+    allowedRaceKeyword: 'dwarf',
+  },
+  'Barbarian|XPHB|Battlerager|SCAG': {
     allowedRaceKeyword: 'dwarf',
   },
 } as const

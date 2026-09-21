@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
 import { isSourceReadinessFocus } from '@/lib/navigation/readinessFocus'
 import {
   getSourceCompatibility,
@@ -129,6 +130,10 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
 
   const preferNewerPrintings =
     character?.originSystem === '2024' || (character?.variantRules?.preferNewerPrintings ?? false)
+  const preferNewerPrintingsAvailable = useMemo(
+    () => Boolean(gameData && hasAvailableReprintPair(gameData, effectiveSources)),
+    [effectiveSources, gameData],
+  )
 
   if (!character) {
     return <NoCharCard icon={<Books weight="duotone" />} noun="manage additional content" />
@@ -136,14 +141,20 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
 
   const implicitSource = getImplicitSource(character.originSystem)
   const implicitSourceName = sourceNameMap.get(implicitSource) ?? implicitSource
+  const preferNewerPrintingsUnavailable =
+    character.originSystem === '2014' && !preferNewerPrintingsAvailable
   const printingNotice =
     character.originSystem === '2024'
       ? preferNewerPrintings
         ? 'Revised replacements are always used. Compatible older options remain available when no revised version exists.'
         : ''
-      : preferNewerPrintings
-        ? 'Older printings are hidden where a newer version exists in the selected sources.'
-        : 'Some selected books contain multiple printings of the same option. Prefer Newer Printings can remove those duplicates.'
+      : preferNewerPrintingsUnavailable
+        ? preferNewerPrintings
+          ? 'This preference is saved but currently inactive because no alternate printings are available from the selected content.'
+          : 'No alternate printings are available from the selected content.'
+        : preferNewerPrintings
+          ? 'Older printings are hidden where a newer version exists in the selected sources.'
+          : 'Some selected books contain multiple printings of the same option. Prefer Newer Printings can remove those duplicates.'
 
   const patch = (updates: Partial<typeof character>) => updateCharacter(character.id, updates)
 
@@ -197,6 +208,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
 
   const setPreferNewerPrintings = (checked: boolean) => {
     if (character.originSystem === '2024') return
+    if (checked && !preferNewerPrintingsAvailable) return
     patch({ variantRules: { ...character.variantRules, preferNewerPrintings: checked } })
   }
 
@@ -327,7 +339,12 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
               <div className="ml-auto flex shrink-0 items-center gap-3 pl-3">
                 <Label
                   htmlFor={preferNewerId}
-                  className="cursor-pointer whitespace-nowrap text-xs font-semibold"
+                  className={cn(
+                    'cursor-pointer whitespace-nowrap text-xs font-semibold',
+                    preferNewerPrintingsUnavailable &&
+                      !preferNewerPrintings &&
+                      'cursor-not-allowed text-muted-foreground',
+                  )}
                 >
                   Prefer Newer Printings
                 </Label>
@@ -335,7 +352,10 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                   id={preferNewerId}
                   checked={preferNewerPrintings}
                   onCheckedChange={setPreferNewerPrintings}
-                  disabled={character.originSystem === '2024'}
+                  disabled={
+                    character.originSystem === '2024' ||
+                    (preferNewerPrintingsUnavailable && !preferNewerPrintings)
+                  }
                 />
               </div>
             </aside>

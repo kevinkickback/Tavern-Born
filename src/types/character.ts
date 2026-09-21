@@ -259,8 +259,7 @@ export interface VariantRules {
   optionalClassFeatures?: boolean
   averageHitPoints?: boolean
   abilityScoreMethod?: 'point-buy' | 'standard-array' | 'custom'
-  bladesingerAnyRace?: boolean
-  battleragerAnyRace?: boolean
+  anyRaceSubclasses?: boolean
   preferNewerPrintings?: boolean
   ignoreEquipRestrictions?: boolean
 }
