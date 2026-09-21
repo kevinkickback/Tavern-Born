@@ -1,10 +1,11 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 
 describe('PortraitCardPreview', () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
   })
 
   test('shows fallback name and gender branch when level is not provided', () => {
@@ -33,10 +34,54 @@ describe('PortraitCardPreview', () => {
     expect(screen.getByText('Wizard')).toBeTruthy()
     expect(screen.getByText(/Last modified:/)).toBeTruthy()
 
-    const buttons = screen.getAllByRole('button')
-    expect(buttons).toHaveLength(2)
-    expect(buttons[0]).toHaveProperty('disabled', true)
-    expect(buttons[1]).toHaveProperty('disabled', true)
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(document.querySelectorAll('[data-slot="button"]')).toHaveLength(3)
+  })
+
+  test('enlarges the complete card canvas with the available preview width', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 540,
+      height: 360,
+      top: 0,
+      right: 540,
+      bottom: 360,
+      left: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    render(<PortraitCardPreview name="Aelar" level={3} />)
+
+    const canvas = document.querySelector('[data-slot="portrait-card-preview-canvas"]')
+    expect(canvas?.getAttribute('style')).toContain('transform: scale(1.5)')
+    expect(canvas?.getAttribute('style')).toContain('width: 360px')
+    expect(canvas?.getAttribute('style')).toContain('height: 240px')
+  })
+
+  test('limits the card by available height when the preview must contain its controls', () => {
+    const onWidthChange = vi.fn()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 900,
+      height: 300,
+      top: 0,
+      right: 900,
+      bottom: 300,
+      left: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    render(
+      <PortraitCardPreview name="Aelar" level={3} fit="contain" onWidthChange={onWidthChange} />,
+    )
+
+    const preview = document.querySelector('[data-slot="portrait-card-preview"]')
+    const canvas = document.querySelector('[data-slot="portrait-card-preview-canvas"]')
+    expect(preview?.getAttribute('style')).toContain('width: 450px')
+    expect(canvas?.getAttribute('style')).toContain('transform: scale(1.25)')
+    expect(onWidthChange).toHaveBeenCalledWith(450)
   })
 
   test('applies portrait transform values to image style', () => {
@@ -50,7 +95,7 @@ describe('PortraitCardPreview', () => {
     const image = screen.getByAltText('Character portrait card preview')
     const style = image.getAttribute('style') ?? ''
 
-    expect(style).toContain('translate(calc(-50% + -72px), calc(-50% + -10px))')
+    expect(style).toContain('translate(calc(-50% - 20%), calc(-50% - 4.166667%))')
     expect(style).toContain('scale(1.5)')
     expect(style).toContain('rotate(12deg)')
   })
