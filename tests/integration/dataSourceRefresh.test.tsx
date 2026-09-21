@@ -62,6 +62,14 @@ describe('data source refresh feedback', () => {
     expect(toast.info).not.toHaveBeenCalledWith('Data is already up to date')
   })
 
+  test('shows external source details without exposing the internal base layer', () => {
+    render(<DataSourceConfigurator />)
+
+    expect(screen.getByText('Additional Content on This Computer')).toBeTruthy()
+    expect(screen.getByText('C:/5etools/data')).toBeTruthy()
+    expect(screen.queryByText('Base content:')).toBeNull()
+  })
+
   test('removes additional content without clearing the current source first', async () => {
     const user = userEvent.setup()
     const onSourceLoaded = vi.fn()

@@ -413,10 +413,6 @@ export function DataSourceConfigurator({
               ) : (
                 <>
                   <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Base content:</span>
-                    <span className="text-xs">Included SRD</span>
-                  </div>
-                  <div className="flex items-start gap-2">
                     <span className="text-xs text-muted-foreground min-w-24">Location:</span>
                     <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
                   </div>
