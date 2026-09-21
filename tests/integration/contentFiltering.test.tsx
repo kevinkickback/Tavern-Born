@@ -163,15 +163,13 @@ describe('Content Filtering (allowedSources)', () => {
       expect(result.current.items.map((i) => i.name)).not.toContain('Immovable Rod')
     })
 
-    test('useFilteredGameData exposes matching bundled SRD items without a DMG selection', () => {
+    test('useFilteredGameData retains Included SRD items when additional content is configured', () => {
       const character = makeCharacterFixture({ allowedSources: ['PHB'] })
       useCharacterStore.setState({ activeCharacter: character, characters: [character] })
       useGameDataStore.setState({
         dataSourceConfig: {
-          type: 'bundled',
-          path: 'srd/core',
-          packId: 'tavern-born-srd-core',
-          packVersion: 'test',
+          type: 'local',
+          path: 'additional-content',
           isValid: true,
         },
         gameData: partialGameData({

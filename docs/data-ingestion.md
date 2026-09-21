@@ -168,11 +168,12 @@ items. The character stores the selected concrete `name|source` separately from 
 `items-base.json` supplies base items and mastery definitions; mastery records are not ordinary
 inventory entries.
 
-Core SRD/Basic Rules potions and scrolls housed in DMG/XDMG may be admitted by the shared
-player-item policy without enabling the full source. When the bundled SRD is active, all public
-SRD items for the character's matching ruleset are admitted without presenting DMG, MM, XDMG, or
-XMM as selectable books. Their original source-qualified identities remain intact for references
-and lookups. This is a filtering and source-catalog policy, not duplicated or relabeled item data.
+Public SRD items housed in DMG/XDMG are admitted by the shared player-item policy without enabling
+the full source. The Included SRD remains the base catalog when additional content is configured,
+so these items stay available in both the bundled-only and layered views without presenting DMG,
+MM, XDMG, or XMM as selectable books. Their original source-qualified identities remain intact for
+references and lookups. This is a filtering and source-catalog policy, not duplicated or relabeled
+item data.
 
 ## Cache compatibility
 

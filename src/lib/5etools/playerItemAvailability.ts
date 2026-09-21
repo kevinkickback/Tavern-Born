@@ -1,13 +1,10 @@
-import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import { DataFilter } from './filters'
 
 interface CharacterItemFilterOptions {
   allowedSources?: string[]
   originSystem?: '2014' | '2024'
-  itemTypeByAbbr?: Readonly<Record<string, string>>
   suppressedKeys?: Set<string>
-  includeBundledSrdItems?: boolean
 }
 
 function isPublicCoreItem(item: Item5e, originSystem: '2014' | '2024'): boolean {
@@ -16,30 +13,14 @@ function isPublicCoreItem(item: Item5e, originSystem: '2014' | '2024'): boolean 
     : item.source.toUpperCase() === 'DMG' && Boolean(item.srd || item.basicRules)
 }
 
-function isCoreRulesetConsumable(
-  item: Item5e,
-  originSystem: '2014' | '2024',
-  itemTypeByAbbr: Readonly<Record<string, string>>,
-): boolean {
-  if (!isPublicCoreItem(item, originSystem)) return false
-
-  const traits = getNormalizedItemTraits(item, itemTypeByAbbr)
-  return traits.isPotion || traits.isScroll
-}
-
 /**
- * Applies character source settings while retaining the ruleset's public core potions and scrolls.
- * Their definitions live in the DMG catalog even though they are routine player inventory.
+ * Applies character source settings while retaining the matching ruleset's public SRD items.
+ * Their definitions keep their DMG/XDMG identities even though the Included SRD remains the base
+ * catalog when additional content is configured.
  */
 export function filterCharacterItems(
   items: Item5e[],
-  {
-    allowedSources,
-    originSystem,
-    itemTypeByAbbr = {},
-    suppressedKeys,
-    includeBundledSrdItems = false,
-  }: CharacterItemFilterOptions,
+  { allowedSources, originSystem, suppressedKeys }: CharacterItemFilterOptions,
 ): Item5e[] {
   const unsuppressedItems = DataFilter.filterItems(items, { suppressedKeys })
   if (!allowedSources || allowedSources.length === 0) return unsuppressedItems
@@ -48,7 +29,6 @@ export function filterCharacterItems(
   return unsuppressedItems.filter(
     (item) =>
       allowed.has(item.source.toUpperCase()) ||
-      (includeBundledSrdItems && originSystem ? isPublicCoreItem(item, originSystem) : false) ||
-      (originSystem ? isCoreRulesetConsumable(item, originSystem, itemTypeByAbbr) : false),
+      (originSystem ? isPublicCoreItem(item, originSystem) : false),
   )
 }

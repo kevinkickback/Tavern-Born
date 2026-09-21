@@ -285,6 +285,8 @@ an advanced user can configure, refresh, change, and remove an external source.
     byte-for-byte unchanged.
   - [x] Compose the generated SRD with the configured full 5etools corpus and reject required
     resource failures, unresolved added-class dependencies, and duplicate top-level identities.
+  - [x] Keep matching DMG/XDMG SRD magic items visible when an external layer and source preset are
+    active; adding content must expand the catalog rather than hide entries from the base layer.
 - [x] Run the full quality gate: focused tests, all Vitest tests, Electron and browser journeys,
   Biome, TypeScript, Knip, dependency boundaries, production build, release checks, and revised
   bundle budgets.
