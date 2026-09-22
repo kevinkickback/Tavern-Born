@@ -1,62 +1,42 @@
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
+import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
+import {
+  getCharacterSheetTemplate,
+  getDefaultCharacterSheetTemplateId,
+} from '@/lib/pdf/characterSheetTemplates'
 import type { CharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
 
+export {
+  CHARACTER_SHEET_TEMPLATES,
+  getCharacterSheetTemplate,
+} from '@/lib/pdf/characterSheetTemplates'
 export type { CharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 export { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 export type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
 
-interface CharacterSheetTemplate {
-  id: CharacterSheetTemplateId
-  name: string
-  fileName: string
-  assetPath: string
-}
-
-const CHARACTER_SHEET_TEMPLATES: readonly CharacterSheetTemplate[] = [
-  {
-    id: '2014',
-    name: '2014 Character Sheet',
-    fileName: '2014_Character_Sheet.pdf',
-    assetPath: 'pdf/2014_Character_Sheet.pdf',
-  },
-  {
-    id: '2024',
-    name: '2024 Character Sheet',
-    fileName: '2024_Character_Sheet.pdf',
-    assetPath: 'pdf/2024_Character_Sheet.pdf',
-  },
-] as const
-
-const TEMPLATE_BY_ID: Record<CharacterSheetTemplateId, CharacterSheetTemplate> = {
-  '2014': CHARACTER_SHEET_TEMPLATES[0],
-  '2024': CHARACTER_SHEET_TEMPLATES[1],
-}
-
-const DEFAULT_CHARACTER_SHEET_TEMPLATE = TEMPLATE_BY_ID['2024']
-
 export function buildCharacterSheetFieldMap(
   viewModel: CharacterSheetViewModel,
-  templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+  templateId: CharacterSheetTemplateId = getDefaultCharacterSheetTemplateId(),
 ): CharacterSheetFieldMap {
-  return templateId === '2014' ? mapCharacterSheet2014(viewModel) : mapCharacterSheet2024(viewModel)
-}
-
-export function getCharacterSheetTemplate(
-  templateId: CharacterSheetTemplateId,
-): CharacterSheetTemplate {
-  return TEMPLATE_BY_ID[templateId]
+  const template = getCharacterSheetTemplate(templateId)
+  if (template.mappingId === '2014-custom') return mapCharacterSheet2014(viewModel)
+  if (template.mappingId === '2014-official') return mapCharacterSheet2014Official(viewModel)
+  return mapCharacterSheet2024(viewModel)
 }
 
 export function generateFilledCharacterSheetPdf(
   viewModel: CharacterSheetViewModel,
   templateBytes: ArrayBuffer | Uint8Array,
-  templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+  templateId: CharacterSheetTemplateId = getDefaultCharacterSheetTemplateId(),
 ): Promise<Uint8Array> {
+  const template = getCharacterSheetTemplate(templateId)
   return fillCharacterSheetPdf(templateBytes, buildCharacterSheetFieldMap(viewModel, templateId), {
-    templateId,
+    cleanupProfile: template.cleanupProfile,
+    portraitFieldName: template.portraitFieldName,
+    organizationImageFieldName: template.organizationImageFieldName,
     portrait: viewModel.character.portrait,
     organizationImage: viewModel.organizationImage,
   })

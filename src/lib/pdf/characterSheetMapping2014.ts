@@ -62,7 +62,7 @@ function normalizeSize(code: string | undefined): string {
 }
 
 const ACTION_FIELD_MAX_LENGTH = 72
-const CAPACITY = CHARACTER_SHEET_CAPACITIES['2014']
+const CAPACITY = CHARACTER_SHEET_CAPACITIES['2014-custom']
 
 function titleCase(value: string): string {
   return value.replace(/^\p{L}/u, (letter) => letter.toUpperCase())

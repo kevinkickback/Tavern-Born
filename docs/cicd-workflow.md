@@ -171,6 +171,10 @@ and macOS users may need to approve the application under Privacy & Security.
 
 `npm run dist` runs the production build and bundle-budget check before packaging. A deliberate
 bundle increase requires an explicit budget review rather than silently growing release artifacts.
+The four-template character-sheet rollout established a reviewed 36.2 MiB distribution baseline:
+the official 2024 PDF artwork accounts for roughly 16 MiB, and the budget retains that print-quality
+master while a separate post-functional compression review measures whether meaningful savings are
+available. Source, duplicate, and superseded PDFs must never enter `public/pdf/` or the package.
 Electron Builder copies the managed `resources/srd/core/**` tree to `srd/core` beside the packaged
 application archive so the restricted bundled-resource reader can resolve it through
 `process.resourcesPath`. The external development-only `data/` tree remains excluded.

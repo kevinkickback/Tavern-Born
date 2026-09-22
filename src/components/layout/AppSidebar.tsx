@@ -47,6 +47,7 @@ const CharacterReadinessBadge = lazy(() =>
 
 interface ContextItem {
   label: string
+  ariaLabel?: string
   path: string
   icon: Icon
   search?: string
@@ -146,10 +147,37 @@ const workspaces: Workspace[] = [
     matches: (pathname) => pathname.startsWith('/character-sheet'),
     groups: [
       {
-        label: 'Templates',
+        label: '5e (2014) Templates',
         items: [
-          { label: '5e (2014)', path: '/character-sheet/2014', icon: FilePdf },
-          { label: '5.5e (2024)', path: '/character-sheet/2024', icon: FilePdf },
+          {
+            label: 'WotC Official',
+            ariaLabel: '5e (2014) WotC Official',
+            path: '/character-sheet/2014/official',
+            icon: FilePdf,
+          },
+          {
+            label: 'MPMB Custom',
+            ariaLabel: '5e (2014) MPMB Custom',
+            path: '/character-sheet/2014/custom',
+            icon: FilePdf,
+          },
+        ],
+      },
+      {
+        label: '5.5e (2024) Templates',
+        items: [
+          {
+            label: 'WotC Official',
+            ariaLabel: '5.5e (2024) WotC Official',
+            path: '/character-sheet/2024/official',
+            icon: FilePdf,
+          },
+          {
+            label: 'Lost Loot Custom',
+            ariaLabel: '5.5e (2024) Lost Loot Custom',
+            path: '/character-sheet/2024/custom',
+            icon: FilePdf,
+          },
         ],
       },
     ],
@@ -396,6 +424,7 @@ export function AppSidebar() {
                     <li key={`${item.path}${item.search ?? ''}`}>
                       <Link
                         to={`${item.path}${item.search ?? ''}`}
+                        aria-label={item.ariaLabel}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                           'relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',

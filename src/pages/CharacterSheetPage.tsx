@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import { CharacterSheetAttribution } from '@/components/pdf/CharacterSheetAttribution'
 import { ExportPreflightDialog } from '@/components/pdf/ExportPreflightDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -94,8 +95,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
 
   const characterName = character?.name?.trim() || 'Unnamed Character'
   const downloadName = useMemo(
-    () => `${getSafeFileName(characterName)}_${templateId}_character_sheet.pdf`,
-    [characterName, templateId],
+    () => `${getSafeFileName(characterName)}_${selectedTemplate.id}_character_sheet.pdf`,
+    [characterName, selectedTemplate.id],
   )
   const exportPreflight = useMemo(
     () =>
@@ -185,14 +186,12 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     return <NoCharCard icon={<FilePdf weight="duotone" />} noun="generate a character sheet PDF" />
   }
 
-  const rulesetMismatch = character.originSystem !== templateId
-  const editionLabel = templateId === '2014' ? '5e · 2014 rules' : '5.5e · 2024 rules'
-
+  const rulesetMismatch = character.originSystem !== selectedTemplate.edition
   return (
     <WorkspacePage>
       <WorkspacePaneHeader ariaLabel="Character sheet controls" className="overflow-x-auto">
         <FilePdf className="size-5 shrink-0 text-primary" weight="fill" />
-        <p className="shrink-0 text-sm font-semibold">{editionLabel}</p>
+        <p className="shrink-0 text-sm font-semibold">{selectedTemplate.name}</p>
 
         {rulesetMismatch && (
           <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning-foreground">
@@ -321,6 +320,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           downloadPdf()
         }}
       />
+      <CharacterSheetAttribution template={selectedTemplate} />
     </WorkspacePage>
   )
 }

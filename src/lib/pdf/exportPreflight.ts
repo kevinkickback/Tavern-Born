@@ -2,6 +2,7 @@ import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/cal
 import type { CharacterReadinessResult } from '@/lib/readiness/characterReadiness'
 import type { CharacterEffect } from '@/types/effects'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
+import { getCharacterSheetTemplate } from './characterSheetTemplates'
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
 import type { CharacterSheetTemplateId } from './types'
 
@@ -42,8 +43,9 @@ function getCapacityIssues(
   viewModel: CharacterSheetViewModel,
 ): ExportPreflightIssue[] {
   const issues: Array<ExportPreflightIssue | null> = []
-  if (templateId === '2014') {
-    const capacity = CHARACTER_SHEET_CAPACITIES['2014']
+  const template = getCharacterSheetTemplate(templateId)
+  if (template.mappingId === '2014-custom') {
+    const capacity = CHARACTER_SHEET_CAPACITIES['2014-custom']
     issues.push(
       capacityIssue('weapons', 'Weapon attacks', viewModel.weaponRows.length, capacity.weapons),
       capacityIssue(
@@ -87,6 +89,12 @@ function getCapacityIssues(
         capacity.reactions,
       ),
     )
+  } else if (template.mappingId === '2014-official') {
+    const capacity = CHARACTER_SHEET_CAPACITIES['2014-official']
+    issues.push(
+      capacityIssue('weapons', 'Weapon attacks', viewModel.weaponRows.length, capacity.weapons),
+      capacityIssue('spells', 'Spell rows', viewModel.spellRows.length, capacity.spells),
+    )
   } else {
     const capacity = CHARACTER_SHEET_CAPACITIES['2024']
     issues.push(
@@ -110,9 +118,10 @@ function isUnsupportedPdfEffect(
   if (effect.operation.kind === 'conditional-note') {
     return true
   }
+  const template = getCharacterSheetTemplate(templateId)
   return (
     effect.target.kind === 'carrying-capacity' ||
-    (templateId === '2024' &&
+    (template.edition === '2024' &&
       (effect.target.kind === 'resource-maximum' || effect.target.kind === 'sense'))
   )
 }

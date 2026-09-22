@@ -1,4 +1,14 @@
-import { PDFDocument, PDFHexString, PDFName, PDFNumber } from '@cantoo/pdf-lib'
+import {
+  PDFCheckBox,
+  PDFDict,
+  PDFDocument,
+  PDFDropdown,
+  PDFHexString,
+  PDFName,
+  PDFNumber,
+  type PDFObject,
+  PDFTextField,
+} from '@cantoo/pdf-lib'
 import {
   type AcroWidget,
   asFieldWithInternals,
@@ -6,7 +16,11 @@ import {
   type FormWithInternals,
 } from '@/lib/pdf/pdfFieldInternals'
 import { embedOrganizationImage, embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
-import type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
+import type {
+  CharacterSheetCleanupProfile,
+  CharacterSheetFieldMap,
+  CharacterSheetTemplateId,
+} from '@/lib/pdf/types'
 
 const MPMB_BUTTON_KEEP_PATTERNS = [
   /^Portrait$/i,
@@ -22,7 +36,10 @@ export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
   fields: CharacterSheetFieldMap,
   options: {
-    templateId: CharacterSheetTemplateId
+    cleanupProfile?: CharacterSheetCleanupProfile
+    templateId?: CharacterSheetTemplateId
+    portraitFieldName?: string
+    organizationImageFieldName?: string
     portrait?: string
     organizationImage?: string
   },
@@ -30,23 +47,31 @@ export async function fillCharacterSheetPdf(
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
   const form = pdfDoc.getForm()
+  const cleanupProfile =
+    options.cleanupProfile ?? (options.templateId === '2014' ? 'mpmb-2014' : 'standard')
+  const missingFields: string[] = []
 
   for (const [fieldName, value] of Object.entries(fields.textFields)) {
+    let handled = false
     try {
       form.getTextField(fieldName).setText(value)
-      continue
+      handled = true
     } catch {
       // Some templates expose select fields as dropdowns.
     }
-    try {
-      const dropdown = form.getDropdown(fieldName)
-      const choices = dropdown.getOptions()
-      if (value && !choices.includes(value)) dropdown.addOptions([value])
-      if (value) dropdown.select(value)
-      else dropdown.clear()
-    } catch {
-      // Missing fields are allowed across template revisions.
+    if (!handled) {
+      try {
+        const dropdown = form.getDropdown(fieldName)
+        const choices = dropdown.getOptions()
+        if (value && !choices.includes(value)) dropdown.addOptions([value])
+        if (value) dropdown.select(value)
+        else dropdown.clear()
+        handled = true
+      } catch {
+        // Report missing and wrong-type fields together after validating the complete map.
+      }
     }
+    if (!handled) missingFields.push(fieldName)
   }
 
   for (const [fieldName, checked] of Object.entries(fields.checkboxFields)) {
@@ -54,28 +79,50 @@ export async function fillCharacterSheetPdf(
       const checkbox = form.getCheckBox(fieldName)
       if (checked) checkbox.check()
       else checkbox.uncheck()
-      if (options.templateId === '2014') checkbox.defaultUpdateAppearances()
     } catch {
-      // Missing fields are allowed across template revisions.
+      missingFields.push(fieldName)
     }
   }
 
-  if (options.templateId === '2014') {
+  if (missingFields.length > 0) {
+    throw new Error(
+      `PDF template is missing ${missingFields.length} required field${missingFields.length === 1 ? '' : 's'}: ${missingFields.join(', ')}`,
+    )
+  }
+
+  if (cleanupProfile === 'mpmb-2014') {
     setMappedTextDefaults(form, fields.textFields)
-    hideUnwantedFields(form)
     clearAttackModDropdowns(form)
     stripFormActions(form, fields)
     makeCalculatedFieldsEditable(form)
+    updateDirtyFieldAppearances(form)
+    hideUnwantedFields(form)
+  } else {
+    updateDirtyFieldAppearances(form)
   }
-  form.updateFieldAppearances()
-  if (options.templateId === '2014') {
-    stripCheckboxOffAppearances(form)
-    if (options.portrait) await embedPortraitImage(pdfDoc, options.portrait)
-    if (options.organizationImage) {
-      await embedOrganizationImage(pdfDoc, options.organizationImage)
-    }
+  replaceCheckboxOffAppearances(pdfDoc, form)
+  if (options.portrait && options.portraitFieldName) {
+    await embedPortraitImage(pdfDoc, options.portrait, options.portraitFieldName)
+  }
+  if (options.organizationImage && options.organizationImageFieldName) {
+    await embedOrganizationImage(
+      pdfDoc,
+      options.organizationImage,
+      options.organizationImageFieldName,
+    )
   }
   return pdfDoc.save({ updateFieldAppearances: false })
+}
+
+function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
+  const font = form.getDefaultFont()
+  for (const field of form.getFields()) {
+    if (!form.fieldIsDirty(field.ref)) continue
+    if (field instanceof PDFCheckBox) field.defaultUpdateAppearances()
+    else if (field instanceof PDFTextField || field instanceof PDFDropdown) {
+      field.defaultUpdateAppearances(font)
+    }
+  }
 }
 
 function hideFieldWidgets(field: FieldWithInternals) {
@@ -176,7 +223,10 @@ function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) 
   }
 }
 
-function stripCheckboxOffAppearances(form: ReturnType<PDFDocument['getForm']>) {
+function replaceCheckboxOffAppearances(
+  pdfDoc: PDFDocument,
+  form: ReturnType<PDFDocument['getForm']>,
+) {
   for (const field of form.getFields()) {
     const internals = asFieldWithInternals(field)
     if (!internals) continue
@@ -186,15 +236,22 @@ function stripCheckboxOffAppearances(form: ReturnType<PDFDocument['getForm']>) {
       continue
     }
     for (const widget of internals.acroField.getWidgets() as AcroWidget[]) {
-      const appearance = widget.dict.get(PDFName.of('AP')) as
-        | {
-            get: (
-              name: unknown,
-            ) => { has: (name: unknown) => boolean; delete: (name: unknown) => void } | undefined
-          }
-        | undefined
-      const normalAppearance = appearance?.get(PDFName.of('N'))
-      if (normalAppearance?.has(PDFName.of('Off'))) normalAppearance.delete(PDFName.of('Off'))
+      const appearanceEntry = widget.dict.get(PDFName.of('AP')) as PDFObject | undefined
+      const appearance = pdfDoc.context.lookup(appearanceEntry)
+      if (!(appearance instanceof PDFDict)) continue
+      const normalAppearance = pdfDoc.context.lookup(appearance.get(PDFName.of('N')))
+      if (!(normalAppearance instanceof PDFDict) || !normalAppearance.has(PDFName.of('Off'))) {
+        continue
+      }
+      const { width, height } = widget.getRectangle()
+      const context = pdfDoc.context
+      const emptyAppearance = context.formXObject([], {
+        BBox: context.obj([0, 0, width, height]),
+        Matrix: context.obj([1, 0, 0, 1, 0, 0]),
+      })
+      normalAppearance.delete(PDFName.of('Off'))
+      const offAppearanceRef = context.register(emptyAppearance)
+      normalAppearance.set(PDFName.of('Off'), offAppearanceRef)
     }
   }
 }

@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { AboutPanel } from '@/components/settings/AboutPanel'
 
@@ -33,7 +34,11 @@ describe('About panel', () => {
       })),
     })
 
-    render(<AboutPanel />)
+    render(
+      <MemoryRouter>
+        <AboutPanel />
+      </MemoryRouter>,
+    )
 
     await waitFor(() => expect(screen.getByText('SRD Attribution')).toBeTruthy())
     expect(screen.getByText('Official test attribution.')).toBeTruthy()
@@ -44,5 +49,17 @@ describe('About panel', () => {
       }),
     ).toBeTruthy()
     expect(screen.queryByText('Internal transformation note.')).toBeNull()
+    expect(screen.getByText('Character Sheet PDF Attribution')).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' })
+        .getAttribute('href'),
+    ).toBe('https://www.flapkan.com/')
+    expect(screen.getByRole('link', { name: 'Lost Loot (u/Beaoudix)' }).getAttribute('href')).toBe(
+      'https://www.reddit.com/r/DnD/comments/1e5apxk/dd_5e24_new_character_sheets/',
+    )
+    expect(document.body.textContent).toContain('Free D&D 5E24 character-sheet replica created by')
+    expect(document.getElementById('character-sheet-pdf-2014-official')).toBeTruthy()
+    expect(document.getElementById('character-sheet-pdf-2024-custom')).toBeTruthy()
   })
 })

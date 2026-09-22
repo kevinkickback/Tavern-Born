@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { type PDFDict, PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import { asFieldWithInternals, type FormWithInternals } from '@/lib/pdf/pdfFieldInternals'
+import {
+  asFieldWithInternals,
+  type FormWithInternals,
+  findAttachedWidgetLocation,
+} from '@/lib/pdf/pdfFieldInternals'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 
 const AFFECTED_TEXT_FIELDS = {
@@ -23,10 +27,32 @@ const AFFECTED_CHECKBOX_FIELDS = {
 }
 
 describe('2014 saved PDF compatibility', () => {
+  test('rejects a template that is missing a required mapped field', async () => {
+    const template = await PDFDocument.create()
+    template.addPage()
+
+    await expect(
+      fillCharacterSheetPdf(
+        await template.save(),
+        { textFields: { RequiredField: 'value' }, checkboxFields: {} },
+        { cleanupProfile: 'standard' },
+      ),
+    ).rejects.toThrow('PDF template is missing 1 required field: RequiredField')
+  })
+
   test('persists affected values and portable appearances in the saved file', async () => {
     const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public', 'pdf', '2014_Character_Sheet.pdf')),
+      readFileSync(join(process.cwd(), 'public', 'pdf', '2014_MPMB_Character_Sheet.pdf')),
     )
+    const template = await PDFDocument.load(templateBytes)
+    expect(template.getPageCount()).toBe(6)
+    expect(template.getForm().getFieldMaybe('d20warning')).toBeUndefined()
+    expect(template.getForm().getFieldMaybe('AmmoLeft.Top.1')).toBeUndefined()
+    const portrait = asFieldWithInternals(template.getForm().getButton('Portrait'))
+    const portraitWidgets = portrait?.acroField.getWidgets() ?? []
+    expect(portraitWidgets).toHaveLength(1)
+    expect(findAttachedWidgetLocation(template, portraitWidgets)?.pageIndex).toBe(3)
+
     const outputBytes = await fillCharacterSheetPdf(
       templateBytes,
       {
@@ -36,6 +62,7 @@ describe('2014 saved PDF compatibility', () => {
       { templateId: '2014' },
     )
     const output = await PDFDocument.load(outputBytes)
+    expect(output.getPageCount()).toBe(6)
     const form = output.getForm()
 
     expect(form.getTextField('AC Armor Bonus').getText()).toBe('16')

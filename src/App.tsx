@@ -110,7 +110,7 @@ function RouteLoadingFallback() {
 
 function CharacterSheetRedirect() {
   const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
-  return <Navigate to={`/character-sheet/${originSystem ?? '2024'}`} replace />
+  return <Navigate to={`/character-sheet/${originSystem ?? '2024'}/custom`} replace />
 }
 
 function RequireActiveCharacter() {
@@ -225,11 +225,47 @@ function App() {
                   <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
                   <Route
                     path="/character-sheet/2014"
-                    element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
+                    element={<Navigate to="/character-sheet/2014/custom" replace />}
                   />
                   <Route
                     path="/character-sheet/2024"
-                    element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
+                    element={<Navigate to="/character-sheet/2024/custom" replace />}
+                  />
+                  <Route
+                    path="/character-sheet/2014/official"
+                    element={
+                      <CharacterSheetPage
+                        key="character-sheet-2014-official"
+                        templateId="2014-official"
+                      />
+                    }
+                  />
+                  <Route
+                    path="/character-sheet/2014/custom"
+                    element={
+                      <CharacterSheetPage
+                        key="character-sheet-2014-custom"
+                        templateId="2014-custom"
+                      />
+                    }
+                  />
+                  <Route
+                    path="/character-sheet/2024/official"
+                    element={
+                      <CharacterSheetPage
+                        key="character-sheet-2024-official"
+                        templateId="2024-official"
+                      />
+                    }
+                  />
+                  <Route
+                    path="/character-sheet/2024/custom"
+                    element={
+                      <CharacterSheetPage
+                        key="character-sheet-2024-custom"
+                        templateId="2024-custom"
+                      />
+                    }
                   />
                 </Route>
                 <Route path="/compendium" element={<CompendiumPage />} />

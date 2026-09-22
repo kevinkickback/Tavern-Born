@@ -1,5 +1,5 @@
 export const CHARACTER_SHEET_CAPACITIES = {
-  '2014': {
+  '2014-custom': {
     weapons: 5,
     equipment: 90,
     magicItems: 5,
@@ -10,6 +10,10 @@ export const CHARACTER_SHEET_CAPACITIES = {
     actions: 6,
     bonusActions: 6,
     reactions: 6,
+  },
+  '2014-official': {
+    weapons: 3,
+    spells: 100,
   },
   '2024': {
     weapons: 6,

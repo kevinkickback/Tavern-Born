@@ -5,8 +5,10 @@
 
 * Tavern Born now includes the D&D rules available through the SRD
 * Character options now reflect available content and group related selections more clearly
+* Expanded PDF character sheets support with more pages and brand new templates
 * Expanded support for subclass-specific options, including companions, runes, and similar selections
 * Creature stat blocks and available subclass features are now searchable in the Compendium
+* Character Sheet export now offers official and custom templates for both 5e (2014) and 5.5e (2024)
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
 

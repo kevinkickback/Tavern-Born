@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -18,6 +19,14 @@ vi.mock('@/lib/pdf/characterSheetPdf', async (importOriginal) => {
 })
 
 describe('CharacterSheetPage', () => {
+  function renderPage() {
+    return render(
+      <MemoryRouter>
+        <CharacterSheetPage templateId="2014" />
+      </MemoryRouter>,
+    )
+  }
+
   beforeEach(() => {
     const character = makeCharacterFixture()
     useCharacterStore.setState({
@@ -38,7 +47,7 @@ describe('CharacterSheetPage', () => {
   })
 
   test('uses the flat workspace layout with full-width export controls', () => {
-    const { container } = render(<CharacterSheetPage templateId="2014" />)
+    const { container } = renderPage()
 
     const workspacePage = container.querySelector('[data-slot="workspace-page"]')
     const workspaceBody = container.querySelector('[data-slot="workspace-body"]')
@@ -54,7 +63,12 @@ describe('CharacterSheetPage', () => {
     expect(container.querySelector('[data-slot="workspace-toolbar"]')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Character sheet controls' })).toBeTruthy()
     expect(screen.queryByText('2014 Character Sheet')).toBeNull()
-    expect(screen.getByText('5e · 2014 rules')).toBeTruthy()
+    expect(
+      screen.getByText("MorePurpleMoreBetter's D&D 5th Edition Character Record Sheet (5e 2014)"),
+    ).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'PDF attribution' }).getAttribute('href')).toBe(
+      '/settings?section=about#character-sheet-pdf-2014-custom',
+    )
     expect((screen.getByRole('button', { name: 'Regenerate' }) as HTMLButtonElement).disabled).toBe(
       true,
     )
@@ -64,7 +78,7 @@ describe('CharacterSheetPage', () => {
 
   test('runs an export preflight before downloading a sheet', async () => {
     const user = userEvent.setup()
-    render(<CharacterSheetPage templateId="2014" />)
+    renderPage()
 
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())

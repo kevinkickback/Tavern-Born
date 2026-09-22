@@ -46,7 +46,7 @@ test('2014 PDF replaces the organization placeholder with the selected emblem', 
   await ensureStartupPromptResolved(page, 'e2e-pdf-organization')
   await selectCharacterFromHome(page, String(fixture.name))
   await page.getByRole('button', { name: 'Character Sheet' }).click()
-  await page.getByRole('link', { name: '5e (2014)' }).click()
+  await page.getByRole('link', { name: '5e (2014) MPMB Custom' }).click()
 
   await page.getByRole('button', { name: 'Generate Preview' }).click()
   await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 30_000 })

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PDFDocument } from '@cantoo/pdf-lib'
+import { PDFDocument, PDFName } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import {
   buildBackgroundLookup,
@@ -11,10 +11,11 @@ import {
 import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
-  generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
+  getCharacterSheetTemplate,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
-import { asFieldWithInternals } from '@/lib/pdf/pdfFieldInternals'
+import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
+import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -45,21 +46,6 @@ function buildCharacterSheetFieldMap(
 ) {
   return mapCharacterSheetViewModel(
     prepareViewModel(character, classesData, racesData, backgroundsData),
-    templateId,
-  )
-}
-
-function generateFilledCharacterSheetPdf(
-  character: Character,
-  templateBytes: ArrayBuffer | Uint8Array,
-  templateId: CharacterSheetTemplateId = '2024',
-  classesData: Class5e[] = [],
-  racesData: Race5e[] = [],
-  backgroundsData: Background5e[] = [],
-) {
-  return fillCharacterSheetViewModel(
-    prepareViewModel(character, classesData, racesData, backgroundsData),
-    templateBytes,
     templateId,
   )
 }
@@ -843,11 +829,11 @@ describe('characterSheetPdf', () => {
 
     const templateBytes = await templateDoc.save()
 
-    const character = makeCharacterFixture({
-      name: 'Hidden UI Test',
-    })
-
-    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const filledBytes = await fillCharacterSheetPdf(
+      templateBytes,
+      { textFields: { 'PC Name': 'Hidden UI Test' }, checkboxFields: {} },
+      { cleanupProfile: 'mpmb-2014' },
+    )
 
     const outputDoc = await PDFDocument.load(filledBytes)
     const outputForm = outputDoc.getForm()
@@ -855,11 +841,7 @@ describe('characterSheetPdf', () => {
     const outputAttackMod = outputForm.getDropdown('Attack.1.Mod')
     expect(outputAttackMod.getSelected()).toEqual([])
 
-    const outputHiddenButton = outputForm.getButton('Print Button') as unknown as {
-      acroField: {
-        getWidgets: () => Array<{ getRectangle: () => { width: number } }>
-      }
-    }
+    const outputHiddenButton = asFieldWithInternals(outputForm.getButton('Print Button'))
     const outputPortraitButton = outputForm.getButton('Portrait') as unknown as {
       acroField: {
         getWidgets: () => Array<{ getRectangle: () => { width: number } }>
@@ -871,9 +853,30 @@ describe('characterSheetPdf', () => {
       }
     }
 
-    expect(outputHiddenButton.acroField.getWidgets()[0].getRectangle().width).toBe(0)
+    expect(outputHiddenButton?.acroField.getWidgets()[0].getRectangle().width).toBe(0)
+    expect(outputHiddenButton?.acroField.getWidgets()[0].dict.has(PDFName.of('AP'))).toBe(false)
     expect(outputAmmo.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(outputPortraitButton.acroField.getWidgets()[0].getRectangle().width).toBe(120)
+  })
+
+  test('locates an image widget from its page annotation when its page reference is stale', async () => {
+    const document = await PDFDocument.create()
+    const wrongPage = document.addPage([600, 800])
+    const attachedPage = document.addPage([600, 800])
+    const portrait = document.getForm().createButton('Portrait')
+    portrait.addToPage('Portrait', attachedPage, {
+      x: 20,
+      y: 640,
+      width: 120,
+      height: 100,
+    })
+    const widget = asFieldWithInternals(portrait)?.acroField.getWidgets()[0]
+    expect(widget).toBeDefined()
+    widget?.dict.set(PDFName.of('P'), wrongPage.ref)
+
+    const location = widget ? findAttachedWidgetLocation(document, [widget]) : null
+    expect(location?.pageIndex).toBe(1)
+    expect(location?.widget).toBe(widget)
   })
 
   test('embeds a custom organization image into the 2014 symbol field', async () => {
@@ -898,7 +901,15 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const filledBytes = await fillCharacterSheetPdf(
+      templateBytes,
+      { textFields: {}, checkboxFields: {} },
+      {
+        cleanupProfile: 'mpmb-2014',
+        organizationImageFieldName: 'Symbol',
+        organizationImage: character.details.organizationCustomImage,
+      },
+    )
     const outputDoc = await PDFDocument.load(filledBytes)
     const outputSymbol = asFieldWithInternals(outputDoc.getForm().getButton('Symbol'))
 
@@ -1256,8 +1267,10 @@ describe('characterSheetPdf', () => {
   })
 
   test.each([
-    '2014',
-    '2024',
+    '2014-official',
+    '2014-custom',
+    '2024-official',
+    '2024-custom',
   ] as const)('%s mapping only targets fields present in the shipped template', async (templateId) => {
     const equipment = Array.from({ length: 90 }, (_, index) => ({
       id: `item-${index}`,
@@ -1269,8 +1282,9 @@ describe('characterSheetPdf', () => {
       rarity: index < 5 ? 'Uncommon' : undefined,
     }))
     const map = buildCharacterSheetFieldMap(makeCharacterFixture({ equipment }), templateId)
+    const templateDefinition = getCharacterSheetTemplate(templateId)
     const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public', 'pdf', `${templateId}_Character_Sheet.pdf`)),
+      readFileSync(join(process.cwd(), 'public', templateDefinition.assetPath)),
     )
     const template = await PDFDocument.load(templateBytes)
     const fieldNames = new Set(
@@ -1282,7 +1296,7 @@ describe('characterSheetPdf', () => {
 
     expect(Object.keys(map.textFields).filter((name) => !fieldNames.has(name))).toEqual([])
     expect(Object.keys(map.checkboxFields).filter((name) => !fieldNames.has(name))).toEqual([])
-    if (templateId === '2024') {
+    if (templateDefinition.edition === '2024') {
       expect(Object.keys(map.textFields)).toHaveLength(230)
       expect(Object.keys(map.checkboxFields)).toHaveLength(151)
     }

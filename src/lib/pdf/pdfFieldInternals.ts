@@ -1,3 +1,5 @@
+import type { PDFDocument } from '@cantoo/pdf-lib'
+
 /**
  * Typed accessors for pdf-lib internal structures that are not exposed by the
  * public API. All casts are isolated here so each call-site stays clean.
@@ -60,4 +62,24 @@ export function getPageRefTag(page: unknown): string | undefined {
   const p = page as Partial<PageWithRef>
   if (!p.ref || typeof p.ref !== 'object') return undefined
   return typeof p.ref.tag === 'string' ? p.ref.tag : undefined
+}
+
+export function findAttachedWidgetLocation(
+  pdfDoc: PDFDocument,
+  widgets: AcroWidget[],
+): { widget: AcroWidget; pageIndex: number } | null {
+  const pages = pdfDoc.getPages()
+  for (const widget of widgets) {
+    for (const [pageIndex, page] of pages.entries()) {
+      const annotations = page.node.Annots()?.asArray() ?? []
+      if (
+        annotations.some(
+          (reference) => (pdfDoc.context.lookup(reference) as unknown) === widget.dict,
+        )
+      ) {
+        return { widget, pageIndex }
+      }
+    }
+  }
+  return null
 }

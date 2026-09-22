@@ -182,18 +182,20 @@ describe('desktop workspace navigation', () => {
     ).toBeNull()
   })
 
-  test('offers separate 2014 and 2024 character-sheet templates', () => {
-    renderSidebar('/character-sheet/2014')
+  test('offers official and custom templates under each rules edition', () => {
+    renderSidebar('/character-sheet/2014/official')
 
     expect(
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-current'),
     ).toBe('page')
-    expect(screen.getByRole('link', { name: '5e (2014)' }).getAttribute('aria-current')).toBe(
-      'page',
-    )
+    expect(screen.getByText('5e (2014) Templates')).toBeTruthy()
+    expect(screen.getByText('5.5e (2024) Templates')).toBeTruthy()
     expect(
-      screen.getByRole('link', { name: '5.5e (2024)' }).getAttribute('aria-current'),
-    ).toBeNull()
+      screen.getByRole('link', { name: '5e (2014) WotC Official' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.getByRole('link', { name: '5e (2014) MPMB Custom' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) WotC Official' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) Lost Loot Custom' })).toBeTruthy()
   })
 
   test('renders the permanent Characters context pane for the character collection', () => {

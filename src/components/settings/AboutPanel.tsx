@@ -1,7 +1,13 @@
 import { Books, Code, GithubLogo, Globe, Heart } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Section } from '@/components/workspace'
 import { getBundledFileUrl } from '@/lib/assetUrls'
+import {
+  CHARACTER_SHEET_TEMPLATES,
+  getCharacterSheetAttributionAnchor,
+} from '@/lib/pdf/characterSheetTemplates'
+import type { CharacterSheetTemplate } from '@/lib/pdf/types'
 
 type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
 
@@ -11,6 +17,7 @@ const TECH_STACK = [
 ]
 
 export function AboutPanel() {
+  const location = useLocation()
   const [appVersion, setAppVersion] = useState('')
   const [srdManifest, setSrdManifest] = useState<BundledManifest | null>(null)
 
@@ -20,6 +27,11 @@ export function AboutPanel() {
       .then(setAppVersion)
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!location.hash) return
+    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [location.hash])
 
   useEffect(() => {
     const getBundledManifest = window.electronAPI?.getBundledManifest
@@ -105,6 +117,38 @@ export function AboutPanel() {
           </div>
         </Section>
       )}
+
+      <Section title="Character Sheet PDF Attribution">
+        <ul className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+          {CHARACTER_SHEET_TEMPLATES.map((template: CharacterSheetTemplate) => (
+            <li
+              key={template.id}
+              id={getCharacterSheetAttributionAnchor(template.id)}
+              className="scroll-mt-5"
+            >
+              <p className="font-medium text-foreground">{template.name}</p>
+              <p>
+                {template.attribution.credit}
+                {template.attribution.creatorName && template.attribution.creatorUrl && (
+                  <>
+                    {' '}
+                    <a
+                      href={template.attribution.creatorUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      {template.attribution.creatorName}
+                    </a>
+                    .
+                  </>
+                )}
+              </p>
+              {template.attribution.notice && <p>{template.attribution.notice}</p>}
+            </li>
+          ))}
+        </ul>
+      </Section>
 
       <Section title="Built With">
         <ul className="grid gap-2 sm:grid-cols-2">
