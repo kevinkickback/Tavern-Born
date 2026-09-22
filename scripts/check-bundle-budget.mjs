@@ -13,7 +13,8 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 19 * MIB,
   staticAssets: 13 * MIB,
   rendererCode: 5.25 * MIB,
-  initialRendererScript: 420 * KIB,
+  // Reviewed with source-qualified subclass-choice normalization in the startup data graph.
+  initialRendererScript: 425 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
