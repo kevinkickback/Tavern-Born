@@ -179,20 +179,25 @@ function filterSubclassContent(
   return { subclassFeatures, subclassFeatureRefs, levelFeatures }
 }
 
-function rebuildFilteredClassRules(classData: Class5e): Class5e {
-  const subclasses = classData.subclasses?.map((subclass) => ({
-    ...subclass,
-    normalizedRules:
-      subclass.subclassFeatureRefs === undefined
-        ? subclass.normalizedRules
-        : normalizeSubclassRules(classData, subclass, subclass.subclassFeatureRefs),
-  }))
+function rebuildFilteredClassRules(classData: Class5e, originalClassData: Class5e): Class5e {
+  const subclasses = classData.subclasses?.map((subclass) => {
+    const originalSubclass = originalClassData.subclasses?.find(
+      (candidate) => candidate.name === subclass.name && candidate.source === subclass.source,
+    )
+    const shouldRebuild = (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0
+    return {
+      ...subclass,
+      normalizedRules: shouldRebuild
+        ? normalizeSubclassRules(classData, subclass, subclass.subclassFeatureRefs ?? [])
+        : subclass.normalizedRules,
+    }
+  })
+  const shouldRebuildClass = (originalClassData.classFeatureRefs?.length ?? 0) > 0
   return {
     ...classData,
-    normalizedRules:
-      classData.classFeatureRefs === undefined
-        ? classData.normalizedRules
-        : normalizeClassRules(classData, classData.classFeatureRefs),
+    normalizedRules: shouldRebuildClass
+      ? normalizeClassRules(classData, classData.classFeatureRefs ?? [])
+      : classData.normalizedRules,
     subclasses,
   }
 }
@@ -278,6 +283,9 @@ export class DataFilter {
 
   static filterClasses(classes: Class5e[], filters: ClassFilters): Class5e[] {
     let filtered = [...classes]
+    const originalClassesByKey = new Map(
+      classes.map((classData) => [`${classData.name}|${classData.source}`, classData]),
+    )
 
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
@@ -368,7 +376,12 @@ export class DataFilter {
       (filters.sources && filters.sources.length > 0) ||
       (filters.suppressedKeys && filters.suppressedKeys.size > 0)
     ) {
-      filtered = filtered.map(rebuildFilteredClassRules)
+      filtered = filtered.map((classData) =>
+        rebuildFilteredClassRules(
+          classData,
+          originalClassesByKey.get(`${classData.name}|${classData.source}`) ?? classData,
+        ),
+      )
     }
 
     if (filters.hasProficiency && filters.hasProficiency.length > 0) {

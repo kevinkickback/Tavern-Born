@@ -309,6 +309,42 @@ describe('5etools/filters', () => {
     ])
   })
 
+  test('filterClasses preserves pre-normalized rules when the source has no feature references', () => {
+    const precomputedRules = {
+      resources: [],
+      asiLevels: [4],
+      ritualCasting: false,
+      choices: [
+        {
+          id: 'class:fighter|xphb|choice:weapon-mastery|1',
+          label: 'Weapon Mastery',
+          kind: 'item' as const,
+          owner: { type: 'class' as const, name: 'Fighter', source: 'XPHB' },
+          level: 1,
+          minimumSelections: 1,
+          maximumSelections: 1,
+          selectionCountByLevel: Array(20).fill(1),
+          options: [{ entityType: 'item' as const, name: 'Longsword', source: 'XPHB' }],
+          repeatable: false,
+          replacement: { cadence: 'never' as const },
+          source: { kind: 'class-table' as const, field: 'Weapon Mastery' },
+        },
+      ],
+      choiceDiagnostics: [],
+    }
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'XPHB',
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: precomputedRules,
+    })
+
+    const [filtered] = DataFilter.filterClasses([fighter], { sources: ['XPHB'] })
+
+    expect(filtered.normalizedRules).toEqual(precomputedRules)
+  })
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({
