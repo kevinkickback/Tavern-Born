@@ -324,6 +324,15 @@ function getPreviewHtml(
   return entries.slice(0, 2).map(formatter).join('')
 }
 
+function getCreaturePreviewEntries(creature: Creature5e): unknown[] {
+  const namedEntries = [...(creature.trait ?? []), ...(creature.action ?? [])].map((entry) => ({
+    type: 'item',
+    name: entry.name,
+    entries: entry.entries ?? [],
+  }))
+  return [...(creature.entries ?? []), ...namedEntries]
+}
+
 export function getRecursiveTooltipData(
   reference: RecursiveReference,
   lookup: RecursiveLookup,
@@ -418,6 +427,11 @@ export function getRecursiveTooltipData(
     : undefined
   if (!entity) return simpleFallback
 
+  const previewEntries =
+    normalizedKind === 'creatures'
+      ? getCreaturePreviewEntries(entity as Creature5e)
+      : entity.entries
+
   const kindLabels: Record<string, string> = {
     items: 'Item',
     feats: 'Feat',
@@ -440,7 +454,7 @@ export function getRecursiveTooltipData(
   return {
     title: entity.name ?? reference.name,
     subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
-    html: getPreviewHtml(entity.entries),
+    html: getPreviewHtml(previewEntries),
   }
 }
 

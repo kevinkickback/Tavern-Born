@@ -142,4 +142,30 @@ describe('additional content availability', () => {
     expect(characterUsesContentOutsideCatalog(external, index)).toBe(true)
     expect(characterUsesContentOutsideCatalog(custom, index)).toBe(false)
   })
+
+  test('ignores source-qualified choices while they are dormant', () => {
+    const character = makeCharacterFixture({
+      classChoiceSelections: [
+        {
+          choiceId: 'dormant-variant',
+          label: 'Dormant Variant',
+          kind: 'class-feature',
+          inactive: true,
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 1,
+          selected: [
+            { entityType: 'classFeature', name: 'External Training', source: 'TCE', slotLevel: 1 },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      characterUsesContentOutsideCatalog(
+        character,
+        createGameDataAvailabilityIndex(makeIncludedSrdData()),
+      ),
+    ).toBe(false)
+  })
 })

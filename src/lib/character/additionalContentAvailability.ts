@@ -159,8 +159,9 @@ export function characterUsesContentOutsideCatalog(
     return true
   }
   if (
-    (character.classChoiceSelections ?? []).some((selection) =>
-      selection.selected.some((choice) => choiceIsMissing(choice, index)),
+    (character.classChoiceSelections ?? []).some(
+      (selection) =>
+        !selection.inactive && selection.selected.some((choice) => choiceIsMissing(choice, index)),
     )
   ) {
     return true

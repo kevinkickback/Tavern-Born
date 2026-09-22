@@ -57,7 +57,7 @@ describe('buildRecursiveLookup', () => {
     const wolf = {
       name: 'Wolf',
       source: 'MM',
-      entries: ['Wolf details.'],
+      trait: [{ name: 'Pack Tactics', entries: ['Wolf details.'] }],
     } as Creature5e
     const lookup = buildRecursiveLookup({ creatures: [wolf] })
 

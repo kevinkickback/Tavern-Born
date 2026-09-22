@@ -133,9 +133,13 @@ export function RulesPage() {
   const rules = character.variantRules ?? {}
   const abilityMethod = rules.abilityScoreMethod ?? 'standard-array'
   const abilityMethods = getAbilityScoreMethodOptions(character.originSystem)
-  const hasOptionalFeatureGrants = Object.values(character.provenance?.features ?? {}).some(
-    (tags) => tags.some((tag) => tag.sourceType === 'optionalFeature'),
-  )
+  const hasOptionalFeatureSelections =
+    Object.values(character.provenance?.features ?? {}).some((tags) =>
+      tags.some((tag) => tag.sourceType === 'optionalFeature'),
+    ) ||
+    (character.classChoiceSelections ?? []).some(
+      (selection) => selection.inactive || selection.kind === 'optional-feature',
+    )
 
   const updateRules = (updates: Partial<VariantRules>) => {
     updateCharacter(character.id, { variantRules: { ...rules, ...updates } })
@@ -143,9 +147,10 @@ export function RulesPage() {
 
   const updateBooleanRule = (key: BooleanRuleKey, checked: boolean) => {
     const selectedSubclass = character.classProgression.find((entry) => entry.subclass)?.subclass
-    if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureGrants) {
-      toast.warning('Existing optional class feature choices will be kept.', {
-        description: 'Review the Class page if you want to replace or remove them.',
+    if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureSelections) {
+      toast.warning('Existing optional class feature selections are saved.', {
+        description:
+          'Replacement choices become dormant while this rule is off and are restored when it is enabled again.',
       })
     }
     if (
