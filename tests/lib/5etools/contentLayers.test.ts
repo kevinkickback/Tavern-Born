@@ -207,6 +207,57 @@ describe('game-data content layers', () => {
     ).toEqual([])
   })
 
+  test('uses the latest layered subclass feature for matching references', () => {
+    const baseFeature = {
+      name: 'Inventive Method',
+      source: 'TEST',
+      className: 'Inventor',
+      classSource: 'TEST',
+      subclassShortName: 'Smith',
+      subclassSource: 'TEST',
+      level: 3,
+      entries: ['Base rules.'],
+    }
+    const additionalFeature = { ...baseFeature, entries: ['Additional rules.'] }
+    const classWithFeature = (feature: typeof baseFeature) =>
+      makeClassFixture({
+        name: 'Inventor',
+        source: 'TEST',
+        classFeatureRefs: [],
+        subclasses: [
+          {
+            name: 'The Smith',
+            shortName: 'Smith',
+            source: 'TEST',
+            className: 'Inventor',
+            classSource: 'TEST',
+            subclassFeatureRefs: [
+              {
+                ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
+                name: 'Inventive Method',
+                source: 'TEST',
+                className: 'Inventor',
+                classSource: 'TEST',
+                subclassShortName: 'Smith',
+                subclassSource: 'TEST',
+                level: 3,
+                feature,
+              },
+            ],
+          },
+        ],
+      })
+
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ classes: [classWithFeature(baseFeature)] }),
+      makeGameDataFixture({ classes: [classWithFeature(additionalFeature)] }),
+    ])
+
+    expect(composed.classes[0].subclasses?.[0].subclassFeatureRefs?.[0].feature).toBe(
+      additionalFeature,
+    )
+  })
+
   test('reports unresolved hard references introduced by additional classes', () => {
     const additionalClass = makeClassFixture({
       name: 'Inventor',

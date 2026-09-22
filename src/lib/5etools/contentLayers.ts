@@ -83,7 +83,7 @@ function collectSubclassFeatures(layers: readonly GameData[]): Map<string, Subcl
   const visit = (feature: SubclassFeature | undefined) => {
     if (!feature) return
     const identity = subclassFeatureIdentity(feature)
-    if (!features.has(identity)) features.set(identity, feature)
+    features.set(identity, feature)
 
     const walk = (value: unknown) => {
       if (Array.isArray(value)) {
