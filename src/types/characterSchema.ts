@@ -364,6 +364,8 @@ const classFeatChoiceSchema = z.object({
   id: z.string().min(1),
   className: z.string().min(1),
   classSource: z.string().min(1),
+  subclassName: z.string().min(1).optional(),
+  subclassSource: z.string().min(1).optional(),
   progressionName: z.string().min(1),
   categories: z.array(z.string()),
   feats: z.array(featSchema),

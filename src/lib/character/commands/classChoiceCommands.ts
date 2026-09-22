@@ -32,12 +32,13 @@ function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
   return levels
 }
 
-function findOwnerLevel(character: Character, choice: NormalizedCharacterChoice): number {
-  return (
-    character.classProgression?.find(
-      (entry) =>
-        entry.name === choice.owner.name && (entry.source ?? '') === (choice.owner.source ?? ''),
-    )?.levels ?? 0
+function findOwner(
+  character: Character,
+  choice: NormalizedCharacterChoice,
+): CharacterClassEntry | undefined {
+  return character.classProgression?.find(
+    (entry) =>
+      entry.name === choice.owner.name && (entry.source ?? '') === (choice.owner.source ?? ''),
   )
 }
 
@@ -62,9 +63,18 @@ export function applyClassChoiceSelectionCommand(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
 ): Pick<Character, 'classChoiceSelections'> {
-  const classLevel = findOwnerLevel(character, choice)
+  const owner = findOwner(character, choice)
+  const classLevel = owner?.levels ?? 0
   if (classLevel < choice.level) {
     throw new RangeError(`${choice.label} is not available at the character's current class level.`)
+  }
+  if (
+    choice.owner.type === 'subclass' &&
+    (!choice.owner.subclassName ||
+      owner?.subclass !== choice.owner.subclassName ||
+      (owner.subclassSource ?? '') !== (choice.owner.subclassSource ?? ''))
+  ) {
+    throw new RangeError(`${choice.label} is not available for the character's current subclass.`)
   }
   const requiredCount = getRequiredChoiceSelectionCount(choice, classLevel)
   if (selected.length > requiredCount) {
@@ -139,6 +149,8 @@ function reconcileClassChoiceFeatMirror(
       choiceId: choice.id,
       className: choice.owner.name,
       classSource: choice.owner.source,
+      ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
+      ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
       progressionName: choice.label,
       categories,
       slotLevels: selection?.selected.map((option) => option.slotLevel) ?? [],

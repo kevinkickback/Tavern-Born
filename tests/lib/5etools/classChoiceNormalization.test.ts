@@ -171,6 +171,72 @@ describe('class choice normalization', () => {
     })
   })
 
+  test('reports subclass option blocks with an invalid explicit selection count', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Hunter', source: 'PHB' },
+      [
+        subclassFeatureRef('Uncounted Tactic', [
+          {
+            type: 'options',
+            count: 0,
+            entries: [
+              {
+                type: 'refSubclassFeature',
+                subclassFeature: 'First Tactic|Ranger|PHB|Hunter|PHB|3',
+              },
+              {
+                type: 'refSubclassFeature',
+                subclassFeature: 'Second Tactic|Ranger|PHB|Hunter|PHB|3',
+              },
+            ],
+          },
+        ]),
+      ],
+    )
+
+    expect(rules.choices).toEqual([])
+    expect(rules.choiceDiagnostics).toEqual([
+      expect.objectContaining({
+        code: 'invalid-count',
+        subclassName: 'Hunter',
+        featureName: 'Uncounted Tactic',
+      }),
+    ])
+  })
+
+  test('treats count-less subclass option blocks as presentation groups', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Fighter', source: 'PHB' },
+      { name: 'Psi Warrior', source: 'TCE' },
+      [
+        {
+          ...subclassFeatureRef('Psionic Power', [
+            {
+              type: 'options',
+              entries: [
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Protective Field|Fighter|PHB|Psi Warrior|TCE|3',
+                },
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Psionic Strike|Fighter|PHB|Psi Warrior|TCE|3',
+                },
+              ],
+            },
+          ]),
+          className: 'Fighter',
+          subclassShortName: 'Psi Warrior',
+          subclassSource: 'TCE',
+        },
+      ],
+    )
+
+    expect(rules.choices).toEqual([])
+    expect(rules.choiceDiagnostics).toEqual([])
+  })
+
   test('normalizes source-qualified class feature option references', () => {
     const result = normalizeClassChoices({ name: 'Test Class', source: 'XPHB' }, [
       featureRef('Sacred Order', 1, [

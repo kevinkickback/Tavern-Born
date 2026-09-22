@@ -587,7 +587,7 @@ function normalizeFeatureOptionChoices(
   classData: Pick<Class5e, 'name' | 'source'>,
   refs: readonly ChoiceFeatureReference[],
   owner: ChoiceOwner,
-  reportMissingCounts = true,
+  missingCountPolicy: 'diagnose' | 'presentation' = 'diagnose',
   progressions: readonly OptFeatureProg[] = [],
 ): ChoiceNormalizationResult {
   const choices: NormalizedCharacterChoice[] = []
@@ -616,7 +616,10 @@ function normalizeFeatureOptionChoices(
           ? Math.trunc(rawCount)
           : undefined
       if (!count) {
-        if (!reportMissingCounts) return
+        // Upstream subclass data also uses count-less option blocks to group features which are
+        // all granted together. Only an explicit positive count makes those blocks selectable.
+        // An explicit but invalid count is still malformed and must remain diagnostic.
+        if (rawCount === undefined && missingCountPolicy === 'presentation') return
         diagnostics.push(
           choiceDiagnostic(
             owner,
@@ -1003,7 +1006,7 @@ export function normalizeClassChoices(
     classData,
     refs,
     owner,
-    true,
+    'diagnose',
     classData.optionalfeatureProgression ?? [],
   )
   const progression = normalizeOptionalFeatureProgressions(
@@ -1040,7 +1043,13 @@ export function normalizeSubclassRules(
       'featProgression',
     ),
   ]
-  const direct = normalizeFeatureOptionChoices(classData, expandedRefs, owner, false, progressions)
+  const direct = normalizeFeatureOptionChoices(
+    classData,
+    expandedRefs,
+    owner,
+    'presentation',
+    progressions,
+  )
   const directChoices = direct.choices.filter(
     (choice) =>
       !progression.some(

@@ -89,6 +89,8 @@ multiclass math. There are no top-level class mirrors.
 - Other normalized class and subclass choices retain descriptor identity, source-qualified owner,
   and earned level in `classChoiceSelections`. Supported selections include class features,
   subclass features, optional features, feats, items, and creatures.
+- Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
+  retracts both the normalized selection and its materialized feat state.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
 - Level-down/class removal retracts choices, grants, ASIs, spells, and replacement events owned by
   removed levels.

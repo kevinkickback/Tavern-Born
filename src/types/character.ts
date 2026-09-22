@@ -311,6 +311,8 @@ export interface ClassFeatChoice {
   id: string
   className: string
   classSource: string
+  subclassName?: string
+  subclassSource?: string
   progressionName: string
   categories: string[]
   feats: Feat[]

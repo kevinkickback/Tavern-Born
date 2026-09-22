@@ -444,7 +444,12 @@ export function applyClassProgressionUpdate(
   const retainedClassFeatChoices: ClassFeatChoice[] = []
   for (const choice of character.classFeatChoices ?? []) {
     const matchingEntry = nextProgression.find(
-      (entry) => entry.name === choice.className && entry.source === choice.classSource,
+      (entry) =>
+        entry.name === choice.className &&
+        entry.source === choice.classSource &&
+        (!choice.subclassName ||
+          (entry.subclass === choice.subclassName &&
+            (entry.subclassSource ?? '') === (choice.subclassSource ?? ''))),
     )
     const retainedFeats = matchingEntry
       ? choice.feats.filter(

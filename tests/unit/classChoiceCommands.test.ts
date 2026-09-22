@@ -334,6 +334,105 @@ describe('class choice commands', () => {
     ).toEqual([])
   })
 
+  test('rejects a subclass-owned choice when its subclass is not currently selected', () => {
+    const companionChoice = choice({
+      id: 'class:ranger|phb|subclass:beast-master|phb|choice:companion|3',
+      label: 'Companion',
+      kind: 'creature',
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+      },
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: [0, 0, ...Array(18).fill(1)],
+      optionFilter: { entityType: 'creature', creatureTypes: ['beast'] },
+    })
+    const hunter = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Hunter',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+
+    expect(() =>
+      applyClassChoiceSelectionCommand(hunter, companionChoice, [
+        { entityType: 'creature', name: 'Wolf', source: 'MM' },
+      ]),
+    ).toThrow(/current subclass/i)
+  })
+
+  test('retracts a subclass-owned feat mirror when the subclass changes', () => {
+    const featChoice = choice({
+      id: 'class:ranger|phb|subclass:beast-master|phb|choice:bonus-feat|3',
+      label: 'Bonus Feat',
+      kind: 'feat',
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+      },
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: [0, 0, ...Array(18).fill(1)],
+      optionFilter: { entityType: 'feat' },
+    })
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    const applied = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      emptyProvenance(),
+      featChoice,
+      [{ entityType: 'feat', name: 'Skilled', source: 'PHB' }],
+    )
+    const appliedCharacter = makeCharacterFixture({
+      ...character,
+      ...applied.characterPatch,
+      provenance: applied.provenanceUpdate,
+    })
+
+    expect(appliedCharacter.classFeatChoices?.[0]).toMatchObject({
+      subclassName: 'Beast Master',
+      subclassSource: 'PHB',
+      feats: [{ name: 'Skilled', source: 'PHB' }],
+    })
+
+    const reconciled = applyClassProgressionUpdate(appliedCharacter, applied.provenanceUpdate, [
+      {
+        name: 'Ranger',
+        source: 'PHB',
+        levels: 3,
+        subclass: 'Hunter',
+        subclassSource: 'PHB',
+      },
+    ])
+
+    expect(reconciled.characterPatch.classChoiceSelections).toEqual([])
+    expect(reconciled.characterPatch.classFeatChoices).toEqual([])
+    expect(reconciled.provenanceUpdate.feats.skilled).toBeUndefined()
+  })
+
   test('level-down reconciliation retracts generated features and their exact tags', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Test Class', source: 'TEST', levels: 10 }],
