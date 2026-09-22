@@ -46,6 +46,8 @@ Maintain coverage for:
 
 - character schema validation, supported migrations, quarantine/export recovery;
 - class progression through level 20, level-down, multiclassing, HP refill, and subclass casting;
+- subclass-owned choices, variant replacement, creature-filter resolution, and cleanup when a
+  subclass changes;
 - origin-system feat/ability ownership and readiness navigation;
 - spell profile/provenance atomicity, prepared-caster models, replacements, and slot pools;
 - overlapping provenance owners and source changes;
@@ -59,7 +61,8 @@ Maintain coverage for:
 The golden browser journeys cover deterministic 2014 Variant Human/Arcane Trickster and 2024
 Human/Eldritch Knight creation through level 20. The fast progression matrix covers every supported
 core class and level. Guarded corpus tests verify that the external catalog still satisfies the
-fixtures' assumptions.
+fixtures' assumptions and that normalized class/subclass choice tracks have resolvable
+source-qualified dependencies without diagnostics.
 
 ## E2E conventions
 

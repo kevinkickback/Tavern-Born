@@ -39,6 +39,9 @@ rules, and offline availability rather than internal pack or cache status.
 
 Bundled transport and version-aware cache identity use the approved committed pack in every
 environment. A fresh packaged or development startup therefore has the same Included SRD base.
+In development only, Electron disables its persistent HTTP disk cache before Chromium starts so
+Vite cannot reuse an optimized dependency response after the corresponding shared chunks have been
+regenerated. Packaged applications retain normal HTTP caching.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 composed content fingerprint changes. Layered cache identity includes both the bundled pack and the

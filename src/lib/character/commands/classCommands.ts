@@ -444,7 +444,12 @@ export function applyClassProgressionUpdate(
   const retainedClassFeatChoices: ClassFeatChoice[] = []
   for (const choice of character.classFeatChoices ?? []) {
     const matchingEntry = nextProgression.find(
-      (entry) => entry.name === choice.className && entry.source === choice.classSource,
+      (entry) =>
+        entry.name === choice.className &&
+        entry.source === choice.classSource &&
+        (!choice.subclassName ||
+          (entry.subclass === choice.subclassName &&
+            (entry.subclassSource ?? '') === (choice.subclassSource ?? ''))),
     )
     const retainedFeats = matchingEntry
       ? choice.feats.filter(
@@ -707,17 +712,12 @@ export function selectSubclass(
         }
       : entry,
   )
-
-  const characterPatch: Partial<Character> = {
-    classProgression: nextProgression,
-  }
-
-  const provenanceUpdate = ledger
+  const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
 
   return {
     classEntity: subclassEntity as Class5e | undefined,
-    characterPatch,
-    provenanceUpdate,
+    characterPatch: progressionResult.characterPatch,
+    provenanceUpdate: progressionResult.provenanceUpdate,
   }
 }
 

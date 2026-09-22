@@ -18,6 +18,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -40,6 +41,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import type {
   Class5e,
   ClassFeature,
+  Creature5e,
   Feat5e,
   Item5e,
   OptionalFeatureLike,
@@ -56,6 +58,7 @@ export function BuildClassPage() {
   const {
     classes,
     classFeatures,
+    creatures,
     optionalfeatures,
     spells,
     feats,
@@ -106,13 +109,23 @@ export function BuildClassPage() {
       ),
     [spellLookup],
   )
-  const viewingClassData = viewingClassSource
-    ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
-    : undefined
+  const viewingClassData = useMemo(() => {
+    if (!viewingClassSource) return undefined
+    const viewingKey = getEntityLookupKey(viewingClass, viewingClassSource)
+    return (classes as Class5e[]).find(
+      (classData) => getEntityLookupKey(classData.name, classData.source) === viewingKey,
+    )
+  }, [classes, viewingClass, viewingClassSource])
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
+  const viewingSubclassSpellcastingData = useMemo(
+    () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
+    [viewingClassData, viewingEntry],
+  )
   const classChoiceCatalogs = useMemo(
     () => ({
       classFeatures: classFeatures as ClassFeature[],
+      subclassFeatures: collectSubclassFeatures(viewingSubclassSpellcastingData),
+      creatures: creatures as Creature5e[],
       feats: feats as Feat5e[],
       items: items as Item5e[],
       itemsBase: itemsBase as Item5e[],
@@ -123,17 +136,15 @@ export function BuildClassPage() {
     }),
     [
       classFeatures,
+      creatures,
       feats,
       includeClassFeatureVariants,
       itemMasteries,
       items,
       itemsBase,
       optionalfeatures,
+      viewingSubclassSpellcastingData,
     ],
-  )
-  const viewingSubclassSpellcastingData = useMemo(
-    () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
-    [viewingClassData, viewingEntry],
   )
   const spellController = useClassSpellChoiceController(
     viewingClassData,
@@ -218,7 +229,9 @@ export function BuildClassPage() {
   const classChoiceController = useClassChoiceController({
     character,
     viewingClassData,
+    viewingSubclassData: viewingSubclassSpellcastingData,
     viewingClassLevel,
+    includeClassFeatureVariants,
     catalogs: classChoiceCatalogs,
     onFeatOptionsRequired: (feat, choiceId) =>
       setOptionsPendingFeat({ ...feat, classFeatChoiceId: choiceId }),

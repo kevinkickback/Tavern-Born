@@ -88,10 +88,16 @@ export interface MovementAdjustment {
   createdAt: string
 }
 
-type CharacterClassChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
+type CharacterClassChoiceKind =
+  | 'class-feature'
+  | 'subclass-feature'
+  | 'feat'
+  | 'item'
+  | 'optional-feature'
+  | 'creature'
 
 export interface CharacterClassChoiceOption {
-  entityType: 'classFeature' | 'feat' | 'item' | 'optionalFeature'
+  entityType: 'classFeature' | 'subclassFeature' | 'feat' | 'item' | 'optionalFeature' | 'creature'
   name: string
   source?: string
   /** Class level at which this selection occupied an available choice slot. */
@@ -102,8 +108,12 @@ export interface CharacterClassChoiceSelection {
   choiceId: string
   label: string
   kind: CharacterClassChoiceKind
+  /** Preserved while an alternate feature variant is active; inactive choices grant nothing. */
+  inactive?: boolean
   className: string
   classSource: string
+  subclassName?: string
+  subclassSource?: string
   classLevel: number
   selected: CharacterClassChoiceOption[]
 }
@@ -303,6 +313,8 @@ export interface ClassFeatChoice {
   id: string
   className: string
   classSource: string
+  subclassName?: string
+  subclassSource?: string
   progressionName: string
   categories: string[]
   feats: Feat[]

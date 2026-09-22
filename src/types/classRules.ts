@@ -1,6 +1,18 @@
-export type NormalizedCharacterChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
+export type NormalizedCharacterChoiceKind =
+  | 'class-feature'
+  | 'subclass-feature'
+  | 'feat'
+  | 'item'
+  | 'optional-feature'
+  | 'creature'
 
-export type ChoiceOptionEntityType = 'classFeature' | 'feat' | 'item' | 'optionalFeature'
+export type ChoiceOptionEntityType =
+  | 'classFeature'
+  | 'subclassFeature'
+  | 'feat'
+  | 'item'
+  | 'optionalFeature'
+  | 'creature'
 
 export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
@@ -15,7 +27,12 @@ export interface NormalizedChoiceOptionFilter {
   featureTypes?: string[]
   itemTypes?: string[]
   excludedItemTypes?: string[]
+  excludedItemProperties?: string[]
   rarities?: string[]
+  creatureTypes?: string[]
+  sizes?: string[]
+  challengeRatingMaximum?: number
+  excludeSwarms?: boolean
   excludeCursed?: boolean
   weaponRanges?: Array<'melee' | 'ranged'>
   source?: string
@@ -30,9 +47,11 @@ export interface NormalizedCharacterChoice {
   label: string
   kind: NormalizedCharacterChoiceKind
   owner: {
-    type: 'class'
+    type: 'class' | 'subclass'
     name: string
     source: string
+    subclassName?: string
+    subclassSource?: string
     featureName?: string
     featureSource?: string
   }
@@ -47,6 +66,9 @@ export interface NormalizedCharacterChoice {
     cadence: 'never' | 'class-level' | 'asi-level' | 'long-rest'
     maximumPerEvent?: number | 'all'
   }
+  featureVariant?: {
+    replacesFeatureName?: string
+  }
   source: {
     kind: 'class-feature-options' | 'class-table' | 'optional-feature-progression'
     field: string
@@ -57,9 +79,14 @@ export interface ClassChoiceDiagnostic {
   code: 'invalid-count' | 'unresolved-options'
   className: string
   classSource: string
+  subclassName?: string
+  subclassSource?: string
   featureName: string
   level?: number
   message: string
+  featureVariant?: {
+    replacesFeatureName?: string
+  }
 }
 
 type ClassResourceMaxFormula = 'cha-mod'

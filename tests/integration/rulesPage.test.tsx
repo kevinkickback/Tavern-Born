@@ -134,6 +134,124 @@ describe('RulesPage', () => {
     )
   })
 
+  test('switches active replacement grants while preserving the dormant choice', async () => {
+    const original = {
+      id: 'original-training',
+      label: 'Original Training',
+      kind: 'class-feature' as const,
+      owner: {
+        type: 'class' as const,
+        name: 'Fighter',
+        source: 'PHB',
+        featureName: 'Original Training',
+      },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [{ entityType: 'classFeature' as const, name: 'Guard Training', source: 'PHB' }],
+      repeatable: false,
+      replacement: { cadence: 'never' as const },
+      source: { kind: 'class-feature-options' as const, field: 'original' },
+    }
+    const variant = {
+      ...original,
+      id: 'replacement-training',
+      label: 'Replacement Training',
+      owner: { ...original.owner, featureName: 'Replacement Training' },
+      options: [{ entityType: 'classFeature' as const, name: 'Scholar Training', source: 'TCE' }],
+      featureVariant: { replacesFeatureName: 'Original Training' },
+      source: { kind: 'class-feature-options' as const, field: 'variant' },
+    }
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [original, variant],
+        choiceDiagnostics: [],
+      },
+    })
+    const character = makeCharacterFixture({
+      classChoiceSelections: [
+        {
+          choiceId: original.id,
+          label: original.label,
+          kind: original.kind,
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 1,
+          selected: [{ ...original.options[0], slotLevel: 1 }],
+        },
+        {
+          choiceId: variant.id,
+          label: variant.label,
+          kind: variant.kind,
+          inactive: true,
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 1,
+          selected: [{ ...variant.options[0], slotLevel: 1 }],
+        },
+      ],
+      features: [
+        {
+          id: 'class-choice:original-training:guard-training',
+          name: 'Guard Training',
+          source: 'PHB',
+          description: '',
+          level: 1,
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        classes: [fighter],
+        classFeatures: [
+          { name: 'Replacement Training', source: 'TCE', isClassFeatureVariant: true },
+        ],
+      }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
+
+    await user.click(screen.getByLabelText('Optional Class Features'))
+
+    let updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.features.map((feature) => feature.name)).toEqual(['Scholar Training'])
+    expect(
+      updated?.classChoiceSelections?.find((selection) => selection.choiceId === original.id)
+        ?.inactive,
+    ).toBe(true)
+    expect(
+      updated?.classChoiceSelections?.find((selection) => selection.choiceId === variant.id)
+        ?.inactive,
+    ).toBeUndefined()
+
+    await user.click(screen.getByLabelText('Optional Class Features'))
+
+    updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.features.map((feature) => feature.name)).toEqual(['Guard Training'])
+    expect(
+      updated?.classChoiceSelections?.find((selection) => selection.choiceId === original.id)
+        ?.inactive,
+    ).toBeUndefined()
+    expect(
+      updated?.classChoiceSelections?.find((selection) => selection.choiceId === variant.id)
+        ?.inactive,
+    ).toBe(true)
+  })
+
   test('disables rules that have no matching content', async () => {
     const user = userEvent.setup()
     useGameDataStore.setState({ gameData: makeGameDataFixture() })

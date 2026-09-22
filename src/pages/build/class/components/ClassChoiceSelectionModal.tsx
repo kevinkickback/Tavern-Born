@@ -8,6 +8,7 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -22,13 +23,167 @@ import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 const ENTITY_LABELS = {
   classFeature: 'Class feature',
+  subclassFeature: 'Subclass feature',
   feat: 'Feat',
   item: 'Item',
   optionalFeature: 'Optional feature',
+  creature: 'Creature',
 } as const
 
 function masteryKey(mastery: { name: string; source?: string }): string {
   return `${mastery.name.trim().toLowerCase()}|${mastery.source?.trim().toLowerCase() ?? ''}`
+}
+
+function titleCase(value: string): string {
+  return value.replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toUpperCase())
+}
+
+function hasSelectedValue(selected: Set<string> | undefined, actual: readonly string[]): boolean {
+  if (!selected?.size) return true
+  return actual.some((value) => selected.has(value))
+}
+
+function getEntryKey(entry: unknown): string {
+  if (typeof entry === 'string') return entry
+  if (entry && typeof entry === 'object') {
+    const named = entry as { name?: unknown }
+    if (typeof named.name === 'string') return named.name
+    return JSON.stringify(entry)
+  }
+  return String(entry)
+}
+
+function withEntryKeys(entries: unknown[], prefix: string) {
+  const occurrences = new Map<string, number>()
+  return entries.map((entry) => {
+    const contentKey = getEntryKey(entry)
+    const occurrence = occurrences.get(contentKey) ?? 0
+    occurrences.set(contentKey, occurrence + 1)
+    return { entry, key: `${prefix}:${contentKey}:${occurrence}` }
+  })
+}
+
+function CreatureOptionSummary({ summary }: { summary: CreatureChoiceSummary }) {
+  const stats = [
+    { label: 'AC', value: summary.armorClass },
+    { label: 'HP', value: summary.hitPoints },
+    { label: 'Speed', value: summary.speed },
+  ].filter((stat) => stat.value)
+  const traits = summary.traits.slice(0, 4)
+  const firstAction = summary.actions[0]
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        {summary.subtitle && <span className="italic">{summary.subtitle}</span>}
+        {summary.challenge && (
+          <Badge variant="secondary" className="h-5 px-1.5 py-0 text-xs">
+            CR {summary.challenge}
+          </Badge>
+        )}
+      </div>
+      {stats.length > 0 && (
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-border bg-border text-xs">
+          {stats.map((stat) => (
+            <div key={stat.label} className="min-w-0 bg-muted/60 px-2 py-1.5 text-center">
+              <div className="font-semibold text-muted-foreground">{stat.label}</div>
+              <div className="truncate tabular-nums text-foreground" title={stat.value}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {traits.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {traits.map((trait) => (
+            <Badge key={trait.name} variant="outline" className="h-5 px-1.5 py-0 text-xs">
+              {trait.name}
+            </Badge>
+          ))}
+          {summary.traits.length > traits.length && (
+            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
+              +{summary.traits.length - traits.length} traits
+            </Badge>
+          )}
+        </div>
+      )}
+      {firstAction && (
+        <div className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+          <span className="font-semibold text-foreground">{firstAction.name}. </span>
+          {firstAction.entries[0] != null && (
+            <GameContent entry={firstAction.entries[0]} className="inline [&_p]:inline" />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OptionMetadata({ option }: { option: ClassChoiceOptionView }) {
+  const presentation = option.presentation
+  if (!presentation || presentation.kind === 'creature') return null
+
+  const labels: string[] = []
+  if (presentation.kind === 'feature') {
+    labels.push(...presentation.featureTypeLabels)
+    if (presentation.level !== undefined) labels.push(`Level ${presentation.level}`)
+  } else if (presentation.kind === 'feat') {
+    if (presentation.categoryLabel) labels.push(presentation.categoryLabel)
+  } else {
+    labels.push(
+      ...presentation.typeLabels.slice(0, 2),
+      ...(presentation.rarity ? [titleCase(presentation.rarity)] : []),
+      ...(presentation.damage ? [`Damage ${presentation.damage}`] : []),
+      ...(presentation.armorClass ? [presentation.armorClass] : []),
+      ...(presentation.range ? [`Range ${presentation.range}`] : []),
+      ...(presentation.attunement ? ['Attunement'] : []),
+      ...presentation.propertyLabels.slice(0, 4),
+      ...(presentation.weight !== undefined ? [`${presentation.weight} lb.`] : []),
+    )
+  }
+  if (!labels.length) return null
+  const uniqueLabels = [...new Set(labels)]
+
+  return (
+    <div className="mb-1.5 flex flex-wrap gap-1">
+      {uniqueLabels.map((label) => (
+        <Badge key={label} variant="outline" className="h-5 px-1.5 py-0 text-xs">
+          {label}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function OptionEntries({ option }: { option: ClassChoiceOptionView }) {
+  if (!option.entries.length) return null
+  const visibleEntries = withEntryKeys(
+    option.entries.slice(0, 2),
+    `${option.reference.entityType}:${option.reference.name}`,
+  )
+  const multiple = visibleEntries.length > 1
+
+  return (
+    <div className={cn('space-y-1.5', multiple && 'border-l-2 border-primary/20 pl-2')}>
+      {visibleEntries.map(({ entry, key }) => (
+        <GameContent
+          key={key}
+          entry={entry}
+          className={cn(
+            'text-sm leading-snug text-muted-foreground',
+            multiple ? 'line-clamp-3' : 'line-clamp-5',
+          )}
+        />
+      ))}
+      {option.entries.length > visibleEntries.length && (
+        <p className="text-xs text-muted-foreground">
+          +{option.entries.length - visibleEntries.length} more rules section
+          {option.entries.length - visibleEntries.length === 1 ? '' : 's'}
+        </p>
+      )}
+    </div>
+  )
 }
 
 const ChoiceOptionCard = memo(function ChoiceOptionCard({
@@ -86,6 +241,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           </div>
         </div>
       )}
+      <OptionMetadata option={option} />
       {(option.masteries?.length ?? 0) > 0 && (
         <div className="mb-1.5 space-y-1.5">
           {option.masteries?.map((mastery) => (
@@ -106,15 +262,13 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           ))}
         </div>
       )}
-      {option.entries[0] != null && (
-        <GameContent
-          entry={option.entries[0]}
-          className={cn(
-            'line-clamp-3 text-sm leading-snug text-muted-foreground',
-            !prerequisite.met && !selected && 'opacity-70',
-          )}
-        />
-      )}
+      <div className={cn(!prerequisite.met && !selected && 'opacity-70')}>
+        {option.presentation?.kind === 'creature' ? (
+          <CreatureOptionSummary summary={option.presentation.summary} />
+        ) : (
+          <OptionEntries option={option} />
+        )}
+      </div>
     </div>
   )
 })
@@ -146,7 +300,7 @@ export function ClassChoiceSelectionModal({
         key: 'all',
         label: 'selections',
         max: maximumSelections,
-        test: () => true,
+        test: isClassChoiceOptionEligible,
       },
     ],
     [maximumSelections],
@@ -208,6 +362,73 @@ export function ClassChoiceSelectionModal({
         options: weaponRanges.map((range) => ({ value: range, label: range })),
       })
     }
+    const creatureSummaries = options.flatMap((option) =>
+      option.presentation?.kind === 'creature' ? [option.presentation.summary] : [],
+    )
+    const creatureSizes = [...new Set(creatureSummaries.flatMap((summary) => summary.sizes))].sort(
+      (left, right) => left.localeCompare(right),
+    )
+    if (creatureSizes.length > 1) {
+      sections.push({
+        key: 'creatureSize',
+        label: 'Size',
+        type: 'checkboxes',
+        columns: 1,
+        options: creatureSizes.map((size) => ({ value: size.toLowerCase(), label: size })),
+      })
+    }
+    const challengeRatings = new Map<string, number>()
+    for (const summary of creatureSummaries) {
+      if (summary.challenge) {
+        challengeRatings.set(summary.challenge, summary.challengeValue ?? Number.POSITIVE_INFINITY)
+      }
+    }
+    if (challengeRatings.size > 1) {
+      sections.push({
+        key: 'creatureChallenge',
+        label: 'Challenge rating',
+        type: 'checkboxes',
+        columns: 1,
+        options: [...challengeRatings]
+          .sort(
+            ([leftLabel, leftValue], [rightLabel, rightValue]) =>
+              leftValue - rightValue || leftLabel.localeCompare(rightLabel),
+          )
+          .map(([value]) => ({ value, label: `CR ${value}` })),
+      })
+    }
+    const movementModes = [
+      ...new Set(
+        creatureSummaries.flatMap((summary) =>
+          summary.speedModes.filter((mode) => mode !== 'walk'),
+        ),
+      ),
+    ].sort((left, right) => left.localeCompare(right))
+    if (movementModes.length > 0) {
+      sections.push({
+        key: 'creatureMovement',
+        label: 'Special movement',
+        type: 'checkboxes',
+        columns: 1,
+        options: movementModes.map((mode) => ({ value: mode, label: titleCase(mode) })),
+      })
+    }
+    const featureTypes = [
+      ...new Set(
+        options.flatMap((option) =>
+          option.presentation?.kind === 'feature' ? option.presentation.featureTypeLabels : [],
+        ),
+      ),
+    ].sort((left, right) => left.localeCompare(right))
+    if (featureTypes.length > 1) {
+      sections.push({
+        key: 'featureType',
+        label: 'Feature type',
+        type: 'checkboxes',
+        columns: 1,
+        options: featureTypes.map((type) => ({ value: type, label: type })),
+      })
+    }
     if (hasUnmetPrerequisites) {
       sections.push({
         key: 'prerequisite',
@@ -225,7 +446,8 @@ export function ClassChoiceSelectionModal({
   }, [hasUnmetPrerequisites, options])
   const matchItem = useCallback(
     (option: ClassChoiceOptionView, search: string, activeFilters: ActiveFilters) => {
-      if (!option.reference.name.toLowerCase().includes(search.trim().toLowerCase())) return false
+      const searchTarget = option.searchText ?? option.reference.name
+      if (!searchTarget.toLowerCase().includes(search.trim().toLowerCase())) return false
       const masteryFilters = activeFilters.mastery
       if (
         masteryFilters?.size &&
@@ -242,6 +464,40 @@ export function ClassChoiceSelectionModal({
       if (
         activeFilters.weaponRange?.size &&
         (!option.weaponRange || !activeFilters.weaponRange.has(option.weaponRange))
+      ) {
+        return false
+      }
+      const creatureSummary =
+        option.presentation?.kind === 'creature' ? option.presentation.summary : undefined
+      if (
+        !hasSelectedValue(
+          activeFilters.creatureSize,
+          creatureSummary?.sizes.map((size) => size.toLowerCase()) ?? [],
+        )
+      ) {
+        return false
+      }
+      if (
+        !hasSelectedValue(
+          activeFilters.creatureChallenge,
+          creatureSummary?.challenge ? [creatureSummary.challenge] : [],
+        )
+      ) {
+        return false
+      }
+      if (
+        !hasSelectedValue(
+          activeFilters.creatureMovement,
+          creatureSummary?.speedModes.filter((mode) => mode !== 'walk') ?? [],
+        )
+      ) {
+        return false
+      }
+      if (
+        !hasSelectedValue(
+          activeFilters.featureType,
+          option.presentation?.kind === 'feature' ? option.presentation.featureTypeLabels : [],
+        )
       ) {
         return false
       }
@@ -267,12 +523,21 @@ export function ClassChoiceSelectionModal({
     [prerequisiteByOptionKey],
   )
   const canSelect = useCallback(
-    (option: ClassChoiceOptionView, selectedIds: Set<string>) => {
+    (
+      option: ClassChoiceOptionView,
+      selectedIds: Set<string>,
+      allOptions: ClassChoiceOptionView[],
+    ) => {
       const key = getClassChoiceOptionKey(option.reference)
       if (!isClassChoiceOptionEligible(option)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
-      return selectedIds.size < maximumSelections
+      const eligibleSelectionCount = allOptions.filter(
+        (candidate) =>
+          isClassChoiceOptionEligible(candidate) &&
+          selectedIds.has(getClassChoiceOptionKey(candidate.reference)),
+      ).length
+      return eligibleSelectionCount < maximumSelections
     },
     [maximumSelections, prerequisiteByOptionKey],
   )

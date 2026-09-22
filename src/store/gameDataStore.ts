@@ -76,6 +76,7 @@ function getCatalogEntityCount(data: GameData): number {
     data.items.length +
     data.itemsBase.length +
     data.classFeatures.length +
+    (data.creatures?.length ?? 0) +
     data.actions.length +
     data.conditions.length +
     data.deities.length +

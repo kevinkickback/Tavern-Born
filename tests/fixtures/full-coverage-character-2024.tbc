@@ -4161,6 +4161,36 @@
           "slotLevel": 1
         }
       ]
+    },
+    {
+      "choiceId": "class:fighter|xphb|subclass:battle-master|xphb|choice:maneuvers|3",
+      "label": "Maneuvers",
+      "kind": "optional-feature",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "subclassName": "Battle Master",
+      "subclassSource": "XPHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "optionalFeature",
+          "name": "Commander's Strike",
+          "source": "XPHB",
+          "slotLevel": 3
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Disarming Attack",
+          "source": "XPHB",
+          "slotLevel": 3
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Precision Attack",
+          "source": "XPHB",
+          "slotLevel": 3
+        }
+      ]
     }
   ],
   "backgroundEquipmentItemChoices": {},

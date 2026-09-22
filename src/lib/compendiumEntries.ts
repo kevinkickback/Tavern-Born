@@ -1,6 +1,7 @@
 import type {
   Background5e,
   Class5e,
+  Creature5e,
   Feat5e,
   Item5e,
   ItemMastery5e,
@@ -9,6 +10,7 @@ import type {
   Organization5e,
   Race5e,
   Spell5e,
+  SubclassFeature,
 } from '@/types/5etools'
 
 interface CompendiumEntryBase {
@@ -16,6 +18,7 @@ interface CompendiumEntryBase {
   name: string
   source: string
   description?: string
+  context?: string
   searchText?: string
 }
 
@@ -42,6 +45,8 @@ export type CompendiumEntry =
   | (CompendiumEntryBase & { type: 'Item'; data: Item5e })
   | (CompendiumEntryBase & { type: 'Background'; data: Background5e })
   | (CompendiumEntryBase & { type: 'Feat'; data: Feat5e })
+  | (CompendiumEntryBase & { type: 'Creature'; data: Creature5e })
+  | (CompendiumEntryBase & { type: 'Subclass Feature'; data: SubclassFeature })
   | (CompendiumEntryBase & { type: UntypedEntryType; data: Record<string, unknown> })
 
 export type CompendiumEditionFilter = '5e' | '5.5e' | 'both'
@@ -60,6 +65,7 @@ interface CompendiumGameData {
   backgrounds?: Background5e[] | Record<string, Background5e>
   organizations?: Organization5e[]
   feats?: Feat5e[] | Record<string, Feat5e>
+  creatures?: Creature5e[]
   /** Present on GameData, but intentionally excluded from the curated reference index. */
   classFeatures?: unknown[]
   skills?: unknown
@@ -200,14 +206,23 @@ function buildEntry(
   source: string,
   description: string,
   data: Record<string, unknown>,
+  metadata?: { context?: string; identity?: string; searchTerms?: string },
 ): CompendiumEntry {
   return {
-    id: [type, source, name].join('|').toLowerCase(),
+    id: [type, source, name, metadata?.identity].filter(Boolean).join('|').toLowerCase(),
     name,
     type,
     source,
     description,
-    searchText: normalizeSearchText(name, type, source, description),
+    ...(metadata?.context ? { context: metadata.context } : {}),
+    searchText: normalizeSearchText(
+      name,
+      type,
+      source,
+      description,
+      metadata?.context,
+      metadata?.searchTerms,
+    ),
     data,
   } as CompendiumEntry
 }
@@ -216,10 +231,97 @@ function deduplicateEntries(entries: CompendiumEntry[]): CompendiumEntry[] {
   const uniqueEntries = new Map<string, CompendiumEntry>()
   for (const entry of entries) {
     if (!entry.name.trim()) continue
-    const identity = `${entry.type}|${entry.source}|${entry.name}`.toLowerCase()
-    if (!uniqueEntries.has(identity)) uniqueEntries.set(identity, entry)
+    if (!uniqueEntries.has(entry.id)) uniqueEntries.set(entry.id, entry)
   }
   return Array.from(uniqueEntries.values())
+}
+
+interface CollectedSubclassFeature {
+  feature: SubclassFeature
+  context: string
+  identity: string
+}
+
+function collectSubclassFeatures(classes: readonly Class5e[]): CollectedSubclassFeature[] {
+  const collected = new Map<string, CollectedSubclassFeature>()
+
+  for (const classData of classes) {
+    for (const subclass of classData.subclasses ?? []) {
+      const traversedObjects = new WeakSet<object>()
+      const fallback = {
+        className: classData.name,
+        classSource: classData.source,
+        subclassName: subclass.name || subclass.shortName,
+        subclassSource: subclass.source,
+      }
+
+      const visit = (feature: SubclassFeature | undefined) => {
+        if (!feature?.name) return
+        const className = feature.className || fallback.className
+        const classSource = feature.classSource || fallback.classSource
+        const subclassName = feature.subclassShortName || fallback.subclassName
+        const subclassSource = feature.subclassSource || fallback.subclassSource
+        const level = feature.level
+        const identity = [className, classSource, subclassName, subclassSource, level ?? '']
+          .join('|')
+          .toLowerCase()
+        const key = `${feature.name}|${feature.source}|${identity}`.toLowerCase()
+        if (collected.has(key)) return
+
+        const context = [
+          className,
+          subclassName,
+          typeof level === 'number' ? `Level ${level}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        collected.set(key, { feature, context, identity })
+
+        const walk = (value: unknown) => {
+          if (Array.isArray(value)) {
+            value.forEach(walk)
+            return
+          }
+          if (!value || typeof value !== 'object') return
+          if (traversedObjects.has(value)) return
+          traversedObjects.add(value)
+          const record = value as Record<string, unknown>
+          if (record.type === 'refSubclassFeature' && record.feature) {
+            visit(record.feature as SubclassFeature)
+          }
+          Object.values(record).forEach(walk)
+        }
+        walk(feature.entries)
+      }
+
+      for (const feature of subclass.subclassFeatures ?? []) {
+        if (typeof feature !== 'string') visit(feature)
+      }
+      for (const reference of subclass.subclassFeatureRefs ?? []) visit(reference.feature)
+      for (const group of subclass.levelFeatures ?? []) group.features.forEach(visit)
+    }
+  }
+
+  return [...collected.values()]
+}
+
+function getCreatureType(creature: Creature5e): string {
+  return typeof creature.type === 'string' ? creature.type : (creature.type?.type ?? '')
+}
+
+function getCreatureChallengeRating(creature: Creature5e): string {
+  const challengeRating =
+    typeof creature.cr === 'object' && creature.cr !== null ? creature.cr.cr : creature.cr
+  return challengeRating == null ? '' : String(challengeRating)
+}
+
+function getCreatureSummary(creature: Creature5e): string {
+  const size = creature.size?.join('/') ?? ''
+  const type = getCreatureType(creature)
+  const challengeRating = getCreatureChallengeRating(creature)
+  return [[size, type].filter(Boolean).join(' '), challengeRating ? `CR ${challengeRating}` : '']
+    .filter(Boolean)
+    .join(' · ')
 }
 
 function tokenizeSearchQuery(searchQuery: string): string[] {
@@ -284,8 +386,9 @@ export function buildCompendiumEntries(
     })
   }
 
-  if (gameData.classes) {
-    asCollection<Class5e>(gameData.classes).forEach((cls) => {
+  const classes = asCollection<Class5e>(gameData.classes)
+  if (classes.length > 0) {
+    classes.forEach((cls) => {
       const fluffEntries = Array.isArray(asObj(cls.fluff).entries)
         ? (asObj(cls.fluff).entries as unknown[])
         : []
@@ -305,6 +408,20 @@ export function buildCompendiumEntries(
         ),
       )
     })
+
+    for (const { feature, context, identity } of collectSubclassFeatures(classes)) {
+      const preview = getPreviewDescription(feature.entries ?? [])
+      entries.push(
+        buildEntry(
+          feature.name,
+          'Subclass Feature',
+          feature.source || 'Unknown',
+          [context, preview].filter(Boolean).join(' · '),
+          feature as unknown as Record<string, unknown>,
+          { context, identity },
+        ),
+      )
+    }
   }
 
   if (gameData.spells) {
@@ -412,6 +529,34 @@ export function buildCompendiumEntries(
           feat.source ?? 'Unknown',
           description,
           feat as unknown as Record<string, unknown>,
+        ),
+      )
+    })
+  }
+
+  if (gameData.creatures) {
+    gameData.creatures.forEach((creature) => {
+      const summary = getCreatureSummary(creature)
+      const preview =
+        getPreviewDescription(creature.entries ?? []) ||
+        getPreviewDescription(creature.trait ?? []) ||
+        getPreviewDescription(creature.action ?? [])
+      entries.push(
+        buildEntry(
+          creature.name,
+          'Creature',
+          creature.source || 'Unknown',
+          [summary, preview].filter(Boolean).join(' · '),
+          creature as unknown as Record<string, unknown>,
+          {
+            searchTerms: [
+              getCreatureType(creature),
+              getCreatureChallengeRating(creature),
+              creature.size?.join(' '),
+            ]
+              .filter(Boolean)
+              .join(' '),
+          },
         ),
       )
     })

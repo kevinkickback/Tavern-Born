@@ -170,6 +170,12 @@ const workspaces: Workspace[] = [
           { label: 'Races', path: '/compendium', search: '?type=Race', icon: PersonSimple },
           { label: 'Classes', path: '/compendium', search: '?type=Class', icon: Sword },
           {
+            label: 'Subclass Features',
+            path: '/compendium',
+            search: '?type=Subclass+Feature',
+            icon: Sparkle,
+          },
+          {
             label: 'Backgrounds',
             path: '/compendium',
             search: '?type=Background',
@@ -183,6 +189,7 @@ const workspaces: Workspace[] = [
         items: [
           { label: 'Spells', path: '/compendium', search: '?type=Spell', icon: MagicWand },
           { label: 'Items', path: '/compendium', search: '?type=Item', icon: Backpack },
+          { label: 'Creatures', path: '/compendium', search: '?type=Creature', icon: Users },
           {
             label: 'Weapon Masteries',
             path: '/compendium',

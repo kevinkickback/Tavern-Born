@@ -4,6 +4,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Creature5e,
   Feat5e,
   GameData,
   GameDataLookups,
@@ -88,6 +89,10 @@ export function buildSpellLookup(spells: Spell5e[]): Record<string, Spell5e> {
   }, {})
 }
 
+function buildCreatureLookup(creatures: Creature5e[]): Record<string, Creature5e> {
+  return buildEntityLookup(creatures)
+}
+
 function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<string, unknown> {
   return optionalFeatures.reduce<Record<string, unknown>>((lookup, feature) => {
     if (typeof feature !== 'object' || feature === null) return lookup
@@ -134,6 +139,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     spellsByKey: buildSpellLookup(gameData.spells),
     optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),
     subclassesByKey: buildSubclassLookup(gameData.classes),
+    creaturesByKey: buildCreatureLookup(gameData.creatures ?? []),
     itemLookup: buildItemLookup([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
     itemPropertyByAbbr: buildItemPropertyLookup(gameData.itemProperties ?? []),
     itemTypeByAbbr: buildItemTypeLookup(gameData.itemTypes ?? []),

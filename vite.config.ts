@@ -68,8 +68,14 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    // Appearance is lazy-rendered from Settings. Pre-bundle its Radix primitive with
-    // React so first navigation cannot invalidate the renderer's dependency graph.
-    include: ['@radix-ui/react-radio-group'],
+    // Lazy routes must not discover shared UI dependencies after Electron has loaded Vite's
+    // initial graph. A late optimizer pass replaces common chunks while an in-flight route may
+    // still reference the earlier files.
+    include: [
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-toggle-group',
+    ],
   },
 })

@@ -1,5 +1,5 @@
 import { renderEntry } from '@/lib/renderer'
-import type { Spell5e } from '@/types/5etools'
+import type { Creature5e, Spell5e } from '@/types/5etools'
 
 interface TooltipEntityLike {
   name?: string
@@ -46,6 +46,7 @@ export interface RecursiveLookup {
   languages: Map<string, TooltipEntityLike>
   trapHazards: Map<string, TooltipEntityLike>
   rewards: Map<string, TooltipEntityLike>
+  creatures: Map<string, Creature5e>
   classFeatures: Map<string, TooltipEntityLike>
   subclasses: Map<string, TooltipEntityLike>
   subclassFeatures: Map<string, TooltipEntityLike>
@@ -69,6 +70,7 @@ export interface RecursiveTooltipCollections {
   languages?: readonly unknown[]
   trapHazards?: readonly unknown[]
   rewards?: readonly unknown[]
+  creatures?: readonly unknown[]
   classFeatures?: readonly unknown[]
 }
 
@@ -240,6 +242,7 @@ export function buildRecursiveLookup(collections: RecursiveTooltipCollections): 
     languages: buildNameMap(asTooltipEntities(collections.languages)),
     trapHazards: buildNameMap(asTooltipEntities(collections.trapHazards)),
     rewards: buildNameMap(asTooltipEntities(collections.rewards)),
+    creatures: buildNameMap(asTooltipEntities(collections.creatures) as Creature5e[]),
     classFeatures: buildScopedFeatureMap(asTooltipEntities(collections.classFeatures), false),
     subclasses: buildSubclassMap(nestedClassEntities.subclasses),
     subclassFeatures: buildScopedFeatureMap(nestedClassEntities.subclassFeatures, true),
@@ -304,6 +307,7 @@ export function normalizeKind(kind: string): string {
     trap: 'trapHazards',
     hazard: 'trapHazards',
     reward: 'rewards',
+    creature: 'creatures',
     classfeature: 'classFeatures',
     subclass: 'subclasses',
     subclassfeature: 'subclassFeatures',
@@ -318,6 +322,15 @@ function getPreviewHtml(
   if (!entries?.length) return undefined
   const formatter = formatSpellInfo || ((entry: unknown) => getEntryWithHoverTitles(entry))
   return entries.slice(0, 2).map(formatter).join('')
+}
+
+function getCreaturePreviewEntries(creature: Creature5e): unknown[] {
+  const namedEntries = [...(creature.trait ?? []), ...(creature.action ?? [])].map((entry) => ({
+    type: 'item',
+    name: entry.name,
+    entries: entry.entries ?? [],
+  }))
+  return [...(creature.entries ?? []), ...namedEntries]
 }
 
 export function getRecursiveTooltipData(
@@ -405,6 +418,7 @@ export function getRecursiveTooltipData(
     languages: lookup.languages,
     trapHazards: lookup.trapHazards,
     rewards: lookup.rewards,
+    creatures: lookup.creatures,
   }
 
   const entityMap = mapByKind[normalizedKind]
@@ -412,6 +426,11 @@ export function getRecursiveTooltipData(
     ? resolveRecursiveEntity(entityMap, reference.name, reference.source)
     : undefined
   if (!entity) return simpleFallback
+
+  const previewEntries =
+    normalizedKind === 'creatures'
+      ? getCreaturePreviewEntries(entity as Creature5e)
+      : entity.entries
 
   const kindLabels: Record<string, string> = {
     items: 'Item',
@@ -429,12 +448,13 @@ export function getRecursiveTooltipData(
     languages: 'Language',
     trapHazards: 'Trap or Hazard',
     rewards: 'Reward',
+    creatures: 'Creature',
   }
 
   return {
     title: entity.name ?? reference.name,
     subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
-    html: getPreviewHtml(entity.entries),
+    html: getPreviewHtml(previewEntries),
   }
 }
 

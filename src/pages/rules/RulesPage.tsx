@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
+import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -115,6 +117,7 @@ export function RulesPage() {
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
   const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
+  const allClasses = useClasses()
   const contentAvailability = getVariantRuleContentAvailability({
     classes,
     classFeatures,
@@ -132,9 +135,13 @@ export function RulesPage() {
   const rules = character.variantRules ?? {}
   const abilityMethod = rules.abilityScoreMethod ?? 'standard-array'
   const abilityMethods = getAbilityScoreMethodOptions(character.originSystem)
-  const hasOptionalFeatureGrants = Object.values(character.provenance?.features ?? {}).some(
-    (tags) => tags.some((tag) => tag.sourceType === 'optionalFeature'),
-  )
+  const hasOptionalFeatureSelections =
+    Object.values(character.provenance?.features ?? {}).some((tags) =>
+      tags.some((tag) => tag.sourceType === 'optionalFeature'),
+    ) ||
+    (character.classChoiceSelections ?? []).some(
+      (selection) => selection.inactive || selection.kind === 'optional-feature',
+    )
 
   const updateRules = (updates: Partial<VariantRules>) => {
     updateCharacter(character.id, { variantRules: { ...rules, ...updates } })
@@ -142,9 +149,10 @@ export function RulesPage() {
 
   const updateBooleanRule = (key: BooleanRuleKey, checked: boolean) => {
     const selectedSubclass = character.classProgression.find((entry) => entry.subclass)?.subclass
-    if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureGrants) {
-      toast.warning('Existing optional class feature choices will be kept.', {
-        description: 'Review the Class page if you want to replace or remove them.',
+    if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureSelections) {
+      toast.warning('Existing optional class feature selections are saved.', {
+        description:
+          'Replacement choices become dormant while this rule is off and are restored when it is enabled again.',
       })
     }
     if (
@@ -155,6 +163,20 @@ export function RulesPage() {
       toast.warning(`Your existing ${selectedSubclass} subclass will be kept.`, {
         description: 'This rule will apply the next time you choose a subclass.',
       })
+    }
+    if (key === 'optionalClassFeatures') {
+      const result = reconcileOptionalClassFeatureChoicesCommand(
+        character,
+        character.provenance,
+        { availableClasses: classes, allClasses },
+        checked,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+        variantRules: { ...rules, [key]: checked },
+      })
+      return
     }
     updateRules({ [key]: checked })
   }

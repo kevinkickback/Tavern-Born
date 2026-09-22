@@ -138,6 +138,9 @@ export interface Subclass5e {
   subclassFeatures?: string[] | SubclassFeature[]
   subclassFeatureRefs?: SubclassFeatureReference[]
   levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>
+  normalizedRules?: import('./classRules').NormalizedClassRules
+  optionalfeatureProgression?: OptFeatureProg[]
+  featProgression?: OptFeatureProg[]
   spellcastingAbility?: string
   casterProgression?: string
   isSpellcaster?: boolean
@@ -182,7 +185,7 @@ export interface SubclassFeature {
   [key: string]: unknown
 }
 
-interface SubclassFeatureReference {
+export interface SubclassFeatureReference {
   ref: string
   name: string
   source?: string
@@ -194,9 +197,47 @@ interface SubclassFeatureReference {
   feature?: SubclassFeature
 }
 
+export interface Creature5e {
+  name: string
+  source: string
+  page?: number
+  size?: string[]
+  type?: string | { type?: string; swarmSize?: string; [key: string]: unknown }
+  cr?: string | number | { cr?: string | number; [key: string]: unknown }
+  ac?: unknown[]
+  hp?: { average?: number; formula?: string; special?: string }
+  speed?: Record<string, unknown>
+  str?: number
+  dex?: number
+  con?: number
+  int?: number
+  wis?: number
+  cha?: number
+  alignment?: unknown[]
+  save?: Record<string, unknown>
+  skill?: Record<string, unknown>
+  vulnerable?: unknown[]
+  resist?: unknown[]
+  immune?: unknown[]
+  conditionImmune?: unknown[]
+  senses?: unknown[]
+  passive?: number | string
+  languages?: unknown[]
+  entries?: unknown[]
+  trait?: Array<{ name?: string; entries?: unknown[] }>
+  action?: Array<{ name?: string; entries?: unknown[] }>
+  bonus?: Array<{ name?: string; entries?: unknown[] }>
+  reaction?: Array<{ name?: string; entries?: unknown[] }>
+  legendary?: Array<{ name?: string; entries?: unknown[] }>
+  mythic?: Array<{ name?: string; entries?: unknown[] }>
+  spellcasting?: unknown[]
+  [key: string]: unknown
+}
+
 export interface OptFeatureProg {
   name: string
-  featureType: string[]
+  featureType?: string[]
+  category?: string[]
   progression: number[] | Record<string, number>
 }
 
@@ -232,6 +273,7 @@ export interface GameDataLookups {
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>
   subclassesByKey: Record<string, Subclass5e>
+  creaturesByKey?: Record<string, Creature5e>
   itemLookup: Map<string, Item5e>
   /** Parsed from data/items-base.json → .itemProperty[]. Maps abbreviation → display name. */
   itemPropertyByAbbr: Record<string, string>
@@ -529,6 +571,7 @@ export interface GameData {
   /** Parsed from data/items-base.json → .itemMastery[]. */
   itemMasteries?: ItemMastery5e[]
   classFeatures: ClassFeature[]
+  creatures?: Creature5e[]
   actions: unknown[]
   conditions: unknown[]
   deities: unknown[]

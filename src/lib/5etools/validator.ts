@@ -38,6 +38,7 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
   { name: 'class/index.json', schema: IndexSchema },
   { name: 'backgrounds.json', schema: BackgroundDataSchema },
   { name: 'spells/index.json', schema: IndexSchema },
+  { name: 'bestiary/index.json', schema: IndexSchema, required: false },
   { name: 'generated/gendata-spell-source-lookup.json', schema: GenericDataSchema },
   { name: 'feats.json', schema: FeatDataSchema },
   { name: 'items.json', schema: ItemDataSchema },

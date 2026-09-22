@@ -1,3 +1,4 @@
+import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import type { ClassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
@@ -366,7 +367,16 @@ export function parseClasses(data: unknown): unknown[] {
   const introEntriesMap = new Map<string, unknown[]>()
   const fullNameIntroMap = new Map<string, unknown[]>()
   const levelFeaturesMap = new Map<string, { level: number; features: unknown[] }[]>()
-  const subclassFeatureRecords: unknown[] = asArray(obj.subclassFeature)
+  const rawSubclassFeatureRecords: unknown[] = asArray(obj.subclassFeature)
+  const subclassFeatureRecords: unknown[] = rawSubclassFeatureRecords.map((feature) => {
+    const record = asObject(feature)
+    return Array.isArray(record.entries)
+      ? {
+          ...record,
+          entries: enrichEntriesSubclassRefs(record.entries, rawSubclassFeatureRecords),
+        }
+      : feature
+  })
   for (const scf of subclassFeatureRecords) {
     const scfObj = asObject(scf)
     if (!scfObj.subclassShortName || !scfObj.className || !scfObj.entries) continue
@@ -427,6 +437,20 @@ export function parseClasses(data: unknown): unknown[] {
       entries,
       subclassFeatureRefs,
       levelFeatures,
+      normalizedRules: normalizeSubclassRules(
+        { name: className, source: classSource ?? '' },
+        {
+          name: String(scObj.name ?? scObj.shortName ?? ''),
+          source: String(scObj.source ?? ''),
+          optionalfeatureProgression: Array.isArray(scObj.optionalfeatureProgression)
+            ? (scObj.optionalfeatureProgression as import('@/types/5etools').OptFeatureProg[])
+            : undefined,
+          featProgression: Array.isArray(scObj.featProgression)
+            ? (scObj.featProgression as import('@/types/5etools').OptFeatureProg[])
+            : undefined,
+        },
+        subclassFeatureRefs as unknown as import('@/types/5etools').SubclassFeatureReference[],
+      ),
     })
   }
 
@@ -574,13 +598,21 @@ function resolveInlineSubclassFeatureRef(
     classSource: parts[2] ?? '',
     subclassShortName: parts[3] ?? '',
     subclassSource: parts[4] ?? '',
-    source: parts[4] ?? '',
+    source: parts[6] || parts[4] || '',
   }
   const level = Number.parseInt(parts[5] ?? '', 10)
   if (!Number.isNaN(level)) parsedRef.level = level
   const feature = resolveSubclassFeatureRecord(parsedRef, subclassFeatureRecords)
   if (!feature) return entry
-  return { ...entry, feature }
+  return {
+    ...entry,
+    feature: Array.isArray(feature.entries)
+      ? {
+          ...feature,
+          entries: enrichEntriesSubclassRefs(feature.entries, subclassFeatureRecords),
+        }
+      : feature,
+  }
 }
 
 function enrichEntriesSubclassRefs(

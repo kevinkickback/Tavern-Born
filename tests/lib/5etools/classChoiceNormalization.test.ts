@@ -4,9 +4,10 @@ import { describe, expect, test } from 'vitest'
 import {
   getRequiredChoiceSelectionCount,
   normalizeClassChoices,
+  normalizeSubclassRules,
 } from '@/lib/5etools/classChoiceNormalization'
 import { parseClasses } from '@/lib/5etools/parsers'
-import type { Class5e, ClassFeatureReference } from '@/types/5etools'
+import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 
 const hasConfiguredCorpus = existsSync(join(process.cwd(), 'data', 'class', 'index.json'))
 
@@ -35,7 +36,226 @@ function loadParsedClass(fileName: string, name: string, source = 'XPHB'): Class
   return classData
 }
 
+function subclassFeatureRef(
+  name: string,
+  entries: unknown[],
+  source = 'PHB',
+  variant = false,
+): SubclassFeatureReference {
+  return {
+    ref: `${name}|Ranger|PHB|Beast Master|PHB|3|${source}`,
+    name,
+    source,
+    className: 'Ranger',
+    classSource: 'PHB',
+    subclassShortName: 'Beast Master',
+    subclassSource: 'PHB',
+    level: 3,
+    feature: {
+      name,
+      source,
+      level: 3,
+      entries,
+      ...(variant ? { isClassFeatureVariant: true } : {}),
+    },
+  }
+}
+
 describe('class choice normalization', () => {
+  test('normalizes a classic Beast Master companion as a filtered creature choice', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Beast Master', source: 'PHB' },
+      [
+        subclassFeatureRef("Ranger's Companion", [
+          'Choose a {@filter beast that is no larger than Medium and that has a challenge rating of 1/4 or lower|bestiary|challenge rating=[&0;&1/4]|type=beast|size=f;d;t;s;m|miscellaneous=!swarm}.',
+        ]),
+      ],
+    )
+
+    expect(rules.choiceDiagnostics).toEqual([])
+    expect(rules.choices).toHaveLength(1)
+    expect(rules.choices[0]).toMatchObject({
+      kind: 'creature',
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+        featureName: "Ranger's Companion",
+      },
+      optionFilter: {
+        entityType: 'creature',
+        creatureTypes: ['beast'],
+        sizes: ['f', 'd', 't', 's', 'm'],
+        challengeRatingMaximum: 0.25,
+        excludeSwarms: true,
+      },
+      minimumSelections: 1,
+      maximumSelections: 1,
+    })
+  })
+
+  test('normalizes primal companion stat blocks and preserves replacement metadata', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Beast Master', source: 'PHB' },
+      [
+        subclassFeatureRef(
+          'Primal Companion',
+          [
+            "3rd-level Beast Master variant feature, which replaces the Ranger's Companion feature.",
+            'Choose its stat block—{@creature Beast of the Land|TCE}, {@creature Beast of the Sea|TCE}, or {@creature Beast of the Sky|TCE}.',
+          ],
+          'TCE',
+          true,
+        ),
+      ],
+    )
+
+    expect(rules.choices[0]).toMatchObject({
+      kind: 'creature',
+      featureVariant: { replacesFeatureName: "Ranger's Companion" },
+      options: [
+        { entityType: 'creature', name: 'Beast of the Land', source: 'TCE' },
+        { entityType: 'creature', name: 'Beast of the Sea', source: 'TCE' },
+        { entityType: 'creature', name: 'Beast of the Sky', source: 'TCE' },
+      ],
+    })
+  })
+
+  test('qualifies source-less creature tags with the feature source', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Beast Master', source: 'PHB' },
+      [
+        subclassFeatureRef(
+          'Primal Companion',
+          ['Choose its stat block—{@creature Beast of the Land} or {@creature Beast of the Sea}.'],
+          'TCE',
+        ),
+      ],
+    )
+
+    expect(rules.choices[0]?.options).toEqual([
+      { entityType: 'creature', name: 'Beast of the Land', source: 'TCE' },
+      { entityType: 'creature', name: 'Beast of the Sea', source: 'TCE' },
+    ])
+  })
+
+  test('normalizes nested subclass feature option blocks', () => {
+    const root = subclassFeatureRef('Hunter', [
+      {
+        type: 'refSubclassFeature',
+        subclassFeature: "Hunter's Prey|Ranger|PHB|Hunter|PHB|3",
+        feature: {
+          name: "Hunter's Prey",
+          source: 'PHB',
+          level: 3,
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Colossus Slayer|Ranger|PHB|Hunter|PHB|3',
+                },
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Horde Breaker|Ranger|PHB|Hunter|PHB|3',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ])
+
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Hunter', source: 'PHB' },
+      [root],
+    )
+
+    expect(rules.choiceDiagnostics).toEqual([])
+    expect(rules.choices[0]).toMatchObject({
+      label: "Hunter's Prey",
+      kind: 'subclass-feature',
+      options: [
+        { entityType: 'subclassFeature', name: 'Colossus Slayer', source: 'PHB' },
+        { entityType: 'subclassFeature', name: 'Horde Breaker', source: 'PHB' },
+      ],
+    })
+  })
+
+  test('reports subclass option blocks with an invalid explicit selection count', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Hunter', source: 'PHB' },
+      [
+        subclassFeatureRef('Uncounted Tactic', [
+          {
+            type: 'options',
+            count: 0,
+            entries: [
+              {
+                type: 'refSubclassFeature',
+                subclassFeature: 'First Tactic|Ranger|PHB|Hunter|PHB|3',
+              },
+              {
+                type: 'refSubclassFeature',
+                subclassFeature: 'Second Tactic|Ranger|PHB|Hunter|PHB|3',
+              },
+            ],
+          },
+        ]),
+      ],
+    )
+
+    expect(rules.choices).toEqual([])
+    expect(rules.choiceDiagnostics).toEqual([
+      expect.objectContaining({
+        code: 'invalid-count',
+        subclassName: 'Hunter',
+        featureName: 'Uncounted Tactic',
+      }),
+    ])
+  })
+
+  test('treats count-less subclass option blocks as presentation groups', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Fighter', source: 'PHB' },
+      { name: 'Psi Warrior', source: 'TCE' },
+      [
+        {
+          ...subclassFeatureRef('Psionic Power', [
+            {
+              type: 'options',
+              entries: [
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Protective Field|Fighter|PHB|Psi Warrior|TCE|3',
+                },
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Psionic Strike|Fighter|PHB|Psi Warrior|TCE|3',
+                },
+              ],
+            },
+          ]),
+          className: 'Fighter',
+          subclassShortName: 'Psi Warrior',
+          subclassSource: 'TCE',
+        },
+      ],
+    )
+
+    expect(rules.choices).toEqual([])
+    expect(rules.choiceDiagnostics).toEqual([])
+  })
+
   test('normalizes source-qualified class feature option references', () => {
     const result = normalizeClassChoices({ name: 'Test Class', source: 'XPHB' }, [
       featureRef('Sacred Order', 1, [
@@ -433,6 +653,51 @@ describe('class choice normalization', () => {
           ]),
         )
       }
+    },
+  )
+
+  test.runIf(hasConfiguredCorpus)(
+    'discovers Beast Master companion choices from the configured ranger data',
+    () => {
+      const classicRanger = loadParsedClass('class-ranger.json', 'Ranger', 'PHB')
+      const revisedRanger = loadParsedClass('class-ranger.json', 'Ranger', 'XPHB')
+      const classicBeastMaster = classicRanger.subclasses?.find(
+        (subclass) =>
+          subclass.name === 'Beast Master' &&
+          subclass.source === 'PHB' &&
+          subclass.classSource === 'PHB',
+      )
+      const revisedBeastMaster = revisedRanger.subclasses?.find(
+        (subclass) => subclass.name === 'Beast Master' && subclass.source === 'XPHB',
+      )
+
+      expect(classicBeastMaster?.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "Ranger's Companion",
+            kind: 'creature',
+            optionFilter: expect.objectContaining({ challengeRatingMaximum: 0.25 }),
+          }),
+          expect.objectContaining({
+            label: 'Primal Companion',
+            kind: 'creature',
+            featureVariant: { replacesFeatureName: "Ranger's Companion" },
+          }),
+        ]),
+      )
+      expect(revisedBeastMaster?.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Primal Companion',
+            kind: 'creature',
+            options: expect.arrayContaining([
+              expect.objectContaining({ name: 'Beast of the Land', source: 'XPHB' }),
+              expect.objectContaining({ name: 'Beast of the Sea', source: 'XPHB' }),
+              expect.objectContaining({ name: 'Beast of the Sky', source: 'XPHB' }),
+            ]),
+          }),
+        ]),
+      )
     },
   )
 

@@ -20,6 +20,7 @@ import {
   parseClassFluff,
   parseClassFluffSummaries,
   parseConditions,
+  parseCreatures,
   parseCultsBoons,
   parseDeities,
   parseFeats,
@@ -41,6 +42,7 @@ import {
   parseVariantRules,
 } from './parsers/index'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
+import { CreatureDataSchema } from './schemas'
 
 export { DATA_REQUEST_TIMEOUT_MS } from './resourceReader'
 
@@ -104,6 +106,7 @@ export class FiveEToolsDataLoader {
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
+      { key: 'bestiaryIndex', file: 'bestiary/index.json', required: false },
       {
         key: 'spellSourceLookup',
         file: 'generated/gendata-spell-source-lookup.json',
@@ -141,6 +144,7 @@ export class FiveEToolsDataLoader {
       itemTypes: [],
       itemMasteries: [],
       classFeatures: [],
+      creatures: [],
       actions: [],
       conditions: [],
       deities: [],
@@ -160,6 +164,7 @@ export class FiveEToolsDataLoader {
     let adventuresData: unknown = null
     let classIndexData: unknown = null
     let spellIndexData: unknown = null
+    let bestiaryIndexData: unknown = null
     let spellSourceLookupData: unknown = null
     let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
@@ -186,6 +191,9 @@ export class FiveEToolsDataLoader {
             break
           case 'spellIndex':
             spellIndexData = data
+            break
+          case 'bestiaryIndex':
+            bestiaryIndexData = data
             break
           case 'spellSourceLookup':
             spellSourceLookupData = data
@@ -286,8 +294,12 @@ export class FiveEToolsDataLoader {
         }
       } catch (error) {
         if (isAbortError(error)) throw error
-        console.warn(`Failed to load ${resource.file}:`, error)
-        options?.onResourceFailure?.(resource.file, { required: resource.required !== false })
+        const isUndistributedBundledBestiary =
+          this.sourceType === 'bundled' && resource.key === 'bestiaryIndex'
+        if (!isUndistributedBundledBestiary) {
+          console.warn(`Failed to load ${resource.file}:`, error)
+          options?.onResourceFailure?.(resource.file, { required: resource.required !== false })
+        }
       } finally {
         completedResources += 1
         if (options?.onProgress) {
@@ -334,6 +346,10 @@ export class FiveEToolsDataLoader {
 
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
+    }
+
+    if (bestiaryIndexData) {
+      await this.loadCreatureData(bestiaryIndexData, gameData, options)
     }
 
     const sourceCatalog = buildSourcesList(
@@ -507,6 +523,33 @@ export class FiveEToolsDataLoader {
     })
 
     gameData.spells = allSpells
+  }
+
+  private async loadCreatureData(
+    indexData: unknown,
+    gameData: GameData,
+    options?: DataLoaderOptions,
+  ): Promise<void> {
+    const creatureFiles = this.extractIndexFiles(indexData)
+    const results = await mapWithConcurrency(
+      creatureFiles,
+      DATA_FETCH_CONCURRENCY,
+      async (creatureFile) => {
+        try {
+          const data = CreatureDataSchema.parse(
+            await this.loadResource(`bestiary/${creatureFile.file}`, options?.signal),
+          )
+          return this.filterByIndexedSource(parseCreatures(data), creatureFile.source)
+        } catch (error) {
+          if (isAbortError(error)) throw error
+          console.warn(`Failed to load bestiary file ${creatureFile.file}:`, error)
+          options?.onResourceFailure?.(`bestiary/${creatureFile.file}`, { required: true })
+          return [] as NonNullable<GameData['creatures']>
+        }
+      },
+    )
+
+    gameData.creatures = results.flat()
   }
 
   private extractIndexFiles(
