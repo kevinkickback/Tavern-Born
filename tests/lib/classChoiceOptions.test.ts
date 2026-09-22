@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import {
+  collectSubclassFeatures,
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import type { Subclass5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharacterChoice {
@@ -40,6 +42,28 @@ const emptyCatalogs = {
 }
 
 describe('class choice option resolution', () => {
+  test('collects direct subclass features and their embedded feature references', () => {
+    const nested = { name: 'Nested Ward', source: 'HB', level: 3 }
+    const direct = {
+      name: 'Direct Ward',
+      source: 'HB',
+      level: 3,
+      entries: [{ type: 'refSubclassFeature', feature: nested }],
+    }
+    const subclass = {
+      name: 'School of Tests',
+      shortName: 'Tests',
+      source: 'HB',
+      className: 'Wizard',
+      subclassFeatures: [direct],
+    } satisfies Subclass5e
+
+    expect(collectSubclassFeatures(subclass).map((feature) => feature.name)).toEqual([
+      'Direct Ward',
+      'Nested Ward',
+    ])
+  })
+
   test('filters eligible Beast Master companions from parsed creature traits', () => {
     const result = resolveClassChoiceOptions(
       choice({

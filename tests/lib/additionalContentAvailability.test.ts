@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
@@ -22,6 +23,28 @@ function makeIncludedSrdData() {
 }
 
 describe('additional content availability', () => {
+  test('indexes direct subclass feature objects', () => {
+    const gameData = makeGameDataFixture({
+      classes: [
+        makeClassFixture({
+          subclasses: [
+            {
+              name: 'School of Tests',
+              shortName: 'Tests',
+              source: 'HB',
+              className: 'Wizard',
+              subclassFeatures: [{ name: 'Direct Ward', source: 'HB', level: 3 }],
+            },
+          ],
+        }),
+      ],
+    })
+
+    expect(createGameDataAvailabilityIndex(gameData).subclassFeatures).toContain(
+      getEntityLookupKey('Direct Ward', 'HB'),
+    )
+  })
+
   test('accepts source-qualified choices that are present in the Included SRD catalog', () => {
     const character = makeCharacterFixture({
       feats: [{ id: 'grappler', name: 'Grappler', source: 'PHB', description: 'An SRD feat.' }],

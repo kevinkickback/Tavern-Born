@@ -244,10 +244,29 @@ describe('5etools/filters', () => {
                 name: 'Allowed Tactic',
                 source: 'PHB',
                 level: 2,
-                entries: optionBlock(
-                  'subclassFeature',
-                  'Allowed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
-                ),
+                entries: [
+                  {
+                    type: 'options',
+                    count: 1,
+                    entries: [
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Allowed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
+                        feature: { name: 'Allowed Ward', source: 'PHB', level: 2 },
+                      },
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Forbidden Ward|Wizard|PHB|Test Magic|PHB|2|XGE',
+                        feature: { name: 'Forbidden Ward', source: 'XGE', level: 2 },
+                      },
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Suppressed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
+                        feature: { name: 'Suppressed Ward', source: 'PHB', level: 2 },
+                      },
+                    ],
+                  },
+                ],
               },
             },
             {
@@ -274,7 +293,10 @@ describe('5etools/filters', () => {
       ],
     })
 
-    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+    const [filtered] = DataFilter.filterClasses([wizard], {
+      sources: ['PHB'],
+      suppressedKeys: new Set(['Suppressed Ward|PHB']),
+    })
 
     expect(filtered.normalizedRules?.choices.map((choice) => choice.label)).toEqual([
       'Allowed Training',
@@ -282,6 +304,9 @@ describe('5etools/filters', () => {
     expect(filtered.subclasses?.[0].normalizedRules?.choices.map((choice) => choice.label)).toEqual(
       ['Allowed Tactic'],
     )
+    expect(filtered.subclasses?.[0].normalizedRules?.choices[0]?.options).toEqual([
+      expect.objectContaining({ name: 'Allowed Ward', source: 'PHB' }),
+    ])
   })
 
   test('filterSpells applies class, concentration, and component filters', () => {

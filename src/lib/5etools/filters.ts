@@ -9,6 +9,8 @@ import type {
   Language5e,
   Race5e,
   Spell5e,
+  Subclass5e,
+  SubclassFeature,
 } from '@/types/5etools'
 
 export interface RaceFilters {
@@ -82,6 +84,99 @@ const isSuppressed = (
     return false
   }
   return suppressedKeys.has(`${name}|${source}`)
+}
+
+type SubclassFeatureInclusion = (name: string | undefined, source: string) => boolean
+
+const removedNestedSubclassFeature = Symbol('removedNestedSubclassFeature')
+
+function subclassFeatureIdentity(
+  feature: string | SubclassFeature,
+  fallbackSource: string,
+): { name: string | undefined; source: string } {
+  if (typeof feature !== 'string') {
+    return { name: feature.name, source: feature.source || fallbackSource }
+  }
+  const parts = feature.split('|')
+  return { name: parts[0], source: parts[6] || fallbackSource }
+}
+
+function pruneNestedSubclassFeatureRecords(
+  value: unknown,
+  include: SubclassFeatureInclusion,
+  fallbackSource: string,
+): unknown | typeof removedNestedSubclassFeature {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      const filtered = pruneNestedSubclassFeatureRecords(entry, include, fallbackSource)
+      return filtered === removedNestedSubclassFeature ? [] : [filtered]
+    })
+  }
+  if (!value || typeof value !== 'object') return value
+
+  const record = value as Record<string, unknown>
+  let nestedSource = fallbackSource
+  if (record.type === 'refSubclassFeature') {
+    const parts =
+      typeof record.subclassFeature === 'string' ? record.subclassFeature.split('|') : []
+    const embeddedFeature =
+      record.feature && typeof record.feature === 'object'
+        ? (record.feature as Record<string, unknown>)
+        : undefined
+    const name =
+      parts[0] || (typeof embeddedFeature?.name === 'string' ? embeddedFeature.name : undefined)
+    nestedSource =
+      parts[6] ||
+      (typeof embeddedFeature?.source === 'string' ? embeddedFeature.source : fallbackSource)
+    if (!include(name, nestedSource)) return removedNestedSubclassFeature
+  }
+
+  const filteredEntries = Object.entries(record).flatMap(([key, entry]) => {
+    const filtered = pruneNestedSubclassFeatureRecords(entry, include, nestedSource)
+    return filtered === removedNestedSubclassFeature ? [] : [[key, filtered] as const]
+  })
+  return Object.fromEntries(filteredEntries)
+}
+
+function pruneNestedSubclassFeatures(
+  feature: SubclassFeature,
+  include: SubclassFeatureInclusion,
+  fallbackSource: string,
+): SubclassFeature {
+  if (feature.entries === undefined) return feature
+  const entries = pruneNestedSubclassFeatureRecords(feature.entries, include, fallbackSource)
+  return {
+    ...feature,
+    entries: entries === removedNestedSubclassFeature ? [] : (entries as unknown[]),
+  }
+}
+
+function filterSubclassContent(
+  subclass: Subclass5e,
+  include: SubclassFeatureInclusion,
+): Pick<Subclass5e, 'subclassFeatures' | 'subclassFeatureRefs' | 'levelFeatures'> {
+  const prune = (feature: SubclassFeature) =>
+    pruneNestedSubclassFeatures(feature, include, feature.source || subclass.source)
+  const subclassFeatures = subclass.subclassFeatures?.flatMap((feature) => {
+    const identity = subclassFeatureIdentity(feature, subclass.source)
+    if (!include(identity.name, identity.source)) return []
+    return [typeof feature === 'string' ? feature : prune(feature)]
+  }) as typeof subclass.subclassFeatures
+  const subclassFeatureRefs = subclass.subclassFeatureRefs?.flatMap((reference) => {
+    const source = reference.source || reference.feature?.source || subclass.source
+    if (!include(reference.name, source)) return []
+    return [reference.feature ? { ...reference, feature: prune(reference.feature) } : reference]
+  })
+  const levelFeatures = subclass.levelFeatures
+    ?.map((group) => ({
+      ...group,
+      features: group.features.flatMap((feature) => {
+        const identity = subclassFeatureIdentity(feature, subclass.source)
+        return include(identity.name, identity.source) ? [prune(feature)] : []
+      }),
+    }))
+    .filter((group) => group.features.length > 0)
+  return { subclassFeatures, subclassFeatureRefs, levelFeatures }
 }
 
 function rebuildFilteredClassRules(classData: Class5e): Class5e {
@@ -225,30 +320,9 @@ export class DataFilter {
             const isNestedSourceAllowed = (source: string) =>
               sourcesUpper.has(source.toUpperCase()) ||
               (isExplicitlyAllowed && source.toUpperCase() === subclass.source.toUpperCase())
-            const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
-              const source =
-                typeof feature === 'string'
-                  ? feature.split('|')[6] || subclass.source
-                  : feature.source || subclass.source
-              return isNestedSourceAllowed(source)
-            }) as typeof subclass.subclassFeatures
-            const levelFeatures = subclass.levelFeatures
-              ?.map((group) => ({
-                ...group,
-                features: group.features.filter((feature) =>
-                  isNestedSourceAllowed(feature.source || subclass.source),
-                ),
-              }))
-              .filter((group) => group.features.length > 0)
             return {
               ...subclass,
-              subclassFeatures,
-              subclassFeatureRefs: subclass.subclassFeatureRefs?.filter((reference) =>
-                isNestedSourceAllowed(
-                  reference.source || reference.feature?.source || subclass.source,
-                ),
-              ),
-              levelFeatures,
+              ...filterSubclassContent(subclass, (_name, source) => isNestedSourceAllowed(source)),
             }
           }),
       }))
@@ -279,38 +353,12 @@ export class DataFilter {
               (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
             )
             .map((subclass) => {
-              const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
-                const [name, source] =
-                  typeof feature === 'string'
-                    ? [feature.split('|')[0], feature.split('|')[6]]
-                    : [feature.name, feature.source]
-                return !isSuppressed(name, source || subclass.source, filters.suppressedKeys)
-              }) as typeof subclass.subclassFeatures
-              const levelFeatures = subclass.levelFeatures
-                ?.map((group) => ({
-                  ...group,
-                  features: group.features.filter(
-                    (feature) =>
-                      !isSuppressed(
-                        feature.name,
-                        feature.source || subclass.source,
-                        filters.suppressedKeys,
-                      ),
-                  ),
-                }))
-                .filter((group) => group.features.length > 0)
               return {
                 ...subclass,
-                subclassFeatures,
-                subclassFeatureRefs: subclass.subclassFeatureRefs?.filter(
-                  (reference) =>
-                    !isSuppressed(
-                      reference.name,
-                      reference.source || reference.feature?.source || subclass.source,
-                      filters.suppressedKeys,
-                    ),
+                ...filterSubclassContent(
+                  subclass,
+                  (name, source) => !isSuppressed(name, source, filters.suppressedKeys),
                 ),
-                levelFeatures,
               }
             }),
         }))

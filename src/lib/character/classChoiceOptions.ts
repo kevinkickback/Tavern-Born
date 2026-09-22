@@ -665,6 +665,9 @@ export function collectSubclassFeatures(subclass: Subclass5e | undefined): Subcl
     }
     walk(feature.entries)
   }
+  for (const feature of subclass?.subclassFeatures ?? []) {
+    if (typeof feature === 'object') visit(feature)
+  }
   for (const reference of subclass?.subclassFeatureRefs ?? []) visit(reference.feature)
   for (const group of subclass?.levelFeatures ?? []) group.features.forEach(visit)
   return [...features.values()]
