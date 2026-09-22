@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { useRawRecursiveLookup, useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Item5e, Subclass5e } from '@/types/5etools'
+import type { Creature5e, Item5e, Subclass5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -117,5 +117,20 @@ describe('useRecursiveLookup', () => {
     const { result } = renderHook(() => useRawRecursiveLookup())
 
     expect(result.current.items.get('global relic|dmg')).toBe(rawItem)
+  })
+
+  test('includes creatures in the raw Compendium lookup', () => {
+    const wolf = {
+      name: 'Wolf',
+      source: 'MM',
+      entries: ['Wolf details.'],
+    } as Creature5e
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({ creatures: [wolf] }),
+    })
+
+    const { result } = renderHook(() => useRawRecursiveLookup())
+
+    expect(result.current.creatures.get('wolf|mm')).toBe(wolf)
   })
 })

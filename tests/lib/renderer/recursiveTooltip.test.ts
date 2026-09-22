@@ -4,7 +4,7 @@ import {
   getRecursiveTooltipData,
   markRecursiveTooltipReferences,
 } from '@/lib/renderer/recursiveTooltip'
-import type { Item5e, Spell5e } from '@/types/5etools'
+import type { Creature5e, Item5e, Spell5e } from '@/types/5etools'
 
 describe('buildRecursiveLookup', () => {
   test('builds source-qualified and deterministic name-only maps from explicit collections', () => {
@@ -51,6 +51,27 @@ describe('buildRecursiveLookup', () => {
         'Reward: Blessing of Health',
       ).html,
     ).toContain('Reward details.')
+  })
+
+  test('resolves creature references from rendered stat blocks', () => {
+    const wolf = {
+      name: 'Wolf',
+      source: 'MM',
+      entries: ['Wolf details.'],
+    } as Creature5e
+    const lookup = buildRecursiveLookup({ creatures: [wolf] })
+
+    expect(
+      getRecursiveTooltipData(
+        { kind: 'creature', name: 'Wolf', source: 'MM' },
+        lookup,
+        'Creature: Wolf',
+      ),
+    ).toMatchObject({
+      title: 'Wolf',
+      subtitle: 'Creature • MM',
+      html: expect.stringContaining('Wolf details.'),
+    })
   })
 
   test('resolves colliding class features and nested subclass features by their parent scope', () => {
