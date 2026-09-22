@@ -263,6 +263,34 @@ describe('Content Filtering (allowedSources)', () => {
         'Current',
       ])
     })
+
+    test('preferNewerPrintings suppresses reprinted creatures', () => {
+      const character = makeCharacterFixture({
+        allowedSources: ['VGM', 'TCE'],
+        variantRules: { preferNewerPrintings: true },
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          creatures: [
+            {
+              name: 'Beastling',
+              source: 'VGM',
+              reprintedAs: ['Beastling|TCE'],
+              type: 'beast',
+            },
+            { name: 'Beastling', source: 'TCE', type: 'beast' },
+          ],
+          sources: [],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(
+        result.current.creatures.map((creature) => `${creature.name}|${creature.source}`),
+      ).toEqual(['Beastling|TCE'])
+    })
   })
 
   describe('Character with expanded allowedSources', () => {

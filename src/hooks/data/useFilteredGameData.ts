@@ -164,9 +164,12 @@ export function useFilteredGameDataParams(params: FilterParams) {
       creatures: creatures.filter((creature) => {
         const source = creature.source.toUpperCase()
         const implicitMonsterSource = originSystem === '2024' ? 'XMM' : 'MM'
-        return (
+        const sourceIsAvailable =
           source === implicitMonsterSource ||
           compatibleAllowedSources.some((allowed) => allowed.toUpperCase() === source)
+        return (
+          sourceIsAvailable &&
+          !(suppressedKeys?.has(`${creature.name}|${creature.source}`) ?? false)
         )
       }),
       optionalfeatures: optionalfeatures.filter((of: unknown) => {
