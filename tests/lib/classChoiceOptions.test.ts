@@ -3,6 +3,7 @@ import {
   collectSubclassFeatures,
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
+  getCharacterClassFeatureVariantChoices,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -507,6 +508,7 @@ describe('class choice option resolution', () => {
 
     expect(getCharacterClassChoices({}, subclass, false)).toEqual([original])
     expect(getCharacterClassChoices({}, subclass, true)).toEqual([variant])
+    expect(getCharacterClassFeatureVariantChoices({}, subclass)).toEqual([original, variant])
   })
 
   test('switches a class replacement choice with the optional-feature toggle', () => {
@@ -522,11 +524,36 @@ describe('class choice option resolution', () => {
       featureVariant: { replacesFeatureName: 'Original Feature' },
     })
     const classData = {
-      normalizedRules: { choices: [original, variant] },
+      normalizedRules: {
+        choices: [
+          original,
+          variant,
+          choice({
+            id: 'unrelated',
+            label: 'Unrelated Feature',
+            owner: {
+              type: 'class',
+              name: 'Any',
+              source: 'PHB',
+              featureName: 'Unrelated Feature',
+            },
+          }),
+        ],
+      },
     }
 
-    expect(getCharacterClassChoices(classData, undefined, false)).toEqual([original])
-    expect(getCharacterClassChoices(classData, undefined, true)).toEqual([variant])
+    expect(getCharacterClassChoices(classData, undefined, false)).toEqual([
+      original,
+      expect.objectContaining({ id: 'unrelated' }),
+    ])
+    expect(getCharacterClassChoices(classData, undefined, true)).toEqual([
+      expect.objectContaining({ id: 'unrelated' }),
+      variant,
+    ])
+    expect(getCharacterClassFeatureVariantChoices(classData, undefined)).toEqual([
+      original,
+      variant,
+    ])
   })
 
   test('switches replacement diagnostics with the optional-feature toggle', () => {

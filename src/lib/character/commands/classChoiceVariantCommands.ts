@@ -1,7 +1,7 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
-  getAllCharacterClassChoices,
   getCharacterClassChoices,
+  getCharacterClassFeatureVariantChoices,
 } from '@/lib/character/classChoiceOptions'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Class5e } from '@/types/5etools'
@@ -20,26 +20,42 @@ function uniqueChoices(choices: readonly NormalizedCharacterChoice[]): Normalize
 /**
  * Activates the original or replacement side of optional class-feature choices atomically.
  * Dormant selections are retained so toggling the rule back restores the prior choice, while
- * features and feat mirrors are rebuilt from active selections only.
+ * features and feat mirrors are rebuilt from active selections only. The complete catalog scopes
+ * persisted replacement families; the source-filtered catalog determines which side may activate.
  */
 export function reconcileOptionalClassFeatureChoicesCommand(
   character: Character,
   ledger: ProvenanceLedger,
-  classes: readonly Class5e[],
+  catalogs: {
+    availableClasses: readonly Class5e[]
+    allClasses: readonly Class5e[]
+  },
   includeVariants: boolean,
 ): CharacterCommandResult {
   const allChoices: NormalizedCharacterChoice[] = []
   const activeChoiceIds = new Set<string>()
 
   for (const entry of character.classProgression) {
-    const classData = classes.find(
+    const scopedClassData = catalogs.allClasses.find(
       (candidate) =>
         candidate.name === entry.name && (candidate.source ?? '') === (entry.source ?? ''),
     )
-    if (!classData) continue
-    const subclass = getSelectedSubclassData(classData, entry)
-    allChoices.push(...getAllCharacterClassChoices(classData, subclass))
-    for (const choice of getCharacterClassChoices(classData, subclass, includeVariants)) {
+    if (scopedClassData) {
+      const scopedSubclass = getSelectedSubclassData(scopedClassData, entry)
+      allChoices.push(...getCharacterClassFeatureVariantChoices(scopedClassData, scopedSubclass))
+    }
+
+    const availableClassData = catalogs.availableClasses.find(
+      (candidate) =>
+        candidate.name === entry.name && (candidate.source ?? '') === (entry.source ?? ''),
+    )
+    if (!availableClassData) continue
+    const availableSubclass = getSelectedSubclassData(availableClassData, entry)
+    for (const choice of getCharacterClassChoices(
+      availableClassData,
+      availableSubclass,
+      includeVariants,
+    )) {
       activeChoiceIds.add(choice.id)
     }
   }

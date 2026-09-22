@@ -582,13 +582,40 @@ export function getStandaloneClassChoices(classData: {
   return classData.normalizedRules?.choices ?? []
 }
 
-export function getAllCharacterClassChoices(
+function getAllCharacterClassChoices(
   classData: { normalizedRules?: { choices: NormalizedCharacterChoice[] } },
   subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
 ): NormalizedCharacterChoice[] {
   return [
     ...getStandaloneClassChoices(classData),
     ...(subclass?.normalizedRules?.choices ?? []),
+  ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
+}
+
+function getFeatureVariantFamilyChoices(
+  choices: readonly NormalizedCharacterChoice[],
+): NormalizedCharacterChoice[] {
+  const replacedFeatureNames = new Set(
+    choices.flatMap((choice) => {
+      const name = normalized(choice.featureVariant?.replacesFeatureName)
+      return name ? [name] : []
+    }),
+  )
+  return choices.filter(
+    (choice) =>
+      choice.featureVariant !== undefined ||
+      replacedFeatureNames.has(normalized(choice.owner.featureName)),
+  )
+}
+
+/** Returns only replacement choices and the original choices they supersede. */
+export function getCharacterClassFeatureVariantChoices(
+  classData: { normalizedRules?: { choices: NormalizedCharacterChoice[] } },
+  subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
+): NormalizedCharacterChoice[] {
+  return [
+    ...getFeatureVariantFamilyChoices(getStandaloneClassChoices(classData)),
+    ...getFeatureVariantFamilyChoices(subclass?.normalizedRules?.choices ?? []),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 

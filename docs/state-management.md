@@ -92,6 +92,8 @@ multiclass math. There are no top-level class mirrors.
 - Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
   retracts both the normalized selection and its materialized feat state.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
+- Optional-feature variant reconciliation scopes persisted choices against the complete loaded class
+  catalog, but activates only choices that remain available after character source filtering.
 - Level-down/class removal retracts choices, grants, ASIs, spells, and replacement events owned by
   removed levels.
 - Subclass changes remove selections owned by the previous subclass while preserving choices owned

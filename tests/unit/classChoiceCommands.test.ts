@@ -259,7 +259,7 @@ describe('class choice commands', () => {
     expect(replacement.provenanceUpdate.features['scholar training']).toHaveLength(1)
   })
 
-  test('switches replacement grants atomically and restores dormant selections', () => {
+  test('switches replacement grants atomically across toggles and source filtering', () => {
     const originalFeature = choice({
       id: 'original-feature',
       label: 'Original Training',
@@ -312,6 +312,18 @@ describe('class choice commands', () => {
       optionFilter: undefined,
       featureVariant: { replacesFeatureName: 'Original Talent' },
     })
+    const unrelatedFeature = choice({
+      id: 'unrelated-feature',
+      label: 'Unrelated Training',
+      owner: {
+        type: 'class',
+        name: 'Test Class',
+        source: 'TEST',
+        featureName: 'Unrelated Training',
+      },
+      options: [{ entityType: 'classFeature', name: 'Field Training', source: 'OTHER' }],
+      optionFilter: undefined,
+    })
     const classData = {
       name: 'Test Class',
       source: 'TEST',
@@ -320,7 +332,7 @@ describe('class choice commands', () => {
         resources: [],
         asiLevels: [],
         ritualCasting: false,
-        choices: [originalFeature, variantFeature, originalFeat, variantFeat],
+        choices: [originalFeature, variantFeature, originalFeat, variantFeat, unrelatedFeature],
         choiceDiagnostics: [],
       },
     } as Class5e
@@ -334,6 +346,7 @@ describe('class choice commands', () => {
       [variantFeature, variantFeature.options],
       [originalFeat, originalFeat.options],
       [variantFeat, variantFeat.options],
+      [unrelatedFeature, unrelatedFeature.options],
     ] as const) {
       const applied = applyClassChoiceSelectionWithGrantsCommand(
         current,
@@ -347,7 +360,7 @@ describe('class choice commands', () => {
     const enabled = reconcileOptionalClassFeatureChoicesCommand(
       current,
       current.provenance,
-      [classData],
+      { availableClasses: [classData], allClasses: [classData] },
       true,
     )
     const enabledCharacter = {
@@ -356,7 +369,10 @@ describe('class choice commands', () => {
       provenance: enabled.provenanceUpdate,
     }
 
-    expect(enabledCharacter.features.map((feature) => feature.name)).toEqual(['Scholar Training'])
+    expect(enabledCharacter.features.map((feature) => feature.name)).toEqual([
+      'Scholar Training',
+      'Field Training',
+    ])
     expect(
       enabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
     ).toEqual(['Lucky'])
@@ -372,11 +388,19 @@ describe('class choice commands', () => {
     ).toBeUndefined()
     expect(enabled.provenanceUpdate.features['guard training']).toBeUndefined()
     expect(enabled.provenanceUpdate.feats.alert).toBeUndefined()
+    expect(enabled.provenanceUpdate.features['field training']).toHaveLength(1)
 
+    const sourceFilteredClassData = {
+      ...classData,
+      normalizedRules: {
+        ...classData.normalizedRules,
+        choices: [originalFeature, originalFeat],
+      },
+    } as Class5e
     const disabled = reconcileOptionalClassFeatureChoicesCommand(
       enabledCharacter,
       enabledCharacter.provenance,
-      [classData],
+      { availableClasses: [sourceFilteredClassData], allClasses: [classData] },
       false,
     )
     const disabledCharacter = {
@@ -385,7 +409,10 @@ describe('class choice commands', () => {
       provenance: disabled.provenanceUpdate,
     }
 
-    expect(disabledCharacter.features.map((feature) => feature.name)).toEqual(['Guard Training'])
+    expect(disabledCharacter.features.map((feature) => feature.name)).toEqual([
+      'Guard Training',
+      'Field Training',
+    ])
     expect(
       disabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
     ).toEqual(['Alert'])
@@ -401,6 +428,62 @@ describe('class choice commands', () => {
     ).toBe(true)
     expect(disabled.provenanceUpdate.features['scholar training']).toBeUndefined()
     expect(disabled.provenanceUpdate.feats.lucky).toBeUndefined()
+    expect(
+      disabledCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === unrelatedFeature.id,
+      )?.inactive,
+    ).toBeUndefined()
+    expect(disabled.provenanceUpdate.features['field training']).toHaveLength(1)
+
+    const enabledWithoutVariant = reconcileOptionalClassFeatureChoicesCommand(
+      disabledCharacter,
+      disabledCharacter.provenance,
+      { availableClasses: [sourceFilteredClassData], allClasses: [classData] },
+      true,
+    )
+    const enabledWithoutVariantCharacter = {
+      ...disabledCharacter,
+      ...enabledWithoutVariant.characterPatch,
+      provenance: enabledWithoutVariant.provenanceUpdate,
+    }
+
+    expect(enabledWithoutVariantCharacter.features.map((feature) => feature.name)).toEqual([
+      'Guard Training',
+      'Field Training',
+    ])
+    expect(
+      enabledWithoutVariantCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === variantFeature.id,
+      )?.inactive,
+    ).toBe(true)
+    expect(enabledWithoutVariant.provenanceUpdate.features['scholar training']).toBeUndefined()
+
+    const restored = reconcileOptionalClassFeatureChoicesCommand(
+      enabledWithoutVariantCharacter,
+      enabledWithoutVariantCharacter.provenance,
+      { availableClasses: [classData], allClasses: [classData] },
+      true,
+    )
+    const restoredCharacter = {
+      ...enabledWithoutVariantCharacter,
+      ...restored.characterPatch,
+      provenance: restored.provenanceUpdate,
+    }
+
+    expect(restoredCharacter.features.map((feature) => feature.name)).toEqual([
+      'Scholar Training',
+      'Field Training',
+    ])
+    expect(
+      restoredCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === originalFeature.id,
+      )?.inactive,
+    ).toBe(true)
+    expect(
+      restoredCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === variantFeature.id,
+      )?.inactive,
+    ).toBeUndefined()
   })
 
   test('keeps item and feat choices source-qualified without inventing domain effects', () => {

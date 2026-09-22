@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
@@ -116,6 +117,7 @@ export function RulesPage() {
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
   const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
+  const allClasses = useClasses()
   const contentAvailability = getVariantRuleContentAvailability({
     classes,
     classFeatures,
@@ -166,7 +168,7 @@ export function RulesPage() {
       const result = reconcileOptionalClassFeatureChoicesCommand(
         character,
         character.provenance,
-        classes,
+        { availableClasses: classes, allClasses },
         checked,
       )
       updateCharacter(character.id, {
