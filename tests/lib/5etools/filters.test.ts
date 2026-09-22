@@ -345,6 +345,57 @@ describe('5etools/filters', () => {
     expect(filtered.normalizedRules).toEqual(precomputedRules)
   })
 
+  test('filterClasses rebuilds subclass rules from filtered direct feature objects', () => {
+    const directChoiceFeature = (name: string, source: string, option: string) => ({
+      name,
+      source,
+      level: 2,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [
+            {
+              type: 'refSubclassFeature',
+              subclassFeature: `${option}|Wizard|PHB|Tests|PHB|2|${source}`,
+            },
+          ],
+        },
+      ],
+    })
+    const wizard = makeClassFixture({
+      subclasses: [
+        {
+          name: 'School of Tests',
+          shortName: 'Tests',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: [
+            directChoiceFeature('Allowed Direct Choice', 'PHB', 'Allowed Ward'),
+            directChoiceFeature('Forbidden Direct Choice', 'XGE', 'Forbidden Ward'),
+          ],
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+
+    expect(filtered.subclasses?.[0].normalizedRules?.choices).toEqual([
+      expect.objectContaining({
+        label: 'Allowed Direct Choice',
+        options: [expect.objectContaining({ name: 'Allowed Ward', source: 'PHB' })],
+      }),
+    ])
+  })
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({

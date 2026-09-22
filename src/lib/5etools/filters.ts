@@ -4,6 +4,8 @@ import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
   Background5e,
   Class5e,
+  ClassFeature,
+  ClassFeatureReference,
   Feat5e,
   Item5e,
   Language5e,
@@ -11,6 +13,7 @@ import type {
   Spell5e,
   Subclass5e,
   SubclassFeature,
+  SubclassFeatureReference,
 } from '@/types/5etools'
 
 export interface RaceFilters {
@@ -179,24 +182,108 @@ function filterSubclassContent(
   return { subclassFeatures, subclassFeatureRefs, levelFeatures }
 }
 
+function directClassFeatureReferences(classData: Class5e): ClassFeatureReference[] {
+  return (classData.classFeatures ?? []).flatMap((feature) => {
+    if (typeof feature === 'string') return []
+    const typedFeature = feature as ClassFeature
+    const level = typedFeature.level
+    return [
+      {
+        ref: `${typedFeature.name}|${typedFeature.className || classData.name}|${typedFeature.classSource || classData.source}|${level ?? ''}|${typedFeature.source || classData.source}`,
+        name: typedFeature.name,
+        source: typedFeature.source || classData.source,
+        className: typedFeature.className || classData.name,
+        classSource: typedFeature.classSource || classData.source,
+        level,
+        feature: typedFeature,
+      },
+    ]
+  })
+}
+
+function directSubclassFeatureReferences(
+  classData: Class5e,
+  subclass: Subclass5e,
+): SubclassFeatureReference[] {
+  const features = new Map<string, { feature: SubclassFeature; level?: number }>()
+  const add = (feature: SubclassFeature, fallbackLevel?: number) => {
+    const level = feature.level ?? fallbackLevel
+    const key = `${feature.name}|${feature.source}|${level ?? ''}`
+    if (!features.has(key)) features.set(key, { feature, level })
+  }
+  for (const feature of subclass.subclassFeatures ?? []) {
+    if (typeof feature === 'object') add(feature)
+  }
+  for (const group of subclass.levelFeatures ?? []) {
+    for (const feature of group.features) add(feature, group.level)
+  }
+  return [...features.values()].map(({ feature, level }) => {
+    const className = feature.className || subclass.className || classData.name
+    const classSource = feature.classSource || subclass.classSource || classData.source
+    const subclassShortName = feature.subclassShortName || subclass.shortName
+    const subclassSource = feature.subclassSource || subclass.source
+    return {
+      ref: `${feature.name}|${className}|${classSource}|${subclassShortName}|${subclassSource}|${level ?? ''}|${feature.source || subclass.source}`,
+      name: feature.name,
+      source: feature.source || subclass.source,
+      className,
+      classSource,
+      subclassShortName,
+      subclassSource,
+      level,
+      feature,
+    }
+  })
+}
+
 function rebuildFilteredClassRules(classData: Class5e, originalClassData: Class5e): Class5e {
   const subclasses = classData.subclasses?.map((subclass) => {
     const originalSubclass = originalClassData.subclasses?.find(
       (candidate) => candidate.name === subclass.name && candidate.source === subclass.source,
     )
-    const shouldRebuild = (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0
+    const filteredDirectRefs = directSubclassFeatureReferences(classData, subclass)
+    const originalDirectRefs = originalSubclass
+      ? directSubclassFeatureReferences(originalClassData, originalSubclass)
+      : []
+    const directContentWasFiltered =
+      (originalSubclass?.subclassFeatures?.length ?? 0) !==
+        (subclass.subclassFeatures?.length ?? 0) ||
+      (originalSubclass?.levelFeatures?.reduce(
+        (total, group) => total + group.features.length,
+        0,
+      ) ?? 0) !==
+        (subclass.levelFeatures?.reduce((total, group) => total + group.features.length, 0) ?? 0)
+    const shouldRebuild =
+      (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0 ||
+      originalDirectRefs.length > 0 ||
+      directContentWasFiltered
+    const featureRefs =
+      (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0
+        ? (subclass.subclassFeatureRefs ?? [])
+        : filteredDirectRefs
     return {
       ...subclass,
       normalizedRules: shouldRebuild
-        ? normalizeSubclassRules(classData, subclass, subclass.subclassFeatureRefs ?? [])
+        ? normalizeSubclassRules(classData, subclass, featureRefs)
         : subclass.normalizedRules,
     }
   })
-  const shouldRebuildClass = (originalClassData.classFeatureRefs?.length ?? 0) > 0
+  const filteredDirectClassRefs = directClassFeatureReferences(classData)
+  const originalDirectClassRefs = directClassFeatureReferences(originalClassData)
+  const directClassContentWasFiltered =
+    (originalClassData.classFeatures?.length ?? 0) !== (classData.classFeatures?.length ?? 0)
+  const shouldRebuildClass =
+    (originalClassData.classFeatureRefs?.length ?? 0) > 0 ||
+    originalDirectClassRefs.length > 0 ||
+    directClassContentWasFiltered
+  const classFeatureRefs =
+    (originalClassData.classFeatureRefs?.length ?? 0) > 0
+      ? (classData.classFeatureRefs ?? [])
+      : filteredDirectClassRefs
   return {
     ...classData,
     normalizedRules: shouldRebuildClass
-      ? normalizeClassRules(classData, classData.classFeatureRefs ?? [])
+      ? normalizeClassRules(classData, classFeatureRefs)
       : classData.normalizedRules,
     subclasses,
   }
