@@ -78,6 +78,77 @@ describe('getCharacterReadiness', () => {
     )
   })
 
+  test('does not count an unresolved explicit class option as eligible', () => {
+    const primalCompanion = {
+      id: 'class:ranger|phb|choice:primal-companion|3',
+      label: 'Primal Companion',
+      kind: 'subclass-feature' as const,
+      owner: { type: 'class' as const, name: 'Ranger', source: 'PHB' },
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: [0, 0, ...Array(18).fill(1)],
+      options: [
+        { entityType: 'subclassFeature' as const, name: 'Beast of the Land', source: 'TCE' },
+      ],
+      repeatable: false,
+      replacement: { cadence: 'never' as const },
+      source: { kind: 'class-feature-options' as const, field: 'fixture' },
+    }
+    const ranger = {
+      name: 'Ranger',
+      source: 'PHB',
+      hd: { faces: 10 },
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [primalCompanion],
+        choiceDiagnostics: [],
+      },
+    } as Class5e
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Ranger', source: 'PHB', levels: 3 }],
+      classChoiceSelections: [
+        {
+          choiceId: primalCompanion.id,
+          label: primalCompanion.label,
+          kind: primalCompanion.kind,
+          className: 'Ranger',
+          classSource: 'PHB',
+          classLevel: 3,
+          selected: [
+            {
+              entityType: 'subclassFeature',
+              name: 'Beast of the Land',
+              source: 'TCE',
+              slotLevel: 3,
+            },
+          ],
+        },
+      ],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Ranger|PHB': ranger },
+    })
+
+    const issues = validateClassChoices(character, calculation, {
+      classFeatures: [],
+      subclassFeatures: [],
+      creatures: [],
+      feats: [],
+      items: [],
+      itemsBase: [],
+      itemMasteries: [],
+      optionalFeatures: [],
+      itemPropertyByAbbr: {},
+      itemTypeByAbbr: {},
+      weaponProficiencies: [],
+    })
+
+    expect(issues.map((issue) => issue.id)).toContain(`class-choice:${primalCompanion.id}`)
+  })
+
   test('validates point-buy against allocated scores when a feat grants an ability bonus', () => {
     const character = makeCharacterFixture({
       variantRules: { abilityScoreMethod: 'point-buy' },

@@ -516,7 +516,7 @@ function resolveExplicitOption(
   return match
     ? toView(option.entityType, match, catalogs, availability)
     : {
-        availability,
+        availability: 'retained',
         reference: {
           entityType: option.entityType,
           name: option.name,
@@ -582,6 +582,16 @@ export function getStandaloneClassChoices(classData: {
   return classData.normalizedRules?.choices ?? []
 }
 
+export function getAllCharacterClassChoices(
+  classData: { normalizedRules?: { choices: NormalizedCharacterChoice[] } },
+  subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
+): NormalizedCharacterChoice[] {
+  return [
+    ...getStandaloneClassChoices(classData),
+    ...(subclass?.normalizedRules?.choices ?? []),
+  ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
+}
+
 function includeFeatureVariantChoice(
   choice: NormalizedCharacterChoice,
   choices: readonly NormalizedCharacterChoice[],
@@ -604,14 +614,13 @@ export function getCharacterClassChoices(
 ): NormalizedCharacterChoice[] {
   const classChoices = getStandaloneClassChoices(classData)
   const subclassChoices = subclass?.normalizedRules?.choices ?? []
-  return [
-    ...classChoices.filter((choice) =>
-      includeFeatureVariantChoice(choice, classChoices, includeVariants),
+  return getAllCharacterClassChoices(classData, subclass).filter((choice) =>
+    includeFeatureVariantChoice(
+      choice,
+      choice.owner.type === 'subclass' ? subclassChoices : classChoices,
+      includeVariants,
     ),
-    ...subclassChoices.filter((choice) =>
-      includeFeatureVariantChoice(choice, subclassChoices, includeVariants),
-    ),
-  ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
+  )
 }
 
 export function getCharacterClassChoiceDiagnostics(

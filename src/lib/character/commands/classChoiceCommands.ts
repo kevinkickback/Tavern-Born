@@ -134,7 +134,7 @@ function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'sour
   return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
 }
 
-function reconcileClassChoiceFeatMirror(
+export function reconcileClassChoiceFeatMirror(
   character: Character,
   ledger: ProvenanceLedger,
   choice: NormalizedCharacterChoice,
@@ -206,6 +206,7 @@ export function reconcileClassChoiceSelectionGrants(
   ledger: ProvenanceLedger,
   selections: readonly CharacterClassChoiceSelection[],
 ): Pick<CharacterCommandResult, 'provenanceUpdate'> & { features: Feature[] } {
+  const activeSelections = selections.filter((selection) => !selection.inactive)
   const ownedChoiceIds = new Set([
     ...(character.classChoiceSelections ?? []).map((selection) => selection.choiceId),
     ...selections.map((selection) => selection.choiceId),
@@ -225,7 +226,7 @@ export function reconcileClassChoiceSelectionGrants(
   )
   let provenanceUpdate: ProvenanceLedger = { ...ledger, features }
 
-  for (const selection of selections) {
+  for (const selection of activeSelections) {
     const tag = {
       ...makeSourceTag('class', selection.className, 'choice', selection.classSource),
       grantVariant: selection.choiceId,
@@ -237,7 +238,7 @@ export function reconcileClassChoiceSelectionGrants(
   }
 
   return {
-    features: rebuildClassChoiceFeatures(character.features, selections),
+    features: rebuildClassChoiceFeatures(character.features, activeSelections),
     provenanceUpdate,
   }
 }

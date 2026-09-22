@@ -307,6 +307,7 @@ const characterClassChoiceSelectionSchema = z.object({
     'optional-feature',
     'creature',
   ]),
+  inactive: z.boolean().optional(),
   className: z.string().min(1),
   classSource: z.string().min(1),
   subclassName: z.string().min(1).optional(),

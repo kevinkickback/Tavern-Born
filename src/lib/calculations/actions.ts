@@ -37,13 +37,15 @@ function parseMasteryReference(reference: string): { name: string; source?: stri
 }
 
 function isSelectedItemChoice(character: Character, item: Equipment): boolean {
-  return (character.classChoiceSelections ?? []).some((selection) =>
-    selection.selected.some(
-      (option) =>
-        option.entityType === 'item' &&
-        option.name === item.name &&
-        (!option.source || !item.source || option.source === item.source),
-    ),
+  return (character.classChoiceSelections ?? []).some(
+    (selection) =>
+      !selection.inactive &&
+      selection.selected.some(
+        (option) =>
+          option.entityType === 'item' &&
+          option.name === item.name &&
+          (!option.source || !item.source || option.source === item.source),
+      ),
   )
 }
 

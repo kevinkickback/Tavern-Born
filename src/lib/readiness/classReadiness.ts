@@ -7,6 +7,7 @@ import {
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
   getClassChoiceOptionKey,
+  isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -55,7 +56,9 @@ export function validateClassChoices(
     ]),
   )
   const selections = new Map(
-    (character.classChoiceSelections ?? []).map((selection) => [selection.choiceId, selection]),
+    (character.classChoiceSelections ?? [])
+      .filter((selection) => !selection.inactive)
+      .map((selection) => [selection.choiceId, selection]),
   )
 
   for (const entry of entries) {
@@ -103,9 +106,9 @@ export function validateClassChoices(
       const storedSelection = selections.get(choice.id)?.selected ?? []
       const eligibleOptionKeys = catalogs
         ? new Set(
-            resolveClassChoiceOptions(choice, catalogs, [], entry.levels).map((option) =>
-              getClassChoiceOptionKey(option.reference),
-            ),
+            resolveClassChoiceOptions(choice, catalogs, [], entry.levels)
+              .filter(isClassChoiceOptionEligible)
+              .map((option) => getClassChoiceOptionKey(option.reference)),
           )
         : undefined
       const count = eligibleOptionKeys

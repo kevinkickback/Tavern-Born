@@ -108,6 +108,8 @@ export interface CharacterClassChoiceSelection {
   choiceId: string
   label: string
   kind: CharacterClassChoiceKind
+  /** Preserved while an alternate feature variant is active; inactive choices grant nothing. */
+  inactive?: boolean
   className: string
   classSource: string
   subclassName?: string

@@ -10,6 +10,7 @@ import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
+import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -155,6 +156,20 @@ export function RulesPage() {
       toast.warning(`Your existing ${selectedSubclass} subclass will be kept.`, {
         description: 'This rule will apply the next time you choose a subclass.',
       })
+    }
+    if (key === 'optionalClassFeatures') {
+      const result = reconcileOptionalClassFeatureChoicesCommand(
+        character,
+        character.provenance,
+        classes,
+        checked,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+        variantRules: { ...rules, [key]: checked },
+      })
+      return
     }
     updateRules({ [key]: checked })
   }

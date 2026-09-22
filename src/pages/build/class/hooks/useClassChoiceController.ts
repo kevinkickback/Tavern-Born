@@ -57,7 +57,12 @@ export function useClassChoiceController({
     [includeClassFeatureVariants, viewingClassData, viewingClassLevel, viewingSubclassData],
   )
   const persistedSelectionByChoiceId = useMemo(
-    () => new Map((character?.classChoiceSelections ?? []).map((entry) => [entry.choiceId, entry])),
+    () =>
+      new Map(
+        (character?.classChoiceSelections ?? [])
+          .filter((entry) => !entry.inactive)
+          .map((entry) => [entry.choiceId, entry]),
+      ),
     [character?.classChoiceSelections],
   )
   const resolvedCatalogs = useMemo<ClassChoiceCatalogs>(

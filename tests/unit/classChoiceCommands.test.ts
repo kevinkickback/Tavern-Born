@@ -4,8 +4,10 @@ import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelections,
 } from '@/lib/character/commands/classChoiceCommands'
+import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { applyClassProgressionUpdate, selectSubclass } from '@/lib/character/commands/classCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
+import type { Class5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -213,6 +215,150 @@ describe('class choice commands', () => {
     ])
     expect(replacement.provenanceUpdate.features['guard training']).toBeUndefined()
     expect(replacement.provenanceUpdate.features['scholar training']).toHaveLength(1)
+  })
+
+  test('switches replacement grants atomically and restores dormant selections', () => {
+    const originalFeature = choice({
+      id: 'original-feature',
+      label: 'Original Training',
+      owner: {
+        type: 'class',
+        name: 'Test Class',
+        source: 'TEST',
+        featureName: 'Original Training',
+      },
+      options: [{ entityType: 'classFeature', name: 'Guard Training', source: 'TEST' }],
+      optionFilter: undefined,
+    })
+    const variantFeature = choice({
+      id: 'variant-feature',
+      label: 'Replacement Training',
+      owner: {
+        type: 'class',
+        name: 'Test Class',
+        source: 'TEST',
+        featureName: 'Replacement Training',
+      },
+      options: [{ entityType: 'classFeature', name: 'Scholar Training', source: 'TEST' }],
+      optionFilter: undefined,
+      featureVariant: { replacesFeatureName: 'Original Training' },
+    })
+    const originalFeat = choice({
+      id: 'original-feat',
+      label: 'Original Talent',
+      kind: 'feat',
+      owner: {
+        type: 'class',
+        name: 'Test Class',
+        source: 'TEST',
+        featureName: 'Original Talent',
+      },
+      options: [{ entityType: 'feat', name: 'Alert', source: 'PHB' }],
+      optionFilter: undefined,
+    })
+    const variantFeat = choice({
+      id: 'variant-feat',
+      label: 'Replacement Talent',
+      kind: 'feat',
+      owner: {
+        type: 'class',
+        name: 'Test Class',
+        source: 'TEST',
+        featureName: 'Replacement Talent',
+      },
+      options: [{ entityType: 'feat', name: 'Lucky', source: 'PHB' }],
+      optionFilter: undefined,
+      featureVariant: { replacesFeatureName: 'Original Talent' },
+    })
+    const classData = {
+      name: 'Test Class',
+      source: 'TEST',
+      hd: { faces: 8 },
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [originalFeature, variantFeature, originalFeat, variantFeat],
+        choiceDiagnostics: [],
+      },
+    } as Class5e
+    let current = makeCharacterFixture({
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 2 }],
+      features: [],
+      feats: [],
+    })
+    for (const [featureChoice, selected] of [
+      [originalFeature, originalFeature.options],
+      [variantFeature, variantFeature.options],
+      [originalFeat, originalFeat.options],
+      [variantFeat, variantFeat.options],
+    ] as const) {
+      const applied = applyClassChoiceSelectionWithGrantsCommand(
+        current,
+        current.provenance,
+        featureChoice,
+        selected,
+      )
+      current = { ...current, ...applied.characterPatch, provenance: applied.provenanceUpdate }
+    }
+
+    const enabled = reconcileOptionalClassFeatureChoicesCommand(
+      current,
+      current.provenance,
+      [classData],
+      true,
+    )
+    const enabledCharacter = {
+      ...current,
+      ...enabled.characterPatch,
+      provenance: enabled.provenanceUpdate,
+    }
+
+    expect(enabledCharacter.features.map((feature) => feature.name)).toEqual(['Scholar Training'])
+    expect(
+      enabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
+    ).toEqual(['Lucky'])
+    expect(
+      enabledCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === originalFeature.id,
+      )?.inactive,
+    ).toBe(true)
+    expect(
+      enabledCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === variantFeature.id,
+      )?.inactive,
+    ).toBeUndefined()
+    expect(enabled.provenanceUpdate.features['guard training']).toBeUndefined()
+    expect(enabled.provenanceUpdate.feats.alert).toBeUndefined()
+
+    const disabled = reconcileOptionalClassFeatureChoicesCommand(
+      enabledCharacter,
+      enabledCharacter.provenance,
+      [classData],
+      false,
+    )
+    const disabledCharacter = {
+      ...enabledCharacter,
+      ...disabled.characterPatch,
+      provenance: disabled.provenanceUpdate,
+    }
+
+    expect(disabledCharacter.features.map((feature) => feature.name)).toEqual(['Guard Training'])
+    expect(
+      disabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
+    ).toEqual(['Alert'])
+    expect(
+      disabledCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === originalFeature.id,
+      )?.inactive,
+    ).toBeUndefined()
+    expect(
+      disabledCharacter.classChoiceSelections?.find(
+        (selection) => selection.choiceId === variantFeature.id,
+      )?.inactive,
+    ).toBe(true)
+    expect(disabled.provenanceUpdate.features['scholar training']).toBeUndefined()
+    expect(disabled.provenanceUpdate.feats.lucky).toBeUndefined()
   })
 
   test('keeps item and feat choices source-qualified without inventing domain effects', () => {

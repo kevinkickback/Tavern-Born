@@ -434,6 +434,26 @@ describe('class choice option resolution', () => {
     expect(result[0]?.availability).toBe('retained')
   })
 
+  test('marks unresolved explicit options as unavailable', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        options: [{ entityType: 'subclassFeature', name: 'Beast of the Land', source: 'TCE' }],
+      }),
+      emptyCatalogs,
+    )
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        availability: 'retained',
+        reference: {
+          entityType: 'subclassFeature',
+          name: 'Beast of the Land',
+          source: 'TCE',
+        },
+      }),
+    ])
+  })
+
   test('routes every supported class choice through the normalized workflow', () => {
     const standalone = choice({ label: 'Standalone' })
     const optional = choice({
