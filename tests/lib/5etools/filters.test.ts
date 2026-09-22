@@ -182,6 +182,108 @@ describe('5etools/filters', () => {
     ])
   })
 
+  test('filterClasses rebuilds normalized class and subclass rules from retained features', () => {
+    const optionBlock = (entity: 'classFeature' | 'subclassFeature', reference: string) => [
+      {
+        type: 'options',
+        count: 1,
+        entries: [
+          { type: `ref${entity[0]?.toUpperCase()}${entity.slice(1)}`, [entity]: reference },
+        ],
+      },
+    ]
+    const wizard = makeClassFixture({
+      classFeatureRefs: [
+        {
+          ref: 'Allowed Training|Wizard|PHB|1|PHB',
+          name: 'Allowed Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          feature: {
+            name: 'Allowed Training',
+            source: 'PHB',
+            level: 1,
+            entries: optionBlock('classFeature', 'Allowed Path|Wizard|PHB|1|PHB'),
+          },
+        },
+        {
+          ref: 'Forbidden Training|Wizard|PHB|1|XGE',
+          name: 'Forbidden Training',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          feature: {
+            name: 'Forbidden Training',
+            source: 'XGE',
+            level: 1,
+            entries: optionBlock('classFeature', 'Forbidden Path|Wizard|PHB|1|XGE'),
+          },
+        },
+      ],
+      subclasses: [
+        {
+          name: 'School of Test Magic',
+          shortName: 'Test Magic',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatureRefs: [
+            {
+              ref: 'Allowed Tactic|Wizard|PHB|Test Magic|PHB|2|PHB',
+              name: 'Allowed Tactic',
+              source: 'PHB',
+              className: 'Wizard',
+              classSource: 'PHB',
+              subclassShortName: 'Test Magic',
+              subclassSource: 'PHB',
+              level: 2,
+              feature: {
+                name: 'Allowed Tactic',
+                source: 'PHB',
+                level: 2,
+                entries: optionBlock(
+                  'subclassFeature',
+                  'Allowed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
+                ),
+              },
+            },
+            {
+              ref: 'Forbidden Tactic|Wizard|PHB|Test Magic|PHB|2|XGE',
+              name: 'Forbidden Tactic',
+              source: 'XGE',
+              className: 'Wizard',
+              classSource: 'PHB',
+              subclassShortName: 'Test Magic',
+              subclassSource: 'PHB',
+              level: 2,
+              feature: {
+                name: 'Forbidden Tactic',
+                source: 'XGE',
+                level: 2,
+                entries: optionBlock(
+                  'subclassFeature',
+                  'Forbidden Ward|Wizard|PHB|Test Magic|PHB|2|XGE',
+                ),
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+
+    expect(filtered.normalizedRules?.choices.map((choice) => choice.label)).toEqual([
+      'Allowed Training',
+    ])
+    expect(filtered.subclasses?.[0].normalizedRules?.choices.map((choice) => choice.label)).toEqual(
+      ['Allowed Tactic'],
+    )
+  })
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({

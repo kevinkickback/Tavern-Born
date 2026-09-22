@@ -157,7 +157,7 @@ describe('applyClassSelectionCommand', () => {
       },
     )
 
-    expect(result.characterPatch).toEqual({
+    expect(result.characterPatch).toMatchObject({
       classProgression: [
         {
           name: 'Fighter',
@@ -167,8 +167,9 @@ describe('applyClassSelectionCommand', () => {
           subclassSource: 'PHB',
         },
       ],
+      proficiencies: character.proficiencies,
     })
-    expect(result.provenanceUpdate).toBe(ledger)
+    expect(result.provenanceUpdate).toEqual(ledger)
   })
 
   test('adds armor proficiencies for a new class', () => {

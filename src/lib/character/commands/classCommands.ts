@@ -712,17 +712,12 @@ export function selectSubclass(
         }
       : entry,
   )
-
-  const characterPatch: Partial<Character> = {
-    classProgression: nextProgression,
-  }
-
-  const provenanceUpdate = ledger
+  const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
 
   return {
     classEntity: subclassEntity as Class5e | undefined,
-    characterPatch,
-    provenanceUpdate,
+    characterPatch: progressionResult.characterPatch,
+    provenanceUpdate: progressionResult.provenanceUpdate,
   }
 }
 

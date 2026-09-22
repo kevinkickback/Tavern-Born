@@ -4,7 +4,7 @@ import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelections,
 } from '@/lib/character/commands/classChoiceCommands'
-import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { applyClassProgressionUpdate, selectSubclass } from '@/lib/character/commands/classCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -418,15 +418,7 @@ describe('class choice commands', () => {
       feats: [{ name: 'Skilled', source: 'PHB' }],
     })
 
-    const reconciled = applyClassProgressionUpdate(appliedCharacter, applied.provenanceUpdate, [
-      {
-        name: 'Ranger',
-        source: 'PHB',
-        levels: 3,
-        subclass: 'Hunter',
-        subclassSource: 'PHB',
-      },
-    ])
+    const reconciled = selectSubclass(appliedCharacter, applied.provenanceUpdate, 'Hunter', 'PHB')
 
     expect(reconciled.characterPatch.classChoiceSelections).toEqual([])
     expect(reconciled.characterPatch.classFeatChoices).toEqual([])

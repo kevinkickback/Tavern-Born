@@ -1,3 +1,5 @@
+import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
   Background5e,
@@ -80,6 +82,24 @@ const isSuppressed = (
     return false
   }
   return suppressedKeys.has(`${name}|${source}`)
+}
+
+function rebuildFilteredClassRules(classData: Class5e): Class5e {
+  const subclasses = classData.subclasses?.map((subclass) => ({
+    ...subclass,
+    normalizedRules:
+      subclass.subclassFeatureRefs === undefined
+        ? subclass.normalizedRules
+        : normalizeSubclassRules(classData, subclass, subclass.subclassFeatureRefs),
+  }))
+  return {
+    ...classData,
+    normalizedRules:
+      classData.classFeatureRefs === undefined
+        ? classData.normalizedRules
+        : normalizeClassRules(classData, classData.classFeatureRefs),
+    subclasses,
+  }
 }
 
 const isExplicitlyAllowed = (
@@ -294,6 +314,13 @@ export class DataFilter {
               }
             }),
         }))
+    }
+
+    if (
+      (filters.sources && filters.sources.length > 0) ||
+      (filters.suppressedKeys && filters.suppressedKeys.size > 0)
+    ) {
+      filtered = filtered.map(rebuildFilteredClassRules)
     }
 
     if (filters.hasProficiency && filters.hasProficiency.length > 0) {

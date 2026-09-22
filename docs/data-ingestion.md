@@ -154,6 +154,8 @@ recreate this policy.
 
 Downstream UI uses `useFilteredGameData()`, `useWizardGameData()`, or named hooks from
 `useGameData.ts`. Use lookup maps for exact references rather than repeated array scans.
+Filtering class or subclass feature references also rebuilds their normalized rules, so the class
+builder and readiness validation cannot retain choices owned by disabled or suppressed content.
 Creature filtering admits the ruleset's implicit monster source (MM for 2014, XMM for 2024) and any
 explicitly selected monster source only for resolving character options; this does not make those
 books selectable in character source settings.
