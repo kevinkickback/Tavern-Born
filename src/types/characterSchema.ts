@@ -299,13 +299,29 @@ const manualActionSchema = z.object({
 const characterClassChoiceSelectionSchema = z.object({
   choiceId: z.string().min(1),
   label: z.string().min(1),
-  kind: z.enum(['class-feature', 'feat', 'item', 'optional-feature']),
+  kind: z.enum([
+    'class-feature',
+    'subclass-feature',
+    'feat',
+    'item',
+    'optional-feature',
+    'creature',
+  ]),
   className: z.string().min(1),
   classSource: z.string().min(1),
+  subclassName: z.string().min(1).optional(),
+  subclassSource: z.string().min(1).optional(),
   classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
   selected: z.array(
     z.object({
-      entityType: z.enum(['classFeature', 'feat', 'item', 'optionalFeature']),
+      entityType: z.enum([
+        'classFeature',
+        'subclassFeature',
+        'feat',
+        'item',
+        'optionalFeature',
+        'creature',
+      ]),
       name: z.string().min(1),
       source: z.string().optional(),
       slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),

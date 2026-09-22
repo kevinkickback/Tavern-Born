@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
+  getCharacterClassChoiceDiagnostics,
+  getCharacterClassChoices,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -25,16 +27,74 @@ function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharac
 
 const emptyCatalogs = {
   classFeatures: [],
+  subclassFeatures: [],
+  creatures: [],
   feats: [],
   items: [],
   itemsBase: [],
   itemMasteries: [],
   optionalFeatures: [],
+  itemPropertyByAbbr: {},
   itemTypeByAbbr: {},
   weaponProficiencies: [],
 }
 
 describe('class choice option resolution', () => {
+  test('filters eligible Beast Master companions from parsed creature traits', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'creature',
+        optionFilter: {
+          entityType: 'creature',
+          creatureTypes: ['beast'],
+          sizes: ['t', 's', 'm'],
+          challengeRatingMaximum: 0.25,
+          excludeSwarms: true,
+        },
+      }),
+      {
+        ...emptyCatalogs,
+        creatures: [
+          {
+            name: 'Wolf',
+            source: 'MM',
+            type: 'beast',
+            size: ['M'],
+            cr: '1/4',
+            ac: [13],
+            hp: { average: 11, formula: '2d8 + 2' },
+            speed: { walk: 40 },
+            trait: [{ name: 'Pack Tactics', entries: ['The wolf has advantage.'] }],
+            action: [{ name: 'Bite', entries: ['Melee Weapon Attack.'] }],
+          },
+          { name: 'Brown Bear', source: 'MM', type: 'beast', size: ['L'], cr: '1' },
+          {
+            name: 'Swarm of Rats',
+            source: 'MM',
+            type: { type: 'beast', swarmSize: 'T' },
+            size: ['M'],
+            cr: '1/4',
+          },
+          { name: 'Pseudodragon', source: 'MM', type: 'dragon', size: ['T'], cr: '1/4' },
+        ],
+      },
+    )
+
+    expect(result.map((option) => option.reference.name)).toEqual(['Wolf'])
+    expect(result[0]?.presentation).toEqual({
+      kind: 'creature',
+      summary: expect.objectContaining({
+        armorClass: '13',
+        hitPoints: '11 (2d8 + 2)',
+        speed: '40 ft.',
+        challenge: '1/4',
+        traits: [{ name: 'Pack Tactics', entries: ['The wolf has advantage.'] }],
+        actions: [{ name: 'Bite', entries: ['Melee Weapon Attack.'] }],
+      }),
+    })
+    expect(result[0]?.searchText).toContain('Pack Tactics')
+  })
+
   test('resolves explicit references by name and source', () => {
     const result = resolveClassChoiceOptions(
       choice({
@@ -234,6 +294,49 @@ describe('class choice option resolution', () => {
     )
   })
 
+  test('excludes item properties through parsed property metadata', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'item',
+        optionFilter: {
+          entityType: 'item',
+          itemTypes: ['simple weapon', 'martial weapon'],
+          excludedItemProperties: ['heavy', 'special'],
+        },
+      }),
+      {
+        ...emptyCatalogs,
+        itemsBase: [
+          {
+            name: 'Longsword',
+            source: 'PHB',
+            type: 'M',
+            property: ['V'],
+            weaponCategory: 'martial',
+          },
+          {
+            name: 'Greatsword',
+            source: 'PHB',
+            type: 'M',
+            property: ['H'],
+            weaponCategory: 'martial',
+          },
+          {
+            name: 'Net',
+            source: 'PHB',
+            type: 'R',
+            property: ['S'],
+            weaponCategory: 'martial',
+          },
+        ],
+        itemPropertyByAbbr: { H: 'Heavy', S: 'Special', V: 'Versatile' },
+        itemTypeByAbbr: { M: 'Martial Melee Weapon', R: 'Martial Ranged Weapon' },
+      },
+    )
+
+    expect(result.map((option) => option.reference.name)).toEqual(['Longsword'])
+  })
+
   test('matches feat and optional-feature filters without name-based rules', () => {
     const featOptions = resolveClassChoiceOptions(
       choice({ kind: 'feat', optionFilter: { entityType: 'feat', categories: ['STYLE'] } }),
@@ -261,6 +364,37 @@ describe('class choice option resolution', () => {
 
     expect(featOptions.map((option) => option.reference.name)).toEqual(['A'])
     expect(featureOptions.map((option) => option.reference.name)).toEqual(['C'])
+    expect(featOptions[0]?.presentation).toEqual({ kind: 'feat', categoryLabel: 'STYLE' })
+    expect(featureOptions[0]?.presentation).toEqual({
+      kind: 'feature',
+      featureTypeLabels: ['CUSTOM'],
+    })
+  })
+
+  test('projects rune type and both rules paragraphs for choice presentation', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'optional-feature',
+        optionFilter: { entityType: 'optionalFeature', featureTypes: ['RN'] },
+      }),
+      {
+        ...emptyCatalogs,
+        optionalFeatures: [
+          {
+            name: 'Cloud Rune',
+            source: 'TCE',
+            featureType: ['RN'],
+            entries: ['Passive benefit.', 'Invoked reaction benefit.'],
+          },
+        ],
+      },
+    )
+
+    expect(result[0]).toMatchObject({
+      entries: ['Passive benefit.', 'Invoked reaction benefit.'],
+      presentation: { kind: 'feature', featureTypeLabels: ['Rune Knight Rune'] },
+    })
+    expect(result[0]?.searchText).toContain('Rune Knight Rune')
   })
 
   test('keeps saved source-qualified options visible after catalog filtering', () => {
@@ -289,5 +423,96 @@ describe('class choice option resolution', () => {
         normalizedRules: { choices: [standalone, optional, featProgression] },
       }),
     ).toEqual([standalone, optional, featProgression])
+  })
+
+  test('switches a subclass replacement choice with the optional-feature toggle', () => {
+    const original = choice({
+      id: 'original',
+      label: "Ranger's Companion",
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+        featureName: "Ranger's Companion",
+      },
+    })
+    const variant = choice({
+      id: 'variant',
+      label: 'Primal Companion',
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+        featureName: 'Primal Companion',
+      },
+      featureVariant: { replacesFeatureName: "Ranger's Companion" },
+    })
+    const subclass = {
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [original, variant],
+        choiceDiagnostics: [],
+      },
+    }
+
+    expect(getCharacterClassChoices({}, subclass, false)).toEqual([original])
+    expect(getCharacterClassChoices({}, subclass, true)).toEqual([variant])
+  })
+
+  test('switches a class replacement choice with the optional-feature toggle', () => {
+    const original = choice({
+      id: 'original',
+      label: 'Original Feature',
+      owner: { type: 'class', name: 'Any', source: 'PHB', featureName: 'Original Feature' },
+    })
+    const variant = choice({
+      id: 'variant',
+      label: 'Replacement Feature',
+      owner: { type: 'class', name: 'Any', source: 'PHB', featureName: 'Replacement Feature' },
+      featureVariant: { replacesFeatureName: 'Original Feature' },
+    })
+    const classData = {
+      normalizedRules: { choices: [original, variant] },
+    }
+
+    expect(getCharacterClassChoices(classData, undefined, false)).toEqual([original])
+    expect(getCharacterClassChoices(classData, undefined, true)).toEqual([variant])
+  })
+
+  test('switches replacement diagnostics with the optional-feature toggle', () => {
+    const original = {
+      code: 'unresolved-options' as const,
+      className: 'Ranger',
+      classSource: 'PHB',
+      subclassName: 'Beast Master',
+      subclassSource: 'PHB',
+      featureName: "Ranger's Companion",
+      level: 3,
+      message: 'Original diagnostic.',
+    }
+    const variant = {
+      ...original,
+      featureName: 'Primal Companion',
+      message: 'Variant diagnostic.',
+      featureVariant: { replacesFeatureName: "Ranger's Companion" },
+    }
+    const subclass = {
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [],
+        choiceDiagnostics: [original, variant],
+      },
+    }
+
+    expect(getCharacterClassChoiceDiagnostics({}, subclass, false)).toEqual([original])
+    expect(getCharacterClassChoiceDiagnostics({}, subclass, true)).toEqual([variant])
   })
 })

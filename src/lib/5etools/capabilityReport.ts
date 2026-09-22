@@ -9,6 +9,7 @@ const FIELD_COLLECTIONS = [
   'feats',
   'items',
   'itemsBase',
+  'creatures',
   'optionalfeatures',
 ] as const
 
@@ -102,17 +103,41 @@ function optionCatalogs(
       reference.feature ? [reference.feature] : [],
     ),
   )
+  const embeddedSubclassFeatures: unknown[] = []
+  const visitSubclassEntries = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visitSubclassEntries)
+      return
+    }
+    const record = asRecord(value)
+    if (!record) return
+    if (record.type === 'refSubclassFeature' && asRecord(record.feature)) {
+      embeddedSubclassFeatures.push(record.feature)
+    }
+    Object.values(record).forEach(visitSubclassEntries)
+  }
+  for (const classData of gameData.classes) {
+    for (const subclass of classData.subclasses ?? []) {
+      for (const reference of subclass.subclassFeatureRefs ?? []) {
+        if (!reference.feature) continue
+        embeddedSubclassFeatures.push(reference.feature)
+        visitSubclassEntries(reference.feature.entries)
+      }
+    }
+  }
   return {
     classFeature: new Set(
       [...gameData.classFeatures, ...embeddedClassFeatures].flatMap(
         (value) => entityKey(value) ?? [],
       ),
     ),
+    creature: new Set((gameData.creatures ?? []).flatMap((value) => entityKey(value) ?? [])),
     feat: new Set(gameData.feats.flatMap((value) => entityKey(value) ?? [])),
     item: new Set(
       [...gameData.items, ...gameData.itemsBase].flatMap((value) => entityKey(value) ?? []),
     ),
     optionalFeature: new Set(gameData.optionalfeatures.flatMap((value) => entityKey(value) ?? [])),
+    subclassFeature: new Set(embeddedSubclassFeatures.flatMap((value) => entityKey(value) ?? [])),
   }
 }
 
@@ -219,7 +244,7 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
   const catalogs = optionCatalogs(gameData)
   const report: CorpusCapabilityReport = {
     entities: Object.fromEntries(
-      FIELD_COLLECTIONS.map((collection) => [collection, gameData[collection].length]),
+      FIELD_COLLECTIONS.map((collection) => [collection, (gameData[collection] ?? []).length]),
     ) as Record<CapabilityCollection, number>,
     classChoices: { total: 0, byKind: {}, diagnostics: 0, inventory: [] },
     movement: {
@@ -237,7 +262,7 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
 
   const fieldCounts = new Map<string, Record<string, number>>()
   for (const collection of FIELD_COLLECTIONS) {
-    for (const [index, entity] of gameData[collection].entries()) {
+    for (const [index, entity] of (gameData[collection] ?? []).entries()) {
       const owner = displayEntity(entity, `${collection}[${index}]`)
       if (!entityKey(entity)) {
         issues.push({
@@ -270,21 +295,13 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
 
   for (const race of gameData.races) inspectMovement(race, report.movement, issues)
 
-  for (const classData of gameData.classes) {
-    inspectClassReferences(classData, issues)
-    const owner = displayEntity(classData, 'class')
-    if (!classData.normalizedRules) {
-      issues.push({
-        code: 'missing-normalized-rules',
-        collection: 'classes',
-        entity: owner,
-        path: 'normalizedRules',
-        message: 'Parsed class has no normalized rule contract.',
-      })
-      continue
-    }
-    report.classChoices.total += classData.normalizedRules.choices.length
-    for (const [choiceIndex, choice] of classData.normalizedRules.choices.entries()) {
+  const inspectNormalizedRules = (
+    rules: NonNullable<Class5e['normalizedRules']>,
+    owner: string,
+    pathPrefix: string,
+  ) => {
+    report.classChoices.total += rules.choices.length
+    for (const [choiceIndex, choice] of rules.choices.entries()) {
       increment(report.classChoices.byKind, choice.kind)
       report.classChoices.inventory.push({
         owner,
@@ -299,24 +316,55 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
         inspectReference(
           option,
           owner,
-          `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+          `${pathPrefix}.choices[${choiceIndex}].options[${optionIndex}]`,
           catalogs,
           issues,
         )
       }
     }
-    report.classChoices.diagnostics += classData.normalizedRules.choiceDiagnostics.length
-    for (const [
-      diagnosticIndex,
-      diagnostic,
-    ] of classData.normalizedRules.choiceDiagnostics.entries()) {
+    report.classChoices.diagnostics += rules.choiceDiagnostics.length
+    for (const [diagnosticIndex, diagnostic] of rules.choiceDiagnostics.entries()) {
       issues.push({
         code: 'choice-diagnostic',
         collection: 'classes',
         entity: owner,
-        path: `normalizedRules.choiceDiagnostics[${diagnosticIndex}]`,
+        path: `${pathPrefix}.choiceDiagnostics[${diagnosticIndex}]`,
         message: `${diagnostic.featureName}: ${diagnostic.code}: ${diagnostic.message}`,
       })
+    }
+  }
+
+  for (const classData of gameData.classes) {
+    inspectClassReferences(classData, issues)
+    const owner = displayEntity(classData, 'class')
+    if (!classData.normalizedRules) {
+      issues.push({
+        code: 'missing-normalized-rules',
+        collection: 'classes',
+        entity: owner,
+        path: 'normalizedRules',
+        message: 'Parsed class has no normalized rule contract.',
+      })
+    } else {
+      inspectNormalizedRules(classData.normalizedRules, owner, 'normalizedRules')
+    }
+    for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
+      const subclassOwner = `${owner} / ${displayEntity(subclass, 'subclass')}`
+      if (!subclass.normalizedRules) {
+        issues.push({
+          code: 'missing-normalized-rules',
+          collection: 'classes',
+          entity: subclassOwner,
+          path: `subclasses[${subclassIndex}].normalizedRules`,
+          message: 'Parsed subclass has no normalized rule contract.',
+        })
+        continue
+      }
+      inspectNormalizedRules(
+        subclass.normalizedRules,
+        subclassOwner,
+        `subclasses[${subclassIndex}].normalizedRules`,
+      )
     }
   }
 

@@ -91,6 +91,87 @@ describe('compendiumEntries', () => {
     ).toHaveLength(1)
   })
 
+  test('indexes creature stat blocks and context-qualified subclass features', () => {
+    const hunterOption = {
+      name: 'Colossus Slayer',
+      source: 'PHB',
+      className: 'Ranger',
+      classSource: 'PHB',
+      subclassShortName: 'Hunter',
+      subclassSource: 'PHB',
+      level: 3,
+      entries: ['Your weapon can exploit a wounded foe.'],
+    }
+    const hunterChoice = {
+      name: "Hunter's Prey",
+      source: 'PHB',
+      className: 'Ranger',
+      classSource: 'PHB',
+      subclassShortName: 'Hunter',
+      subclassSource: 'PHB',
+      level: 3,
+      entries: [
+        {
+          type: 'options',
+          entries: [{ type: 'refSubclassFeature', feature: hunterOption }],
+        },
+      ],
+    }
+    const entries = buildCompendiumEntries({
+      classes: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          subclasses: [
+            {
+              name: 'Hunter',
+              shortName: 'Hunter',
+              source: 'PHB',
+              className: 'Ranger',
+              classSource: 'PHB',
+              subclassFeatureRefs: [
+                {
+                  ref: "Hunter's Prey|Ranger||Hunter||3",
+                  name: "Hunter's Prey",
+                  source: 'PHB',
+                  className: 'Ranger',
+                  subclassShortName: 'Hunter',
+                  level: 3,
+                  feature: hunterChoice,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      creatures: [
+        {
+          name: 'Wolf',
+          source: 'MM',
+          size: ['M'],
+          type: 'beast',
+          cr: '1/4',
+          trait: [{ name: 'Keen Hearing and Smell', entries: ['The wolf has advantage.'] }],
+        },
+      ],
+    })
+
+    expect(entries.map((entry) => `${entry.type}:${entry.name}`)).toEqual([
+      'Class:Ranger',
+      "Subclass Feature:Hunter's Prey",
+      'Subclass Feature:Colossus Slayer',
+      'Creature:Wolf',
+    ])
+    expect(entries.find((entry) => entry.name === 'Colossus Slayer')?.context).toBe(
+      'Ranger · Hunter · Level 3',
+    )
+    expect(
+      filterCompendiumEntries(entries, 'beast 1/4', new Set(), new Set()).map(
+        (entry) => entry.name,
+      ),
+    ).toEqual(['Wolf'])
+  })
+
   test('collapses exact duplicates while retaining one canonical rule per source and edition', () => {
     const repeatedClassFeatures = Array.from({ length: 120 }, (_, index) => ({
       name: 'Ability Score Improvement',

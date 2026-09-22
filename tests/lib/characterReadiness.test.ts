@@ -2,10 +2,82 @@ import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { makeSourceTag } from '@/lib/provenance'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('getCharacterReadiness', () => {
+  test('treats a selected subclass companion as a required class-page choice', () => {
+    const companionChoice = {
+      id: 'class:ranger|phb|subclass:beast-master|phb|choice:companion|3',
+      label: 'Companion',
+      kind: 'creature' as const,
+      owner: {
+        type: 'subclass' as const,
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+      },
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: [0, 0, ...Array(18).fill(1)],
+      options: [],
+      optionFilter: { entityType: 'creature' as const, creatureTypes: ['beast'] },
+      repeatable: false,
+      replacement: { cadence: 'never' as const },
+      source: { kind: 'class-feature-options' as const, field: 'fixture' },
+    }
+    const ranger = {
+      name: 'Ranger',
+      source: 'PHB',
+      hd: { faces: 10 },
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [],
+        choiceDiagnostics: [],
+      },
+      subclasses: [
+        {
+          name: 'Beast Master',
+          shortName: 'Beast Master',
+          source: 'PHB',
+          className: 'Ranger',
+          classSource: 'PHB',
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [companionChoice],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    } as Class5e
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
+        },
+      ],
+      classChoiceSelections: [],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Ranger|PHB': ranger },
+    })
+
+    expect(validateClassChoices(character, calculation).map((issue) => issue.id)).toContain(
+      `class-choice:${companionChoice.id}`,
+    )
+  })
+
   test('validates point-buy against allocated scores when a feat grants an ability bonus', () => {
     const character = makeCharacterFixture({
       variantRules: { abilityScoreMethod: 'point-buy' },
@@ -358,11 +430,14 @@ describe('getCharacterReadiness', () => {
       calculation,
       classChoiceCatalogs: {
         classFeatures: [],
+        subclassFeatures: [],
+        creatures: [],
         feats: [],
         items: [],
         itemsBase: [testBow],
         itemMasteries: [],
         optionalFeatures: [],
+        itemPropertyByAbbr: {},
         itemTypeByAbbr: {},
         weaponProficiencies: ['martial weapons'],
       },

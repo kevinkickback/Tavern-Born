@@ -1,5 +1,6 @@
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import type { GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 
@@ -7,12 +8,14 @@ export interface GameDataAvailabilityIndex {
   backgrounds: ReadonlySet<string>
   classes: ReadonlySet<string>
   classFeatures: ReadonlySet<string>
+  creatures: ReadonlySet<string>
   feats: ReadonlySet<string>
   items: ReadonlySet<string>
   optionalFeatures: ReadonlySet<string>
   races: ReadonlySet<string>
   spells: ReadonlySet<string>
   subclasses: ReadonlySet<string>
+  subclassFeatures: ReadonlySet<string>
 }
 
 function entityKey(value: { name?: unknown; source?: unknown }): string | null {
@@ -41,6 +44,7 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
   }
 
   const subclasses = new Set<string>()
+  const subclassFeatures = new Set<string>()
   for (const cls of gameData.classes) {
     for (const subclass of cls.subclasses ?? []) {
       subclasses.add(getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source))
@@ -49,6 +53,14 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
           getSubclassLookupKey(cls.name, cls.source, subclass.shortName, subclass.source),
         )
       }
+      for (const reference of subclass.subclassFeatureRefs ?? []) {
+        const key = reference.feature ? entityKey(reference.feature) : null
+        if (key) subclassFeatures.add(key)
+      }
+      for (const feature of collectSubclassFeatures(subclass)) {
+        const key = entityKey(feature)
+        if (key) subclassFeatures.add(key)
+      }
     }
   }
 
@@ -56,12 +68,14 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
     backgrounds: entityKeys(gameData.backgrounds),
     classes: entityKeys(gameData.classes),
     classFeatures: entityKeys(gameData.classFeatures),
+    creatures: entityKeys(gameData.creatures ?? []),
     feats: entityKeys(gameData.feats),
     items: entityKeys([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
     optionalFeatures: entityKeys(gameData.optionalfeatures),
     races,
     spells: entityKeys(gameData.spells),
     subclasses,
+    subclassFeatures,
   }
 }
 
@@ -88,9 +102,11 @@ function choiceIsMissing(
 ): boolean {
   const catalogs: Record<CharacterClassChoiceOption['entityType'], ReadonlySet<string>> = {
     classFeature: index.classFeatures,
+    creature: index.creatures,
     feat: index.feats,
     item: index.items,
     optionalFeature: index.optionalFeatures,
+    subclassFeature: index.subclassFeatures,
   }
   return referenceIsMissing(choice.name, choice.source, catalogs[choice.entityType])
 }

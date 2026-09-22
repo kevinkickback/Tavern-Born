@@ -282,6 +282,58 @@ describe('class choice commands', () => {
     ).toEqual([])
   })
 
+  test('retracts subclass-owned selections when the subclass changes', () => {
+    const companionChoice = choice({
+      id: 'class:ranger|phb|subclass:beast-master|phb|choice:companion|3',
+      label: 'Companion',
+      kind: 'creature',
+      owner: {
+        type: 'subclass',
+        name: 'Ranger',
+        source: 'PHB',
+        subclassName: 'Beast Master',
+        subclassSource: 'PHB',
+        featureName: "Ranger's Companion",
+      },
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: [0, 0, ...Array(18).fill(1)],
+      optionFilter: { entityType: 'creature', creatureTypes: ['beast'] },
+    })
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    const selections = applyClassChoiceSelectionCommand(character, companionChoice, [
+      { entityType: 'creature', name: 'Wolf', source: 'MM' },
+    ]).classChoiceSelections
+
+    expect(selections?.[0]).toMatchObject({
+      subclassName: 'Beast Master',
+      subclassSource: 'PHB',
+      selected: [{ entityType: 'creature', name: 'Wolf', source: 'MM' }],
+    })
+    expect(
+      reconcileClassChoiceSelections(selections, [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Hunter',
+          subclassSource: 'PHB',
+        },
+      ]),
+    ).toEqual([])
+  })
+
   test('level-down reconciliation retracts generated features and their exact tags', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Test Class', source: 'TEST', levels: 10 }],

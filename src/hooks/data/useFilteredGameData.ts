@@ -14,6 +14,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Creature5e,
   Feat5e,
   Item5e,
   ItemMastery5e,
@@ -50,6 +51,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         itemsBase: [] as Item5e[],
         itemMasteries: [] as ItemMastery5e[],
         classFeatures: [] as ClassFeature[],
+        creatures: [] as Creature5e[],
         optionalfeatures: [],
         sources: [] as SourceBook[],
         actions: [],
@@ -74,6 +76,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const itemsBase = gameData.itemsBase ?? []
     const itemMasteries = gameData.itemMasteries ?? []
     const classFeatures = gameData.classFeatures ?? []
+    const creatures = gameData.creatures ?? []
     const optionalfeatures = gameData.optionalfeatures ?? []
     const sources = gameData.sources ?? []
     const compatibleAllowedSources =
@@ -94,6 +97,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         itemsBase,
         itemMasteries,
         classFeatures,
+        creatures,
         optionalfeatures,
         sources,
       }
@@ -157,6 +161,14 @@ export function useFilteredGameDataParams(params: FilterParams) {
           compatibleAllowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
+      creatures: creatures.filter((creature) => {
+        const source = creature.source.toUpperCase()
+        const implicitMonsterSource = originSystem === '2024' ? 'XMM' : 'MM'
+        return (
+          source === implicitMonsterSource ||
+          compatibleAllowedSources.some((allowed) => allowed.toUpperCase() === source)
+        )
+      }),
       optionalfeatures: optionalfeatures.filter((of: unknown) => {
         const optionalFeature = of as { name?: string; source?: string }
         const source = optionalFeature.source ?? ''

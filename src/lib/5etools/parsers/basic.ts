@@ -1,5 +1,6 @@
 import type {
   Background5e,
+  Creature5e,
   Item5e,
   ItemMastery5e,
   ItemProperty5e,
@@ -42,6 +43,13 @@ export function parseFeats(data: unknown): unknown[] {
   const obj = asObject(data)
   if (obj.feat) return asArray(obj.feat)
   if (Array.isArray(data)) return data
+  return []
+}
+
+export function parseCreatures(data: unknown): Creature5e[] {
+  const obj = asObject(data)
+  if (obj.monster) return asArray(obj.monster) as Creature5e[]
+  if (Array.isArray(data)) return data as Creature5e[]
   return []
 }
 

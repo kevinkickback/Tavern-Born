@@ -1,4 +1,5 @@
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
+import { normalizeSubclassRules } from './classChoiceNormalization'
 import { normalizeClassRules } from './classRuleNormalization'
 import type { DataLoaderOptions } from './dataLoader'
 import { loadDataFromSource } from './dataLoader'
@@ -77,23 +78,44 @@ function mergeCollection<T>(
 
 function collectSubclassFeatures(layers: readonly GameData[]): Map<string, SubclassFeature> {
   const features = new Map<string, SubclassFeature>()
+  const traversedObjects = new WeakSet<object>()
+
+  const visit = (feature: SubclassFeature | undefined) => {
+    if (!feature) return
+    const identity = subclassFeatureIdentity(feature)
+    if (!features.has(identity)) features.set(identity, feature)
+
+    const walk = (value: unknown) => {
+      if (Array.isArray(value)) {
+        value.forEach(walk)
+        return
+      }
+      if (!value || typeof value !== 'object') return
+      if (traversedObjects.has(value)) return
+      traversedObjects.add(value)
+      const record = value as Record<string, unknown>
+      if (record.type === 'refSubclassFeature' && record.feature) {
+        visit(record.feature as SubclassFeature)
+      }
+      for (const [key, nested] of Object.entries(record)) {
+        if (key !== 'feature') walk(nested)
+      }
+    }
+
+    walk(feature.entries)
+  }
+
   for (const layer of layers) {
     for (const classData of layer.classes) {
       for (const subclass of classData.subclasses ?? []) {
         for (const reference of subclass.subclassFeatureRefs ?? []) {
-          if (reference.feature) {
-            features.set(subclassFeatureIdentity(reference.feature), reference.feature)
-          }
+          visit(reference.feature)
         }
         for (const feature of subclass.subclassFeatures ?? []) {
-          if (typeof feature === 'object') {
-            features.set(subclassFeatureIdentity(feature), feature)
-          }
+          if (typeof feature === 'object') visit(feature)
         }
         for (const group of subclass.levelFeatures ?? []) {
-          for (const feature of group.features) {
-            features.set(subclassFeatureIdentity(feature), feature)
-          }
+          for (const feature of group.features) visit(feature)
         }
       }
     }
@@ -165,6 +187,7 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
         ...subclass,
         subclassFeatureRefs,
         levelFeatures: groupSubclassFeaturesByLevel(subclassFeatureRefs),
+        normalizedRules: normalizeSubclassRules(classData, subclass, subclassFeatureRefs),
       }
     })
 
@@ -201,6 +224,14 @@ export function findLayerDependencyIssues(
   const optionCatalogs = {
     classFeature: new Set(
       gameData.classFeatures.map((value) => entityKey(value.name, value.source)),
+    ),
+    subclassFeature: new Set(
+      [...collectSubclassFeatures([gameData]).values()].map((value) =>
+        entityKey(value.name, value.source),
+      ),
+    ),
+    creature: new Set(
+      (gameData.creatures ?? []).map((value) => entityKey(value.name, value.source)),
     ),
     feat: new Set(gameData.feats.map((value) => entityKey(value.name, value.source))),
     item: new Set(
@@ -252,6 +283,24 @@ export function findLayerDependencyIssues(
           path: `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
           reference,
         })
+      }
+    }
+    for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
+      for (const [choiceIndex, choice] of (subclass.normalizedRules?.choices ?? []).entries()) {
+        for (const [optionIndex, option] of choice.options.entries()) {
+          const reference = `${option.name}|${option.source ?? ''}`
+          if (
+            option.source &&
+            optionCatalogs[option.entityType].has(entityKey(option.name, option.source))
+          ) {
+            continue
+          }
+          issues.push({
+            owner: `${owner}/${subclass.name}|${subclass.source}`,
+            path: `subclasses[${subclassIndex}].normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+            reference,
+          })
+        }
       }
     }
   }

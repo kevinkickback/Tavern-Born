@@ -34,8 +34,10 @@ import { useGameDataStore } from '@/store/gameDataStore'
 const ENTRY_TYPES = [
   'Race',
   'Class',
+  'Subclass Feature',
   'Spell',
   'Item',
+  'Creature',
   'Background',
   'Feat',
   'Skill',

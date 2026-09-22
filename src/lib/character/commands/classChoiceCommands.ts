@@ -90,6 +90,8 @@ export function applyClassChoiceSelectionCommand(
     kind: choice.kind,
     className: choice.owner.name,
     classSource: choice.owner.source,
+    ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
+    ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
     selected: selected.map<CharacterClassChoiceOption>((option, index) => ({
       ...option,
@@ -109,9 +111,13 @@ export function applyClassChoiceSelectionCommand(
 function isFeatureOption(
   option: CharacterClassChoiceOption,
 ): option is CharacterClassChoiceOption & {
-  entityType: 'classFeature' | 'optionalFeature'
+  entityType: 'classFeature' | 'subclassFeature' | 'optionalFeature'
 } {
-  return option.entityType === 'classFeature' || option.entityType === 'optionalFeature'
+  return (
+    option.entityType === 'classFeature' ||
+    option.entityType === 'subclassFeature' ||
+    option.entityType === 'optionalFeature'
+  )
 }
 
 function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'source'>): string {
@@ -269,6 +275,13 @@ export function reconcileClassChoiceSelections(
         (entry.source ?? '') === (selection.classSource ?? ''),
     )
     if (!owner || owner.levels < selection.classLevel) return []
+    if (
+      selection.subclassName &&
+      (owner.subclass !== selection.subclassName ||
+        (owner.subclassSource ?? '') !== (selection.subclassSource ?? ''))
+    ) {
+      return []
+    }
     const selected = selection.selected.filter((option) => option.slotLevel <= owner.levels)
     return selected.length > 0 ? [{ ...selection, selected }] : []
   })

@@ -299,4 +299,85 @@ describe('game-data content layers', () => {
       },
     ])
   })
+
+  test('resolves nested subclass-choice features in dependency audits', () => {
+    const bear = {
+      name: 'Bear',
+      source: 'PHB',
+      className: 'Barbarian',
+      classSource: 'PHB',
+      subclassShortName: 'Totem Warrior',
+      subclassSource: 'PHB',
+      level: 3,
+      entries: ['Bear option rules.'],
+    }
+    const totemSpirit = {
+      name: 'Totem Spirit',
+      source: 'PHB',
+      className: 'Barbarian',
+      classSource: 'PHB',
+      subclassShortName: 'Totem Warrior',
+      subclassSource: 'PHB',
+      level: 3,
+      entries: [{ type: 'refSubclassFeature', feature: bear }],
+    }
+    const barbarian = makeClassFixture({
+      name: 'Barbarian',
+      source: 'PHB',
+      classFeatureRefs: [],
+      subclasses: [
+        {
+          name: 'Path of the Totem Warrior',
+          shortName: 'Totem Warrior',
+          source: 'PHB',
+          className: 'Barbarian',
+          classSource: 'PHB',
+          subclassFeatureRefs: [
+            {
+              ref: 'Totem Spirit|Barbarian||Totem Warrior||3',
+              name: 'Totem Spirit',
+              source: 'PHB',
+              className: 'Barbarian',
+              classSource: 'PHB',
+              subclassShortName: 'Totem Warrior',
+              subclassSource: 'PHB',
+              level: 3,
+              feature: totemSpirit,
+            },
+          ],
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [
+              {
+                id: 'totem-spirit',
+                label: 'Totem Spirit',
+                kind: 'subclass-feature',
+                owner: {
+                  type: 'subclass',
+                  name: 'Barbarian',
+                  source: 'PHB',
+                  subclassName: 'Path of the Totem Warrior',
+                  subclassSource: 'PHB',
+                },
+                level: 3,
+                minimumSelections: 1,
+                maximumSelections: 1,
+                selectionCountByLevel: [0, 0, 1],
+                options: [{ entityType: 'subclassFeature', name: 'Bear', source: 'PHB' }],
+                repeatable: false,
+                replacement: { cadence: 'never' },
+                source: { kind: 'class-feature-options', field: 'entries' },
+              },
+            ],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    })
+    const layer = makeGameDataFixture({ classes: [barbarian] })
+
+    expect(findLayerDependencyIssues(layer, layer)).toEqual([])
+  })
 })

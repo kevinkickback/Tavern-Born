@@ -86,12 +86,14 @@ change semantics. Do not sequence a materialized write and a later provenance wr
 multiclass math. There are no top-level class mirrors.
 
 - Class feats retain source-qualified slot ownership in `classFeatChoices`.
-- Other normalized choices retain descriptor identity, owner, and earned level in
-  `classChoiceSelections`.
+- Other normalized class and subclass choices retain descriptor identity, source-qualified owner,
+  and earned level in `classChoiceSelections`. Supported selections include class features,
+  subclass features, optional features, feats, items, and creatures.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
 - Level-down/class removal retracts choices, grants, ASIs, spells, and replacement events owned by
   removed levels.
-- Subclass changes reconcile subclass ownership without replacing the base class.
+- Subclass changes remove selections owned by the previous subclass while preserving choices owned
+  by the base class. Materialized subclass-feature selections follow the same ownership boundary.
 
 ## Spell state
 

@@ -4,6 +4,8 @@ import type { CharacterCalculationContext } from '@/lib/calculations/characterCa
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   type ClassChoiceCatalogs,
+  getCharacterClassChoiceDiagnostics,
+  getCharacterClassChoices,
   getClassChoiceOptionKey,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -76,7 +78,8 @@ export function validateClassChoices(
         ),
       )
     }
-    if (entry.subclass && !getSelectedSubclassData(classData, entry)) {
+    const subclassData = getSelectedSubclassData(classData, entry)
+    if (entry.subclass && !subclassData) {
       issues.push(
         readinessIssue(
           classSubclassReadinessId(readinessClassKey(entry)),
@@ -89,7 +92,12 @@ export function validateClassChoices(
       )
     }
 
-    for (const choice of classData.normalizedRules?.choices ?? []) {
+    const includeClassFeatureVariants = character.variantRules?.optionalClassFeatures ?? false
+    for (const choice of getCharacterClassChoices(
+      classData,
+      subclassData,
+      includeClassFeatureVariants,
+    )) {
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
       const storedSelection = selections.get(choice.id)?.selected ?? []
@@ -118,7 +126,11 @@ export function validateClassChoices(
         )
       }
     }
-    for (const diagnostic of classData.normalizedRules?.choiceDiagnostics ?? []) {
+    for (const diagnostic of getCharacterClassChoiceDiagnostics(
+      classData,
+      subclassData,
+      includeClassFeatureVariants,
+    )) {
       if ((diagnostic.level ?? 1) > entry.levels) continue
       issues.push(
         readinessIssue(

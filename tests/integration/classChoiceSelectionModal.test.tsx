@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassChoiceSelectionModal'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -180,5 +181,120 @@ describe('ClassChoiceSelectionModal', () => {
     render(props.renderCard(retained, false))
     expect(screen.getByText('Unavailable')).toBeTruthy()
     expect(screen.getByText(/no longer eligible/i)).toBeTruthy()
+  })
+
+  test('shows companion combat facts and supports creature capability filters and search', () => {
+    const wolf: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'creature', name: 'Wolf', source: 'MM' },
+      entries: [],
+      presentation: {
+        kind: 'creature',
+        summary: buildCreatureChoiceSummary({
+          name: 'Wolf',
+          source: 'MM',
+          size: ['M'],
+          type: 'beast',
+          cr: '1/4',
+          ac: [13],
+          hp: { average: 11, formula: '2d8 + 2' },
+          speed: { walk: 40 },
+          trait: [{ name: 'Pack Tactics', entries: ['The wolf has advantage.'] }],
+          action: [{ name: 'Bite', entries: ['Melee Weapon Attack.'] }],
+        }),
+      },
+      searchText: 'Wolf beast Pack Tactics Bite',
+    }
+    const hawk: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'creature', name: 'Hawk', source: 'MM' },
+      entries: [],
+      presentation: {
+        kind: 'creature',
+        summary: buildCreatureChoiceSummary({
+          name: 'Hawk',
+          source: 'MM',
+          size: ['T'],
+          type: 'beast',
+          cr: '0',
+          ac: [13],
+          hp: { average: 1, formula: '1d4 - 1' },
+          speed: { walk: 10, fly: 60 },
+          trait: [{ name: 'Keen Sight', entries: ['The hawk has advantage.'] }],
+          action: [{ name: 'Talons', entries: ['Melee Weapon Attack.'] }],
+        }),
+      },
+      searchText: 'Hawk beast fly flight flying Keen Sight Talons',
+    }
+
+    render(
+      <ClassChoiceSelectionModal
+        choice={{ ...choice, label: "Ranger's Companion", kind: 'creature' }}
+        options={[wolf, hawk]}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    const props = selectionModalCapture.props as {
+      filterSections: Array<{ key: string }>
+      matchItem: (
+        item: ClassChoiceOptionView,
+        search: string,
+        filters: Record<string, Set<string>>,
+      ) => boolean
+      renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
+    }
+    expect(props.filterSections.map((section) => section.key)).toEqual([
+      'creatureSize',
+      'creatureChallenge',
+      'creatureMovement',
+    ])
+    expect(props.matchItem(wolf, 'pack tactics', {})).toBe(true)
+    expect(props.matchItem(hawk, 'flight', {})).toBe(true)
+    expect(props.matchItem(wolf, '', { creatureMovement: new Set(['fly']) })).toBe(false)
+    expect(props.matchItem(hawk, '', { creatureMovement: new Set(['fly']) })).toBe(true)
+
+    render(props.renderCard(wolf, false))
+    expect(screen.getByText('Medium beast')).toBeTruthy()
+    expect(screen.getByText('CR 1/4')).toBeTruthy()
+    expect(screen.getByText('AC')).toBeTruthy()
+    expect(screen.getByText('11 (2d8 + 2)')).toBeTruthy()
+    expect(screen.getByText('40 ft.')).toBeTruthy()
+    expect(screen.getByText('Pack Tactics')).toBeTruthy()
+    expect(screen.getByText('Bite.')).toBeTruthy()
+    expect(screen.getByText('Melee Weapon Attack.')).toBeTruthy()
+  })
+
+  test('shows optional-feature type and multiple rules paragraphs for runes', () => {
+    const rune: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'optionalFeature', name: 'Cloud Rune', source: 'TCE' },
+      entries: ['Passive skill benefit.', 'Invoked reaction benefit.'],
+      presentation: { kind: 'feature', featureTypeLabels: ['Rune Knight Rune'] },
+    }
+
+    render(
+      <ClassChoiceSelectionModal
+        choice={{ ...choice, label: 'Runes' }}
+        options={[rune]}
+        maximumSelections={2}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    const props = selectionModalCapture.props as {
+      renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
+    }
+    render(props.renderCard(rune, false))
+    expect(screen.getByText('Rune Knight Rune')).toBeTruthy()
+    expect(screen.getByText('Passive skill benefit.')).toBeTruthy()
+    expect(screen.getByText('Invoked reaction benefit.')).toBeTruthy()
   })
 })

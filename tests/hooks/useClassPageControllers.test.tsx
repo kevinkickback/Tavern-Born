@@ -416,6 +416,8 @@ describe('class page controllers', () => {
       classFeatures: [
         { name: 'Practical Study', source: 'PHB', entries: ['Choose practical training.'] },
       ],
+      subclassFeatures: [],
+      creatures: [],
       feats: [],
       items: [],
       itemsBase: [],
@@ -508,6 +510,8 @@ describe('class page controllers', () => {
         viewingClassLevel: 4,
         catalogs: {
           classFeatures: [{ name: 'Current Study', source: 'PHB', entries: [] }],
+          subclassFeatures: [],
+          creatures: [],
           feats: [],
           items: [],
           itemsBase: [],
