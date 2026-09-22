@@ -899,18 +899,21 @@ function normalizeSingleFilterChoices(
   return { choices, diagnostics }
 }
 
-function parseCreatureTags(text: string): NormalizedChoiceOptionReference[] {
+function parseCreatureTags(
+  text: string,
+  fallbackSource: string,
+): NormalizedChoiceOptionReference[] {
   const options = new Map<string, NormalizedChoiceOptionReference>()
   for (const match of text.matchAll(/\{@creature\s+([^|}]+)(?:\|([^|}]*))?(?:\|[^}]*)?}/gi)) {
     const name = match[1]?.trim()
     if (!name) continue
-    const source = match[2]?.trim()
+    const source = match[2]?.trim() || fallbackSource
     const option: NormalizedChoiceOptionReference = {
       entityType: 'creature',
       name,
-      ...(source ? { source } : {}),
+      source,
     }
-    options.set(`${normalizedIdPart(name)}|${normalizedIdPart(source ?? '')}`, option)
+    options.set(`${normalizedIdPart(name)}|${normalizedIdPart(source)}`, option)
   }
   return [...options.values()]
 }
@@ -926,7 +929,7 @@ function normalizeCreatureTagChoices(
     const text = getFeatureText(ref)
     const searchableText = toSearchableText(text)
     if (!/\bchoose (?:its|a|the) stat block\b/i.test(searchableText)) return []
-    const options = parseCreatureTags(text)
+    const options = parseCreatureTags(text, ref.feature?.source || ref.source || owner.source)
     if (options.length < 2) return []
     return [
       {

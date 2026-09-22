@@ -186,4 +186,54 @@ describe('createCorpusCapabilityReport', () => {
       }),
     )
   })
+
+  it('resolves options backed by direct subclass feature objects', () => {
+    const directFeature = { name: 'Direct Ward', source: 'TST', level: 3 }
+    const subclassRules: NormalizedClassRules = {
+      ...EMPTY_RULES,
+      choices: [
+        {
+          id: 'direct-subclass-choice',
+          label: 'Direct Subclass Choice',
+          kind: 'subclass-feature',
+          owner: {
+            type: 'subclass',
+            name: 'Test Adept',
+            source: 'TST',
+            subclassName: 'School of Tests',
+            subclassSource: 'TST',
+          },
+          level: 3,
+          minimumSelections: 1,
+          maximumSelections: 1,
+          selectionCountByLevel: [1],
+          options: [{ entityType: 'subclassFeature', name: 'Direct Ward', source: 'TST' }],
+          repeatable: false,
+          replacement: { cadence: 'never' },
+          source: { kind: 'class-feature-options', field: 'test.direct-options' },
+        },
+      ],
+    }
+    const classData = makeClassFixture({
+      name: 'Test Adept',
+      source: 'TST',
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: EMPTY_RULES,
+      subclasses: [
+        {
+          name: 'School of Tests',
+          shortName: 'Tests',
+          source: 'TST',
+          className: 'Test Adept',
+          subclassFeatures: [directFeature],
+          normalizedRules: subclassRules,
+        },
+      ],
+    })
+
+    expect(
+      createCorpusCapabilityReport(makeGameDataFixture({ classes: [classData] })).issues,
+    ).toEqual([])
+  })
 })

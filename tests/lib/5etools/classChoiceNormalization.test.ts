@@ -125,6 +125,25 @@ describe('class choice normalization', () => {
     })
   })
 
+  test('qualifies source-less creature tags with the feature source', () => {
+    const rules = normalizeSubclassRules(
+      { name: 'Ranger', source: 'PHB' },
+      { name: 'Beast Master', source: 'PHB' },
+      [
+        subclassFeatureRef(
+          'Primal Companion',
+          ['Choose its stat block—{@creature Beast of the Land} or {@creature Beast of the Sea}.'],
+          'TCE',
+        ),
+      ],
+    )
+
+    expect(rules.choices[0]?.options).toEqual([
+      { entityType: 'creature', name: 'Beast of the Land', source: 'TCE' },
+      { entityType: 'creature', name: 'Beast of the Sea', source: 'TCE' },
+    ])
+  })
+
   test('normalizes nested subclass feature option blocks', () => {
     const root = subclassFeatureRef('Hunter', [
       {

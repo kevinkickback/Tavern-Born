@@ -109,9 +109,13 @@ export function BuildClassPage() {
       ),
     [spellLookup],
   )
-  const viewingClassData = viewingClassSource
-    ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
-    : undefined
+  const viewingClassData = useMemo(() => {
+    if (!viewingClassSource) return undefined
+    const viewingKey = getEntityLookupKey(viewingClass, viewingClassSource)
+    return (classes as Class5e[]).find(
+      (classData) => getEntityLookupKey(classData.name, classData.source) === viewingKey,
+    )
+  }, [classes, viewingClass, viewingClassSource])
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const viewingSubclassSpellcastingData = useMemo(
     () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),

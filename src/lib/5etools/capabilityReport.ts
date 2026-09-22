@@ -116,12 +116,20 @@ function optionCatalogs(
     }
     Object.values(record).forEach(visitSubclassEntries)
   }
+  const addSubclassFeature = (value: unknown): void => {
+    const feature = asRecord(value)
+    if (!feature) return
+    embeddedSubclassFeatures.push(feature)
+    visitSubclassEntries(feature.entries)
+  }
   for (const classData of gameData.classes) {
     for (const subclass of classData.subclasses ?? []) {
+      for (const feature of subclass.subclassFeatures ?? []) addSubclassFeature(feature)
       for (const reference of subclass.subclassFeatureRefs ?? []) {
-        if (!reference.feature) continue
-        embeddedSubclassFeatures.push(reference.feature)
-        visitSubclassEntries(reference.feature.entries)
+        addSubclassFeature(reference.feature)
+      }
+      for (const group of subclass.levelFeatures ?? []) {
+        for (const feature of group.features) addSubclassFeature(feature)
       }
     }
   }
