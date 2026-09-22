@@ -179,11 +179,14 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
     !entity.source || allowedSources.has(entity.source)
   return {
     classFeatures: classFeatures.filter(fromAllowedSource),
+    subclassFeatures: [],
+    creatures: [],
     feats: feats.filter(fromAllowedSource),
     items: items.filter(fromAllowedSource),
     itemsBase: itemsBase.filter(fromAllowedSource),
     itemMasteries: itemMasteries.filter(fromAllowedSource),
     optionalFeatures: optionalFeatures.filter(fromAllowedSource),
+    itemPropertyByAbbr: {},
     itemTypeByAbbr,
     weaponProficiencies: character.proficiencies.weapons,
   }

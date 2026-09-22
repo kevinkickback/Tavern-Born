@@ -95,21 +95,57 @@ export function findClassChoiceCoverageGaps(
     }
     if (!classData.normalizedRules) {
       gaps.push({ owner, message: 'Normalized class rules are unavailable.' })
-      continue
-    }
-    for (const diagnostic of classData.normalizedRules.choiceDiagnostics) {
-      gaps.push({ owner, level: diagnostic.level, message: diagnostic.message })
-    }
-    for (const choice of classData.normalizedRules.choices) {
-      if (choice.owner.name !== owner.name || choice.owner.source !== owner.source) {
-        gaps.push({ owner, level: choice.level, message: `${choice.id} has a mismatched owner.` })
+    } else {
+      for (const diagnostic of classData.normalizedRules.choiceDiagnostics) {
+        gaps.push({ owner, level: diagnostic.level, message: diagnostic.message })
       }
-      if (choice.selectionCountByLevel.length !== maximumLevel) {
+      for (const choice of classData.normalizedRules.choices) {
+        if (choice.owner.name !== owner.name || choice.owner.source !== owner.source) {
+          gaps.push({ owner, level: choice.level, message: `${choice.id} has a mismatched owner.` })
+        }
+        if (choice.selectionCountByLevel.length !== maximumLevel) {
+          gaps.push({
+            owner,
+            level: choice.level,
+            message: `${choice.id} has ${choice.selectionCountByLevel.length} progression entries.`,
+          })
+        }
+      }
+    }
+    for (const subclass of classData.subclasses ?? []) {
+      const subclassLabel = `${subclass.name}|${subclass.source}`
+      if (!subclass.normalizedRules) {
+        gaps.push({ owner, message: `${subclassLabel} has no normalized subclass rules.` })
+        continue
+      }
+      for (const diagnostic of subclass.normalizedRules.choiceDiagnostics) {
         gaps.push({
           owner,
-          level: choice.level,
-          message: `${choice.id} has ${choice.selectionCountByLevel.length} progression entries.`,
+          level: diagnostic.level,
+          message: `${subclassLabel}: ${diagnostic.message}`,
         })
+      }
+      for (const choice of subclass.normalizedRules.choices) {
+        if (
+          choice.owner.type !== 'subclass' ||
+          choice.owner.name !== owner.name ||
+          choice.owner.source !== owner.source ||
+          choice.owner.subclassName !== subclass.name ||
+          choice.owner.subclassSource !== subclass.source
+        ) {
+          gaps.push({
+            owner,
+            level: choice.level,
+            message: `${subclassLabel}: ${choice.id} has a mismatched owner.`,
+          })
+        }
+        if (choice.selectionCountByLevel.length !== maximumLevel) {
+          gaps.push({
+            owner,
+            level: choice.level,
+            message: `${subclassLabel}: ${choice.id} has ${choice.selectionCountByLevel.length} progression entries.`,
+          })
+        }
       }
     }
   }

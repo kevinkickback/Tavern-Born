@@ -3,8 +3,10 @@
 
 ## ✨ Changes
 
-* Tavern Born now includes the free D&D rules provided through the SRD
-* Character rules now reflect available content and group related options more clearly
+* Tavern Born now includes the D&D rules available through the SRD
+* Character options now reflect available content and group related selections more clearly
+* Expanded support for subclass-specific options, including companions, runes, and similar selections
+* Creature stat blocks and available subclass features are now searchable in the Compendium
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
 

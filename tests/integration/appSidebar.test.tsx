@@ -165,6 +165,8 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: 'Items' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Weapon Masteries' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Class Features' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Subclass Features' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Creatures' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Organizations' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Item Types' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Optional Features' })).toBeTruthy()

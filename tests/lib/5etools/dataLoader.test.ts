@@ -223,6 +223,15 @@ describe('5etools/dataLoader', () => {
       'spells/index.json': {
         PHB: 'spells-phb.json',
       },
+      'bestiary/index.json': {
+        MM: 'bestiary-mm.json',
+      },
+      'bestiary/bestiary-mm.json': {
+        monster: [
+          { name: 'Wolf', source: 'MM', size: ['M'], type: 'beast', cr: '1/4' },
+          { name: 'Wrong Source Beast', source: 'XMM', size: ['M'], type: 'beast', cr: '1/4' },
+        ],
+      },
       'spells/spells-phb.json': {
         spell: [
           { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' },
@@ -291,6 +300,8 @@ describe('5etools/dataLoader', () => {
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Wrong Feature'])
 
     expect(gameData.spells.map((it) => it.name)).toEqual(['Magic Missile'])
+    expect(gameData.creatures?.map((it) => it.name)).toEqual(['Wolf'])
+    expect(gameData.lookups?.creaturesByKey?.['Wolf|MM']?.name).toBe('Wolf')
     expect(gameData.spells[0]?.classes?.fromClassList).toEqual(
       expect.arrayContaining([{ name: 'Wizard', source: 'PHB' }]),
     )

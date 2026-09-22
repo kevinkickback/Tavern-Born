@@ -755,6 +755,8 @@ export function replaceClassFeatSelectionsCommand(
                 id: choiceId,
                 className: owner.className,
                 classSource: owner.classSource,
+                ...(owner.subclassName ? { subclassName: owner.subclassName } : {}),
+                ...(owner.subclassSource ? { subclassSource: owner.subclassSource } : {}),
                 progressionName: owner.progressionName,
                 categories: owner.categories,
                 feats,

@@ -41,9 +41,10 @@ external normalized collections on the SRD collections: an exact external identi
 SRD identity omitted by the external source remains available. Raw source JSON is never
 concatenated. Unresolved class-feature references are re-linked against the completed catalog and
 their normalized class rules are rebuilt before the final lookups are constructed. Subclass-feature
-references are re-linked the same way and their level groupings are rebuilt. Explicit class-choice
-references are checked against the completed class-feature, feat, item, and optional-feature
-catalogs.
+references are re-linked the same way, their level groupings are rebuilt, and their source-owned
+choice descriptors are normalized after layering. Explicit class and subclass choice references
+are checked against the completed class-feature, subclass-feature, creature, feat, item, and
+optional-feature catalogs.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names
@@ -82,9 +83,12 @@ not read arbitrary files or construct legal metadata independently.
   indexes. Do not replace it with unbounded `Promise.all`.
 - Every load has a request identity and abort signal. Superseded progress, success, and failure are
   ignored.
-- Bundled entity files, indexes, and spell-source association data are required. For an external
-  partial layer, every inventoried entity file and every file referenced by an inventoried index is
-  required; unlisted families are intentionally absent. Fluff/presentation data is optional.
+- Bundled entity files, class/spell indexes, and spell-source association data are required. When a
+  source inventories a bestiary index, its referenced files are loaded through the same bounded
+  worker pool and retained as a creature catalog for character-option resolution; their sourcebooks
+  are not thereby exposed as selectable character-content books. For an external partial layer,
+  every inventoried entity file and every file referenced by an inventoried index is required;
+  unlisted families are intentionally absent. Fluff/presentation data is optional.
 - Foreground loads reject required failures. Background refresh rejects any dropped resource so it
   cannot replace a more complete cache.
 - A remote source with no reachable top-level resources fails instead of producing an empty catalog.
@@ -114,7 +118,9 @@ explicit ruleset metadata module. Both must be testable and removable.
 The parser layer owns normalization that would otherwise be repeated across pages, including:
 
 - class/subclass feature references, copied subclasses, spellcasting, resources, ritual casting,
-  ASIs, and source-owned choice descriptors;
+  ASIs, and source-owned class and subclass choice descriptors;
+- creature choices expressed as explicit stat-block references or structured bestiary filters,
+  including type, size, challenge rating, and swarm exclusions;
 - background origin rules, source-qualified narrative entries, and starting-equipment blocks;
 - race versions/lineages, structured traits, and presentation entries;
 - conditions versus diseases and structured rules entries;
@@ -122,10 +128,11 @@ The parser layer owns normalization that would otherwise be repeated across page
 - feat fixed references and unconditional lasting effects;
 - fluff summaries and optional images/sections.
 
-Choice normalizers preserve owner, level, capacity, replacement rule, source filters, and diagnostic
-provenance. Unknown choice blocks remain visible as diagnostics instead of becoming invented
-options. Optional-feature progression remains the count owner when feature prose repeats the same
-choice.
+Choice normalizers preserve class/subclass owner, level, capacity, replacement rule, source filters,
+and diagnostic provenance. Unknown choice blocks remain visible as diagnostics instead of becoming
+invented options. Optional-feature and feat progression remain the count owners when feature prose
+repeats the same choice. Feature variants retain replacement metadata so the character's optional
+class-feature setting can swap the original and replacement choice without showing both.
 
 ## Identity and entity resolution
 
@@ -147,6 +154,14 @@ recreate this policy.
 
 Downstream UI uses `useFilteredGameData()`, `useWizardGameData()`, or named hooks from
 `useGameData.ts`. Use lookup maps for exact references rather than repeated array scans.
+Filtering class or subclass feature references also rebuilds their normalized rules, so the class
+builder and readiness validation cannot retain choices owned by disabled or suppressed content.
+Creature filtering admits the ruleset's implicit monster source (MM for 2014, XMM for 2024) and any
+explicitly selected monster source only for resolving character options; this does not make those
+books selectable in character source settings.
+The global Compendium intentionally indexes the complete loaded creature catalog and canonical,
+context-qualified subclass features. Character source filtering remains separate from that global
+reference view.
 
 ## Spell enrichment
 

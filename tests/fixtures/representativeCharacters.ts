@@ -396,6 +396,10 @@ const clericData = withLookups(
   makeGameDataFixture({
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [cleric2024],
+    classFeatures: [
+      { name: 'Protector', source: 'XPHB' },
+      { name: 'Thaumaturge', source: 'XPHB' },
+    ],
     backgrounds: [
       {
         name: 'Acolyte',
@@ -551,6 +555,12 @@ const druidData = withLookups(
   makeGameDataFixture({
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [druid2024],
+    classFeatures: [
+      { name: 'Magician', source: 'XPHB' },
+      { name: 'Warden', source: 'XPHB' },
+      { name: 'Potent Spellcasting', source: 'XPHB' },
+      { name: 'Primal Strike', source: 'XPHB' },
+    ],
     backgrounds: [
       {
         name: 'Guide',

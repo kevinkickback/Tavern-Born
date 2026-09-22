@@ -1,4 +1,10 @@
-import type { Class5e, ClassFeatureReference, OptFeatureProg } from '@/types/5etools'
+import type {
+  Class5e,
+  ClassFeatureReference,
+  OptFeatureProg,
+  Subclass5e,
+  SubclassFeatureReference,
+} from '@/types/5etools'
 import type {
   ChoiceOptionEntityType,
   ClassChoiceDiagnostic,
@@ -17,6 +23,26 @@ interface ParsedFilterTag {
 interface ChoiceNormalizationResult {
   choices: NormalizedCharacterChoice[]
   diagnostics: ClassChoiceDiagnostic[]
+}
+
+type ChoiceFeatureReference = ClassFeatureReference | SubclassFeatureReference
+type ChoiceOwner = NormalizedCharacterChoice['owner']
+
+function classChoiceOwner(classData: Pick<Class5e, 'name' | 'source'>): ChoiceOwner {
+  return { type: 'class', name: classData.name, source: classData.source }
+}
+
+function subclassChoiceOwner(
+  classData: Pick<Class5e, 'name' | 'source'>,
+  subclass: Pick<Subclass5e, 'name' | 'source'>,
+): ChoiceOwner {
+  return {
+    type: 'subclass',
+    name: classData.name,
+    source: classData.source,
+    subclassName: subclass.name,
+    subclassSource: subclass.source,
+  }
 }
 
 const LEVEL_COUNT = 20
@@ -57,16 +83,22 @@ function normalizedIdPart(value: string): string {
     .replace(/^-|-$/g, '')
 }
 
-function buildChoiceId(classData: Pick<Class5e, 'name' | 'source'>, label: string, level: number) {
-  return `class:${normalizedIdPart(classData.name)}|${normalizedIdPart(classData.source)}|choice:${normalizedIdPart(label)}|${level}`
+function buildChoiceId(owner: ChoiceOwner, label: string, level: number) {
+  const subclassPart = owner.subclassName
+    ? `|subclass:${normalizedIdPart(owner.subclassName)}|${normalizedIdPart(owner.subclassSource ?? '')}`
+    : ''
+  return `class:${normalizedIdPart(owner.name)}|${normalizedIdPart(owner.source)}${subclassPart}|choice:${normalizedIdPart(label)}|${level}`
 }
 
-function getReferenceLevel(ref: ClassFeatureReference): number | undefined {
-  const encodedLevel = Number.parseInt(
-    typeof ref.ref === 'string' ? (ref.ref.split('|')[3] ?? '') : '',
-    10,
-  )
-  return Number.isNaN(encodedLevel) ? (ref.level ?? ref.feature?.level) : encodedLevel
+function getReferenceLevel(ref: ChoiceFeatureReference): number | undefined {
+  if (ref.level !== undefined) return ref.level
+  if (ref.feature?.level !== undefined) return ref.feature.level
+  const parts = typeof ref.ref === 'string' ? ref.ref.split('|') : []
+  for (const index of [5, 3]) {
+    const encodedLevel = Number.parseInt(parts[index] ?? '', 10)
+    if (!Number.isNaN(encodedLevel)) return encodedLevel
+  }
+  return undefined
 }
 
 function countsFromLevel(level: number, count: number): number[] {
@@ -105,9 +137,23 @@ function parseClassFeatureReference(
   }
 }
 
+function parseSubclassFeatureReference(
+  value: string,
+  fallbackSource: string,
+): NormalizedChoiceOptionReference | undefined {
+  const parts = value.split('|')
+  const name = parts[0]?.trim()
+  if (!name) return undefined
+  return {
+    entityType: 'subclassFeature',
+    name,
+    source: parts[6]?.trim() || parts[4]?.trim() || fallbackSource,
+  }
+}
+
 function parseNamedEntityReference(
   value: string,
-  entityType: Exclude<ChoiceOptionEntityType, 'classFeature'>,
+  entityType: Exclude<ChoiceOptionEntityType, 'classFeature' | 'subclassFeature'>,
   fallbackSource: string,
 ): NormalizedChoiceOptionReference | undefined {
   const [rawName, rawSource] = value.split('|')
@@ -129,6 +175,9 @@ function getOptionReference(
   if (typeof entry.classFeature === 'string') {
     return parseClassFeatureReference(entry.classFeature, fallbackSource)
   }
+  if (typeof entry.subclassFeature === 'string') {
+    return parseSubclassFeatureReference(entry.subclassFeature, fallbackSource)
+  }
   if (typeof entry.optionalfeature === 'string') {
     return parseNamedEntityReference(entry.optionalfeature, 'optionalFeature', fallbackSource)
   }
@@ -137,6 +186,9 @@ function getOptionReference(
   }
   if (typeof entry.item === 'string') {
     return parseNamedEntityReference(entry.item, 'item', fallbackSource)
+  }
+  if (typeof entry.creature === 'string') {
+    return parseNamedEntityReference(entry.creature, 'creature', fallbackSource)
   }
   if (typeof entry.name === 'string' && entry.name.trim()) {
     return {
@@ -188,7 +240,9 @@ function isProgressionBackedOptionBlock(
 
 function getFeatureText(ref: ClassFeatureReference): string {
   try {
-    return JSON.stringify(ref.feature?.entries ?? '')
+    return JSON.stringify(ref.feature?.entries ?? '', (key, value) =>
+      key === 'feature' ? undefined : value,
+    )
   } catch {
     return ''
   }
@@ -307,28 +361,29 @@ function hasFilteredSelectionIntent(text: string, labels: readonly string[]): bo
   })
 }
 
-function filtersSameOptionalFeatureFamily(
+function filtersSameProgressionFamily(
   progression: NormalizedCharacterChoice,
   filter: NormalizedChoiceOptionFilter,
 ): boolean {
-  if (
-    progression.source.kind !== 'optional-feature-progression' ||
-    filter.entityType !== 'optionalFeature'
-  ) {
+  if (progression.source.kind !== 'optional-feature-progression') {
     return false
   }
-  const progressionTypes = new Set(
-    (progression.optionFilter?.featureTypes ?? []).map((type) => type.toLowerCase()),
+  if (progression.optionFilter?.entityType !== filter.entityType) return false
+  const overlaps = (left: readonly string[] | undefined, right: readonly string[]) => {
+    const values = new Set((left ?? []).map((value) => value.toLowerCase()))
+    return right.some((value) => values.has(value.toLowerCase()))
+  }
+  const candidateFilters = [filter, ...(filter.anyOf ?? [])]
+  return candidateFilters.some(
+    (candidate) =>
+      overlaps(progression.optionFilter?.featureTypes, candidate.featureTypes ?? []) ||
+      overlaps(progression.optionFilter?.categories, candidate.categories ?? []),
   )
-  const filterTypes = [
-    ...(filter.featureTypes ?? []),
-    ...(filter.anyOf ?? []).flatMap((candidate) => candidate.featureTypes ?? []),
-  ]
-  return filterTypes.some((type) => progressionTypes.has(type.toLowerCase()))
 }
 
 function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedCharacterChoiceKind {
   if (entityType === 'classFeature') return 'class-feature'
+  if (entityType === 'subclassFeature') return 'subclass-feature'
   if (entityType === 'optionalFeature') return 'optional-feature'
   return entityType
 }
@@ -355,7 +410,32 @@ function inferFilteredChoiceCount(text: string, label: string): number | undefin
     `\\b(\\d+|${countWords})\\s+(?:kinds?\\s+of\\s+)?${escapedLabel}\\b[^.]{0,160}\\bof your choice\\b`,
     'i',
   ).exec(searchableText)
-  return match?.[1] ? parsePositiveCount(match[1]) : undefined
+  if (match?.[1]) return parsePositiveCount(match[1])
+  const leadingSelection = new RegExp(
+    `\\b(?:choose|select|learn|pick)\\s+(a|an|\\d+|${countWords})\\s+(?:(?:types?|kinds?)\\s+of\\s+)?[a-z]`,
+    'i',
+  ).exec(searchableText)
+  return leadingSelection?.[1] ? parsePositiveCount(leadingSelection[1]) : undefined
+}
+
+function inferSelectionCounts(text: string, level: number, initialCount: number): number[] {
+  const gains = new Map<number, number>([[level, initialCount]])
+  const searchableText = toSearchableText(text)
+  for (const match of searchableText.matchAll(
+    /\bwhen you reach ([^.]{0,80}?) level\b[^.]{0,180}\b(?:choose|select|learn|pick) another\b/gi,
+  )) {
+    for (const rawLevel of match[1]?.matchAll(/\d+/g) ?? []) {
+      const parsedLevel = Number.parseInt(rawLevel[0], 10)
+      if (parsedLevel > level && parsedLevel <= LEVEL_COUNT) {
+        gains.set(parsedLevel, (gains.get(parsedLevel) ?? 0) + 1)
+      }
+    }
+  }
+  let count = 0
+  return Array.from({ length: LEVEL_COUNT }, (_, index) => {
+    count += gains.get(index + 1) ?? 0
+    return count
+  })
 }
 
 function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
@@ -382,6 +462,28 @@ function addChoiceContext(
   }
 }
 
+function parseFraction(value: string): number | undefined {
+  const cleaned = value.replace(/[[\]&]/g, '').trim()
+  const fraction = /^(\d+)\/(\d+)$/.exec(cleaned)
+  if (fraction) {
+    const numerator = Number(fraction[1])
+    const denominator = Number(fraction[2])
+    return denominator > 0 ? numerator / denominator : undefined
+  }
+  const numeric = Number(cleaned)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
+
+function parseChallengeRatingMaximum(values: readonly string[]): number | undefined {
+  const ratings = values.flatMap((value) =>
+    value
+      .split(/[;&]/)
+      .map(parseFraction)
+      .filter((rating): rating is number => rating !== undefined),
+  )
+  return ratings.length > 0 ? Math.max(...ratings) : undefined
+}
+
 function parseFilterTags(text: string): ParsedFilterTag[] {
   const tags: ParsedFilterTag[] = []
   const regex = /\{@filter\s+([^|}]+)\|([^|}]+)\|([^}]+)}/gi
@@ -396,7 +498,9 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
           ? 'item'
           : collection === 'optionalfeatures'
             ? 'optionalFeature'
-            : undefined
+            : collection === 'bestiary'
+              ? 'creature'
+              : undefined
     if (!entityType) continue
 
     const filter: NormalizedChoiceOptionFilter = { entityType }
@@ -411,15 +515,26 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
         .filter(Boolean)
       if (key === 'category') filter.categories = values
       else if (key === 'feature type') filter.featureTypes = values
-      else if (key === 'type') {
+      else if (key === 'challenge rating') {
+        filter.challengeRatingMaximum = parseChallengeRatingMaximum(values)
+      } else if (filter.entityType === 'creature' && key === 'type') {
+        filter.creatureTypes = values.filter((value) => !value.startsWith('!'))
+      } else if (filter.entityType === 'creature' && key === 'size') {
+        filter.sizes = values.filter((value) => !value.startsWith('!'))
+      } else if (key === 'type') {
         const included = values.filter((value) => !value.startsWith('!'))
         const excluded = values
           .filter((value) => value.startsWith('!'))
           .map((value) => value.slice(1))
         if (included.length > 0) filter.itemTypes = included
         if (excluded.length > 0) filter.excludedItemTypes = excluded
+      } else if (filter.entityType === 'item' && key === 'property') {
+        filter.excludedItemProperties = values
+          .filter((value) => value.startsWith('!'))
+          .map((value) => value.slice(1))
       } else if (key === 'rarity') filter.rarities = values
       else if (key === 'miscellaneous' && values.includes('!cursed')) filter.excludeCursed = true
+      else if (key === 'miscellaneous' && values.includes('!swarm')) filter.excludeSwarms = true
       else if (key === 'melee weapon') {
         filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'melee' as const])]
       } else if (key === 'ranged weapon') {
@@ -431,9 +546,49 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
   return tags
 }
 
+function getFeatureVariant(
+  ref: ChoiceFeatureReference,
+): NormalizedCharacterChoice['featureVariant'] | undefined {
+  if (ref.feature?.isClassFeatureVariant !== true) return undefined
+  const text = toSearchableText(getFeatureText(ref))
+  const replacesFeatureName = /replaces (?:the )?([^.,;]+?) feature\b/i.exec(text)?.[1]?.trim()
+  return { ...(replacesFeatureName ? { replacesFeatureName } : {}) }
+}
+
+function ownedFeature(owner: ChoiceOwner, ref: ChoiceFeatureReference): ChoiceOwner {
+  return {
+    ...owner,
+    featureName: ref.name,
+    featureSource: ref.feature?.source || ref.source || owner.source,
+  }
+}
+
+function choiceDiagnostic(
+  owner: ChoiceOwner,
+  ref: ChoiceFeatureReference,
+  level: number,
+  code: ClassChoiceDiagnostic['code'],
+  message: string,
+): ClassChoiceDiagnostic {
+  return {
+    code,
+    className: owner.name,
+    classSource: owner.source,
+    ...(owner.subclassName ? { subclassName: owner.subclassName } : {}),
+    ...(owner.subclassSource ? { subclassSource: owner.subclassSource } : {}),
+    featureName: ref.name,
+    level,
+    message,
+    ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
+  }
+}
+
 function normalizeFeatureOptionChoices(
-  classData: Pick<Class5e, 'name' | 'source' | 'optionalfeatureProgression'>,
-  refs: readonly ClassFeatureReference[],
+  classData: Pick<Class5e, 'name' | 'source'>,
+  refs: readonly ChoiceFeatureReference[],
+  owner: ChoiceOwner,
+  missingCountPolicy: 'diagnose' | 'presentation' = 'diagnose',
+  progressions: readonly OptFeatureProg[] = [],
 ): ChoiceNormalizationResult {
   const choices: NormalizedCharacterChoice[] = []
   const diagnostics: ClassChoiceDiagnostic[] = []
@@ -452,14 +607,7 @@ function normalizeFeatureOptionChoices(
             return option ? [option] : []
           })
         : []
-      if (
-        isProgressionBackedOptionBlock(
-          ref.name,
-          level,
-          options,
-          classData.optionalfeatureProgression ?? [],
-        )
-      ) {
+      if (isProgressionBackedOptionBlock(ref.name, level, options, progressions)) {
         return
       }
       const rawCount = block.count
@@ -468,52 +616,53 @@ function normalizeFeatureOptionChoices(
           ? Math.trunc(rawCount)
           : undefined
       if (!count) {
-        diagnostics.push({
-          code: 'invalid-count',
-          className: classData.name,
-          classSource: classData.source,
-          featureName: ref.name,
-          level,
-          message: `Option block ${blockIndex + 1} has no safe positive selection count.`,
-        })
+        // Upstream subclass data also uses count-less option blocks to group features which are
+        // all granted together. Only an explicit positive count makes those blocks selectable.
+        // An explicit but invalid count is still malformed and must remain diagnostic.
+        if (rawCount === undefined && missingCountPolicy === 'presentation') return
+        diagnostics.push(
+          choiceDiagnostic(
+            owner,
+            ref,
+            level,
+            'invalid-count',
+            `Option block ${blockIndex + 1} has no safe positive selection count.`,
+          ),
+        )
         return
       }
       if (options.length === 0) {
-        diagnostics.push({
-          code: 'unresolved-options',
-          className: classData.name,
-          classSource: classData.source,
-          featureName: ref.name,
-          level,
-          message: `Option block ${blockIndex + 1} has no source-qualified option references.`,
-        })
+        diagnostics.push(
+          choiceDiagnostic(
+            owner,
+            ref,
+            level,
+            'unresolved-options',
+            `Option block ${blockIndex + 1} has no source-qualified option references.`,
+          ),
+        )
         return
       }
       const entityType = options[0]?.entityType
       if (!entityType || options.some((option) => option.entityType !== entityType)) {
-        diagnostics.push({
-          code: 'unresolved-options',
-          className: classData.name,
-          classSource: classData.source,
-          featureName: ref.name,
-          level,
-          message: `Option block ${blockIndex + 1} mixes entity types and cannot form one choice.`,
-        })
+        diagnostics.push(
+          choiceDiagnostic(
+            owner,
+            ref,
+            level,
+            'unresolved-options',
+            `Option block ${blockIndex + 1} mixes entity types and cannot form one choice.`,
+          ),
+        )
         return
       }
 
       const label = blocks.length > 1 ? `${ref.name} ${blockIndex + 1}` : ref.name
       choices.push({
-        id: buildChoiceId(classData, label, level),
+        id: buildChoiceId(owner, label, level),
         label,
         kind: choiceKindForEntity(entityType),
-        owner: {
-          type: 'class',
-          name: classData.name,
-          source: classData.source,
-          featureName: ref.name,
-          featureSource: feature.source || ref.source || classData.source,
-        },
+        owner: ownedFeature(owner, ref),
         level,
         minimumSelections: count,
         maximumSelections: count,
@@ -521,6 +670,7 @@ function normalizeFeatureOptionChoices(
         options,
         repeatable: false,
         replacement: inferReplacement(getFeatureText(ref)),
+        ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
         source: {
           kind: 'class-feature-options',
           field: `classFeatureRefs:${ref.ref || ref.name}:entries`,
@@ -532,10 +682,15 @@ function normalizeFeatureOptionChoices(
 }
 
 function normalizeOptionalFeatureProgressions(
-  classData: Pick<Class5e, 'name' | 'source' | 'optionalfeatureProgression'>,
-  refs: readonly ClassFeatureReference[],
+  progressions: readonly OptFeatureProg[],
+  refs: readonly ChoiceFeatureReference[],
+  owner: ChoiceOwner,
+  sourceField: 'optionalfeatureProgression' | 'featProgression' = 'optionalfeatureProgression',
 ): NormalizedCharacterChoice[] {
-  return (classData.optionalfeatureProgression ?? []).flatMap((progression, index) => {
+  return progressions.flatMap((progression, index) => {
+    const featureTypes = progression.featureType ?? []
+    const categories = progression.category ?? []
+    if (featureTypes.length === 0 && categories.length === 0) return []
     const counts = normalizeProgression(progression.progression)
     const levelIndex = counts.findIndex((count) => count > 0)
     if (levelIndex < 0) return []
@@ -543,8 +698,11 @@ function normalizeOptionalFeatureProgressions(
     const featureRef = refs.find(
       (ref) =>
         ref.name.trim().toLowerCase() === progression.name.trim().toLowerCase() ||
-        progression.featureType.some((type) =>
+        featureTypes.some((type) =>
           getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
+        ) ||
+        categories.some((category) =>
+          getFeatureText(ref).toLowerCase().includes(`category=${category.toLowerCase()}`),
         ),
     )
     let replacement = inferReplacement(featureRef ? getFeatureText(featureRef) : '')
@@ -558,7 +716,7 @@ function normalizeOptionalFeatureProgressions(
             (tag) =>
               tag.entityType === 'optionalFeature' &&
               (tag.filter.featureTypes ?? []).some((type) =>
-                progression.featureType.some(
+                featureTypes.some(
                   (progressionType) => progressionType.toLowerCase() === type.toLowerCase(),
                 ),
               ),
@@ -571,30 +729,28 @@ function normalizeOptionalFeatureProgressions(
     }
     return [
       {
-        id: buildChoiceId(classData, progression.name, levelIndex + 1),
+        id: buildChoiceId(owner, progression.name, levelIndex + 1),
         label: progression.name,
-        kind: 'optional-feature' as const,
+        kind: categories.length > 0 ? ('feat' as const) : ('optional-feature' as const),
         owner: {
-          type: 'class' as const,
-          name: classData.name,
-          source: classData.source,
+          ...owner,
           featureName: featureRef?.name ?? progression.name,
-          featureSource: featureRef?.source ?? classData.source,
+          featureSource: featureRef?.source ?? owner.source,
         },
         level: levelIndex + 1,
         minimumSelections: maximumSelections,
         maximumSelections,
         selectionCountByLevel: counts,
         options: [],
-        optionFilter: {
-          entityType: 'optionalFeature' as const,
-          featureTypes: [...progression.featureType],
-        },
+        optionFilter:
+          categories.length > 0
+            ? { entityType: 'feat' as const, categories: [...categories] }
+            : { entityType: 'optionalFeature' as const, featureTypes: [...featureTypes] },
         repeatable: false,
         replacement,
         source: {
           kind: 'optional-feature-progression' as const,
-          field: `optionalfeatureProgression[${index}]`,
+          field: `${sourceField}[${index}]`,
         },
       },
     ]
@@ -611,6 +767,7 @@ function normalizeTableBackedFilterChoices(
     const tags = tableRules.tags.length > 0 ? tableRules.tags : parseFilterTags(text)
     const mergedFilter = mergeFilters(tags)
     if (!mergedFilter) return []
+    if (mergedFilter.entityType === 'creature') return []
     const filter = addChoiceContext(mergedFilter, text)
     const sectionNames = new Set([featureRef.name.toLowerCase()])
     visitFeatureRecords(featureRef.feature?.entries, (entry) => {
@@ -638,7 +795,7 @@ function normalizeTableBackedFilterChoices(
       const maximumSelections = Math.max(...counts)
       return [
         {
-          id: buildChoiceId(classData, featureRef.name, firstLevelIndex + 1),
+          id: buildChoiceId(classChoiceOwner(classData), featureRef.name, firstLevelIndex + 1),
           label: featureRef.name,
           kind: choiceKindForEntity(filter.entityType),
           owner: {
@@ -668,9 +825,9 @@ function normalizeTableBackedFilterChoices(
 }
 
 function normalizeSingleFilterChoices(
-  classData: Pick<Class5e, 'name' | 'source'>,
-  refs: readonly ClassFeatureReference[],
+  refs: readonly ChoiceFeatureReference[],
   existing: readonly NormalizedCharacterChoice[],
+  owner: ChoiceOwner,
 ): ChoiceNormalizationResult {
   const choices: NormalizedCharacterChoice[] = []
   const diagnostics: ClassChoiceDiagnostic[] = []
@@ -686,11 +843,12 @@ function normalizeSingleFilterChoices(
     const tags = parseFilterTags(text)
     const mergedFilter = mergeFilters(tags)
     if (!mergedFilter) continue
+    if (mergedFilter.entityType === 'creature' && tags.length !== 1) continue
     const filter = addChoiceContext(mergedFilter, text)
     if (
       existing.some(
         (choice) =>
-          filtersSameOptionalFeatureFamily(choice, filter) ||
+          filtersSameProgressionFamily(choice, filter) ||
           (filter.entityType === 'optionalFeature' &&
             choice.source.kind === 'optional-feature-progression' &&
             choiceNameStem(choice.label) === choiceNameStem(ref.name)),
@@ -705,35 +863,33 @@ function normalizeSingleFilterChoices(
     )
     if (!count) {
       if (!hasFilteredSelectionIntent(text, labels)) continue
-      diagnostics.push({
-        code: 'invalid-count',
-        className: classData.name,
-        classSource: classData.source,
-        featureName: ref.name,
-        level,
-        message: 'Filtered choice has no safely parseable selection count or matching class table.',
-      })
+      diagnostics.push(
+        choiceDiagnostic(
+          owner,
+          ref,
+          level,
+          'invalid-count',
+          'Filtered choice has no safely parseable selection count or matching class table.',
+        ),
+      )
       continue
     }
+    const selectionCountByLevel = inferSelectionCounts(text, level, count)
+    const maximumSelections = Math.max(...selectionCountByLevel)
     choices.push({
-      id: buildChoiceId(classData, ref.name, level),
+      id: buildChoiceId(owner, ref.name, level),
       label: ref.name,
       kind: choiceKindForEntity(filter.entityType),
-      owner: {
-        type: 'class',
-        name: classData.name,
-        source: classData.source,
-        featureName: ref.name,
-        featureSource: ref.source ?? classData.source,
-      },
+      owner: ownedFeature(owner, ref),
       level,
-      minimumSelections: count,
-      maximumSelections: count,
-      selectionCountByLevel: countsFromLevel(level, count),
+      minimumSelections: maximumSelections,
+      maximumSelections,
+      selectionCountByLevel,
       options: [],
       optionFilter: filter,
       repeatable: false,
       replacement: inferReplacement(text),
+      ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
       source: {
         kind: 'class-feature-options',
         field: `classFeatureRefs:${ref.ref || ref.name}:entries.filter`,
@@ -743,20 +899,180 @@ function normalizeSingleFilterChoices(
   return { choices, diagnostics }
 }
 
+function parseCreatureTags(
+  text: string,
+  fallbackSource: string,
+): NormalizedChoiceOptionReference[] {
+  const options = new Map<string, NormalizedChoiceOptionReference>()
+  for (const match of text.matchAll(/\{@creature\s+([^|}]+)(?:\|([^|}]*))?(?:\|[^}]*)?}/gi)) {
+    const name = match[1]?.trim()
+    if (!name) continue
+    const source = match[2]?.trim() || fallbackSource
+    const option: NormalizedChoiceOptionReference = {
+      entityType: 'creature',
+      name,
+      source,
+    }
+    options.set(`${normalizedIdPart(name)}|${normalizedIdPart(source)}`, option)
+  }
+  return [...options.values()]
+}
+
+function normalizeCreatureTagChoices(
+  refs: readonly ChoiceFeatureReference[],
+  existing: readonly NormalizedCharacterChoice[],
+  owner: ChoiceOwner,
+): NormalizedCharacterChoice[] {
+  return refs.flatMap((ref) => {
+    const level = getReferenceLevel(ref)
+    if (!level || existing.some((choice) => choice.owner.featureName === ref.name)) return []
+    const text = getFeatureText(ref)
+    const searchableText = toSearchableText(text)
+    if (!/\bchoose (?:its|a|the) stat block\b/i.test(searchableText)) return []
+    const options = parseCreatureTags(text, ref.feature?.source || ref.source || owner.source)
+    if (options.length < 2) return []
+    return [
+      {
+        id: buildChoiceId(owner, ref.name, level),
+        label: ref.name,
+        kind: 'creature' as const,
+        owner: ownedFeature(owner, ref),
+        level,
+        minimumSelections: 1,
+        maximumSelections: 1,
+        selectionCountByLevel: countsFromLevel(level, 1),
+        options,
+        repeatable: false,
+        replacement: inferReplacement(text),
+        ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
+        source: {
+          kind: 'class-feature-options' as const,
+          field: `subclassFeatureRefs:${ref.ref || ref.name}:entries.creature`,
+        },
+      },
+    ]
+  })
+}
+
+function collectSubclassChoiceFeatureRefs(
+  refs: readonly SubclassFeatureReference[],
+): ChoiceFeatureReference[] {
+  const collected: ChoiceFeatureReference[] = []
+  const seen = new Set<string>()
+
+  const add = (ref: ChoiceFeatureReference) => {
+    const subclassRef = ref as SubclassFeatureReference
+    const feature = ref.feature
+    const identity = `${ref.ref}|${feature?.name ?? ref.name}|${feature?.source ?? ref.source ?? ''}|${getReferenceLevel(ref) ?? ''}`
+    if (seen.has(identity)) return
+    seen.add(identity)
+    collected.push(ref)
+    visitFeatureRecords(feature?.entries, (record) => {
+      if (record.type !== 'refSubclassFeature' || typeof record.subclassFeature !== 'string') return
+      const nestedFeature = asRecord(record.feature)
+      if (!nestedFeature || typeof nestedFeature.name !== 'string') return
+      const parts = record.subclassFeature.split('|')
+      add({
+        ref: record.subclassFeature,
+        name: parts[0] ?? nestedFeature.name,
+        className: parts[1] ?? ref.className,
+        classSource: parts[2] || ref.classSource,
+        subclassShortName: parts[3] || subclassRef.subclassShortName,
+        subclassSource: parts[4] || subclassRef.subclassSource,
+        source: parts[6] || (typeof nestedFeature.source === 'string' ? nestedFeature.source : ''),
+        ...(() => {
+          const parsedLevel = Number.parseInt(parts[5] ?? '', 10)
+          const level =
+            typeof nestedFeature.level === 'number'
+              ? nestedFeature.level
+              : Number.isNaN(parsedLevel)
+                ? undefined
+                : parsedLevel
+          return level === undefined ? {} : { level }
+        })(),
+        feature: nestedFeature as unknown as NonNullable<SubclassFeatureReference['feature']>,
+      })
+    })
+  }
+
+  refs.forEach(add)
+  return collected
+}
+
 /** Normalizes class-owned choice requirements with data-shape rules shared by every class. */
 export function normalizeClassChoices(
   classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups' | 'optionalfeatureProgression'>,
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
-  const direct = normalizeFeatureOptionChoices(classData, refs)
-  const progression = normalizeOptionalFeatureProgressions(classData, refs)
+  const owner = classChoiceOwner(classData)
+  const direct = normalizeFeatureOptionChoices(
+    classData,
+    refs,
+    owner,
+    'diagnose',
+    classData.optionalfeatureProgression ?? [],
+  )
+  const progression = normalizeOptionalFeatureProgressions(
+    classData.optionalfeatureProgression ?? [],
+    refs,
+    owner,
+  )
   const tableBacked = normalizeTableBackedFilterChoices(classData, refs)
   const accumulated = [...direct.choices, ...progression, ...tableBacked]
-  const singleFilters = normalizeSingleFilterChoices(classData, refs, accumulated)
+  const singleFilters = normalizeSingleFilterChoices(refs, accumulated, owner)
   const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
   )
   return { choices, diagnostics: [...direct.diagnostics, ...singleFilters.diagnostics] }
+}
+
+/** Normalizes selected-subclass feature choices, including nested referenced features. */
+export function normalizeSubclassRules(
+  classData: Pick<Class5e, 'name' | 'source'>,
+  subclass: Pick<Subclass5e, 'name' | 'source' | 'optionalfeatureProgression' | 'featProgression'>,
+  refs: readonly SubclassFeatureReference[],
+): import('@/types/classRules').NormalizedClassRules {
+  const owner = subclassChoiceOwner(classData, subclass)
+  const expandedRefs = collectSubclassChoiceFeatureRefs(refs)
+  const optionalFeatureProgressions = subclass.optionalfeatureProgression ?? []
+  const featProgressions = subclass.featProgression ?? []
+  const progressions = [...optionalFeatureProgressions, ...featProgressions]
+  const progression = [
+    ...normalizeOptionalFeatureProgressions(optionalFeatureProgressions, expandedRefs, owner),
+    ...normalizeOptionalFeatureProgressions(
+      featProgressions,
+      expandedRefs,
+      owner,
+      'featProgression',
+    ),
+  ]
+  const direct = normalizeFeatureOptionChoices(
+    classData,
+    expandedRefs,
+    owner,
+    'presentation',
+    progressions,
+  )
+  const directChoices = direct.choices.filter(
+    (choice) =>
+      !progression.some(
+        (candidate) =>
+          normalizedIdPart(candidate.label) === normalizedIdPart(choice.label) &&
+          candidate.kind === choice.kind,
+      ),
+  )
+  const creatureTags = normalizeCreatureTagChoices(expandedRefs, directChoices, owner)
+  const accumulated = [...progression, ...directChoices, ...creatureTags]
+  const singleFilters = normalizeSingleFilterChoices(expandedRefs, accumulated, owner)
+  return {
+    resources: [],
+    asiLevels: [],
+    ritualCasting: false,
+    choices: [...accumulated, ...singleFilters.choices].sort(
+      (left, right) => left.level - right.level || left.id.localeCompare(right.id),
+    ),
+    choiceDiagnostics: [...direct.diagnostics, ...singleFilters.diagnostics],
+  }
 }
 
 export function getRequiredChoiceSelectionCount(

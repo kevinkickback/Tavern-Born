@@ -36,6 +36,23 @@ function hasRestrictedSubclass(classes: readonly Class5e[]): boolean {
   )
 }
 
+function hasNormalizedFeatureVariant(classes: readonly Class5e[]): boolean {
+  return classes.some(
+    (classEntity) =>
+      classEntity.normalizedRules?.choices.some((choice) => choice.featureVariant !== undefined) ||
+      classEntity.normalizedRules?.choiceDiagnostics.some(
+        (diagnostic) => diagnostic.featureVariant !== undefined,
+      ) ||
+      classEntity.subclasses?.some(
+        (subclass) =>
+          subclass.normalizedRules?.choices.some((choice) => choice.featureVariant !== undefined) ||
+          subclass.normalizedRules?.choiceDiagnostics.some(
+            (diagnostic) => diagnostic.featureVariant !== undefined,
+          ),
+      ),
+  )
+}
+
 export function getVariantRuleContentAvailability({
   classes,
   classFeatures,
@@ -44,7 +61,9 @@ export function getVariantRuleContentAvailability({
 }: VariantRuleContent): VariantRuleContentAvailability {
   return {
     optionalClassFeatures:
-      classFeatures.some(isClassFeatureVariant) || optionalFeatures.some(isClassFeatureVariant),
+      classFeatures.some(isClassFeatureVariant) ||
+      optionalFeatures.some(isClassFeatureVariant) ||
+      hasNormalizedFeatureVariant(classes),
     anyRaceSubclasses: hasRestrictedSubclass(classes),
     preferNewerPrintings: preferNewerPrintingsAvailable,
   }

@@ -13,6 +13,7 @@ export function makeGameDataFixture(overrides: Partial<GameData> = {}): GameData
     itemProperties: [],
     itemTypes: [],
     classFeatures: [],
+    creatures: [],
     actions: [],
     conditions: [],
     deities: [],

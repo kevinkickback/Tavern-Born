@@ -19,6 +19,31 @@ function partialGameData(partial: unknown): GameData {
 
 describe('Content Filtering (allowedSources)', () => {
   describe('Character with restricted allowedSources', () => {
+    test('retains the edition monster catalog needed by creature choices', () => {
+      const character = makeCharacterFixture({
+        originSystem: '2014',
+        allowedSources: ['PHB', 'TCE'],
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          creatures: [
+            { name: 'Wolf', source: 'MM', type: 'beast', size: ['M'], cr: '1/4' },
+            { name: 'Beast of the Land', source: 'TCE', type: 'beast', size: ['M'], cr: 'PB' },
+            { name: 'Revised Wolf', source: 'XMM', type: 'beast', size: ['M'], cr: '1/4' },
+          ],
+          sources: [],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.creatures.map((creature) => creature.name)).toEqual([
+        'Wolf',
+        'Beast of the Land',
+      ])
+    })
+
     test('useFilteredGameData filters spells by allowedSources', () => {
       // Character with only PHB sources
       const character = makeCharacterFixture({
@@ -237,6 +262,34 @@ describe('Content Filtering (allowedSources)', () => {
       expect(result.current.classes[0]?.subclasses?.map((subclass) => subclass.shortName)).toEqual([
         'Current',
       ])
+    })
+
+    test('preferNewerPrintings suppresses reprinted creatures', () => {
+      const character = makeCharacterFixture({
+        allowedSources: ['VGM', 'TCE'],
+        variantRules: { preferNewerPrintings: true },
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          creatures: [
+            {
+              name: 'Beastling',
+              source: 'VGM',
+              reprintedAs: ['Beastling|TCE'],
+              type: 'beast',
+            },
+            { name: 'Beastling', source: 'TCE', type: 'beast' },
+          ],
+          sources: [],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(
+        result.current.creatures.map((creature) => `${creature.name}|${creature.source}`),
+      ).toEqual(['Beastling|TCE'])
     })
   })
 

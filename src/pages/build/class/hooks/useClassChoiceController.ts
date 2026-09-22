@@ -1,25 +1,31 @@
 import { useMemo, useState } from 'react'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
-import { useItemTypeLookup } from '@/hooks/data/useGameData'
+import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
+  getCharacterClassChoiceDiagnostics,
+  getCharacterClassChoices,
   getClassChoiceOptionKey,
-  getStandaloneClassChoices,
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 interface ClassChoiceControllerParams {
   character: Character | null
   viewingClassData?: Class5e
+  viewingSubclassData?: Subclass5e
   viewingClassLevel: number
-  catalogs: Omit<ClassChoiceCatalogs, 'itemTypeByAbbr' | 'weaponProficiencies'>
+  includeClassFeatureVariants?: boolean
+  catalogs: Omit<
+    ClassChoiceCatalogs,
+    'itemPropertyByAbbr' | 'itemTypeByAbbr' | 'weaponProficiencies'
+  >
   onFeatOptionsRequired?: (feat: ClassChoiceCatalogs['feats'][number], choiceId: string) => void
 }
 
@@ -28,30 +34,40 @@ const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 export function useClassChoiceController({
   character,
   viewingClassData,
+  viewingSubclassData,
   viewingClassLevel,
+  includeClassFeatureVariants = false,
   catalogs,
   onFeatOptionsRequired,
 }: ClassChoiceControllerParams) {
   const { applyClassChoiceSelection } = useClassProvenanceMutations()
   const itemTypeByAbbr = useItemTypeLookup()
+  const itemPropertyByAbbr = useItemPropertyLookup()
   const weaponProficiencies = character?.proficiencies.weapons ?? EMPTY_WEAPON_PROFICIENCIES
   const [activeChoice, setActiveChoice] = useState<NormalizedCharacterChoice | null>(null)
   const choices = useMemo(
     () =>
       viewingClassData
-        ? getStandaloneClassChoices(viewingClassData).filter(
-            (choice) => choice.level <= viewingClassLevel,
-          )
+        ? getCharacterClassChoices(
+            viewingClassData,
+            viewingSubclassData,
+            includeClassFeatureVariants,
+          ).filter((choice) => choice.level <= viewingClassLevel)
         : [],
-    [viewingClassData, viewingClassLevel],
+    [includeClassFeatureVariants, viewingClassData, viewingClassLevel, viewingSubclassData],
   )
   const persistedSelectionByChoiceId = useMemo(
-    () => new Map((character?.classChoiceSelections ?? []).map((entry) => [entry.choiceId, entry])),
+    () =>
+      new Map(
+        (character?.classChoiceSelections ?? [])
+          .filter((entry) => !entry.inactive)
+          .map((entry) => [entry.choiceId, entry]),
+      ),
     [character?.classChoiceSelections],
   )
   const resolvedCatalogs = useMemo<ClassChoiceCatalogs>(
-    () => ({ ...catalogs, itemTypeByAbbr, weaponProficiencies }),
-    [catalogs, itemTypeByAbbr, weaponProficiencies],
+    () => ({ ...catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies }),
+    [catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies],
   )
   const optionViewsByChoiceId = useMemo(
     () =>
@@ -85,15 +101,13 @@ export function useClassChoiceController({
     [choices, optionViewsByChoiceId, selectionByChoiceId],
   )
   const activeOptionViews = activeChoice ? (optionViewsByChoiceId.get(activeChoice.id) ?? []) : []
-  const activeEligibleOptionKeys = new Set(
-    activeOptionViews
-      .filter(isClassChoiceOptionEligible)
-      .map((option) => getClassChoiceOptionKey(option.reference)),
+  const activeOptionKeys = new Set(
+    activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
   )
   const activeInitialSelectedIds = activeChoice
     ? (selectionByChoiceId.get(activeChoice.id)?.selected ?? [])
         .map(getClassChoiceOptionKey)
-        .filter((key) => activeEligibleOptionKeys.has(key))
+        .filter((key) => activeOptionKeys.has(key))
     : []
   const activeRequiredCount = activeChoice
     ? getRequiredChoiceSelectionCount(activeChoice, viewingClassLevel)
@@ -101,15 +115,21 @@ export function useClassChoiceController({
 
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeChoice) return
+    const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
+    const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
+    const confirmedSelections = [
+      ...eligibleSelections,
+      ...retainedSelections.slice(0, Math.max(0, activeRequiredCount - eligibleSelections.length)),
+    ]
     const previousKeys = new Set(
       (selectionByChoiceId.get(activeChoice.id)?.selected ?? []).map(getClassChoiceOptionKey),
     )
     applyClassChoiceSelection(
       activeChoice,
-      selected.map((option) => option.reference),
+      confirmedSelections.map((option) => option.reference),
     )
     if (activeChoice.kind === 'feat' && onFeatOptionsRequired) {
-      const newlyAdded = selected.find(
+      const newlyAdded = confirmedSelections.find(
         (option) => !previousKeys.has(getClassChoiceOptionKey(option.reference)),
       )
       const feat = newlyAdded
@@ -126,9 +146,15 @@ export function useClassChoiceController({
 
   return {
     choices,
-    diagnostics: (viewingClassData?.normalizedRules?.choiceDiagnostics ?? []).filter(
-      (diagnostic) => diagnostic.level === undefined || diagnostic.level <= viewingClassLevel,
-    ),
+    diagnostics: viewingClassData
+      ? getCharacterClassChoiceDiagnostics(
+          viewingClassData,
+          viewingSubclassData,
+          includeClassFeatureVariants,
+        ).filter(
+          (diagnostic) => diagnostic.level === undefined || diagnostic.level <= viewingClassLevel,
+        )
+      : [],
     selectionByChoiceId,
     selectedViewsByChoiceId,
     activeChoice,

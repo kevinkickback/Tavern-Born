@@ -43,7 +43,7 @@ Start at the narrowest matching owner instead of searching a manual file catalog
 | Readiness and Review | `src/lib/readiness/`, `src/pages/build/review/` |
 | Source filtering and reprints | `useFilteredGameData.ts`, `src/lib/5etools/filters.ts` |
 | Rules text and previews | `GameContent`, renderer modules, `RulesPreviewManager` |
-| Compendium | `src/lib/compendiumEntries.ts`, `src/pages/compendium/` |
+| Compendium | `src/lib/compendiumEntries.ts`, 5etools stat-block adapters, `src/pages/compendium/` |
 | PDF export | `src/lib/pdf/` |
 | Imports, copies, exports | `src/lib/character/characterTransfer.ts`, character store |
 | Updates and packaging | `electron/updateManager.ts`, update components, workflow files |
@@ -98,7 +98,11 @@ centered width convention; `SplitPane` owns compact one-pane behavior and deskto
   take ownership of class progression or equipment.
 - Character actions and effects are view-neutral projections shared by Review, Builder, and PDF.
 - Character duplicate/export/import operates on complete current-format records.
-- The Compendium is an editorial entity index, not an index of every repeated feature definition.
+- The Compendium is an editorial entity index, not an index of every repeated class-feature
+  definition. It includes canonical creature stat blocks and context-qualified subclass features so
+  character-option references can be browsed independently of the builder. Creature field ordering
+  and section semantics are adapted from the upstream 5etools bestiary renderer into a pure view
+  model under `src/lib/5etools/`; React owns only Tavern Born's presentation.
 
 ## Dependency guardrails
 

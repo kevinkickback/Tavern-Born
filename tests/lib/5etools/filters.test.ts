@@ -182,6 +182,220 @@ describe('5etools/filters', () => {
     ])
   })
 
+  test('filterClasses rebuilds normalized class and subclass rules from retained features', () => {
+    const optionBlock = (entity: 'classFeature' | 'subclassFeature', reference: string) => [
+      {
+        type: 'options',
+        count: 1,
+        entries: [
+          { type: `ref${entity[0]?.toUpperCase()}${entity.slice(1)}`, [entity]: reference },
+        ],
+      },
+    ]
+    const wizard = makeClassFixture({
+      classFeatureRefs: [
+        {
+          ref: 'Allowed Training|Wizard|PHB|1|PHB',
+          name: 'Allowed Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          feature: {
+            name: 'Allowed Training',
+            source: 'PHB',
+            level: 1,
+            entries: optionBlock('classFeature', 'Allowed Path|Wizard|PHB|1|PHB'),
+          },
+        },
+        {
+          ref: 'Forbidden Training|Wizard|PHB|1|XGE',
+          name: 'Forbidden Training',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          feature: {
+            name: 'Forbidden Training',
+            source: 'XGE',
+            level: 1,
+            entries: optionBlock('classFeature', 'Forbidden Path|Wizard|PHB|1|XGE'),
+          },
+        },
+      ],
+      subclasses: [
+        {
+          name: 'School of Test Magic',
+          shortName: 'Test Magic',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatureRefs: [
+            {
+              ref: 'Allowed Tactic|Wizard|PHB|Test Magic|PHB|2|PHB',
+              name: 'Allowed Tactic',
+              source: 'PHB',
+              className: 'Wizard',
+              classSource: 'PHB',
+              subclassShortName: 'Test Magic',
+              subclassSource: 'PHB',
+              level: 2,
+              feature: {
+                name: 'Allowed Tactic',
+                source: 'PHB',
+                level: 2,
+                entries: [
+                  {
+                    type: 'options',
+                    count: 1,
+                    entries: [
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Allowed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
+                        feature: { name: 'Allowed Ward', source: 'PHB', level: 2 },
+                      },
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Forbidden Ward|Wizard|PHB|Test Magic|PHB|2|XGE',
+                        feature: { name: 'Forbidden Ward', source: 'XGE', level: 2 },
+                      },
+                      {
+                        type: 'refSubclassFeature',
+                        subclassFeature: 'Suppressed Ward|Wizard|PHB|Test Magic|PHB|2|PHB',
+                        feature: { name: 'Suppressed Ward', source: 'PHB', level: 2 },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              ref: 'Forbidden Tactic|Wizard|PHB|Test Magic|PHB|2|XGE',
+              name: 'Forbidden Tactic',
+              source: 'XGE',
+              className: 'Wizard',
+              classSource: 'PHB',
+              subclassShortName: 'Test Magic',
+              subclassSource: 'PHB',
+              level: 2,
+              feature: {
+                name: 'Forbidden Tactic',
+                source: 'XGE',
+                level: 2,
+                entries: optionBlock(
+                  'subclassFeature',
+                  'Forbidden Ward|Wizard|PHB|Test Magic|PHB|2|XGE',
+                ),
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], {
+      sources: ['PHB'],
+      suppressedKeys: new Set(['Suppressed Ward|PHB']),
+    })
+
+    expect(filtered.normalizedRules?.choices.map((choice) => choice.label)).toEqual([
+      'Allowed Training',
+    ])
+    expect(filtered.subclasses?.[0].normalizedRules?.choices.map((choice) => choice.label)).toEqual(
+      ['Allowed Tactic'],
+    )
+    expect(filtered.subclasses?.[0].normalizedRules?.choices[0]?.options).toEqual([
+      expect.objectContaining({ name: 'Allowed Ward', source: 'PHB' }),
+    ])
+  })
+
+  test('filterClasses preserves pre-normalized rules when the source has no feature references', () => {
+    const precomputedRules = {
+      resources: [],
+      asiLevels: [4],
+      ritualCasting: false,
+      choices: [
+        {
+          id: 'class:fighter|xphb|choice:weapon-mastery|1',
+          label: 'Weapon Mastery',
+          kind: 'item' as const,
+          owner: { type: 'class' as const, name: 'Fighter', source: 'XPHB' },
+          level: 1,
+          minimumSelections: 1,
+          maximumSelections: 1,
+          selectionCountByLevel: Array(20).fill(1),
+          options: [{ entityType: 'item' as const, name: 'Longsword', source: 'XPHB' }],
+          repeatable: false,
+          replacement: { cadence: 'never' as const },
+          source: { kind: 'class-table' as const, field: 'Weapon Mastery' },
+        },
+      ],
+      choiceDiagnostics: [],
+    }
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'XPHB',
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: precomputedRules,
+    })
+
+    const [filtered] = DataFilter.filterClasses([fighter], { sources: ['XPHB'] })
+
+    expect(filtered.normalizedRules).toEqual(precomputedRules)
+  })
+
+  test('filterClasses rebuilds subclass rules from filtered direct feature objects', () => {
+    const directChoiceFeature = (name: string, source: string, option: string) => ({
+      name,
+      source,
+      level: 2,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [
+            {
+              type: 'refSubclassFeature',
+              subclassFeature: `${option}|Wizard|PHB|Tests|PHB|2|${source}`,
+            },
+          ],
+        },
+      ],
+    })
+    const wizard = makeClassFixture({
+      subclasses: [
+        {
+          name: 'School of Tests',
+          shortName: 'Tests',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: [
+            directChoiceFeature('Allowed Direct Choice', 'PHB', 'Allowed Ward'),
+            directChoiceFeature('Forbidden Direct Choice', 'XGE', 'Forbidden Ward'),
+          ],
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+
+    expect(filtered.subclasses?.[0].normalizedRules?.choices).toEqual([
+      expect.objectContaining({
+        label: 'Allowed Direct Choice',
+        options: [expect.objectContaining({ name: 'Allowed Ward', source: 'PHB' })],
+      }),
+    ])
+  })
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({

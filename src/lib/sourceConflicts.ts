@@ -84,6 +84,7 @@ export function detectSourceConflicts(
     }
   }
   for (const choice of character.classChoiceSelections ?? []) {
+    if (choice.inactive) continue
     for (const option of choice.selected) flag(option.name, option.source)
   }
 

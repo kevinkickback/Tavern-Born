@@ -16,6 +16,7 @@ type ReprintableGameData = Pick<
   | 'items'
   | 'itemsBase'
   | 'classFeatures'
+  | 'creatures'
   | 'optionalfeatures'
 >
 
@@ -73,6 +74,7 @@ export function collectReprintableEntities(gameData: ReprintableGameData): Repri
     ...(gameData.items ?? []),
     ...(gameData.itemsBase ?? []),
     ...(gameData.classFeatures ?? []),
+    ...(gameData.creatures ?? []),
     ...((gameData.optionalfeatures ?? []) as ReprintableEntity[]),
   ]
 }

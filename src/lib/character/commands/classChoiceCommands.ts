@@ -32,25 +32,27 @@ function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
   return levels
 }
 
-function findOwnerLevel(character: Character, choice: NormalizedCharacterChoice): number {
-  return (
-    character.classProgression?.find(
-      (entry) =>
-        entry.name === choice.owner.name && (entry.source ?? '') === (choice.owner.source ?? ''),
-    )?.levels ?? 0
+function findOwner(
+  character: Character,
+  choice: NormalizedCharacterChoice,
+): CharacterClassEntry | undefined {
+  return character.classProgression?.find(
+    (entry) =>
+      entry.name === choice.owner.name && (entry.source ?? '') === (choice.owner.source ?? ''),
   )
 }
 
 function validateSelectedOptions(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
+  previouslySelected: readonly CharacterClassChoiceOption[] = [],
 ): void {
   const keys = selected.map(optionKey)
   if (!choice.repeatable && new Set(keys).size !== keys.length) {
     throw new RangeError(`${choice.label} does not allow duplicate selections.`)
   }
   if (choice.options.length === 0 || choice.optionFilter) return
-  const allowed = new Set(choice.options.map(optionKey))
+  const allowed = new Set([...choice.options, ...previouslySelected].map(optionKey))
   if (keys.some((key) => !allowed.has(key))) {
     throw new RangeError(`A selected option is not available for ${choice.label}.`)
   }
@@ -62,19 +64,27 @@ export function applyClassChoiceSelectionCommand(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
 ): Pick<Character, 'classChoiceSelections'> {
-  const classLevel = findOwnerLevel(character, choice)
+  const owner = findOwner(character, choice)
+  const classLevel = owner?.levels ?? 0
   if (classLevel < choice.level) {
     throw new RangeError(`${choice.label} is not available at the character's current class level.`)
+  }
+  if (
+    choice.owner.type === 'subclass' &&
+    (!choice.owner.subclassName ||
+      owner?.subclass !== choice.owner.subclassName ||
+      (owner.subclassSource ?? '') !== (choice.owner.subclassSource ?? ''))
+  ) {
+    throw new RangeError(`${choice.label} is not available for the character's current subclass.`)
   }
   const requiredCount = getRequiredChoiceSelectionCount(choice, classLevel)
   if (selected.length > requiredCount) {
     throw new RangeError(`${choice.label} allows ${requiredCount} selections at this class level.`)
   }
-  validateSelectedOptions(choice, selected)
-
   const existingSelection = character.classChoiceSelections?.find(
     (existing) => existing.choiceId === choice.id,
   )
+  validateSelectedOptions(choice, selected, existingSelection?.selected)
   const slotLevels = assignProgressionSlotLevels(
     (existingSelection?.selected ?? []).map((option) => ({
       key: optionKey(option),
@@ -90,6 +100,8 @@ export function applyClassChoiceSelectionCommand(
     kind: choice.kind,
     className: choice.owner.name,
     classSource: choice.owner.source,
+    ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
+    ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
     selected: selected.map<CharacterClassChoiceOption>((option, index) => ({
       ...option,
@@ -109,16 +121,20 @@ export function applyClassChoiceSelectionCommand(
 function isFeatureOption(
   option: CharacterClassChoiceOption,
 ): option is CharacterClassChoiceOption & {
-  entityType: 'classFeature' | 'optionalFeature'
+  entityType: 'classFeature' | 'subclassFeature' | 'optionalFeature'
 } {
-  return option.entityType === 'classFeature' || option.entityType === 'optionalFeature'
+  return (
+    option.entityType === 'classFeature' ||
+    option.entityType === 'subclassFeature' ||
+    option.entityType === 'optionalFeature'
+  )
 }
 
 function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'source'>): string {
   return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
 }
 
-function reconcileClassChoiceFeatMirror(
+export function reconcileClassChoiceFeatMirror(
   character: Character,
   ledger: ProvenanceLedger,
   choice: NormalizedCharacterChoice,
@@ -133,6 +149,8 @@ function reconcileClassChoiceFeatMirror(
       choiceId: choice.id,
       className: choice.owner.name,
       classSource: choice.owner.source,
+      ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
+      ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
       progressionName: choice.label,
       categories,
       slotLevels: selection?.selected.map((option) => option.slotLevel) ?? [],
@@ -188,6 +206,7 @@ export function reconcileClassChoiceSelectionGrants(
   ledger: ProvenanceLedger,
   selections: readonly CharacterClassChoiceSelection[],
 ): Pick<CharacterCommandResult, 'provenanceUpdate'> & { features: Feature[] } {
+  const activeSelections = selections.filter((selection) => !selection.inactive)
   const ownedChoiceIds = new Set([
     ...(character.classChoiceSelections ?? []).map((selection) => selection.choiceId),
     ...selections.map((selection) => selection.choiceId),
@@ -207,7 +226,7 @@ export function reconcileClassChoiceSelectionGrants(
   )
   let provenanceUpdate: ProvenanceLedger = { ...ledger, features }
 
-  for (const selection of selections) {
+  for (const selection of activeSelections) {
     const tag = {
       ...makeSourceTag('class', selection.className, 'choice', selection.classSource),
       grantVariant: selection.choiceId,
@@ -219,7 +238,7 @@ export function reconcileClassChoiceSelectionGrants(
   }
 
   return {
-    features: rebuildClassChoiceFeatures(character.features, selections),
+    features: rebuildClassChoiceFeatures(character.features, activeSelections),
     provenanceUpdate,
   }
 }
@@ -269,6 +288,13 @@ export function reconcileClassChoiceSelections(
         (entry.source ?? '') === (selection.classSource ?? ''),
     )
     if (!owner || owner.levels < selection.classLevel) return []
+    if (
+      selection.subclassName &&
+      (owner.subclass !== selection.subclassName ||
+        (owner.subclassSource ?? '') !== (selection.subclassSource ?? ''))
+    ) {
+      return []
+    }
     const selected = selection.selected.filter((option) => option.slotLevel <= owner.levels)
     return selected.length > 0 ? [{ ...selection, selected }] : []
   })

@@ -62,6 +62,58 @@ describe('variant rule content availability', () => {
     })
   })
 
+  test('detects a normalized variant that exists only on a subclass', () => {
+    const classData = makeClassFixture({
+      subclasses: [
+        {
+          name: 'Beast Master',
+          shortName: 'Beast Master',
+          source: 'PHB',
+          className: 'Ranger',
+          classSource: 'PHB',
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [
+              {
+                id: 'primal-companion',
+                label: 'Primal Companion',
+                kind: 'creature',
+                owner: {
+                  type: 'subclass',
+                  name: 'Ranger',
+                  source: 'PHB',
+                  subclassName: 'Beast Master',
+                  subclassSource: 'PHB',
+                  featureName: 'Primal Companion',
+                },
+                level: 3,
+                minimumSelections: 1,
+                maximumSelections: 1,
+                selectionCountByLevel: Array(20).fill(1),
+                options: [],
+                repeatable: false,
+                replacement: { cadence: 'never' },
+                source: { kind: 'class-feature-options', field: 'fixture' },
+                featureVariant: { replacesFeatureName: "Ranger's Companion" },
+              },
+            ],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    })
+
+    expect(
+      getVariantRuleContentAvailability({
+        classes: [classData],
+        classFeatures: [],
+        optionalFeatures: [],
+      }).optionalClassFeatures,
+    ).toBe(true)
+  })
+
   test('does not activate a restriction for a similarly named homebrew subclass', () => {
     expect(
       getVariantRuleContentAvailability({

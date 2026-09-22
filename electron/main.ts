@@ -58,6 +58,11 @@ const isDev = !!process.env.VITE_DEV_SERVER_URL
 const LOCAL_DATA_AUTH_FILE = 'trusted-data-root.json'
 const MAX_LOCAL_JSON_BYTES = 50 * 1024 * 1024
 
+// Vite's optimized dependency responses are intentionally immutable. Electron's persistent
+// HTTP cache can otherwise retain one of those responses after Vite regenerates its shared
+// chunks, leaving lazy routes pointed at an obsolete chunk until the cache is cleared manually.
+if (isDev) app.commandLine.appendSwitch('disable-http-cache')
+
 type TrustedIpcEvent = IpcMainEvent | IpcMainInvokeEvent
 
 function isTrustedIpcSender(event: TrustedIpcEvent): boolean {

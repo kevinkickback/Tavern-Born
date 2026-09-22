@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useRawRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import type { CompendiumEntry } from '@/lib/compendiumEntries'
+import { CreatureStatBlock } from '@/pages/compendium/CreatureStatBlock'
 import type { Class5e } from '@/types/5etools'
 
 interface CompendiumEntryDetailsProps {
@@ -219,6 +220,9 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
           <Badge>{selectedEntry.type}</Badge>
           <Badge variant="outline">{selectedEntry.source}</Badge>
         </div>
+        {selectedEntry.context && (
+          <p className="text-sm text-muted-foreground">{selectedEntry.context}</p>
+        )}
       </div>
 
       <Separator />
@@ -267,7 +271,9 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
           </div>
         )}
 
-        {entryList.length > 0 ? (
+        {selectedEntry.type === 'Creature' ? (
+          <CreatureStatBlock creature={selectedEntry.data} recursiveLookup={recursiveLookup} />
+        ) : entryList.length > 0 ? (
           entryList.map((entry, idx) => {
             const entryKey = typeof entry === 'string' ? `${idx}:${entry}` : `${idx}`
 

@@ -4,7 +4,10 @@ import type { CharacterCalculationContext } from '@/lib/calculations/characterCa
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   type ClassChoiceCatalogs,
+  getCharacterClassChoiceDiagnostics,
+  getCharacterClassChoices,
   getClassChoiceOptionKey,
+  isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -53,7 +56,9 @@ export function validateClassChoices(
     ]),
   )
   const selections = new Map(
-    (character.classChoiceSelections ?? []).map((selection) => [selection.choiceId, selection]),
+    (character.classChoiceSelections ?? [])
+      .filter((selection) => !selection.inactive)
+      .map((selection) => [selection.choiceId, selection]),
   )
 
   for (const entry of entries) {
@@ -76,7 +81,8 @@ export function validateClassChoices(
         ),
       )
     }
-    if (entry.subclass && !getSelectedSubclassData(classData, entry)) {
+    const subclassData = getSelectedSubclassData(classData, entry)
+    if (entry.subclass && !subclassData) {
       issues.push(
         readinessIssue(
           classSubclassReadinessId(readinessClassKey(entry)),
@@ -89,15 +95,20 @@ export function validateClassChoices(
       )
     }
 
-    for (const choice of classData.normalizedRules?.choices ?? []) {
+    const includeClassFeatureVariants = character.variantRules?.optionalClassFeatures ?? false
+    for (const choice of getCharacterClassChoices(
+      classData,
+      subclassData,
+      includeClassFeatureVariants,
+    )) {
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
       const storedSelection = selections.get(choice.id)?.selected ?? []
       const eligibleOptionKeys = catalogs
         ? new Set(
-            resolveClassChoiceOptions(choice, catalogs, [], entry.levels).map((option) =>
-              getClassChoiceOptionKey(option.reference),
-            ),
+            resolveClassChoiceOptions(choice, catalogs, [], entry.levels)
+              .filter(isClassChoiceOptionEligible)
+              .map((option) => getClassChoiceOptionKey(option.reference)),
           )
         : undefined
       const count = eligibleOptionKeys
@@ -118,7 +129,11 @@ export function validateClassChoices(
         )
       }
     }
-    for (const diagnostic of classData.normalizedRules?.choiceDiagnostics ?? []) {
+    for (const diagnostic of getCharacterClassChoiceDiagnostics(
+      classData,
+      subclassData,
+      includeClassFeatureVariants,
+    )) {
       if ((diagnostic.level ?? 1) > entry.levels) continue
       issues.push(
         readinessIssue(

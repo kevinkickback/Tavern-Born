@@ -150,6 +150,22 @@ export const OptionalFeatureDataSchema = z
   })
   .passthrough()
 
+const CreatureSchema = z
+  .object({
+    name: z.string(),
+    source: z.string(),
+    size: z.array(z.string()).optional(),
+    type: z.any().optional(),
+    cr: z.any().optional(),
+  })
+  .passthrough()
+
+export const CreatureDataSchema = z
+  .object({
+    monster: z.array(CreatureSchema),
+  })
+  .passthrough()
+
 const GenericSchema = z
   .object({
     name: z.string().optional(),

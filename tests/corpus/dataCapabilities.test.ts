@@ -8,9 +8,11 @@ import {
   getPrimaryClassSourceForEdition,
   getSrdClassCohort,
 } from '@/lib/5etools/classChoiceCoverage'
+import { findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import {
   parseBackgrounds,
   parseClasses,
+  parseCreatures,
   parseFeats,
   parseItems,
   parseMagicVariants,
@@ -19,7 +21,16 @@ import {
 } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
-import type { Background5e, Class5e, ClassFeature, Feat5e, Item5e, Race5e } from '@/types/5etools'
+import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
+import type {
+  Background5e,
+  Class5e,
+  ClassFeature,
+  Creature5e,
+  Feat5e,
+  Item5e,
+  Race5e,
+} from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 const DATA_ROOT = resolve(process.cwd(), 'data')
@@ -65,19 +76,29 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const optionalfeatures = parseOptionalFeatures(
       readJson(resolve(DATA_ROOT, 'optionalfeatures.json')),
     )
-
-    const report = createCorpusCapabilityReport(
-      makeGameDataFixture({
-        classes,
-        classFeatures,
-        races,
-        backgrounds,
-        feats,
-        items,
-        itemsBase,
-        optionalfeatures,
-      }),
+    const bestiaryIndex = readJson(resolve(DATA_ROOT, 'bestiary', 'index.json')) as Record<
+      string,
+      string
+    >
+    const creatures = Object.values(bestiaryIndex).flatMap(
+      (fileName) =>
+        parseCreatures(readJson(resolve(DATA_ROOT, 'bestiary', fileName))) as Creature5e[],
     )
+
+    const gameData = makeGameDataFixture({
+      classes,
+      classFeatures,
+      races,
+      backgrounds,
+      feats,
+      items,
+      itemsBase,
+      creatures,
+      optionalfeatures,
+    })
+    const report = createCorpusCapabilityReport(gameData)
+    const compendiumEntries = buildCompendiumEntries(gameData)
+    const layerDependencyIssues = findLayerDependencyIssues(gameData, gameData)
     const primaryEditionSource = getPrimaryClassSourceForEdition(classes, 'one')
     const primaryEditionClasses = classes.filter(
       (classData) => classData.source === primaryEditionSource,
@@ -154,12 +175,69 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
     expect(report.issues).toEqual([])
+    expect(layerDependencyIssues).toEqual([])
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
     expect(choiceCoverageGaps).toEqual([])
     expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)
     expect(copiedArcaneArcher?.subclassFeatureRefs?.length).toBeGreaterThan(0)
+    expect(
+      filterCompendiumEntries(compendiumEntries, 'wolf', new Set(['Creature']), new Set(['MM'])),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Wolf', type: 'Creature', source: 'MM' }),
+      ]),
+    )
+    expect(
+      filterCompendiumEntries(
+        compendiumEntries,
+        'colossus slayer',
+        new Set(['Subclass Feature']),
+        new Set(['PHB']),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Colossus Slayer',
+          type: 'Subclass Feature',
+          source: 'PHB',
+        }),
+      ]),
+    )
+    expect(
+      filterCompendiumEntries(
+        compendiumEntries,
+        'primal companion',
+        new Set(['Subclass Feature']),
+        new Set(['TCE']),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Primal Companion',
+          type: 'Subclass Feature',
+          source: 'TCE',
+          context: 'Ranger · Beast Master · Level 3',
+        }),
+      ]),
+    )
+    expect(
+      filterCompendiumEntries(
+        compendiumEntries,
+        'beast of the land',
+        new Set(['Creature']),
+        new Set(['TCE']),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Beast of the Land',
+          type: 'Creature',
+          source: 'TCE',
+        }),
+      ]),
+    )
     expect(variantHuman?.ability).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -102,6 +102,16 @@ describe('detectSourceConflicts', () => {
           classLevel: 2,
           selected: [{ entityType: 'item', name: 'Manifold Tool', source: 'EFA', slotLevel: 2 }],
         },
+        {
+          choiceId: 'dormant-plan',
+          label: 'Dormant Choice',
+          kind: 'item',
+          inactive: true,
+          className: 'Artificer',
+          classSource: 'EFA',
+          classLevel: 2,
+          selected: [{ entityType: 'item', name: 'Dormant Tool', source: 'HB', slotLevel: 2 }],
+        },
       ],
     })
 
@@ -110,6 +120,9 @@ describe('detectSourceConflicts', () => {
         { source: 'TCE', items: ['Skill Expert'] },
         { source: 'EFA', items: ['Manifold Tool'] },
       ]),
+    )
+    expect(detectSourceConflicts(char, ['PHB']).some((conflict) => conflict.source === 'HB')).toBe(
+      false,
     )
   })
 

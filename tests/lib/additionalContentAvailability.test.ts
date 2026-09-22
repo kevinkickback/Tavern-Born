@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
@@ -22,6 +23,28 @@ function makeIncludedSrdData() {
 }
 
 describe('additional content availability', () => {
+  test('indexes direct subclass feature objects', () => {
+    const gameData = makeGameDataFixture({
+      classes: [
+        makeClassFixture({
+          subclasses: [
+            {
+              name: 'School of Tests',
+              shortName: 'Tests',
+              source: 'HB',
+              className: 'Wizard',
+              subclassFeatures: [{ name: 'Direct Ward', source: 'HB', level: 3 }],
+            },
+          ],
+        }),
+      ],
+    })
+
+    expect(createGameDataAvailabilityIndex(gameData).subclassFeatures).toContain(
+      getEntityLookupKey('Direct Ward', 'HB'),
+    )
+  })
+
   test('accepts source-qualified choices that are present in the Included SRD catalog', () => {
     const character = makeCharacterFixture({
       feats: [{ id: 'grappler', name: 'Grappler', source: 'PHB', description: 'An SRD feat.' }],
@@ -118,5 +141,31 @@ describe('additional content availability', () => {
 
     expect(characterUsesContentOutsideCatalog(external, index)).toBe(true)
     expect(characterUsesContentOutsideCatalog(custom, index)).toBe(false)
+  })
+
+  test('ignores source-qualified choices while they are dormant', () => {
+    const character = makeCharacterFixture({
+      classChoiceSelections: [
+        {
+          choiceId: 'dormant-variant',
+          label: 'Dormant Variant',
+          kind: 'class-feature',
+          inactive: true,
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 1,
+          selected: [
+            { entityType: 'classFeature', name: 'External Training', source: 'TCE', slotLevel: 1 },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      characterUsesContentOutsideCatalog(
+        character,
+        createGameDataAvailabilityIndex(makeIncludedSrdData()),
+      ),
+    ).toBe(false)
   })
 })

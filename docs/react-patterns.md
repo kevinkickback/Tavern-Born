@@ -141,9 +141,14 @@ pane state, and cross-domain presentation only.
 
 `BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
 under `src/pages/build/class/hooks/`. Its generic class-choice controller also resolves normalized
-choice descriptors into source-qualified view models while the pure resolver remains in
-`src/lib/character/classChoiceOptions.ts`. Do not move canonical rules into a controller; rules
-remain pure calculations or commands.
+choice descriptors from the selected class and subclass into source-qualified view models while the
+pure resolver remains in `src/lib/character/classChoiceOptions.ts`. Creature and subclass-feature
+catalogs follow the same resolver path as item, feat, and optional-feature choices. Do not move
+canonical rules into a controller; rules remain pure calculations or commands.
+
+Class-choice option cards consume the resolver's type-specific presentation projection instead of
+interpreting raw 5etools entities in React. Creature facts share the Compendium's 5etools formatter;
+feature, feat, and item summaries remain data-driven and preserve source-qualified identity.
 
 ---
 

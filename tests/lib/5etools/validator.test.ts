@@ -17,6 +17,7 @@ const payloadByFile: Record<string, unknown> = {
   'class/index.json': { phb: 'class-phb.json' },
   'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
   'spells/index.json': { phb: 'spells-phb.json' },
+  'bestiary/index.json': { mm: 'bestiary-mm.json' },
   'generated/gendata-spell-source-lookup.json': {},
   'feats.json': { feat: [{ name: 'Alert', source: 'PHB' }] },
   'items.json': { item: [{ name: 'Rope', source: 'PHB' }] },

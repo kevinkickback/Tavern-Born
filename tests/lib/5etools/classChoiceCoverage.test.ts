@@ -124,4 +124,66 @@ describe('class choice coverage', () => {
       ),
     ).toContain('Coverage contains a duplicate source-qualified class.')
   })
+
+  test('audits normalized subclass choices and their qualified owners', () => {
+    const classData = makeClassFixture({
+      name: 'Ranger',
+      source: 'PHB',
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [],
+        choiceDiagnostics: [],
+      },
+      subclasses: [
+        {
+          name: 'Beast Master',
+          shortName: 'Beast Master',
+          source: 'PHB',
+          className: 'Ranger',
+          classSource: 'PHB',
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choices: [
+              {
+                id: 'companion',
+                label: 'Companion',
+                kind: 'creature',
+                owner: {
+                  type: 'subclass',
+                  name: 'Ranger',
+                  source: 'PHB',
+                  subclassName: 'Wrong Subclass',
+                  subclassSource: 'PHB',
+                },
+                level: 3,
+                minimumSelections: 1,
+                maximumSelections: 1,
+                selectionCountByLevel: [0, 0, 1],
+                options: [],
+                repeatable: false,
+                replacement: { cadence: 'never' },
+                source: { kind: 'class-feature-options', field: 'fixture' },
+              },
+            ],
+            choiceDiagnostics: [],
+          },
+        },
+      ],
+    })
+
+    expect(
+      findClassChoiceCoverageGaps(
+        [classData],
+        createClassChoiceCoverageMatrix([classData], 20),
+        20,
+      ).map((gap) => gap.message),
+    ).toEqual([
+      'Beast Master|PHB: companion has a mismatched owner.',
+      'Beast Master|PHB: companion has 3 progression entries.',
+    ])
+  })
 })
