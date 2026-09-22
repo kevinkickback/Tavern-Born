@@ -458,7 +458,7 @@ describe('class page controllers', () => {
     ])
   })
 
-  test('does not initialize a retained unavailable class option as selected', () => {
+  test('preserves a retained unavailable class option until it is replaced', () => {
     const normalizedChoice = {
       id: 'class:wizard|phb|choice:study|1',
       label: 'Field of Study',
@@ -503,6 +503,11 @@ describe('class page controllers', () => {
         },
       ],
     })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
     const { result } = renderHook(() =>
       useClassChoiceController({
         character,
@@ -522,10 +527,21 @@ describe('class page controllers', () => {
     )
 
     act(() => result.current.open(normalizedChoice))
-    expect(result.current.activeInitialSelectedIds).toEqual([])
+    const retained = result.current.activeOptionViews.find(
+      (option) => option.reference.name === 'Archived Study',
+    )
+    expect(retained?.availability).toBe('retained')
+    expect(result.current.activeInitialSelectedIds).toEqual(['classFeature|archived study|old'])
+
+    act(() => result.current.confirm(retained ? [retained] : []))
     expect(
-      result.current.activeOptionViews.find((option) => option.reference.name === 'Archived Study')
-        ?.availability,
-    ).toBe('retained')
+      useCharacterStore.getState().activeCharacter?.classChoiceSelections?.[0]?.selected,
+    ).toEqual([expect.objectContaining({ name: 'Archived Study', source: 'OLD' })])
+
+    act(() => result.current.open(normalizedChoice))
+    act(() => result.current.confirm(result.current.activeOptionViews))
+    expect(
+      useCharacterStore.getState().activeCharacter?.classChoiceSelections?.[0]?.selected,
+    ).toEqual([expect.objectContaining({ name: 'Current Study', source: 'PHB' })])
   })
 })

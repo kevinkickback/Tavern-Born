@@ -45,13 +45,14 @@ function findOwner(
 function validateSelectedOptions(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
+  previouslySelected: readonly CharacterClassChoiceOption[] = [],
 ): void {
   const keys = selected.map(optionKey)
   if (!choice.repeatable && new Set(keys).size !== keys.length) {
     throw new RangeError(`${choice.label} does not allow duplicate selections.`)
   }
   if (choice.options.length === 0 || choice.optionFilter) return
-  const allowed = new Set(choice.options.map(optionKey))
+  const allowed = new Set([...choice.options, ...previouslySelected].map(optionKey))
   if (keys.some((key) => !allowed.has(key))) {
     throw new RangeError(`A selected option is not available for ${choice.label}.`)
   }
@@ -80,11 +81,10 @@ export function applyClassChoiceSelectionCommand(
   if (selected.length > requiredCount) {
     throw new RangeError(`${choice.label} allows ${requiredCount} selections at this class level.`)
   }
-  validateSelectedOptions(choice, selected)
-
   const existingSelection = character.classChoiceSelections?.find(
     (existing) => existing.choiceId === choice.id,
   )
+  validateSelectedOptions(choice, selected, existingSelection?.selected)
   const slotLevels = assignProgressionSlotLevels(
     (existingSelection?.selected ?? []).map((option) => ({
       key: optionKey(option),

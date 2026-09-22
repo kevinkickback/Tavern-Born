@@ -159,6 +159,48 @@ describe('class choice commands', () => {
     ).not.toThrow()
   })
 
+  test('allows a previously saved explicit option to be retained after it leaves the catalog', () => {
+    const divineOrder = choice({
+      id: 'class:cleric|xphb|choice:divine-order|1',
+      label: 'Divine Order',
+      kind: 'class-feature',
+      owner: { type: 'class', name: 'Cleric', source: 'XPHB' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [{ entityType: 'classFeature', name: 'Protector', source: 'XPHB' }],
+      optionFilter: undefined,
+    })
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Cleric', source: 'XPHB', levels: 1 }],
+      classChoiceSelections: [
+        {
+          choiceId: divineOrder.id,
+          label: divineOrder.label,
+          kind: divineOrder.kind,
+          className: 'Cleric',
+          classSource: 'XPHB',
+          classLevel: 1,
+          selected: [
+            {
+              entityType: 'classFeature',
+              name: 'Archived Order',
+              source: 'OLD',
+              slotLevel: 1,
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      applyClassChoiceSelectionCommand(character, divineOrder, [
+        { entityType: 'classFeature', name: 'Archived Order', source: 'OLD' },
+      ]).classChoiceSelections?.[0]?.selected,
+    ).toEqual([expect.objectContaining({ name: 'Archived Order', source: 'OLD', slotLevel: 1 })])
+  })
+
   test('materializes feature selections with exact class-choice ownership', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],

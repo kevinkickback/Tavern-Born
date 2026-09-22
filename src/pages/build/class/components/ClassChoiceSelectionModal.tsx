@@ -300,7 +300,7 @@ export function ClassChoiceSelectionModal({
         key: 'all',
         label: 'selections',
         max: maximumSelections,
-        test: () => true,
+        test: isClassChoiceOptionEligible,
       },
     ],
     [maximumSelections],
@@ -523,12 +523,21 @@ export function ClassChoiceSelectionModal({
     [prerequisiteByOptionKey],
   )
   const canSelect = useCallback(
-    (option: ClassChoiceOptionView, selectedIds: Set<string>) => {
+    (
+      option: ClassChoiceOptionView,
+      selectedIds: Set<string>,
+      allOptions: ClassChoiceOptionView[],
+    ) => {
       const key = getClassChoiceOptionKey(option.reference)
       if (!isClassChoiceOptionEligible(option)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
-      return selectedIds.size < maximumSelections
+      const eligibleSelectionCount = allOptions.filter(
+        (candidate) =>
+          isClassChoiceOptionEligible(candidate) &&
+          selectedIds.has(getClassChoiceOptionKey(candidate.reference)),
+      ).length
+      return eligibleSelectionCount < maximumSelections
     },
     [maximumSelections, prerequisiteByOptionKey],
   )

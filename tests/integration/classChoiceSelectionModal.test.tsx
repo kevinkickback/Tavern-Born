@@ -2,7 +2,10 @@ import { cleanup, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
-import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
+import {
+  type ClassChoiceOptionView,
+  getClassChoiceOptionKey,
+} from '@/lib/character/classChoiceOptions'
 import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassChoiceSelectionModal'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makePrereqCharacterSnapshotFixture } from '../fixtures/characterFixtures'
@@ -76,13 +79,17 @@ describe('ClassChoiceSelectionModal', () => {
         search: string,
         filters: Record<string, Set<string>>,
       ) => boolean
-      canSelect: (item: ClassChoiceOptionView, selected: Set<string>) => boolean
+      canSelect: (
+        item: ClassChoiceOptionView,
+        selected: Set<string>,
+        allItems: ClassChoiceOptionView[],
+      ) => boolean
     }
     expect(props.filterSections).toEqual([expect.objectContaining({ key: 'prerequisite' })])
     expect(props.matchItem(advanced, '', {})).toBe(false)
     expect(props.matchItem(advanced, '', { prerequisite: new Set(['showUnmet']) })).toBe(true)
-    expect(props.canSelect(advanced, new Set())).toBe(false)
-    expect(props.canSelect(available, new Set())).toBe(true)
+    expect(props.canSelect(advanced, new Set(), [available, advanced])).toBe(false)
+    expect(props.canSelect(available, new Set(), [available, advanced])).toBe(true)
   })
 
   test('shows a weapon mastery property on its option card', () => {
@@ -155,18 +162,24 @@ describe('ClassChoiceSelectionModal', () => {
     expect(screen.getByText('Sap mastery details')).toBeTruthy()
   })
 
-  test('keeps a retained selection visible but prevents selecting it again', () => {
+  test('keeps a retained selection selected without consuming an eligible slot', () => {
     const retained: ClassChoiceOptionView = {
       availability: 'retained',
       reference: { entityType: 'item', name: 'Archived Blade', source: 'OLD' },
       entries: [],
     }
+    const replacement: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'item', name: 'Current Blade', source: 'TEST' },
+      entries: [],
+    }
+    const retainedKey = getClassChoiceOptionKey(retained.reference)
     render(
       <ClassChoiceSelectionModal
         choice={choice}
-        options={[retained]}
+        options={[retained, replacement]}
         maximumSelections={1}
-        initialSelectedIds={[]}
+        initialSelectedIds={[retainedKey]}
         characterSnapshot={makePrereqCharacterSnapshotFixture()}
         onClose={vi.fn()}
         onConfirm={vi.fn()}
@@ -174,12 +187,22 @@ describe('ClassChoiceSelectionModal', () => {
     )
 
     const props = selectionModalCapture.props as {
-      canSelect: (item: ClassChoiceOptionView, selected: Set<string>) => boolean
+      categories: Array<{ test: (item: ClassChoiceOptionView) => boolean }>
+      initialSelectedIds: string[]
+      canSelect: (
+        item: ClassChoiceOptionView,
+        selected: Set<string>,
+        allItems: ClassChoiceOptionView[],
+      ) => boolean
       renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
     }
-    expect(props.canSelect(retained, new Set())).toBe(false)
-    render(props.renderCard(retained, false))
+    expect(props.initialSelectedIds).toEqual([retainedKey])
+    expect(props.categories[0]?.test(retained)).toBe(false)
+    expect(props.canSelect(retained, new Set(), [retained, replacement])).toBe(false)
+    expect(props.canSelect(replacement, new Set([retainedKey]), [retained, replacement])).toBe(true)
+    render(props.renderCard(retained, true))
     expect(screen.getByText('Unavailable')).toBeTruthy()
+    expect(screen.getByText('Selected')).toBeTruthy()
     expect(screen.getByText(/no longer eligible/i)).toBeTruthy()
   })
 

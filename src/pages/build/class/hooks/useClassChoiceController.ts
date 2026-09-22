@@ -101,15 +101,13 @@ export function useClassChoiceController({
     [choices, optionViewsByChoiceId, selectionByChoiceId],
   )
   const activeOptionViews = activeChoice ? (optionViewsByChoiceId.get(activeChoice.id) ?? []) : []
-  const activeEligibleOptionKeys = new Set(
-    activeOptionViews
-      .filter(isClassChoiceOptionEligible)
-      .map((option) => getClassChoiceOptionKey(option.reference)),
+  const activeOptionKeys = new Set(
+    activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
   )
   const activeInitialSelectedIds = activeChoice
     ? (selectionByChoiceId.get(activeChoice.id)?.selected ?? [])
         .map(getClassChoiceOptionKey)
-        .filter((key) => activeEligibleOptionKeys.has(key))
+        .filter((key) => activeOptionKeys.has(key))
     : []
   const activeRequiredCount = activeChoice
     ? getRequiredChoiceSelectionCount(activeChoice, viewingClassLevel)
@@ -117,15 +115,21 @@ export function useClassChoiceController({
 
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeChoice) return
+    const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
+    const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
+    const confirmedSelections = [
+      ...eligibleSelections,
+      ...retainedSelections.slice(0, Math.max(0, activeRequiredCount - eligibleSelections.length)),
+    ]
     const previousKeys = new Set(
       (selectionByChoiceId.get(activeChoice.id)?.selected ?? []).map(getClassChoiceOptionKey),
     )
     applyClassChoiceSelection(
       activeChoice,
-      selected.map((option) => option.reference),
+      confirmedSelections.map((option) => option.reference),
     )
     if (activeChoice.kind === 'feat' && onFeatOptionsRequired) {
-      const newlyAdded = selected.find(
+      const newlyAdded = confirmedSelections.find(
         (option) => !previousKeys.has(getClassChoiceOptionKey(option.reference)),
       )
       const feat = newlyAdded
