@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { APP_INTERACTIVE_CONTENT_ID } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -56,6 +57,7 @@ describe('startup integration: loading overlay and startup modal', () => {
   afterEach(() => {
     localStorageMock.clear()
     cleanup()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -64,6 +66,23 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
     expect(screen.getByText('Loading the app…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay makes underlying app content inert while startup is blocked', () => {
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Character editor action</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+
+    const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
+    expect(appContent?.hasAttribute('inert')).toBe(true)
+    expect(appContent?.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.getByRole('dialog', { name: 'Tavern Born' })).toBe(document.activeElement)
+    expect(screen.getByRole('status').textContent).toContain('Loading the app…')
   })
 
   test('AppLoadingOverlay renders progress details during foreground loading', () => {
@@ -155,6 +174,50 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.getByText('Checking saved game data…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay reports source connection after a cache miss starts loading', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: true,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unknown',
+      loadProgress: null,
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Connecting to game data source…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay stays hidden for later modeless refreshes', async () => {
+    vi.useFakeTimers()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: false,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unconfigured',
+    })
+
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Character editor action</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+
+    await act(async () => vi.advanceTimersByTime(1200))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+
+    await act(async () => useGameDataStore.setState({ isBackgroundRefreshing: true }))
+
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    expect(document.getElementById(APP_INTERACTIVE_CONTENT_ID)?.hasAttribute('inert')).toBe(false)
   })
 
   test('AppLoadingOverlay shows ready state when hydrated and idle', () => {
