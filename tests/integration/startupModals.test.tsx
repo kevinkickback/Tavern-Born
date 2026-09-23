@@ -162,6 +162,25 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
   })
 
+  test('AppLoadingOverlay reports a meaningful terminal refresh state', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+      loadProgress: {
+        current: 8,
+        total: 8,
+        resource: 'Complete',
+      },
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Finalizing game data update…')).toBeTruthy()
+    expect(screen.queryByText('Checking Complete for updates…')).toBeNull()
+  })
+
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {
     useGameDataStore.setState({
       hasHydrated: true,

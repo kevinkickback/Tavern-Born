@@ -76,6 +76,7 @@ export function AppLoadingOverlay() {
   const isReady = !shouldStayVisible && (phase === 'ready' || phase === 'fading')
   const isFading = !shouldStayVisible && phase === 'fading'
   const hasProgress = loadProgress !== null && loadProgress.total > 0
+  const isProgressComplete = hasProgress && loadProgress.resource === 'Complete'
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
@@ -84,13 +85,17 @@ export function AppLoadingOverlay() {
   } else if (!hasHydrated) {
     statusLine = 'Loading the app…'
   } else if (isBackgroundRefreshing) {
-    statusLine = hasProgress
-      ? `Checking ${loadProgress.resource} for updates…`
-      : 'Checking for game data updates…'
+    statusLine = isProgressComplete
+      ? 'Finalizing game data update…'
+      : hasProgress
+        ? `Checking ${loadProgress.resource} for updates…`
+        : 'Checking for game data updates…'
   } else if (isLoading) {
-    statusLine = hasProgress
-      ? `Loading ${loadProgress.resource}…`
-      : 'Connecting to game data source…'
+    statusLine = isProgressComplete
+      ? 'Finalizing game data…'
+      : hasProgress
+        ? `Loading ${loadProgress.resource}…`
+        : 'Connecting to game data source…'
   } else if (!gameData && cacheStatus === 'unknown') {
     statusLine = 'Checking saved game data…'
   } else {
