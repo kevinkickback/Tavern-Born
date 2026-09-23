@@ -90,7 +90,8 @@
 
     #tb-pre-loader-status {
       display: flex;
-      width: 18rem;
+      width: 24rem;
+      max-width: calc(100vw - 2rem);
       flex-direction: column;
       gap: 0.625rem;
     }
@@ -125,9 +126,7 @@
     }
 
     #tb-pre-loader-text span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      text-align: center;
     }
 
     @keyframes tb-loader-indeterminate {
@@ -160,7 +159,7 @@
           <div id="tb-pre-loader-bar"></div>
         </div>
         <div id="tb-pre-loader-text">
-          <span>Reading saved settings&hellip;</span>
+          <span>Loading the app&hellip;</span>
         </div>
       </div>
     </div>

@@ -267,6 +267,7 @@ export const useGameDataStore = create<GameDataState>()(
           set({
             isBackgroundRefreshing: true,
             error: null,
+            loadProgress: null,
           })
         } else {
           set({
@@ -283,13 +284,11 @@ export const useGameDataStore = create<GameDataState>()(
           const cacheIdentity = sourceStack ?? config
           const layerMetadata: GameDataLayerCacheMetadataByRole = {}
           const loaderOptions: DataSourceStackLoaderOptions = {
-            onProgress: background
-              ? undefined
-              : (current, total, resource) => {
-                  if (requestId === activeLoadRequestId) {
-                    set({ loadProgress: { current, total, resource } })
-                  }
-                },
+            onProgress: (current, total, resource) => {
+              if (requestId === activeLoadRequestId) {
+                set({ loadProgress: { current, total, resource } })
+              }
+            },
             onResourceFailure: (resource, failure) => {
               failedResources.add(resource)
               if (failure.required) failedRequiredResources.add(resource)

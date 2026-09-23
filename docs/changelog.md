@@ -10,6 +10,7 @@
 * Creature stat blocks and subclass features are now searchable in the Compendium
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
+* Fixed startup not finishing game data checks/updates before app became available
 
 </details>
 

@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { APP_INTERACTIVE_CONTENT_ID } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -56,6 +57,7 @@ describe('startup integration: loading overlay and startup modal', () => {
   afterEach(() => {
     localStorageMock.clear()
     cleanup()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -63,7 +65,24 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
-    expect(screen.getByText('Reading saved settings…')).toBeTruthy()
+    expect(screen.getByText('Loading the app…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay makes underlying app content inert while startup is blocked', () => {
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Character editor action</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+
+    const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
+    expect(appContent?.hasAttribute('inert')).toBe(true)
+    expect(appContent?.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.getByRole('dialog', { name: 'Tavern Born' })).toBe(document.activeElement)
+    expect(screen.getByRole('status').textContent).toContain('Loading the app…')
   })
 
   test('AppLoadingOverlay renders progress details during foreground loading', () => {
@@ -82,6 +101,145 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getAllByText('Loading classes…').length).toBeGreaterThan(0)
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay remains active while cached game data refreshes', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: {
+        races: [],
+        classes: [],
+        backgrounds: [],
+        spells: [],
+        feats: [],
+        items: [],
+        itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
+        classFeatures: [],
+        actions: [],
+        conditions: [],
+        deities: [],
+        skills: [],
+        senses: [],
+        languages: [],
+        optionalfeatures: [],
+        variantrules: [],
+        trapHazards: [],
+        rewards: [],
+        cultsBoons: [],
+        organizations: [],
+        sources: [],
+      },
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByTestId('app-loading-overlay').getAttribute('data-phase')).toBe('loading')
+    expect(screen.getByText('Checking for game data updates…')).toBeTruthy()
+    expect(screen.queryByText('App is ready')).toBeNull()
+  })
+
+  test('AppLoadingOverlay reports background refresh resource progress', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+      loadProgress: {
+        current: 3,
+        total: 8,
+        resource: 'Additional Content: spells',
+      },
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Checking Additional Content: spells for updates…')).toBeTruthy()
+    expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
+  })
+
+  test.each([
+    'Complete',
+    'Additional Content: Complete',
+  ])('AppLoadingOverlay reports a meaningful terminal refresh state for %s', (resource) => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+      loadProgress: {
+        current: 8,
+        total: 8,
+        resource,
+      },
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Finalizing game data update…')).toBeTruthy()
+    expect(screen.queryByText(`Checking ${resource} for updates…`)).toBeNull()
+  })
+
+  test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: false,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unknown',
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Checking saved game data…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay reports source connection after a cache miss starts loading', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: true,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unknown',
+      loadProgress: null,
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Connecting to game data source…')).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay stays hidden for later modeless refreshes', async () => {
+    vi.useFakeTimers()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: false,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unconfigured',
+    })
+
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Character editor action</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+
+    await act(async () => vi.advanceTimersByTime(1200))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+
+    await act(async () => useGameDataStore.setState({ isBackgroundRefreshing: true }))
+
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    expect(document.getElementById(APP_INTERACTIVE_CONTENT_ID)?.hasAttribute('inert')).toBe(false)
   })
 
   test('AppLoadingOverlay shows ready state when hydrated and idle', () => {
