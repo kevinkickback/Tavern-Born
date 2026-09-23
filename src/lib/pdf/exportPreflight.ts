@@ -3,8 +3,12 @@ import type { CharacterReadinessResult } from '@/lib/readiness/characterReadines
 import type { CharacterEffect } from '@/types/effects'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
 import { getAmmunitionRows, MPMB_CARD_DESCRIPTION_LIMIT } from './characterSheetMapping2014'
-import { OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL } from './characterSheetMapping2014Official'
+import {
+  getOfficial2014SpellPages,
+  OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
+} from './characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from './characterSheetMapping2024'
+import { getOptionalCharacterSheetPages } from './characterSheetPages'
 import { getCharacterSheetTemplate } from './characterSheetTemplates'
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
 import {
@@ -13,7 +17,7 @@ import {
   OFFICIAL_2014_SECTION_LIMITS,
 } from './official2014Text'
 import { OFFICIAL_2024_PROSE_WARNING_LIMITS } from './official2024Text'
-import type { CharacterSheetTemplateId } from './types'
+import type { CharacterSheetPageOptions, CharacterSheetTemplateId } from './types'
 
 type ExportPreflightCategory = 'readiness' | 'dependency' | 'unsupported' | 'truncation'
 
@@ -50,9 +54,32 @@ function capacityIssue(
 function getCapacityIssues(
   templateId: CharacterSheetTemplateId,
   viewModel: CharacterSheetViewModel,
+  pageChoices: CharacterSheetPageOptions,
 ): ExportPreflightIssue[] {
   const issues: Array<ExportPreflightIssue | null> = []
   const template = getCharacterSheetTemplate(templateId)
+  const omitted = new Set(
+    getOptionalCharacterSheetPages(viewModel, templateId, pageChoices)
+      .filter((page) => !page.included)
+      .map((page) => page.id),
+  )
+  if (template.edition === '2014') {
+    const spellPages = omitted.has('spells') ? [] : getOfficial2014SpellPages(viewModel)
+    spellPages.forEach((page, index) => {
+      OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fields, level) => {
+        const label = level === 0 ? 'Cantrips' : `Level ${level} spells`
+        issues.push(
+          capacityIssue(
+            `spells-level-${level}${spellPages.length > 1 ? `-page-${index + 1}` : ''}`,
+            spellPages.length > 1 ? `${page.detail?.className}: ${label}` : label,
+            page.spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
+              .length,
+            fields.length,
+          ),
+        )
+      })
+    })
+  }
   if (template.mappingId === '2014-custom') {
     const capacity = CHARACTER_SHEET_CAPACITIES['2014-custom']
     issues.push(
@@ -74,7 +101,7 @@ function getCapacityIssues(
       capacityIssue(
         'companions',
         'Active companions',
-        viewModel.companions.length,
+        omitted.has('companion') ? 0 : viewModel.companions.length,
         capacity.companionPages,
       ),
       capacityIssue('hit-dice', 'Hit-die rows', viewModel.hitDiceRows.length, capacity.hitDice),
@@ -131,17 +158,6 @@ function getCapacityIssues(
     issues.push(
       capacityIssue('weapons', 'Weapon attacks', viewModel.weaponRows.length, capacity.weapons),
     )
-    OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fields, level) => {
-      issues.push(
-        capacityIssue(
-          `spells-level-${level}`,
-          level === 0 ? 'Cantrips' : `Level ${level} spells`,
-          viewModel.spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
-            .length,
-          fields.length,
-        ),
-      )
-    })
     for (const [fieldName, characterLimit] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
       const sectionName = fieldName as keyof typeof OFFICIAL_2014_SECTION_LIMITS
       const sourceText = sections[sectionName]
@@ -227,14 +243,20 @@ export function getPdfExportPreflight(
   effects: readonly CharacterEffect[],
   effectContext: EffectResolutionContext = {},
   truncatedFields: readonly string[] = [],
+  pageChoices: CharacterSheetPageOptions = {},
 ): ExportPreflightResult {
-  const readinessIssues: ExportPreflightIssue[] = (readiness?.issues ?? []).map((issue) => ({
-    id: `readiness:${issue.id}`,
-    category: issue.section === 'sources' ? 'dependency' : 'readiness',
-    severity: issue.severity === 'blocking' ? 'blocking' : 'warning',
-    title: issue.title,
-    detail: issue.explanation,
-  }))
+  const spellsOmitted = getOptionalCharacterSheetPages(viewModel, templateId, pageChoices).some(
+    (page) => page.id === 'spells' && !page.included,
+  )
+  const readinessIssues: ExportPreflightIssue[] = (readiness?.issues ?? [])
+    .filter((issue) => !(spellsOmitted && issue.section === 'spells'))
+    .map((issue) => ({
+      id: `readiness:${issue.id}`,
+      category: issue.section === 'sources' ? 'dependency' : 'readiness',
+      severity: issue.severity === 'blocking' ? 'blocking' : 'warning',
+      title: issue.title,
+      detail: issue.explanation,
+    }))
   const unsupportedEffects = effects.filter(
     (effect) =>
       isCharacterEffectActive(effect, effectContext) && isUnsupportedPdfEffect(templateId, effect),
@@ -250,12 +272,15 @@ export function getPdfExportPreflight(
   const issues = [
     ...readinessIssues,
     ...unsupportedIssues,
-    ...getCapacityIssues(templateId, viewModel),
+    ...getCapacityIssues(templateId, viewModel, pageChoices),
   ]
   const pactSlots = Object.entries(viewModel.spellSlots.mergedPactWithUsage).filter(
     ([, slot]) => slot && slot.max > 0,
   )
-  if (pactSlots.length) {
+  const hasPactPage =
+    getCharacterSheetTemplate(templateId).edition === '2014' &&
+    getOfficial2014SpellPages(viewModel).some((page) => page.detail?.casterProgression === 'pact')
+  if (pactSlots.length && !hasPactPage && !spellsOmitted) {
     issues.push({
       id: 'unsupported:pact-slots',
       category: 'unsupported',
@@ -265,6 +290,13 @@ export function getPdfExportPreflight(
     })
   }
   for (const field of new Set(truncatedFields)) {
+    if (
+      spellsOmitted &&
+      /^(SpellPage\d+__)?(Spells |Spellcasting|SpellSaveDC|SpellAtkBonus|Slots)/u.test(field)
+    )
+      continue
+    if (pageChoices.notes === false && field.startsWith('P5.ASnotes.')) continue
+    if (pageChoices.companion === false && field.startsWith('P4.AScomp.')) continue
     const id = `text-limit:${field}`
     if (issues.some((issue) => issue.id === id)) continue
     const label =

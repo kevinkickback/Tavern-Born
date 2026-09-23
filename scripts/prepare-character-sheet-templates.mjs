@@ -21,7 +21,7 @@ const sourceDirectory = join(root, 'docs', 'review', 'pdf-sources')
 
 const paths = {
   custom2014Source: join(sourceDirectory, '2014_expanded_source.pdf'),
-  custom2014Output: join(pdfDirectory, '2014_MPMB_Character_Sheet.pdf'),
+  custom2014Output: join(root, 'scripts', 'pdf-sources', '2014_MPMB_Character_Sheet.pdf'),
   custom2024Source: join(pdfDirectory, '2024_Beaoudix_Character_Sheet.pdf'),
   official2024Source: join(sourceDirectory, '2024_official_source.pdf'),
   official2024Output: join(pdfDirectory, '2024_Official_Character_Sheet.pdf'),
@@ -390,5 +390,6 @@ if (process.argv.includes('--official-2024')) {
   await buildOfficial2024()
 } else {
   await buildCustom2014()
+  await import('./prepare-2014-pdf-modules.mjs')
   await buildOfficial2024()
 }

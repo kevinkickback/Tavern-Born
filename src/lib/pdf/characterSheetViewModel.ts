@@ -131,6 +131,10 @@ export interface CharacterSheetViewModel {
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
+  spellcastingPages: Array<{
+    detail: ReturnType<typeof buildSpellcastingClassDetails>[number]
+    spellRows: CharacterSheetSpellRow[]
+  }>
   spellSlots: ReturnType<typeof calculateCharacterSpellSlots>
   magicItems: Equipment[]
   companions: Array<{ name: string; source?: string; className?: string; creature?: Creature5e }>
@@ -431,12 +435,12 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
 }
 
 function buildSpellRows(
-  character: Character,
+  profiles: Character['spells']['spellProfiles'],
   spellsByKey: Readonly<Record<string, Spell5e>>,
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
-  for (const profile of character.spells.spellProfiles) {
+  for (const profile of profiles) {
     const detail = castingDetails.find((entry) => entry.profileId === profile.id)
     const alwaysReady =
       profile.alwaysPrepared ||
@@ -449,7 +453,7 @@ function buildSpellRows(
     ])
       prepared.add(getSpellReferenceKey(reference))
   }
-  const references = character.spells.spellProfiles.flatMap((profile) => [
+  const references = profiles.flatMap((profile) => [
     ...(profile.cantrips ?? []),
     ...(profile.spellsKnown ?? []),
     ...(profile.preparedSpells ?? []),
@@ -716,7 +720,23 @@ export function createCharacterSheetViewModel(
     ),
     weaponRows: buildWeaponRows(actions),
     actions,
-    spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}, spellcastingDetails),
+    spellRows: buildSpellRows(
+      character.spells.spellProfiles,
+      rawLookups.spellsByKey ?? {},
+      spellcastingDetails,
+    ),
+    spellcastingPages: spellcastingDetails.map((detail, index) => ({
+      detail,
+      spellRows: buildSpellRows(
+        character.spells.spellProfiles.filter(
+          (profile) =>
+            profile.id === detail.profileId ||
+            (index === 0 && !spellcastingDetails.some((caster) => caster.profileId === profile.id)),
+        ),
+        rawLookups.spellsByKey ?? {},
+        spellcastingDetails,
+      ),
+    })),
     spellSlots: calculateCharacterSpellSlots(character, classesById),
     magicItems,
     companions,

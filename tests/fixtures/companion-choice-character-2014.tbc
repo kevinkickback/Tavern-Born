@@ -484,10 +484,13 @@
     "choices": []
   },
   "movement": {
-    "speeds": {},
+    "speeds": {
+      "walk": 30
+    },
     "source": {
-      "kind": "manual",
-      "name": "Full-coverage test fixture"
+      "kind": "race",
+      "name": "High",
+      "source": "PHB"
     }
   },
   "schemaVersion": 2,

@@ -1,5 +1,6 @@
 import {
   ArrowsClockwise,
+  CaretDown,
   DownloadSimple,
   FilePdf,
   Minus,
@@ -13,7 +14,18 @@ import { CharacterSheetAttribution } from '@/components/pdf/CharacterSheetAttrib
 import { ExportPreflightDialog } from '@/components/pdf/ExportPreflightDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AnchoredHint,
+  WorkspaceBody,
+  WorkspacePage,
+  WorkspacePaneHeader,
+} from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import {
@@ -27,16 +39,30 @@ import {
   useRaceLookup,
   useSpellLookup,
 } from '@/hooks/data/useGameData'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getBundledFileUrl } from '@/lib/assetUrls'
 import {
+  type CharacterSheetSupplementBytes,
+  createPdfAssetLoader,
+  getCharacterSheetAssetPlan,
+} from '@/lib/pdf/characterSheetAssets'
+import { getOptionalCharacterSheetPages } from '@/lib/pdf/characterSheetPages'
+import {
   type CharacterSheetTemplateId,
+  type CharacterSheetViewModel,
   createCharacterSheetViewModel,
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
+import type { CharacterSheetPageOptions } from '@/lib/pdf/types'
+import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from './_shared'
+
+const EMPTY_PAGE_CHOICES: CharacterSheetPageOptions = {}
+const EMPTY_WARNINGS: string[] = []
+const PAGES_HINT_ID = 'character-sheet-optional-pages'
 
 function getSafeFileName(name: string): string {
   const safeName = name
@@ -52,7 +78,20 @@ interface CharacterSheetPageProps {
   templateId: CharacterSheetTemplateId
 }
 
+const loadPdfAsset = createPdfAssetLoader(async (path) => {
+  const response = await fetch(getBundledFileUrl(path))
+  if (!response.ok)
+    throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
+  return new Uint8Array(await response.arrayBuffer())
+})
+
 export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
+  const [showPagesHint, setShowPagesHint] = useState(() => !isHintDismissed(PAGES_HINT_ID))
+  const dismissPagesHint = useCallback(() => {
+    setHintDismissed(PAGES_HINT_ID, true)
+    setShowPagesHint(false)
+  }, [])
+  useEffect(() => subscribeToHintReset(() => setShowPagesHint(true)), [])
   const character = useCharacterStore((state) => state.activeCharacter)
   const classesByKey = useClassLookup()
   const racesByKey = useRaceLookup()
@@ -63,8 +102,16 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()
-  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
-  const [truncatedFields, setTruncatedFields] = useState<string[]>([])
+  const [pageChoicesByContext, setPageChoicesByContext] = useState<
+    Record<string, CharacterSheetPageOptions>
+  >({})
+  const [generated, setGenerated] = useState<{
+    bytes: Uint8Array
+    truncatedFields: string[]
+    viewModel: CharacterSheetViewModel
+    templateId: CharacterSheetTemplateId
+    pageKey: string
+  } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
@@ -77,16 +124,16 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     () =>
       character
         ? createCharacterSheetViewModel(character, {
-            classesByKey,
-            racesByKey,
-            backgroundsByKey,
-            spellsByKey,
-            featsByKey,
-            creaturesByKey,
-            itemLookup,
-            itemPropertyByAbbr,
-            organizations,
-          })
+          classesByKey,
+          racesByKey,
+          backgroundsByKey,
+          spellsByKey,
+          featsByKey,
+          creaturesByKey,
+          itemLookup,
+          itemPropertyByAbbr,
+          organizations,
+        })
         : null,
     [
       backgroundsByKey,
@@ -102,6 +149,26 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     ],
   )
 
+  const selectionContext = `${character?.id}:${selectedTemplate.id}`
+  const pageChoices = pageChoicesByContext[selectionContext] ?? EMPTY_PAGE_CHOICES
+  const optionalPages = viewModel
+    ? getOptionalCharacterSheetPages(viewModel, templateId, pageChoices)
+    : []
+  const pageKey = JSON.stringify(optionalPages.map((page) => page.included))
+  const pagesHintPosition = useAnchoredHintPosition({
+    enabled: showPagesHint && optionalPages.length > 0 && !isGenerating && !exportPreflightOpen,
+    selector: '[data-pdf-pages-menu]',
+    horizontalAlign: 'end',
+  })
+  const currentPreview =
+    generated?.viewModel === viewModel &&
+      generated?.templateId === templateId &&
+      generated?.pageKey === pageKey
+      ? generated
+      : null
+  const pdfBytes = currentPreview?.bytes ?? null
+  const truncatedFields = currentPreview?.truncatedFields ?? EMPTY_WARNINGS
+
   useEffect(() => {
     return () => {
       if (cancelRef.current) cancelRef.current.canceled = true
@@ -114,13 +181,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     () =>
       viewModel
         ? getPdfExportPreflight(
-            templateId,
-            viewModel,
-            readiness,
-            calculation?.effects.declarations ?? [],
-            calculation?.effects.resolutionContext,
-            truncatedFields,
-          )
+          templateId,
+          viewModel,
+          readiness,
+          calculation?.effects.declarations ?? [],
+          calculation?.effects.resolutionContext,
+          truncatedFields,
+          pageChoices,
+        )
         : { issues: [], blockingCount: 0, warningCount: 0 },
     [
       calculation?.effects.declarations,
@@ -129,6 +197,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       templateId,
       truncatedFields,
       viewModel,
+      pageChoices,
     ],
   )
 
@@ -143,23 +212,34 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       setIsGenerating(true)
       setErrorMessage(null)
 
-      const response = await fetch(getBundledFileUrl(selectedTemplate.assetPath))
-      if (!response.ok) {
-        throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
-      }
-
-      const templateBytes = new Uint8Array(await response.arrayBuffer())
+      const plan = getCharacterSheetAssetPlan(viewModel, templateId, pageChoices)
+      const loaded = await Promise.all(
+        plan.map(async (part) => ({ id: part.id, bytes: await loadPdfAsset(part.path) })),
+      )
+      const templateBytes = loaded[0].bytes
+      const supplements: CharacterSheetSupplementBytes = Object.fromEntries(
+        loaded.slice(1).map((part) => [part.id, part.bytes]),
+      )
       const shortened: string[] = []
       const filledBytes = await generateFilledCharacterSheetPdf(
         viewModel,
         templateBytes,
         templateId,
-        { onTextTruncated: (fieldName) => shortened.push(fieldName) },
+        {
+          onTextTruncated: (fieldName) => shortened.push(fieldName),
+          pages: pageChoices,
+          supplements,
+        },
       )
 
       if (!handle.canceled) {
-        setPdfBytes(filledBytes)
-        setTruncatedFields(shortened)
+        setGenerated({
+          bytes: filledBytes,
+          truncatedFields: shortened,
+          viewModel,
+          templateId,
+          pageKey,
+        })
       }
     } catch (error) {
       console.error('[PDF] generation failed', { error, characterId: character.id })
@@ -167,13 +247,12 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
       if (!handle.canceled) {
         setErrorMessage(message)
-        setPdfBytes(null)
-        setTruncatedFields([])
+        setGenerated(null)
       }
     } finally {
       if (!handle.canceled) setIsGenerating(false)
     }
-  }, [character, selectedTemplate, templateId, viewModel])
+  }, [character, templateId, viewModel, pageChoices, pageKey])
 
   const downloadPdf = () => {
     if (!pdfBytes) {
@@ -199,7 +278,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       toast.error('Generate a preview before downloading the sheet.')
       return
     }
-    setExportPreflightOpen(true)
+    if (exportPreflight.issues.length > 0) setExportPreflightOpen(true)
+    else downloadPdf()
   }
 
   if (!character) {
@@ -209,9 +289,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const rulesetMismatch = character.originSystem !== selectedTemplate.edition
   return (
     <WorkspacePage>
-      <WorkspacePaneHeader ariaLabel="Character sheet controls" className="overflow-x-auto">
+      <WorkspacePaneHeader
+        ariaLabel="Character sheet controls"
+        className="h-auto min-h-[var(--workspace-pane-header-height)] flex-wrap py-2"
+      >
         <FilePdf className="size-5 shrink-0 text-primary" weight="fill" />
-        <p className="shrink-0 text-sm font-semibold">{selectedTemplate.name}</p>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold" title={selectedTemplate.name}>
+          {selectedTemplate.name}
+        </p>
 
         {rulesetMismatch && (
           <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning-foreground">
@@ -227,7 +312,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           </Badge>
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <span className="mr-1 text-xs text-muted-foreground" aria-live="polite">
             {isGenerating
               ? 'Generating…'
@@ -258,6 +343,47 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
               <Plus className="size-3.5" />
             </button>
           </div>
+          {optionalPages.length > 0 && (
+            <DropdownMenu
+              onOpenChange={(open) => {
+                if (open) dismissPagesHint()
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  data-pdf-pages-menu
+                  variant="outline"
+                  size="sm"
+                  disabled={isGenerating}
+                  className="h-8 gap-1.5"
+                >
+                  Optional Pages
+                  <CaretDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {optionalPages.map((page) => (
+                  <DropdownMenuCheckboxItem
+                    key={page.id}
+                    checked={page.included}
+                    disabled={isGenerating}
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={(checked) => {
+                      setPageChoicesByContext((current) => ({
+                        ...current,
+                        [selectionContext]: { ...pageChoices, [page.id]: checked === true },
+                      }))
+                      setExportPreflightOpen(false)
+                      setErrorMessage(null)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {page.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -284,6 +410,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           </Button>
         </div>
       </WorkspacePaneHeader>
+      <AnchoredHint
+        position={pagesHintPosition}
+        width={260}
+        onDismiss={dismissPagesHint}
+        dismissLabel="Dismiss Optional Pages hint"
+      >
+        Choose which optional pages to include in your PDF here.
+      </AnchoredHint>
 
       <WorkspaceBody>
         <div className="mx-auto min-h-full w-full max-w-[var(--workspace-collection-max-width)]">
@@ -315,7 +449,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
                 <FilePdf className="mx-auto size-10 text-muted-foreground/45" weight="duotone" />
                 <h2 className="mt-3 text-sm font-semibold">Preview not generated</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Generate a filled {selectedTemplate.name.toLowerCase()} for {characterName}.
+                  Preview your character sheet before downloading it as a PDF. Use the toolbar above to choose
+                  which, if any, optional pages to include.
                 </p>
                 <Button type="button" size="sm" onClick={handleGenerate} className="mt-4 gap-1.5">
                   <ArrowsClockwise className="size-4" />

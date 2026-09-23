@@ -42,7 +42,7 @@ describe('2014 saved PDF compatibility', () => {
 
   test('persists affected values and portable appearances in the saved file', async () => {
     const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public', 'pdf', '2014_MPMB_Character_Sheet.pdf')),
+      readFileSync(join(process.cwd(), 'scripts', 'pdf-sources', '2014_MPMB_Character_Sheet.pdf')),
     )
     const template = await PDFDocument.load(templateBytes)
     expect(template.getPageCount()).toBe(6)

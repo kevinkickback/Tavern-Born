@@ -146,12 +146,12 @@ const workspaces: Workspace[] = [
     requiresCharacter: true,
     matches: (pathname) => pathname.startsWith('/character-sheet'),
     groups: [
-      ['2014', '5e (2014)', 'MPMB Custom'],
-      ['2024', '5.5e (2024)', 'Lost Loot Custom'],
+      ['2014', '5e (2014)', 'MorePurpleMoreBetter'],
+      ['2024', '5.5e (2024)', 'Lost Loot'],
     ].map(([edition, ruleset, customLabel]) => ({
       label: `${ruleset} Templates`,
       items: [
-        ['official', 'WotC Official'],
+        ['official', 'Wizards of the Coast'],
         ['custom', customLabel],
       ].map(([variant, label]) => ({
         label,

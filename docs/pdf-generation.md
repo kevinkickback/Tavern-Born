@@ -13,11 +13,73 @@ Character sheet export has five boundaries:
 5. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds supported 2014 portrait and
    organization images, and applies the MPMB cleanup profile only to the custom 2014 sheet.
 
-Preview generation remains available for inspection, but a download always opens the export
-preflight. Blocking readiness items and missing source dependencies are disclosed rather than
-silently discarded. Active typed mechanics with no reliable fixed-form representation are listed
-as warnings, as is every collection that exceeds a template capacity. The user can return to the
-builder or deliberately download with warnings.
+Preview generation remains available for inspection. A clean export downloads immediately;
+otherwise a compact "Before you download" dialog groups notes about character choices, missing
+content, details to track separately, and text that may not fit. Each group expands on demand.
+The full diagnostics remain available, and downloading is still allowed with unresolved issues.
+
+Optional-page definitions live in the template registry. `characterSheetPages.ts` combines them
+with content-based defaults and user overrides: official 2014 spell pages start unchecked without
+casting or spell selections, MPMB's companion page starts unchecked without an active creature,
+and its notes page starts checked. Racial/bonus spells and unresolved casting selections retain
+the spell page. Users can include blank pages or omit populated ones. The two 2024 forms have no
+standalone optional pages because their spell content shares pages with other character details.
+Choices are local to each character/template in the export screen and never mutate character data.
+The toolbar's Optional Pages menu lists checkable page names and is hidden when a template has no optional pages.
+Its anchored introduction appears until the user opens the menu or dismisses the hint. Dismissal
+is shared across characters/templates, survives restarts, and honors Settings' Reset dismissed hints.
+Changing choices, character data, or templates invalidates the generated preview and fitting notes;
+the preview and download always use the same selection. Omitted pages do not produce capacity or
+fitting warnings. Spell-readiness warnings are also omitted when spell pages are deselected.
+
+The 2014 export is composed from six modules in `public/pdf/2014/`: `wotc-main` (two pages),
+`mpmb-main` (four), `wotc-companion`, `mpmb-companion`, `wotc-spells`, and `mpmb-notes`.
+The spell and notes modules each ship once and are shared by both layouts. Output order is always
+**core character sheets → selected companion pages → selected spell pages → selected notes page**.
+Both layouts use the original MPMB notes artwork; there are no generated Tavern Born notes or
+continuation pages. MPMB retains its racial/organization overflow in the notes fields; WotC's notes
+start blank. Notes remain optional (checked by default for MPMB, unchecked for WotC).
+
+`characterSheetAssets.ts` supplies the ordered plan to both loading and assembly. The export screen
+loads selected assets concurrently and caches immutable source bytes, coalesces concurrent requests,
+and retries failed loads. A caller receives its own byte copy, never a shared mutable document.
+`characterSheetPdf.ts` fills only each selected module's field map and builds one output document.
+`pdfAssembly.ts` registers copied widget/field relationships, isolates font resource names, and
+retains only font resources referenced by editable field appearances. Only the final document is
+serialized. The shared WotC spell module is duplicated per caster; MPMB uses the `WotC__` field
+prefix, and subsequent casters use `SpellPageN__`, preserving independent editable values and dots.
+Omitted modules have no fields, artwork, or fitting warnings in the output.
+
+The full 2014 source PDFs are preserved in `scripts/pdf-sources/`, outside Electron's packaged
+`dist` assets. Run `node scripts/prepare-2014-pdf-modules.mjs` to rebuild the runtime modules after
+replacing a source. The preparation step copies selected pages and their forms into fresh documents,
+removes authoring metadata/thumbnails, and prunes unused form fonts without flattening or rasterizing
+artwork. The full-template preparation script also rebuilds these modules after preparing MPMB.
+The 2014 packaged baseline was 5,517,583 bytes; the modular assets total approximately 2,746,677
+bytes (50% less). The two 2024 assets and their layout pipeline are unchanged.
+
+The official 2014 export optionally appends `wotc-companion.pdf`, one independent editable
+page per active companion (or one blank page when explicitly selected). The loader supplies
+`supplements.companion` only when selected. `buildCompanionSheetData` projects template-neutral
+creature facts; `companionSheetMapping.ts` owns the external field names and audited geometry.
+This separation allows a replacement companion layout to reuse the data projection. Unresolved
+creatures retain their selected name. Unstored current HP, equipment, personality, and runtime
+trackers remain blank. Conditional defenses remain in prose rather than unconditional checkboxes.
+Generated copies use dot checkboxes, remove source field actions/rules tooltips, and register
+independent `CompanionN__` fields. Companion pages never generate continuation pages. Text exceeding
+readable form capacity is abbreviated and reported through the existing fitting/preflight warnings.
+The separate blank Notes page is included only when selected. Exported companion panel and entry-box
+fills match the official 2014 artwork’s audited RGB grays; the archived source remains byte-for-byte
+unchanged. The main official Speed field uses explicit fitting bounds so its value and units stay
+inside the printed box.
+
+Companion asset provenance: user-supplied *Companion Sheet Form*,
+https://www.dmsguild.com/en/product/318155/companion-sheet-form . Its visible page and PDF metadata
+contain no named author or redistribution license. Metadata identifies Adobe Illustrator 24.1,
+creation on 2020-06-16 and modification on 2025-11-09; no embedded attachments were found.
+Bundling permission is pending: the project owner intends to obtain it before release, or replace
+the artwork with an original form. The free-download price is not recorded as a redistribution
+license. This is a supplemental asset, not a fifth selectable character-sheet template.
 
 For the custom 2014 template, saving also replaces mapped checkbox appearances with portable vector
 marks, records mapped text as both the current and reset/default value, and removes obsolete MPMB
@@ -27,20 +89,19 @@ PDF.js displays them correctly in the app preview.
 
 Bundled organization artwork remains in its native WebP format throughout the app. The PDF image adapter converts it to PNG in memory only when embedding it into the 2014 form; custom images use the same format-normalization boundary when needed.
 
+The official 2014 adapter uses transparent vector dots for all checkbox appearances; Inspiration
+remains an X in its text field. Its organization emblem is embedded in the page-two
+`Faction Symbol Image` widget, using the source-qualified organization selection or custom image.
+
 The template field names are an external contract. Some are descriptive (2014), while the 2024 template uses positional names such as `Text_61`. Never infer a positional field from its number. Inspect its widget rectangle in the actual PDF and extend the template-contract tests whenever a mapping changes.
 
 ## Audit Results
 
-Four mutually exclusive runtime templates ship in `public/pdf/`:
+Four selectable layouts remain in the registry. The 2014 layouts assemble the modules described
+above; the two 2024 PDFs remain self-contained in `public/pdf/`:
 
-- `2014_MPMB_Character_Sheet.pdf`: six pages built from the expanded MPMB source, with the
-  reference page excluded and document JavaScript/actions removed;
-- `2014_Official_Character_Sheet.pdf`: the three-page Wizards of the Coast form with a dedicated
-  semantic mapper;
-- `2024_Beaoudix_Character_Sheet.pdf`: the two-page free Lost Loot / u/Beaoudix form shared on
-  Reddit; and
-- `2024_Official_Character_Sheet.pdf`: the two-page official artwork with a generated AcroForm
-  overlay.
+- `2024_Beaoudix_Character_Sheet.pdf`: the two-page free Lost Loot / u/Beaoudix form;
+- `2024_Official_Character_Sheet.pdf`: the two-page official artwork with a generated AcroForm overlay.
 
 The two 2024 templates share the same 381-field contract: 230 text fields and 151 checkboxes. The
 official form layer is reproduced by `scripts/prepare-character-sheet-templates.mjs`, which scales
@@ -64,7 +125,7 @@ The custom 2014 source contains thousands of MPMB helper fields in addition to c
 The generator intentionally targets semantic inputs and removes unsupported interactive chrome. Its
 fifth page now receives the first active, source-qualified creature choice (including ability scores,
 core statistics, attacks, traits, and notes) when one is saved. Unresolved companion choices keep
-their selected name rather than substituting another printing. The sixth page carries racial-trait
+their selected name rather than substituting another printing. Its optional notes page carries racial-trait
 and organization-note overflow and remains manually fillable in its unused space because Tavern
 Born has no general notes persistence model.
 
@@ -123,8 +184,10 @@ circles inside the AC box describe the armor being worn, independently of profic
 - Identity, physical details, abilities, saves, skills, combat state, and death saves
 - Three weapon rows, with additional weapon summaries carried into Attacks & Spellcasting
 - Equipment, currency, proficiencies/languages, features, allies, biography, feats, and treasure
-- Primary spellcasting summary, slots expended, prepared-spell circles, and the printed spell-row capacities for levels
-  0-9
+- One editable spell page per resolved casting class, with its own ability, save DC, attack bonus,
+  spell list, and prepared dots; a character without spellcasting defaults to two pages
+- Regular casters repeat the shared multiclass slot pool with plain class headings; Pact Magic
+  pages carry their separate totals and expended slots
 - Portrait and faction image embedding through the official field names
 - Bounded text sizes for narrow save/skill and HP fields and long prose boxes; Equipment,
   Features and Traits, Additional Features and Traits, and Treasure have explicit character
@@ -155,9 +218,16 @@ exports cannot silently reprioritize entries.
   100 printed spell rows distributed by spell level.
 - Slot grids derive regular Spellcasting maxima from parsed class progressions and clamp saved
   usage through the shared slot calculator; saved maxima are never trusted or modified. Pact Magic
-  remains a separate pool. Preflight reports its totals and expended slots because the grids cannot
-  distinguish its recovery rules. Prepared circles preserve source-qualified spell identity and
-  include always-prepared grants and ready known-caster spells.
+  remains a separate pool. The official 2014 template prints it on the Pact caster's page; other
+  templates report its totals and expended slots in preflight. Prepared circles preserve
+  source-qualified spell identity and include always-prepared grants and ready known-caster spells.
+- Official 2014 spell pages follow casting-class progression order, including subclass casters.
+  Racial, bonus, and unresolved-profile spells remain on the first page. Each page deduplicates and
+  determines preparation independently, so learning the same spell in two classes does not combine
+  their preparation states. Preflight checks each page's per-level capacity separately.
+  Additional pages copy the pristine final page before filling and register uniquely named editable
+  fields (`SpellPage2__`, `SpellPage3__`, etc.) in the AcroForm tree; widgets point to their copied
+  page. The original page retains its template field names.
 - Official 2014 damage cells use compact damage-type labels; the attack notes retain full damage
   and weapon properties. Official weapon cells and 2024 fields fit against the appearance provider's
   actual padding, border, font metrics, and wrapping. Generation reports any text shortened at the
@@ -168,6 +238,8 @@ exports cannot silently reprioritize entries.
   have portrait fields. Faction text alone does not identify source-qualified artwork: the
   character needs an organization selection with an image or a custom emblem. Preflight warns
   when a faction is named but no image resolves.
+- Ancestry trait summaries use the shared gameplay-trait display helper. It omits the descriptive
+  Age entry while preserving the original ancestry reference text and the character's Age field.
 - Daily lifestyle price, per-shot ammunition tracker dots, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime. The two ammunition name/count boxes are populated independently.
 
 ## Verification
@@ -206,3 +278,7 @@ source-qualified selections from `data/` and stores no copied item, feat, or fea
 The fixture test reparses the current 5etools corpus, rejects unresolved game-data references,
 checks active subclass and companion choice eligibility, validates import/readiness, and exercises
 the level-20 fixtures only against their matching template capacity boundary.
+
+Fixture movement is initialized from the selected race/subrace's source speed rather than an
+empty seed value. Previously imported copies must be reimported to receive that correction;
+export does not mutate a saved character's movement.

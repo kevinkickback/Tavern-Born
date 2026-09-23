@@ -128,6 +128,11 @@ The parser layer owns normalization that would otherwise be repeated across page
 - feat fixed references and unconditional lasting effects;
 - fluff summaries and optional images/sections.
 
+The shared `getRaceTraits` presentation helper further excludes the descriptive Age entry from
+gameplay-trait lists in the builder, creation wizard, and PDFs. Ingestion retains the original
+entry for ancestry reference text; this display policy does not discard source data or require a
+cache migration.
+
 Choice normalizers preserve class/subclass owner, level, capacity, replacement rule, source filters,
 and diagnostic provenance. Unknown choice blocks remain visible as diagnostics instead of becoming
 invented options. Optional-feature and feat progression remain the count owners when feature prose

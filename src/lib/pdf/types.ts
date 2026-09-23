@@ -13,6 +13,9 @@ export type CharacterSheetTemplateId = ResolvedCharacterSheetTemplateId | Charac
 type CharacterSheetMappingId = '2014-custom' | '2014-official' | '2024-shared'
 export type CharacterSheetCleanupProfile = 'standard' | 'mpmb-2014'
 
+export type OptionalCharacterSheetPageId = 'spells' | 'companion' | 'notes'
+export type CharacterSheetPageOptions = Partial<Record<OptionalCharacterSheetPageId, boolean>>
+
 interface CharacterSheetAttribution {
   credit: string
   creatorName?: string
@@ -26,13 +29,16 @@ export interface CharacterSheetTemplate {
   variant: CharacterSheetVariant
   editionLabel: string
   name: string
-  fileName: string
   assetPath: string
   routePath: string
   mappingId: CharacterSheetMappingId
   cleanupProfile: CharacterSheetCleanupProfile
   portraitFieldName?: string
   organizationImageFieldName?: string
+  optionalPages?: readonly {
+    id: OptionalCharacterSheetPageId
+    label: string
+  }[]
   attribution: CharacterSheetAttribution
 }
 

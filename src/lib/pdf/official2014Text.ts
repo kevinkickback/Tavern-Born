@@ -20,6 +20,7 @@ const SECTION_FONT_BOUNDS: Record<Official2014SectionName, FontBounds> = {
 }
 
 const OTHER_FONT_BOUNDS: Record<string, FontBounds> = {
+  Speed: { min: 9, max: 18 },
   ClassLevel: { min: 7.5, max: 10 },
   HPMax: { min: 9, max: 9 },
   HDTotal: { min: 7, max: 8 },

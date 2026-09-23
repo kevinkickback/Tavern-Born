@@ -34,6 +34,7 @@ import {
 import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { normalizeRaceMovement } from '@/lib/calculations/movement'
 import { parseSpellReference, resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import {
   buildClassSpellSelectionsByLevel,
@@ -271,6 +272,13 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     )
 
     const calculation = createCharacterCalculationContext(character, lookups)
+    expect(character.movement).toEqual(
+      normalizeRaceMovement(
+        calculation.raceResolution.parentRace as Race5e,
+        calculation.raceResolution.subraceData,
+      ),
+    )
+    expect(createCharacterSheetViewModel(character, lookups).walkingSpeed).toBeGreaterThan(0)
     const classChoiceCatalogs = buildClassChoiceCatalogs(character)
     const readiness = getCharacterReadiness(character, {
       calculation,
@@ -548,6 +556,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
 
     const calculation = createCharacterCalculationContext(character, lookups)
     const classData = calculation.classes[0]
+    expect(character.movement.speeds.walk).toBeGreaterThan(0)
     const subclassData = getSelectedSubclassData(classData, character.classProgression[0])
     const catalogs = buildClassChoiceCatalogs(character)
     const choices = getCharacterClassChoices(classData, subclassData, edition === '2014')

@@ -191,11 +191,13 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByText('5e (2014) Templates')).toBeTruthy()
     expect(screen.getByText('5.5e (2024) Templates')).toBeTruthy()
     expect(
-      screen.getByRole('link', { name: '5e (2014) WotC Official' }).getAttribute('aria-current'),
+      screen
+        .getByRole('link', { name: '5e (2014) Wizards of the Coast' })
+        .getAttribute('aria-current'),
     ).toBe('page')
-    expect(screen.getByRole('link', { name: '5e (2014) MPMB Custom' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: '5.5e (2024) WotC Official' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: '5.5e (2024) Lost Loot Custom' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) Wizards of the Coast' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) Lost Loot' })).toBeTruthy()
   })
 
   test('renders the permanent Characters context pane for the character collection', () => {

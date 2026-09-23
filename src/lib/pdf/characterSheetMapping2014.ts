@@ -1,4 +1,3 @@
-import { buildCreatureChoiceSummary, buildCreatureStatBlock } from '@/lib/5etools/creatureStatBlock'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -8,6 +7,7 @@ import {
   formatViewModelModifier,
   usesCustomOrganization,
 } from '@/lib/pdf/characterSheetViewModel'
+import { getCompanionSheetValues } from '@/lib/pdf/companionSheet'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 import type { CharacterAction } from '@/types/actions'
 
@@ -203,29 +203,13 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   const strengthScore = viewModel.effectiveAbilityScores.strength
   const ammoRows = getAmmunitionRows(viewModel)
   const companion = viewModel.companions[0]
-  const companionStat = companion?.creature ? buildCreatureStatBlock(companion.creature) : undefined
-  const companionSummary = companion?.creature
-    ? buildCreatureChoiceSummary(companion.creature)
-    : undefined
-  const companionArmorClass = companionSummary?.armorClass.match(/^13\s*\+\s*PB\b/iu)
-    ? String(13 + viewModel.proficiencyBonus)
-    : (companionSummary?.armorClass.match(/^\d+$/u)?.[0] ?? '')
-  const companionClassLevel = character.classProgression.find(
-    (entry) => entry.name === companion?.className,
-  )?.levels
-  const companionMaxHp =
-    companion?.creature?.hp?.average != null
-      ? String(companion.creature.hp.average)
-      : companion?.className === 'Ranger' &&
-          companionClassLevel != null &&
-          /^5\s*\+\s*five times your ranger level\b/iu.test(companion.creature?.hp?.special ?? '')
-        ? String(5 + 5 * companionClassLevel)
-        : ''
-  const companionWalkSpeed = companion?.creature?.speed?.walk
-  const companionSpeed =
-    typeof companionWalkSpeed === 'number'
-      ? `${companionWalkSpeed} ft.`
-      : (companionSummary?.speed ?? '')
+  const {
+    stat: companionStat,
+    summary: companionSummary,
+    armorClass: companionArmorClass,
+    maxHp: companionMaxHp,
+    speed: companionSpeed,
+  } = getCompanionSheetValues(viewModel, companion)
   const [racialTraits, racialOverflow] = splitRuledSection(
     [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
     310,

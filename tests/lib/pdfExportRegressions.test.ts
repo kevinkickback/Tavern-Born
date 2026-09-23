@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import {
   decodePDFRawStream,
   PDFCheckBox,
+  PDFDict,
   PDFDocument,
   PDFName,
   PDFRawStream,
@@ -12,20 +13,21 @@ import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseClasses, parseSpells } from '@/lib/5etools/parsers'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
-import { OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL } from '@/lib/pdf/characterSheetMapping2014Official'
+import {
+  getOfficial2014SpellPages,
+  OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
+} from '@/lib/pdf/characterSheetMapping2014Official'
 import {
   buildCharacterSheetFieldMap,
   createCharacterSheetViewModel,
-  generateFilledCharacterSheetPdf,
-  getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
-import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
 import type { Class5e, Spell5e } from '@/types/5etools'
+import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'))
-const classes = ['wizard', 'warlock', 'fighter'].flatMap((name) =>
+const classes = ['wizard', 'warlock', 'fighter', 'cleric'].flatMap((name) =>
   parseClasses(json(`data/class/class-${name}.json`)),
 )
 const spells = ['phb', 'xphb'].flatMap((name) =>
@@ -35,10 +37,247 @@ const lookups = {
   classesByKey: buildClassLookup(classes as Class5e[]),
   spellsByKey: buildSpellLookup(spells as Spell5e[]),
 }
-const templateBytes = (id: CharacterSheetTemplateId) =>
-  readFileSync(join(process.cwd(), 'public', getCharacterSheetTemplate(id).assetPath))
+const templateBytes = sourceTemplateBytes
 
 describe('PDF export review regressions', () => {
+  test.each([
+    30, 120,
+  ])('official 2014 preserves and visibly fits a walking speed of %s ft', async (speed) => {
+    const vm = createCharacterSheetViewModel(
+      createEmptyCharacter({
+        movement: { speeds: { walk: speed }, source: { kind: 'manual', name: 'Speed regression' } },
+      }),
+      {},
+    )
+    const map = buildCharacterSheetFieldMap(vm, '2014-official')
+    expect(map.textFields.Speed).toBe(`${speed} ft`)
+    const saved = await PDFDocument.load(
+      await fillCharacterSheetPdf(templateBytes('2014-official'), map, {
+        templateId: '2014-official',
+      }),
+    )
+    const field = saved.getForm().getTextField('Speed')
+    expect(field.getText()).toBe(`${speed} ft`)
+    const widget = field.acroField.getWidgets()[0]
+    const stream = saved.context.lookup(widget.getAppearances()?.normal)
+    expect(stream).toBeInstanceOf(PDFRawStream)
+    const operators = new TextDecoder().decode(decodePDFRawStream(stream as PDFRawStream).decode())
+    const fontSize = Number(/([\d.]+) Tf/u.exec(operators)?.[1])
+    expect(fontSize).toBeGreaterThanOrEqual(9)
+    expect(fontSize).toBeLessThanOrEqual(18)
+    const font = await saved.embedFont(StandardFonts.Helvetica)
+    expect(font.widthOfTextAtSize(`${speed} ft`, fontSize)).toBeLessThan(
+      widget.getRectangle().width - 2,
+    )
+  }, 30_000)
+
+  test.each([
+    [undefined, 1],
+    ['Eldritch Knight', 2],
+  ] as const)('adds a page only when the second class can cast (%s)', (subclass, count) => {
+    const character = createEmptyCharacter({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 3,
+          subclass,
+          subclassSource: subclass ? 'PHB' : undefined,
+        },
+      ],
+    })
+    const vm = createCharacterSheetViewModel(character, lookups)
+    expect(getOfficial2014SpellPages(vm)).toHaveLength(count)
+    expect(getOfficial2014SpellPages(vm).map((page) => page.detail?.className)).toEqual(
+      count === 1 ? ['Wizard'] : ['Wizard', 'Fighter'],
+    )
+  })
+
+  test('official 2014 saves independent editable pages for each caster, with separate preparation and slot pools', async () => {
+    const character = createEmptyCharacter({
+      name: 'Multiclass PDF Test',
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        { name: 'Cleric', source: 'PHB', levels: 3 },
+        { name: 'Warlock', source: 'PHB', levels: 3 },
+      ],
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 18,
+        wisdom: 16,
+        charisma: 14,
+      },
+    })
+    character.spells.spellProfiles = ['Wizard', 'Cleric', 'Warlock'].map((name) => ({
+      id: `class:${name}|PHB`,
+      type: 'class',
+      label: name,
+      className: name,
+      classSource: 'PHB',
+      cantrips: [],
+      spellsKnown: ['Detect Magic|PHB'],
+      preparedSpells: name === 'Wizard' ? ['Detect Magic|PHB'] : [],
+    }))
+    character.spells.spellProfiles.push({
+      id: 'racial:Elf|PHB',
+      type: 'racial',
+      label: 'Elf',
+      cantrips: ['Light|PHB'],
+      spellsKnown: [],
+      preparedSpells: [],
+    })
+    character.spells.spellSlots = { 1: { max: 99, used: 1 } }
+    character.spells.pactSpellSlots = { 2: { max: 99, used: 1 } }
+    const before = structuredClone(character)
+    const vm = createCharacterSheetViewModel(character, lookups)
+    const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
+    expect(saved.getPageCount()).toBe(5)
+    const form = saved.getForm()
+    const prefixes = ['', 'SpellPage2__', 'SpellPage3__']
+    const expectedHeaders = ['Wizard', 'Cleric', 'Warlock (Pact Magic)']
+    for (const [index, prefix] of prefixes.entries()) {
+      expect(form.getTextField(`${prefix}Spellcasting Class 2`).getText()).toBe(
+        expectedHeaders[index],
+      )
+      expect(form.getTextField(`${prefix}SpellcastingAbility 2`).getText()).toBe(
+        ['Intelligence', 'Wisdom', 'Charisma'][index],
+      )
+      expect(form.getTextField(`${prefix}SpellSaveDC  2`).getText()).toBe(['16', '15', '14'][index])
+      expect(form.getTextField(`${prefix}SpellAtkBonus 2`).getText()).toBe(
+        ['+8', '+7', '+6'][index],
+      )
+      const spell = form.getTextField(`${prefix}${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]}`)
+      expect(spell.getText()).toBe('Detect Magic')
+      expect(form.getCheckBox(`${prefix}Check Box 251`).isChecked()).toBe(index !== 1)
+      expect(spell.acroField.getWidgets()[0].P()).toEqual(saved.getPage(index + 2).ref)
+      expect(
+        saved
+          .getPage(index + 2)
+          .node.Annots()
+          ?.asArray(),
+      ).toContainEqual(spell.ref)
+      expect(spell.isReadOnly()).toBe(false)
+      expect(form.getTextField(`${prefix}SlotsTotal 19`).getText() ?? '').toBe(index < 2 ? '4' : '')
+      expect(form.getTextField(`${prefix}SlotsRemaining 19`).getText() ?? '').toBe(
+        index < 2 ? '1' : '',
+      )
+      expect(form.getTextField(`${prefix}SlotsTotal 20`).getText()).toBe(index < 2 ? '3' : '2')
+      expect(form.getTextField(`${prefix}SlotsRemaining 20`).getText()).toBe(index < 2 ? '0' : '1')
+      expect(
+        form.getTextField(`${prefix}${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[0][0]}`).getText() ?? '',
+      ).toBe(index === 0 ? 'Light' : '')
+    }
+    form
+      .getTextField(`SpellPage2__${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]}`)
+      .setText('Edited Cleric spell')
+    const reopened = (await PDFDocument.load(await saved.save())).getForm()
+    expect(reopened.getTextField(OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]).getText()).toBe(
+      'Detect Magic',
+    )
+    expect(
+      reopened.getTextField(`SpellPage2__${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]}`).getText(),
+    ).toBe('Edited Cleric spell')
+    expect(new Set(form.getFields().map((field) => field.getName())).size).toBe(
+      form.getFields().length,
+    )
+    expect(
+      getPdfExportPreflight('2014-official', vm, null, []).issues.some(
+        (issue) => issue.id === 'unsupported:pact-slots',
+      ),
+    ).toBe(false)
+    expect(character).toEqual(before)
+  }, 30_000)
+
+  test('official 2014 checks per-caster spell capacity instead of a combined list', () => {
+    const vm = createCharacterSheetViewModel(
+      createEmptyCharacter({
+        classProgression: [
+          { name: 'Wizard', source: 'PHB', levels: 3 },
+          { name: 'Cleric', source: 'PHB', levels: 3 },
+        ],
+      }),
+      lookups,
+    )
+    const row = {
+      name: 'Spell',
+      level: '1',
+      prepared: true,
+      castingTimeAndDuration: '',
+      notes: '',
+      concentration: false,
+      ritual: false,
+      material: false,
+    }
+    vm.spellcastingPages.forEach((page) => {
+      page.spellRows = Array.from({ length: 10 }, () => ({ ...row }))
+    })
+    vm.spellRows = vm.spellcastingPages.flatMap((page) => page.spellRows)
+    expect(
+      getPdfExportPreflight('2014-official', vm, null, []).issues.some((issue) =>
+        issue.id.startsWith('capacity:spells'),
+      ),
+    ).toBe(false)
+    vm.spellcastingPages[1].spellRows.push(row, row, row)
+    expect(getPdfExportPreflight('2014-official', vm, null, []).issues).toContainEqual(
+      expect.objectContaining({
+        id: 'capacity:spells-level-1-page-2',
+        title: 'Cleric: Level 1 spells exceed this template',
+      }),
+    )
+  })
+
+  test('official 2014 uses portable dots for all checkbox states and retains inspiration X', async () => {
+    const vm = createCharacterSheetViewModel(createEmptyCharacter({ inspiration: true }), lookups)
+    const saved = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-official', {
+        pages: { spells: true },
+      }),
+    )
+    expect(saved.getPageCount()).toBe(3)
+    expect(saved.getForm().getTextField('Inspiration').getText()).toBe('X')
+    for (const field of saved.getForm().getFields()) {
+      if (!(field instanceof PDFCheckBox)) continue
+      for (const widget of field.acroField.getWidgets()) {
+        const normal = widget.getAppearances()?.normal
+        expect(normal).toBeInstanceOf(PDFDict)
+        const onValue = field.acroField.getOnValue()
+        expect(onValue).toBeDefined()
+        const on = saved.context.lookup((normal as PDFDict).get(onValue!)) as PDFRawStream
+        const off = saved.context.lookup((normal as PDFDict).get(PDFName.of('Off'))) as PDFRawStream
+        const operators = new TextDecoder().decode(decodePDFRawStream(on).decode())
+        expect(operators).toContain(' c\n')
+        expect(operators).toContain('f\n')
+        expect(operators).not.toContain('BT')
+        expect(decodePDFRawStream(off).decode()).toHaveLength(0)
+      }
+    }
+  }, 30_000)
+
+  test('official 2014 embeds the selected custom organization image inside its page-two box', async () => {
+    const character = createEmptyCharacter()
+    character.details.organizationSelectionKey = '__custom__'
+    character.details.organizationCustomImage = `data:image/png;base64,${readFileSync(join(process.cwd(), 'public/assets/images/ui/logo.png')).toString('base64')}`
+    const vm = createCharacterSheetViewModel(character, lookups)
+    expect(vm.organizationImage).toBe(character.details.organizationCustomImage)
+    const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
+    const widget = saved.getForm().getButton('Faction Symbol Image').acroField.getWidgets()[0]
+    expect(widget.P()).toEqual(saved.getPage(1).ref)
+    expect(widget.getRectangle().width).toBe(0)
+    const objects = saved.getPage(1).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict)
+    expect(
+      objects?.values().some((ref) => {
+        const object = saved.context.lookup(ref)
+        return (
+          object instanceof PDFRawStream &&
+          object.dict.get(PDFName.of('Subtype'))?.toString() === '/Image'
+        )
+      }),
+    ).toBe(true)
+  }, 30_000)
+
   test.each([
     ['PHB', 5, 4, 3, 2],
     ['XPHB', 5, 4, 3, 2],
@@ -160,9 +399,7 @@ describe('PDF export review regressions', () => {
         material: false,
       })),
     )
-    const saved = await PDFDocument.load(
-      await generateFilledCharacterSheetPdf(vm, templateBytes('2014-official'), '2014-official'),
-    )
+    const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
     const form = saved.getForm()
     const circles = form.getFields().filter((field) => field instanceof PDFCheckBox)
     OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fields, level) => {
@@ -241,7 +478,7 @@ describe('PDF export review regressions', () => {
     )
     const shortened: string[] = []
     const saved = await PDFDocument.load(
-      await generateFilledCharacterSheetPdf(vm, templateBytes('2024-official'), '2024-official', {
+      await generateTestCharacterSheet(vm, '2024-official', {
         onTextTruncated: (field) => shortened.push(field),
       }),
     )

@@ -14,7 +14,6 @@ import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
-  getCharacterSheetTemplate,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
 import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
@@ -24,6 +23,7 @@ import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
   character: Character,
@@ -452,7 +452,9 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['P4.AScomp.Comp.Use.Attack.1.Description']).toBe(
       'Melee Weapon Attack: your spell attack modifier to hit.',
     )
-    const template = readFileSync(join(process.cwd(), 'public/pdf/2014_MPMB_Character_Sheet.pdf'))
+    const template = readFileSync(
+      join(process.cwd(), 'scripts/pdf-sources/2014_MPMB_Character_Sheet.pdf'),
+    )
     const output = await fillCharacterSheetPdf(template, map, { templateId: '2014-custom' })
     const form = (await PDFDocument.load(output)).getForm()
     expect(form.getTextField('P4.AScomp.Comp.Desc.Name').getText()).toBe('Beast of the Land')
@@ -1438,7 +1440,7 @@ describe('characterSheetPdf', () => {
     ).toMatch(/^Equipment item \d+$/)
 
     const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public/pdf/2014_Official_Character_Sheet.pdf')),
+      readFileSync(join(process.cwd(), 'scripts/pdf-sources/2014_Official_Character_Sheet.pdf')),
     )
     const filledBytes = await fillCharacterSheetPdf(templateBytes, map, {
       templateId: '2014-official',
@@ -1588,10 +1590,7 @@ describe('characterSheetPdf', () => {
       rarity: index < 5 ? 'Uncommon' : undefined,
     }))
     const map = buildCharacterSheetFieldMap(makeCharacterFixture({ equipment }), templateId)
-    const templateDefinition = getCharacterSheetTemplate(templateId)
-    const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public', templateDefinition.assetPath)),
-    )
+    const templateBytes = new Uint8Array(sourceTemplateBytes(templateId))
     const template = await PDFDocument.load(templateBytes)
     const fieldNames = new Set(
       template
@@ -1602,7 +1601,7 @@ describe('characterSheetPdf', () => {
 
     expect(Object.keys(map.textFields).filter((name) => !fieldNames.has(name))).toEqual([])
     expect(Object.keys(map.checkboxFields).filter((name) => !fieldNames.has(name))).toEqual([])
-    if (templateDefinition.edition === '2024') {
+    if (templateId.startsWith('2024')) {
       expect(Object.keys(map.textFields)).toHaveLength(230)
       expect(Object.keys(map.checkboxFields)).toHaveLength(151)
     }

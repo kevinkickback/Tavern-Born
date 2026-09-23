@@ -13,6 +13,7 @@ import {
   PDFName,
   PDFNumber,
   type PDFObject,
+  PDFRef,
   PDFTextField,
   popGraphicsState,
   pushGraphicsState,
@@ -29,6 +30,7 @@ import {
   type FormWithInternals,
 } from '@/lib/pdf/pdfFieldInternals'
 import { embedOrganizationImage, embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
+import { omitPdfPages } from '@/lib/pdf/pdfPageSelection'
 import { fitPdfText } from '@/lib/pdf/pdfTextLayout'
 import type {
   CharacterSheetCleanupProfile,
@@ -69,6 +71,16 @@ const MPMB_RULED_TEXT_FIELDS = new Set([
 export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
   fields: CharacterSheetFieldMap,
+  options: Parameters<typeof fillCharacterSheetDocument>[2],
+): Promise<Uint8Array> {
+  return (await fillCharacterSheetDocument(templateBytes, fields, options)).save({
+    updateFieldAppearances: false,
+  })
+}
+
+export async function fillCharacterSheetDocument(
+  templateBytes: ArrayBuffer | Uint8Array,
+  fields: CharacterSheetFieldMap,
   options: {
     cleanupProfile?: CharacterSheetCleanupProfile
     templateId?: CharacterSheetTemplateId
@@ -76,17 +88,50 @@ export async function fillCharacterSheetPdf(
     organizationImageFieldName?: string
     portrait?: string
     organizationImage?: string
+    additionalSpellPages?: CharacterSheetFieldMap[]
+    spellPageIndex?: number
+    excludedPageIndices?: number[]
     onTextTruncated?: (fieldName: string) => void
   },
-): Promise<Uint8Array> {
+): Promise<PDFDocument> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
   const form = pdfDoc.getForm()
   const cleanupProfile =
     options.cleanupProfile ?? (options.templateId === '2014' ? 'mpmb-2014' : 'standard')
   const missingFields: string[] = []
+  const excludedPages = options.excludedPageIndices ?? []
+  const excludedWidgets = new Set(
+    excludedPages.flatMap((index) =>
+      (pdfDoc.getPage(index).node.Annots()?.asArray() ?? []).map((ref) =>
+        pdfDoc.context.lookup(ref),
+      ),
+    ),
+  )
+  const excludedFields = new Set(
+    form
+      .getFields()
+      .filter((field) => {
+        const widgets = field.acroField.getWidgets()
+        return widgets.length > 0 && widgets.every((widget) => excludedWidgets.has(widget.dict))
+      })
+      .map((field) => field.getName()),
+  )
+  const onTextTruncated = (name: string) => {
+    if (!excludedFields.has(name)) options.onTextTruncated?.(name)
+  }
+  fields = { textFields: { ...fields.textFields }, checkboxFields: { ...fields.checkboxFields } }
+  for (const [index, spellFields] of (options.additionalSpellPages ?? []).entries()) {
+    const prefix = `SpellPage${index + 2}__`
+    await appendOfficial2014SpellPage(pdfDoc, prefix, options.spellPageIndex ?? 2)
+    for (const [name, value] of Object.entries(spellFields.textFields))
+      fields.textFields[prefix + name] = value
+    for (const [name, value] of Object.entries(spellFields.checkboxFields))
+      fields.checkboxFields[prefix + name] = value
+  }
 
   for (const [fieldName, value] of Object.entries(fields.textFields)) {
+    if (excludedFields.has(fieldName)) continue
     let handled = false
     try {
       form.getTextField(fieldName).setText(value)
@@ -110,6 +155,7 @@ export async function fillCharacterSheetPdf(
   }
 
   for (const [fieldName, checked] of Object.entries(fields.checkboxFields)) {
+    if (excludedFields.has(fieldName)) continue
     try {
       const checkbox = form.getCheckBox(fieldName)
       if (checked) checkbox.check()
@@ -136,12 +182,12 @@ export async function fillCharacterSheetPdf(
   } else {
     if (options.templateId === '2014-official') setOfficial2014SectionLimits(form)
     if (options.templateId === '2024-official')
-      fitOfficial2024TextAppearances(form, options.onTextTruncated)
+      fitOfficial2024TextAppearances(form, onTextTruncated)
     updateDirtyFieldAppearances(form)
     if (options.templateId === '2014-official')
-      normalizeOfficial2014TextAppearances(form, options.onTextTruncated)
+      normalizeOfficial2014TextAppearances(form, onTextTruncated)
   }
-  replaceCheckboxOffAppearances(pdfDoc, form, options.templateId === '2024-official')
+  replaceCheckboxOffAppearances(pdfDoc, form, options.templateId)
   if (options.portrait && options.portraitFieldName) {
     await embedPortraitImage(pdfDoc, options.portrait, options.portraitFieldName)
   }
@@ -152,7 +198,41 @@ export async function fillCharacterSheetPdf(
       options.organizationImageFieldName,
     )
   }
-  return pdfDoc.save({ updateFieldAppearances: false })
+  // Keep the generated appearances' default font available to external readers after edits.
+  const font = form.getDefaultFont()
+  const resources =
+    form.acroForm.dict.lookupMaybe(PDFName.of('DR'), PDFDict) ?? pdfDoc.context.obj({})
+  const fonts = resources.lookupMaybe(PDFName.of('Font'), PDFDict) ?? pdfDoc.context.obj({})
+  fonts.set(PDFName.of(font.name), font.ref)
+  resources.set(PDFName.of('Font'), fonts)
+  form.acroForm.dict.set(PDFName.of('DR'), resources)
+  const output = await omitPdfPages(pdfDoc, excludedPages)
+  return output
+}
+
+/** The official spell page uses flat terminal widgets; register each copy as an independent field. */
+async function appendOfficial2014SpellPage(pdfDoc: PDFDocument, prefix: string, pageIndex: number) {
+  const [page] = await pdfDoc.copyPages(pdfDoc, [pageIndex])
+  pdfDoc.addPage(page)
+  for (const ref of page.node.Annots()?.asArray() ?? []) {
+    const widget = pdfDoc.context.lookup(ref)
+    if (
+      !(ref instanceof PDFRef) ||
+      !(widget instanceof PDFDict) ||
+      widget.get(PDFName.of('Subtype'))?.toString() !== '/Widget'
+    )
+      continue
+    if (widget.has(PDFName.of('Parent')) || !widget.has(PDFName.of('FT'))) {
+      throw new Error('The official 2014 spell page no longer uses independent form fields.')
+    }
+    const name = widget.lookup(PDFName.of('T'))
+    if (!name || !('decodeText' in name) || typeof name.decodeText !== 'function') {
+      throw new Error('The official 2014 spell page contains an unnamed field.')
+    }
+    widget.set(PDFName.of('T'), PDFHexString.fromText(prefix + name.decodeText()))
+    widget.set(PDFName.of('P'), page.ref)
+    pdfDoc.getForm().acroForm.addField(ref)
+  }
 }
 
 /** Keep MPMB multiline text on the template's roughly 11 pt printed rules. */
@@ -197,7 +277,8 @@ function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
 
 function setOfficial2014SectionLimits(form: ReturnType<PDFDocument['getForm']>) {
   for (const [fieldName, maxLength] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
-    form.getTextField(fieldName).setMaxLength(maxLength)
+    const field = form.getFieldMaybe(fieldName)
+    if (field instanceof PDFTextField) field.setMaxLength(maxLength)
   }
 }
 
@@ -211,7 +292,11 @@ function normalizeOfficial2014TextAppearances(
     const widget = field.acroField.getWidgets()[0]
     if (!widget) continue
     const { width, height } = widget.getRectangle()
-    const bounds = getOfficial2014FontBounds(field.getName(), width, height)
+    const bounds = getOfficial2014FontBounds(
+      field.getName().replace(/^SpellPage\d+__/u, ''),
+      width,
+      height,
+    )
     if (!bounds) continue
 
     const defaultAppearance = field.acroField.dict.get(PDFName.of('DA')) as
@@ -220,7 +305,11 @@ function normalizeOfficial2014TextAppearances(
     const autoSize = Number(defaultAppearance?.decodeText?.().match(/([\d.]+)\s+Tf/)?.[1])
     if (!Number.isFinite(autoSize)) continue
     let fontSize = Math.min(bounds.max, Math.max(bounds.min, autoSize))
-    if (field.getName().startsWith('Wpn') || field.getName() === 'AttacksSpellcasting') {
+    if (
+      field.getName().startsWith('Wpn') ||
+      field.getName() === 'AttacksSpellcasting' ||
+      field.getName() === 'Speed'
+    ) {
       const fitted = fitPdfText(
         field.getText() ?? '',
         font,
@@ -373,7 +462,7 @@ function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) 
 function replaceCheckboxOffAppearances(
   pdfDoc: PDFDocument,
   form: ReturnType<PDFDocument['getForm']>,
-  transparentChecked = false,
+  templateId?: CharacterSheetTemplateId,
 ) {
   for (const field of form.getFields()) {
     const internals = asFieldWithInternals(field)
@@ -401,7 +490,7 @@ function replaceCheckboxOffAppearances(
       normalAppearance.delete(PDFName.of('Off'))
       const offAppearanceRef = context.register(emptyAppearance)
       normalAppearance.set(PDFName.of('Off'), offAppearanceRef)
-      if (transparentChecked) {
+      if (templateId === '2024-official' || templateId === '2014-official') {
         const onValue = checkbox.acroField.getOnValue()
         if (!onValue) continue
         // The official template prints its own circles/diamonds. The default
@@ -410,34 +499,37 @@ function replaceCheckboxOffAppearances(
         const fieldId = Number(/^Checkbox_(\d+)$/.exec(field.getName())?.[1])
         const centerX = width / 2
         const centerY = height / 2
-        const radius = Math.min(width, height) * (fieldId >= 8 && fieldId <= 32 ? 0.29 : 0.34)
-        const mark =
-          fieldId >= 8 && fieldId <= 32
-            ? drawEllipse({
-                x: centerX,
-                y: centerY,
-                xScale: radius,
-                yScale: radius,
-                color: rgb(0, 0, 0),
-                borderColor: undefined,
-                borderWidth: 0,
-              })
-            : [
-                pushGraphicsState(),
-                setFillingRgbColor(0, 0, 0),
-                moveTo(centerX, centerY + radius),
-                lineTo(centerX + radius, centerY),
-                lineTo(centerX, centerY - radius),
-                lineTo(centerX - radius, centerY),
-                closePath(),
-                fill(),
-                popGraphicsState(),
-              ]
+        const circular = templateId === '2014-official' || (fieldId >= 8 && fieldId <= 32)
+        const radius = Math.min(width, height) * (circular ? 0.29 : 0.34)
+        const mark = circular
+          ? drawEllipse({
+              x: centerX,
+              y: centerY,
+              xScale: radius,
+              yScale: radius,
+              color: rgb(0, 0, 0),
+              borderColor: undefined,
+              borderWidth: 0,
+            })
+          : [
+              pushGraphicsState(),
+              setFillingRgbColor(0, 0, 0),
+              moveTo(centerX, centerY + radius),
+              lineTo(centerX + radius, centerY),
+              lineTo(centerX, centerY - radius),
+              lineTo(centerX - radius, centerY),
+              closePath(),
+              fill(),
+              popGraphicsState(),
+            ]
         const checkAppearance = context.formXObject(mark, {
           BBox: context.obj([0, 0, width, height]),
           Matrix: context.obj([1, 0, 0, 1, 0, 0]),
         })
         normalAppearance.set(onValue, context.register(checkAppearance))
+        // Reuse the portable normal appearance while clicking or hovering, too.
+        appearance.delete(PDFName.of('D'))
+        appearance.delete(PDFName.of('R'))
       }
     }
   }

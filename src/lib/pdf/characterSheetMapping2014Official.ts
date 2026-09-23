@@ -201,11 +201,53 @@ function titleCaseAbility(ability: string | undefined): string {
   return ability ? ability.charAt(0).toUpperCase() + ability.slice(1) : ''
 }
 
+export function getOfficial2014SpellPages(viewModel: CharacterSheetViewModel) {
+  if (viewModel.spellcastingPages.length <= 1) {
+    return [{ detail: viewModel.spellcastingDetails[0], spellRows: viewModel.spellRows }]
+  }
+  return viewModel.spellcastingPages
+}
+
+export function mapOfficial2014SpellPage(
+  viewModel: CharacterSheetViewModel,
+  page = getOfficial2014SpellPages(viewModel)[0],
+): CharacterSheetFieldMap {
+  const { detail, spellRows } = page
+  const pact = detail?.casterProgression === 'pact'
+  const label = detail ? `${detail.className}${pact ? ' (Pact Magic)' : ''}` : ''
+  const textFields: Record<string, string> = {
+    'Spellcasting Class 2': label,
+    'SpellcastingAbility 2': titleCaseAbility(detail?.spellcastingAbility),
+    'SpellSaveDC  2': detail?.spellSaveDC != null ? String(detail.spellSaveDC) : '',
+    'SpellAtkBonus 2':
+      detail?.spellAttackBonus != null ? formatViewModelModifier(detail.spellAttackBonus) : '',
+  }
+  const checkboxFields: Record<string, boolean> = {}
+  OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fieldNames, level) => {
+    const rows = spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
+    fieldNames.forEach((fieldName, index) => {
+      textFields[fieldName] = rows[index]?.name ?? ''
+      if (level > 0) {
+        checkboxFields[`Check Box ${PREPARED_FIELDS_BY_LEVEL[level][index]}`] =
+          rows[index]?.prepared ?? false
+      }
+    })
+    if (level > 0) {
+      const slots = pact
+        ? viewModel.spellSlots.mergedPactWithUsage
+        : viewModel.spellSlots.mergedSharedWithUsage
+      const slot = slots[level]
+      textFields[`SlotsTotal ${level + 18}`] = slot?.max ? String(slot.max) : ''
+      textFields[`SlotsRemaining ${level + 18}`] = slot?.max ? String(slot.used) : ''
+    }
+  })
+  return { textFields, checkboxFields }
+}
+
 export function mapCharacterSheet2014Official(
   viewModel: CharacterSheetViewModel,
 ): CharacterSheetFieldMap {
   const { character } = viewModel
-  const primarySpellcasting = viewModel.spellcastingDetails[0]
   const passivePerception =
     10 + (viewModel.skillByName.get('perception')?.modifier ?? viewModel.abilityModifiers.wisdom)
   const attackOverflow = viewModel.weaponRows.map((row) =>
@@ -268,14 +310,6 @@ export function mapCharacterSheet2014Official(
     Backstory: viewModel.historyAndPersonalitySummary,
     'Feat+Traits': limitOfficial2014SectionText('Feat+Traits', sections['Feat+Traits']),
     Treasure: limitOfficial2014SectionText('Treasure', sections.Treasure),
-    'Spellcasting Class 2': primarySpellcasting?.className ?? '',
-    'SpellcastingAbility 2': titleCaseAbility(primarySpellcasting?.spellcastingAbility),
-    'SpellSaveDC  2':
-      primarySpellcasting?.spellSaveDC != null ? String(primarySpellcasting.spellSaveDC) : '',
-    'SpellAtkBonus 2':
-      primarySpellcasting?.spellAttackBonus != null
-        ? formatViewModelModifier(primarySpellcasting.spellAttackBonus)
-        : '',
   }
   const checkboxFields: Record<string, boolean> = {
     'Check Box 12': (character.deathSaves?.successes ?? 0) >= 1,
@@ -311,23 +345,9 @@ export function mapCharacterSheet2014Official(
       : ''
   })
 
-  OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fieldNames, level) => {
-    const rows = viewModel.spellRows.filter(
-      (row) => (row.level === 'C' ? 0 : Number(row.level)) === level,
-    )
-    fieldNames.forEach((fieldName, index) => {
-      textFields[fieldName] = rows[index]?.name ?? ''
-      if (level > 0) {
-        checkboxFields[`Check Box ${PREPARED_FIELDS_BY_LEVEL[level][index]}`] =
-          rows[index]?.prepared ?? false
-      }
-    })
-    if (level > 0) {
-      const slot = viewModel.spellSlots.mergedSharedWithUsage[level]
-      textFields[`SlotsTotal ${level + 18}`] = slot?.max ? String(slot.max) : ''
-      textFields[`SlotsRemaining ${level + 18}`] = slot?.max ? String(slot.used) : ''
-    }
-  })
-
-  return { textFields, checkboxFields }
+  const spells = mapOfficial2014SpellPage(viewModel)
+  return {
+    textFields: { ...textFields, ...spells.textFields },
+    checkboxFields: { ...checkboxFields, ...spells.checkboxFields },
+  }
 }

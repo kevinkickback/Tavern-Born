@@ -957,7 +957,6 @@ function buildClassChoiceSelections(edition) {
 }
 
 function buildFixture(seed, edition) {
-  const seedSpeed = seed.movement.speeds.walk
   const race = editionEntity(races, seed.race, edition)
   const background = editionEntity(backgrounds, edition === '2024' ? 'Criminal' : 'Sage', edition)
   const progression = buildProgression(seed, edition)
@@ -979,6 +978,11 @@ function buildFixture(seed, edition) {
             source: version.source ?? race.source,
           }))
           .find((version) => version.name)
+  const movementOwner = selectedSubrace?.speed !== undefined ? selectedSubrace : race
+  const walkSpeed =
+    typeof movementOwner.speed === 'number' ? movementOwner.speed : movementOwner.speed?.walk
+  if (typeof walkSpeed !== 'number')
+    throw new Error(`Missing walking speed for fixture race: ${key(movementOwner)}`)
   const { profiles: mappedProfiles, spellAttributions } = buildSpellProfiles(
     race,
     progression,
@@ -1088,8 +1092,8 @@ function buildFixture(seed, edition) {
     classEquipmentItemChoices: {},
     raceAsiBlockIndex: undefined,
     movement: {
-      speeds: { walk: seedSpeed },
-      source: { kind: 'manual', name: 'Full-coverage test fixture' },
+      speeds: { walk: walkSpeed },
+      source: { kind: 'race', name: movementOwner.name, source: movementOwner.source },
     },
     details: {
       ...seed.details,
