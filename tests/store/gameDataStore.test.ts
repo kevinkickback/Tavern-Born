@@ -226,6 +226,32 @@ describe('gameDataStore', () => {
     expect(state.loadProgress).toBeNull()
   })
 
+  test('loadGameData reports resource progress during a background refresh', async () => {
+    let reportProgress: ((current: number, total: number, resource: string) => void) | undefined
+    let resolveLoad: ((data: GameData) => void) | undefined
+    loadDataFromSourceMock.mockImplementation((_config, options) => {
+      reportProgress = options?.onProgress
+      return new Promise<GameData>((resolve) => {
+        resolveLoad = resolve
+      })
+    })
+
+    const load = useGameDataStore.getState().loadGameData(config, true)
+    await vi.waitFor(() => expect(reportProgress).toBeTypeOf('function'))
+
+    reportProgress?.(4, 9, 'spells')
+
+    expect(useGameDataStore.getState()).toMatchObject({
+      isBackgroundRefreshing: true,
+      loadProgress: { current: 4, total: 9, resource: 'spells' },
+    })
+
+    resolveLoad?.(makeGameDataFixture())
+    await load
+
+    expect(useGameDataStore.getState().loadProgress).toBeNull()
+  })
+
   test('background refresh rejects partial data before updating cache or timestamps', async () => {
     const existing = makeGameDataFixture()
     existing.classes = [{ name: 'Wizard', source: 'PHB' }] as unknown as GameData['classes']
