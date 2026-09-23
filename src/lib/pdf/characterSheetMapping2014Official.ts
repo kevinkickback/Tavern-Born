@@ -4,6 +4,7 @@ import {
   formatViewModelModifier,
 } from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
+import { getOfficial2014SectionText, limitOfficial2014SectionText } from './official2014Text'
 
 const ABILITY_FIELDS: Record<AbilityName, { score: string; modifier: string; save: string }> = {
   strength: { score: 'STR', modifier: 'STRmod', save: 'ST Strength' },
@@ -187,8 +188,12 @@ export function mapCharacterSheet2014Official(
   const attackOverflow = viewModel.weaponRows
     .slice(3)
     .map((row) => `${row.name} ${row.attackBonus}; ${row.damage} ${row.damageType}`.trim())
+  const sections = getOfficial2014SectionText(viewModel)
   const textFields: Record<string, string> = {
-    ClassLevel: viewModel.classLevelSummary,
+    ClassLevel: character.classProgression
+      .filter((entry) => entry.name)
+      .map((entry) => `${entry.name} ${entry.levels}`)
+      .join(', '),
     Background: character.background || '',
     PlayerName: character.details.playerName || '',
     CharacterName: character.name || '',
@@ -223,8 +228,11 @@ export function mapCharacterSheet2014Official(
     ProficienciesLang: [viewModel.proficienciesSummary, viewModel.languagesSummary]
       .filter(Boolean)
       .join('\n'),
-    Equipment: viewModel.equipmentSummary,
-    'Features and Traits': viewModel.featuresSummary,
+    Equipment: limitOfficial2014SectionText('Equipment', sections.Equipment),
+    'Features and Traits': limitOfficial2014SectionText(
+      'Features and Traits',
+      sections['Features and Traits'],
+    ),
     'CharacterName 2': character.name || '',
     Age: String(character.details.age ?? ''),
     Height: character.details.height || '',
@@ -235,10 +243,8 @@ export function mapCharacterSheet2014Official(
     Allies: viewModel.alliesAndOrganizationsSummary,
     FactionName: [character.details.faction, character.details.rank].filter(Boolean).join(' — '),
     Backstory: viewModel.historyAndPersonalitySummary,
-    'Feat+Traits': [viewModel.racialTraitsSummary, viewModel.featsSummary]
-      .filter(Boolean)
-      .join('\n'),
-    Treasure: viewModel.magicItems.map((item) => item.name).join(', '),
+    'Feat+Traits': limitOfficial2014SectionText('Feat+Traits', sections['Feat+Traits']),
+    Treasure: limitOfficial2014SectionText('Treasure', sections.Treasure),
     'Spellcasting Class 2': primarySpellcasting?.className ?? '',
     'SpellcastingAbility 2': titleCaseAbility(primarySpellcasting?.spellcastingAbility),
     'SpellSaveDC  2':

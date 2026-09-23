@@ -19,6 +19,8 @@ import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import {
   useBackgroundLookup,
   useClassLookup,
+  useCreatureLookup,
+  useFeatLookup,
   useItemLookup,
   useItemPropertyLookup,
   useOrganizations,
@@ -37,7 +39,13 @@ import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from './_shared'
 
 function getSafeFileName(name: string): string {
-  return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'character'
+  const safeName = name
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, '')
+    .replace(/\p{Cc}/gu, '')
+    .replace(/[. ]+$/g, '')
+  if (!safeName) return 'Unnamed Character'
+  return /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(safeName) ? `_${safeName}` : safeName
 }
 
 interface CharacterSheetPageProps {
@@ -50,6 +58,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
+  const featsByKey = useFeatLookup()
+  const creaturesByKey = useCreatureLookup()
   const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()
@@ -70,6 +80,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             racesByKey,
             backgroundsByKey,
             spellsByKey,
+            featsByKey,
+            creaturesByKey,
             itemLookup,
             itemPropertyByAbbr,
             organizations,
@@ -79,6 +91,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       backgroundsByKey,
       character,
       classesByKey,
+      creaturesByKey,
+      featsByKey,
       itemPropertyByAbbr,
       itemLookup,
       organizations,
@@ -94,10 +108,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   }, [])
 
   const characterName = character?.name?.trim() || 'Unnamed Character'
-  const downloadName = useMemo(
-    () => `${getSafeFileName(characterName)}_${selectedTemplate.id}_character_sheet.pdf`,
-    [characterName, selectedTemplate.id],
-  )
+  const downloadName = `${getSafeFileName(characterName)}.pdf`
   const exportPreflight = useMemo(
     () =>
       viewModel

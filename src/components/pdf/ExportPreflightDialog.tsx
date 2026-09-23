@@ -34,7 +34,7 @@ export function ExportPreflightDialog({
 }: ExportPreflightDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-h-[min(42rem,calc(100vh-2rem))] overflow-hidden">
+      <AlertDialogContent className="max-h-[min(42rem,calc(100dvh-2rem))] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
         <AlertDialogHeader>
           <AlertDialogTitle>PDF export preflight</AlertDialogTitle>
           <AlertDialogDescription>
@@ -42,7 +42,10 @@ export function ExportPreflightDialog({
             capacity before downloading.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="overflow-y-auto pr-1">
+        <div
+          data-testid="preflight-issues-scroll"
+          className="min-h-0 overflow-y-auto overscroll-contain pr-1"
+        >
           {result.issues.length === 0 ? (
             <div className="flex items-start gap-3 rounded-lg border border-success/35 bg-success/5 p-3">
               <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" weight="fill" />

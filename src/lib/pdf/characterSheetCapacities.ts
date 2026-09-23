@@ -4,6 +4,8 @@ export const CHARACTER_SHEET_CAPACITIES = {
     equipment: 90,
     magicItems: 5,
     feats: 4,
+    ammunitionDisplays: 2,
+    companionPages: 1,
     hitDice: 3,
     classResources: 8,
     spellcastingProfiles: 2,

@@ -44,13 +44,29 @@ Four mutually exclusive runtime templates ship in `public/pdf/`:
 
 The two 2024 templates share the same 381-field contract: 230 text fields and 151 checkboxes. The
 official form layer is reproduced by `scripts/prepare-character-sheet-templates.mjs`, which scales
-the audited custom widget geometry to the official page boxes while keeping checkbox off
-appearances transparent so the printed controls remain visible.
+the audited custom widget geometry to the official page boxes. The script then calibrates the
+official artwork's death-save, armor-training, spell-slot, spell-component, attunement, and coin
+locations and increases the height of number widgets whose multiline appearances clipped glyphs
+at the bottom edge; those enlarged widgets have transparent backgrounds so they do not hide printed
+labels. Spell-component widgets use a linear vertical correction across all 30 rows to counter
+the imported form's cumulative drift against the evenly spaced printed diamonds. The adapter fills
+the center of printed circles and diamonds for checked fields (and leaves unchecked appearances
+transparent), so neither state paints over the printed controls. `official2024Text.ts` sets field-specific font
+bounds; long prose and list fields are fitted to their printed boxes with an ellipsis when they
+cannot fit at the readable minimum. Preflight warns when long official-2024 narrative or equipment
+fields are likely to be abbreviated. Run the preparation script with `--official-2024` when only
+rebuilding the official form, leaving the custom 2014 asset untouched.
+
+The preflight dialog constrains its warning list to a scrollable middle row while keeping its
+title and download/cancel actions visible, including on short viewports.
 
 The custom 2014 source contains thousands of MPMB helper fields in addition to character inputs.
 The generator intentionally targets semantic inputs and removes unsupported interactive chrome. Its
-fifth and sixth pages remain manually fillable because Tavern Born has no companion or general
-notes persistence model.
+fifth page now receives the first active, source-qualified creature choice (including ability scores,
+core statistics, attacks, traits, and notes) when one is saved. Unresolved companion choices keep
+their selected name rather than substituting another printing. The sixth page carries racial-trait
+and organization-note overflow and remains manually fillable in its unused space because Tavern
+Born has no general notes persistence model.
 
 The preparation script copies only the first six pages into a fresh document, reconstructs the
 AcroForm root from widgets on those pages, and removes orphaned fields. Rebuilding the page tree is
@@ -90,8 +106,17 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
   class-owned feat selections
 - Up to 90 inventory rows across the equipment and extra-equipment pages
 - Five magic items with description, rarity, weight, and attunement state
+- Two ammunition summaries, grouped by ammunition name with pack quantities expanded
+- One active creature companion on the fifth page; inactive alternate-feature choices are omitted
 - Currency, languages, tools, faith, lifestyle, faction/rank, allies/organizations with the selected or custom emblem, appearance, enemies, and expanded history/personality
 - Up to two spellcasting save-DC summaries
+
+Empty stored feat and magic-item descriptions are resolved from the exact source-qualified game
+record when available; user-written descriptions take precedence. The small printed cards cap
+description text at 260 characters and preflight warns about any abbreviation. Ruled multiline
+boxes use the template's approximately 11-point line pitch when their contents fit, preserving a
+tighter pitch only when needed to avoid pushing text past the field bottom. The Medium/Heavy
+circles inside the AC box describe the armor being worn, independently of proficiency.
 
 ### 2014 official
 
@@ -101,6 +126,11 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 - Primary spellcasting summary, slots remaining, and the printed spell-row capacities for levels
   0-9
 - Portrait and faction image embedding through the official field names
+- Bounded text sizes for narrow save/skill and HP fields and long prose boxes; Equipment,
+  Features and Traits, Additional Features and Traits, and Treasure have explicit character
+  ceilings. When source text exceeds a ceiling, the mapper keeps its beginning and preflight
+  warns before download. Selected feats lead the additional-traits box so ancestry prose cannot
+  push them out.
 
 ## Intentional Limits
 
@@ -119,8 +149,10 @@ exports cannot silently reprioritize entries.
   five magic-item cards, and 90 equipment rows. The official template has three attack rows and
   100 printed spell rows distributed by spell level.
 - Both 2014 templates support portrait and organization/faction images; the 2024 templates do not
-  have portrait fields.
-- Daily lifestyle price, ammunition trackers, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime.
+  have portrait fields. Faction text alone does not identify source-qualified artwork: the
+  character needs an organization selection with an image or a custom emblem. Preflight warns
+  when a faction is named but no image resolves.
+- Daily lifestyle price, per-shot ammunition tracker dots, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime. The two ammunition name/count boxes are populated independently.
 
 ## Verification
 
@@ -134,7 +166,7 @@ shipped forms. When replacing a template, rerun those tests and visually inspect
 page before changing field names.
 
 `tests/e2e/pdf-templates.spec.ts` exercises the complete browser workflow for all four templates:
-sidebar selection, preview and page count, preflight, edition-and-variant filename, download, and
+sidebar selection, preview and page count, preflight, character-name-only filename, download, and
 AcroForm reopen.
 
 PDF asset size optimization is intentionally a post-functional step. Record the packaged baseline
@@ -146,8 +178,11 @@ budget established for the former two-template set.
 `tests/fixtures/full-coverage-character-2024.tbc` are importable level-20 regression characters dedicated
 to their respective rulesets. Each includes three corpus-valid classes/subclasses, four spell
 profiles, all skills and saves, at least six weapons, five magic items, 90 inventory rows, multiple
-defenses, runtime state, a portrait, and extensive character details. The generation script sources
-equipment fields and source-qualified selections from `data/` and stores no copied item, feat, or
-feature rules prose. The companion test reparses the current 5etools corpus, rejects every unresolved
-race/species, subrace, class/subclass, background, feat, spell, item, or feature reference, validates
-both schemas, and exercises each fixture only against its matching template capacity boundary.
+defenses, runtime state, a portrait, a source-qualified organization emblem, subclass-owned
+Battle Master maneuvers, and extensive character details. Two smaller importable Beast Master
+fixtures cover a 2014 inactive classic Wolf companion with an active Primal Companion replacement,
+and the 2024 Primal Companion. The generation script sources equipment fields and
+source-qualified selections from `data/` and stores no copied item, feat, or feature rules prose.
+The fixture test reparses the current 5etools corpus, rejects unresolved game-data references,
+checks active subclass and companion choice eligibility, validates import/readiness, and exercises
+the level-20 fixtures only against their matching template capacity boundary.

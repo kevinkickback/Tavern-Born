@@ -12,6 +12,7 @@ import {
   PDFTextField,
   rgb,
   StandardFonts,
+  TextAlignment,
 } from '@cantoo/pdf-lib'
 
 const root = process.cwd()
@@ -234,6 +235,73 @@ function getWidgetPageIndex(pdfDoc, widget) {
   return pdfDoc.getPages().findIndex((page) => page.ref.tag === pageTag)
 }
 
+// The Beaoudix form and the official artwork use different checkbox layouts.
+// Keep the AcroForm widgets centered on the official sheet's printed controls.
+function alignOfficial2024Widget(name, rect) {
+  const textId = Number(/^Text_(\d+)$/.exec(name)?.[1])
+  if (
+    textId === 1 ||
+    textId === 6 ||
+    (textId >= 8 && textId <= 13) ||
+    (textId >= 25 && textId <= 30)
+  ) {
+    // These inherited multiline widgets are only ~11-14 pt high. At readable
+    // font sizes their baseline lands on the clip edge; extra height lifts the
+    // baseline and leaves room for the full glyph without moving the field.
+    rect.height += 5
+  } else if (textId === 15 || (textId >= 20 && textId <= 24)) {
+    rect.y += 1 // Center ability modifiers within their printed circles.
+  }
+  if (textId === 8) rect.y -= 1.5 // Place the larger AC value lower in its shield.
+  if (textId >= 16 && textId <= 19) rect.y += 1.5
+  if (/^Text_[2345]$/.test(name)) rect.y += 2
+  if (name === 'Text_7') {
+    rect.x -= 3
+    rect.width = 30
+  }
+  if (name === 'Text_18') {
+    rect.x -= 8
+    rect.width = 45 // The printed Size panel is wider than Beaoudix's widget.
+  }
+  const match = /^Checkbox_(\d+)$/.exec(name)
+  if (match) {
+    const id = Number(match[1])
+    if (id >= 2 && id <= 7)
+      rect.y += 2.6 // Death saves
+    else if (id === 8)
+      rect.y += 1 // Strength was already vertically centered.
+    else if ([10, 24, 29, 30].includes(id))
+      rect.y -= 0.5 // Checked saving throws are high in the printed circles.
+    else if (id >= 11 && id <= 18)
+      rect.y -= 0.5 // Dexterity and Wisdom skill dots need to sit lower.
+    else if (id >= 25 && id <= 28)
+      rect.y -= 1.5 // Charisma skill dots need a larger downward correction.
+    else if (id >= 8 && id <= 31)
+      rect.y += 1 // Saves and skills
+    else if (id === 32) {
+      rect.x -= 1 // Center Heroic Inspiration on the star.
+      rect.y -= 1.5
+    } else if (id >= 33 && id <= 36) {
+      const centers = [62.9, 97.2, 141.6, 178.8] // Armor training
+      rect.x = centers[id - 33] - rect.width / 2
+      rect.y -= 5
+      if (id === 36) rect.y += 0.75 // Shield proficiency sits slightly high.
+    } else if (id >= 37 && id <= 58) {
+      rect.x += id <= 46 ? 1.5 : id <= 54 ? 0.5 : 0 // Expended spell slots
+      rect.y += 3
+    } else if (id >= 59 && id <= 148) {
+      const row = Math.floor((id - 59) / 3)
+      // The source form drifts almost linearly against the official diamonds:
+      // about 2 pt low at the top and 3.4 pt high at the bottom.
+      rect.y += 2 - row * 0.185
+    } else if (id >= 149 && id <= 151) rect.y -= 2.8 // Attunement
+  } else if (/^Text_21[5-9]$/.test(name)) {
+    rect.y -= 4.7 // Extend the bottom clipping edge without moving the baseline.
+    rect.height += 2
+  }
+  return rect
+}
+
 async function buildOfficial2024() {
   const sourceDoc = await PDFDocument.load(await readFile(paths.custom2024Source))
   const targetDoc = await PDFDocument.load(await readFile(paths.official2024Source))
@@ -263,17 +331,18 @@ async function buildOfficial2024() {
     const rect = widget.getRectangle()
     const scaleX = targetSize.width / sourceSize.width
     const scaleY = targetSize.height / sourceSize.height
-    const appearance = {
+    const appearance = alignOfficial2024Widget(sourceField.getName(), {
       x: rect.x * scaleX,
       y: rect.y * scaleY,
       width: rect.width * scaleX,
       height: rect.height * scaleY,
       borderWidth: 0,
-    }
+    })
 
     if (sourceField instanceof PDFTextField) {
       const targetField = targetForm.createTextField(sourceField.getName())
       if (sourceField.isMultiline()) targetField.enableMultiline()
+      if (sourceField.getName() === 'Text_9') targetField.setAlignment(TextAlignment.Center)
       const maxLength = sourceField.getMaxLength()
       if (maxLength != null) targetField.setMaxLength(maxLength)
       targetField.addToPage(targetPage, {
@@ -281,6 +350,14 @@ async function buildOfficial2024() {
         font: helvetica,
         textColor: rgb(0, 0, 0),
       })
+      if (appearance.height > rect.height * scaleY + 1) {
+        // A larger transparent text widget must not erase the printed labels
+        // and rules just outside the inherited narrow form rectangle.
+        for (const targetWidget of targetField.acroField.getWidgets()) {
+          const characteristics = targetWidget.dict.get(PDFName.of('MK'))
+          if (characteristics instanceof PDFDict) characteristics.delete(PDFName.of('BG'))
+        }
+      }
       targetField.setFontSize(Math.max(5, Math.min(10, appearance.height * 0.55)))
     } else if (sourceField instanceof PDFCheckBox) {
       const targetField = targetForm.createCheckBox(sourceField.getName())
@@ -309,5 +386,9 @@ async function buildOfficial2024() {
   )
 }
 
-await buildCustom2014()
-await buildOfficial2024()
+if (process.argv.includes('--official-2024')) {
+  await buildOfficial2024()
+} else {
+  await buildCustom2014()
+  await buildOfficial2024()
+}

@@ -4,7 +4,13 @@ import {
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
-import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
+import {
+  type EntityLookupSet,
+  resolveClassReference,
+  resolveFeatReference,
+} from '@/lib/5etools/entityResolvers'
+import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
@@ -43,6 +49,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Creature5e,
   Organization5e,
   Race5e,
   Spell5e,
@@ -54,6 +61,7 @@ import type { CharacterEffect } from '@/types/effects'
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
+  creaturesByKey?: Readonly<Record<string, Creature5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -121,6 +129,7 @@ export interface CharacterSheetViewModel {
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
   magicItems: Equipment[]
+  companions: Array<{ name: string; source?: string; className?: string; creature?: Creature5e }>
   resolvedClasses: readonly Class5e[]
   mergedRace: Race5e | undefined
   background: Background5e | undefined
@@ -558,7 +567,34 @@ export function createCharacterSheetViewModel(
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
   const calculationContext = createCharacterCalculationContext(character, rawLookups)
-  const feats = getSelectedFeats(character)
+  const feats = getSelectedFeats(character).map((feat) => ({
+    ...feat,
+    description:
+      feat.description?.trim() ||
+      renderEntriesToText(resolveFeatReference(feat, rawLookups)?.entries),
+  }))
+  const magicItems = character.equipment.filter(isMagicItem).map((item) => ({
+    ...item,
+    description:
+      item.description?.trim() ||
+      (item.source
+        ? renderEntriesToText(resolveItemReference(item, rawLookups.itemLookup)?.entries)
+        : ''),
+  }))
+  const companions = (character.classChoiceSelections ?? [])
+    .filter((choice) => choice.kind === 'creature' && !choice.inactive)
+    .flatMap((choice) =>
+      choice.selected.map((selection) => ({ ...selection, className: choice.className })),
+    )
+    .filter((selection) => selection.entityType === 'creature')
+    .map((selection) => ({
+      name: selection.name,
+      source: selection.source,
+      className: selection.className,
+      creature: selection.source
+        ? rawLookups.creaturesByKey?.[getEntityLookupKey(selection.name, selection.source)]
+        : undefined,
+    }))
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
@@ -650,7 +686,8 @@ export function createCharacterSheetViewModel(
     weaponRows: buildWeaponRows(actions),
     actions,
     spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
-    magicItems: character.equipment.filter(isMagicItem),
+    magicItems,
+    companions,
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,

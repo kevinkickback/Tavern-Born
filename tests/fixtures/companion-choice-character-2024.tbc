@@ -1,0 +1,599 @@
+{
+  "id": "companion-choice-character-2024",
+  "name": "Companion Choice Test Character (2024)",
+  "originSystem": "2024",
+  "race": "Elf",
+  "raceSource": "XPHB",
+  "subrace": "Drow Lineage",
+  "subraceSource": "XPHB",
+  "background": "Criminal",
+  "backgroundSource": "XPHB",
+  "currency": {
+    "cp": 0,
+    "sp": 0,
+    "ep": 0,
+    "gp": 25,
+    "pp": 0
+  },
+  "experiencePoints": 0,
+  "classProgression": [
+    {
+      "name": "Ranger",
+      "source": "XPHB",
+      "levels": 3,
+      "subclass": "Beast Master",
+      "subclassSource": "XPHB"
+    }
+  ],
+  "abilityScores": {
+    "strength": 10,
+    "dexterity": 16,
+    "constitution": 14,
+    "intelligence": 10,
+    "wisdom": 14,
+    "charisma": 10
+  },
+  "proficiencies": {
+    "armor": [
+      "Light Armor",
+      "Medium Armor",
+      "Shields"
+    ],
+    "weapons": [
+      "Simple Weapons",
+      "Martial Weapons"
+    ],
+    "tools": [],
+    "skills": [
+      "animal handling",
+      "perception",
+      "survival",
+      "sleight of hand",
+      "stealth"
+    ],
+    "expertise": [],
+    "languages": [
+      "Common",
+      "Elvish"
+    ],
+    "savingThrows": [
+      "strength",
+      "dexterity"
+    ]
+  },
+  "features": [
+    {
+      "id": "companion-feature-2024",
+      "name": "Primal Companion",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    }
+  ],
+  "feats": [],
+  "spells": {
+    "spellProfiles": [
+      {
+        "id": "class:Ranger|XPHB",
+        "type": "class",
+        "label": "Ranger (Lv 3)",
+        "className": "Ranger",
+        "classSource": "XPHB",
+        "cantrips": [],
+        "spellsKnown": [
+          "Alarm|XPHB",
+          "Animal Friendship|XPHB",
+          "Cure Wounds|XPHB",
+          "Detect Magic|XPHB"
+        ],
+        "preparedSpells": [
+          "Alarm|XPHB",
+          "Animal Friendship|XPHB",
+          "Cure Wounds|XPHB",
+          "Detect Magic|XPHB"
+        ],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "special:unrestricted",
+        "type": "special",
+        "label": "Special (Unrestricted)",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      }
+    ],
+    "spellSlots": {
+      "1": {
+        "max": 3,
+        "used": 1
+      }
+    },
+    "pactSpellSlots": {}
+  },
+  "equipment": [
+    {
+      "id": "companion-gear-2024-1",
+      "name": "Longbow",
+      "type": "R|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 5000,
+      "rarity": "none",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A|XPHB",
+        "H|XPHB",
+        "2H|XPHB"
+      ],
+      "range": "150/600",
+      "source": "XPHB"
+    },
+    {
+      "id": "companion-gear-2024-2",
+      "name": "Leather Armor",
+      "type": "LA|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 10,
+      "value": 1000,
+      "rarity": "none",
+      "ac": 11,
+      "armorType": "light",
+      "source": "XPHB"
+    }
+  ],
+  "visions": [
+    {
+      "type": "Darkvision",
+      "range": 60
+    },
+    {
+      "type": "Blindsight",
+      "range": 10
+    },
+    {
+      "type": "Truesight",
+      "range": 30
+    }
+  ],
+  "hitPointsInitialized": true,
+  "hitPointGains": [
+    {
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "characterLevel": 2,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    },
+    {
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "classLevel": 3,
+      "characterLevel": 3,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    }
+  ],
+  "hitPointAdjustments": [],
+  "armorClassAdjustments": [],
+  "damageResistances": [],
+  "damageImmunities": [],
+  "conditionImmunities": [],
+  "details": {
+    "playerName": "Fixture Runner",
+    "faction": "The Harpers",
+    "rank": "Scout",
+    "organizationSelectionKey": "The Harpers|SCAG",
+    "appearance": "A travel-worn ranger accompanied by a primal beast.",
+    "backstory": "A Harper scout whose companion shares every journey."
+  },
+  "portrait": "/assets/images/characters/placeholder_char_card9.jpg",
+  "portraitTransform": {
+    "zoom": 1.35,
+    "panX": 8,
+    "panY": -6,
+    "rotation": 2
+  },
+  "allowedSources": [
+    "SCAG",
+    "XPHB"
+  ],
+  "variantRules": {
+    "optionalClassFeatures": true,
+    "averageHitPoints": false,
+    "abilityScoreMethod": "custom",
+    "anyRaceSubclasses": true,
+    "preferNewerPrintings": false,
+    "ignoreEquipRestrictions": true
+  },
+  "raceAsiChoices": [],
+  "backgroundEquipmentChoices": [],
+  "classEquipmentChoices": {},
+  "asiChoices": [],
+  "specialFeats": [],
+  "classFeatChoices": [
+    {
+      "id": "class:ranger|xphb|choice:fighting-style|2",
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "progressionName": "Fighting Style",
+      "categories": [
+        "FS"
+      ],
+      "feats": [
+        {
+          "id": "class-class:ranger|xphb|choice:fighting-style|2-Defense-XPHB",
+          "name": "Defense",
+          "source": "XPHB",
+          "description": "",
+          "className": "Ranger",
+          "classSource": "XPHB",
+          "classLevel": 2
+        }
+      ]
+    }
+  ],
+  "fixedFeatOptions": {},
+  "inspiration": false,
+  "deathSaves": {
+    "successes": 0,
+    "failures": 0
+  },
+  "conditions": [],
+  "exhaustion": 0,
+  "hitDiceUsed": {},
+  "ritualCasting": false,
+  "classResources": {},
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "lastModified": "2026-09-11T12:00:00.000Z",
+  "provenance": {
+    "proficiencies": {
+      "armor": {
+        "light armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "medium armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "shields": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      },
+      "weapons": {
+        "simple weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "martial weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      },
+      "tools": {},
+      "languages": {
+        "common": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ],
+        "elvish": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ]
+      },
+      "skills": {
+        "animal handling": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "perception": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "survival": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "sleight of hand": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Criminal"
+          }
+        ],
+        "stealth": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Criminal"
+          }
+        ]
+      },
+      "savingThrows": {
+        "strength": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "dexterity": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      }
+    },
+    "abilityBonuses": [
+      {
+        "ability": "dexterity",
+        "value": 2,
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Criminal"
+        }
+      },
+      {
+        "ability": "constitution",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Criminal"
+        }
+      }
+    ],
+    "features": {
+      "primal companion": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Beast Master",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Beast Master"
+        }
+      ]
+    },
+    "feats": {
+      "defense": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "grantVariant": "class:ranger|xphb|choice:fighting-style|2"
+        }
+      ]
+    },
+    "spells": {
+      "alarm": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animal friendship": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cure wounds": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "detect magic": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ]
+    },
+    "equipment": {
+      "longbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "leather armor": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ]
+    },
+    "choices": []
+  },
+  "movement": {
+    "speeds": {},
+    "source": {
+      "kind": "manual",
+      "name": "Full-coverage test fixture"
+    }
+  },
+  "schemaVersion": 2,
+  "hitPoints": {
+    "current": 28,
+    "temporary": 0
+  },
+  "classChoiceSelections": [
+    {
+      "choiceId": "class:ranger|xphb|choice:fighting-style|2",
+      "label": "Fighting Style",
+      "kind": "feat",
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "selected": [
+        {
+          "entityType": "feat",
+          "name": "Defense",
+          "source": "XPHB",
+          "slotLevel": 2
+        }
+      ]
+    },
+    {
+      "choiceId": "class:ranger|xphb|choice:weapon-mastery|1",
+      "label": "Weapon Mastery",
+      "kind": "item",
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "item",
+          "name": "Longbow",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Shortsword",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    },
+    {
+      "choiceId": "class:ranger|xphb|subclass:beast-master|xphb|choice:primal-companion|3",
+      "label": "Primal Companion",
+      "kind": "creature",
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "subclassName": "Beast Master",
+      "subclassSource": "XPHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "creature",
+          "name": "Beast of the Land",
+          "source": "XPHB",
+          "slotLevel": 3
+        }
+      ]
+    }
+  ],
+  "backgroundEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {},
+  "movementAdjustments": [],
+  "movementOverrides": {},
+  "manualEffects": [],
+  "suppressedEffectIds": [],
+  "effectFlags": {},
+  "manualActions": [],
+  "backgroundAsiBlockIndex": 0,
+  "backgroundAsiChoices": [
+    "dexterity",
+    "constitution"
+  ]
+}

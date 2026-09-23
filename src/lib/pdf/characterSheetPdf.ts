@@ -34,6 +34,7 @@ export function generateFilledCharacterSheetPdf(
 ): Promise<Uint8Array> {
   const template = getCharacterSheetTemplate(templateId)
   return fillCharacterSheetPdf(templateBytes, buildCharacterSheetFieldMap(viewModel, templateId), {
+    templateId: template.id,
     cleanupProfile: template.cleanupProfile,
     portraitFieldName: template.portraitFieldName,
     organizationImageFieldName: template.organizationImageFieldName,

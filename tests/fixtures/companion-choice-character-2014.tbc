@@ -1,0 +1,561 @@
+{
+  "id": "companion-choice-character-2014",
+  "name": "Companion Choice Test Character (2014)",
+  "originSystem": "2014",
+  "race": "Elf",
+  "raceSource": "PHB",
+  "subrace": "High",
+  "subraceSource": "PHB",
+  "background": "Sage",
+  "backgroundSource": "PHB",
+  "currency": {
+    "cp": 0,
+    "sp": 0,
+    "ep": 0,
+    "gp": 25,
+    "pp": 0
+  },
+  "experiencePoints": 0,
+  "classProgression": [
+    {
+      "name": "Ranger",
+      "source": "PHB",
+      "levels": 3,
+      "subclass": "Beast Master",
+      "subclassSource": "PHB"
+    }
+  ],
+  "abilityScores": {
+    "strength": 10,
+    "dexterity": 16,
+    "constitution": 14,
+    "intelligence": 10,
+    "wisdom": 14,
+    "charisma": 10
+  },
+  "proficiencies": {
+    "armor": [
+      "Light Armor",
+      "Medium Armor",
+      "Shields"
+    ],
+    "weapons": [
+      "Simple Weapons",
+      "Martial Weapons"
+    ],
+    "tools": [],
+    "skills": [
+      "animal handling",
+      "perception",
+      "survival",
+      "arcana",
+      "history"
+    ],
+    "expertise": [],
+    "languages": [
+      "Common",
+      "Elvish"
+    ],
+    "savingThrows": [
+      "strength",
+      "dexterity"
+    ]
+  },
+  "features": [
+    {
+      "id": "companion-feature-2014",
+      "name": "Primal Companion",
+      "source": "TCE",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "class-choice:class%3Aranger%7Cphb%7Cchoice%3Afighting-style%7C2:Defense%7CPHB",
+      "name": "Defense",
+      "source": "PHB",
+      "description": "",
+      "level": 2
+    }
+  ],
+  "feats": [],
+  "spells": {
+    "spellProfiles": [
+      {
+        "id": "class:Ranger|PHB",
+        "type": "class",
+        "label": "Ranger (Lv 3)",
+        "className": "Ranger",
+        "classSource": "PHB",
+        "cantrips": [],
+        "spellsKnown": [
+          "Alarm|PHB",
+          "Animal Friendship|PHB",
+          "Cure Wounds|PHB"
+        ],
+        "preparedSpells": [],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "special:unrestricted",
+        "type": "special",
+        "label": "Special (Unrestricted)",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      }
+    ],
+    "spellSlots": {
+      "1": {
+        "max": 3,
+        "used": 1
+      }
+    },
+    "pactSpellSlots": {}
+  },
+  "equipment": [
+    {
+      "id": "companion-gear-2014-1",
+      "name": "Longbow",
+      "type": "R",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 5000,
+      "rarity": "none",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A",
+        "H",
+        "2H"
+      ],
+      "range": "150/600",
+      "source": "PHB"
+    },
+    {
+      "id": "companion-gear-2014-2",
+      "name": "Leather Armor",
+      "type": "LA",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 10,
+      "value": 1000,
+      "rarity": "none",
+      "ac": 11,
+      "armorType": "light",
+      "source": "PHB"
+    }
+  ],
+  "visions": [
+    {
+      "type": "Darkvision",
+      "range": 60
+    },
+    {
+      "type": "Blindsight",
+      "range": 10
+    },
+    {
+      "type": "Truesight",
+      "range": 30
+    }
+  ],
+  "hitPointsInitialized": true,
+  "hitPointGains": [
+    {
+      "className": "Ranger",
+      "classSource": "PHB",
+      "classLevel": 2,
+      "characterLevel": 2,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    },
+    {
+      "className": "Ranger",
+      "classSource": "PHB",
+      "classLevel": 3,
+      "characterLevel": 3,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    }
+  ],
+  "hitPointAdjustments": [],
+  "armorClassAdjustments": [],
+  "damageResistances": [],
+  "damageImmunities": [],
+  "conditionImmunities": [],
+  "details": {
+    "playerName": "Fixture Runner",
+    "faction": "The Harpers",
+    "rank": "Scout",
+    "organizationSelectionKey": "The Harpers|SCAG",
+    "appearance": "A travel-worn ranger accompanied by a primal beast.",
+    "backstory": "A Harper scout whose companion shares every journey."
+  },
+  "portrait": "/assets/images/characters/placeholder_char_card9.jpg",
+  "portraitTransform": {
+    "zoom": 1.35,
+    "panX": 8,
+    "panY": -6,
+    "rotation": 2
+  },
+  "allowedSources": [
+    "MM",
+    "PHB",
+    "SCAG",
+    "TCE"
+  ],
+  "variantRules": {
+    "optionalClassFeatures": true,
+    "averageHitPoints": false,
+    "abilityScoreMethod": "custom",
+    "anyRaceSubclasses": true,
+    "preferNewerPrintings": false,
+    "ignoreEquipRestrictions": true
+  },
+  "raceAsiChoices": [],
+  "backgroundEquipmentChoices": [],
+  "classEquipmentChoices": {},
+  "asiChoices": [],
+  "specialFeats": [],
+  "classFeatChoices": [],
+  "fixedFeatOptions": {},
+  "inspiration": false,
+  "deathSaves": {
+    "successes": 0,
+    "failures": 0
+  },
+  "conditions": [],
+  "exhaustion": 0,
+  "hitDiceUsed": {},
+  "ritualCasting": false,
+  "classResources": {},
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "lastModified": "2026-09-11T12:00:00.000Z",
+  "provenance": {
+    "proficiencies": {
+      "armor": {
+        "light armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "medium armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "shields": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      },
+      "weapons": {
+        "simple weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "martial weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      },
+      "tools": {},
+      "languages": {
+        "common": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ],
+        "elvish": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ]
+      },
+      "skills": {
+        "animal handling": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "perception": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "survival": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "arcana": [
+          {
+            "sourceType": "background",
+            "sourceName": "Sage",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Sage"
+          }
+        ],
+        "history": [
+          {
+            "sourceType": "background",
+            "sourceName": "Sage",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Sage"
+          }
+        ]
+      },
+      "savingThrows": {
+        "strength": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ],
+        "dexterity": [
+          {
+            "sourceType": "class",
+            "sourceName": "Ranger",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Ranger"
+          }
+        ]
+      }
+    },
+    "abilityBonuses": [
+      {
+        "ability": "dexterity",
+        "value": 2,
+        "sourceTag": {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Elf"
+        }
+      },
+      {
+        "ability": "intelligence",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "subrace",
+          "sourceName": "High",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High"
+        }
+      }
+    ],
+    "features": {
+      "defense": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "grantVariant": "class:ranger|phb|choice:fighting-style|2"
+        }
+      ],
+      "primal companion": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Beast Master",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Beast Master"
+        }
+      ]
+    },
+    "feats": {},
+    "spells": {
+      "alarm": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animal friendship": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cure wounds": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Ranger",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ]
+    },
+    "equipment": {
+      "longbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "leather armor": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ]
+    },
+    "choices": []
+  },
+  "movement": {
+    "speeds": {},
+    "source": {
+      "kind": "manual",
+      "name": "Full-coverage test fixture"
+    }
+  },
+  "schemaVersion": 2,
+  "hitPoints": {
+    "current": 28,
+    "temporary": 0
+  },
+  "classChoiceSelections": [
+    {
+      "choiceId": "class:ranger|phb|choice:fighting-style|2",
+      "label": "Fighting Style",
+      "kind": "optional-feature",
+      "className": "Ranger",
+      "classSource": "PHB",
+      "classLevel": 2,
+      "selected": [
+        {
+          "entityType": "optionalFeature",
+          "name": "Defense",
+          "source": "PHB",
+          "slotLevel": 2
+        }
+      ]
+    },
+    {
+      "choiceId": "class:ranger|phb|subclass:beast-master|phb|choice:ranger-s-companion|3",
+      "label": "Ranger's Companion",
+      "kind": "creature",
+      "inactive": true,
+      "className": "Ranger",
+      "classSource": "PHB",
+      "subclassName": "Beast Master",
+      "subclassSource": "PHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "creature",
+          "name": "Wolf",
+          "source": "MM",
+          "slotLevel": 3
+        }
+      ]
+    },
+    {
+      "choiceId": "class:ranger|phb|subclass:beast-master|phb|choice:primal-companion|3",
+      "label": "Primal Companion",
+      "kind": "creature",
+      "className": "Ranger",
+      "classSource": "PHB",
+      "subclassName": "Beast Master",
+      "subclassSource": "PHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "creature",
+          "name": "Beast of the Land",
+          "source": "TCE",
+          "slotLevel": 3
+        }
+      ]
+    }
+  ],
+  "backgroundEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {},
+  "movementAdjustments": [],
+  "movementOverrides": {},
+  "manualEffects": [],
+  "suppressedEffectIds": [],
+  "effectFlags": {},
+  "manualActions": []
+}

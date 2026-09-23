@@ -1,4 +1,7 @@
+import { buildCreatureChoiceSummary, buildCreatureStatBlock } from '@/lib/5etools/creatureStatBlock'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
+import { renderEntriesToText } from '@/lib/entryText'
 import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
 import {
   type CharacterSheetViewModel,
@@ -62,7 +65,13 @@ function normalizeSize(code: string | undefined): string {
 }
 
 const ACTION_FIELD_MAX_LENGTH = 72
+export const MPMB_CARD_DESCRIPTION_LIMIT = 260
 const CAPACITY = CHARACTER_SHEET_CAPACITIES['2014-custom']
+
+export function limitMpmbCardDescription(description: string): string {
+  if (description.length <= MPMB_CARD_DESCRIPTION_LIMIT) return description
+  return `${description.slice(0, MPMB_CARD_DESCRIPTION_LIMIT - 1).trimEnd()}…`
+}
 
 function titleCase(value: string): string {
   return value.replace(/^\p{L}/u, (letter) => letter.toUpperCase())
@@ -137,6 +146,37 @@ function actionsForField(
   ].slice(0, CAPACITY.actions)
 }
 
+export function getAmmunitionRows(viewModel: CharacterSheetViewModel) {
+  const rows = new Map<string, { name: string; amount: number }>()
+  for (const item of viewModel.character.equipment) {
+    if (!getNormalizedItemTraits(item).isAmmunition) continue
+    const packSize = Number(item.name.match(/\((\d+)\)/u)?.[1] ?? 1)
+    const name = item.name.replace(/\s*\(\d+\)/u, '').replace(/\b(Arrow|Bolt|Needle)$/iu, '$1s')
+    const key = name.toLocaleLowerCase()
+    const prior = rows.get(key)
+    rows.set(key, {
+      name,
+      amount: (prior?.amount ?? 0) + Math.max(0, item.quantity) * packSize,
+    })
+  }
+  return [...rows.values()]
+}
+
+function splitRuledSection(value: string, visibleCharacters: number): [string, string] {
+  if (value.length <= visibleCharacters) return [value, '']
+  const first = value.slice(0, visibleCharacters)
+  const boundary = Math.max(first.lastIndexOf(' '), first.lastIndexOf('\n'))
+  const cut = boundary > visibleCharacters * 0.65 ? boundary : visibleCharacters
+  return [value.slice(0, cut).trimEnd(), value.slice(cut).trimStart()]
+}
+
+function renderCompanionEntries(entries: readonly unknown[] | undefined): string {
+  return renderEntriesToText(entries)
+    .replace(/\{@hitYourSpellAttack\}/gu, 'your spell attack modifier')
+    .replace(/\bmw\b(?=\s+(?:\(|your|to hit))/gu, 'Melee Weapon Attack:')
+    .replace(/\brw\b(?=\s+(?:\(|your|to hit))/gu, 'Ranged Weapon Attack:')
+}
+
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
   const { character } = viewModel
   const additionalMovement =
@@ -161,6 +201,38 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   const spellcastingOne = viewModel.spellcastingDetails[0]
   const spellcastingTwo = viewModel.spellcastingDetails[1]
   const strengthScore = viewModel.effectiveAbilityScores.strength
+  const ammoRows = getAmmunitionRows(viewModel)
+  const companion = viewModel.companions[0]
+  const companionStat = companion?.creature ? buildCreatureStatBlock(companion.creature) : undefined
+  const companionSummary = companion?.creature
+    ? buildCreatureChoiceSummary(companion.creature)
+    : undefined
+  const companionArmorClass = companionSummary?.armorClass.match(/^13\s*\+\s*PB\b/iu)
+    ? String(13 + viewModel.proficiencyBonus)
+    : (companionSummary?.armorClass.match(/^\d+$/u)?.[0] ?? '')
+  const companionClassLevel = character.classProgression.find(
+    (entry) => entry.name === companion?.className,
+  )?.levels
+  const companionMaxHp =
+    companion?.creature?.hp?.average != null
+      ? String(companion.creature.hp.average)
+      : companion?.className === 'Ranger' &&
+          companionClassLevel != null &&
+          /^5\s*\+\s*five times your ranger level\b/iu.test(companion.creature?.hp?.special ?? '')
+        ? String(5 + 5 * companionClassLevel)
+        : ''
+  const companionWalkSpeed = companion?.creature?.speed?.walk
+  const companionSpeed =
+    typeof companionWalkSpeed === 'number'
+      ? `${companionWalkSpeed} ft.`
+      : (companionSummary?.speed ?? '')
+  const [racialTraits, racialOverflow] = splitRuledSection(
+    [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
+    310,
+  )
+  const organizationLines = viewModel.organizationDetailsSummary.split(/\n+/u).filter(Boolean)
+  const organizationDetails = organizationLines.slice(0, 2).join('\n')
+  const organizationOverflow = organizationLines.slice(2).join('\n')
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
     'Player Name': character.details.playerName || '',
@@ -199,13 +271,13 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Flaw: character.details.flaws || '',
     Background_History: viewModel.historyAndPersonalitySummary,
     'Class Features': viewModel.classFeaturesSummary2014,
-    'Racial Traits': [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
+    'Racial Traits': racialTraits,
     'Background Feature': viewModel.backgroundFeature.name,
     'Background Feature Description': viewModel.backgroundFeature.description,
     'Background_Organisation.Left': usesCustomOrganization(viewModel)
       ? viewModel.customOrganizationSummary || viewModel.alliesAndOrganizationsSummary
       : viewModel.alliesAndOrganizationsSummary,
-    'Background_Organisation.Right': viewModel.organizationDetailsSummary,
+    'Background_Organisation.Right': organizationDetails,
     'Background_Faction.Text': character.details.faction || '',
     'Background_FactionRank.Text': character.details.rank || '',
     Background_Appearance: viewModel.appearanceSummary,
@@ -217,6 +289,10 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'AC Armor Bonus': equippedArmor?.ac != null ? String(equippedArmor.ac) : '',
     'AC Armor Description': equippedArmor?.name ?? '',
     'AC Armor Weight': equippedArmor?.weight != null ? String(equippedArmor.weight) : '',
+    'AmmoLeftDisplay.Name': ammoRows[0]?.name ?? '',
+    'AmmoLeftDisplay.Amount': ammoRows[0] ? String(ammoRows[0].amount) : '',
+    'AmmoRightDisplay.Name': ammoRows[1]?.name ?? '',
+    'AmmoRightDisplay.Amount': ammoRows[1] ? String(ammoRows[1].amount) : '',
     'AC Shield Bonus': equippedShield?.ac != null ? String(equippedShield.ac) : '',
     'AC Shield Bonus Description': equippedShield?.name ?? '',
     'AC Shield Weight': equippedShield?.weight != null ? String(equippedShield.weight) : '',
@@ -267,15 +343,74 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Feat Name 2': viewModel.feats[1]?.name ?? '',
     'Feat Name 3': viewModel.feats[2]?.name ?? '',
     'Feat Name 4': viewModel.feats[3]?.name ?? '',
-    'Feat Description 1': viewModel.feats[0]?.description ?? '',
-    'Feat Description 2': viewModel.feats[1]?.description ?? '',
-    'Feat Description 3': viewModel.feats[2]?.description ?? '',
-    'Feat Description 4': viewModel.feats[3]?.description ?? '',
+    'Feat Description 1': limitMpmbCardDescription(viewModel.feats[0]?.description ?? ''),
+    'Feat Description 2': limitMpmbCardDescription(viewModel.feats[1]?.description ?? ''),
+    'Feat Description 3': limitMpmbCardDescription(viewModel.feats[2]?.description ?? ''),
+    'Feat Description 4': limitMpmbCardDescription(viewModel.feats[3]?.description ?? ''),
     'Feat Note 1': viewModel.feats[0]?.prerequisites ?? '',
     'Feat Note 2': viewModel.feats[1]?.prerequisites ?? '',
     'Feat Note 3': viewModel.feats[2]?.prerequisites ?? '',
     'Feat Note 4': viewModel.feats[3]?.prerequisites ?? '',
     'Extra.Notes': viewModel.defensiveTraits.slice(6).join('\n'),
+    'P4.AScomp.Comp.Desc.Name': companion?.name ?? '',
+    'P4.AScomp.Comp.Desc.Size': companionSummary?.sizes[0] ?? '',
+    'P4.AScomp.Comp.Desc.MonsterType': companionSummary?.creatureType ?? '',
+    'P4.AScomp.Comp.Use.Speed': companionSpeed,
+    'P4.AScomp.Comp.Use.AC': companionArmorClass,
+    'P4.AScomp.Comp.Use.HP.Max': companionMaxHp,
+    'P4.AScomp.Comp.Use.Proficiency Bonus':
+      companion?.creature?.pbNote === 'equals your bonus'
+        ? formatViewModelModifier(viewModel.proficiencyBonus)
+        : (companionStat?.proficiencyBonus ?? ''),
+    'P4.AScomp.Comp.Use.Senses':
+      companionStat?.details.find((line) => line.label === 'Senses')?.value ?? '',
+    'P4.AScomp.Comp.Use.Features':
+      companionStat?.sections
+        .filter((section) => section.id !== 'traits' && section.id !== 'actions')
+        .map((section) => `${section.title}\n${renderCompanionEntries(section.entries)}`)
+        .join('\n\n') ?? '',
+    'P4.AScomp.Comp.Use.Traits': (companion?.creature?.trait ?? [])
+      .map((trait) =>
+        [trait.name, renderCompanionEntries(trait.entries)].filter(Boolean).join(': '),
+      )
+      .join('\n\n'),
+    'P4.AScomp.Cnote.Left': companionStat
+      ? [
+          `${companion?.name} (${companion?.source ?? 'unknown source'})`,
+          ...(companionSummary?.armorClass && companionArmorClass !== companionSummary.armorClass
+            ? [`Armor Class: ${companionSummary.armorClass}`]
+            : []),
+          ...(companionSummary?.speed && companionSummary.speed !== companionSpeed
+            ? [`Speed: ${companionSummary.speed}`]
+            : []),
+          ...companionStat.core
+            .filter(
+              (line) => line.label === 'Hit Points' && companion?.creature?.hp?.average == null,
+            )
+            .map((line) => `${line.label}: ${line.value}`),
+          ...companionStat.details
+            .filter((line) => line.label !== 'Senses')
+            .map((line) => `${line.label}: ${line.value}`),
+        ].join('\n')
+      : '',
+    'P5.ASnotes.Notes.Left': [
+      racialOverflow ? `RACIAL TRAITS (CONTINUED)\n${racialOverflow}` : '',
+      organizationOverflow ? `ORGANIZATION (CONTINUED)\n${organizationOverflow}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  }
+
+  for (const ability of companionStat?.abilities ?? []) {
+    const prefix = `P4.AScomp.Comp.Use.Ability.${ability.label.charAt(0)}${ability.label.slice(1).toLowerCase()}`
+    textFields[`${prefix}.Score`] = ability.score == null ? '' : String(ability.score)
+    textFields[`${prefix}.Mod`] = ability.score == null ? '' : ability.modifier
+  }
+
+  for (const [index, action] of (companion?.creature?.action ?? []).slice(0, 3).entries()) {
+    const prefix = `P4.AScomp.Comp.Use.Attack.${index + 1}`
+    textFields[`${prefix}.Weapon Selection`] = action.name ?? ''
+    textFields[`${prefix}.Description`] = renderCompanionEntries(action.entries)
   }
 
   for (
@@ -302,7 +437,9 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     const item = viewModel.magicItems[index]
     const row = index + 1
     textFields[`Extra.Magic Item ${row}`] = item?.name ?? ''
-    textFields[`Extra.Magic Item Description ${row}`] = item?.description ?? ''
+    textFields[`Extra.Magic Item Description ${row}`] = limitMpmbCardDescription(
+      item?.description ?? '',
+    )
     textFields[`Extra.Magic Item Note ${row}`] = item?.rarity ?? ''
     textFields[`Extra.Magic Item Weight ${row}`] = item?.weight != null ? String(item.weight) : ''
   }
@@ -360,6 +497,8 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
 
   const checkboxFields: Record<string, boolean> = {
     Inspiration: !!character.inspiration,
+    'Medium Armor': equippedArmor?.armorType === 'medium',
+    'Heavy Armor': equippedArmor?.armorType === 'heavy',
     'Death Save Success1': (character.deathSaves?.successes ?? 0) >= 1,
     'Death Save Success2': (character.deathSaves?.successes ?? 0) >= 2,
     'Death Save Success3': (character.deathSaves?.successes ?? 0) >= 3,

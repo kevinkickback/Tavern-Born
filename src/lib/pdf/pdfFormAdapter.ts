@@ -1,4 +1,10 @@
 import {
+  closePath,
+  defaultTextFieldAppearanceProvider,
+  drawEllipse,
+  fill,
+  lineTo,
+  moveTo,
   PDFCheckBox,
   PDFDict,
   PDFDocument,
@@ -8,7 +14,14 @@ import {
   PDFNumber,
   type PDFObject,
   PDFTextField,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  setFillingRgbColor,
+  setTextMatrix,
 } from '@cantoo/pdf-lib'
+import { getOfficial2014FontBounds, OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
+import { fitOfficial2024Text } from '@/lib/pdf/official2024Text'
 import {
   type AcroWidget,
   asFieldWithInternals,
@@ -31,6 +44,26 @@ const MPMB_BUTTON_KEEP_PATTERNS = [
 ]
 const AMMO_CHECKBOX_PATTERN = /^Ammo(Left|Right)\.(Top|Base|Bullet|Icon)\./
 const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus', 'HP Max'] as const
+const MPMB_RULED_TEXT_FIELDS = new Set([
+  'Class Features',
+  'Personality Trait',
+  'Ideal',
+  'Bond',
+  'Flaw',
+  'Background Feature Description',
+  'Racial Traits',
+  'Extra.Notes',
+  'Background_Organisation.Left',
+  'Background_Organisation.Right',
+  'Background_Appearance',
+  'Background_Enemies',
+  'Background_History',
+  'P4.AScomp.Comp.Use.Features',
+  'P4.AScomp.Comp.Use.Traits',
+  'P4.AScomp.Cnote.Left',
+  'P5.ASnotes.Notes.Left',
+  'P5.ASnotes.Notes.Right',
+])
 
 export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
@@ -96,11 +129,15 @@ export async function fillCharacterSheetPdf(
     stripFormActions(form, fields)
     makeCalculatedFieldsEditable(form)
     updateDirtyFieldAppearances(form)
+    alignMpmbRuledText(form)
     hideUnwantedFields(form)
   } else {
+    if (options.templateId === '2014-official') setOfficial2014SectionLimits(form)
+    if (options.templateId === '2024-official') fitOfficial2024TextAppearances(form)
     updateDirtyFieldAppearances(form)
+    if (options.templateId === '2014-official') normalizeOfficial2014TextAppearances(form)
   }
-  replaceCheckboxOffAppearances(pdfDoc, form)
+  replaceCheckboxOffAppearances(pdfDoc, form, options.templateId === '2024-official')
   if (options.portrait && options.portraitFieldName) {
     await embedPortraitImage(pdfDoc, options.portrait, options.portraitFieldName)
   }
@@ -114,6 +151,35 @@ export async function fillCharacterSheetPdf(
   return pdfDoc.save({ updateFieldAppearances: false })
 }
 
+/** Keep MPMB multiline text on the template's roughly 11 pt printed rules. */
+function alignMpmbRuledText(form: ReturnType<PDFDocument['getForm']>) {
+  const font = form.getDefaultFont()
+  for (const name of MPMB_RULED_TEXT_FIELDS) {
+    const field = form.getFieldMaybe(name)
+    if (!(field instanceof PDFTextField) || !field.getText()) continue
+    field.updateAppearances(font, (textField, widget, appearanceFont) => {
+      const operators = defaultTextFieldAppearanceProvider(textField, widget, appearanceFont)
+      if (!Array.isArray(operators)) return operators
+      const positions = operators
+        .map((operator, index) => ({ operator, index }))
+        .filter(({ operator }) => operator.toString().endsWith(' Tm'))
+        .map(({ operator, index }) => {
+          const parts = operator.toString().split(' ')
+          return { index, x: Number(parts[4]), y: Number(parts[5]) }
+        })
+      if (positions.length < 2) return operators
+      const naturalGap = positions[0].y - positions[1].y
+      const maxGap = (positions[0].y - 2) / (positions.length - 1)
+      const lineGap = Math.max(naturalGap, Math.min(11, maxGap))
+      return operators.map((operator, index) => {
+        const line = positions.findIndex((position) => position.index === index)
+        if (line < 0) return operator
+        return setTextMatrix(1, 0, 0, 1, positions[line].x, positions[0].y - line * lineGap)
+      })
+    })
+  }
+}
+
 function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
   const font = form.getDefaultFont()
   for (const field of form.getFields()) {
@@ -122,6 +188,50 @@ function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
     else if (field instanceof PDFTextField || field instanceof PDFDropdown) {
       field.defaultUpdateAppearances(font)
     }
+  }
+}
+
+function setOfficial2014SectionLimits(form: ReturnType<PDFDocument['getForm']>) {
+  for (const [fieldName, maxLength] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
+    form.getTextField(fieldName).setMaxLength(maxLength)
+  }
+}
+
+function normalizeOfficial2014TextAppearances(form: ReturnType<PDFDocument['getForm']>) {
+  const font = form.getDefaultFont()
+  for (const field of form.getFields()) {
+    if (!(field instanceof PDFTextField) || !field.getText()) continue
+    const widget = asFieldWithInternals(field)?.acroField.getWidgets()[0]
+    if (!widget) continue
+    const { width, height } = widget.getRectangle()
+    const bounds = getOfficial2014FontBounds(field.getName(), width, height)
+    if (!bounds) continue
+
+    const defaultAppearance = field.acroField.dict.get(PDFName.of('DA')) as
+      | { decodeText?: () => string }
+      | undefined
+    const autoSize = Number(defaultAppearance?.decodeText?.().match(/([\d.]+)\s+Tf/)?.[1])
+    if (!Number.isFinite(autoSize)) continue
+    const fontSize = Math.min(bounds.max, Math.max(bounds.min, autoSize))
+    if (fontSize === autoSize) continue
+    field.setFontSize(fontSize)
+    field.defaultUpdateAppearances(font)
+  }
+}
+
+function fitOfficial2024TextAppearances(form: ReturnType<PDFDocument['getForm']>) {
+  const font = form.getDefaultFont()
+  for (const field of form.getFields()) {
+    if (!(field instanceof PDFTextField)) continue
+    const value = field.getText()
+    if (!value) continue
+    const widget = asFieldWithInternals(field)?.acroField.getWidgets()[0]
+    if (!widget) continue
+    const { width, height } = widget.getRectangle()
+    const fitted = fitOfficial2024Text(field.getName(), value, font, width, height)
+    if (!fitted) continue
+    if (fitted.text !== value) field.setText(fitted.text)
+    field.setFontSize(fitted.fontSize)
   }
 }
 
@@ -226,12 +336,14 @@ function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) 
 function replaceCheckboxOffAppearances(
   pdfDoc: PDFDocument,
   form: ReturnType<PDFDocument['getForm']>,
+  transparentChecked = false,
 ) {
   for (const field of form.getFields()) {
     const internals = asFieldWithInternals(field)
     if (!internals) continue
+    let checkbox: PDFCheckBox
     try {
-      form.getCheckBox(internals.getName())
+      checkbox = form.getCheckBox(internals.getName())
     } catch {
       continue
     }
@@ -252,6 +364,44 @@ function replaceCheckboxOffAppearances(
       normalAppearance.delete(PDFName.of('Off'))
       const offAppearanceRef = context.register(emptyAppearance)
       normalAppearance.set(PDFName.of('Off'), offAppearanceRef)
+      if (transparentChecked) {
+        const onValue = checkbox.acroField.getOnValue()
+        if (!onValue) continue
+        // The official template prints its own circles/diamonds. The default
+        // checked appearance paints white over them. Fill the printed center
+        // with ink instead of drawing an offset, font-dependent check mark.
+        const fieldId = Number(/^Checkbox_(\d+)$/.exec(field.getName())?.[1])
+        const centerX = width / 2
+        const centerY = height / 2
+        const radius = Math.min(width, height) * (fieldId >= 8 && fieldId <= 32 ? 0.29 : 0.34)
+        const mark =
+          fieldId >= 8 && fieldId <= 32
+            ? drawEllipse({
+                x: centerX,
+                y: centerY,
+                xScale: radius,
+                yScale: radius,
+                color: rgb(0, 0, 0),
+                borderColor: undefined,
+                borderWidth: 0,
+              })
+            : [
+                pushGraphicsState(),
+                setFillingRgbColor(0, 0, 0),
+                moveTo(centerX, centerY + radius),
+                lineTo(centerX + radius, centerY),
+                lineTo(centerX, centerY - radius),
+                lineTo(centerX - radius, centerY),
+                closePath(),
+                fill(),
+                popGraphicsState(),
+              ]
+        const checkAppearance = context.formXObject(mark, {
+          BBox: context.obj([0, 0, width, height]),
+          Matrix: context.obj([1, 0, 0, 1, 0, 0]),
+        })
+        normalAppearance.set(onValue, context.register(checkAppearance))
+      }
     }
   }
 }

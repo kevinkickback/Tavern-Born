@@ -241,6 +241,27 @@
       "source": "XPHB",
       "description": "",
       "level": 1
+    },
+    {
+      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Commander's%20Strike%7CXPHB",
+      "name": "Commander's Strike",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Disarming%20Attack%7CXPHB",
+      "name": "Disarming Attack",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Precision%20Attack%7CXPHB",
+      "name": "Precision Attack",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
     }
   ],
   "feats": [
@@ -2016,7 +2037,7 @@
     "definingMoment": "Survived the collapse of the Glass Library and recovered its living index.",
     "lifeEvents": "Apprenticed as a wizard, served with a mercenary company, then took vows at a temple of knowledge.",
     "backstory": "Seraphina followed a map written in starlight through ruined academies, border wars, and divine archives. Each class represents a distinct chapter of that journey.",
-    "organizationSelectionKey": "",
+    "organizationSelectionKey": "The Harpers|SCAG",
     "organizationCustomName": "",
     "organizationCustomDescription": "",
     "organizationCustomImage": "",
@@ -2705,16 +2726,39 @@
           "sourceType": "class",
           "sourceName": "Cleric",
           "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Cleric"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
           "grantVariant": "class:cleric|xphb|choice:divine-order|1"
+        }
+      ],
+      "commander's strike": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Battle Master",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Battle Master",
+          "grantVariant": "class:fighter|xphb|subclass:battle-master|xphb|choice:maneuvers|3"
+        }
+      ],
+      "disarming attack": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Battle Master",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Battle Master",
+          "grantVariant": "class:fighter|xphb|subclass:battle-master|xphb|choice:maneuvers|3"
+        }
+      ],
+      "precision attack": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Battle Master",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Battle Master",
+          "grantVariant": "class:fighter|xphb|subclass:battle-master|xphb|choice:maneuvers|3"
         }
       ]
     },
