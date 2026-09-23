@@ -3,6 +3,7 @@ import type { CharacterReadinessResult } from '@/lib/readiness/characterReadines
 import type { CharacterEffect } from '@/types/effects'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
 import { getAmmunitionRows, MPMB_CARD_DESCRIPTION_LIMIT } from './characterSheetMapping2014'
+import { OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL } from './characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from './characterSheetMapping2024'
 import { getCharacterSheetTemplate } from './characterSheetTemplates'
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
@@ -129,8 +130,18 @@ function getCapacityIssues(
     const sections = getOfficial2014SectionText(viewModel)
     issues.push(
       capacityIssue('weapons', 'Weapon attacks', viewModel.weaponRows.length, capacity.weapons),
-      capacityIssue('spells', 'Spell rows', viewModel.spellRows.length, capacity.spells),
     )
+    OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fields, level) => {
+      issues.push(
+        capacityIssue(
+          `spells-level-${level}`,
+          level === 0 ? 'Cantrips' : `Level ${level} spells`,
+          viewModel.spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
+            .length,
+          fields.length,
+        ),
+      )
+    })
     for (const [fieldName, characterLimit] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
       const sectionName = fieldName as keyof typeof OFFICIAL_2014_SECTION_LIMITS
       const sourceText = sections[sectionName]
@@ -204,7 +215,7 @@ function isUnsupportedPdfEffect(
   const template = getCharacterSheetTemplate(templateId)
   return (
     effect.target.kind === 'carrying-capacity' ||
-    (template.edition === '2024' &&
+    (template.mappingId !== '2014-custom' &&
       (effect.target.kind === 'resource-maximum' || effect.target.kind === 'sense'))
   )
 }
@@ -215,6 +226,7 @@ export function getPdfExportPreflight(
   readiness: CharacterReadinessResult | null | undefined,
   effects: readonly CharacterEffect[],
   effectContext: EffectResolutionContext = {},
+  truncatedFields: readonly string[] = [],
 ): ExportPreflightResult {
   const readinessIssues: ExportPreflightIssue[] = (readiness?.issues ?? []).map((issue) => ({
     id: `readiness:${issue.id}`,
@@ -240,6 +252,33 @@ export function getPdfExportPreflight(
     ...unsupportedIssues,
     ...getCapacityIssues(templateId, viewModel),
   ]
+  const pactSlots = Object.entries(viewModel.spellSlots.mergedPactWithUsage).filter(
+    ([, slot]) => slot && slot.max > 0,
+  )
+  if (pactSlots.length) {
+    issues.push({
+      id: 'unsupported:pact-slots',
+      category: 'unsupported',
+      severity: 'warning',
+      title: 'Track Pact Magic slots separately',
+      detail: `The slot grid represents regular Spellcasting only; it cannot distinguish the Pact Magic recovery pool. Pact Magic: ${pactSlots.map(([level, slot]) => `level ${level}: ${slot?.max} total, ${slot?.used} expended`).join('; ')}.`,
+    })
+  }
+  for (const field of new Set(truncatedFields)) {
+    const id = `text-limit:${field}`
+    if (issues.some((issue) => issue.id === id)) continue
+    const label =
+      OFFICIAL_2024_PROSE_WARNING_LIMITS[field as keyof typeof OFFICIAL_2024_PROSE_WARNING_LIMITS]
+        ?.label ?? field
+    issues.push({
+      id,
+      category: 'truncation',
+      severity: 'warning',
+      title: `${label} was shortened on this sheet`,
+      detail:
+        'The generated PDF could not fit the full text at a readable size. It keeps the beginning and marks omitted text with an ellipsis.',
+    })
+  }
   return {
     issues,
     blockingCount: issues.filter((issue) => issue.severity === 'blocking').length,

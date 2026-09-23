@@ -51,7 +51,7 @@ const WEAPON_FIELDS = [
   { name: 'Wpn Name 3', attack: 'Wpn3 AtkBonus  ', damage: 'Wpn3 Damage ' },
 ] as const
 
-const SPELL_FIELDS_BY_LEVEL: readonly (readonly string[])[] = [
+export const OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL: readonly (readonly string[])[] = [
   [
     'Spells 1014',
     'Spells 1016',
@@ -174,6 +174,29 @@ const SPELL_FIELDS_BY_LEVEL: readonly (readonly string[])[] = [
   ],
 ]
 
+// Widget names verified against the circles beside each spell row in the bundled form.
+const PREPARED_FIELDS_BY_LEVEL = [
+  [],
+  [251, 309, 3010, 3011, 3012, 3013, 3014, 3015, 3016, 3017, 3018, 3019],
+  [313, 310, 3020, 3021, 3022, 3023, 3024, 3025, 3026, 3027, 3028, 3029, 3030],
+  [315, 314, 3031, 3032, 3033, 3034, 3035, 3036, 3037, 3038, 3039, 3040, 3041],
+  [317, 316, 3042, 3043, 3044, 3045, 3046, 3047, 3048, 3049, 3050, 3051, 3052],
+  [319, 318, 3053, 3054, 3055, 3056, 3057, 3058, 3059],
+  [321, 320, 3060, 3061, 3062, 3063, 3064, 3065, 3066],
+  [323, 322, 3067, 3068, 3069, 3070, 3071, 3072, 3073],
+  [325, 324, 3074, 3075, 3076, 3077, 3078],
+  [327, 326, 3079, 3080, 3081, 3082, 3083],
+] as const
+
+const SHORT_DAMAGE_TYPES: Record<string, string> = {
+  Bludgeoning: 'Bludg.',
+  Piercing: 'Pierc.',
+  Slashing: 'Slash.',
+  Lightning: 'Lightn.',
+  Necrotic: 'Necrot.',
+  Psychic: 'Psych.',
+}
+
 function titleCaseAbility(ability: string | undefined): string {
   return ability ? ability.charAt(0).toUpperCase() + ability.slice(1) : ''
 }
@@ -185,9 +208,9 @@ export function mapCharacterSheet2014Official(
   const primarySpellcasting = viewModel.spellcastingDetails[0]
   const passivePerception =
     10 + (viewModel.skillByName.get('perception')?.modifier ?? viewModel.abilityModifiers.wisdom)
-  const attackOverflow = viewModel.weaponRows
-    .slice(3)
-    .map((row) => `${row.name} ${row.attackBonus}; ${row.damage} ${row.damageType}`.trim())
+  const attackOverflow = viewModel.weaponRows.map((row) =>
+    `${row.name} ${row.attackBonus}; ${row.damage} ${row.damageType}${row.notes ? `; ${row.notes}` : ''}`.trim(),
+  )
   const sections = getOfficial2014SectionText(viewModel)
   const textFields: Record<string, string> = {
     ClassLevel: character.classProgression
@@ -284,23 +307,25 @@ export function mapCharacterSheet2014Official(
     textFields[fields.name] = row?.name ?? ''
     textFields[fields.attack] = row?.attackBonus ?? ''
     textFields[fields.damage] = row
-      ? [row.damage, row.damageType, row.notes].filter(Boolean).join(' ')
+      ? [row.damage, SHORT_DAMAGE_TYPES[row.damageType] ?? row.damageType].filter(Boolean).join(' ')
       : ''
   })
 
-  SPELL_FIELDS_BY_LEVEL.forEach((fieldNames, level) => {
+  OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fieldNames, level) => {
     const rows = viewModel.spellRows.filter(
       (row) => (row.level === 'C' ? 0 : Number(row.level)) === level,
     )
     fieldNames.forEach((fieldName, index) => {
       textFields[fieldName] = rows[index]?.name ?? ''
+      if (level > 0) {
+        checkboxFields[`Check Box ${PREPARED_FIELDS_BY_LEVEL[level][index]}`] =
+          rows[index]?.prepared ?? false
+      }
     })
     if (level > 0) {
-      const slot = character.spells.spellSlots[level]
+      const slot = viewModel.spellSlots.mergedSharedWithUsage[level]
       textFields[`SlotsTotal ${level + 18}`] = slot?.max ? String(slot.max) : ''
-      textFields[`SlotsRemaining ${level + 18}`] = slot?.max
-        ? String(Math.max(0, slot.max - (slot.used ?? 0)))
-        : ''
+      textFields[`SlotsRemaining ${level + 18}`] = slot?.max ? String(slot.used) : ''
     }
   })
 

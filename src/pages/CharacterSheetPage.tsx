@@ -64,6 +64,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
+  const [truncatedFields, setTruncatedFields] = useState<string[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
@@ -118,6 +119,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             readiness,
             calculation?.effects.declarations ?? [],
             calculation?.effects.resolutionContext,
+            truncatedFields,
           )
         : { issues: [], blockingCount: 0, warningCount: 0 },
     [
@@ -125,6 +127,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       calculation?.effects.resolutionContext,
       readiness,
       templateId,
+      truncatedFields,
       viewModel,
     ],
   )
@@ -146,13 +149,18 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       }
 
       const templateBytes = new Uint8Array(await response.arrayBuffer())
+      const shortened: string[] = []
       const filledBytes = await generateFilledCharacterSheetPdf(
         viewModel,
         templateBytes,
         templateId,
+        { onTextTruncated: (fieldName) => shortened.push(fieldName) },
       )
 
-      if (!handle.canceled) setPdfBytes(filledBytes)
+      if (!handle.canceled) {
+        setPdfBytes(filledBytes)
+        setTruncatedFields(shortened)
+      }
     } catch (error) {
       console.error('[PDF] generation failed', { error, characterId: character.id })
       const message =
@@ -160,6 +168,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       if (!handle.canceled) {
         setErrorMessage(message)
         setPdfBytes(null)
+        setTruncatedFields([])
       }
     } finally {
       if (!handle.canceled) setIsGenerating(false)

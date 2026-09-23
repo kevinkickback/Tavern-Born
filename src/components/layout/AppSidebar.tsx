@@ -146,41 +146,20 @@ const workspaces: Workspace[] = [
     requiresCharacter: true,
     matches: (pathname) => pathname.startsWith('/character-sheet'),
     groups: [
-      {
-        label: '5e (2014) Templates',
-        items: [
-          {
-            label: 'WotC Official',
-            ariaLabel: '5e (2014) WotC Official',
-            path: '/character-sheet/2014/official',
-            icon: FilePdf,
-          },
-          {
-            label: 'MPMB Custom',
-            ariaLabel: '5e (2014) MPMB Custom',
-            path: '/character-sheet/2014/custom',
-            icon: FilePdf,
-          },
-        ],
-      },
-      {
-        label: '5.5e (2024) Templates',
-        items: [
-          {
-            label: 'WotC Official',
-            ariaLabel: '5.5e (2024) WotC Official',
-            path: '/character-sheet/2024/official',
-            icon: FilePdf,
-          },
-          {
-            label: 'Lost Loot Custom',
-            ariaLabel: '5.5e (2024) Lost Loot Custom',
-            path: '/character-sheet/2024/custom',
-            icon: FilePdf,
-          },
-        ],
-      },
-    ],
+      ['2014', '5e (2014)', 'MPMB Custom'],
+      ['2024', '5.5e (2024)', 'Lost Loot Custom'],
+    ].map(([edition, ruleset, customLabel]) => ({
+      label: `${ruleset} Templates`,
+      items: [
+        ['official', 'WotC Official'],
+        ['custom', customLabel],
+      ].map(([variant, label]) => ({
+        label,
+        ariaLabel: `${ruleset} ${label}`,
+        path: `/character-sheet/${edition}/${variant}`,
+        icon: FilePdf,
+      })),
+    })),
   },
   {
     id: 'compendium',

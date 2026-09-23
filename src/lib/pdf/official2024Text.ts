@@ -1,4 +1,5 @@
 import type { PDFFont } from '@cantoo/pdf-lib'
+import { fitPdfText } from './pdfTextLayout'
 
 export type Official2024FontBounds = { min: number; max: number; multiline?: boolean }
 
@@ -41,53 +42,6 @@ export function getOfficial2024FontBounds(name: string): Official2024FontBounds 
   return { min: 8, max: 10 }
 }
 
-function textWidth(font: PDFFont, value: string, size: number) {
-  try {
-    return font.widthOfTextAtSize(value, size)
-  } catch {
-    return value.length * size * 0.55
-  }
-}
-
-function shortenLine(value: string, font: PDFFont, size: number, width: number) {
-  if (textWidth(font, value, size) <= width) return value
-  let end = value.length
-  while (end > 0 && textWidth(font, `${value.slice(0, end).trimEnd()}...`, size) > width) {
-    end -= 1
-  }
-  return `${value.slice(0, end).trimEnd()}...`
-}
-
-function wrapLines(value: string, font: PDFFont, size: number, width: number) {
-  const lines: string[] = []
-  for (const paragraph of value.split('\n')) {
-    if (!paragraph.trim()) {
-      lines.push('')
-      continue
-    }
-    let line = ''
-    for (const word of paragraph.trim().split(/\s+/)) {
-      const next = line ? `${line} ${word}` : word
-      if (textWidth(font, next, size) <= width) {
-        line = next
-      } else {
-        if (line) lines.push(line)
-        line = word
-        while (line.length > 1 && textWidth(font, line, size) > width) {
-          let end = 1
-          while (end < line.length && textWidth(font, line.slice(0, end + 1), size) <= width) {
-            end += 1
-          }
-          lines.push(line.slice(0, end))
-          line = line.slice(end)
-        }
-      }
-    }
-    lines.push(line)
-  }
-  return lines
-}
-
 /** Fit each AcroForm appearance to its printed cell, retaining a readable floor. */
 export function fitOfficial2024Text(
   name: string,
@@ -95,45 +49,15 @@ export function fitOfficial2024Text(
   font: PDFFont,
   width: number,
   height: number,
-): { text: string; fontSize: number } | null {
+  borderWidth = 0,
+): { text: string; fontSize: number; truncated: boolean } | null {
   const bounds = getOfficial2024FontBounds(name)
   if (!bounds || !value) return null
-  const availableWidth = Math.max(1, width - 1)
-  const availableHeight = Math.max(1, height - 2)
   const id = Number(name.slice(5))
   // These are lists, not paragraphs; spare blank lines otherwise hide later entries.
   const normalized = [57, 58, 59, 60, 88, 89, 90].includes(id)
     ? value.replace(/\n{2,}/g, '\n')
     : value
 
-  for (let size = bounds.max; size >= bounds.min; size -= 0.25) {
-    const fontSize = Math.round(size * 100) / 100
-    if (!bounds.multiline) {
-      if (textWidth(font, normalized, fontSize) <= availableWidth) {
-        return { text: normalized, fontSize }
-      }
-    } else {
-      const capacity = Math.max(1, Math.floor(availableHeight / (fontSize * 1.2)))
-      if (wrapLines(normalized, font, fontSize, availableWidth).length <= capacity) {
-        return { text: normalized, fontSize }
-      }
-    }
-  }
-
-  if (!bounds.multiline) {
-    return {
-      text: shortenLine(normalized, font, bounds.min, availableWidth),
-      fontSize: bounds.min,
-    }
-  }
-  const capacity = Math.max(1, Math.floor(availableHeight / (bounds.min * 1.2)))
-  const lines = wrapLines(normalized, font, bounds.min, availableWidth)
-  const kept = lines.slice(0, capacity)
-  kept[kept.length - 1] = shortenLine(
-    `${kept[kept.length - 1]}...`,
-    font,
-    bounds.min,
-    availableWidth,
-  )
-  return { text: kept.join('\n'), fontSize: bounds.min }
+  return fitPdfText(normalized, font, width, height, bounds, borderWidth)
 }

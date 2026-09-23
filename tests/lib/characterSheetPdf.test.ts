@@ -9,6 +9,7 @@ import {
   buildRaceLookup,
   buildSpellLookup,
 } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
   type CharacterSheetTemplateId,
@@ -1177,15 +1178,9 @@ describe('characterSheetPdf', () => {
         spellSlots: { 1: { max: 4, used: 2 } },
       },
     })
-    const classesData = [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        spellcastingAbility: 'int',
-        casterProgression: 'full',
-        hd: { faces: 6 },
-      } as Class5e,
-    ]
+    const classesData = parseClasses(
+      JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
+    ) as Class5e[]
     const spellsData: Spell5e[] = [
       {
         name: 'Fire Bolt',

@@ -29,6 +29,7 @@ import {
   type FormWithInternals,
 } from '@/lib/pdf/pdfFieldInternals'
 import { embedOrganizationImage, embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
+import { fitPdfText } from '@/lib/pdf/pdfTextLayout'
 import type {
   CharacterSheetCleanupProfile,
   CharacterSheetFieldMap,
@@ -75,6 +76,7 @@ export async function fillCharacterSheetPdf(
     organizationImageFieldName?: string
     portrait?: string
     organizationImage?: string
+    onTextTruncated?: (fieldName: string) => void
   },
 ): Promise<Uint8Array> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
@@ -133,9 +135,11 @@ export async function fillCharacterSheetPdf(
     hideUnwantedFields(form)
   } else {
     if (options.templateId === '2014-official') setOfficial2014SectionLimits(form)
-    if (options.templateId === '2024-official') fitOfficial2024TextAppearances(form)
+    if (options.templateId === '2024-official')
+      fitOfficial2024TextAppearances(form, options.onTextTruncated)
     updateDirtyFieldAppearances(form)
-    if (options.templateId === '2014-official') normalizeOfficial2014TextAppearances(form)
+    if (options.templateId === '2014-official')
+      normalizeOfficial2014TextAppearances(form, options.onTextTruncated)
   }
   replaceCheckboxOffAppearances(pdfDoc, form, options.templateId === '2024-official')
   if (options.portrait && options.portraitFieldName) {
@@ -197,11 +201,14 @@ function setOfficial2014SectionLimits(form: ReturnType<PDFDocument['getForm']>) 
   }
 }
 
-function normalizeOfficial2014TextAppearances(form: ReturnType<PDFDocument['getForm']>) {
+function normalizeOfficial2014TextAppearances(
+  form: ReturnType<PDFDocument['getForm']>,
+  onTextTruncated?: (fieldName: string) => void,
+) {
   const font = form.getDefaultFont()
   for (const field of form.getFields()) {
     if (!(field instanceof PDFTextField) || !field.getText()) continue
-    const widget = asFieldWithInternals(field)?.acroField.getWidgets()[0]
+    const widget = field.acroField.getWidgets()[0]
     if (!widget) continue
     const { width, height } = widget.getRectangle()
     const bounds = getOfficial2014FontBounds(field.getName(), width, height)
@@ -212,26 +219,56 @@ function normalizeOfficial2014TextAppearances(form: ReturnType<PDFDocument['getF
       | undefined
     const autoSize = Number(defaultAppearance?.decodeText?.().match(/([\d.]+)\s+Tf/)?.[1])
     if (!Number.isFinite(autoSize)) continue
-    const fontSize = Math.min(bounds.max, Math.max(bounds.min, autoSize))
-    if (fontSize === autoSize) continue
+    let fontSize = Math.min(bounds.max, Math.max(bounds.min, autoSize))
+    if (field.getName().startsWith('Wpn') || field.getName() === 'AttacksSpellcasting') {
+      const fitted = fitPdfText(
+        field.getText() ?? '',
+        font,
+        width,
+        height,
+        { ...bounds, multiline: field.isMultiline() },
+        widget.getBorderStyle()?.getWidth() ?? 0,
+      )
+      fontSize = fitted.fontSize
+      if (fitted.text !== field.getText()) field.setText(fitted.text)
+      if (fitted.truncated) onTextTruncated?.(field.getName())
+    }
     field.setFontSize(fontSize)
+    // Widget-local DA overrides the field font size in the appearance provider.
+    const appearance = PDFHexString.fromText(field.acroField.getDefaultAppearance() ?? '')
+    for (const appearanceWidget of field.acroField.getWidgets())
+      appearanceWidget.dict.set(PDFName.of('DA'), appearance)
     field.defaultUpdateAppearances(font)
   }
 }
 
-function fitOfficial2024TextAppearances(form: ReturnType<PDFDocument['getForm']>) {
+function fitOfficial2024TextAppearances(
+  form: ReturnType<PDFDocument['getForm']>,
+  onTextTruncated?: (fieldName: string) => void,
+) {
   const font = form.getDefaultFont()
   for (const field of form.getFields()) {
     if (!(field instanceof PDFTextField)) continue
     const value = field.getText()
     if (!value) continue
-    const widget = asFieldWithInternals(field)?.acroField.getWidgets()[0]
+    const widget = field.acroField.getWidgets()[0]
     if (!widget) continue
     const { width, height } = widget.getRectangle()
-    const fitted = fitOfficial2024Text(field.getName(), value, font, width, height)
+    const fitted = fitOfficial2024Text(
+      field.getName(),
+      value,
+      font,
+      width,
+      height,
+      widget.getBorderStyle()?.getWidth() ?? 0,
+    )
     if (!fitted) continue
     if (fitted.text !== value) field.setText(fitted.text)
     field.setFontSize(fitted.fontSize)
+    const appearance = PDFHexString.fromText(field.acroField.getDefaultAppearance() ?? '')
+    for (const appearanceWidget of field.acroField.getWidgets())
+      appearanceWidget.dict.set(PDFName.of('DA'), appearance)
+    if (fitted.truncated) onTextTruncated?.(field.getName())
   }
 }
 

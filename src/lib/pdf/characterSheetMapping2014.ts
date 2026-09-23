@@ -68,7 +68,7 @@ const ACTION_FIELD_MAX_LENGTH = 72
 export const MPMB_CARD_DESCRIPTION_LIMIT = 260
 const CAPACITY = CHARACTER_SHEET_CAPACITIES['2014-custom']
 
-export function limitMpmbCardDescription(description: string): string {
+function limitMpmbCardDescription(description: string): string {
   if (description.length <= MPMB_CARD_DESCRIPTION_LIMIT) return description
   return `${description.slice(0, MPMB_CARD_DESCRIPTION_LIMIT - 1).trimEnd()}…`
 }

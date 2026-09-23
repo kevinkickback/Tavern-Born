@@ -123,7 +123,7 @@ circles inside the AC box describe the armor being worn, independently of profic
 - Identity, physical details, abilities, saves, skills, combat state, and death saves
 - Three weapon rows, with additional weapon summaries carried into Attacks & Spellcasting
 - Equipment, currency, proficiencies/languages, features, allies, biography, feats, and treasure
-- Primary spellcasting summary, slots remaining, and the printed spell-row capacities for levels
+- Primary spellcasting summary, slots expended, prepared-spell circles, and the printed spell-row capacities for levels
   0-9
 - Portrait and faction image embedding through the official field names
 - Bounded text sizes for narrow save/skill and HP fields and long prose boxes; Equipment,
@@ -134,7 +134,12 @@ circles inside the AC box describe the armor being worn, independently of profic
 
 ## Intentional Limits
 
-All numeric collection capacities live in `characterSheetCapacities.ts` and are consumed by both
+PDF-specific routes are lazy-loaded together with the export page. Sidebar labels are generated
+from the two edition descriptors; all four URLs and accessible names remain explicit UI contracts.
+This keeps template expansion within the existing initial-renderer budget without raising it.
+
+Numeric collection capacities live in `characterSheetCapacities.ts`; the official 2014 per-level
+spell capacities are derived directly from its field map. Both are consumed by
 the mappings and preflight. This prevents the warning boundary from drifting away from the actual
 export boundary. Within each collection, mappings retain the view-model input order; repeated
 exports cannot silently reprioritize entries.
@@ -148,6 +153,17 @@ exports cannot silently reprioritize entries.
 - The custom 2014 template has five attack rows, three hit-die rows, eight limited-resource rows,
   five magic-item cards, and 90 equipment rows. The official template has three attack rows and
   100 printed spell rows distributed by spell level.
+- Slot grids derive regular Spellcasting maxima from parsed class progressions and clamp saved
+  usage through the shared slot calculator; saved maxima are never trusted or modified. Pact Magic
+  remains a separate pool. Preflight reports its totals and expended slots because the grids cannot
+  distinguish its recovery rules. Prepared circles preserve source-qualified spell identity and
+  include always-prepared grants and ready known-caster spells.
+- Official 2014 damage cells use compact damage-type labels; the attack notes retain full damage
+  and weapon properties. Official weapon cells and 2024 fields fit against the appearance provider's
+  actual padding, border, font metrics, and wrapping. Generation reports any text shortened at the
+  readable font floor; the preview retains those field warnings for download preflight, replacing
+  them on regeneration. Character-count warnings remain conservative early estimates, not the only
+  truncation check.
 - Both 2014 templates support portrait and organization/faction images; the 2024 templates do not
   have portrait fields. Faction text alone does not identify source-qualified artwork: the
   character needs an organization selection with an image or a custom emblem. Preflight warns
@@ -168,6 +184,10 @@ page before changing field names.
 `tests/e2e/pdf-templates.spec.ts` exercises the complete browser workflow for all four templates:
 sidebar selection, preview and page count, preflight, character-name-only filename, download, and
 AcroForm reopen.
+
+`tests/lib/pdfExportRegressions.test.ts` checks real parsed slot progressions, per-level spell
+overflow, prepared-widget geometry, saved damage appearance widths/baselines, and actual multiline
+truncation reporting. `characterSheetPage.test.tsx` verifies warnings follow the generated preview.
 
 PDF asset size optimization is intentionally a post-functional step. Record the packaged baseline
 first, remove duplicate/source assets from packaging, and prefer structural or lossless savings.

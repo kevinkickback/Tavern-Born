@@ -29,8 +29,10 @@ import {
 } from '@/lib/calculations/movement'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
 import {
   formatCastingTime,
   formatComponents,
@@ -81,6 +83,7 @@ interface CharacterSheetWeaponRow {
 
 interface CharacterSheetSpellRow {
   name: string
+  prepared: boolean
   level: string
   castingTimeAndDuration: string
   notes: string
@@ -128,6 +131,7 @@ export interface CharacterSheetViewModel {
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
+  spellSlots: ReturnType<typeof calculateCharacterSpellSlots>
   magicItems: Equipment[]
   companions: Array<{ name: string; source?: string; className?: string; creature?: Creature5e }>
   resolvedClasses: readonly Class5e[]
@@ -429,7 +433,22 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
 function buildSpellRows(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
+  castingDetails: CharacterSheetViewModel['spellcastingDetails'],
 ): CharacterSheetSpellRow[] {
+  const prepared = new Set<string>()
+  for (const profile of character.spells.spellProfiles) {
+    const detail = castingDetails.find((entry) => entry.profileId === profile.id)
+    const alwaysReady =
+      profile.alwaysPrepared ||
+      (detail && (!detail.isPreparedCaster || detail.isLevelOnlyPreparedCaster))
+    for (const reference of [
+      ...profile.cantrips,
+      ...profile.preparedSpells,
+      ...(profile.alwaysPreparedSpells ?? []),
+      ...(alwaysReady ? [...profile.spellsKnown, ...(profile.fixedSpells ?? [])] : []),
+    ])
+      prepared.add(getSpellReferenceKey(reference))
+  }
   const references = character.spells.spellProfiles.flatMap((profile) => [
     ...(profile.cantrips ?? []),
     ...(profile.spellsKnown ?? []),
@@ -437,7 +456,11 @@ function buildSpellRows(
     ...(profile.fixedSpells ?? []),
     ...(profile.alwaysPreparedSpells ?? []),
   ])
-  const uniqueReferences = [...new Set(references)]
+  const uniqueReferences = [
+    ...new Map(
+      references.map((reference) => [getSpellReferenceKey(reference), reference]),
+    ).values(),
+  ]
   return uniqueReferences
     .map((reference) => {
       const spell = resolveSpellReference(reference, spellsByKey)
@@ -445,6 +468,7 @@ function buildSpellRows(
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
       return {
         name: spell?.name ?? fallbackName,
+        prepared: prepared.has(getSpellReferenceKey(reference)),
         level: spell ? (spell.level === 0 ? 'C' : String(spell.level)) : '',
         castingTimeAndDuration: spell
           ? `${formatCastingTime(spell.time)}; ${formatDuration(spell.duration)}`
@@ -625,10 +649,17 @@ export function createCharacterSheetViewModel(
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
   const classesById = new Map(
-    resolvedClasses.map((classData) => [
+    Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
       toClassProfileId(classData.name, classData.source),
       classData,
     ]),
+  )
+  const spellcastingDetails = buildSpellcastingClassDetails(
+    character,
+    classesById,
+    effectiveAbilityScores,
+    calculationContext.effects.declarations,
+    calculationContext.effects.resolutionContext,
   )
   const actions = deriveCharacterActions(character, {
     abilityModifiers,
@@ -685,19 +716,14 @@ export function createCharacterSheetViewModel(
     ),
     weaponRows: buildWeaponRows(actions),
     actions,
-    spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
+    spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}, spellcastingDetails),
+    spellSlots: calculateCharacterSpellSlots(character, classesById),
     magicItems,
     companions,
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
-    spellcastingDetails: buildSpellcastingClassDetails(
-      character,
-      classesById,
-      effectiveAbilityScores,
-      calculationContext.effects.declarations,
-      calculationContext.effects.resolutionContext,
-    ),
+    spellcastingDetails,
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),

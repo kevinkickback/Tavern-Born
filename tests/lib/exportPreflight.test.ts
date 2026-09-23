@@ -101,6 +101,23 @@ describe('getPdfExportPreflight', () => {
 
     expect(getPdfExportPreflight('2014', createViewModel(), READY, effects).warningCount).toBe(0)
     expect(getPdfExportPreflight('2024', createViewModel(), READY, effects).warningCount).toBe(2)
+    for (const templateId of [
+      '2014-custom',
+      '2014-official',
+      '2024-custom',
+      '2024-official',
+    ] as const) {
+      const inactive = effects.map((entry) => ({
+        ...entry,
+        requirements: [{ kind: 'flag' as const, key: 'enabled', expected: true }],
+      }))
+      expect(
+        getPdfExportPreflight(templateId, createViewModel(), READY, effects).warningCount,
+      ).toBe(templateId === '2014-custom' ? 0 : 2)
+      expect(
+        getPdfExportPreflight(templateId, createViewModel(), READY, inactive).warningCount,
+      ).toBe(0)
+    }
   })
 
   test('2014 official warns about clipped prose and an unresolved organization emblem', () => {

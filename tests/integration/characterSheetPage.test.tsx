@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { generateFilledCharacterSheetPdf } from '@/lib/pdf/characterSheetPdf'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -91,5 +92,29 @@ describe('CharacterSheetPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Go Back' }))
     expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  test('includes actual fitting warnings and replaces them after regeneration', async () => {
+    const user = userEvent.setup()
+    vi.mocked(generateFilledCharacterSheetPdf).mockImplementationOnce(
+      (_vm, _bytes, _id, options) => {
+        options?.onTextTruncated?.('Text_89')
+        return Promise.resolve(new Uint8Array([1, 2, 3]))
+      },
+    )
+    render(
+      <MemoryRouter>
+        <CharacterSheetPage templateId="2024-official" />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
+    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+    expect(screen.getByText('Backstory was shortened on this sheet')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Go Back' }))
+    await user.click(screen.getByRole('button', { name: 'Regenerate' }))
+    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+    expect(screen.queryByText('Backstory was shortened on this sheet')).toBeNull()
   })
 })

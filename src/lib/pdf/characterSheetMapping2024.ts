@@ -227,7 +227,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
   }
 
   for (let level = 1; level <= 9; level += 1) {
-    const slot = character.spells.spellSlots[level]
+    const slot = viewModel.spellSlots.mergedSharedWithUsage[level]
     const fields = SLOT_FIELDS[level - 1]
     textFields[fields.total] = slot?.max ? String(slot.max) : ''
     fields.used.forEach((field, index) => {

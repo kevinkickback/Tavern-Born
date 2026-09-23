@@ -15,7 +15,6 @@ export const CHARACTER_SHEET_CAPACITIES = {
   },
   '2014-official': {
     weapons: 3,
-    spells: 100,
   },
   '2024': {
     weapons: 6,

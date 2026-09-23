@@ -31,6 +31,7 @@ export function generateFilledCharacterSheetPdf(
   viewModel: CharacterSheetViewModel,
   templateBytes: ArrayBuffer | Uint8Array,
   templateId: CharacterSheetTemplateId = getDefaultCharacterSheetTemplateId(),
+  options: { onTextTruncated?: (fieldName: string) => void } = {},
 ): Promise<Uint8Array> {
   const template = getCharacterSheetTemplate(templateId)
   return fillCharacterSheetPdf(templateBytes, buildCharacterSheetFieldMap(viewModel, templateId), {
@@ -40,5 +41,6 @@ export function generateFilledCharacterSheetPdf(
     organizationImageFieldName: template.organizationImageFieldName,
     portrait: viewModel.character.portrait,
     organizationImage: viewModel.organizationImage,
+    onTextTruncated: options.onTextTruncated,
   })
 }
