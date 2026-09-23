@@ -63,7 +63,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
-    expect(screen.getByText('Reading saved settings…')).toBeTruthy()
+    expect(screen.getByText('Loading the app…')).toBeTruthy()
   })
 
   test('AppLoadingOverlay renders progress details during foreground loading', () => {
@@ -82,6 +82,79 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getAllByText('Loading classes…').length).toBeGreaterThan(0)
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay remains active while cached game data refreshes', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: {
+        races: [],
+        classes: [],
+        backgrounds: [],
+        spells: [],
+        feats: [],
+        items: [],
+        itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
+        classFeatures: [],
+        actions: [],
+        conditions: [],
+        deities: [],
+        skills: [],
+        senses: [],
+        languages: [],
+        optionalfeatures: [],
+        variantrules: [],
+        trapHazards: [],
+        rewards: [],
+        cultsBoons: [],
+        organizations: [],
+        sources: [],
+      },
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByTestId('app-loading-overlay').getAttribute('data-phase')).toBe('loading')
+    expect(screen.getByText('Checking for game data updates…')).toBeTruthy()
+    expect(screen.queryByText('App is ready')).toBeNull()
+  })
+
+  test('AppLoadingOverlay reports background refresh resource progress', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      isLoading: false,
+      isBackgroundRefreshing: true,
+      cacheStatus: 'fresh',
+      loadProgress: {
+        current: 3,
+        total: 8,
+        resource: 'Additional Content: spells',
+      },
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Checking Additional Content: spells for updates…')).toBeTruthy()
+    expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
+  })
+
+  test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      isLoading: false,
+      isBackgroundRefreshing: false,
+      cacheStatus: 'unknown',
+    })
+
+    render(<AppLoadingOverlay />)
+
+    expect(screen.getByText('Checking saved game data…')).toBeTruthy()
   })
 
   test('AppLoadingOverlay shows ready state when hydrated and idle', () => {

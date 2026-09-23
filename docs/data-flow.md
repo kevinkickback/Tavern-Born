@@ -13,7 +13,10 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
 2. Theme bootstrap data is applied from local storage before React paints, then reconciled with
    hydrated preferences.
 3. `useDataInit` waits for hydration and chooses cache, foreground load, or source configuration.
-4. A usable cache starts the app immediately. Stale data refreshes in the background.
+4. A usable cache supplies the initial catalog immediately. When a startup refresh is required, the
+   startup overlay remains active until that refresh succeeds or fails so character editing cannot
+   begin against a catalog that may be replaced. The overlay distinguishes settings hydration,
+   cache inspection, source connection, and per-resource loading or update progress.
 5. Each configured source is fetched, validated, parsed, and normalized independently. Parsed
    collections are composed by canonical identity and lookups are rebuilt from the result.
 6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads

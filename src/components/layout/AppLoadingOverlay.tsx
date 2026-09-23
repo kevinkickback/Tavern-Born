@@ -13,13 +13,19 @@ export function AppLoadingOverlay() {
 
   const shouldStayVisible =
     !hasHydrated ||
-    (isLoading && !isBackgroundRefreshing) ||
+    isLoading ||
+    isBackgroundRefreshing ||
     (!gameData && cacheStatus === 'unknown' && !error)
 
   const [phase, setPhase] = useState<'loading' | 'ready' | 'fading' | 'hidden'>('loading')
 
   useEffect(() => {
-    if (shouldStayVisible) return
+    if (shouldStayVisible) {
+      // A refresh can begin immediately after cached data is restored. Keep the
+      // overlay in its loading phase instead of briefly announcing readiness.
+      if (phase === 'ready' || phase === 'fading') setPhase('loading')
+      return
+    }
 
     if (phase === 'loading') {
       setPhase('ready')
@@ -41,18 +47,24 @@ export function AppLoadingOverlay() {
 
   const isReady = phase === 'ready' || phase === 'fading'
   const isFading = phase === 'fading'
-  const hasProgress = loadProgress !== null
+  const hasProgress = loadProgress !== null && loadProgress.total > 0
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
   if (isReady) {
     statusLine = 'App is ready'
   } else if (!hasHydrated) {
-    statusLine = 'Reading saved settings…'
-  } else if (!hasProgress) {
-    statusLine = 'Connecting to data source…'
-  } else {
+    statusLine = 'Loading the app…'
+  } else if (isBackgroundRefreshing) {
+    statusLine = hasProgress
+      ? `Checking ${loadProgress.resource} for updates…`
+      : 'Checking for game data updates…'
+  } else if (hasProgress) {
     statusLine = `Loading ${loadProgress.resource}…`
+  } else if (!gameData && cacheStatus === 'unknown') {
+    statusLine = 'Checking saved game data…'
+  } else {
+    statusLine = 'Connecting to game data source…'
   }
 
   return (
@@ -69,7 +81,7 @@ export function AppLoadingOverlay() {
           5e Character Builder
         </p>
       </div>
-      <div className="w-72 space-y-2.5">
+      <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
         {isReady ? (
           <div className="flex items-center justify-center">
             <CheckCircle2 className="h-6 w-6 animate-in zoom-in-50 text-primary" />
@@ -87,7 +99,7 @@ export function AppLoadingOverlay() {
           </div>
         )}
         <div className="flex items-center justify-center text-xs text-muted-foreground">
-          <span className="truncate">{statusLine}</span>
+          <span className="min-w-0 text-center leading-4">{statusLine}</span>
           {!isReady && hasProgress && (
             <span className="ml-3 shrink-0 tabular-nums">
               {loadProgress.current}&thinsp;/&thinsp;{loadProgress.total}
