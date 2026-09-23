@@ -162,7 +162,10 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
   })
 
-  test('AppLoadingOverlay reports a meaningful terminal refresh state', () => {
+  test.each([
+    'Complete',
+    'Additional Content: Complete',
+  ])('AppLoadingOverlay reports a meaningful terminal refresh state for %s', (resource) => {
     useGameDataStore.setState({
       hasHydrated: true,
       isLoading: false,
@@ -171,14 +174,14 @@ describe('startup integration: loading overlay and startup modal', () => {
       loadProgress: {
         current: 8,
         total: 8,
-        resource: 'Complete',
+        resource,
       },
     })
 
     render(<AppLoadingOverlay />)
 
     expect(screen.getByText('Finalizing game data update…')).toBeTruthy()
-    expect(screen.queryByText('Checking Complete for updates…')).toBeNull()
+    expect(screen.queryByText(`Checking ${resource} for updates…`)).toBeNull()
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {

@@ -76,7 +76,9 @@ export function AppLoadingOverlay() {
   const isReady = !shouldStayVisible && (phase === 'ready' || phase === 'fading')
   const isFading = !shouldStayVisible && phase === 'fading'
   const hasProgress = loadProgress !== null && loadProgress.total > 0
-  const isProgressComplete = hasProgress && loadProgress.resource === 'Complete'
+  const isProgressComplete =
+    hasProgress &&
+    (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
