@@ -3,10 +3,10 @@
 
 ## ✨ Changes
 
-* Tavern Born now includes the D&D rules available through the SRD
-* Character options now reflect available content and group related selections more clearly
+* Tavern Born now includes limited D&D rules available through the SRD
+* Expanded PDF character sheets support with additional pages, new templates, and content customization
 * Expanded support for subclass-specific options, including companions, runes, and similar selections
-* Creature stat blocks and available subclass features are now searchable in the Compendium
+* Creature stat blocks and subclass features are now searchable in the Compendium
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
 * Fixed startup not finishing game data checks/updates before app became available

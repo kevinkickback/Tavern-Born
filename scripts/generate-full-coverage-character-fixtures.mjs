@@ -2,11 +2,13 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
-const CURRENT_CHARACTER_SCHEMA_VERSION = 1
+const CURRENT_CHARACTER_SCHEMA_VERSION = 2
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
 const fixture2014Path = join(fixtureRoot, 'full-coverage-character-2014.tbc')
 const fixture2024Path = join(fixtureRoot, 'full-coverage-character-2024.tbc')
+const companion2014Path = join(fixtureRoot, 'companion-choice-character-2014.tbc')
+const companion2024Path = join(fixtureRoot, 'companion-choice-character-2024.tbc')
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -40,6 +42,10 @@ const races = asArray(racePayload.race)
 const subraces = asArray(racePayload.subrace)
 const backgrounds = asArray(readJson(join(dataRoot, 'backgrounds.json')).background)
 const feats = asArray(readJson(join(dataRoot, 'feats.json')).feat)
+const optionalFeatures = asArray(readJson(join(dataRoot, 'optionalfeatures.json')).optionalfeature)
+const companionCreatures = ['bestiary-mm.json', 'bestiary-tce.json', 'bestiary-xphb.json'].flatMap(
+  (fileName) => asArray(readJson(join(dataRoot, 'bestiary', fileName)).monster),
+)
 const itemsPayload = readJson(join(dataRoot, 'items.json'))
 const baseItemsPayload = readJson(join(dataRoot, 'items-base.json'))
 const items = [
@@ -62,6 +68,14 @@ function editionEntity(entities, name, edition) {
   const exact = entities.find((entity) => entity.name === name && entity.source === source)
   if (!exact) throw new Error(`Missing ${edition} corpus entity: ${name}`)
   return exact
+}
+
+function requireEntity(entities, name, source) {
+  const entity = entities.find(
+    (candidate) => candidate.name === name && candidate.source === source,
+  )
+  if (!entity) throw new Error(`Missing corpus entity: ${name}|${source}`)
+  return entity
 }
 
 function sourceQualifiedReference(reference, entities, edition) {
@@ -585,6 +599,7 @@ function buildFixtureProvenance({
   }
 
   for (const feature of features) {
+    if (feature.id.startsWith('class-choice:')) continue
     const definition = classFeatures.find(
       (candidate) => candidate.name === feature.name && candidate.source === feature.source,
     )
@@ -639,9 +654,15 @@ function buildFixtureProvenance({
       addLedgerGrant(
         provenance.features,
         option.name,
-        makeTag('class', selection.className, 'choice', selection.classSource, {
-          grantVariant: selection.choiceId,
-        }),
+        makeTag(
+          selection.subclassName ? 'subclass' : 'class',
+          selection.subclassName ?? selection.className,
+          'choice',
+          selection.subclassSource ?? selection.classSource,
+          {
+            grantVariant: selection.choiceId,
+          },
+        ),
       )
     }
   }
@@ -912,11 +933,30 @@ function buildClassChoiceSelections(edition) {
       },
     )
   }
+  const maneuverNames = ["Commander's Strike", 'Disarming Attack', 'Precision Attack']
+  selections.push({
+    choiceId: `class:fighter|${source.toLowerCase()}|subclass:battle-master|${source.toLowerCase()}|choice:maneuvers|3`,
+    label: 'Maneuvers',
+    kind: 'optional-feature',
+    className: 'Fighter',
+    classSource: source,
+    subclassName: 'Battle Master',
+    subclassSource: source,
+    classLevel: 3,
+    selected: maneuverNames.map((name) => {
+      const entity = editionEntity(optionalFeatures, name, edition)
+      return {
+        entityType: 'optionalFeature',
+        name: entity.name,
+        source: entity.source,
+        slotLevel: 3,
+      }
+    }),
+  })
   return selections
 }
 
 function buildFixture(seed, edition) {
-  const seedSpeed = seed.movement.speeds.walk
   const race = editionEntity(races, seed.race, edition)
   const background = editionEntity(backgrounds, edition === '2024' ? 'Criminal' : 'Sage', edition)
   const progression = buildProgression(seed, edition)
@@ -938,6 +978,11 @@ function buildFixture(seed, edition) {
             source: version.source ?? race.source,
           }))
           .find((version) => version.name)
+  const movementOwner = selectedSubrace?.speed !== undefined ? selectedSubrace : race
+  const walkSpeed =
+    typeof movementOwner.speed === 'number' ? movementOwner.speed : movementOwner.speed?.walk
+  if (typeof walkSpeed !== 'number')
+    throw new Error(`Missing walking speed for fixture race: ${key(movementOwner)}`)
   const { profiles: mappedProfiles, spellAttributions } = buildSpellProfiles(
     race,
     progression,
@@ -1019,6 +1064,14 @@ function buildFixture(seed, edition) {
           }
         : {}),
     })),
+    hitDiceUsed: Object.fromEntries(
+      Object.entries(seed.hitDiceUsed ?? {}).map(([classKey, count]) => {
+        const className = classKey.split('|')[0]
+        const classEntry = progression.find((entry) => entry.name.toLowerCase() === className)
+        if (!classEntry) throw new Error(`Unknown hit-die class ${classKey}`)
+        return [`${classEntry.name.toLowerCase()}|${classEntry.source.toLowerCase()}`, count]
+      }),
+    ),
     allowedSources: [
       ...new Set([
         race.source,
@@ -1039,12 +1092,12 @@ function buildFixture(seed, edition) {
     classEquipmentItemChoices: {},
     raceAsiBlockIndex: undefined,
     movement: {
-      speeds: { walk: seedSpeed },
-      source: { kind: 'manual', name: 'Full-coverage test fixture' },
+      speeds: { walk: walkSpeed },
+      source: { kind: 'race', name: movementOwner.name, source: movementOwner.source },
     },
     details: {
       ...seed.details,
-      organizationSelectionKey: '',
+      organizationSelectionKey: 'The Harpers|SCAG',
       organizationCustomName: '',
       organizationCustomDescription: '',
       organizationCustomImage: '',
@@ -1061,13 +1114,319 @@ function buildFixture(seed, edition) {
   return JSON.parse(JSON.stringify(fixture))
 }
 
+function buildCompanionFixture(baseFixture, edition) {
+  const source = edition === '2024' ? 'XPHB' : 'PHB'
+  const ranger = editionEntity(classes, 'Ranger', edition)
+  const beastMaster = requireEntity(
+    subclasses.filter((candidate) => candidate.className === 'Ranger'),
+    'Beast Master',
+    source,
+  )
+  const progression = [
+    {
+      name: ranger.name,
+      source: ranger.source,
+      levels: 3,
+      subclass: beastMaster.name,
+      subclassSource: beastMaster.source,
+    },
+  ]
+  const primalSource = edition === '2024' ? 'XPHB' : 'TCE'
+  const primalCompanion = requireEntity(companionCreatures, 'Beast of the Land', primalSource)
+  const classicCompanion =
+    edition === '2014' ? requireEntity(companionCreatures, 'Wolf', 'MM') : undefined
+  const defense = editionEntity(edition === '2024' ? feats : optionalFeatures, 'Defense', edition)
+  const selected = [
+    {
+      choiceId: `class:ranger|${source.toLowerCase()}|choice:fighting-style|2`,
+      label: 'Fighting Style',
+      kind: edition === '2024' ? 'feat' : 'optional-feature',
+      className: 'Ranger',
+      classSource: source,
+      classLevel: 2,
+      selected: [
+        {
+          entityType: edition === '2024' ? 'feat' : 'optionalFeature',
+          name: defense.name,
+          source: defense.source,
+          slotLevel: 2,
+        },
+      ],
+    },
+    ...(edition === '2024'
+      ? [
+          {
+            choiceId: 'class:ranger|xphb|choice:weapon-mastery|1',
+            label: 'Weapon Mastery',
+            kind: 'item',
+            className: 'Ranger',
+            classSource: source,
+            classLevel: 1,
+            selected: ['Longbow', 'Shortsword'].map((name) => {
+              const item = editionEntity(items, name, edition)
+              return { entityType: 'item', name: item.name, source: item.source, slotLevel: 1 }
+            }),
+          },
+        ]
+      : []),
+    ...(edition === '2014'
+      ? [
+          {
+            choiceId: 'class:ranger|phb|subclass:beast-master|phb|choice:ranger-s-companion|3',
+            label: "Ranger's Companion",
+            kind: 'creature',
+            inactive: true,
+            className: 'Ranger',
+            classSource: source,
+            subclassName: beastMaster.name,
+            subclassSource: beastMaster.source,
+            classLevel: 3,
+            selected: [
+              {
+                entityType: 'creature',
+                name: classicCompanion.name,
+                source: classicCompanion.source,
+                slotLevel: 3,
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      choiceId: `class:ranger|${source.toLowerCase()}|subclass:beast-master|${source.toLowerCase()}|choice:primal-companion|3`,
+      label: 'Primal Companion',
+      kind: 'creature',
+      className: 'Ranger',
+      classSource: source,
+      subclassName: beastMaster.name,
+      subclassSource: beastMaster.source,
+      classLevel: 3,
+      selected: [
+        {
+          entityType: 'creature',
+          name: primalCompanion.name,
+          source: primalCompanion.source,
+          slotLevel: 3,
+        },
+      ],
+    },
+  ]
+  const classChoiceState = buildClassChoiceState(
+    [],
+    selected.filter((choice) => !choice.inactive),
+  )
+  const spellReferences = selectClassSpells('Ranger', ranger.source, edition, {
+    1: edition === '2024' ? 4 : 3,
+  })
+  const spellLevels = edition === '2024' ? [1, 1, 2, 3] : [2, 2, 3]
+  const provenance = emptyProvenance()
+  provenance.abilityBonuses = baseFixture.provenance.abilityBonuses
+  const rangerTag = makeTag('class', ranger.name, 'fixed', ranger.source)
+  const backgroundTag = makeTag(
+    'background',
+    baseFixture.background,
+    'fixed',
+    baseFixture.backgroundSource,
+  )
+  const raceTag = makeTag('race', baseFixture.race, 'fixed', baseFixture.raceSource)
+  const proficiencies = {
+    armor: ['Light Armor', 'Medium Armor', 'Shields'],
+    weapons: ['Simple Weapons', 'Martial Weapons'],
+    tools: [],
+    skills:
+      edition === '2024'
+        ? ['animal handling', 'perception', 'survival', 'sleight of hand', 'stealth']
+        : ['animal handling', 'perception', 'survival', 'arcana', 'history'],
+    expertise: [],
+    languages: ['Common', 'Elvish'],
+    savingThrows: ['strength', 'dexterity'],
+  }
+  for (const domain of Object.keys(provenance.proficiencies)) {
+    for (const name of proficiencies[domain]) {
+      const isBackgroundSkill =
+        domain === 'skills' && !['animal handling', 'perception', 'survival'].includes(name)
+      addLedgerGrant(
+        provenance.proficiencies[domain],
+        name,
+        domain === 'languages' ? raceTag : isBackgroundSkill ? backgroundTag : rangerTag,
+      )
+    }
+  }
+  spellReferences.forEach((reference, index) => {
+    addLedgerGrant(
+      provenance.spells,
+      reference,
+      makeTag('class', ranger.name, 'choice', ranger.source, {
+        spellGrantedAtLevel: spellLevels[index],
+        spellAttributionMode: 'exact',
+      }),
+    )
+  })
+  for (const selection of selected) {
+    if (selection.inactive) continue
+    for (const option of selection.selected) {
+      if (option.entityType === 'feat') {
+        addLedgerGrant(
+          provenance.feats,
+          option.name,
+          makeTag('class', ranger.name, 'choice', ranger.source, {
+            grantVariant: selection.choiceId,
+          }),
+        )
+      } else if (option.entityType === 'optionalFeature') {
+        addLedgerGrant(
+          provenance.features,
+          option.name,
+          makeTag('class', ranger.name, 'choice', ranger.source, {
+            grantVariant: selection.choiceId,
+          }),
+        )
+      }
+    }
+  }
+  const companionFeature = requireEntity(
+    classFeatures.filter((feature) => feature.className === 'Ranger'),
+    'Primal Companion',
+    primalSource,
+  )
+  const companionEquipment = ['Longbow', 'Leather Armor'].map((name, index) =>
+    toEquipment(
+      editionEntity(items, name, edition),
+      `companion-gear-${edition}-${index + 1}`,
+      index === 1,
+    ),
+  )
+  addLedgerGrant(
+    provenance.features,
+    companionFeature.name,
+    makeTag('subclass', beastMaster.name, 'fixed', beastMaster.source),
+  )
+  for (const item of companionEquipment) {
+    addLedgerGrant(provenance.equipment, item.name, rangerTag)
+  }
+  return JSON.parse(
+    JSON.stringify({
+      ...baseFixture,
+      id: `companion-choice-character-${edition}`,
+      name: `Companion Choice Test Character (${edition})`,
+      currency: { cp: 0, sp: 0, ep: 0, gp: 25, pp: 0 },
+      experiencePoints: 0,
+      abilityScores: {
+        strength: 10,
+        dexterity: 16,
+        constitution: 14,
+        intelligence: 10,
+        wisdom: 14,
+        charisma: 10,
+      },
+      proficiencies,
+      classProgression: progression,
+      classChoiceSelections: selected,
+      classFeatChoices: classChoiceState.classFeatChoices,
+      features: [
+        {
+          id: `companion-feature-${edition}`,
+          name: companionFeature.name,
+          source: companionFeature.source,
+          description: '',
+          level: 3,
+        },
+        ...classChoiceState.features,
+      ],
+      feats: [],
+      specialFeats: [],
+      fixedFeatOptions: {},
+      asiChoices: [],
+      equipment: companionEquipment,
+      allowedSources: [
+        ...new Set([
+          source,
+          baseFixture.raceSource,
+          baseFixture.backgroundSource,
+          'SCAG',
+          primalSource,
+          ...(edition === '2014' ? ['MM'] : []),
+        ]),
+      ].sort(),
+      hitPoints: { current: 28, temporary: 0 },
+      hitPointsInitialized: true,
+      hitPointGains: [2, 3].map((level) => ({
+        className: ranger.name,
+        classSource: ranger.source,
+        classLevel: level,
+        characterLevel: level,
+        hitDie: 10,
+        dieResult: 6,
+        method: 'average',
+      })),
+      hitPointAdjustments: [],
+      maxHitPointsOverride: undefined,
+      armorClassAdjustments: [],
+      damageResistances: [],
+      damageImmunities: [],
+      conditionImmunities: [],
+      hitDiceUsed: {},
+      inspiration: false,
+      deathSaves: { successes: 0, failures: 0 },
+      conditions: [],
+      exhaustion: 0,
+      ritualCasting: false,
+      classResources: {},
+      spells: {
+        ...baseFixture.spells,
+        spellProfiles: [
+          {
+            id: `class:${ranger.name}|${ranger.source}`,
+            type: 'class',
+            label: `${ranger.name} (Lv 3)`,
+            className: ranger.name,
+            classSource: ranger.source,
+            cantrips: [],
+            spellsKnown: spellReferences,
+            preparedSpells: edition === '2024' ? spellReferences : [],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'special:unrestricted',
+            type: 'special',
+            label: 'Special (Unrestricted)',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+        spellSlots: { 1: { max: 3, used: 1 } },
+        pactSpellSlots: {},
+      },
+      provenance,
+      details: {
+        playerName: 'Fixture Runner',
+        faction: 'The Harpers',
+        rank: 'Scout',
+        organizationSelectionKey: 'The Harpers|SCAG',
+        appearance: 'A travel-worn ranger accompanied by a primal beast.',
+        backstory: 'A Harper scout whose companion shares every journey.',
+      },
+      manualEffects: [],
+      suppressedEffectIds: [],
+      effectFlags: {},
+      manualActions: [],
+    }),
+  )
+}
+
 const seed = readJson(fixture2014Path)
 const character2014 = buildFixture(seed, '2014')
 const character2024 = buildFixture(seed, '2024')
+const companion2014 = buildCompanionFixture(character2014, '2014')
+const companion2024 = buildCompanionFixture(character2024, '2024')
 
 for (const [path, fixture] of [
   [fixture2014Path, character2014],
   [fixture2024Path, character2024],
+  [companion2014Path, companion2014],
+  [companion2024Path, companion2024],
 ]) {
   writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`)
 }

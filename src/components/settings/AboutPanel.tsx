@@ -1,7 +1,19 @@
 import { Books, Code, GithubLogo, Globe, Heart } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Section } from '@/components/workspace'
 import { getBundledFileUrl } from '@/lib/assetUrls'
+import {
+  CHARACTER_SHEET_TEMPLATES,
+  getCharacterSheetAttributionAnchor,
+} from '@/lib/pdf/characterSheetTemplates'
+import type { CharacterSheetTemplate } from '@/lib/pdf/types'
 
 type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
 
@@ -11,6 +23,7 @@ const TECH_STACK = [
 ]
 
 export function AboutPanel() {
+  const location = useLocation()
   const [appVersion, setAppVersion] = useState('')
   const [srdManifest, setSrdManifest] = useState<BundledManifest | null>(null)
 
@@ -20,6 +33,11 @@ export function AboutPanel() {
       .then(setAppVersion)
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!location.hash) return
+    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [location.hash])
 
   useEffect(() => {
     const getBundledManifest = window.electronAPI?.getBundledManifest
@@ -43,9 +61,9 @@ export function AboutPanel() {
   ]
 
   return (
-    <div>
-      <Section className="pt-0">
-        <div className="flex items-center gap-4">
+    <div className="@container">
+      <Section className="pt-0 pb-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-border bg-sidebar">
             <img
               src={getBundledFileUrl('assets/images/ui/logo.png')}
@@ -57,90 +75,154 @@ export function AboutPanel() {
             <h2 className="font-display text-xl font-bold">Tavern Born</h2>
             <p className="text-sm text-muted-foreground">D&amp;D 5e Character Manager</p>
           </div>
+          <dl className="grid gap-x-3 gap-y-1 text-sm @min-[640px]:ml-auto">
+            {infoRows.map(({ label, value }) => (
+              <div key={label} className="flex flex-wrap items-baseline gap-x-2">
+                <dt className="font-medium">{label}</dt>
+                <dd className="text-muted-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          A desktop app for building and managing D&amp;D 5th Edition characters. Create characters,
-          manage spells and equipment, and explore options across published sources.
+          Build D&amp;D 5e characters, manage spells and equipment, and explore published content.
         </p>
-
-        <dl className="mt-4 grid max-w-xl grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
-          {infoRows.map(({ label, value }) => (
-            <div key={label} className="contents">
-              <dt className="font-medium">{label}</dt>
-              <dd className="text-muted-foreground">{value}</dd>
-            </div>
-          ))}
-        </dl>
       </Section>
 
-      {srdManifest && (
-        <Section title="SRD Attribution">
-          <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
-            {srdManifest.documents.map((document) => (
-              <div key={document.version} className="space-y-1">
-                <p>{document.attribution}</p>
-                <a
-                  href={document.landingPage}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex text-primary underline underline-offset-2"
-                >
-                  View the official SRD {document.version}
-                </a>
+      <Accordion
+        key={location.hash}
+        type="multiple"
+        defaultValue={location.hash.startsWith('#character-sheet-pdf-') ? ['pdf'] : []}
+        className="border-b border-border-subtle"
+      >
+        {srdManifest && (
+          <AccordionItem value="srd">
+            <AccordionTrigger className="py-3 font-semibold">SRD Attribution</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+                {srdManifest.documents.map((document) => (
+                  <p key={document.version}>
+                    <span>{document.attribution}</span>{' '}
+                    <a
+                      href={document.landingPage}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      View the official SRD {document.version}
+                    </a>
+                  </p>
+                ))}
+                <p>
+                  Available under the{' '}
+                  <a
+                    href={srdManifest.license.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {srdManifest.license.name}
+                  </a>
+                  .
+                </p>
               </div>
-            ))}
-            <p>
-              Available under the{' '}
-              <a
-                href={srdManifest.license.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary underline underline-offset-2"
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        <AccordionItem value="pdf">
+          <AccordionTrigger className="py-3 font-semibold">
+            Character Sheet PDF Attribution
+          </AccordionTrigger>
+          <AccordionContent>
+            <ul className="grid gap-x-6 gap-y-3 text-sm leading-relaxed text-muted-foreground @min-[640px]:grid-cols-2">
+              {CHARACTER_SHEET_TEMPLATES.map((template: CharacterSheetTemplate) => (
+                <li
+                  key={template.id}
+                  id={getCharacterSheetAttributionAnchor(template.id)}
+                  className="scroll-mt-5"
+                >
+                  <p className="font-medium text-foreground">{template.name}</p>
+                  <p>
+                    {template.attribution.credit}
+                    {template.attribution.creatorName && template.attribution.creatorUrl && (
+                      <>
+                        {' '}
+                        <a
+                          href={template.attribution.creatorUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary underline underline-offset-2"
+                        >
+                          {template.attribution.creatorName}
+                        </a>
+                        .
+                      </>
+                    )}
+                  </p>
+                  {template.attribution.notice && <p>{template.attribution.notice}</p>}
+                </li>
+              ))}
+              <li className="@min-[640px]:col-span-2">
+                <p className="font-medium text-foreground">Companion Sheet Form</p>
+                <p>
+                  Optional companion sheet.{' '}
+                  <a
+                    href="https://www.dmsguild.com/en/product/318155/companion-sheet-form"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Support the creator on DMs Guild.
+                  </a>
+                </p>
+              </li>
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <div className="grid gap-x-6 @min-[640px]:grid-cols-2">
+        <Section title="Built With" className="border-b-0 py-2">
+          <ul className="space-y-1">
+            {TECH_STACK.map(({ icon: StackIcon, label }) => (
+              <li
+                key={label}
+                className="flex min-h-8 items-center gap-2 text-sm text-muted-foreground"
               >
-                {srdManifest.license.name}
-              </a>
-              .
-            </p>
+                <StackIcon className="size-4 text-primary" />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Links" className="py-2">
+          <div className="flex flex-wrap gap-x-6 gap-y-1">
+            <a
+              href="https://github.com/kevinkickback/Tavern-Born"
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-8 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <GithubLogo className="size-4 text-primary" />
+              GitHub Repository
+            </a>
+            <a
+              href="https://kevinkickback.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-8 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Globe className="size-4 text-primary" />
+              KevinKickback.com
+            </a>
           </div>
         </Section>
-      )}
+      </div>
 
-      <Section title="Built With">
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {TECH_STACK.map(({ icon: StackIcon, label }) => (
-            <li key={label} className="flex h-9 items-center gap-2 text-sm text-muted-foreground">
-              <StackIcon className="size-4 text-primary" />
-              {label}
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section title="Links">
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <a
-            href="https://github.com/kevinkickback/Tavern-Born"
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-8 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <GithubLogo className="size-4 text-primary" />
-            GitHub Repository
-          </a>
-          <a
-            href="https://kevinkickback.com"
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-8 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Globe className="size-4 text-primary" />
-            KevinKickback.com
-          </a>
-        </div>
-      </Section>
-
-      <div className="flex items-center gap-1.5 pt-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span>Made with</span>
         <Heart className="size-3.5 text-pink-500" weight="fill" />
         <span>for the D&amp;D community</span>

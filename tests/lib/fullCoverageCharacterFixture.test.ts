@@ -20,18 +20,21 @@ import {
   parseBackgrounds,
   parseClasses,
   parseClassFeatures,
+  parseCreatures,
   parseFeats,
   parseItemMasteries,
   parseItems,
   parseItemTypes,
   parseMagicVariants,
   parseOptionalFeatures,
+  parseOrganizations,
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
 import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { normalizeRaceMovement } from '@/lib/calculations/movement'
 import { parseSpellReference, resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import {
   buildClassSpellSelectionsByLevel,
@@ -39,6 +42,8 @@ import {
 } from '@/lib/calculations/spellProfiles'
 import {
   type ClassChoiceCatalogs,
+  collectSubclassFeatures,
+  getCharacterClassChoices,
   getClassChoiceOptionKey,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -63,6 +68,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Creature5e,
   Feat5e,
   Item5e,
   ItemMastery5e,
@@ -79,6 +85,10 @@ const fixtureRoot = join(process.cwd(), 'tests', 'fixtures')
 const fixturePaths = {
   '2014': join(fixtureRoot, 'full-coverage-character-2014.tbc'),
   '2024': join(fixtureRoot, 'full-coverage-character-2024.tbc'),
+} as const
+const companionPaths = {
+  '2014': join(fixtureRoot, 'companion-choice-character-2014.tbc'),
+  '2024': join(fixtureRoot, 'companion-choice-character-2024.tbc'),
 } as const
 const hasConfiguredCorpus = existsSync(join(dataRoot, 'class', 'index.json'))
 
@@ -134,6 +144,14 @@ const optionalFeatures = hasConfiguredCorpus
       readJson(join(dataRoot, 'optionalfeatures.json')),
     ) as OptionalFeatureLike[])
   : []
+const organizations = hasConfiguredCorpus
+  ? parseOrganizations(readJson(join(dataRoot, 'fluff-backgrounds.json')))
+  : []
+const companionCreatures = hasConfiguredCorpus
+  ? (['bestiary-mm.json', 'bestiary-tce.json', 'bestiary-xphb.json'].flatMap((fileName) =>
+      parseCreatures(readJson(join(dataRoot, 'bestiary', fileName))),
+    ) as Creature5e[])
+  : []
 const spellSourceLookup = hasConfiguredCorpus
   ? (readJson(join(dataRoot, 'generated', 'gendata-spell-source-lookup.json')) as SpellSourceLookup)
   : ({} as SpellSourceLookup)
@@ -152,6 +170,7 @@ const lookups = {
   featsByKey: buildFeatLookup(feats),
   spellsByKey: buildSpellLookup(spells),
   itemLookup: buildItemLookup(allItems),
+  organizations,
 }
 const featureKeys = new Set(
   [...rawClassFeatures, ...optionalFeatures].map((feature) =>
@@ -179,8 +198,12 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
     !entity.source || allowedSources.has(entity.source)
   return {
     classFeatures: classFeatures.filter(fromAllowedSource),
-    subclassFeatures: [],
-    creatures: [],
+    subclassFeatures: classes
+      .flatMap((classData) =>
+        (classData.subclasses ?? []).flatMap((subclass) => collectSubclassFeatures(subclass)),
+      )
+      .filter(fromAllowedSource),
+    creatures: companionCreatures.filter(fromAllowedSource),
     feats: feats.filter(fromAllowedSource),
     items: items.filter(fromAllowedSource),
     itemsBase: itemsBase.filter(fromAllowedSource),
@@ -231,13 +254,31 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(character.classProgression).toHaveLength(3)
     expect(character.spells.spellProfiles).toHaveLength(4)
     expect(character.equipment).toHaveLength(90)
-    expect(character.features).toHaveLength(18)
+    expect(character.features).toHaveLength(21)
     expect(character.proficiencies.skills).toHaveLength(18)
     expect(character.proficiencies.expertise.length).toBeGreaterThan(0)
     expect(character.details.allies).toHaveLength(3)
     expect(character.hitPointGains).toHaveLength(19)
+    const organization = organizations.find(
+      (candidate) =>
+        `${candidate.name}|${candidate.source}` === character.details.organizationSelectionKey,
+    )
+    expect(organization?.imagePath).toBeTruthy()
+    expect(
+      existsSync(join(process.cwd(), 'public', organization?.imagePath?.replace(/^\//, '') ?? '')),
+    ).toBe(true)
+    expect(createCharacterSheetViewModel(character, lookups).organizationImage).toBe(
+      organization?.imagePath,
+    )
 
     const calculation = createCharacterCalculationContext(character, lookups)
+    expect(character.movement).toEqual(
+      normalizeRaceMovement(
+        calculation.raceResolution.parentRace as Race5e,
+        calculation.raceResolution.subraceData,
+      ),
+    )
+    expect(createCharacterSheetViewModel(character, lookups).walkingSpeed).toBeGreaterThan(0)
     const classChoiceCatalogs = buildClassChoiceCatalogs(character)
     const readiness = getCharacterReadiness(character, {
       calculation,
@@ -409,7 +450,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         ).toHaveLength(requiredSpellChoices)
       }
 
-      for (const choice of classData.normalizedRules?.choices ?? []) {
+      for (const choice of getCharacterClassChoices(classData, subclassData, false)) {
         const required = getRequiredChoiceSelectionCount(choice, entry.levels)
         if (required === 0) continue
         const selection = storedChoices.get(choice.id)
@@ -444,6 +485,14 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
               ),
               `Missing materialized feature choice ${option.name}|${option.source}`,
             ).toBe(true)
+            if (choice.owner.type === 'subclass') {
+              expect(character.provenance.features[option.name.toLowerCase()]).toContainEqual(
+                expect.objectContaining({
+                  sourceType: 'subclass',
+                  grantVariant: choice.id,
+                }),
+              )
+            }
           }
         }
       }
@@ -482,5 +531,125 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(map2024.textFields.Text_66).not.toBe('')
     expect(map2024.textFields.Text_151).not.toBe('')
     expect(map2024.textFields.Text_214).not.toBe('')
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('%s companion character keeps a source-qualified, eligible Beast Master choice', (edition) => {
+    const raw = readJson(companionPaths[edition])
+    const character = characterSchema.parse(raw)
+    expect(validateCharacterData(raw)).toBeNull()
+    expect(character.classProgression).toEqual([
+      expect.objectContaining({ name: 'Ranger', subclass: 'Beast Master', levels: 3 }),
+    ])
+    expect(character.details.organizationSelectionKey).toBe('The Harpers|SCAG')
+    const organizationImagePath = organizations.find(
+      (organization) =>
+        `${organization.name}|${organization.source}` ===
+        character.details.organizationSelectionKey,
+    )?.imagePath
+    expect(organizationImagePath).toBeTruthy()
+    expect(createCharacterSheetViewModel(character, lookups).organizationImage).toBe(
+      organizationImagePath,
+    )
+
+    const calculation = createCharacterCalculationContext(character, lookups)
+    const classData = calculation.classes[0]
+    expect(character.movement.speeds.walk).toBeGreaterThan(0)
+    const subclassData = getSelectedSubclassData(classData, character.classProgression[0])
+    const catalogs = buildClassChoiceCatalogs(character)
+    const choices = getCharacterClassChoices(classData, subclassData, edition === '2014')
+    for (const choice of choices) {
+      const required = getRequiredChoiceSelectionCount(choice, 3)
+      if (required === 0) continue
+      const selection = character.classChoiceSelections?.find(
+        (candidate) => candidate.choiceId === choice.id,
+      )
+      expect(selection?.inactive).not.toBe(true)
+      expect(selection?.selected, `Missing ${choice.label} selection`).toHaveLength(required)
+      const eligible = new Set(
+        resolveClassChoiceOptions(choice, catalogs)
+          .filter((option) => option.availability === 'eligible')
+          .map((option) => getClassChoiceOptionKey(option.reference)),
+      )
+      for (const option of selection?.selected ?? []) {
+        expect(
+          eligible.has(getClassChoiceOptionKey(option)),
+          `Ineligible ${choice.label} option ${option.name}|${option.source}`,
+        ).toBe(true)
+        if (option.entityType === 'feat') {
+          expect(
+            character.classFeatChoices?.some((featChoice) =>
+              featChoice.feats.some(
+                (feat) => feat.name === option.name && feat.source === option.source,
+              ),
+            ),
+          ).toBe(true)
+        }
+        if (option.entityType === 'optionalFeature') {
+          expect(
+            character.features.some(
+              (feature) => feature.name === option.name && feature.source === option.source,
+            ),
+          ).toBe(true)
+        }
+      }
+    }
+
+    const primal = character.classChoiceSelections?.find(
+      (selection) => selection.label === 'Primal Companion',
+    )
+    expect(primal?.selected).toEqual([
+      expect.objectContaining({
+        entityType: 'creature',
+        name: 'Beast of the Land',
+        source: edition === '2014' ? 'TCE' : 'XPHB',
+      }),
+    ])
+    if (edition === '2014') {
+      const classic = character.classChoiceSelections?.find(
+        (selection) => selection.label === "Ranger's Companion",
+      )
+      expect(classic?.inactive).toBe(true)
+      expect(classic?.selected[0]).toMatchObject({
+        entityType: 'creature',
+        name: 'Wolf',
+        source: 'MM',
+      })
+      const classicChoice = getCharacterClassChoices(classData, subclassData, false).find(
+        (choice) => choice.id === classic?.choiceId,
+      )
+      expect(classicChoice).toBeDefined()
+      expect(
+        resolveClassChoiceOptions(classicChoice!, catalogs).some(
+          (option) =>
+            getClassChoiceOptionKey(option.reference) ===
+            getClassChoiceOptionKey(classic!.selected[0]),
+        ),
+      ).toBe(true)
+    }
+
+    const selectedSpells = buildClassSpellSelectionsByLevel({
+      character,
+      className: 'Ranger',
+      classSource: classData.source,
+    })
+    for (let level = 1; level <= 3; level += 1) {
+      const required = getClassSpellGainAtLevel(classData, level, calculation.classes)
+      if (required.spells > 0) {
+        expect(selectedSpells.get(level)).toHaveLength(required.spells)
+      }
+    }
+    const readiness = getCharacterReadiness(character, {
+      calculation,
+      classChoiceCatalogs: catalogs,
+      featsByKey: lookups.featsByKey,
+      spellsByKey: lookups.spellsByKey,
+    })
+    expect(
+      readiness.blockingIssues,
+      readiness.blockingIssues.map((issue) => `${issue.title}: ${issue.explanation}`).join('\n'),
+    ).toEqual([])
   })
 })

@@ -182,18 +182,22 @@ describe('desktop workspace navigation', () => {
     ).toBeNull()
   })
 
-  test('offers separate 2014 and 2024 character-sheet templates', () => {
-    renderSidebar('/character-sheet/2014')
+  test('offers official and custom templates under each rules edition', () => {
+    renderSidebar('/character-sheet/2014/official')
 
     expect(
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-current'),
     ).toBe('page')
-    expect(screen.getByRole('link', { name: '5e (2014)' }).getAttribute('aria-current')).toBe(
-      'page',
-    )
+    expect(screen.getByText('5e (2014) Templates')).toBeTruthy()
+    expect(screen.getByText('5.5e (2024) Templates')).toBeTruthy()
     expect(
-      screen.getByRole('link', { name: '5.5e (2024)' }).getAttribute('aria-current'),
-    ).toBeNull()
+      screen
+        .getByRole('link', { name: '5e (2014) Wizards of the Coast' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) Wizards of the Coast' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '5.5e (2024) Lost Loot' })).toBeTruthy()
   })
 
   test('renders the permanent Characters context pane for the character collection', () => {

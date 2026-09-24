@@ -93,7 +93,28 @@ function titleCaseAbility(ability: string | undefined): string {
   return ability.charAt(0).toUpperCase() + ability.slice(1)
 }
 
-export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
+/** The printed 2024 tables list cantrips and prepared spells, without a preparation checkbox. */
+export function get2024SpellRows(viewModel: CharacterSheetViewModel) {
+  return (
+    viewModel.spellRowsForSheet ??
+    viewModel.spellRows.filter((row) => row.prepared || row.level === 'C' || !row.level)
+  )
+}
+
+function compactSpellText(value: string): string {
+  return value
+    .replace(/Concentration, /g, '')
+    .replace(/Instantaneous/g, 'Instant.')
+    .replace(/Bonus Action/g, 'Bonus')
+    .replace(/\bfeet\b/g, 'ft.')
+    .replace(/\bminutes?\b/g, 'min.')
+    .replace(/\bhours?\b/g, 'hr.')
+}
+
+export function mapCharacterSheet2024(
+  viewModel: CharacterSheetViewModel,
+  variant: 'official' | 'custom' = 'custom',
+): CharacterSheetFieldMap {
   const { character } = viewModel
   const additionalMovement =
     viewModel.additionalMovementSummary === '—'
@@ -104,6 +125,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     viewModel.classFeaturesSummary2014,
   )
   const primarySpellcasting = viewModel.spellcastingDetails[0]
+  const spellRows = get2024SpellRows(viewModel)
   const attunedItems = viewModel.magicItems
     .filter((item) => item.attuned)
     .slice(0, CAPACITY.attunements)
@@ -216,18 +238,28 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
   }
 
   for (let index = 0; index < CAPACITY.spells; index += 1) {
-    const row = viewModel.spellRows[index]
+    const row = spellRows[index]
     textFields[`Text_${92 + index}`] = row?.level ?? ''
     textFields[`Text_${122 + index}`] = row?.name ?? ''
-    textFields[`Text_${152 + index}`] = row?.castingTimeAndDuration ?? ''
-    textFields[`Text_${182 + index}`] = row?.notes ?? ''
+    textFields[`Text_${152 + index}`] = row
+      ? compactSpellText(variant === 'official' ? row.castingTime : row.castingTimeAndDuration)
+      : ''
+    textFields[`Text_${182 + index}`] = row
+      ? compactSpellText(
+          variant === 'official'
+            ? [row.duration, row.components].filter(Boolean).join('; ')
+            : [row.range, row.components].filter(Boolean).join('; '),
+        )
+      : ''
+    if (variant === 'official')
+      textFields[`SpellRange_${index + 1}`] = row ? compactSpellText(row.range) : ''
     checkboxFields[`Checkbox_${59 + index * 3}`] = row?.concentration ?? false
     checkboxFields[`Checkbox_${60 + index * 3}`] = row?.ritual ?? false
     checkboxFields[`Checkbox_${61 + index * 3}`] = row?.material ?? false
   }
 
   for (let level = 1; level <= 9; level += 1) {
-    const slot = character.spells.spellSlots[level]
+    const slot = viewModel.spellSlots.mergedSharedWithUsage[level]
     const fields = SLOT_FIELDS[level - 1]
     textFields[fields.total] = slot?.max ? String(slot.max) : ''
     fields.used.forEach((field, index) => {

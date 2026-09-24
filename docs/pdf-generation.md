@@ -1,96 +1,146 @@
 # Character Sheet PDF Generation
 
+This guide owns export behavior. Template geometry, provenance, and rebuilding commands live with
+the [retained PDF sources](../scripts/pdf-sources/README.md).
+
 ## Pipeline
 
-Character sheet export has five boundaries:
+1. `CharacterSheetPage` loads the selected template and character/game-data inputs.
+2. `characterSheetViewModel.ts` creates a template-neutral projection through shared calculations
+   and source-qualified lookups.
+3. `sheetContent.ts` selects entries without changing the character; `characterSheetPdf.ts`
+   coordinates fitting, optional pages, and the completed export report.
+4. The template mapper translates values to audited external field names.
+5. `pdfFormAdapter.ts` fills values/appearances and supported images; `pdfAssembly.ts` registers
+   copied pages and fields in one editable document.
 
-1. `CharacterSheetPage` loads the selected template and supplies character plus game-data lookups.
-2. `characterSheetViewModel.ts` resolves class, race, background, spell, item-property, combat, and narrative data into a template-neutral projection.
-3. `exportPreflight.ts` compares that projection with readiness, content-resolution, active-effect, and fixed-template capacity contracts before every download.
-4. `characterSheetMapping2014.ts` or `characterSheetMapping2024.ts` maps that projection to the exact AcroForm field names in the shipped PDF.
-5. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds the 2014 portrait and organization emblem, and removes unsupported MPMB controls and scripts.
+Preview and download use the same completed export. Changes to character data, game data, template,
+or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
 
-Preview generation remains available for inspection, but a download always opens the export
-preflight. Blocking readiness items and missing source dependencies are disclosed rather than
-silently discarded. Active typed mechanics with no reliable fixed-form representation are listed
-as warnings, as is every collection that exceeds a template capacity. The user can return to the
-builder or deliberately download with warnings.
+## Templates and page assembly
 
-For the legacy 2014 template, saving also replaces mapped checkbox appearances with portable vector marks, records mapped text as both the current and reset/default value, and removes the obsolete MPMB action and calculation-order entries. This is required because some desktop PDF readers do not render the template's font-dependent checkbox glyphs and can reset MPMB-managed fields even though PDF.js displays them correctly in the app preview.
+Entering Character Sheet selects WotC for the active character's origin ruleset (2024 when
+unavailable). Edition-only routes also select WotC; explicit custom-template URLs remain supported.
+PDF routes and their dependencies are lazy-loaded.
 
-Bundled organization artwork remains in its native WebP format throughout the app. The PDF image adapter converts it to PNG in memory only when embedding it into the 2014 form; custom images use the same format-normalization boundary when needed.
+| Layout | Core pages | Optional modules |
+| --- | ---: | --- |
+| Wizards of the Coast (2014) | 2 | WotC companion, shared WotC spells, shared MPMB notes |
+| MorePurpleMoreBetter (2014) | 4 | MPMB companion, shared WotC spells, shared MPMB notes |
+| Wizards of the Coast (2024) | 2 | WotC companion, shared MPMB notes |
+| Lost Loot (2024) | 2 | WotC companion, shared MPMB notes |
 
-The template field names are an external contract. Some are descriptive (2014), while the 2024 template uses positional names such as `Text_61`. Never infer a positional field from its number. Inspect its widget rectangle in the actual PDF and extend the template-contract tests whenever a mapping changes.
+The six 2014 modules live in `public/pdf/2014/`; each 2024 core stays combined because both pages
+contain essential character sections. Shared modules are packaged once. Output order is always
+**core → companions → spells → notes**.
 
-## Audit Results
+`characterSheetAssets.ts` plans selected assets, coalesces concurrent loads, caches immutable bytes,
+and retries failures. Callers get byte copies, not shared mutable documents. Assembly fills selected
+modules only and serializes once. Omitted modules contribute no artwork, fields, or fitting warnings.
 
-The shipped 2014 template contains 1,220 canonical fields and 1,217 page widgets across four pages. Most are MPMB buttons, display helpers, calculation intermediates, labels, and duplicated controls rather than character values. The generator intentionally targets the semantic input fields and hides unsupported interactive chrome.
+## Export preferences
 
-The shipped 2024 template contains 381 fields/widgets across two pages: 230 text fields and 151 checkboxes. The generator maps every one of those fields. Empty boxes therefore mean that the character does not contain a corresponding value or that the fixed template capacity exceeds the character's data—not that the field was skipped.
+`characterSheetPages.ts` derives defaults from content; explicit overrides win:
 
-The original 2024 mapping assumed its numeric field names followed the page's visual reading order. They instead follow the PDF's widget creation order. That made generation appear successful while identity, ability, save, skill, combat, and narrative values were written into unrelated boxes. The form adapter permits missing fields across template revisions, so this kind of semantic misalignment did not throw an error. Tests now compare every targeted name with each shipped template, while focused assertions lock important fields to their intended meaning.
+- Spells default on for casting or spell selections, including racial/bonus spells and unresolved
+  class profiles.
+- Companions default on for active creature choices.
+- MPMB notes default on. Other layouts add notes as needed by **Continue in notes**, unless disabled.
+- Users may include blank pages or omit populated supplements.
 
-## Current Coverage
+**Customize PDF** uses a single-open accordion and bounded lists. Automatic selection prefers
+equipped attacks/inventory, ready spells, active actions, and attuned/equipped magic items. Each
+group shows its capacity and supports manual selections or Automatic reset. Choices use stable
+source-qualified spell IDs or entity/action IDs. Removed IDs are ignored; an entirely stale
+nonempty selection falls back to automatic.
 
-### 2024
+Description and overflow controls are independent:
 
-- Identity: name, background, species, class, subclass, level, XP, and alignment
-- Combat: AC, shield, current/max/temporary HP, spent/max hit dice, death saves, initiative, speed, size, passive Perception, and Heroic Inspiration
-- Abilities: all scores and modifiers, all saving throws, every skill modifier, and every proficiency checkbox
-- Training: armor, shields, weapon, and tool proficiencies
-- Features: class features split across both columns, species traits, and feats
-- Weapons: up to six rows with calculated attack bonus, damage, damage type, and property notes
-- Spellcasting: primary ability, modifier, save DC, attack modifier, total/used slots for levels 1–9, and up to 30 known/prepared/fixed spells with timing, duration, range, components, concentration, ritual, and material markers
-- Story and inventory: appearance, history/personality, languages, inventory, three attunements, and all five coin denominations
+- Full descriptions are the default; names-only keeps combat numbers while removing rules
+  descriptions from features, traits, feats, actions, and magic items. Companion rules remain intact.
+- **Shorten with ellipsis** is the default overflow mode. Explicit notes pages remain blank.
+- **Continue in notes** preserves full reference text and keeps a useful fitted beginning in each
+  main-sheet box, plus a reference to the actual continuation page.
 
-### 2014
+Only overrides persist in `sheetExportPreferences.ts`, keyed by character/template; automatic
+choices are recomputed. Preferences never enter character files. **Optional Pages** contains
+checkable page names. A shared, resettable one-time hint covers both controls and dismisses when
+either opens. Zoom lives in the footer opposite attribution.
 
-- Identity, class levels, ancestry, background, XP, alignment, physical details, and player name
-- Ability scores/modifiers, saves, skills, proficiencies, vision, AC, HP, initiative, speed, death saves, inspiration, and passive Perception
-- Equipped armor/shield breakdown, two AC adjustments, carried weight, carrying/encumbrance thresholds, and encumbered speed
-- Up to three class hit-die rows, eight limited class-resource rows, and six resistance/immunity rows with overflow notes
-- Up to five weapon attacks with calculated bonuses, damage, type, range, properties, and description
-- Up to six active Actions, six Bonus Actions, and six Reactions, projected from structured source
-  data and user-authored manual actions; manual entries take precedence when a column is full
-- Class/racial/background features and four feats, using one ordered list for regular, bonus, and
-  class-owned feat selections
-- Up to 90 inventory rows across the equipment and extra-equipment pages
-- Five magic items with description, rarity, weight, and attunement state
-- Currency, languages, tools, faith, lifestyle, faction/rank, allies/organizations with the selected or custom emblem, appearance, enemies, and expanded history/personality
-- Up to two spellcasting save-DC summaries
+## Fitting and overflow
 
-## Intentional Limits
+Row limits live in `characterSheetCapacities.ts`; WotC 2014 per-level spell limits derive from its
+field map. Selection, mapping, and diagnostics use the same limits. The shared projection retains
+all entries, including every class's Hit Dice pool, before applying template limits.
 
-All numeric collection capacities live in `characterSheetCapacities.ts` and are consumed by both
-the mappings and preflight. This prevents the warning boundary from drifting away from the actual
-export boundary. Within each collection, mappings retain the view-model input order; repeated
-exports cannot silently reprioritize entries.
+Text fitting uses widget geometry, padding, font metrics, and readable minimum sizes. Binary
+searches stop at word boundaries; prewrapping avoids repeated scans of long prose.
+`official2024Text.ts` accounts for different page scales and spell-row heights. Ruled MPMB boxes
+retain their printed line pitch when content fits. Compaction removes whitespace only; no AI
+summarizer rewrites rules, costs, conditions, or exceptions.
 
-- The 2014 Actions, Bonus Actions, and Reactions columns each hold six entries. Inactive entries,
-  prose-only features without reliable timing, and weapon attacks already shown in the attack table
-  are excluded. Additional structured entries remain available in the app but cannot fit the form.
-- Spent hit dice are stored by source-qualified class pool, so multiclass sheets can print each class's die, level, and spent count accurately.
-- The 2024 template has one spellcasting summary, 30 spell rows, six weapon rows, and three attunement rows. Additional entries remain available in the app but cannot fit this fixed form.
-- The 2014 template has five attack rows, three hit-die rows, eight limited-resource rows, five magic-item cards, and 90 equipment rows. Additional data is limited by the template.
-- The 2014 portrait is supported; the 2024 template has no portrait field.
-- Daily lifestyle price, ammunition trackers, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime.
+`sheetNotes.ts` fills shared MPMB columns at 9 pt and paginates against their geometry. Continue
+in notes retains full source text for context; original boxes never become only pointers. Copies
+have independent editable fields. Disabling notes preserves fitted beginnings and records actual
+omissions. `SheetExportReport` records preserved/omitted sections and actual notes-page counts;
+completed exports replace estimated warnings with measured results and readable section labels.
+
+## Spells and companions
+
+Both 2014 layouts use the shared spell asset per resolved casting class, including subclass casters.
+Regular casters repeat the shared multiclass pool; Pact Magic retains its separate pool. Maxima
+derive from parsed progressions and usage is clamped without changing the character. Each page
+deduplicates and determines preparation independently, including always-prepared and ready
+known-caster spells. Racial, bonus, and unresolved-profile spells stay on the first page.
+Per-level overflow continues onto extra spell-page copies independently of the long-text setting.
+
+MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
+Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries
+continue in notes when enabled, rather than duplicating mixed-content core pages.
+
+`buildCompanionSheetData` resolves active source-qualified creature choices; external field
+names/geometry belong in `companionSheetMapping.ts`. Each active creature gets an independent
+editable page, or one blank page when requested without a creature. Unresolved choices retain
+their names. Supported formulas use the owning class, including 2024 Primal Companion AC, damage,
+HP, Hit Dice, and proficiency. Unknown formulas and conditional defenses remain prose; unstored
+runtime values remain blank. Overflow uses shared notes when enabled, never separate companion
+continuation pages.
+
+## Preflight and deliberate limits
+
+Clean exports download immediately. **Before you download** groups unresolved character choices,
+missing content, and mechanics to track separately; download remains allowed.
+`getPdfDownloadPreflight` excludes fit, capacity, and overflow diagnostics because Customize PDF
+owns those choices. Dialog title/actions stay visible on short viewports.
+
+- Omitted pages generate no capacity/fitting warnings; omitting spell pages also suppresses
+  spell-readiness warnings and removes their overflow from both notes defaults and generation.
+- Structured racial senses described in exported traits need no separate warning. Match resolved
+  race name/source; manual adjustments and unrepresented senses still qualify.
+- The shared gameplay-trait helper excludes descriptive Age while retaining the ancestry's
+  original reference text and the character's Age field.
+- 2014 forms support portrait and source-qualified organization/custom emblem images; 2024 forms
+  have no portrait fields. Faction text alone cannot identify artwork.
+- Action columns exclude inactive entries, weapon attacks already printed in the attack table,
+  and prose-only features without reliable timing.
+- Unsupported MPMB JavaScript helpers, per-shot ammunition dots, and daily lifestyle calculations
+  are not inferred. Both ammunition name/count fields are mapped independently.
 
 ## Verification
 
-`tests/lib/characterSheetPdf.test.ts` covers semantic mapping, active typed defensive effects,
-unified feat projection, field-capacity boundaries, real-template field-name contracts, actual form
-filling, and 2014 cleanup. `tests/lib/exportPreflight.test.ts` locks readiness, missing-dependency,
-unsupported-effect, inactive-effect, and truncation classification. `tests/lib/pdfSavedOutput.test.ts`
-reopens an actual generated 2014 file and verifies the resistance, armor, language, and tool values
-plus portable checkbox appearances. When replacing either template, rerun those tests and visually
-inspect every generated page before changing field names.
+Focused suites under `tests/lib/` cover projection, source identity, optional-page assembly,
+companion formulas, selection/overflow, actual filling, saved appearances, and every mapper's
+field contract against all four shipped layouts. Integration tests cover preferences, hints,
+routing, preview invalidation, and download warnings.
 
-`tests/fixtures/full-coverage-character-2014.tbc` and
-`tests/fixtures/full-coverage-character-2024.tbc` are importable level-20 regression characters dedicated
-to their respective rulesets. Each includes three corpus-valid classes/subclasses, four spell
-profiles, all skills and saves, at least six weapons, five magic items, 90 inventory rows, multiple
-defenses, runtime state, a portrait, and extensive character details. The generation script sources
-equipment fields and source-qualified selections from `data/` and stores no copied item, feat, or
-feature rules prose. The companion test reparses the current 5etools corpus, rejects every unresolved
-race/species, subrace, class/subclass, background, feat, spell, item, or feature reference, validates
-both schemas, and exercises each fixture only against its matching template capacity boundary.
+`tests/e2e/pdf-templates.spec.ts` previews/downloads all layouts, reopens the AcroForm, and rejects
+malformed PDF operator warnings. Companion and organization E2E checks exercise creature mapping
+and emblem embedding.
+
+Importable full-coverage and Beast Master fixtures cover both rulesets. Regenerate them with
+`npm run generate:test-fixtures` using external `data/`; validation rejects unresolved references
+and checks choice eligibility, readiness, and matching-template capacities. Fixtures contain no
+copied rules prose. Reimport local copies after fixture changes; export never rewrites characters.
+
+For source/geometry changes, follow the [template maintenance checks](../scripts/pdf-sources/README.md#rebuild-runtime-assets)
+and visually inspect every page. General gates live in [Testing Map](testing-map.md#commands).

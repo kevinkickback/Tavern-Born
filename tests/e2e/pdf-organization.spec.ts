@@ -46,14 +46,14 @@ test('2014 PDF replaces the organization placeholder with the selected emblem', 
   await ensureStartupPromptResolved(page, 'e2e-pdf-organization')
   await selectCharacterFromHome(page, String(fixture.name))
   await page.getByRole('button', { name: 'Character Sheet' }).click()
-  await page.getByRole('link', { name: '5e (2014)' }).click()
+  await page.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' }).click()
 
   await page.getByRole('button', { name: 'Generate Preview' }).click()
-  await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download PDF' }).click()
-  await page.getByRole('button', { name: 'Download with Warnings' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Download PDF' }).click()
   const download = await downloadPromise
   const outputPath = testInfo.outputPath('2014-organization-icon.pdf')
   await download.saveAs(outputPath)

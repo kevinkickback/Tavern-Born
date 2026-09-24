@@ -8,6 +8,36 @@ import type { CharacterAction } from '@/types/actions'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('createCharacterSheetViewModel', () => {
+  test('excludes ancestry Age prose from PDF traits while keeping the character Age field', () => {
+    const character = makeCharacterFixture({
+      race: 'Elf',
+      raceSource: 'PHB',
+      features: [],
+      details: { age: 120 },
+    })
+    const race: Race5e = {
+      name: 'Elf',
+      source: 'PHB',
+      entries: [
+        { type: 'entries', name: 'Age', entries: ['Elves live for many years.'] },
+        { type: 'entries', name: 'Keen Senses', entries: ['A perception benefit.'] },
+        { type: 'entries', name: 'Fey Ancestry', entries: ['A magical benefit.'] },
+      ],
+    }
+    const viewModel = createCharacterSheetViewModel(character, {
+      racesByKey: buildRaceLookup([race]),
+    })
+    expect(viewModel.racialTraitsSummary).toContain('Keen Senses')
+    expect(viewModel.racialTraitsSummary).toContain('Fey Ancestry')
+    expect(viewModel.racialTraitsSummary).not.toContain('Age')
+    expect(mapCharacterSheet2014(viewModel).textFields.Age).toBe('120')
+    expect(race.entries).toContainEqual({
+      type: 'entries',
+      name: 'Age',
+      entries: ['Elves live for many years.'],
+    })
+  })
+
   test('maps active structured actions into the fixed 2014 capacities', () => {
     const viewModel = createCharacterSheetViewModel(makeCharacterFixture(), {})
     const action = (

@@ -120,9 +120,11 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await page.getByRole('button', { name: 'Characters' }).click()
       await openCharacter(page, 'SRD Revised')
       await page.getByRole('button', { name: 'Character Sheet' }).click()
-      await page.getByRole('link', { name: '5.5e (2024)' }).click()
+      await page.getByRole('link', { name: '5.5e (2024) Wizards of the Coast' }).click()
       await page.getByRole('button', { name: 'Generate Preview' }).click()
-      await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 60_000 })
+      await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({
+        timeout: 60_000,
+      })
     })
   } finally {
     if (electronApp.process().exitCode === null) await electronApp.close()

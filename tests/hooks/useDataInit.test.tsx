@@ -264,6 +264,44 @@ describe('useDataInit', () => {
     expect(toast.info).not.toHaveBeenCalled()
   })
 
+  test.each([
+    true,
+    false,
+  ])('loads the current bundled pack after an app upgrade (cache: %s)', async (hasCache) => {
+    const oldConfig: DataSourceConfig = {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const currentConfig = { ...oldConfig, packVersion: '1.0.1' }
+    resolveDefaultBundledSourceMock.mockResolvedValue(currentConfig)
+    vi.mocked(readGameDataCache).mockResolvedValue(
+      hasCache
+        ? {
+            data: makeGameData(),
+            cachedAt: new Date().toISOString(),
+            sourceSnapshot: oldConfig,
+          }
+        : null,
+    )
+    const actual =
+      await vi.importActual<typeof import('@/lib/storage/dataCache')>('@/lib/storage/dataCache')
+    if (hasCache) vi.mocked(isCacheForSource).mockImplementationOnce(actual.isCacheForSource)
+    const loadGameDataMock = vi.fn(async () => true)
+    useGameDataStore.setState({
+      hasHydrated: true,
+      dataSourceConfig: oldConfig,
+      loadGameData: loadGameDataMock,
+    })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => expect(loadGameDataMock).toHaveBeenCalledWith(currentConfig))
+    expect(useGameDataStore.getState().gameData).toBeNull()
+  })
+
   test('treats a matching bundled cache as immutable regardless of age or refresh preference', async () => {
     const config: DataSourceConfig = {
       type: 'bundled',

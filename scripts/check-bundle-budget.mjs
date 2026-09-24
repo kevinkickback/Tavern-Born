@@ -8,10 +8,12 @@ const KIB = 1024
 const MIB = 1024 * KIB
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  totalDistribution: 25 * MIB,
+  // Reviewed at 36.2 MiB after moving from two PDF exports to four. The 16 MiB official 2024
+  // source dominates the increase; compression is intentionally a post-functional review.
+  totalDistribution: 42 * MIB,
   bundledSrdPack: 5.25 * MIB,
-  applicationBundle: 19 * MIB,
-  staticAssets: 13 * MIB,
+  applicationBundle: 37 * MIB,
+  staticAssets: 32 * MIB,
   rendererCode: 5.25 * MIB,
   // Reviewed at 426.9 KiB with source-qualified subclass choices, filtered-rule rebuilding,
   // and inactive replacement-choice state in the startup data graph.

@@ -4,19 +4,25 @@ import {
   type AcroWidget,
   asFieldWithInternals,
   type FieldWithInternals,
+  findAttachedWidgetLocation,
   getPageRefTag,
 } from '@/lib/pdf/pdfFieldInternals'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 
-export async function embedPortraitImage(pdfDoc: PDFDocument, portrait: string): Promise<void> {
-  await embedButtonImage(pdfDoc, 'Portrait', portrait, resolvePortraitSrc)
+export async function embedPortraitImage(
+  pdfDoc: PDFDocument,
+  portrait: string,
+  fieldName = 'Portrait',
+): Promise<void> {
+  await embedButtonImage(pdfDoc, fieldName, portrait, resolvePortraitSrc)
 }
 
 export async function embedOrganizationImage(
   pdfDoc: PDFDocument,
   organizationImage: string,
+  fieldName = 'Symbol',
 ): Promise<void> {
-  await embedButtonImage(pdfDoc, 'Symbol', organizationImage, resolveOrganizationImageSrc)
+  await embedButtonImage(pdfDoc, fieldName, organizationImage, resolveOrganizationImageSrc)
 }
 
 function getPdfImageType(bytes: Uint8Array): 'png' | 'jpg' | null {
@@ -64,9 +70,11 @@ async function embedButtonImage(
 
   const widgets = button.acroField.getWidgets() as AcroWidget[]
   if (widgets.length === 0) return
+  const attachedWidget = findAttachedWidgetLocation(pdfDoc, widgets)
+  const widget = attachedWidget?.widget ?? widgets[0]
   let rect: { x: number; y: number; width: number; height: number }
   try {
-    rect = widgets[0].getRectangle()
+    rect = widget.getRectangle()
   } catch {
     return
   }
@@ -101,10 +109,13 @@ async function embedButtonImage(
     const image = imageType === 'png' ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes)
     const pages = pdfDoc.getPages()
     if (pages.length > 0) {
-      const pageRefTag = widgets[0].P?.()?.tag
-      const targetPage = pageRefTag
-        ? (pages.find((page) => getPageRefTag(page) === pageRefTag) ?? pages[0])
-        : pages[0]
+      const pageRefTag = widget.P?.()?.tag
+      const targetPage =
+        attachedWidget !== null
+          ? pages[attachedWidget.pageIndex]
+          : pageRefTag
+            ? (pages.find((page) => getPageRefTag(page) === pageRefTag) ?? pages[0])
+            : pages[0]
       const dimensions = image.scaleToFit(rect.width, rect.height)
       targetPage.drawImage(image, {
         x: rect.x + (rect.width - dimensions.width) / 2,

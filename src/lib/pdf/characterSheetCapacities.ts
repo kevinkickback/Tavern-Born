@@ -1,9 +1,11 @@
 export const CHARACTER_SHEET_CAPACITIES = {
-  '2014': {
+  '2014-custom': {
     weapons: 5,
     equipment: 90,
     magicItems: 5,
     feats: 4,
+    ammunitionDisplays: 2,
+    companionPages: 1,
     hitDice: 3,
     classResources: 8,
     spellcastingProfiles: 2,
@@ -11,9 +13,13 @@ export const CHARACTER_SHEET_CAPACITIES = {
     bonusActions: 6,
     reactions: 6,
   },
+  '2014-official': {
+    weapons: 3,
+  },
   '2024': {
     weapons: 6,
     spells: 30,
+    spellcastingProfiles: 1,
     attunements: 3,
   },
 } as const
