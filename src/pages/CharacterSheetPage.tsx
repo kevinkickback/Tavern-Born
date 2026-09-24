@@ -30,11 +30,10 @@ import {
 } from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   useBackgroundLookup,
   useClassLookup,
-  useCreatureLookup,
-  useFeatLookup,
   useItemLookup,
   useItemPropertyLookup,
   useOrganizations,
@@ -111,8 +110,19 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
-  const featsByKey = useFeatLookup()
-  const creaturesByKey = useCreatureLookup()
+  const filteredData = useFilteredGameData()
+  const featsByKey = useMemo(
+    () =>
+      Object.fromEntries(filteredData.feats.map((feat) => [`${feat.name}|${feat.source}`, feat])),
+    [filteredData.feats],
+  )
+  const creaturesByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        filteredData.creatures.map((creature) => [`${creature.name}|${creature.source}`, creature]),
+      ),
+    [filteredData.creatures],
+  )
   const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()

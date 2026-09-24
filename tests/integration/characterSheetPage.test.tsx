@@ -2,12 +2,19 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { generateFilledCharacterSheetPdf } from '@/lib/pdf/characterSheetPdf'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import {
+  createCharacterSheetViewModel,
+  generateFilledCharacterSheetPdf,
+} from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { isHintDismissed, resetAllHints } from '@/lib/storage/hints'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Creature5e, Feat5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/components/PdfCanvasPreview', () => ({
   PdfCanvasPreview: () => <div>PDF preview</div>,
@@ -22,6 +29,7 @@ vi.mock('@/lib/pdf/characterSheetPdf', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/pdf/characterSheetPdf')>()
   return {
     ...original,
+    createCharacterSheetViewModel: vi.fn(original.createCharacterSheetViewModel),
     generateFilledCharacterSheetPdf: vi.fn(async () => new Uint8Array([1, 2, 3])),
   }
 })
@@ -41,6 +49,7 @@ describe('CharacterSheetPage', () => {
   }
 
   beforeEach(() => {
+    useGameDataStore.setState({ gameData: null })
     const hintStorage = new Map<string, string>()
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => hintStorage.get(key) ?? null,
@@ -100,6 +109,27 @@ describe('CharacterSheetPage', () => {
       within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Zoom in' }),
     ).toBeTruthy()
     expect(screen.queryByText('Not generated')).toBeNull()
+  })
+
+  test('limits feat and creature export lookups to the character sources', () => {
+    const character = useCharacterStore.getState().activeCharacter!
+    useCharacterStore.setState({ activeCharacter: { ...character, allowedSources: ['PHB', 'MM'] } })
+    const feats = [
+      { name: 'Alert', source: 'PHB' },
+      { name: 'Alert', source: 'XPHB' },
+    ] as Feat5e[]
+    const creatures = [
+      { name: 'Wolf', source: 'MM' },
+      { name: 'Wolf', source: 'TCE' },
+    ] as Creature5e[]
+    const gameData = makeGameDataFixture({ feats, creatures })
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
+
+    renderPage()
+    const lookups = vi.mocked(createCharacterSheetViewModel).mock.lastCall?.[1]
+    expect(Object.keys(lookups?.featsByKey ?? {})).toEqual(['Alert|PHB'])
+    expect(Object.keys(lookups?.creaturesByKey ?? {})).toEqual(['Wolf|MM'])
   })
 
   test('runs an export preflight before downloading a sheet', async () => {

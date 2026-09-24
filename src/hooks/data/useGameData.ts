@@ -10,8 +10,6 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
   Condition5e,
-  Creature5e,
-  Feat5e,
   Item5e,
   Organization5e,
   Race5e,
@@ -20,8 +18,6 @@ import type {
 
 const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
 const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
-const EMPTY_FEAT_LOOKUP: Readonly<Record<string, Feat5e>> = {}
-const EMPTY_CREATURE_LOOKUP: Readonly<Record<string, Creature5e>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
 const EMPTY_STRING_LIST: readonly string[] = []
@@ -79,16 +75,6 @@ export function useOrganizations(): readonly Organization5e[] {
 
 export function useItemLookup() {
   return useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
-}
-
-export function useFeatLookup(): Readonly<Record<string, Feat5e>> {
-  return useGameDataStore((state) => state.gameData?.lookups?.featsByKey) ?? EMPTY_FEAT_LOOKUP
-}
-
-export function useCreatureLookup(): Readonly<Record<string, Creature5e>> {
-  return (
-    useGameDataStore((state) => state.gameData?.lookups?.creaturesByKey) ?? EMPTY_CREATURE_LOOKUP
-  )
 }
 
 export function useItemPropertyLookup(): Readonly<Record<string, string>> {

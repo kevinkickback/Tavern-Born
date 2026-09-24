@@ -189,6 +189,30 @@ describe('Automatic sheet content and lossless overflow', () => {
     expect(shortened).toEqual([])
   }, 30_000)
 
+  test('preserves custom 2014 racial and organization continuations in generated notes', async () => {
+    const vm = model()
+    vm.racialTraitsSummary = `${'Ancestry detail. '.repeat(120)}Final ancestry detail.`
+    vm.organizationDetailsSummary = [
+      'Faction: The Harpers',
+      'Rank: Watcher',
+      'Additional organization detail.',
+    ].join('\n')
+    let report: SheetExportReport | undefined
+    const doc = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-custom', {
+        text: { overflow: 'notes' },
+        onReport: (value) => {
+          report = value
+        },
+      }),
+    )
+    const continued = notes(doc)
+    expect(continued).toContain('Final ancestry detail.')
+    expect(continued).toContain('Additional organization detail.')
+    expect(report?.preserved.map((section) => section.id)).toContain('text-limit:Racial Traits')
+    expect(report?.preserved.map((section) => section.id)).toContain('organization')
+  }, 90_000)
+
   test('prefers equipped attacks, keeps stable manual choices after reordering, and never mutates the character', () => {
     const vm = model()
     attacks(vm)

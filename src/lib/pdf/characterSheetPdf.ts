@@ -114,6 +114,8 @@ export async function generateFilledCharacterSheetPdf(
     ]
       .filter(Boolean)
       .join('\n')
+    // The main field receives the complete racial text; the adapter moves any
+    // text that does not fit into overflow. Notes are assembled from overflow.
     fullMap.textFields['P5.ASnotes.Notes.Left'] = ''
     const ammunition = getAmmunitionRows(original).slice(2)
     if (ammunition.length)
