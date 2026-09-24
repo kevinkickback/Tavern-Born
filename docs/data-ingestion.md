@@ -72,7 +72,7 @@ The temporary source converter, correction adapters, exception queue, and PDF-re
 removed after pack 1.0.0 was reproduced byte-for-byte. The retained bundle validator rejects an
 unapproved manifest, mismatched provenance or notices, missing or extra data files, and checksum
 drift. The committed corpus test loads the reviewed files through the normal parser and capability
-report. See [Bundled SRD Provenance Record](srd-provenance-review.md).
+report. See the [Bundled SRD Provenance Record](../resources/srd/core/PROVENANCE.md).
 The restricted manifest IPC returns validated pack identity, HTTPS source links, attribution,
 license metadata, and the transformation notice for offline display in Settings. Renderer code does
 not read arbitrary files or construct legal metadata independently.
@@ -127,6 +127,11 @@ The parser layer owns normalization that would otherwise be repeated across page
 - item type labels, generic magic variants, mastery definitions, generic equipment candidates;
 - feat fixed references and unconditional lasting effects;
 - fluff summaries and optional images/sections.
+
+The shared `getRaceTraits` presentation helper further excludes the descriptive Age entry from
+gameplay-trait lists in the builder, creation wizard, and PDFs. Ingestion retains the original
+entry for ancestry reference text; this display policy does not discard source data or require a
+cache migration.
 
 Choice normalizers preserve class/subclass owner, level, capacity, replacement rule, source filters,
 and diagnostic provenance. Unknown choice blocks remain visible as diagnostics instead of becoming

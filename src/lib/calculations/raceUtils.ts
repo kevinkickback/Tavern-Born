@@ -215,7 +215,13 @@ export function getRaceTraits(
   const traits = (race.presentationEntries ?? race.entries ?? [])
     .filter((e) => {
       const entry = e as RaceTraitEntry
-      return typeof e === 'object' && entry.type === 'entries' && typeof entry.name === 'string'
+      return (
+        e !== null &&
+        typeof e === 'object' &&
+        entry.type === 'entries' &&
+        typeof entry.name === 'string' &&
+        entry.name.trim().toLowerCase() !== 'age'
+      )
     })
     .map((e) => {
       const entry = e as RaceTraitEntry

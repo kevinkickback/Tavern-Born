@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle, Database, PlusCircle } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -9,7 +9,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useGameDataStore } from '@/store/gameDataStore'
-import { DataSourceConfigurator } from './DataSourceConfigurator'
+
+const DataSourceConfigurator = lazy(() =>
+  import('./DataSourceConfigurator').then((module) => ({ default: module.DataSourceConfigurator })),
+)
 
 const FORCE_KEY = 'tb:force-setup'
 const BUNDLED_INTRO_KEY = 'tb:bundled-srd-intro:v1'
@@ -167,12 +170,20 @@ export function DataSourceStartupModal() {
               </div>
             </div>
           ) : (
-            <DataSourceConfigurator
-              selectorOnly={shouldShowSelectorOnly}
-              showAdditionalContentGuidance={showExternalSetup}
-              onSourceLoaded={handleSourceLoaded}
-              onCancel={showExternalSetup ? handleReturnToBundledIntro : undefined}
-            />
+            <Suspense
+              fallback={
+                <p role="status" className="text-sm text-muted-foreground">
+                  Loading data settings…
+                </p>
+              }
+            >
+              <DataSourceConfigurator
+                selectorOnly={shouldShowSelectorOnly}
+                showAdditionalContentGuidance={showExternalSetup}
+                onSourceLoaded={handleSourceLoaded}
+                onCancel={showExternalSetup ? handleReturnToBundledIntro : undefined}
+              />
+            </Suspense>
           )}
         </div>
       </DialogContent>

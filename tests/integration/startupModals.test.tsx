@@ -254,7 +254,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText('App is ready')).toBeTruthy()
   })
 
-  test('DataSourceStartupModal opens when hydrated with no data and not loading', () => {
+  test('DataSourceStartupModal opens when hydrated with no data and not loading', async () => {
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: null,
@@ -265,7 +265,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<DataSourceStartupModal />)
 
     expect(screen.getByText('Choose Game Data')).toBeTruthy()
-    expect(screen.getByText('Data Source Configurator')).toBeTruthy()
+    expect(await screen.findByText('Data Source Configurator')).toBeTruthy()
   })
 
   test('introduces an approved bundled source once and continues without setup', async () => {
@@ -414,7 +414,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(container.textContent).toBe('')
   })
 
-  test('DataSourceStartupModal forced mode opens with setup title', () => {
+  test('DataSourceStartupModal forced mode opens with setup title', async () => {
     localStorage.setItem('tb:force-setup', '1')
     useGameDataStore.setState({
       hasHydrated: true,
@@ -450,6 +450,6 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<DataSourceStartupModal />)
 
     expect(screen.getByText('Game Data Setup')).toBeTruthy()
-    expect(screen.getByText('Data Source Configurator')).toBeTruthy()
+    expect(await screen.findByText('Data Source Configurator')).toBeTruthy()
   })
 })

@@ -6,6 +6,7 @@ This directory contains Tavern Born's approved, read-only SRD 5.1 and SRD 5.2.1 
 - `manifest.json` identifies every packaged data file by SHA-256 checksum and records the source
   documents, upstream revision, transformation coverage, and pack version.
 - `provenance.json` pins the official documents and records the completed one-time audit.
+- [PROVENANCE.md](PROVENANCE.md) summarizes that audit and the original packaging verification.
 - `THIRD_PARTY_NOTICES.md` contains the prescribed attributions, source links, license, pack
   version, and Tavern Born transformation notice.
 

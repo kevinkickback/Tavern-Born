@@ -47,6 +47,7 @@ const CharacterReadinessBadge = lazy(() =>
 
 interface ContextItem {
   label: string
+  ariaLabel?: string
   path: string
   icon: Icon
   search?: string
@@ -145,14 +146,20 @@ const workspaces: Workspace[] = [
     requiresCharacter: true,
     matches: (pathname) => pathname.startsWith('/character-sheet'),
     groups: [
-      {
-        label: 'Templates',
-        items: [
-          { label: '5e (2014)', path: '/character-sheet/2014', icon: FilePdf },
-          { label: '5.5e (2024)', path: '/character-sheet/2024', icon: FilePdf },
-        ],
-      },
-    ],
+      ['2014', '5e (2014)', 'MorePurpleMoreBetter'],
+      ['2024', '5.5e (2024)', 'Lost Loot'],
+    ].map(([edition, ruleset, customLabel]) => ({
+      label: `${ruleset} Templates`,
+      items: [
+        ['official', 'Wizards of the Coast'],
+        ['custom', customLabel],
+      ].map(([variant, label]) => ({
+        label,
+        ariaLabel: `${ruleset} ${label}`,
+        path: `/character-sheet/${edition}/${variant}`,
+        icon: FilePdf,
+      })),
+    })),
   },
   {
     id: 'compendium',
@@ -396,6 +403,7 @@ export function AppSidebar() {
                     <li key={`${item.path}${item.search ?? ''}`}>
                       <Link
                         to={`${item.path}${item.search ?? ''}`}
+                        aria-label={item.ariaLabel}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                           'relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',

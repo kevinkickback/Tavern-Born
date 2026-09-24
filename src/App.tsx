@@ -54,8 +54,10 @@ const AdjustmentsPage = lazy(() =>
     default: module.AdjustmentsPage,
   })),
 )
-const CharacterSheetPage = lazy(() =>
-  import('@/pages/CharacterSheetPage').then((module) => ({ default: module.CharacterSheetPage })),
+const CharacterSheetRoutes = lazy(() =>
+  import('@/pages/CharacterSheetRoutes').then((module) => ({
+    default: module.CharacterSheetRoutes,
+  })),
 )
 const CompendiumPage = lazy(() =>
   import('@/pages/compendium/CompendiumPage').then((module) => ({
@@ -106,11 +108,6 @@ function RouteLoadingFallback() {
       Loading page…
     </div>
   )
-}
-
-function CharacterSheetRedirect() {
-  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
-  return <Navigate to={`/character-sheet/${originSystem ?? '2024'}`} replace />
 }
 
 function RequireActiveCharacter() {
@@ -222,15 +219,7 @@ function App() {
                   <Route path="/details/characteristics" element={<CharacteristicsPage />} />
                   <Route path="/details/conditions" element={<ConditionsPage />} />
                   <Route path="/sources" element={<SourcesPage />} />
-                  <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
-                  <Route
-                    path="/character-sheet/2014"
-                    element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
-                  />
-                  <Route
-                    path="/character-sheet/2024"
-                    element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
-                  />
+                  <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
                 </Route>
                 <Route path="/compendium" element={<CompendiumPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

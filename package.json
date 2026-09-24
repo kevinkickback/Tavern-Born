@@ -2,7 +2,7 @@
   "name": "tavern-born",
   "description": "A desktop Dungeons & Dragons 5th Edition character creator.",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "author": {
     "name": "KevinKickback",
     "email": "kevinkickback@users.noreply.github.com"

@@ -4,7 +4,13 @@ import {
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
-import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
+import {
+  type EntityLookupSet,
+  resolveClassReference,
+  resolveFeatReference,
+} from '@/lib/5etools/entityResolvers'
+import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
@@ -23,8 +29,10 @@ import {
 } from '@/lib/calculations/movement'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
 import {
   formatCastingTime,
   formatComponents,
@@ -43,6 +51,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Creature5e,
   Organization5e,
   Race5e,
   Spell5e,
@@ -54,6 +63,7 @@ import type { CharacterEffect } from '@/types/effects'
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
+  creaturesByKey?: Readonly<Record<string, Creature5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -62,6 +72,8 @@ export interface CharacterSheetLookupSet extends EntityLookupSet {
 }
 
 interface CharacterSheetWeaponRow {
+  id?: string
+  active?: boolean
   name: string
   attackBonus: string
   damage: string
@@ -72,9 +84,15 @@ interface CharacterSheetWeaponRow {
 }
 
 interface CharacterSheetSpellRow {
+  id?: string
   name: string
+  prepared: boolean
   level: string
   castingTimeAndDuration: string
+  castingTime: string
+  duration: string
+  range: string
+  components: string
   notes: string
   concentration: boolean
   ritual: boolean
@@ -95,6 +113,9 @@ interface CharacterSheetHitDieRow {
 }
 
 export interface CharacterSheetViewModel {
+  /** Export-only selection; never written back to the character. */
+  spellRowsForSheet?: CharacterSheetSpellRow[]
+  equipmentForSheet?: Equipment[]
   character: Character
   feats: Feat[]
   level: number
@@ -120,7 +141,19 @@ export interface CharacterSheetViewModel {
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
+  spellcastingPages: Array<{
+    detail: ReturnType<typeof buildSpellcastingClassDetails>[number]
+    spellRows: CharacterSheetSpellRow[]
+  }>
+  spellSlots: ReturnType<typeof calculateCharacterSpellSlots>
   magicItems: Equipment[]
+  companions: Array<{
+    name: string
+    source?: string
+    className?: string
+    classSource?: string
+    creature?: Creature5e
+  }>
   resolvedClasses: readonly Class5e[]
   mergedRace: Race5e | undefined
   background: Background5e | undefined
@@ -207,7 +240,11 @@ function buildVisionSummary(senses: readonly { type: string; range?: number }[])
     .join(', ')
 }
 
-function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): string {
+function buildRacialTraitsSummary(
+  character: Character,
+  mergedRace?: Race5e,
+  descriptions = true,
+): string {
   const provenanceFeatures = character.provenance?.features ?? {}
   const racialFeatureNames = new Set(
     Object.entries(provenanceFeatures)
@@ -222,7 +259,7 @@ function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): st
   if (racialFeatures.length > 0) {
     return racialFeatures
       .map((feature) => {
-        const body = feature.description?.trim()
+        const body = descriptions ? feature.description?.trim() : ''
         return body ? `${feature.name}: ${body}` : feature.name
       })
       .join('\n\n')
@@ -232,7 +269,7 @@ function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): st
     if (traits.length > 0) {
       return traits
         .map((trait) => {
-          const text = renderEntriesToText(trait.entries)
+          const text = descriptions ? renderEntriesToText(trait.entries) : ''
           return text ? `${trait.name}: ${text}` : trait.name
         })
         .join('\n\n')
@@ -263,18 +300,19 @@ function getBackgroundFeature(
   }
 }
 
-function buildFeaturesSummary(character: Character): string {
+function buildFeaturesSummary(character: Character, descriptions = true): string {
   return character.features
     .map((feature) => {
-      const body = feature.description?.trim()
+      const body = descriptions ? feature.description?.trim() : ''
       return body ? `${feature.name}: ${body}` : feature.name
     })
     .join('\n\n')
 }
 
-function buildClassFeaturesSummary(character: Character): string {
+function buildClassFeaturesSummary(character: Character, descriptions = true): string {
   const provenanceFeatures = character.provenance?.features ?? {}
-  if (Object.keys(provenanceFeatures).length === 0) return buildFeaturesSummary(character)
+  if (Object.keys(provenanceFeatures).length === 0)
+    return buildFeaturesSummary(character, descriptions)
   const classFeatureNames = new Set(
     Object.entries(provenanceFeatures)
       .filter(([, tags]) =>
@@ -291,10 +329,30 @@ function buildClassFeaturesSummary(character: Character): string {
   return character.features
     .filter((feature) => classFeatureNames.has(feature.name) || !knownNames.has(feature.name))
     .map((feature) => {
-      const body = feature.description?.trim()
+      const body = descriptions ? feature.description?.trim() : ''
       return body ? `${feature.name}: ${body}` : feature.name
     })
     .join('\n\n')
+}
+
+/** Print-only projection: preserve names and combat numbers without changing source rules. */
+export function withoutSheetDescriptions(vm: CharacterSheetViewModel): CharacterSheetViewModel {
+  return {
+    ...vm,
+    racialTraitsSummary: buildRacialTraitsSummary(vm.character, vm.mergedRace, false),
+    classFeaturesSummary2014: buildClassFeaturesSummary(vm.character, false),
+    featuresSummary: buildFeaturesSummary(vm.character, false),
+    featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
+    feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
+    magicItems: vm.magicItems.map((item) => ({ ...item, description: '' })),
+    equipmentForSheet: (vm.equipmentForSheet ?? vm.character.equipment).map((item) => ({
+      ...item,
+      description: '',
+    })),
+    backgroundFeature: { ...vm.backgroundFeature, description: '' },
+    weaponRows: vm.weaponRows.map((row) => ({ ...row, description: '' })),
+    actions: vm.actions.map((action) => ({ ...action, description: '' })),
+  }
 }
 
 function buildProficienciesSummary(character: Character): string {
@@ -404,6 +462,8 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
         damageBonus > 0 ? ` + ${damageBonus}` : damageBonus < 0 ? ` - ${Math.abs(damageBonus)}` : ''
       const masteryLabels = (action.mastery ?? []).map((mastery) => mastery.name)
       return {
+        id: action.id,
+        active: action.active,
         name: action.name,
         attackBonus: action.attackBonus == null ? '' : formatModifier(action.attackBonus),
         damage: damage?.dice ? `${damage.dice}${formattedDamageBonus}` : '',
@@ -418,28 +478,53 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
 }
 
 function buildSpellRows(
-  character: Character,
+  profiles: Character['spells']['spellProfiles'],
   spellsByKey: Readonly<Record<string, Spell5e>>,
+  castingDetails: CharacterSheetViewModel['spellcastingDetails'],
 ): CharacterSheetSpellRow[] {
-  const references = character.spells.spellProfiles.flatMap((profile) => [
+  const prepared = new Set<string>()
+  for (const profile of profiles) {
+    const detail = castingDetails.find((entry) => entry.profileId === profile.id)
+    const alwaysReady =
+      profile.alwaysPrepared ||
+      (detail && (!detail.isPreparedCaster || detail.isLevelOnlyPreparedCaster))
+    for (const reference of [
+      ...profile.cantrips,
+      ...profile.preparedSpells,
+      ...(profile.alwaysPreparedSpells ?? []),
+      ...(alwaysReady ? [...profile.spellsKnown, ...(profile.fixedSpells ?? [])] : []),
+    ])
+      prepared.add(getSpellReferenceKey(reference))
+  }
+  const references = profiles.flatMap((profile) => [
     ...(profile.cantrips ?? []),
     ...(profile.spellsKnown ?? []),
     ...(profile.preparedSpells ?? []),
     ...(profile.fixedSpells ?? []),
     ...(profile.alwaysPreparedSpells ?? []),
   ])
-  const uniqueReferences = [...new Set(references)]
+  const uniqueReferences = [
+    ...new Map(
+      references.map((reference) => [getSpellReferenceKey(reference), reference]),
+    ).values(),
+  ]
   return uniqueReferences
     .map((reference) => {
       const spell = resolveSpellReference(reference, spellsByKey)
       const separator = reference.lastIndexOf('|')
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
       return {
+        id: getSpellReferenceKey(reference),
         name: spell?.name ?? fallbackName,
+        prepared: prepared.has(getSpellReferenceKey(reference)),
         level: spell ? (spell.level === 0 ? 'C' : String(spell.level)) : '',
         castingTimeAndDuration: spell
           ? `${formatCastingTime(spell.time)}; ${formatDuration(spell.duration)}`
           : '',
+        castingTime: spell ? formatCastingTime(spell.time) : '',
+        duration: spell ? formatDuration(spell.duration) : '',
+        range: spell ? formatRange(spell.range) : '',
+        components: spell ? formatComponents(spell.components) : '',
         notes: spell
           ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}`
           : '',
@@ -460,7 +545,7 @@ function buildHitDiceRows(
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetHitDieRow[] {
   const entries = getCharacterClassEntries(character)
-  return entries.slice(0, 3).map((entry) => {
+  return entries.map((entry) => {
     const classData = resolveClassReference(entry, rawLookups)
     return {
       level: entry.levels,
@@ -558,7 +643,39 @@ export function createCharacterSheetViewModel(
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
   const calculationContext = createCharacterCalculationContext(character, rawLookups)
-  const feats = getSelectedFeats(character)
+  const feats = getSelectedFeats(character).map((feat) => ({
+    ...feat,
+    description:
+      feat.description?.trim() ||
+      renderEntriesToText(resolveFeatReference(feat, rawLookups)?.entries),
+  }))
+  const magicItems = character.equipment.filter(isMagicItem).map((item) => ({
+    ...item,
+    description:
+      item.description?.trim() ||
+      (item.source
+        ? renderEntriesToText(resolveItemReference(item, rawLookups.itemLookup)?.entries)
+        : ''),
+  }))
+  const companions = (character.classChoiceSelections ?? [])
+    .filter((choice) => choice.kind === 'creature' && !choice.inactive)
+    .flatMap((choice) =>
+      choice.selected.map((selection) => ({
+        ...selection,
+        className: choice.className,
+        classSource: choice.classSource,
+      })),
+    )
+    .filter((selection) => selection.entityType === 'creature')
+    .map((selection) => ({
+      name: selection.name,
+      source: selection.source,
+      className: selection.className,
+      classSource: selection.classSource,
+      creature: selection.source
+        ? rawLookups.creaturesByKey?.[getEntityLookupKey(selection.name, selection.source)]
+        : undefined,
+    }))
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
@@ -589,10 +706,17 @@ export function createCharacterSheetViewModel(
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
   const classesById = new Map(
-    resolvedClasses.map((classData) => [
+    Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
       toClassProfileId(classData.name, classData.source),
       classData,
     ]),
+  )
+  const spellcastingDetails = buildSpellcastingClassDetails(
+    character,
+    classesById,
+    effectiveAbilityScores,
+    calculationContext.effects.declarations,
+    calculationContext.effects.resolutionContext,
   )
   const actions = deriveCharacterActions(character, {
     abilityModifiers,
@@ -649,18 +773,30 @@ export function createCharacterSheetViewModel(
     ),
     weaponRows: buildWeaponRows(actions),
     actions,
-    spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
-    magicItems: character.equipment.filter(isMagicItem),
+    spellRows: buildSpellRows(
+      character.spells.spellProfiles,
+      rawLookups.spellsByKey ?? {},
+      spellcastingDetails,
+    ),
+    spellcastingPages: spellcastingDetails.map((detail, index) => ({
+      detail,
+      spellRows: buildSpellRows(
+        character.spells.spellProfiles.filter(
+          (profile) =>
+            profile.id === detail.profileId ||
+            (index === 0 && !spellcastingDetails.some((caster) => caster.profileId === profile.id)),
+        ),
+        rawLookups.spellsByKey ?? {},
+        spellcastingDetails,
+      ),
+    })),
+    spellSlots: calculateCharacterSpellSlots(character, classesById),
+    magicItems,
+    companions,
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
-    spellcastingDetails: buildSpellcastingClassDetails(
-      character,
-      classesById,
-      effectiveAbilityScores,
-      calculationContext.effects.declarations,
-      calculationContext.effects.resolutionContext,
-    ),
+    spellcastingDetails,
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),

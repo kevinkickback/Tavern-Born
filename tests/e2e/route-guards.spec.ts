@@ -20,7 +20,11 @@ const CHARACTER_ROUTES = [
   '/sources',
   '/character-sheet',
   '/character-sheet/2014',
+  '/character-sheet/2014/official',
+  '/character-sheet/2014/custom',
   '/character-sheet/2024',
+  '/character-sheet/2024/official',
+  '/character-sheet/2024/custom',
 ] as const
 
 test.beforeEach(async ({ page }) => {
@@ -70,5 +74,13 @@ test('public settings and compendium routes remain available without a character
     await expect(page).toHaveURL(/\/#\/compendium$/)
     await expect(page.getByRole('searchbox', { name: 'Search compendium' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Results' })).toBeVisible()
+  })
+
+  await test.step('character-sheet attribution', async () => {
+    await page.goto('/#/settings?section=about#character-sheet-pdf-2014-custom')
+    await expect(page.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true')
+    await expect(
+      page.getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' }),
+    ).toBeVisible()
   })
 })

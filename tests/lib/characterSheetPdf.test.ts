@@ -1,23 +1,29 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PDFDocument } from '@cantoo/pdf-lib'
+import { PDFDocument, PDFName, TextAlignment } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import {
   buildBackgroundLookup,
   buildClassLookup,
+  buildFeatLookup,
   buildRaceLookup,
   buildSpellLookup,
 } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers'
+import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
-  generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
-import { asFieldWithInternals } from '@/lib/pdf/pdfFieldInternals'
+import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
+import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
+import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
+import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
   character: Character,
@@ -45,21 +51,6 @@ function buildCharacterSheetFieldMap(
 ) {
   return mapCharacterSheetViewModel(
     prepareViewModel(character, classesData, racesData, backgroundsData),
-    templateId,
-  )
-}
-
-function generateFilledCharacterSheetPdf(
-  character: Character,
-  templateBytes: ArrayBuffer | Uint8Array,
-  templateId: CharacterSheetTemplateId = '2024',
-  classesData: Class5e[] = [],
-  racesData: Race5e[] = [],
-  backgroundsData: Background5e[] = [],
-) {
-  return fillCharacterSheetViewModel(
-    prepareViewModel(character, classesData, racesData, backgroundsData),
-    templateBytes,
     templateId,
   )
 }
@@ -320,6 +311,155 @@ describe('characterSheetPdf', () => {
     expect(map.checkboxFields['Proficiency Weapon Martial']).toBe(false)
     expect(map.checkboxFields['Proficiency Weapon Other']).toBe(false)
   })
+
+  test('2014 AC armor circles reflect worn armor, not armor proficiency', () => {
+    const character = makeCharacterFixture({
+      proficiencies: {
+        armor: ['Heavy Armor'],
+        weapons: [],
+        tools: [],
+        languages: [],
+        skills: [],
+        expertise: [],
+        savingThrows: [],
+      },
+      equipment: [
+        {
+          id: 'half-plate',
+          name: 'Half Plate Armor',
+          type: 'MA',
+          quantity: 1,
+          equipped: true,
+          armorType: 'medium',
+          ac: 15,
+        },
+      ],
+    })
+    const map = buildCharacterSheetFieldMap(character, '2014')
+    expect(map.checkboxFields['Medium Armor']).toBe(true)
+    expect(map.checkboxFields['Heavy Armor']).toBe(false)
+    expect(map.checkboxFields['Proficiency Armor Heavy']).toBe(true)
+    expect(map.checkboxFields['Proficiency Armor Medium']).toBe(false)
+  })
+
+  test('2014 groups ammunition packs in the two display boxes', () => {
+    const character = makeCharacterFixture({
+      equipment: [
+        { id: 'arrow', name: 'Arrow', type: 'A', quantity: 1, equipped: false },
+        { id: 'arrows', name: 'Arrows (20)', type: 'A', quantity: 2, equipped: false },
+        { id: 'bolts', name: 'Crossbow Bolts (20)', type: 'A', quantity: 1, equipped: false },
+      ],
+    })
+    const map = buildCharacterSheetFieldMap(character, '2014')
+    expect(map.textFields['AmmoLeftDisplay.Name']).toBe('Arrows')
+    expect(map.textFields['AmmoLeftDisplay.Amount']).toBe('41')
+    expect(map.textFields['AmmoRightDisplay.Name']).toBe('Crossbow Bolts')
+    expect(map.textFields['AmmoRightDisplay.Amount']).toBe('20')
+  })
+
+  test('2014 carries long ruled sections onto the notes page', () => {
+    const viewModel = prepareViewModel(makeCharacterFixture())
+    viewModel.racialTraitsSummary = 'Ancestry detail. '.repeat(35)
+    viewModel.organizationDetailsSummary = [
+      'Faction: The Harpers',
+      'Rank: Watcher',
+      'Faction notes: Detailed account. '.repeat(9),
+    ].join('\n\n')
+    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    expect(map.textFields['Racial Traits'].length).toBeLessThanOrEqual(310)
+    expect(map.textFields['Background_Organisation.Right']).toBe(
+      'Faction: The Harpers\nRank: Watcher',
+    )
+    expect(map.textFields['P5.ASnotes.Notes.Left']).toContain('RACIAL TRAITS (CONTINUED)')
+    expect(map.textFields['P5.ASnotes.Notes.Left']).toContain('ORGANIZATION (CONTINUED)')
+  })
+
+  test('2014 fills missing feat and magic-item descriptions from matching sources only', () => {
+    const character = makeCharacterFixture({
+      feats: [{ id: 'alert', name: 'Alert', source: 'PHB', description: '' }],
+      equipment: [
+        {
+          id: 'staff',
+          name: 'Staff of Power',
+          source: 'DMG',
+          type: 'ST',
+          quantity: 1,
+          equipped: true,
+          rarity: 'very rare',
+          description: '',
+        },
+      ],
+    })
+    const viewModel = createCharacterSheetViewModel(character, {
+      featsByKey: buildFeatLookup([{ name: 'Alert', source: 'PHB', entries: ['Always ready.'] }]),
+      itemLookup: buildItemLookup([
+        { name: 'Staff of Power', source: 'DMG', type: 'ST', entries: ['A powerful staff.'] },
+      ]),
+    })
+    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    expect(map.textFields['Feat Description 1']).toBe('Always ready.')
+    expect(map.textFields['Extra.Magic Item Description 1']).toBe('A powerful staff.')
+  })
+
+  test('2014 fills the active creature companion but ignores an inactive choice', async () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Ranger', source: 'PHB', levels: 3 }],
+      classChoiceSelections: [
+        {
+          choiceId: 'inactive',
+          label: 'Companion',
+          kind: 'creature',
+          inactive: true,
+          className: 'Ranger',
+          classSource: 'PHB',
+          classLevel: 3,
+          selected: [{ entityType: 'creature', name: 'Wolf', source: 'MM', slotLevel: 3 }],
+        },
+        {
+          choiceId: 'active',
+          label: 'Primal Companion',
+          kind: 'creature',
+          className: 'Ranger',
+          classSource: 'PHB',
+          classLevel: 3,
+          selected: [
+            { entityType: 'creature', name: 'Beast of the Land', source: 'TCE', slotLevel: 3 },
+          ],
+        },
+      ],
+    })
+    const viewModel = createCharacterSheetViewModel(character, {
+      creaturesByKey: {
+        'Beast of the Land|TCE': {
+          name: 'Beast of the Land',
+          source: 'TCE',
+          size: ['M'],
+          type: 'beast',
+          ac: [{ special: '13 + PB (natural armor)' }],
+          hp: { special: '5 + five times your ranger level' },
+          speed: { walk: 40 },
+          str: 14,
+          action: [{ name: 'Maul', entries: ['{@atk mw} {@hitYourSpellAttack} to hit.'] }],
+        },
+      },
+    })
+    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    expect(map.textFields['P4.AScomp.Comp.Desc.Name']).toBe('Beast of the Land')
+    expect(map.textFields['P4.AScomp.Comp.Use.Ability.Str.Score']).toBe('14')
+    expect(map.textFields['P4.AScomp.Comp.Use.HP.Max']).toBe('20')
+    expect(map.textFields['P4.AScomp.Comp.Use.AC']).toBe('15')
+    expect(map.textFields['P4.AScomp.Comp.Use.Attack.1.Weapon Selection']).toBe('Maul')
+    expect(map.textFields['P4.AScomp.Comp.Use.Attack.1.Description']).toBe(
+      'Melee Weapon Attack: your spell attack modifier to hit.',
+    )
+    const template = readFileSync(
+      join(process.cwd(), 'scripts/pdf-sources/2014_MPMB_Character_Sheet.pdf'),
+    )
+    const output = await fillCharacterSheetPdf(template, map, { templateId: '2014-custom' })
+    const form = (await PDFDocument.load(output)).getForm()
+    expect(form.getTextField('P4.AScomp.Comp.Desc.Name').getText()).toBe('Beast of the Land')
+    expect(form.getTextField('P4.AScomp.Comp.Use.Ability.Str.Score').getText()).toBe('14')
+  }, 90_000)
 
   test('2014 Vision field from character visions', () => {
     const character = makeCharacterFixture({
@@ -843,11 +983,11 @@ describe('characterSheetPdf', () => {
 
     const templateBytes = await templateDoc.save()
 
-    const character = makeCharacterFixture({
-      name: 'Hidden UI Test',
-    })
-
-    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const filledBytes = await fillCharacterSheetPdf(
+      templateBytes,
+      { textFields: { 'PC Name': 'Hidden UI Test' }, checkboxFields: {} },
+      { cleanupProfile: 'mpmb-2014' },
+    )
 
     const outputDoc = await PDFDocument.load(filledBytes)
     const outputForm = outputDoc.getForm()
@@ -855,11 +995,7 @@ describe('characterSheetPdf', () => {
     const outputAttackMod = outputForm.getDropdown('Attack.1.Mod')
     expect(outputAttackMod.getSelected()).toEqual([])
 
-    const outputHiddenButton = outputForm.getButton('Print Button') as unknown as {
-      acroField: {
-        getWidgets: () => Array<{ getRectangle: () => { width: number } }>
-      }
-    }
+    const outputHiddenButton = asFieldWithInternals(outputForm.getButton('Print Button'))
     const outputPortraitButton = outputForm.getButton('Portrait') as unknown as {
       acroField: {
         getWidgets: () => Array<{ getRectangle: () => { width: number } }>
@@ -871,9 +1007,30 @@ describe('characterSheetPdf', () => {
       }
     }
 
-    expect(outputHiddenButton.acroField.getWidgets()[0].getRectangle().width).toBe(0)
+    expect(outputHiddenButton?.acroField.getWidgets()[0].getRectangle().width).toBe(0)
+    expect(outputHiddenButton?.acroField.getWidgets()[0].dict.has(PDFName.of('AP'))).toBe(false)
     expect(outputAmmo.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(outputPortraitButton.acroField.getWidgets()[0].getRectangle().width).toBe(120)
+  })
+
+  test('locates an image widget from its page annotation when its page reference is stale', async () => {
+    const document = await PDFDocument.create()
+    const wrongPage = document.addPage([600, 800])
+    const attachedPage = document.addPage([600, 800])
+    const portrait = document.getForm().createButton('Portrait')
+    portrait.addToPage('Portrait', attachedPage, {
+      x: 20,
+      y: 640,
+      width: 120,
+      height: 100,
+    })
+    const widget = asFieldWithInternals(portrait)?.acroField.getWidgets()[0]
+    expect(widget).toBeDefined()
+    widget?.dict.set(PDFName.of('P'), wrongPage.ref)
+
+    const location = widget ? findAttachedWidgetLocation(document, [widget]) : null
+    expect(location?.pageIndex).toBe(1)
+    expect(location?.widget).toBe(widget)
   })
 
   test('embeds a custom organization image into the 2014 symbol field', async () => {
@@ -898,7 +1055,15 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const filledBytes = await fillCharacterSheetPdf(
+      templateBytes,
+      { textFields: {}, checkboxFields: {} },
+      {
+        cleanupProfile: 'mpmb-2014',
+        organizationImageFieldName: 'Symbol',
+        organizationImage: character.details.organizationCustomImage,
+      },
+    )
     const outputDoc = await PDFDocument.load(filledBytes)
     const outputSymbol = asFieldWithInternals(outputDoc.getForm().getButton('Symbol'))
 
@@ -948,134 +1113,131 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Extra.Gear Row 37']).toBeUndefined()
   })
 
-  test('2024 maps weapons, spellcasting, spell slots, spells, history, and inventory', () => {
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      abilityScores: {
-        strength: 8,
-        dexterity: 16,
-        constitution: 14,
-        intelligence: 18,
-        wisdom: 12,
-        charisma: 10,
-      },
-      proficiencies: {
-        armor: ['Light Armor'],
-        weapons: ['Martial Weapons'],
-        tools: ["Calligrapher's Supplies"],
-        languages: ['Common', 'Draconic'],
-        skills: ['arcana'],
-        expertise: [],
-        savingThrows: ['intelligence', 'wisdom'],
-      },
-      equipment: [
-        {
-          id: 'longbow',
-          name: 'Longbow',
-          type: 'R',
-          quantity: 1,
-          equipped: true,
-          weaponCategory: 'martial',
-          dmg1: '1d8',
-          dmgType: 'P',
-          properties: ['A'],
-          range: '150/600 ft.',
+  test.runIf(existsSync('data/class/class-wizard.json'))(
+    '2024 maps weapons, spellcasting, spell slots, spells, history, and inventory',
+    () => {
+      const character = makeCharacterFixture({
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+        abilityScores: {
+          strength: 8,
+          dexterity: 16,
+          constitution: 14,
+          intelligence: 18,
+          wisdom: 12,
+          charisma: 10,
         },
-        {
-          id: 'wand',
-          name: 'Wand of Web',
-          type: 'WD',
-          quantity: 1,
-          equipped: true,
-          attuned: true,
-          rarity: 'Uncommon',
+        proficiencies: {
+          armor: ['Light Armor'],
+          weapons: ['Martial Weapons'],
+          tools: ["Calligrapher's Supplies"],
+          languages: ['Common', 'Draconic'],
+          skills: ['arcana'],
+          expertise: [],
+          savingThrows: ['intelligence', 'wisdom'],
         },
-      ],
-      currency: { cp: 1, sp: 2, ep: 3, gp: 42, pp: 5 },
-      details: {
-        alignment: 'Neutral Good',
-        appearance: 'Ink-stained fingers and blue robes.',
-        personalityTraits: 'Always asks one more question.',
-        backstory: 'Studied a map written in starlight.',
-      },
-      spells: {
-        spellProfiles: [
+        equipment: [
           {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 5)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            castingAbility: 'int',
-            cantrips: ['Fire Bolt|PHB'],
-            spellsKnown: [],
-            preparedSpells: ['Magic Missile|PHB'],
+            id: 'longbow',
+            name: 'Longbow',
+            type: 'R',
+            quantity: 1,
+            equipped: true,
+            weaponCategory: 'martial',
+            dmg1: '1d8',
+            dmgType: 'P',
+            properties: ['A'],
+            range: '150/600 ft.',
+          },
+          {
+            id: 'wand',
+            name: 'Wand of Web',
+            type: 'WD',
+            quantity: 1,
+            equipped: true,
+            attuned: true,
+            rarity: 'Uncommon',
           },
         ],
-        spellSlots: { 1: { max: 4, used: 2 } },
-      },
-    })
-    const classesData = [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        spellcastingAbility: 'int',
-        casterProgression: 'full',
-        hd: { faces: 6 },
-      } as Class5e,
-    ]
-    const spellsData: Spell5e[] = [
-      {
-        name: 'Fire Bolt',
-        source: 'PHB',
-        level: 0,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-      },
-      {
-        name: 'Magic Missile',
-        source: 'PHB',
-        level: 1,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-        meta: { ritual: true },
-      },
-    ]
-    const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
-      A: 'Ammunition',
-    })
-    const map = mapCharacterSheetViewModel(viewModel, '2024')
+        currency: { cp: 1, sp: 2, ep: 3, gp: 42, pp: 5 },
+        details: {
+          alignment: 'Neutral Good',
+          appearance: 'Ink-stained fingers and blue robes.',
+          personalityTraits: 'Always asks one more question.',
+          backstory: 'Studied a map written in starlight.',
+        },
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class',
+              label: 'Wizard (Lv 5)',
+              className: 'Wizard',
+              classSource: 'PHB',
+              castingAbility: 'int',
+              cantrips: ['Fire Bolt|PHB'],
+              spellsKnown: [],
+              preparedSpells: ['Magic Missile|PHB'],
+            },
+          ],
+          spellSlots: { 1: { max: 4, used: 2 } },
+        },
+      })
+      const classesData = parseClasses(
+        JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
+      ) as Class5e[]
+      const spellsData: Spell5e[] = [
+        {
+          name: 'Fire Bolt',
+          source: 'PHB',
+          level: 0,
+          school: 'V',
+          time: [{ number: 1, unit: 'action' }],
+          range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+          components: { v: true, s: true },
+          duration: [{ type: 'instant' }],
+        },
+        {
+          name: 'Magic Missile',
+          source: 'PHB',
+          level: 1,
+          school: 'V',
+          time: [{ number: 1, unit: 'action' }],
+          range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+          components: { v: true, s: true },
+          duration: [{ type: 'instant' }],
+          meta: { ritual: true },
+        },
+      ]
+      const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
+        A: 'Ammunition',
+      })
+      const map = mapCharacterSheetViewModel(viewModel, '2024')
 
-    expect(map.textFields.Text_61).toBe('Longbow')
-    expect(map.textFields.Text_67).toBe('+6')
-    expect(map.textFields.Text_73).toBe('1d8 + 3 Piercing')
-    expect(map.textFields.Text_79).toBe('Ammunition')
-    expect(map.textFields.Text_230).toBe('Intelligence')
-    expect(map.textFields.Text_85).toBe('+4')
-    expect(map.textFields.Text_86).toBe('15')
-    expect(map.textFields.Text_87).toBe('+7')
-    expect(map.textFields.Text_220).toBe('4')
-    expect(map.checkboxFields.Checkbox_37).toBe(true)
-    expect(map.checkboxFields.Checkbox_38).toBe(true)
-    expect(map.checkboxFields.Checkbox_39).toBe(false)
-    expect(map.textFields.Text_92).toBe('C')
-    expect(map.textFields.Text_122).toBe('Fire Bolt')
-    expect(map.textFields.Text_93).toBe('1')
-    expect(map.textFields.Text_123).toBe('Magic Missile')
-    expect(map.checkboxFields.Checkbox_63).toBe(true)
-    expect(map.textFields.Text_88).toContain('Ink-stained fingers')
-    expect(map.textFields.Text_89).toContain('Studied a map')
-    expect(map.textFields.Text_90).toContain('Longbow')
-    expect(map.textFields.Text_212).toBe('Wand of Web')
-    expect(map.checkboxFields.Checkbox_151).toBe(true)
-    expect(map.textFields.Text_218).toBe('42')
-  })
+      expect(map.textFields.Text_61).toBe('Longbow')
+      expect(map.textFields.Text_67).toBe('+6')
+      expect(map.textFields.Text_73).toBe('1d8 + 3 Piercing')
+      expect(map.textFields.Text_79).toBe('Ammunition')
+      expect(map.textFields.Text_230).toBe('Intelligence')
+      expect(map.textFields.Text_85).toBe('+4')
+      expect(map.textFields.Text_86).toBe('15')
+      expect(map.textFields.Text_87).toBe('+7')
+      expect(map.textFields.Text_220).toBe('4')
+      expect(map.checkboxFields.Checkbox_37).toBe(true)
+      expect(map.checkboxFields.Checkbox_38).toBe(true)
+      expect(map.checkboxFields.Checkbox_39).toBe(false)
+      expect(map.textFields.Text_92).toBe('C')
+      expect(map.textFields.Text_122).toBe('Fire Bolt')
+      expect(map.textFields.Text_93).toBe('1')
+      expect(map.textFields.Text_123).toBe('Magic Missile')
+      expect(map.checkboxFields.Checkbox_63).toBe(true)
+      expect(map.textFields.Text_88).toContain('Ink-stained fingers')
+      expect(map.textFields.Text_89).toContain('Studied a map')
+      expect(map.textFields.Text_90).toContain('Longbow')
+      expect(map.textFields.Text_212).toBe('Wand of Web')
+      expect(map.checkboxFields.Checkbox_151).toBe(true)
+      expect(map.textFields.Text_218).toBe('42')
+    },
+  )
 
   test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
     const character = makeCharacterFixture({
@@ -1255,9 +1417,171 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Feat Name 3']).toBe('Class Test Feat')
   })
 
+  test('2014 official limits long sections and writes readable, bounded text appearances', async () => {
+    const viewModel = prepareViewModel(makeCharacterFixture())
+    viewModel.equipmentSummary = Array.from(
+      { length: 50 },
+      (_, index) => `Equipment item ${index + 1}`,
+    ).join('\n')
+    viewModel.featuresSummary = 'A detailed class feature. '.repeat(50)
+    viewModel.featsSummary = 'Alert: Always ready.'
+    viewModel.racialTraitsSummary = 'A detailed ancestry trait. '.repeat(60)
+    viewModel.magicItems = Array.from({ length: 60 }, (_, index) => ({
+      name: `Treasure ${index + 1}`,
+    })) as typeof viewModel.magicItems
+
+    const map = mapCharacterSheetViewModel(viewModel, '2014-official')
+    for (const [name, limit] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
+      expect(map.textFields[name].length).toBeLessThanOrEqual(limit)
+      expect(map.textFields[name]).toMatch(/\.\.\.$/)
+    }
+    expect(map.textFields['Feat+Traits']).toContain('Alert: Always ready.')
+    expect(
+      map.textFields.Equipment.split('\n')
+        .slice(-1)[0]
+        ?.replace(/\.\.\.$/, ''),
+    ).toMatch(/^Equipment item \d+$/)
+
+    const templateBytes = new Uint8Array(
+      readFileSync(join(process.cwd(), 'scripts/pdf-sources/2014_Official_Character_Sheet.pdf')),
+    )
+    const filledBytes = await fillCharacterSheetPdf(templateBytes, map, {
+      templateId: '2014-official',
+    })
+    const filledForm = (await PDFDocument.load(filledBytes)).getForm()
+    for (const name of Object.keys(OFFICIAL_2014_SECTION_LIMITS)) {
+      const field = filledForm.getTextField(name)
+      expect(field.getText()).toBe(map.textFields[name])
+      expect(field.getMaxLength()).toBeUndefined()
+    }
+    for (const [name, min, max] of [
+      ['ST Strength', 7, 7],
+      ['Acrobatics', 7, 7],
+      ['HPMax', 9, 9],
+      ['Equipment', 7.5, 9],
+      ['Features and Traits', 8, 10],
+      ['Feat+Traits', 8, 10],
+      ['Treasure', 9, 11],
+    ] as const) {
+      const field = filledForm.getTextField(name)
+      const appearance = field.acroField.dict.get(PDFName.of('DA')) as unknown as {
+        decodeText: () => string
+      }
+      const fontSize = Number(appearance.decodeText().match(/([\d.]+)\s+Tf/)?.[1])
+      expect(fontSize).toBeGreaterThanOrEqual(min)
+      expect(fontSize).toBeLessThanOrEqual(max)
+    }
+  }, 90_000)
+
+  test('2024 official aligns printed controls and keeps small numeric fields legible', async () => {
+    const templateBytes = new Uint8Array(
+      readFileSync(join(process.cwd(), 'public/pdf/2024_Official_Character_Sheet.pdf')),
+    )
+    const template = await PDFDocument.load(templateBytes)
+    const armor = template.getForm().getCheckBox('Checkbox_33').acroField.getWidgets()[0]
+    expect(armor.getRectangle().x + armor.getRectangle().width / 2).toBeCloseTo(62.9, 1)
+    const death = template.getForm().getCheckBox('Checkbox_2').acroField.getWidgets()[0]
+    expect(death.getRectangle().y).toBeGreaterThan(726)
+    const form = template.getForm()
+    expect(form.getTextField('Text_9').getAlignment()).toBe(TextAlignment.Center)
+    expect(form.getTextField('Text_8').acroField.getWidgets()[0].getRectangle().y).toBeLessThan(723)
+    expect(form.getTextField('Text_16').acroField.getWidgets()[0].getRectangle().y).toBeGreaterThan(
+      626,
+    )
+    expect(
+      form.getTextField('Text_215').acroField.getWidgets()[0].getRectangle().height,
+    ).toBeGreaterThan(14)
+    expect(
+      form.getCheckBox('Checkbox_8').acroField.getWidgets()[0].getRectangle().y,
+    ).toBeGreaterThan(505)
+    expect(form.getCheckBox('Checkbox_10').acroField.getWidgets()[0].getRectangle().y).toBeLessThan(
+      388,
+    )
+    expect(form.getCheckBox('Checkbox_32').acroField.getWidgets()[0].getRectangle().x).toBeLessThan(
+      54,
+    )
+    expect(form.getCheckBox('Checkbox_57').acroField.getWidgets()[0].getRectangle().x).toBeLessThan(
+      367,
+    )
+    expect(form.getCheckBox('Checkbox_62').acroField.getWidgets()[0].getRectangle().y).toBeLessThan(
+      567,
+    )
+    const checkboxY = (id: number) =>
+      form.getCheckBox(`Checkbox_${id}`).acroField.getWidgets()[0].getRectangle().y
+    expect(checkboxY(11)).toBeLessThan(369) // Dexterity skills
+    expect(checkboxY(14)).toBeLessThan(390) // Wisdom skills
+    expect(checkboxY(25)).toBeLessThan(217) // Charisma skills
+    expect(checkboxY(32)).toBeLessThan(179.5) // Heroic Inspiration
+    expect(checkboxY(36)).toBeGreaterThan(122) // Shield training
+    expect(checkboxY(62)).toBeGreaterThan(565.8) // Top third of spells
+    expect(checkboxY(104)).toBeCloseTo(294.1, 1) // Middle third remains centered
+    expect(checkboxY(148)).toBeLessThan(23) // Bottom third of spells
+    for (let row = 0; row < 30; row += 1) {
+      // Centers measured from the evenly spaced diamonds in the official artwork.
+      const printedDiamondY = 588.96 - row * 19.44
+      for (let column = 0; column < 3; column += 1) {
+        const widget = form
+          .getCheckBox(`Checkbox_${59 + row * 3 + column}`)
+          .acroField.getWidgets()[0]
+          .getRectangle()
+        expect(Math.abs(widget.y + widget.height / 2 - printedDiamondY)).toBeLessThan(0.75)
+      }
+    }
+    for (const [name, minimumHeight] of [
+      ['Text_1', 16], // Name
+      ['Text_6', 16], // Level
+      ['Text_8', 16], // Armor Class
+      ['Text_9', 16], // Current HP
+      ['Text_12', 16], // Spent Hit Dice
+      ['Text_25', 18], // Ability score
+    ] as const) {
+      const widget = template.getForm().getTextField(name).acroField.getWidgets()[0]
+      expect(widget.getRectangle().height).toBeGreaterThan(minimumHeight)
+      expect(widget.getAppearanceCharacteristics()?.getBackgroundColor()).toBeUndefined()
+    }
+
+    const fields = buildCharacterSheetFieldMap(makeCharacterFixture(), '2024-official')
+    fields.textFields.Text_1 = 'Full-Coverage Test Character (2024)'
+    fields.textFields.Text_7 = '355000'
+    fields.textFields.Text_8 = '24'
+    fields.textFields.Text_9 = '121'
+    fields.textFields.Text_31 = '+17'
+    fields.textFields.Text_90 = Array.from({ length: 80 }, (_, index) => `Item ${index + 1}`).join(
+      '\n',
+    )
+    fields.textFields.Text_218 = '12450'
+    fields.checkboxFields.Checkbox_2 = true
+    fields.checkboxFields.Checkbox_33 = true
+    const filled = (
+      await PDFDocument.load(
+        await fillCharacterSheetPdf(templateBytes, fields, { templateId: '2024-official' }),
+      )
+    ).getForm()
+
+    for (const name of ['Text_1', 'Text_7', 'Text_8', 'Text_9', 'Text_31', 'Text_218', 'Text_90']) {
+      const field = filled.getTextField(name)
+      const bounds = getOfficial2024FontBounds(name)
+      expect(bounds).not.toBeNull()
+      const appearance = field.acroField.dict.get(PDFName.of('DA')) as unknown as {
+        decodeText: () => string
+      }
+      const fontSize = Number(appearance.decodeText().match(/([\d.]+)\s+Tf/)?.[1])
+      expect(fontSize).toBeGreaterThanOrEqual(bounds!.min)
+      expect(fontSize).toBeLessThanOrEqual(bounds!.max)
+    }
+    expect(filled.getTextField('Text_7').getText()).toBe('355000')
+    expect(filled.getTextField('Text_31').getText()).toBe('+17')
+    expect(filled.getTextField('Text_218').getText()).toBe('12450')
+    expect(filled.getTextField('Text_90').getText()).toMatch(/\.\.\.$/)
+    expect(filled.getCheckBox('Checkbox_2').isChecked()).toBe(true)
+    expect(filled.getCheckBox('Checkbox_33').isChecked()).toBe(true)
+  }, 90_000)
+
   test.each([
-    '2014',
-    '2024',
+    '2014-official',
+    '2014-custom',
+    '2024-official',
+    '2024-custom',
   ] as const)('%s mapping only targets fields present in the shipped template', async (templateId) => {
     const equipment = Array.from({ length: 90 }, (_, index) => ({
       id: `item-${index}`,
@@ -1269,9 +1593,7 @@ describe('characterSheetPdf', () => {
       rarity: index < 5 ? 'Uncommon' : undefined,
     }))
     const map = buildCharacterSheetFieldMap(makeCharacterFixture({ equipment }), templateId)
-    const templateBytes = new Uint8Array(
-      readFileSync(join(process.cwd(), 'public', 'pdf', `${templateId}_Character_Sheet.pdf`)),
-    )
+    const templateBytes = new Uint8Array(sourceTemplateBytes(templateId))
     const template = await PDFDocument.load(templateBytes)
     const fieldNames = new Set(
       template
@@ -1282,9 +1604,9 @@ describe('characterSheetPdf', () => {
 
     expect(Object.keys(map.textFields).filter((name) => !fieldNames.has(name))).toEqual([])
     expect(Object.keys(map.checkboxFields).filter((name) => !fieldNames.has(name))).toEqual([])
-    if (templateId === '2024') {
-      expect(Object.keys(map.textFields)).toHaveLength(230)
+    if (templateId.startsWith('2024')) {
+      expect(Object.keys(map.textFields)).toHaveLength(templateId === '2024-official' ? 260 : 230)
       expect(Object.keys(map.checkboxFields)).toHaveLength(151)
     }
-  })
+  }, 90_000)
 })

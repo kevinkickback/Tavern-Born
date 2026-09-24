@@ -9,8 +9,8 @@ describe('bundled file URLs', () => {
     expect(getBundledFileUrl('/assets/images/ui/logo.png', './')).toBe(
       './assets/images/ui/logo.png',
     )
-    expect(getBundledFileUrl('pdf/2024_Character_Sheet.pdf', './')).toBe(
-      './pdf/2024_Character_Sheet.pdf',
+    expect(getBundledFileUrl('pdf/2024_Beaoudix_Character_Sheet.pdf', './')).toBe(
+      './pdf/2024_Beaoudix_Character_Sheet.pdf',
     )
     expect(getClassIconUrl(' Wizard ', './')).toBe('./assets/images/ui/icons/wizard.svg')
     expect(resolvePortraitSrc('/assets/images/characters/portrait.jpg', './')).toBe(

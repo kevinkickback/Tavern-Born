@@ -33,6 +33,10 @@ Additional Content” loads and validates the admitted bundled catalog before re
 external connection; failure keeps the existing data, cache, and external configuration while
 exposing a diagnostic. The rebuild is atomic and never makes the application content-free.
 
+Startup compares bundled-only caches with the installed manifest's current pack version, so an
+app upgrade reloads changed SRD data even when automatic external-data refresh is disabled.
+The external data configurator loads on demand when opened, keeping it out of the startup bundle.
+
 After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
 available offline. Continuing requires no source setup; “Add Additional Content” opens the existing
 external-source controls and explains that user-supplied content expands the bundled catalog. A Back
@@ -84,15 +88,8 @@ grants and attribution must never be written as separate user-visible steps.
 
 ## Derived character values
 
-`CharacterCalculationContext` resolves exact saved entity identities and composes effective values.
-Ability scores are applied in this order:
-
-1. persisted allocated scores;
-2. ruleset origin bonuses (2014 race/subrace or 2024 background);
-3. class ASIs;
-4. feat-option provenance;
-5. active typed effects;
-6. explicit exact overrides where supported.
+`CharacterCalculationContext` resolves exact saved entity identities and composes effective values
+in the order defined by [State Management](state-management.md#calculation-context).
 
 HP reads class/level/Constitution, recorded raw hit-die gains, adjustments/effects, and an optional
 override. AC reads equipped armor/Dexterity, adjustments/effects, and an optional override. PDF,
@@ -132,16 +129,9 @@ must not render raw 5etools syntax or build independent tooltip systems.
 
 ## Character format compatibility
 
-On import or hydration:
-
-1. Read `schemaVersion`.
-2. Apply supported pure migrations sequentially.
-3. Validate against the strict current schema.
-4. Expose only the current shape to runtime code.
-5. Quarantine newer, malformed, or safely unmigratable originals.
-
-Quarantined records stay durable until the user acknowledges the compatibility dialog and can be
-exported as `.tbc` files first. See [State Management](state-management.md) for the version policy.
+Import and hydration migrate and validate before exposing a current-format record. Rejected
+originals remain in durable, exportable quarantine until acknowledged. The migration and version
+policy lives in [State Management](state-management.md#schema-compatibility).
 
 ## Auto-update
 

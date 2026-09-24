@@ -181,7 +181,7 @@ describe('getRaceTraits', () => {
     expect(getRaceTraits(undefined)).toEqual([])
   })
 
-  test('renders the presentation entries normalized during ingestion', () => {
+  test('excludes Age from gameplay traits while preserving ancestry reference entries', () => {
     const race = makeRace({
       entries: [
         { type: 'entries', name: 'Age', entries: ['...'] },
@@ -194,7 +194,19 @@ describe('getRaceTraits', () => {
       ],
     })
     const traits = getRaceTraits(race)
-    expect(traits.map((trait) => trait.name)).toEqual(['Age', 'Darkvision'])
+    expect(traits.map((trait) => trait.name)).toEqual(['Darkvision'])
+    expect(race.entries?.[0]).toEqual({ type: 'entries', name: 'Age', entries: ['...'] })
+    expect(
+      getRaceTraits(
+        makeRace({
+          entries: [
+            { type: 'entries', name: ' Age ', entries: ['Maturity and lifespan.'] },
+            { type: 'entries', name: 'Keen Senses', entries: ['Perception proficiency.'] },
+            { type: 'entries', name: 'Fey Ancestry', entries: ['A benefit.'] },
+          ],
+        }),
+      ).map((trait) => trait.name),
+    ).toEqual(['Keen Senses', 'Fey Ancestry'])
   })
 
   test('synthesizes darkvision trait when not in entries', () => {
