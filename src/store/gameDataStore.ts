@@ -189,7 +189,7 @@ export const useGameDataStore = create<GameDataState>()(
 
       loadFromCache: async (opts) => {
         const {
-          dataSourceConfig,
+          dataSourceConfig: savedSourceConfig,
           lastUpdateCheckAt,
           loadGameData,
           setGameData,
@@ -198,6 +198,12 @@ export const useGameDataStore = create<GameDataState>()(
           setLastContentFingerprint,
         } = get()
         const cache = await readGameDataCache()
+        // The installed pack can change with an app update. Compare against its
+        // current manifest, not the version remembered by the previous installation.
+        const dataSourceConfig =
+          savedSourceConfig?.type === 'bundled'
+            ? ((await resolveDefaultBundledSource()) ?? savedSourceConfig)
+            : savedSourceConfig
         const configuredStack = dataSourceConfig ? await resolveSourceStack(dataSourceConfig) : null
         const cacheIdentity = configuredStack ?? dataSourceConfig
 

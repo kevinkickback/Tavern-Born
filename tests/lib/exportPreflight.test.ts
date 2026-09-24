@@ -1,7 +1,14 @@
 import { describe, expect, test } from 'vitest'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetPdf'
-import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
+import { parseRaces } from '@/lib/5etools/parsers'
+import { deriveStructuredRaceEffects } from '@/lib/calculations/characterEffects'
+import {
+  buildCharacterSheetFieldMap,
+  createCharacterSheetViewModel,
+} from '@/lib/pdf/characterSheetPdf'
+import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterReadinessResult } from '@/lib/readiness/characterReadiness'
+import type { Race5e } from '@/types/5etools'
 import type { CharacterEffect, NumericEffectTarget } from '@/types/effects'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -38,6 +45,24 @@ function effect(id: string, target: NumericEffectTarget): CharacterEffect {
 }
 
 describe('getPdfExportPreflight', () => {
+  test('download confirmation retains data issues and recalculates counts without fitting issues', () => {
+    const issues = [
+      { id: 'choice', category: 'readiness', severity: 'blocking' },
+      { id: 'source', category: 'dependency', severity: 'warning' },
+      { id: 'mechanic', category: 'unsupported', severity: 'warning' },
+      { id: 'fit', category: 'truncation', severity: 'warning' },
+    ].map((issue) => ({ ...issue, title: issue.id, detail: issue.id }))
+    const result = { issues, blockingCount: 1, warningCount: 3 } as Parameters<
+      typeof getPdfDownloadPreflight
+    >[0]
+    expect(getPdfDownloadPreflight(result)).toEqual({
+      issues: issues.slice(0, 3),
+      blockingCount: 1,
+      warningCount: 2,
+    })
+    expect(result.issues).toHaveLength(4)
+  })
+
   test('returns a clean result when readiness, effects, and capacities are representable', () => {
     expect(getPdfExportPreflight('2014', createViewModel(), READY, [])).toEqual({
       issues: [],
@@ -118,6 +143,66 @@ describe('getPdfExportPreflight', () => {
         getPdfExportPreflight(templateId, createViewModel(), READY, inactive).warningCount,
       ).toBe(0)
     }
+  })
+
+  test.each([
+    '2024-official',
+    '2024-custom',
+  ] as const)('%s recognizes a lineage sense described by the printed species trait', (templateId) => {
+    const races = parseRaces({
+      race: [
+        {
+          name: 'Elf',
+          source: 'XPHB',
+          entries: [{ name: 'Elven Lineage', type: 'entries', entries: ['Choose a lineage.'] }],
+          _versions: [
+            {
+              name: 'Elf; Drow Lineage',
+              source: 'XPHB',
+              darkvision: 120,
+              _mod: {
+                entries: {
+                  mode: 'replaceArr',
+                  replace: 'Elven Lineage',
+                  items: {
+                    name: 'Elven Lineage (Drow)',
+                    type: 'entries',
+                    entries: ['Your Darkvision has a range of 120 feet.'],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }) as Race5e[]
+    const vm = createCharacterSheetViewModel(
+      makeCharacterFixture({
+        originSystem: '2024',
+        race: 'Elf',
+        raceSource: 'XPHB',
+        subrace: 'Drow Lineage',
+        subraceSource: 'XPHB',
+      }),
+      { racesByKey: buildRaceLookup(races) },
+    )
+    const effects = deriveStructuredRaceEffects(vm.mergedRace)
+    expect(effects).toHaveLength(1)
+    expect(effects[0].label).toBe('Drow Lineage sense')
+    expect(buildCharacterSheetFieldMap(vm, templateId).textFields.Text_59).toContain(
+      'Elven Lineage (Drow): Your Darkvision has a range of 120 feet.',
+    )
+    expect(getPdfExportPreflight(templateId, vm, READY, effects).issues).toEqual([])
+
+    const manual = effect('Manual darkvision bonus', { kind: 'sense', sense: 'darkvision' })
+    const otherPrinting = { ...effects[0], source: { ...effects[0].source, source: 'OTHER' } }
+    const result = getPdfExportPreflight(templateId, vm, READY, [...effects, manual, otherPrinting])
+    expect(result.issues.map((issue) => issue.title)).toEqual([manual.label, otherPrinting.label])
+
+    vm.racialTraitsSummary = 'Fey Ancestry'
+    expect(getPdfExportPreflight(templateId, vm, READY, effects).issues).toEqual([
+      expect.objectContaining({ title: 'Drow Lineage sense', category: 'unsupported' }),
+    ])
   })
 
   test('2014 official warns about clipped prose and an unresolved organization emblem', () => {

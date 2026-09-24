@@ -33,9 +33,9 @@ export function getCharacterSheetAssetPlan(
           {
             id: 'companion' as const,
             path:
-              template.id === '2014-official'
-                ? PDF_2014_ASSETS.wotcCompanion
-                : PDF_2014_ASSETS.mpmbCompanion,
+              template.id === '2014-custom'
+                ? PDF_2014_ASSETS.mpmbCompanion
+                : PDF_2014_ASSETS.wotcCompanion,
           },
         ]
       : []),

@@ -87,7 +87,8 @@ renderer explicitly. Preview positioning and the single pinned/transient chain a
 ### Assets and responsive workspaces
 
 Runtime assets resolve through `src/lib/assetUrls.ts` so development and packaged `file://` paths
-behave alike. Documentation assets belong under `docs/assets/`. Content pages use the shared
+behave alike. Documentation assets belong under `docs/assets/`; packaging artwork and its retained
+source belong under `build/`. Content pages use the shared
 centered width convention; `SplitPane` owns compact one-pane behavior and desktop collapse state.
 
 ## Current high-level flows

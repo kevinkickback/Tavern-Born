@@ -105,7 +105,7 @@ function truncateActionEntry(value: string): string {
   return `${value.slice(0, ACTION_FIELD_MAX_LENGTH - 3).trimEnd()}...`
 }
 
-function formatActionEntry(action: CharacterAction): string {
+export function formatActionEntry(action: CharacterAction, fullText = false): string {
   const mechanics = [
     action.attackBonus != null
       ? `${formatViewModelModifier(action.attackBonus)} to hit`
@@ -125,6 +125,7 @@ function formatActionEntry(action: CharacterAction): string {
     .map(withoutTerminalPunctuation)
   const description = action.description ? withoutTerminalPunctuation(action.description) : ''
   const core = mechanics.length > 0 ? `${action.name}: ${mechanics.join('; ')}` : action.name
+  if (fullText) return description ? `${core}: ${description}` : core
   if (!description) return truncateActionEntry(core)
 
   const withDescription = `${core}: ${description}`
@@ -179,6 +180,7 @@ function renderCompanionEntries(entries: readonly unknown[] | undefined): string
 
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
   const { character } = viewModel
+  const printedEquipment = viewModel.equipmentForSheet ?? character.equipment
   const additionalMovement =
     viewModel.additionalMovementSummary === '—'
       ? ''
@@ -397,12 +399,8 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     textFields[`${prefix}.Description`] = renderCompanionEntries(action.entries)
   }
 
-  for (
-    let index = 0;
-    index < Math.min(character.equipment.length, CAPACITY.equipment);
-    index += 1
-  ) {
-    const item = character.equipment[index]
+  for (let index = 0; index < Math.min(printedEquipment.length, CAPACITY.equipment); index += 1) {
+    const item = printedEquipment[index]
     if (!item) continue
     if (index < 54) {
       const row = index + 1

@@ -206,6 +206,10 @@ describe('PDF export review regressions', () => {
       level: '1',
       prepared: true,
       castingTimeAndDuration: '',
+      castingTime: '',
+      duration: '',
+      range: '',
+      components: '',
       notes: '',
       concentration: false,
       ritual: false,
@@ -393,6 +397,10 @@ describe('PDF export review regressions', () => {
         level: level ? String(level) : 'C',
         prepared: index % 2 === 0,
         castingTimeAndDuration: '',
+        castingTime: '',
+        duration: '',
+        range: '',
+        components: '',
         notes: '',
         concentration: false,
         ritual: false,
@@ -405,7 +413,10 @@ describe('PDF export review regressions', () => {
     OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fields, level) => {
       fields.forEach((name, index) => {
         const field = form.getTextField(name)
-        expect(field.getText()).toBe(`Spell ${level}-${index}`)
+        const expected = vm.spellRows
+          .filter((row) => row.level === (level ? String(level) : 'C'))
+          .sort((a, b) => Number(b.prepared) - Number(a.prepared))[index]
+        expect(field.getText()).toBe(expected.name)
         if (!level) return
         const rect = field.acroField.getWidgets()[0].getRectangle()
         const circle = circles.find((checkbox) => {
@@ -416,7 +427,7 @@ describe('PDF export review regressions', () => {
             rect.x - box.x < 20
           )
         })
-        expect(circle?.isChecked()).toBe(index % 2 === 0)
+        expect(circle?.isChecked()).toBe(expected.prepared)
       })
     })
   }, 30_000)
@@ -471,7 +482,7 @@ describe('PDF export review regressions', () => {
     expect(field.acroField.dict.has(PDFName.of('V'))).toBe(true)
   }, 30_000)
 
-  test('reports actual short multiline truncation and clears it for a fitting export', async () => {
+  test('reports shortening when notes continuation is selected but notes are disabled', async () => {
     const vm = createCharacterSheetViewModel(createEmptyCharacter(), lookups)
     vm.historyAndPersonalitySummary = Array.from({ length: 20 }, (_, i) => `Journey ${i + 1}`).join(
       '\n',
@@ -479,6 +490,8 @@ describe('PDF export review regressions', () => {
     const shortened: string[] = []
     const saved = await PDFDocument.load(
       await generateTestCharacterSheet(vm, '2024-official', {
+        text: { overflow: 'notes' },
+        pages: { notes: false },
         onTextTruncated: (field) => shortened.push(field),
       }),
     )

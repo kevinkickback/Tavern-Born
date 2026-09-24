@@ -19,6 +19,7 @@ export const CHARACTER_SHEET_CAPACITIES = {
   '2024': {
     weapons: 6,
     spells: 30,
+    spellcastingProfiles: 1,
     attunements: 3,
   },
 } as const

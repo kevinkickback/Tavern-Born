@@ -62,7 +62,7 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
     true,
   )
 
-  const hint = page.getByRole('button', { name: 'Dismiss Optional Pages hint' })
+  const hint = page.getByRole('button', { name: 'Dismiss PDF options hint' })
   if (template.id === '2014-official') {
     await expect(hint).toBeVisible()
     await page.screenshot({
@@ -76,9 +76,61 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
     await expect(hint).toHaveCount(0)
   }
 
+  await page.getByRole('button', { name: 'Customize PDF', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Customize PDF' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Customize PDF' })).toHaveCSS('opacity', '1')
+  await expect(page.getByRole('combobox', { name: 'Long text & extra entries' })).toHaveText(
+    'Shorten with ellipsis',
+  )
+  if (template.id === '2024-official') {
+    await page.screenshot({
+      path: path.join(outputDirectory, 'sheet-content.png'),
+      animations: 'disabled',
+    })
+    const viewport = page.viewportSize()
+    await page.setViewportSize({ width: 900, height: 520 })
+    const dialog = page.getByRole('dialog', { name: 'Customize PDF' })
+    await dialog.getByRole('combobox', { name: 'Rules descriptions' }).click()
+    await page.getByRole('option', { name: 'Names only', exact: true }).click()
+    await dialog.getByRole('combobox', { name: 'Long text & extra entries' }).click()
+    await page.getByRole('option', { name: 'Shorten with ellipsis', exact: true }).click()
+    await dialog.getByRole('button', { name: /^Attacks/ }).click()
+    await expect(dialog.getByRole('region', { name: 'Attacks' })).toBeVisible()
+    await dialog.getByRole('button', { name: /^Spells/ }).click()
+    await expect(dialog.getByRole('region', { name: 'Attacks' })).toHaveCount(0)
+    await dialog.getByRole('button', { name: /^Spells/ }).click()
+    await page.screenshot({
+      path: path.join(outputDirectory, 'pdf-settings-compact.png'),
+      animations: 'disabled',
+    })
+    const bounds = await dialog.boundingBox()
+    expect(bounds?.y).toBeGreaterThanOrEqual(0)
+    expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(520)
+    await dialog.getByRole('combobox', { name: 'Rules descriptions' }).click()
+    await page.getByRole('option', { name: 'Include descriptions', exact: true }).click()
+    await dialog.getByRole('combobox', { name: 'Long text & extra entries' }).click()
+    await page.getByRole('option', { name: 'Continue in notes', exact: true }).click()
+    if (viewport) await page.setViewportSize(viewport)
+  }
+  await page.getByRole('button', { name: 'Done', exact: true }).click()
   await page.getByRole('button', { name: 'Generate Preview' }).click()
-  await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 45_000 })
-  await expect(page.locator('canvas')).toHaveCount(template.expectedPageCount, { timeout: 45_000 })
+  await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 45_000 })
+  await expect
+    .poll(() => page.locator('canvas').count())
+    .toBeGreaterThanOrEqual(template.expectedPageCount)
+  await expect(page.getByText('Rendering preview…')).toHaveCount(0, { timeout: 45_000 })
+  const generatedPageCount = await page.locator('canvas').count()
+  if (template.id.startsWith('2024')) {
+    for (const [index, canvas] of (await page.locator('canvas').all()).entries()) {
+      const png = await canvas.evaluate(
+        (element) => (element as HTMLCanvasElement).toDataURL('image/png').split(',')[1],
+      )
+      fs.writeFileSync(
+        path.join(outputDirectory, `${template.id}-page-${index + 1}.png`),
+        Buffer.from(png, 'base64'),
+      )
+    }
+  }
 
   const originalViewport = page.viewportSize()
   if (template.id === '2024-official') {
@@ -109,21 +161,29 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
   const outputPath = path.join(outputDirectory, `${template.id}-${template.expectedFileName}`)
   await download.saveAs(outputPath)
   const output = await PDFDocument.load(fs.readFileSync(outputPath))
-  expect(output.getPageCount()).toBe(template.expectedPageCount)
+  expect(output.getPageCount()).toBe(generatedPageCount)
   expect(output.getForm().getFields().length).toBeGreaterThan(0)
   if (template.id === '2014-official') {
     const emblem = output.getForm().getButton('Faction Symbol Image')
     expect(emblem.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(output.getForm().getTextField('Spellcasting Class 2').getText()).toBe('Wizard')
-    expect(output.getForm().getTextField('SpellPage2__Spellcasting Class 2').getText()).toBe(
-      'Cleric',
-    )
+    expect(
+      output
+        .getForm()
+        .getFields()
+        .filter((field) => /SpellPage\d+__Spellcasting Class 2$/.test(field.getName()))
+        .map((field) => output.getForm().getTextField(field.getName()).getText()),
+    ).toContain('Cleric')
   }
   if (template.id === '2014-custom') {
     expect(output.getForm().getTextField('WotC__Spellcasting Class 2').getText()).toBe('Wizard')
-    expect(output.getForm().getTextField('WotC__SpellPage2__Spellcasting Class 2').getText()).toBe(
-      'Cleric',
-    )
+    expect(
+      output
+        .getForm()
+        .getFields()
+        .filter((field) => /WotC__SpellPage\d+__Spellcasting Class 2$/.test(field.getName()))
+        .map((field) => output.getForm().getTextField(field.getName()).getText()),
+    ).toContain('Cleric')
   }
   if (originalViewport) await page.setViewportSize(originalViewport)
 }
@@ -132,11 +192,11 @@ test('@focused exports every official and custom character-sheet template', asyn
   page,
 }, testInfo) => {
   test.setTimeout(180_000)
-  const unsupportedWidgetWarnings: string[] = []
+  const pdfWarnings: string[] = []
   page.on('console', (message) => {
     const text = message.text()
-    if (text.includes('Unimplemented widget field type "null"')) {
-      unsupportedWidgetWarnings.push(text)
+    if (/Unimplemented widget field type|Unknown command|Skipping command/.test(text)) {
+      pdfWarnings.push(text)
     }
   })
   const characters = (['2014', '2024'] as const).map((edition) =>
@@ -190,6 +250,46 @@ test('@focused exports every official and custom character-sheet template', asyn
 
     for (const template of TEMPLATE_CASES[edition]) {
       await exportTemplate(page, template, testInfo.outputDir)
+      if (template.id.startsWith('2024')) {
+        const pagesBeforeCompanion = await page.locator('canvas').count()
+        const usesNotesContinuation = template.id === '2024-official'
+        const addedPages = usesNotesContinuation ? 1 : 2
+        await page.getByRole('button', { name: 'Optional Pages', exact: true }).click()
+        await expect(page.getByRole('menuitemcheckbox')).toHaveCount(2)
+        await expect(
+          page.getByRole('menuitemcheckbox', { name: 'Companion pages' }),
+        ).toHaveAttribute('aria-checked', 'false')
+        await expect(page.getByRole('menuitemcheckbox', { name: 'Notes page' })).toHaveAttribute(
+          'aria-checked',
+          String(usesNotesContinuation),
+        )
+        if (!usesNotesContinuation)
+          await page.getByRole('menuitemcheckbox', { name: 'Notes page' }).click()
+        await page.getByRole('menuitemcheckbox', { name: 'Companion pages' }).click()
+        await page.keyboard.press('Escape')
+        await expect(page.getByRole('button', { name: 'Download PDF' })).toBeDisabled()
+        await page.getByRole('button', { name: 'Generate Preview' }).click()
+        await expect(page.locator('canvas')).toHaveCount(pagesBeforeCompanion + addedPages, {
+          timeout: 45_000,
+        })
+        await page.getByRole('button', { name: 'Download PDF' }).click()
+        const review = page.getByRole('alertdialog', { name: 'Before you download' })
+        await expect(review).toBeVisible()
+        expect(await review.textContent()).not.toMatch(/Text_\d+/)
+        const downloadEvent = page.waitForEvent('download')
+        await review.getByRole('button', { name: 'Download PDF' }).click()
+        const download = await downloadEvent
+        const outputPath = testInfo.outputPath(`${template.id}-optional-pages.pdf`)
+        await download.saveAs(outputPath)
+        const doc = await PDFDocument.load(fs.readFileSync(outputPath))
+        expect(doc.getPageCount()).toBe(pagesBeforeCompanion + addedPages)
+        expect(
+          doc.getForm().getTextField('Companion1__companion name').acroField.getWidgets()[0].P(),
+        ).toBe(doc.getPage(2).ref)
+        expect(
+          doc.getForm().getTextField('P5.ASnotes.Notes.Left').acroField.getWidgets()[0].P(),
+        ).toBe(doc.getPage(3).ref)
+      }
       if (template.id === '2014-official' || template.id === '2014-custom') {
         const official = template.id === '2014-official'
         await page.getByRole('button', { name: 'Optional Pages', exact: true }).click()
@@ -206,10 +306,18 @@ test('@focused exports every official and custom character-sheet template', asyn
           .click()
         if (!official)
           await page.getByRole('menuitemcheckbox', { name: 'Spellcasting pages' }).click()
+        else if (
+          (await page
+            .getByRole('menuitemcheckbox', { name: 'Notes page' })
+            .getAttribute('aria-checked')) === 'true'
+        )
+          await page.getByRole('menuitemcheckbox', { name: 'Notes page' }).click()
         await page.keyboard.press('Escape')
         await expect(page.getByRole('button', { name: 'Download PDF' })).toBeDisabled()
         await page.getByRole('button', { name: 'Generate Preview' }).click()
-        await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 45_000 })
+        await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({
+          timeout: 45_000,
+        })
         await expect(page.locator('canvas')).toHaveCount(official ? 2 : 4, { timeout: 45_000 })
         await page.getByRole('button', { name: 'Download PDF' }).click()
         const review = page.getByRole('alertdialog', { name: 'Before you download' })
@@ -238,5 +346,5 @@ test('@focused exports every official and custom character-sheet template', asyn
     }
   }
 
-  expect(unsupportedWidgetWarnings).toEqual([])
+  expect(pdfWarnings).toEqual([])
 })

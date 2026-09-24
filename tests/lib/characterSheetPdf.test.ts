@@ -1446,10 +1446,10 @@ describe('characterSheetPdf', () => {
       templateId: '2014-official',
     })
     const filledForm = (await PDFDocument.load(filledBytes)).getForm()
-    for (const [name, limit] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
+    for (const name of Object.keys(OFFICIAL_2014_SECTION_LIMITS)) {
       const field = filledForm.getTextField(name)
       expect(field.getText()).toBe(map.textFields[name])
-      expect(field.getMaxLength()).toBe(limit)
+      expect(field.getMaxLength()).toBeUndefined()
     }
     for (const [name, min, max] of [
       ['ST Strength', 7, 7],
@@ -1602,7 +1602,7 @@ describe('characterSheetPdf', () => {
     expect(Object.keys(map.textFields).filter((name) => !fieldNames.has(name))).toEqual([])
     expect(Object.keys(map.checkboxFields).filter((name) => !fieldNames.has(name))).toEqual([])
     if (templateId.startsWith('2024')) {
-      expect(Object.keys(map.textFields)).toHaveLength(230)
+      expect(Object.keys(map.textFields)).toHaveLength(templateId === '2024-official' ? 260 : 230)
       expect(Object.keys(map.checkboxFields)).toHaveLength(151)
     }
   })

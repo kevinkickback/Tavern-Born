@@ -22,7 +22,6 @@ const CATEGORY_LABELS = {
   readiness: 'Character choices to review',
   dependency: 'Missing source content or artwork',
   unsupported: 'Details to track separately',
-  truncation: 'Content that may not fit',
 } as const
 
 export function ExportPreflightDialog({

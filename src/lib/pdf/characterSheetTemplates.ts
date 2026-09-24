@@ -70,8 +70,12 @@ export const CHARACTER_SHEET_TEMPLATES = [
     name: 'Wizards of the Coast (2024)',
     assetPath: 'pdf/2024_Official_Character_Sheet.pdf',
     routePath: '/character-sheet/2024/official',
-    mappingId: '2024-shared',
+    mappingId: '2024-official',
     cleanupProfile: 'standard',
+    optionalPages: [
+      { id: 'companion', label: 'Companion pages' },
+      { id: 'notes', label: 'Notes page' },
+    ],
     attribution: {
       credit: 'Official 2024 Dungeons & Dragons character sheet by Wizards of the Coast.',
       notice: 'The source document credits its illustrations to Richard Whitters.',
@@ -85,8 +89,12 @@ export const CHARACTER_SHEET_TEMPLATES = [
     name: 'Lost Loot (2024)',
     assetPath: 'pdf/2024_Beaoudix_Character_Sheet.pdf',
     routePath: '/character-sheet/2024/custom',
-    mappingId: '2024-shared',
+    mappingId: '2024-custom',
     cleanupProfile: 'standard',
+    optionalPages: [
+      { id: 'companion', label: 'Companion pages' },
+      { id: 'notes', label: 'Notes page' },
+    ],
     attribution: {
       credit: 'Free D&D 5E24 character-sheet replica created by',
       creatorName: 'Lost Loot (u/Beaoudix)',
@@ -96,7 +104,7 @@ export const CHARACTER_SHEET_TEMPLATES = [
 ] as const satisfies readonly CharacterSheetTemplate[]
 
 const TEMPLATE_BY_ID = Object.fromEntries(
-  CHARACTER_SHEET_TEMPLATES.map((template) => [template.id, template]),
+  CHARACTER_SHEET_TEMPLATES.map((template) => [template.id, template as CharacterSheetTemplate]),
 ) as Record<ResolvedCharacterSheetTemplateId, CharacterSheetTemplate>
 
 function resolveCharacterSheetTemplateId(

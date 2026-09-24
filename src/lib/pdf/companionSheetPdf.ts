@@ -25,6 +25,7 @@ export async function createCompanionSheetDocument(
   templateBytes: Uint8Array | ArrayBuffer,
   vm: CharacterSheetViewModel,
   onTextTruncated?: (label: string) => void,
+  onOverflow?: (label: string, text: string, field: string) => void,
 ) {
   const output = await PDFDocument.create()
   const companions = vm.companions.length ? vm.companions : [{ name: '' }]
@@ -83,6 +84,7 @@ export async function createCompanionSheetDocument(
               ? 'Companion identity'
               : name
           onTextTruncated?.(`Companion ${index + 1}: ${label}`)
+          onOverflow?.(`Companion ${index + 1}: ${label}`, value, `${prefix}${name}`)
         }
         field.setText(fitted.text)
         field.setFontSize(fitted.fontSize)

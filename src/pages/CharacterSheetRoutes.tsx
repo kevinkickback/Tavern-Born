@@ -9,10 +9,10 @@ export function CharacterSheetRoutes() {
     <Routes>
       <Route
         index
-        element={<Navigate to={`/character-sheet/${originSystem ?? '2024'}/custom`} replace />}
+        element={<Navigate to={`/character-sheet/${originSystem ?? '2024'}/official`} replace />}
       />
-      <Route path="2014" element={<Navigate to="/character-sheet/2014/custom" replace />} />
-      <Route path="2024" element={<Navigate to="/character-sheet/2024/custom" replace />} />
+      <Route path="2014" element={<Navigate to="/character-sheet/2014/official" replace />} />
+      <Route path="2024" element={<Navigate to="/character-sheet/2024/official" replace />} />
       <Route
         path="2014/official"
         element={<CharacterSheetPage key="2014-official" templateId="2014-official" />}

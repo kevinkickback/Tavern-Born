@@ -114,6 +114,11 @@ Incomplete or destructive actions retain their warning/destructive semantic vari
 using `accentOutline`.
 
 Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
+The About panel keeps the Settings width and normal text sizes. Compact metadata, two-column PDF
+credits, and paired Built With/Links sections reduce its height on desktop; narrow windows stack
+these groups and retain normal scrolling. Attribution categories start collapsed and expand on demand.
+Links from PDF pages open the relevant credits automatically; complete attribution text and creator
+links remain available inside the sections.
 
 Portrait pan values use the character card's 360 x 240 logical coordinate space. Convert those
 values to card-relative percentages in the shared frame renderer so the portrait editor preview

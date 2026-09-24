@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import {
   PDFArray,
   PDFButton,
@@ -16,15 +17,29 @@ import {
 } from '@cantoo/pdf-lib'
 
 const root = process.cwd()
-const pdfDirectory = join(root, 'public', 'pdf')
-const sourceDirectory = join(root, 'docs', 'review', 'pdf-sources')
+const { values } = parseArgs({
+  options: {
+    'mpmb-source': { type: 'string' },
+    'wotc-2024-source': { type: 'string' },
+    help: { type: 'boolean' },
+  },
+})
+
+if (values.help || (!values['mpmb-source'] && !values['wotc-2024-source'])) {
+  console.log(`Import replacement template artwork from the repository root:
+  node scripts/prepare-character-sheet-templates.mjs --mpmb-source <original.pdf>
+  node scripts/prepare-character-sheet-templates.mjs --wotc-2024-source <artwork.pdf>
+Both source options may be supplied together. See scripts/pdf-sources/README.md.
+To rebuild existing assets, use prepare-2014-pdf-modules.mjs and prepare-2024-pdf-modules.mjs.`)
+  process.exit(values.help ? 0 : 1)
+}
 
 const paths = {
-  custom2014Source: join(sourceDirectory, '2014_expanded_source.pdf'),
+  custom2014Source: values['mpmb-source'],
   custom2014Output: join(root, 'scripts', 'pdf-sources', '2014_MPMB_Character_Sheet.pdf'),
-  custom2024Source: join(pdfDirectory, '2024_Beaoudix_Character_Sheet.pdf'),
-  official2024Source: join(sourceDirectory, '2024_official_source.pdf'),
-  official2024Output: join(pdfDirectory, '2024_Official_Character_Sheet.pdf'),
+  custom2024Source: join(root, 'scripts', 'pdf-sources', '2024_Beaoudix_Character_Sheet.pdf'),
+  official2024Source: values['wotc-2024-source'],
+  official2024Output: join(root, 'scripts', 'pdf-sources', '2024_Official_Character_Sheet.pdf'),
 }
 
 const removableKeys = [
@@ -239,6 +254,24 @@ function getWidgetPageIndex(pdfDoc, widget) {
 // Keep the AcroForm widgets centered on the official sheet's printed controls.
 function alignOfficial2024Widget(name, rect) {
   const textId = Number(/^Text_(\d+)$/.exec(name)?.[1])
+  if (textId >= 92 && textId <= 211) {
+    const row = (textId - 92) % 30
+    rect.y = 581.8 - row * 19.44
+    rect.height = 18
+    // WotC splits the replica's combined casting-time column into time and range.
+    if (textId >= 152 && textId <= 181) {
+      rect.x = 154.5
+      rect.width = 30.5
+    }
+  }
+  if (textId === 55) {
+    rect.y = 61.5
+    rect.height = 45
+  }
+  if (textId === 56) {
+    rect.y = 16.3
+    rect.height = 33
+  }
   if (
     textId === 1 ||
     textId === 6 ||
@@ -350,15 +383,13 @@ async function buildOfficial2024() {
         font: helvetica,
         textColor: rgb(0, 0, 0),
       })
-      if (appearance.height > rect.height * scaleY + 1) {
-        // A larger transparent text widget must not erase the printed labels
-        // and rules just outside the inherited narrow form rectangle.
-        for (const targetWidget of targetField.acroField.getWidgets()) {
-          const characteristics = targetWidget.dict.get(PDFName.of('MK'))
-          if (characteristics instanceof PDFDict) characteristics.delete(PDFName.of('BG'))
-        }
+      // Every field overlays existing artwork, including the printed rules and grid.
+      for (const targetWidget of targetField.acroField.getWidgets()) {
+        const characteristics = targetWidget.dict.get(PDFName.of('MK'))
+        if (characteristics instanceof PDFDict) characteristics.delete(PDFName.of('BG'))
       }
       targetField.setFontSize(Math.max(5, Math.min(10, appearance.height * 0.55)))
+      targetField.defaultUpdateAppearances(helvetica)
     } else if (sourceField instanceof PDFCheckBox) {
       const targetField = targetForm.createCheckBox(sourceField.getName())
       targetField.addToPage(targetPage, appearance)
@@ -380,16 +411,35 @@ async function buildOfficial2024() {
     }
   }
 
+  for (let row = 0; row < 30; row += 1) {
+    const range = targetForm.createTextField(`SpellRange_${row + 1}`)
+    range.enableMultiline()
+    range.addToPage(targetPages[1], {
+      x: 188.5,
+      y: 581.8 - row * 19.44,
+      width: 41,
+      height: 18,
+      borderWidth: 0,
+      backgroundColor: undefined,
+      font: helvetica,
+    })
+    for (const widget of range.acroField.getWidgets())
+      widget.getAppearanceCharacteristics()?.dict.delete(PDFName.of('BG'))
+    range.setFontSize(8)
+    range.defaultUpdateAppearances(helvetica)
+  }
+
   await writeFile(
     paths.official2024Output,
     await targetDoc.save({ addDefaultPage: false, updateFieldAppearances: false }),
   )
 }
 
-if (process.argv.includes('--official-2024')) {
-  await buildOfficial2024()
-} else {
+if (values['mpmb-source']) {
   await buildCustom2014()
   await import('./prepare-2014-pdf-modules.mjs')
+}
+if (values['wotc-2024-source']) {
   await buildOfficial2024()
+  await import('./prepare-2024-pdf-modules.mjs')
 }

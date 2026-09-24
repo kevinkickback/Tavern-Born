@@ -10,11 +10,32 @@ export type ResolvedCharacterSheetTemplateId = `${CharacterSheetEdition}-${Chara
  */
 export type CharacterSheetTemplateId = ResolvedCharacterSheetTemplateId | CharacterSheetEdition
 
-type CharacterSheetMappingId = '2014-custom' | '2014-official' | '2024-shared'
+type CharacterSheetMappingId = ResolvedCharacterSheetTemplateId
 export type CharacterSheetCleanupProfile = 'standard' | 'mpmb-2014'
 
-export type OptionalCharacterSheetPageId = 'spells' | 'companion' | 'notes'
+type OptionalCharacterSheetPageId = 'spells' | 'companion' | 'notes'
 export type CharacterSheetPageOptions = Partial<Record<OptionalCharacterSheetPageId, boolean>>
+
+export type SheetContentChoices = Partial<Record<string, string[]>>
+export interface SheetTextOptions {
+  descriptions?: 'full' | 'names'
+  overflow?: 'notes' | 'ellipsis'
+}
+export const DEFAULT_SHEET_TEXT_OPTIONS = {
+  descriptions: 'full',
+  overflow: 'ellipsis',
+} as const satisfies Required<SheetTextOptions>
+export interface SheetOverflowSection {
+  id: string
+  title: string
+  text: string
+  groupId?: string
+}
+export interface SheetExportReport {
+  notesPageCount: number
+  preserved: SheetOverflowSection[]
+  omitted: SheetOverflowSection[]
+}
 
 interface CharacterSheetAttribution {
   credit: string

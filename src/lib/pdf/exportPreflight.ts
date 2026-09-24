@@ -7,7 +7,7 @@ import {
   getOfficial2014SpellPages,
   OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
 } from './characterSheetMapping2014Official'
-import { mapCharacterSheet2024 } from './characterSheetMapping2024'
+import { get2024SpellRows, mapCharacterSheet2024 } from './characterSheetMapping2024'
 import { getOptionalCharacterSheetPages } from './characterSheetPages'
 import { getCharacterSheetTemplate } from './characterSheetTemplates'
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
@@ -16,12 +16,17 @@ import {
   limitOfficial2014SectionText,
   OFFICIAL_2014_SECTION_LIMITS,
 } from './official2014Text'
-import { OFFICIAL_2024_PROSE_WARNING_LIMITS } from './official2024Text'
-import type { CharacterSheetPageOptions, CharacterSheetTemplateId } from './types'
+import { get2024FieldLabel, OFFICIAL_2024_PROSE_WARNING_LIMITS } from './official2024Text'
+import type {
+  CharacterSheetPageOptions,
+  CharacterSheetTemplateId,
+  SheetExportReport,
+} from './types'
 
 type ExportPreflightCategory = 'readiness' | 'dependency' | 'unsupported' | 'truncation'
 
 interface ExportPreflightIssue {
+  groupId?: string
   id: string
   category: ExportPreflightCategory
   severity: 'blocking' | 'warning'
@@ -33,6 +38,16 @@ export interface ExportPreflightResult {
   issues: ExportPreflightIssue[]
   blockingCount: number
   warningCount: number
+}
+
+/** Content fitting is handled by Customize PDF, not the download confirmation. */
+export function getPdfDownloadPreflight(result: ExportPreflightResult): ExportPreflightResult {
+  const issues = result.issues.filter((issue) => issue.category !== 'truncation')
+  return {
+    issues,
+    blockingCount: issues.filter((issue) => issue.severity === 'blocking').length,
+    warningCount: issues.filter((issue) => issue.severity === 'warning').length,
+  }
 }
 
 function capacityIssue(
@@ -174,7 +189,18 @@ function getCapacityIssues(
     const capacity = CHARACTER_SHEET_CAPACITIES['2024']
     issues.push(
       capacityIssue('weapons', 'Weapon attacks', viewModel.weaponRows.length, capacity.weapons),
-      capacityIssue('spells', 'Spell rows', viewModel.spellRows.length, capacity.spells),
+      capacityIssue(
+        'spells',
+        'Prepared spell rows',
+        get2024SpellRows(viewModel).length,
+        capacity.spells,
+      ),
+      capacityIssue(
+        'spellcasting-profiles',
+        'Spellcasting summaries',
+        viewModel.spellcastingDetails.length,
+        capacity.spellcastingProfiles,
+      ),
       capacityIssue(
         'attunements',
         'Attuned items',
@@ -183,7 +209,7 @@ function getCapacityIssues(
       ),
     )
     if (templateId === '2024-official') {
-      const fields = mapCharacterSheet2024(viewModel).textFields
+      const fields = mapCharacterSheet2024(viewModel, 'official').textFields
       for (const [name, limit] of Object.entries(OFFICIAL_2024_PROSE_WARNING_LIMITS)) {
         const value = fields[name] ?? ''
         const lineCount = value.split('\n').length
@@ -224,9 +250,24 @@ function getCapacityIssues(
 function isUnsupportedPdfEffect(
   templateId: CharacterSheetTemplateId,
   effect: CharacterEffect,
+  viewModel: CharacterSheetViewModel,
 ): boolean {
   if (effect.operation.kind === 'conditional-note') {
     return true
+  }
+  // A structured racial sense is also described by its species traits. The lack of a
+  // separate numeric box does not make that printed rule unsupported. Manual changes
+  // and effects from other sources still need their own representation.
+  if (
+    effect.target.kind === 'sense' &&
+    effect.operation.kind === 'base' &&
+    effect.source.kind === 'race' &&
+    viewModel.mergedRace?.name === effect.source.name &&
+    viewModel.mergedRace.source === effect.source.source &&
+    effect.target.sense.trim() &&
+    viewModel.racialTraitsSummary.toLowerCase().includes(effect.target.sense.trim().toLowerCase())
+  ) {
+    return false
   }
   const template = getCharacterSheetTemplate(templateId)
   return (
@@ -244,6 +285,7 @@ export function getPdfExportPreflight(
   effectContext: EffectResolutionContext = {},
   truncatedFields: readonly string[] = [],
   pageChoices: CharacterSheetPageOptions = {},
+  report?: SheetExportReport,
 ): ExportPreflightResult {
   const spellsOmitted = getOptionalCharacterSheetPages(viewModel, templateId, pageChoices).some(
     (page) => page.id === 'spells' && !page.included,
@@ -259,7 +301,8 @@ export function getPdfExportPreflight(
     }))
   const unsupportedEffects = effects.filter(
     (effect) =>
-      isCharacterEffectActive(effect, effectContext) && isUnsupportedPdfEffect(templateId, effect),
+      isCharacterEffectActive(effect, effectContext) &&
+      isUnsupportedPdfEffect(templateId, effect, viewModel),
   )
   const unsupportedIssues: ExportPreflightIssue[] = unsupportedEffects.map((effect) => ({
     id: `unsupported:${effect.id}`,
@@ -272,7 +315,26 @@ export function getPdfExportPreflight(
   const issues = [
     ...readinessIssues,
     ...unsupportedIssues,
-    ...getCapacityIssues(templateId, viewModel, pageChoices),
+    ...getCapacityIssues(templateId, viewModel, pageChoices).filter((issue) => {
+      if (!report) return true
+      if (issue.id === 'capacity:companions') return false
+      if (issue.id.startsWith('text-limit:') || issue.id.startsWith('capacity:spells-level-'))
+        return false
+      if (
+        [
+          'weapons',
+          'spells',
+          'feats',
+          'magic-items',
+          'equipment',
+          'actions',
+          'bonus-actions',
+          'reactions',
+        ].some((id) => issue.id === `capacity:${id}`)
+      )
+        return false
+      return ![...report.preserved, ...report.omitted].some((section) => section.id === issue.id)
+    }),
   ]
   const pactSlots = Object.entries(viewModel.spellSlots.mergedPactWithUsage).filter(
     ([, slot]) => slot && slot.max > 0,
@@ -280,13 +342,30 @@ export function getPdfExportPreflight(
   const hasPactPage =
     getCharacterSheetTemplate(templateId).edition === '2014' &&
     getOfficial2014SpellPages(viewModel).some((page) => page.detail?.casterProgression === 'pact')
-  if (pactSlots.length && !hasPactPage && !spellsOmitted) {
+  if (
+    pactSlots.length &&
+    !hasPactPage &&
+    !spellsOmitted &&
+    !report?.preserved.some((section) => section.id === 'unsupported:pact-slots')
+  ) {
     issues.push({
       id: 'unsupported:pact-slots',
       category: 'unsupported',
       severity: 'warning',
       title: 'Track Pact Magic slots separately',
       detail: `The slot grid represents regular Spellcasting only; it cannot distinguish the Pact Magic recovery pool. Pact Magic: ${pactSlots.map(([level, slot]) => `level ${level}: ${slot?.max} total, ${slot?.used} expended`).join('; ')}.`,
+    })
+  }
+  for (const section of report?.omitted ?? []) {
+    if (section.id.startsWith('text-limit:')) continue
+    issues.push({
+      id: section.id,
+      category: 'truncation',
+      severity: 'warning',
+      title: `${section.title} left out of this PDF`,
+      detail:
+        'Some content is outside the main sheet. Choose Continue in notes in Customize PDF and enable Notes in Optional Pages to include it, or adjust Customize PDF settings.',
+      groupId: section.groupId,
     })
   }
   for (const field of new Set(truncatedFields)) {
@@ -299,9 +378,11 @@ export function getPdfExportPreflight(
     if (pageChoices.companion === false && field.startsWith('P4.AScomp.')) continue
     const id = `text-limit:${field}`
     if (issues.some((issue) => issue.id === id)) continue
+    const template = getCharacterSheetTemplate(templateId)
     const label =
-      OFFICIAL_2024_PROSE_WARNING_LIMITS[field as keyof typeof OFFICIAL_2024_PROSE_WARNING_LIMITS]
-        ?.label ?? field
+      template.edition === '2024'
+        ? get2024FieldLabel(field, template.variant === 'official')
+        : field
     issues.push({
       id,
       category: 'truncation',

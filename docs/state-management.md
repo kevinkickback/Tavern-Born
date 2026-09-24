@@ -13,7 +13,7 @@ verified in the owning store, command, and tests.
 
 Zustand persistence uses `src/lib/storage/idb-storage.ts`. Parsed game data has its own cache in
 `dataCache.ts`. Accordion/sidebar collapse state uses local storage, and Electron stores native
-window bounds separately.
+window bounds separately. PDF export page/content overrides and description/overflow settings are local UI preferences keyed by character and template (`sheetExportPreferences.ts`); they never alter character inventory, preparation, or rules text. Missing or invalid text settings fall back to full descriptions with ellipsis shortening.
 
 ## Character write APIs
 
@@ -148,7 +148,9 @@ For a breaking change, update together:
 
 Before 1.0, prefer a small migration. Reassess the accumulated chain at 1.0 rather than carrying
 unbounded pre-release compatibility debt. Newer, malformed, and unsafe records go to the durable
-exportable quarantine until acknowledged.
+exportable quarantine until acknowledged. Do not add downgrade paths or compatibility mirrors in
+feature code. Announce any deliberate compatibility cutoff in advance and retain export-before-removal
+recovery.
 
 ## Checklist for new state
 

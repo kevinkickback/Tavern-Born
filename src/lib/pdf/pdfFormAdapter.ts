@@ -14,6 +14,7 @@ import {
   PDFNumber,
   type PDFObject,
   PDFRef,
+  PDFString,
   PDFTextField,
   popGraphicsState,
   pushGraphicsState,
@@ -21,8 +22,8 @@ import {
   setFillingRgbColor,
   setTextMatrix,
 } from '@cantoo/pdf-lib'
-import { getOfficial2014FontBounds, OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
-import { fitOfficial2024Text } from '@/lib/pdf/official2024Text'
+import { getOfficial2014FontBounds } from '@/lib/pdf/official2014Text'
+import { fitOfficial2024Text, getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import {
   type AcroWidget,
   asFieldWithInternals,
@@ -134,7 +135,9 @@ export async function fillCharacterSheetDocument(
     if (excludedFields.has(fieldName)) continue
     let handled = false
     try {
-      form.getTextField(fieldName).setText(value)
+      const field = form.getTextField(fieldName)
+      field.removeMaxLength()
+      field.setText(value)
       handled = true
     } catch {
       // Some templates expose select fields as dropdowns.
@@ -176,16 +179,15 @@ export async function fillCharacterSheetDocument(
     clearAttackModDropdowns(form)
     stripFormActions(form, fields)
     makeCalculatedFieldsEditable(form)
+    fitMpmbText(form, fields.textFields, onTextTruncated)
     updateDirtyFieldAppearances(form)
     alignMpmbRuledText(form)
     hideUnwantedFields(form)
   } else {
-    if (options.templateId === '2014-official') setOfficial2014SectionLimits(form)
-    if (options.templateId === '2024-official')
-      fitOfficial2024TextAppearances(form, onTextTruncated)
-    updateDirtyFieldAppearances(form)
+    if (options.templateId?.startsWith('2024')) fit2024TextAppearances(pdfDoc, onTextTruncated)
     if (options.templateId === '2014-official')
       normalizeOfficial2014TextAppearances(form, onTextTruncated)
+    updateDirtyFieldAppearances(form)
   }
   replaceCheckboxOffAppearances(pdfDoc, form, options.templateId)
   if (options.portrait && options.portraitFieldName) {
@@ -275,10 +277,38 @@ function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
   }
 }
 
-function setOfficial2014SectionLimits(form: ReturnType<PDFDocument['getForm']>) {
-  for (const [fieldName, maxLength] of Object.entries(OFFICIAL_2014_SECTION_LIMITS)) {
-    const field = form.getFieldMaybe(fieldName)
-    if (field instanceof PDFTextField) field.setMaxLength(maxLength)
+function fitMpmbText(
+  form: ReturnType<PDFDocument['getForm']>,
+  values: Record<string, string>,
+  onTextTruncated: (name: string) => void,
+) {
+  const font = form.getDefaultFont()
+  for (const name of Object.keys(values)) {
+    const field = form.getFieldMaybe(name)
+    if (!(field instanceof PDFTextField) || !field.getText()) continue
+    const widget = field.acroField.getWidgets()[0]
+    if (!widget) continue
+    const { width, height } = widget.getRectangle()
+    if (width < 1 || height < 1) continue
+    const fitted = fitPdfText(
+      field.getText() ?? '',
+      font,
+      width,
+      height,
+      {
+        min: field.isMultiline() ? 8 : 7,
+        max: field.isMultiline() ? 9 : 11,
+        multiline: field.isMultiline(),
+      },
+      widget.getBorderStyle()?.getWidth() ?? 0,
+    )
+    field.setText(fitted.text)
+    field.setFontSize(fitted.fontSize)
+    const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
+    for (const item of field.acroField.getWidgets()) item.dict.set(PDFName.of('DA'), appearance)
+    field.acroField.dict.set(PDFName.of('DV'), PDFHexString.fromText(fitted.text))
+    field.defaultUpdateAppearances(font)
+    if (fitted.truncated) onTextTruncated(name)
   }
 }
 
@@ -298,18 +328,11 @@ function normalizeOfficial2014TextAppearances(
       height,
     )
     if (!bounds) continue
+    if (!field.acroField.getDefaultAppearance())
+      field.acroField.setDefaultAppearance(`/${font.name} ${bounds.max} Tf 0 g`)
 
-    const defaultAppearance = field.acroField.dict.get(PDFName.of('DA')) as
-      | { decodeText?: () => string }
-      | undefined
-    const autoSize = Number(defaultAppearance?.decodeText?.().match(/([\d.]+)\s+Tf/)?.[1])
-    if (!Number.isFinite(autoSize)) continue
-    let fontSize = Math.min(bounds.max, Math.max(bounds.min, autoSize))
-    if (
-      field.getName().startsWith('Wpn') ||
-      field.getName() === 'AttacksSpellcasting' ||
-      field.getName() === 'Speed'
-    ) {
+    let fontSize = bounds.max
+    {
       const fitted = fitPdfText(
         field.getText() ?? '',
         font,
@@ -324,24 +347,49 @@ function normalizeOfficial2014TextAppearances(
     }
     field.setFontSize(fontSize)
     // Widget-local DA overrides the field font size in the appearance provider.
-    const appearance = PDFHexString.fromText(field.acroField.getDefaultAppearance() ?? '')
+    const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
     for (const appearanceWidget of field.acroField.getWidgets())
       appearanceWidget.dict.set(PDFName.of('DA'), appearance)
     field.defaultUpdateAppearances(font)
   }
 }
 
-function fitOfficial2024TextAppearances(
-  form: ReturnType<PDFDocument['getForm']>,
+function fit2024TextAppearances(
+  pdfDoc: PDFDocument,
   onTextTruncated?: (fieldName: string) => void,
 ) {
+  const form = pdfDoc.getForm()
   const font = form.getDefaultFont()
   for (const field of form.getFields()) {
     if (!(field instanceof PDFTextField)) continue
-    const value = field.getText()
-    if (!value) continue
     const widget = field.acroField.getWidgets()[0]
     if (!widget) continue
+    // All text is an overlay on printed artwork; opaque boxes erase rules and labels.
+    for (const appearanceWidget of field.acroField.getWidgets())
+      appearanceWidget.getAppearanceCharacteristics()?.dict.delete(PDFName.of('BG'))
+    const bounds = getOfficial2024FontBounds(field.getName())
+    if (bounds?.multiline) field.enableMultiline()
+    else field.disableMultiline()
+    const value = field.getText()
+    if (!value) continue
+    const page = pdfDoc.getPages().find((candidate) => candidate.ref === widget.P())
+    // Lost Loot uses a 1700-unit page. Match readable physical sizes to its larger coordinates.
+    const scale = page && page.getWidth() > 1000 ? page.getWidth() / 603 : 1
+    if (scale > 1) {
+      const id = Number(/^Text_(\d+)$/.exec(field.getName())?.[1])
+      const rect = widget.getRectangle()
+      // The replica leaves room for two lines per spell row but its widgets use only one.
+      if (id >= 92 && id <= 211) rect.height = 18 * scale
+      if (id === 7) {
+        rect.x -= 3 * scale
+        rect.width = 30 * scale
+      }
+      if (id === 18) {
+        rect.x -= 8 * scale
+        rect.width = 45 * scale
+      }
+      widget.setRectangle(rect)
+    }
     const { width, height } = widget.getRectangle()
     const fitted = fitOfficial2024Text(
       field.getName(),
@@ -350,11 +398,12 @@ function fitOfficial2024TextAppearances(
       width,
       height,
       widget.getBorderStyle()?.getWidth() ?? 0,
+      scale,
     )
     if (!fitted) continue
     if (fitted.text !== value) field.setText(fitted.text)
     field.setFontSize(fitted.fontSize)
-    const appearance = PDFHexString.fromText(field.acroField.getDefaultAppearance() ?? '')
+    const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
     for (const appearanceWidget of field.acroField.getWidgets())
       appearanceWidget.dict.set(PDFName.of('DA'), appearance)
     if (fitted.truncated) onTextTruncated?.(field.getName())
@@ -490,7 +539,7 @@ function replaceCheckboxOffAppearances(
       normalAppearance.delete(PDFName.of('Off'))
       const offAppearanceRef = context.register(emptyAppearance)
       normalAppearance.set(PDFName.of('Off'), offAppearanceRef)
-      if (templateId === '2024-official' || templateId === '2014-official') {
+      if (templateId?.startsWith('2024') || templateId === '2014-official') {
         const onValue = checkbox.acroField.getOnValue()
         if (!onValue) continue
         // The official template prints its own circles/diamonds. The default

@@ -208,6 +208,30 @@ export function getOfficial2014SpellPages(viewModel: CharacterSheetViewModel) {
   return viewModel.spellcastingPages
 }
 
+/** Continue a caster's list without mixing classes or dropping a spell level's excess rows. */
+export function paginateOfficial2014SpellPages(viewModel: CharacterSheetViewModel) {
+  return getOfficial2014SpellPages(viewModel).flatMap((page) => {
+    const levels = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.map((_, level) =>
+      page.spellRows
+        .filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
+        .sort((a, b) => Number(b.prepared) - Number(a.prepared)),
+    )
+    const count = Math.max(
+      1,
+      ...levels.map((rows, level) =>
+        Math.ceil(rows.length / OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[level].length),
+      ),
+    )
+    return Array.from({ length: count }, (_, index) => ({
+      detail: page.detail,
+      spellRows: levels.flatMap((rows, level) => {
+        const size = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[level].length
+        return rows.slice(index * size, (index + 1) * size)
+      }),
+    }))
+  })
+}
+
 export function mapOfficial2014SpellPage(
   viewModel: CharacterSheetViewModel,
   page = getOfficial2014SpellPages(viewModel)[0],

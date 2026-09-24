@@ -31,6 +31,10 @@ export function generateTestCharacterSheet(
     vm,
     new Uint8Array(readFileSync(`public/${plan[0].path}`)),
     id,
-    { ...options, supplements },
+    {
+      loadNotes: async () => new Uint8Array(readFileSync('public/pdf/2014/mpmb-notes.pdf')),
+      ...options,
+      supplements,
+    },
   )
 }

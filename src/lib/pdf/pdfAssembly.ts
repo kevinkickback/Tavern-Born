@@ -5,6 +5,7 @@ import {
   PDFName,
   PDFObjectCopier,
   PDFRef,
+  PDFString,
 } from '@cantoo/pdf-lib'
 
 /** Append editable forms, isolating field names and font resources from other page modules. */
@@ -36,7 +37,9 @@ export async function appendPdfForm(output: PDFDocument, source: PDFDocument, pr
       const appearance =
         dict.lookup(PDFName.of('DA')) ?? form.acroForm.dict.lookup(PDFName.of('DA'))
       if (appearance && 'decodeText' in appearance && typeof appearance.decodeText === 'function')
-        dict.set(PDFName.of('DA'), PDFHexString.fromText(renameFonts(appearance.decodeText())))
+        // DA is a content program, not Unicode display text. UTF-16 inserts NULs
+        // between operator bytes and makes PDF.js interpret font names as commands.
+        dict.set(PDFName.of('DA'), PDFString.of(renameFonts(appearance.decodeText())))
     }
   }
   form.acroForm.dict.set(PDFName.of('Fields'), source.context.obj(fields.map((field) => field.ref)))

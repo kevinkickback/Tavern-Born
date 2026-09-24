@@ -41,7 +41,7 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
   await page.getByRole('button', { name: 'Character Sheet' }).click()
   await page.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' }).click()
   await page.getByRole('button', { name: 'Generate Preview' }).click()
-  await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download PDF' }).click()
@@ -67,7 +67,7 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
   await page.getByRole('menuitemcheckbox', { name: 'Notes page' }).click()
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Generate Preview' }).click()
-  await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
   await page.getByRole('button', { name: 'Download PDF' }).click()
   const officialDownloadPromise = page.waitForEvent('download')
   await page.getByRole('alertdialog').getByRole('button', { name: 'Download PDF' }).click()

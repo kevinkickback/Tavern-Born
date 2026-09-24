@@ -17,6 +17,9 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
+// Radix menus scroll the focused option into view; jsdom has no layout engine.
+HTMLElement.prototype.scrollIntoView = vi.fn()
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({

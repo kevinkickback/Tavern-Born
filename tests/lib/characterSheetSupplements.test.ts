@@ -48,7 +48,7 @@ describe('Tavern Born PDF supplements', () => {
     }
   })
 
-  test('fills every companion without continuation pages and reports text that does not fit', async () => {
+  test('fills every companion and preserves long descriptions on shared notes', async () => {
     const vm = blank()
     vm.companions = [
       {
@@ -93,10 +93,11 @@ describe('Tavern Born PDF supplements', () => {
     const warnings: string[] = []
     const doc = await PDFDocument.load(
       await generateTestCharacterSheet(vm, '2014-official', {
+        text: { overflow: 'notes' },
         onTextTruncated: (label) => warnings.push(label),
       }),
     )
-    expect(doc.getPageCount()).toBe(4)
+    expect(doc.getPageCount()).toBeGreaterThan(4)
     expect(doc.getForm().getTextField('Companion1__AC').getText()).toBe('13')
     expect(doc.getForm().getTextField('Companion1__MAX HP').getText()).toBe('11')
     const form = doc.getForm()
@@ -127,8 +128,17 @@ describe('Tavern Born PDF supplements', () => {
       'Unresolved creature',
     )
     expect(form.getFields().some((field) => field.getName().includes('Continuation'))).toBe(false)
-    expect(warnings).toContain('Companion 1: Feats & Traits')
-    expect(form.getTextField('Companion1__Feats & Traits').getText()).toContain('...')
+    expect(warnings).toEqual([])
+    expect(form.getTextField('Companion1__Feats & Traits').getText()).toContain(
+      'Continued on page 5.',
+    )
+    expect(
+      form
+        .getFields()
+        .filter((field) => field.getName().includes('ASnotes.Notes.'))
+        .map((field) => form.getTextField(field.getName()).getText())
+        .join(' '),
+    ).toContain('THE END')
     const contents = doc.getPage(2).node.Contents()
     expect(contents).toBeInstanceOf(PDFArray)
     const artwork = (contents as PDFArray)
@@ -232,6 +242,10 @@ describe('Tavern Born PDF supplements', () => {
       level: '1',
       prepared: false,
       castingTimeAndDuration: '',
+      castingTime: '',
+      duration: '',
+      range: '',
+      components: '',
       notes: '',
       concentration: false,
       ritual: false,

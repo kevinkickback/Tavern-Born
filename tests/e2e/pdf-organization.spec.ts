@@ -49,7 +49,7 @@ test('2014 PDF replaces the organization placeholder with the selected emblem', 
   await page.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' }).click()
 
   await page.getByRole('button', { name: 'Generate Preview' }).click()
-  await expect(page.getByText('Preview ready')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download PDF' }).click()
