@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   decodePDFRawStream,
@@ -27,19 +27,20 @@ import type { Class5e, Spell5e } from '@/types/5etools'
 import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'))
-const classes = ['wizard', 'warlock', 'fighter', 'cleric'].flatMap((name) =>
-  parseClasses(json(`data/class/class-${name}.json`)),
+const classPaths = ['wizard', 'warlock', 'fighter', 'cleric'].map(
+  (name) => `data/class/class-${name}.json`,
 )
-const spells = ['phb', 'xphb'].flatMap((name) =>
-  parseSpells(json(`data/spells/spells-${name}.json`)),
-)
+const spellPaths = ['phb', 'xphb'].map((name) => `data/spells/spells-${name}.json`)
+const hasCorpus = [...classPaths, ...spellPaths].every(existsSync)
+const classes = hasCorpus ? classPaths.flatMap((path) => parseClasses(json(path))) : []
+const spells = hasCorpus ? spellPaths.flatMap((path) => parseSpells(json(path))) : []
 const lookups = {
   classesByKey: buildClassLookup(classes as Class5e[]),
   spellsByKey: buildSpellLookup(spells as Spell5e[]),
 }
 const templateBytes = sourceTemplateBytes
 
-describe('PDF export review regressions', () => {
+describe.runIf(hasCorpus)('PDF export review regressions', () => {
   test.each([
     30, 120,
   ])('official 2014 preserves and visibly fits a walking speed of %s ft', async (speed) => {

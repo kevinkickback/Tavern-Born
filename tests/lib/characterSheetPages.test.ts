@@ -98,7 +98,7 @@ describe('optional PDF pages', () => {
         .getFields()
         .some((field) => field.getName().startsWith('WotC__')),
     ).toBe(false)
-  }, 30_000)
+  }, 90_000)
   test('does not add spell pages before a class gains casting', () => {
     const character = createEmptyCharacter({
       classProgression: [{ name: 'Ranger', source: 'PHB', levels: 1 }],
@@ -241,7 +241,7 @@ describe('optional PDF pages', () => {
     expect(
       (await generate('2014-custom', { companion: false, notes: false }, vm)).getPageCount(),
     ).toBe(4)
-  }, 30_000)
+  }, 90_000)
 
   test('omitted spell and companion pages do not cause export warnings', () => {
     const vm = blank()

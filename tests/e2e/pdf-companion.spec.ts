@@ -7,6 +7,10 @@ import { ensureStartupPromptResolved, MINIMAL_GAME_DATA, seedAppState } from './
 
 test('2014 MPMB export fills the active creature companion page', async ({ page }, testInfo) => {
   test.setTimeout(60_000)
+  test.skip(
+    !fs.existsSync(path.resolve('data/bestiary/bestiary-tce.json')),
+    'Requires the external 5etools corpus',
+  )
   const character = JSON.parse(
     fs.readFileSync(path.resolve('tests/fixtures/companion-choice-character-2014.tbc'), 'utf8'),
   ) as Record<string, unknown>
@@ -68,8 +72,8 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Generate Preview' }).click()
   await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
-  await page.getByRole('button', { name: 'Download PDF' }).click()
   const officialDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Download PDF' }).click()
   const officialDownload = await officialDownloadPromise
   const officialPath = testInfo.outputPath('2014-official-companion-notes.pdf')

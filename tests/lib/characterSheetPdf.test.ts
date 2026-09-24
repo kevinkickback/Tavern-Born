@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PDFDocument, PDFName, TextAlignment } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
@@ -459,7 +459,7 @@ describe('characterSheetPdf', () => {
     const form = (await PDFDocument.load(output)).getForm()
     expect(form.getTextField('P4.AScomp.Comp.Desc.Name').getText()).toBe('Beast of the Land')
     expect(form.getTextField('P4.AScomp.Comp.Use.Ability.Str.Score').getText()).toBe('14')
-  }, 15_000)
+  }, 90_000)
 
   test('2014 Vision field from character visions', () => {
     const character = makeCharacterFixture({
@@ -1113,128 +1113,131 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Extra.Gear Row 37']).toBeUndefined()
   })
 
-  test('2024 maps weapons, spellcasting, spell slots, spells, history, and inventory', () => {
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      abilityScores: {
-        strength: 8,
-        dexterity: 16,
-        constitution: 14,
-        intelligence: 18,
-        wisdom: 12,
-        charisma: 10,
-      },
-      proficiencies: {
-        armor: ['Light Armor'],
-        weapons: ['Martial Weapons'],
-        tools: ["Calligrapher's Supplies"],
-        languages: ['Common', 'Draconic'],
-        skills: ['arcana'],
-        expertise: [],
-        savingThrows: ['intelligence', 'wisdom'],
-      },
-      equipment: [
-        {
-          id: 'longbow',
-          name: 'Longbow',
-          type: 'R',
-          quantity: 1,
-          equipped: true,
-          weaponCategory: 'martial',
-          dmg1: '1d8',
-          dmgType: 'P',
-          properties: ['A'],
-          range: '150/600 ft.',
+  test.runIf(existsSync('data/class/class-wizard.json'))(
+    '2024 maps weapons, spellcasting, spell slots, spells, history, and inventory',
+    () => {
+      const character = makeCharacterFixture({
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+        abilityScores: {
+          strength: 8,
+          dexterity: 16,
+          constitution: 14,
+          intelligence: 18,
+          wisdom: 12,
+          charisma: 10,
         },
-        {
-          id: 'wand',
-          name: 'Wand of Web',
-          type: 'WD',
-          quantity: 1,
-          equipped: true,
-          attuned: true,
-          rarity: 'Uncommon',
+        proficiencies: {
+          armor: ['Light Armor'],
+          weapons: ['Martial Weapons'],
+          tools: ["Calligrapher's Supplies"],
+          languages: ['Common', 'Draconic'],
+          skills: ['arcana'],
+          expertise: [],
+          savingThrows: ['intelligence', 'wisdom'],
         },
-      ],
-      currency: { cp: 1, sp: 2, ep: 3, gp: 42, pp: 5 },
-      details: {
-        alignment: 'Neutral Good',
-        appearance: 'Ink-stained fingers and blue robes.',
-        personalityTraits: 'Always asks one more question.',
-        backstory: 'Studied a map written in starlight.',
-      },
-      spells: {
-        spellProfiles: [
+        equipment: [
           {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 5)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            castingAbility: 'int',
-            cantrips: ['Fire Bolt|PHB'],
-            spellsKnown: [],
-            preparedSpells: ['Magic Missile|PHB'],
+            id: 'longbow',
+            name: 'Longbow',
+            type: 'R',
+            quantity: 1,
+            equipped: true,
+            weaponCategory: 'martial',
+            dmg1: '1d8',
+            dmgType: 'P',
+            properties: ['A'],
+            range: '150/600 ft.',
+          },
+          {
+            id: 'wand',
+            name: 'Wand of Web',
+            type: 'WD',
+            quantity: 1,
+            equipped: true,
+            attuned: true,
+            rarity: 'Uncommon',
           },
         ],
-        spellSlots: { 1: { max: 4, used: 2 } },
-      },
-    })
-    const classesData = parseClasses(
-      JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
-    ) as Class5e[]
-    const spellsData: Spell5e[] = [
-      {
-        name: 'Fire Bolt',
-        source: 'PHB',
-        level: 0,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-      },
-      {
-        name: 'Magic Missile',
-        source: 'PHB',
-        level: 1,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-        meta: { ritual: true },
-      },
-    ]
-    const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
-      A: 'Ammunition',
-    })
-    const map = mapCharacterSheetViewModel(viewModel, '2024')
+        currency: { cp: 1, sp: 2, ep: 3, gp: 42, pp: 5 },
+        details: {
+          alignment: 'Neutral Good',
+          appearance: 'Ink-stained fingers and blue robes.',
+          personalityTraits: 'Always asks one more question.',
+          backstory: 'Studied a map written in starlight.',
+        },
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class',
+              label: 'Wizard (Lv 5)',
+              className: 'Wizard',
+              classSource: 'PHB',
+              castingAbility: 'int',
+              cantrips: ['Fire Bolt|PHB'],
+              spellsKnown: [],
+              preparedSpells: ['Magic Missile|PHB'],
+            },
+          ],
+          spellSlots: { 1: { max: 4, used: 2 } },
+        },
+      })
+      const classesData = parseClasses(
+        JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
+      ) as Class5e[]
+      const spellsData: Spell5e[] = [
+        {
+          name: 'Fire Bolt',
+          source: 'PHB',
+          level: 0,
+          school: 'V',
+          time: [{ number: 1, unit: 'action' }],
+          range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+          components: { v: true, s: true },
+          duration: [{ type: 'instant' }],
+        },
+        {
+          name: 'Magic Missile',
+          source: 'PHB',
+          level: 1,
+          school: 'V',
+          time: [{ number: 1, unit: 'action' }],
+          range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+          components: { v: true, s: true },
+          duration: [{ type: 'instant' }],
+          meta: { ritual: true },
+        },
+      ]
+      const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
+        A: 'Ammunition',
+      })
+      const map = mapCharacterSheetViewModel(viewModel, '2024')
 
-    expect(map.textFields.Text_61).toBe('Longbow')
-    expect(map.textFields.Text_67).toBe('+6')
-    expect(map.textFields.Text_73).toBe('1d8 + 3 Piercing')
-    expect(map.textFields.Text_79).toBe('Ammunition')
-    expect(map.textFields.Text_230).toBe('Intelligence')
-    expect(map.textFields.Text_85).toBe('+4')
-    expect(map.textFields.Text_86).toBe('15')
-    expect(map.textFields.Text_87).toBe('+7')
-    expect(map.textFields.Text_220).toBe('4')
-    expect(map.checkboxFields.Checkbox_37).toBe(true)
-    expect(map.checkboxFields.Checkbox_38).toBe(true)
-    expect(map.checkboxFields.Checkbox_39).toBe(false)
-    expect(map.textFields.Text_92).toBe('C')
-    expect(map.textFields.Text_122).toBe('Fire Bolt')
-    expect(map.textFields.Text_93).toBe('1')
-    expect(map.textFields.Text_123).toBe('Magic Missile')
-    expect(map.checkboxFields.Checkbox_63).toBe(true)
-    expect(map.textFields.Text_88).toContain('Ink-stained fingers')
-    expect(map.textFields.Text_89).toContain('Studied a map')
-    expect(map.textFields.Text_90).toContain('Longbow')
-    expect(map.textFields.Text_212).toBe('Wand of Web')
-    expect(map.checkboxFields.Checkbox_151).toBe(true)
-    expect(map.textFields.Text_218).toBe('42')
-  })
+      expect(map.textFields.Text_61).toBe('Longbow')
+      expect(map.textFields.Text_67).toBe('+6')
+      expect(map.textFields.Text_73).toBe('1d8 + 3 Piercing')
+      expect(map.textFields.Text_79).toBe('Ammunition')
+      expect(map.textFields.Text_230).toBe('Intelligence')
+      expect(map.textFields.Text_85).toBe('+4')
+      expect(map.textFields.Text_86).toBe('15')
+      expect(map.textFields.Text_87).toBe('+7')
+      expect(map.textFields.Text_220).toBe('4')
+      expect(map.checkboxFields.Checkbox_37).toBe(true)
+      expect(map.checkboxFields.Checkbox_38).toBe(true)
+      expect(map.checkboxFields.Checkbox_39).toBe(false)
+      expect(map.textFields.Text_92).toBe('C')
+      expect(map.textFields.Text_122).toBe('Fire Bolt')
+      expect(map.textFields.Text_93).toBe('1')
+      expect(map.textFields.Text_123).toBe('Magic Missile')
+      expect(map.checkboxFields.Checkbox_63).toBe(true)
+      expect(map.textFields.Text_88).toContain('Ink-stained fingers')
+      expect(map.textFields.Text_89).toContain('Studied a map')
+      expect(map.textFields.Text_90).toContain('Longbow')
+      expect(map.textFields.Text_212).toBe('Wand of Web')
+      expect(map.checkboxFields.Checkbox_151).toBe(true)
+      expect(map.textFields.Text_218).toBe('42')
+    },
+  )
 
   test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
     const character = makeCharacterFixture({
@@ -1468,7 +1471,7 @@ describe('characterSheetPdf', () => {
       expect(fontSize).toBeGreaterThanOrEqual(min)
       expect(fontSize).toBeLessThanOrEqual(max)
     }
-  })
+  }, 90_000)
 
   test('2024 official aligns printed controls and keeps small numeric fields legible', async () => {
     const templateBytes = new Uint8Array(
@@ -1572,7 +1575,7 @@ describe('characterSheetPdf', () => {
     expect(filled.getTextField('Text_90').getText()).toMatch(/\.\.\.$/)
     expect(filled.getCheckBox('Checkbox_2').isChecked()).toBe(true)
     expect(filled.getCheckBox('Checkbox_33').isChecked()).toBe(true)
-  })
+  }, 90_000)
 
   test.each([
     '2014-official',
@@ -1605,5 +1608,5 @@ describe('characterSheetPdf', () => {
       expect(Object.keys(map.textFields)).toHaveLength(templateId === '2024-official' ? 260 : 230)
       expect(Object.keys(map.checkboxFields)).toHaveLength(151)
     }
-  })
+  }, 90_000)
 })

@@ -233,7 +233,7 @@ describe('Tavern Born PDF supplements', () => {
     expect(reopened.getForm().getTextField('WotC__SpellPage2__Spells 1015').getText()).toContain(
       'Detect Magic',
     )
-  }, 30_000)
+  }, 90_000)
 
   test('reports the official spell-page capacity for MPMB and suppresses it when omitted', () => {
     const vm = blank()

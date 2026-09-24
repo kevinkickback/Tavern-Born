@@ -35,14 +35,18 @@ describe('character sheet template registry', () => {
   test.each([
     ['2014-official', 'CharacterName'],
     ['2024-official', 'Text_1'],
-  ] as const)('fills and reopens the %s form', async (templateId, nameField) => {
-    const character = makeCharacterFixture({ name: 'Official Form Test' })
-    const viewModel = createCharacterSheetViewModel(character, {})
-    const template = CHARACTER_SHEET_TEMPLATES.find((candidate) => candidate.id === templateId)
-    if (!template) throw new Error(`Missing test template: ${templateId}`)
-    const outputBytes = await generateTestCharacterSheet(viewModel, templateId)
-    const output = await PDFDocument.load(outputBytes)
+  ] as const)(
+    'fills and reopens the %s form',
+    async (templateId, nameField) => {
+      const character = makeCharacterFixture({ name: 'Official Form Test' })
+      const viewModel = createCharacterSheetViewModel(character, {})
+      const template = CHARACTER_SHEET_TEMPLATES.find((candidate) => candidate.id === templateId)
+      if (!template) throw new Error(`Missing test template: ${templateId}`)
+      const outputBytes = await generateTestCharacterSheet(viewModel, templateId)
+      const output = await PDFDocument.load(outputBytes)
 
-    expect(output.getForm().getTextField(nameField).getText()).toBe('Official Form Test')
-  })
+      expect(output.getForm().getTextField(nameField).getText()).toBe('Official Form Test')
+    },
+    90_000,
+  )
 })

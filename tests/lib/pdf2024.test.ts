@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { PDFDocument, PDFName, PDFTextField } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
@@ -18,9 +18,19 @@ import type { Class5e, Creature5e, Spell5e } from '@/types/5etools'
 import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(path, 'utf8'))
+const hasCorpus = [
+  'data/class/class-wizard.json',
+  'data/class/class-ranger.json',
+  'data/spells/spells-xphb.json',
+  'data/bestiary/bestiary-xphb.json',
+].every(existsSync)
 const lookups = {
-  classesByKey: buildClassLookup(parseClasses(json('data/class/class-wizard.json')) as Class5e[]),
-  spellsByKey: buildSpellLookup(parseSpells(json('data/spells/spells-xphb.json')) as Spell5e[]),
+  classesByKey: hasCorpus
+    ? buildClassLookup(parseClasses(json('data/class/class-wizard.json')) as Class5e[])
+    : {},
+  spellsByKey: hasCorpus
+    ? buildSpellLookup(parseSpells(json('data/spells/spells-xphb.json')) as Spell5e[])
+    : {},
 }
 
 function caster() {
@@ -45,7 +55,7 @@ function caster() {
   return createCharacterSheetViewModel(character, lookups)
 }
 
-describe('2024 PDF layout and optional pages', () => {
+describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
   test.each([
     ['Beast of the Land', 30, '5d8'],
     ['Beast of the Sea', 30, '5d8'],
