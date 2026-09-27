@@ -14,7 +14,8 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  rendererCode: 5.25 * MIB,
+  // Reviewed at 5403.2 KiB after expanding the sidebar's distinct navigation icons.
+  rendererCode: 5.3 * MIB,
   // Reviewed at 426.9 KiB with source-qualified subclass choices, filtered-rule rebuilding,
   // and inactive replacement-choice state in the startup data graph.
   initialRendererScript: 428 * KIB,

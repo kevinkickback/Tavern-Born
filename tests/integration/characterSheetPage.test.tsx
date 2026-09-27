@@ -48,6 +48,25 @@ describe('CharacterSheetPage', () => {
     )
   }
 
+  function equipLongsword() {
+    const character = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'blade',
+          name: 'Longsword',
+          source: 'PHB',
+          type: 'M',
+          dmg1: '1d8',
+          dmgType: 'S',
+          quantity: 1,
+          equipped: true,
+          weight: 3,
+        },
+      ],
+    })
+    useCharacterStore.setState({ activeCharacter: character })
+  }
+
   beforeEach(() => {
     useGameDataStore.setState({ gameData: null })
     const hintStorage = new Map<string, string>()
@@ -280,25 +299,10 @@ describe('CharacterSheetPage', () => {
     ).toBe('unchecked')
   })
 
-  test('remembers content choices across visits, invalidates the preview, and leaves equipment untouched', async () => {
+  test('changing content choices invalidates the preview without changing equipment', async () => {
     const user = userEvent.setup()
-    const character = makeCharacterFixture({
-      equipment: [
-        {
-          id: 'blade',
-          name: 'Longsword',
-          source: 'PHB',
-          type: 'M',
-          dmg1: '1d8',
-          dmgType: 'S',
-          quantity: 1,
-          equipped: true,
-          weight: 3,
-        },
-      ],
-    })
-    useCharacterStore.setState({ activeCharacter: character })
-    const first = renderPage()
+    equipLongsword()
+    renderPage()
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
     await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
@@ -312,6 +316,20 @@ describe('CharacterSheetPage', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByText('PDF preview')).toBeNull()
     expect(useCharacterStore.getState().activeCharacter?.equipment[0].equipped).toBe(true)
+  })
+
+  test('remembers content choices across visits and restores automatic attacks', async () => {
+    const user = userEvent.setup()
+    equipLongsword()
+    const first = renderPage()
+    await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
+    await user.click(screen.getByRole('button', { name: /^Attacks/ }))
+    await user.click(
+      within(screen.getByRole('region', { name: 'Attacks' })).getByRole('checkbox', {
+        name: /Longsword/,
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Done' }))
     first.unmount()
     renderPage()
     await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
