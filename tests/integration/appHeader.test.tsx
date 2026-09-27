@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { isHintDismissed, resetAllHints, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -71,6 +73,29 @@ describe('app header character summary', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test.each([
+    ['/build/background', 'Background'],
+    ['/feats', 'Feats'],
+    ['/details/conditions', 'Conditions'],
+    ['/build/adjustments', 'Actions & Effects'],
+  ])('uses the sidebar icon in the %s page header', (path, title) => {
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <AppSidebar />
+          <AppHeader />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+
+    const headerIcon = screen.getByRole('heading', { name: title }).previousElementSibling
+    const sidebarIcon = screen.getByRole('link', { name: title }).querySelector('svg')
+
+    expect(headerIcon?.tagName.toLowerCase()).toBe('svg')
+    expect(sidebarIcon).not.toBeNull()
+    expect(headerIcon?.innerHTML).toBe(sidebarIcon?.innerHTML)
   })
 
   test('should show names directly for one or two classes without a tooltip', () => {
