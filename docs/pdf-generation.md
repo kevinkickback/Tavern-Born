@@ -58,7 +58,12 @@ Description and overflow controls are independent:
 
 - Full descriptions are the default; names-only keeps combat numbers while removing rules
   descriptions from features, traits, feats, actions, and magic items. Companion rules remain intact.
-- **Shorten with ellipsis** is the default overflow mode. Explicit notes pages remain blank.
+- MPMB Action, Bonus Action, and Reaction list fields contain names only. With full descriptions,
+  selected action mechanics and rules text go on its notes page even in the default overflow mode;
+  disabling notes reports those details as omitted. Unknown weapon-property labels display their
+  abbreviation without the saved source suffix.
+- **Shorten with ellipsis** is the default overflow mode. Aside from MPMB action details, explicit
+  notes pages remain blank.
 - **Continue in notes** preserves full reference text and keeps a useful fitted beginning in each
   main-sheet box, plus a reference to the actual continuation page.
 
@@ -121,6 +126,8 @@ owns those choices. Dialog title/actions stay visible on short viewports.
   original reference text and the character's Age field.
 - 2014 forms support portrait and source-qualified organization/custom emblem images; 2024 forms
   have no portrait fields. Faction text alone cannot identify artwork.
+- Organization and ally prose resolves 5etools tags to plain text for PDF output while leaving
+  saved character text and source-qualified selections unchanged.
 - Action columns exclude inactive entries, weapon attacks already printed in the attack table,
   and prose-only features without reliable timing.
 - Unsupported MPMB JavaScript helpers, per-shot ammunition dots, and daily lifestyle calculations

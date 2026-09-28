@@ -264,8 +264,8 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
       ? viewModel.customOrganizationSummary || viewModel.alliesAndOrganizationsSummary
       : viewModel.alliesAndOrganizationsSummary,
     'Background_Organisation.Right': organizationDetails,
-    'Background_Faction.Text': character.details.faction || '',
-    'Background_FactionRank.Text': character.details.rank || '',
+    'Background_Faction.Text': renderEntriesToText([character.details.faction || '']),
+    'Background_FactionRank.Text': renderEntriesToText([character.details.rank || '']),
     Background_Appearance: viewModel.appearanceSummary,
     Background_Enemies: character.details.nemesis || '',
     'Faith/Deity': character.details.faith || '',
@@ -466,7 +466,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   for (const group of actionFields) {
     for (let index = 0; index < CAPACITY.actions; index += 1) {
       const action = group.actions[index]
-      textFields[`${group.label} ${index + 1}`] = action ? formatActionEntry(action) : ''
+      textFields[`${group.label} ${index + 1}`] = action?.name ?? ''
     }
   }
 

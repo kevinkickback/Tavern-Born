@@ -73,17 +73,78 @@ describe('createCharacterSheetViewModel', () => {
 
     const map = mapCharacterSheet2014({ ...viewModel, actions })
 
-    expect(map.textFields['Action 1']).toBe('Test manual-1: Description manual-1')
-    expect(map.textFields['Action 6']).toBe('Test manual-6: Description manual-6')
+    expect(map.textFields['Action 1']).toBe('Test manual-1')
+    expect(map.textFields['Action 6']).toBe('Test manual-6')
     expect(map.textFields['Action 7']).toBeUndefined()
-    expect(map.textFields['Bonus Action 1']).toBe(
-      'Test bonus: DC 13 Wisdom; 1 test-resource; Short rest; Test recharge',
-    )
+    expect(map.textFields['Bonus Action 1']).toBe('Test bonus')
     expect(map.textFields['Bonus Action 2']).toBe('')
-    expect(map.textFields['Reaction 1']).toBe('Test reaction: Description reaction')
+    expect(map.textFields['Reaction 1']).toBe('Test reaction')
     expect(map.textFields['Reaction 2']).toBe('')
     expect(Object.values(map.textFields)).not.toContain('Test weapon: Description weapon.')
     expect(Object.values(map.textFields)).not.toContain('Test inactive: Description inactive.')
+  })
+
+  test.each([
+    ['2014', 'PHB'],
+    ['2024', 'XPHB'],
+  ] as const)('shows weapon property codes without source suffixes for %s characters', (originSystem, source) => {
+    const character = makeCharacterFixture({
+      originSystem,
+      equipment: [
+        {
+          id: 'longbow',
+          name: 'Longbow',
+          source,
+          type: `R|${source}`,
+          quantity: 1,
+          equipped: true,
+          dmg1: '1d8',
+          dmgType: 'P',
+          properties: [`2H|${source}`],
+        },
+      ],
+    })
+    const viewModel = createCharacterSheetViewModel(character, {})
+    const map = mapCharacterSheet2014(viewModel)
+
+    expect(character.equipment[0]?.properties).toEqual([`2H|${source}`])
+    expect(viewModel.weaponRows[0]?.notes).toBe('2H')
+    expect(map.textFields['Attack.1.Description']).toBe('2H')
+  })
+
+  test('renders parsed organization and user-entered ally tags as plain text in 2014 forms', () => {
+    const character = makeCharacterFixture({
+      details: {
+        organizationSelectionKey: 'The Harpers|SCAG',
+        factionNotes: 'Watch for {@skill Perception|PHB} clues.',
+        allies: [
+          {
+            id: 'scout',
+            name: 'Scout',
+            relationship: 'Friend',
+            description: 'Skilled in {@skill Stealth|PHB} and {@skill Investigation|PHB}.',
+          },
+        ],
+      },
+    })
+    const viewModel = createCharacterSheetViewModel(character, {
+      organizations: [
+        {
+          name: 'The Harpers',
+          source: 'SCAG',
+          description: 'Agents use {@skill Investigation|PHB} to gather clues.',
+        },
+      ],
+    })
+
+    expect(viewModel.alliesAndOrganizationsSummary).toContain('Investigation to gather clues')
+    expect(viewModel.alliesAndOrganizationsSummary).toContain('Stealth and Investigation')
+    expect(viewModel.alliesAndOrganizationsSummary).not.toContain('{@')
+    expect(viewModel.organizationDetailsSummary).toContain('Perception clues')
+    expect(viewModel.organizationDetailsSummary).not.toContain('{@')
+    expect(
+      mapCharacterSheet2014(viewModel).textFields['Background_Organisation.Left'],
+    ).not.toContain('{@')
   })
 
   test('resolves source-qualified entities and merges nested subrace data before mapping', () => {

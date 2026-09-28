@@ -431,7 +431,7 @@ export function deriveWeaponActions(
         : []
       const propertyLabels = properties.map((property) => {
         const key = property.split('|')[0].toUpperCase()
-        return context.propertyLookup?.[key] ?? property
+        return context.propertyLookup?.[key] ?? key
       })
       if (item.dmg2) propertyLabels.push(`Versatile ${item.dmg2}`)
 
