@@ -8,7 +8,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 
 describe('BuildReviewPage', () => {
   beforeEach(() => {
@@ -161,6 +161,120 @@ describe('BuildReviewPage', () => {
     await user.keyboard('{ArrowRight}')
     expect(document.activeElement).toBe(attention)
     expect(attention.getAttribute('aria-selected')).toBe('true')
+  })
+
+  test('shows the complete character snapshot in expandable gameplay sections', async () => {
+    const user = userEvent.setup()
+    const gameData = useGameDataStore.getState().gameData!
+    const enrichedData = {
+      ...gameData,
+      feats: [{ name: 'Alert', source: 'TEST', entries: ['Always ready for danger.'] }],
+      classFeatures: [
+        {
+          name: 'Second Wind',
+          source: 'TEST',
+          entries: ['Full feature details remain visible without truncation.'],
+        },
+      ],
+      spells: [makeSpellFixture({ source: 'TEST', entries: ['Three glowing darts.'] })],
+      items: [
+        { name: 'Magic Wand', source: 'TEST', type: 'WD', entries: ['A carved wand.'] },
+        { name: 'Choice Relic', source: 'TEST', type: 'W', entries: ['A chosen relic.'] },
+      ],
+    }
+    enrichedData.lookups = buildGameDataLookups(enrichedData)
+    useGameDataStore.setState({ gameData: enrichedData })
+
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      portrait: 'assets/images/characters/placeholder_char_card.jpg',
+      hitPoints: { current: 7, temporary: 3 },
+      details: { personality: 'Secret backstory should stay off the overview.' },
+      proficiencies: { ...current.proficiencies, skills: ['perception'], languages: ['Common'] },
+      features: [
+        {
+          id: 'feature-1',
+          name: 'Second Wind',
+          source: 'TEST',
+          description: '',
+        },
+      ],
+      feats: [{ id: 'feat-1', name: 'Alert', source: 'TEST', description: '' }],
+      equipment: [
+        {
+          id: 'item-1',
+          name: 'Magic Wand',
+          source: 'TEST',
+          type: 'WD',
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+      conditions: ['Poisoned'],
+      classChoiceSelections: [
+        {
+          choiceId: 'choice-1',
+          label: 'Fighting Style',
+          kind: 'class-feature' as const,
+          className: 'Test Class',
+          classSource: 'TEST',
+          classLevel: 1,
+          selected: [],
+        },
+        {
+          choiceId: 'choice-2',
+          label: 'Relic choice',
+          kind: 'item' as const,
+          className: 'Test Class',
+          classSource: 'TEST',
+          classLevel: 1,
+          selected: [
+            { entityType: 'item' as const, name: 'Choice Relic', source: 'TEST', slotLevel: 1 },
+          ],
+        },
+      ],
+      spells: {
+        ...current.spells,
+        spellProfiles: current.spells.spellProfiles.map((profile) =>
+          profile.type === 'special'
+            ? { ...profile, spellsKnown: ['Magic Missile|TEST'] }
+            : profile,
+        ),
+      },
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('img', { name: 'Test Character portrait' })).toBeTruthy()
+    expect(screen.getByText('Current HP').parentElement?.textContent).toContain('7')
+    expect(screen.getByText('Temporary HP').parentElement?.textContent).toContain('3')
+    expect(screen.getByText('Armor Class')).toBeTruthy()
+    expect(screen.getByText('Common')).toBeTruthy()
+    expect(screen.queryByText(/Secret backstory/)).toBeNull()
+
+    const featureSection = screen.getByText('Traits & features').closest('details')!
+    expect(featureSection.open).toBe(false)
+    await user.click(screen.getByText('Traits & features'))
+    expect(featureSection.open).toBe(true)
+    expect(screen.getByText('Full feature details remain visible without truncation.')).toBeTruthy()
+    expect(screen.getByText('Fighting Style')).toBeTruthy()
+    expect(screen.getByText('No option selected.')).toBeTruthy()
+    expect(screen.getByText('A chosen relic.')).toBeTruthy()
+
+    await user.click(screen.getByText('Feats'))
+    expect(screen.getByText('Always ready for danger.')).toBeTruthy()
+    await user.click(screen.getByText('Spells & spellcasting'))
+    expect(screen.getAllByText('Three glowing darts.').length).toBeGreaterThan(0)
+    await user.click(screen.getByText('Equipment'))
+    expect(screen.getByText('A carved wand.')).toBeTruthy()
+    await user.click(screen.getByText('Resources & conditions'))
+    expect(screen.getByText('Poisoned')).toBeTruthy()
   })
 })
 
