@@ -108,6 +108,10 @@ a flat configuration panel with controls placed directly inside its constrained 
 wrapping the entire content area in a second card unless the page intentionally uses the
 dual-pane/workbench pattern.
 
+Hand-built page tab bars use `handleTabListKeyDown` for arrow, Home, and End navigation. Only the
+selected tab has `tabIndex=0`; each tab's `aria-controls` and the active panel's `aria-labelledby`
+must refer to each other.
+
 Use the shared `Button` `accentOutline` variant for compact edit/configure affordances that lead to
 an existing setup workflow. It provides an accent border and text without a filled resting state.
 Incomplete or destructive actions retain their warning/destructive semantic variants instead of

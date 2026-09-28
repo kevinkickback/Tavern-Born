@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router-dom'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useClassResources } from '@/hooks/character/useClassResources'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
@@ -282,6 +283,7 @@ export function ConditionsPage() {
             className="inline-flex h-full min-w-max items-stretch gap-5"
             role="tablist"
             aria-label="Condition category"
+            onKeyDown={handleTabListKeyDown}
           >
             {CONDITION_PANELS.map(({ value, label, icon: Icon }) => {
               const active = activePanel === value
@@ -293,6 +295,7 @@ export function ConditionsPage() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`conditions-panel-${value}`}
+                  tabIndex={active ? 0 : -1}
                   onClick={() => setActivePanel(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',

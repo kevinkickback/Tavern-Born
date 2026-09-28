@@ -136,6 +136,32 @@ describe('BuildReviewPage', () => {
       '?attention=choice%3Atest-language-choice',
     )
   })
+
+  test('moves keyboard focus between review tabs and labels the selected panel', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/build/review']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    const attention = screen.getByRole('tab', { name: /Needs attention/ })
+    attention.focus()
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1])
+
+    await user.keyboard('{ArrowRight}')
+    const overview = screen.getByRole('tab', { name: 'Character overview' })
+    expect(document.activeElement).toBe(overview)
+    expect(overview.getAttribute('aria-selected')).toBe('true')
+    const panel = document.getElementById(overview.getAttribute('aria-controls')!)
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(overview.id)
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0])
+
+    await user.keyboard('{ArrowRight}')
+    expect(document.activeElement).toBe(attention)
+    expect(attention.getAttribute('aria-selected')).toBe('true')
+  })
 })
 
 function ProficiencyDestination() {

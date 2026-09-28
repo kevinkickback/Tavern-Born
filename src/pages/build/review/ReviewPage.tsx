@@ -10,6 +10,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
@@ -118,6 +119,7 @@ export function BuildReviewPage() {
             className="inline-flex h-full min-w-max items-stretch gap-5"
             role="tablist"
             aria-label="Review section"
+            onKeyDown={handleTabListKeyDown}
           >
             {[
               {
@@ -141,6 +143,7 @@ export function BuildReviewPage() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`${tabIdPrefix}-panel-${value}`}
+                  tabIndex={active ? 0 : -1}
                   onClick={() => selectSection(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',

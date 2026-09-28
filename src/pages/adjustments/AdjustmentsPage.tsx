@@ -5,6 +5,7 @@ import { ManualActionsForm, ManualActionsList } from '@/components/character/Man
 import { ManualEffectsForm, ManualEffectsList } from '@/components/character/ManualEffectsEditor'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import {
   WorkspaceBody,
@@ -78,6 +79,7 @@ export function AdjustmentsPage() {
                       className="inline-flex h-full min-w-max items-stretch gap-5"
                       role="tablist"
                       aria-label="Adjustment type"
+                      onKeyDown={handleTabListKeyDown}
                     >
                       {[
                         { value: 'actions' as const, label: 'Actions', icon: Sword },
@@ -92,6 +94,7 @@ export function AdjustmentsPage() {
                             role="tab"
                             aria-selected={active}
                             aria-controls={`${tabIdPrefix}-panel-${value}`}
+                            tabIndex={active ? 0 : -1}
                             onClick={() => selectSection(value)}
                             className={cn(
                               'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',

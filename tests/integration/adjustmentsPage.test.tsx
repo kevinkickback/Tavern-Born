@@ -86,6 +86,36 @@ describe('AdjustmentsPage', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  test('moves keyboard focus between action and effect tabs and labels the selected panel', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/build/adjustments']}>
+        <AdjustmentsPage />
+      </MemoryRouter>,
+    )
+
+    const actions = screen.getByRole('tab', { name: 'Actions' })
+    actions.focus()
+    expect(
+      within(screen.getByRole('tablist', { name: 'Adjustment type' }))
+        .getAllByRole('tab')
+        .map((tab) => tab.tabIndex),
+    ).toEqual([0, -1])
+
+    await user.keyboard('{ArrowRight}')
+    const effects = screen.getByRole('tab', { name: 'Effects' })
+    expect(document.activeElement).toBe(effects)
+    expect(effects.getAttribute('aria-selected')).toBe('true')
+    const panel = document.getElementById(effects.getAttribute('aria-controls')!)
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(effects.id)
+    expect(
+      within(screen.getByRole('tablist', { name: 'Adjustment type' }))
+        .getAllByRole('tab')
+        .map((tab) => tab.tabIndex),
+    ).toEqual([-1, 0])
+  })
+
   test('limits the source list to action-sized projections', () => {
     render(
       <SourceDerivedActions
