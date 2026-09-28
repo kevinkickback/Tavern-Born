@@ -118,7 +118,7 @@ function RaceAsiBonuses({
         {fixed.map((fb) => (
           <span
             key={`${fb.ability}|${fb.value}`}
-            className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded px-2 py-0.5 font-semibold"
+            className="rounded border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-semibold text-success-foreground"
           >
             {ABILITY_ABBREVIATIONS[fb.ability]} +{fb.value}
           </span>

@@ -255,14 +255,14 @@ export function ReviewStep({
                       </div>
                       <div className="text-2xl font-bold font-mono leading-none">{total}</div>
                       {bonus !== 0 && (
-                        <div className="text-xs text-emerald-500 font-semibold leading-none">
+                        <div className="text-xs font-semibold leading-none text-success-foreground">
                           {base}+{bonus}
                         </div>
                       )}
                       <div
                         className={cn(
                           'text-sm font-semibold',
-                          mod >= 0 ? 'text-success' : 'text-destructive',
+                          mod >= 0 ? 'text-success-foreground' : 'text-destructive',
                         )}
                       >
                         {formatModifier(mod)}
