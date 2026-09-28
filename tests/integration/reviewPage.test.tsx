@@ -258,7 +258,8 @@ describe('BuildReviewPage', () => {
     const portrait = screen.getByRole('img', {
       name: 'Test Character portrait',
     }) as HTMLImageElement
-    expect(portrait.className).toContain('object-contain')
+    expect(portrait.className).toContain('object-cover')
+    expect(portrait.parentElement?.className).toContain('aspect-[3/2]')
     expect(portrait.style.transform).toBe('')
     expect(screen.getByText('Current HP').parentElement?.textContent).toContain('7')
     expect(screen.getByText('Temporary HP').parentElement?.textContent).toContain('3')

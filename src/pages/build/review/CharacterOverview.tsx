@@ -400,11 +400,11 @@ export function CharacterOverview({
       <Card className="gap-4 p-4">
         <div className="flex flex-col gap-4 sm:flex-row">
           {character.portrait && (
-            <div className="flex w-full shrink-0 items-center justify-center sm:w-48">
+            <div className="aspect-[3/2] w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-48">
               <img
                 src={resolvePortraitSrc(character.portrait)}
                 alt={`${character.name || 'Character'} portrait`}
-                className="block h-auto max-h-56 max-w-full rounded-lg object-contain"
+                className="block h-full w-full object-cover object-[50%_25%]"
               />
             </div>
           )}

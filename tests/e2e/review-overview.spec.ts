@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { MINIMAL_GAME_DATA, seedAppState, selectCharacterFromHome } from './helpers/startup'
 
-test('review opens with one expanded section and shows the full portrait', async ({
+test('review opens with one expanded section and fills a fixed portrait frame', async ({
   page,
 }, testInfo) => {
   const character = makeCharacterFixture({
@@ -35,8 +35,15 @@ test('review opens with one expanded section and shows the full portrait', async
     .toBeGreaterThan(0)
   const presentation = await portrait.evaluate((image: HTMLImageElement) => ({
     objectFit: getComputedStyle(image).objectFit,
+    objectPosition: getComputedStyle(image).objectPosition,
     transform: getComputedStyle(image).transform,
+    frameWidth: image.parentElement?.getBoundingClientRect().width,
+    frameHeight: image.parentElement?.getBoundingClientRect().height,
   }))
-  expect(presentation).toEqual({ objectFit: 'contain', transform: 'none' })
+  expect(presentation.objectFit).toBe('cover')
+  expect(presentation.objectPosition).toBe('50% 25%')
+  expect(presentation.transform).toBe('none')
+  expect(presentation.frameWidth).toBeGreaterThan(0)
+  expect(presentation.frameWidth! / presentation.frameHeight!).toBeCloseTo(1.5, 1)
   await panel.screenshot({ path: testInfo.outputPath('overview.png') })
 })
