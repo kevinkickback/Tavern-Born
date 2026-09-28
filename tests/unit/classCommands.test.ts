@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   addMulticlass,
   applyClassEquipmentChoiceCommand,
   applyClassProgressionUpdate,
   applyClassSelectionCommand,
+  applyLevelDown,
   applyLevelUp,
   removeMulticlass,
   selectBaseClass,
@@ -16,6 +19,7 @@ import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 describe('Class Commands', () => {
   test('selectBaseClass updates top-level class fields and progression', () => {
@@ -392,7 +396,11 @@ describe('Class Commands', () => {
         dieResult: 7,
         method: 'manual',
       },
-      17,
+      createCharacterCalculationContext(character, {
+        classesByKey: buildClassLookup([
+          makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } }),
+        ]),
+      }),
     )
 
     expect(result.characterPatch.classProgression?.[0]?.levels).toBe(2)
@@ -407,6 +415,147 @@ describe('Class Commands', () => {
     ])
     expect(result.characterPatch.hitPoints).toEqual({ current: 17, temporary: 0 })
     expect(result.characterPatch.hitPointsInitialized).toBe(true)
+  })
+
+  test('level-up refills to the effective maximum including typed and per-level HP effects', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      hitPointAdjustments: [
+        {
+          id: 'toughness',
+          label: 'Toughness',
+          amount: 2,
+          mode: 'per-level',
+          sourceType: 'manual',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      manualEffects: [
+        {
+          id: 'extra-hp',
+          label: 'Extra HP',
+          source: { kind: 'manual', name: 'Extra HP' },
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+        },
+      ],
+    })
+    const context = createCharacterCalculationContext(character, {
+      classesByKey: buildClassLookup([
+        makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } }),
+      ]),
+    })
+    const result = applyLevelUp(
+      character,
+      character.provenance,
+      [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+      {
+        className: 'Fighter',
+        classSource: 'PHB',
+        classLevel: 2,
+        hitDie: 10,
+        dieResult: 7,
+        method: 'manual',
+      },
+      context,
+    )
+
+    expect(result.characterPatch.hitPoints?.current).toBe(24)
+
+    const overridden = { ...character, maxHitPointsOverride: 40 }
+    const overrideResult = applyLevelUp(
+      overridden,
+      overridden.provenance,
+      [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+      {
+        className: 'Fighter',
+        classSource: 'PHB',
+        classLevel: 2,
+        hitDie: 10,
+        dieResult: 7,
+        method: 'manual',
+      },
+      createCharacterCalculationContext(overridden, context.lookups.primary),
+    )
+    expect(overrideResult.characterPatch.hitPoints?.current).toBe(40)
+  })
+
+  test('level-down removes the last source-qualified class and clamps HP after reconciliation', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 1 },
+        { name: 'Wizard', source: 'XPHB', levels: 1 },
+      ],
+      hitPointGains: [
+        {
+          className: 'Wizard',
+          classSource: 'XPHB',
+          classLevel: 1,
+          characterLevel: 2,
+          hitDie: 6,
+          dieResult: 4,
+          method: 'rolled',
+        },
+      ],
+      hitPoints: { current: 16, temporary: 3 },
+      hitPointAdjustments: [
+        {
+          id: 'toughness',
+          label: 'Toughness',
+          amount: 2,
+          mode: 'per-level',
+          sourceType: 'manual',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    })
+    const context = createCharacterCalculationContext(character, {
+      classesByKey: buildClassLookup([
+        makeClassFixture({ name: 'Wizard', source: 'PHB', hd: { faces: 6 } }),
+        makeClassFixture({ name: 'Wizard', source: 'XPHB', hd: { faces: 6 } }),
+      ]),
+    })
+    const result = applyLevelDown(character, character.provenance, context)
+
+    expect(result.removedClassName).toBe('Wizard')
+    expect(result.characterPatch.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 1 },
+    ])
+    expect(result.characterPatch.hitPointGains).toEqual([])
+    expect(result.characterPatch.hitPoints).toEqual({ current: 8, temporary: 3 })
+    expect(() =>
+      applyLevelDown(
+        { ...character, classProgression: result.characterPatch.classProgression ?? [] },
+        result.provenanceUpdate,
+        context,
+      ),
+    ).toThrow('Cannot go below level 1.')
+  })
+
+  test('level-down clamps HP using Constitution after retracting an earned ASI', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 4 }],
+      asiChoices: [
+        {
+          id: 'fighter|PHB|4',
+          level: 4,
+          className: 'Fighter',
+          classSource: 'PHB',
+          abilityChanges: { constitution: 2 },
+        },
+      ],
+      hitPoints: { current: 32, temporary: 0 },
+    })
+    const context = createCharacterCalculationContext(character, {
+      classesByKey: buildClassLookup([
+        makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } }),
+      ]),
+    })
+    const result = applyLevelDown(character, character.provenance, context)
+
+    expect(result.characterPatch.classProgression?.[0]?.levels).toBe(3)
+    expect(result.characterPatch.asiChoices).toEqual([])
+    expect(result.characterPatch.hitPoints?.current).toBe(22)
   })
 
   test('level removal prunes its persisted hit-point gain', () => {
