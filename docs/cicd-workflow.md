@@ -44,10 +44,18 @@ git switch -c feat/short-description
 Commit and push the branch, then open a pull request:
 
 ```bash
+npm run check:pr
 git push -u origin feat/short-description
 gh pr create --base main --fill
 gh pr merge --auto --squash
 ```
+
+`check:pr` runs the required PR checks locally before the push: architecture and dead-code checks,
+read-only linting, type checking, the production build and bundle budgets, full coverage, browser
+E2E, and Electron smoke. Run focused tests during development, then use this command once the branch
+is ready for review. Install Chromium with `npx playwright install chromium` if Playwright has not
+been set up on the machine. The Electron smoke test skips affected Windows builds as described in
+the testing guide; CI still runs it on Linux.
 
 The final command opts that pull request into GitHub native auto-merge. It does not bypass CI,
 branch protection, or an out-of-date base.
@@ -56,6 +64,10 @@ branch protection, or an out-of-date base.
 architectural boundaries, linting, type checking, coverage thresholds, a production build, bundle
 budgets, the complete browser suite, and the compiled Electron smoke test. Repository-run Node
 commands use Node 24, matching `.nvmrc` and the package engine requirement.
+Build and bundle checks run before coverage so a budget failure is reported without waiting for the
+full test suite. A new run for the same pull request cancels its older run; only the latest revision
+needs to finish validation.
+
 Linux CI and release jobs use the explicit `ubuntu-26.04` runner instead of `ubuntu-latest`, so a
 future GitHub runner migration cannot change the build environment without a reviewed repository
 change.

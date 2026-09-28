@@ -75,7 +75,11 @@ source-qualified dependencies without diagnostics.
 
 ## Commands
 
-During development, run the narrowest relevant Vitest/Playwright files first. Before merging:
+During development, run the narrowest relevant Vitest/Playwright files first. Before pushing a
+branch for review, run `npm run check:pr`. It runs the individual PR checks below in one local
+command. The same checks remain required in CI.
+
+To run or diagnose a check individually:
 
 ```text
 npx biome ci .
@@ -84,14 +88,14 @@ npm run test:coverage
 npm run test:e2e
 npm run build
 npm run check:health
+npm run check:bundle
+npm run test:electron
 ```
 
 Before a release, also run:
 
 ```text
 npm run test:e2e:release
-npm run test:electron
-npm run check:bundle
 npm run check:release
 ```
 

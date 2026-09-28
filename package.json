@@ -25,6 +25,7 @@
     "check:boundaries": "depcruise --config .dependency-cruiser.cjs src electron",
     "check:dead-code": "knip --no-progress --exclude duplicates",
     "check:health": "npm run check:dead-code && npm run check:boundaries",
+    "check:pr": "npm run check:health && npx biome ci . && npx tsc -b && npm run build && npm run check:bundle && npm run test:coverage && npm run test:e2e && npm run test:electron",
     "check:release": "node scripts/check-release.mjs",
     "lint": "npx biome format --write . && npx biome check --write .",
     "report:capabilities": "vitest run tests/corpus/dataCapabilities.test.ts --reporter=verbose",
