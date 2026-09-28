@@ -125,3 +125,48 @@ test('malformed and schema-invalid imports show distinct errors without changing
     'library-bravo',
   ])
 })
+
+test('exports and restores a complete library backup with collision-safe identities', async ({
+  page,
+}) => {
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export Library' }).click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toMatch(/\.tbclib$/)
+  const backup = JSON.parse(fs.readFileSync(await download.path(), 'utf8')) as {
+    kind: string
+    version: number
+    characters: Array<{ id: string; name: string; raceSource?: string; portrait?: string }>
+  }
+  expect(backup.kind).toBe('tavern-born-library')
+  expect(backup.version).toBe(1)
+  expect(backup.characters.map((character) => character.name).sort()).toEqual([
+    'Alpha Hero',
+    'Bravo Mage',
+  ])
+
+  const chooserEvent = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Import' }).first().click()
+  await (await chooserEvent).setFiles({
+    name: download.suggestedFilename(),
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup)),
+  })
+  const dialog = page.getByRole('dialog', { name: 'Character import results' })
+  await expect(dialog).toContainText('2 imported · 0 failed')
+  await expect(dialog).toContainText('renamed to avoid a name collision')
+  await expect(dialog).toContainText('assigned a new ID')
+  await dialog.getByRole('button', { name: 'Done' }).click()
+
+  await expect
+    .poll(async () => {
+      const characters = (await readPersistedCharacters(page)) as Array<{
+        id: string
+        name: string
+        raceSource?: string
+        portrait?: string
+      }>
+      return characters.map((character) => character.name).sort()
+    })
+    .toEqual(['Alpha Hero', 'Alpha Hero (Imported)', 'Bravo Mage', 'Bravo Mage (Imported)'])
+})

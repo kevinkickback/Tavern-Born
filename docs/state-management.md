@@ -130,7 +130,12 @@ equipped state; they are not copied into equipment records.
 
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved
 record and changes only ID, collision-free name, and timestamps. `.tbc` export contains one complete
-current character; import accepts `.tbc` or JSON and validates through the same compatibility path.
+current character; `.tbclib` is a versioned JSON envelope of complete saved characters for selected
+or entire-library backups. Import accepts multiple `.tbc`/JSON files or a `.tbclib` backup, validates
+each character through the store's compatibility path, and retains valid entries when others fail.
+The store resolves ID collisions; transfer preparation assigns collision-free imported names. Saved
+source-qualified choices and portraits remain in each record even if the current catalog lacks their
+content.
 
 ## Schema compatibility
 

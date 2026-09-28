@@ -33,12 +33,21 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -53,7 +62,18 @@ import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
 } from '@/lib/character/additionalContentAvailability'
-import { duplicateCharacter, getDuplicateCharacterName } from '@/lib/character/characterTransfer'
+import {
+  duplicateCharacter,
+  getDuplicateCharacterName,
+  getImportedCharacterName,
+  LIBRARY_BACKUP_EXTENSION,
+  MAX_LIBRARY_BACKUP_SIZE,
+  type PreparedCharacterDownload,
+  prepareCharacterDownload,
+  prepareCharacterImport,
+  prepareLibraryDownload,
+  prepareUnsupportedCharacterDownloads,
+} from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
@@ -66,14 +86,30 @@ import type { Character } from '@/types/character'
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
 type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
 
-function downloadJsonFile(data: unknown, filename: string) {
-  const dataBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+function downloadPreparedFile(file: PreparedCharacterDownload) {
+  const dataBlob = new Blob([file.text], { type: 'application/json' })
   const url = URL.createObjectURL(dataBlob)
   const link = document.createElement('a')
   link.href = url
-  link.download = filename
+  link.download = file.filename
   link.click()
   URL.revokeObjectURL(url)
+}
+
+interface CharacterImportReport {
+  imported: Array<{
+    label: string
+    name: string
+    originalName: string
+    idChanged: boolean
+    missingContent: boolean
+  }>
+  failures: Array<{
+    label: string
+    reason: string
+    kind: 'parse' | 'validation' | 'format' | 'size' | 'storage'
+  }>
+  contentCheckUnavailable: boolean
 }
 
 interface CharacterListRowProps {
@@ -219,6 +255,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [pendingDeleteCharacterId, setPendingDeleteCharacterId] = useState<string | null>(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false)
+  const [importReport, setImportReport] = useState<CharacterImportReport | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const [groupBy, setGroupBy] = useState<GroupByOption>('none')
@@ -350,25 +387,30 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   }
 
   const handleExportCharacter = useCallback((character: Character) => {
-    downloadJsonFile(character, `${character.name || 'character'}.tbc`)
+    downloadPreparedFile(prepareCharacterDownload(character))
     toast.success('Character exported successfully')
   }, [])
 
   const handleExportUnsupportedCharacters = useCallback(() => {
-    unsupportedCharacters.forEach((character, index) => {
-      const record =
-        typeof character === 'object' && character !== null
-          ? (character as Record<string, unknown>)
-          : null
-      const rawName = typeof record?.name === 'string' ? record.name.trim() : ''
-      const safeName = (rawName || 'character').replace(/[<>:"/\\|?*]/g, '_')
-      const suffix = unsupportedCharacters.length === 1 ? '' : `-${index + 1}`
-      downloadJsonFile(character, `${safeName}-legacy-backup${suffix}.tbc`)
-    })
+    prepareUnsupportedCharacterDownloads(unsupportedCharacters).forEach(downloadPreparedFile)
     toast.success(
       `${unsupportedCharacters.length} character backup${unsupportedCharacters.length === 1 ? '' : 's'} exported`,
     )
   }, [unsupportedCharacters])
+
+  const exportLibrary = (selected: readonly Character[]) => {
+    try {
+      downloadPreparedFile(prepareLibraryDownload(selected))
+      toast.success(`${selected.length} character${selected.length === 1 ? '' : 's'} exported`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not export the library backup.')
+    }
+  }
+
+  const handleExportSelected = () => {
+    const selected = characters.filter((character) => selectedCharacterIds.includes(character.id))
+    exportLibrary(selected)
+  }
 
   const handleDuplicateCharacter = useCallback(
     (source: Character) => {
@@ -387,28 +429,88 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const handleImportCharacter = () => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.tbc,.json'
+    input.accept = `.tbc,.json,${LIBRARY_BACKUP_EXTENSION}`
+    input.multiple = true
     input.onchange = async (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      try {
-        if (file.size > MAX_CHARACTER_SIZE) {
-          const maxMB = (MAX_CHARACTER_SIZE / (1024 * 1024)).toFixed(0)
-          toast.error(`Character file exceeds the ${maxMB}MB safety limit.`)
-          return
-        }
-        const character: unknown = JSON.parse(await file.text())
-        const validationError = validateCharacterData(character)
-        if (validationError) {
-          toast.error(`Invalid character: ${validationError}`)
-          return
-        }
-        useCharacterStore.getState().addCharacter(character as Character)
-        toast.success('Character imported successfully')
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        toast.error(`Failed to import character: ${message}`)
+      const files = Array.from((event.target as HTMLInputElement).files ?? [])
+      if (files.length === 0) return
+      const report: CharacterImportReport = {
+        imported: [],
+        failures: [],
+        contentCheckUnavailable: !gameData,
       }
+      const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
+      let isBulkImport = files.length > 1
+      for (const file of files) {
+        const filename = file.name || 'character.tbc'
+        const isBackupFile = filename.toLowerCase().endsWith(LIBRARY_BACKUP_EXTENSION)
+        const limit = isBackupFile ? MAX_LIBRARY_BACKUP_SIZE : MAX_CHARACTER_SIZE
+        if (file.size > limit) {
+          const maxMB = (limit / (1024 * 1024)).toFixed(0)
+          report.failures.push({
+            label: filename,
+            reason: `${isBackupFile ? 'Library backup' : 'Character file'} exceeds the ${maxMB}MB safety limit.`,
+            kind: 'size',
+          })
+          continue
+        }
+        try {
+          const prepared = prepareCharacterImport(
+            await file.text(),
+            filename,
+            validateCharacterData,
+          )
+          isBulkImport ||= prepared.isLibraryBackup
+          report.failures.push(...prepared.failures)
+          for (const entry of prepared.characters) {
+            try {
+              const existingNames = useCharacterStore
+                .getState()
+                .characters.map((value) => value.name)
+              const name = getImportedCharacterName(entry.character.name, existingNames)
+              const added = useCharacterStore
+                .getState()
+                .addCharacter(
+                  name === entry.character.name ? entry.character : { ...entry.character, name },
+                )
+              report.imported.push({
+                label: entry.label,
+                name: added.name,
+                originalName: entry.character.name,
+                idChanged: added.id !== entry.character.id,
+                missingContent: availability
+                  ? characterUsesContentOutsideCatalog(added, availability)
+                  : false,
+              })
+            } catch (error) {
+              report.failures.push({
+                label: entry.label,
+                reason: error instanceof Error ? error.message : 'Unknown error',
+                kind: 'storage',
+              })
+            }
+          }
+        } catch (error) {
+          report.failures.push({
+            label: filename,
+            reason: error instanceof Error ? error.message : 'Unknown error',
+            kind: 'storage',
+          })
+        }
+      }
+      if (isBulkImport) {
+        setImportReport(report)
+        return
+      }
+      if (report.imported.length === 1 && report.failures.length === 0) {
+        toast.success('Character imported successfully')
+        return
+      }
+      const failure = report.failures[0]
+      if (!failure) return
+      if (failure.kind === 'size') toast.error(failure.reason)
+      else if (failure.kind === 'validation') toast.error(`Invalid character: ${failure.reason}`)
+      else toast.error(`Failed to import character: ${failure.reason}`)
     }
     input.click()
   }
@@ -466,6 +568,16 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-2 border-l border-border pl-3">
+            {characters.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 gap-1.5 px-3"
+                onClick={() => exportLibrary(characters)}
+              >
+                <DownloadSimple /> Export Library
+              </Button>
+            )}
             <Button
               variant={filterPanelOpen ? 'secondary' : 'ghost'}
               size="sm"
@@ -551,9 +663,18 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             {selectedCharacterIds.length} selected
           </span>
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
             className="ml-auto h-7 gap-1.5"
+            disabled={selectedCharacterIds.length === 0}
+            onClick={handleExportSelected}
+          >
+            <DownloadSimple /> Export Selected
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 gap-1.5"
             disabled={selectedCharacterIds.length === 0}
             onClick={() => setConfirmBulkDeleteOpen(true)}
           >
@@ -694,6 +815,60 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         onExport={handleExportUnsupportedCharacters}
         onAcknowledge={dismissUnsupportedCharacters}
       />
+      <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Character import results</DialogTitle>
+            <DialogDescription>
+              {importReport?.imported.length ?? 0} imported · {importReport?.failures.length ?? 0}{' '}
+              failed. Valid characters were added even when other entries failed.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-80">
+            <div className="space-y-4 pr-4 text-sm">
+              {(importReport?.imported.length ?? 0) > 0 && (
+                <section>
+                  <h3 className="mb-1 font-semibold">Imported</h3>
+                  <ul className="space-y-1">
+                    {importReport?.imported.map((entry) => (
+                      <li key={`${entry.label}:${entry.name}`}>
+                        {entry.name}
+                        {entry.name !== entry.originalName &&
+                          ' (renamed to avoid a name collision)'}
+                        {entry.idChanged && ' · assigned a new ID'}
+                        {entry.missingContent && ' · needs additional game content'}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {(importReport?.failures.length ?? 0) > 0 && (
+                <section>
+                  <h3 className="mb-1 font-semibold">Could not import</h3>
+                  <ul className="space-y-1">
+                    {importReport?.failures.map((entry) => (
+                      <li key={`${entry.label}:${entry.reason}`}>
+                        {entry.label}: {entry.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {(importReport?.contentCheckUnavailable ||
+                importReport?.imported.some((entry) => entry.missingContent)) && (
+                <p className="text-muted-foreground">
+                  {importReport.contentCheckUnavailable
+                    ? 'Game content is not loaded, so saved source references could not be checked. Load the required content before editing affected characters.'
+                    : 'Some characters reference game content that is not currently loaded. Their saved choices remain intact; load the required content to use them fully.'}
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setImportReport(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
