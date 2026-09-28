@@ -56,6 +56,9 @@ Start at the narrowest matching owner instead of searching a manual file catalog
 typed effects, equipment, rules metadata, HP, AC, prerequisites, spellcasting, readiness, and PDF
 inputs. React callers use `useCharacterCalculationContext`. Ordinary UI/export code must not treat
 persisted base ability scores as effective totals.
+Filtered game-data views and calculation contexts are reused across hooks for the same source
+settings, game-data object, and character object. Store updates must replace those objects when
+their contents change so the shared derived values are invalidated.
 
 ### Character mutations
 

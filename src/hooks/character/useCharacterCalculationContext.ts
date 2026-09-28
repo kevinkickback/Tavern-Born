@@ -14,43 +14,47 @@ import {
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
+// Character and filtered-data identity change when their inputs change in the stores.
+const calculationCache = new WeakMap<
+  Character,
+  WeakMap<object, { rawLookups: unknown; result: CharacterCalculationContext }>
+>()
+
 export function useCharacterCalculationContext(
   character: Character | null | undefined,
 ): CharacterCalculationContext | null {
-  const {
-    backgrounds = [],
-    classes = [],
-    feats = [],
-    items = [],
-    itemsBase = [],
-    races = [],
-  } = useFilteredGameData()
+  const filteredData = useFilteredGameData()
   const rawLookupSet = useGameDataStore((state) => state.gameData?.lookups)
 
-  const primaryLookups = useMemo(
-    () => ({
-      backgroundsByKey: buildBackgroundLookup(backgrounds),
-      classesByKey: buildClassLookup(classes),
-      featsByKey: buildFeatLookup(feats),
-      itemLookup: buildItemLookup([...items, ...itemsBase]),
-      racesByKey: buildRaceLookup(races),
-    }),
-    [backgrounds, classes, feats, items, itemsBase, races],
-  )
-  const rawLookups = useMemo(
-    () => ({
+  return useMemo(() => {
+    if (!character) return null
+    const cached = calculationCache.get(character)?.get(filteredData)
+    if (cached && cached.rawLookups === rawLookupSet) return cached.result
+
+    const primaryLookups = {
+      backgroundsByKey: buildBackgroundLookup(filteredData.backgrounds ?? []),
+      classesByKey: buildClassLookup(filteredData.classes ?? []),
+      featsByKey: buildFeatLookup(filteredData.feats ?? []),
+      itemLookup: buildItemLookup([
+        ...(filteredData.items ?? []),
+        ...(filteredData.itemsBase ?? []),
+      ]),
+      racesByKey: buildRaceLookup(filteredData.races ?? []),
+    }
+    const rawLookups = {
       backgroundsByKey: rawLookupSet?.backgroundsByKey ?? {},
       classesByKey: rawLookupSet?.classesByKey ?? {},
       featsByKey: rawLookupSet?.featsByKey ?? {},
       itemLookup: rawLookupSet?.itemLookup,
       racesByKey: rawLookupSet?.racesByKey ?? {},
-    }),
-    [rawLookupSet],
-  )
-
-  return useMemo(
-    () =>
-      character ? createCharacterCalculationContext(character, primaryLookups, rawLookups) : null,
-    [character, primaryLookups, rawLookups],
-  )
+    }
+    const result = createCharacterCalculationContext(character, primaryLookups, rawLookups)
+    let byData = calculationCache.get(character)
+    if (!byData) {
+      byData = new WeakMap()
+      calculationCache.set(character, byData)
+    }
+    byData.set(filteredData, { rawLookups: rawLookupSet, result })
+    return result
+  }, [character, filteredData, rawLookupSet])
 }
