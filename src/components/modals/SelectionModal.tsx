@@ -420,6 +420,7 @@ function SelectionModalInner<T>({
                       type="button"
                       onClick={() => toggleItem(item)}
                       disabled={!isSelected && !canSel}
+                      aria-pressed={isSelected}
                       className={cn(
                         'w-full text-left rounded-md border bg-surface-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isSelected
