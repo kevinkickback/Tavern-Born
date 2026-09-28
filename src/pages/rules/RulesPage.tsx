@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClasses } from '@/hooks/data/useGameData'
@@ -192,6 +193,7 @@ export function RulesPage() {
             className="inline-flex h-full min-w-max items-stretch gap-5"
             role="tablist"
             aria-label="Rules category"
+            onKeyDown={handleTabListKeyDown}
           >
             {RULES_PANELS.map(({ value, label, icon: Icon }) => {
               const active = activePanel === value
@@ -203,6 +205,7 @@ export function RulesPage() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`${tabIdPrefix}-panel-${value}`}
+                  tabIndex={active ? 0 : -1}
                   onClick={() => setActivePanel(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',

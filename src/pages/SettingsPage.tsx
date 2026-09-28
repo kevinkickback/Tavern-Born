@@ -4,6 +4,7 @@ import { AboutPanel } from '@/components/settings/AboutPanel'
 import { AppearancePanel } from '@/components/settings/AppearancePanel'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
 import { GeneralPanel } from '@/components/settings/GeneralPanel'
+import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +38,7 @@ export function SettingsPage() {
             className="inline-flex h-full min-w-max items-stretch gap-5"
             role="tablist"
             aria-label="Settings category"
+            onKeyDown={handleTabListKeyDown}
           >
             {SETTINGS_SECTIONS.map(({ value, label, icon: Icon }) => {
               const active = activePanel === value
@@ -48,6 +50,7 @@ export function SettingsPage() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`settings-panel-${value}`}
+                  tabIndex={active ? 0 : -1}
                   onClick={() => setActivePanel(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
