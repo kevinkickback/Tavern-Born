@@ -16,6 +16,7 @@ import type {
   ClassFeature,
   Creature5e,
   Feat5e,
+  GameData,
   Item5e,
   ItemMastery5e,
   Language5e,
@@ -29,6 +30,29 @@ interface FilterParams {
   originSystem?: '2014' | '2024'
 }
 
+interface FilteredGameData extends GameData {
+  itemMasteries: ItemMastery5e[]
+  creatures: Creature5e[]
+}
+
+// Game data is replaced on reload; object identity keeps derived source views in sync.
+const filteredDataCache = new WeakMap<GameData, Map<string, FilteredGameData>>()
+
+function cacheFilteredData(
+  data: GameData,
+  key: string,
+  result: FilteredGameData,
+): FilteredGameData {
+  let variants = filteredDataCache.get(data)
+  if (!variants) {
+    variants = new Map()
+    filteredDataCache.set(data, variants)
+  }
+  if (variants.size >= 32) variants.delete(variants.keys().next().value ?? '')
+  variants.set(key, result)
+  return result
+}
+
 /**
  * Core game data filtering hook. Accepts explicit filter parameters so callers
  * without an active character (settings pages, compendium) can pass their own
@@ -38,7 +62,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
   const { allowedSources, preferNewerPrintings = false, originSystem } = params
 
-  const filteredData = useMemo(() => {
+  const filteredData = useMemo<FilteredGameData>(() => {
     if (!gameData) {
       return {
         races: [] as Race5e[],
@@ -49,6 +73,8 @@ export function useFilteredGameDataParams(params: FilterParams) {
         feats: [] as Feat5e[],
         items: [] as Item5e[],
         itemsBase: [] as Item5e[],
+        itemProperties: [],
+        itemTypes: [],
         itemMasteries: [] as ItemMastery5e[],
         classFeatures: [] as ClassFeature[],
         creatures: [] as Creature5e[],
@@ -63,8 +89,17 @@ export function useFilteredGameDataParams(params: FilterParams) {
         variantrules: [],
         trapHazards: [],
         rewards: [],
+        cultsBoons: [],
       }
     }
+
+    const cacheKey = JSON.stringify([
+      originSystem ?? '',
+      preferNewerPrintings,
+      (allowedSources ?? []).map((source) => source.trim().toUpperCase()).sort(),
+    ])
+    const cached = filteredDataCache.get(gameData)?.get(cacheKey)
+    if (cached) return cached
 
     const races = gameData.races ?? []
     const classes = gameData.classes ?? []
@@ -85,7 +120,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         : allowedSources
 
     if (!compatibleAllowedSources || compatibleAllowedSources.length === 0) {
-      return {
+      return cacheFilteredData(gameData, cacheKey, {
         ...gameData,
         races,
         classes,
@@ -100,7 +135,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         creatures,
         optionalfeatures,
         sources,
-      }
+      })
     }
 
     const suppressedKeys =
@@ -114,7 +149,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const legacyFeatKeys = originSystem === '2024' ? XPHB_LEGACY_FEAT_KEYS : undefined
     const legacySubclassKeys = originSystem === '2024' ? XPHB_LEGACY_SUBCLASS_KEYS : undefined
 
-    return {
+    return cacheFilteredData(gameData, cacheKey, {
       ...gameData,
       races: DataFilter.filterRaces(races, {
         sources: compatibleAllowedSources,
@@ -184,7 +219,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
       languages: DataFilter.filterLanguages(gameData.languages ?? [], {
         sources: compatibleAllowedSources,
       }),
-    }
+    })
   }, [gameData, allowedSources, preferNewerPrintings, originSystem])
 
   return filteredData

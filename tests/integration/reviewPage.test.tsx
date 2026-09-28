@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -123,8 +123,12 @@ describe('BuildReviewPage', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Character overview' }))
 
+    expect(screen.getByText('Proficiencies & skills').closest('details')?.open).toBe(true)
+    expect(screen.getByText('Attacks & actions').closest('details')?.open).toBe(false)
+    await user.click(screen.getByText('Attacks & actions'))
     expect(screen.getAllByText('Test Manual Action')).toHaveLength(2)
     expect(screen.getByText('+4 to hit')).toBeTruthy()
+    await user.click(screen.getByText('Content sources'))
     expect(screen.getByText('Test Source')).toBeTruthy()
     expect(screen.getByText('walk 35 ft.')).toBeTruthy()
 
@@ -251,12 +255,28 @@ describe('BuildReviewPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('img', { name: 'Test Character portrait' })).toBeTruthy()
+    const portrait = screen.getByRole('img', {
+      name: 'Test Character portrait',
+    }) as HTMLImageElement
+    expect(portrait.className).toContain('object-contain')
+    expect(portrait.style.transform).toBe('')
     expect(screen.getByText('Current HP').parentElement?.textContent).toContain('7')
     expect(screen.getByText('Temporary HP').parentElement?.textContent).toContain('3')
     expect(screen.getByText('Armor Class')).toBeTruthy()
     expect(screen.getByText('Common')).toBeTruthy()
     expect(screen.queryByText(/Secret backstory/)).toBeNull()
+    for (const section of [
+      'Attacks & actions',
+      'Traits & features',
+      'Feats',
+      'Spells & spellcasting',
+      'Equipment',
+      'Resources & conditions',
+      'Automation notes',
+      'Content sources',
+    ]) {
+      expect(screen.getByText(section).closest('details')?.open).toBe(false)
+    }
 
     const featureSection = screen.getByText('Traits & features').closest('details')!
     expect(featureSection.open).toBe(false)
@@ -275,6 +295,18 @@ describe('BuildReviewPage', () => {
     expect(screen.getByText('A carved wand.')).toBeTruthy()
     await user.click(screen.getByText('Resources & conditions'))
     expect(screen.getByText('Poisoned')).toBeTruthy()
+
+    const restrictedCharacter = { ...character, allowedSources: ['OTHER'] }
+    await act(() => {
+      useCharacterStore.setState({
+        activeCharacter: restrictedCharacter,
+        characters: [restrictedCharacter],
+      })
+    })
+    expect(screen.getAllByText(/Source unavailable/).length).toBeGreaterThanOrEqual(3)
+    expect(screen.getByText('Always ready for danger.')).toBeTruthy()
+    expect(screen.getAllByText('Three glowing darts.').length).toBeGreaterThan(0)
+    expect(screen.getByText('A carved wand.')).toBeTruthy()
   })
 })
 

@@ -33,7 +33,7 @@ import {
 } from '@/lib/calculations/spellUtils'
 import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
-import { getPortraitCssTransform, resolvePortraitSrc } from '@/lib/portraitConstants'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { ClassFeature, OptionalFeatureLike } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
@@ -209,6 +209,24 @@ export function CharacterOverview({
   const itemLookup = useItemLookup()
   const filteredData = useFilteredGameData()
   const rawData = useGameDataStore((state) => state.gameData)
+  const availableSpellKeys = useMemo(
+    () =>
+      new Set(filteredData.spells.map((spell) => getSpellReferenceKey(spell.name, spell.source))),
+    [filteredData.spells],
+  )
+  const availableItemKeys = useMemo(
+    () =>
+      new Set(
+        [...filteredData.items, ...filteredData.itemsBase].map((item) =>
+          getEntityLookupKey(item.name, item.source),
+        ),
+      ),
+    [filteredData.items, filteredData.itemsBase],
+  )
+  const availableFeatKeys = useMemo(
+    () => new Set(filteredData.feats.map((feat) => getEntityLookupKey(feat.name, feat.source))),
+    [filteredData.feats],
+  )
   const level = getTotalCharacterLevel(character)
   const classes = getCharacterClassEntries(character)
   const featureEntriesByKey = useMemo(() => {
@@ -368,23 +386,25 @@ export function CharacterOverview({
                 ? 'Prepared'
                 : 'Known',
             unresolved: !resolved,
+            sourceUnavailable: resolved
+              ? !availableSpellKeys.has(getSpellReferenceKey(resolved.name, resolved.source))
+              : false,
           },
         ]
       })
     })
-  }, [spellcasting.spellProfiles, spellLookup])
+  }, [spellcasting.spellProfiles, spellLookup, availableSpellKeys])
 
   return (
     <div className="space-y-4">
       <Card className="gap-4 p-4">
         <div className="flex flex-col gap-4 sm:flex-row">
           {character.portrait && (
-            <div className="relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-48">
+            <div className="flex w-full shrink-0 items-center justify-center sm:w-48">
               <img
                 src={resolvePortraitSrc(character.portrait)}
                 alt={`${character.name || 'Character'} portrait`}
-                className="absolute left-1/2 top-1/2 h-full w-full max-w-none object-contain"
-                style={{ transform: getPortraitCssTransform(character.portraitTransform) }}
+                className="block h-auto max-h-56 max-w-full rounded-lg object-contain"
               />
             </div>
           )}
@@ -502,7 +522,7 @@ export function CharacterOverview({
             </div>
           </OverviewSection>
 
-          <OverviewSection title="Attacks & actions" count={actions.length} defaultOpen>
+          <OverviewSection title="Attacks & actions" count={actions.length}>
             {actions.length ? (
               <div className="space-y-4">
                 {ACTION_GROUPS.map(({ kind, label }) => {
@@ -646,7 +666,13 @@ export function CharacterOverview({
                       key={feat.id}
                       name={feat.name}
                       source={feat.source}
-                      status={!resolved ? 'Unresolved source' : undefined}
+                      status={
+                        !resolved
+                          ? 'Unresolved source'
+                          : !availableFeatKeys.has(getEntityLookupKey(feat.name, feat.source))
+                            ? 'Source unavailable'
+                            : undefined
+                      }
                     >
                       {resolved?.entries?.length ? (
                         <GameContent entry={resolved.entries} />
@@ -706,7 +732,13 @@ export function CharacterOverview({
                       key={spell.key}
                       name={spell.name}
                       source={`${spell.profile}${spell.source ? ` · ${spell.source}` : ''}`}
-                      status={spell.unresolved ? 'Unresolved source' : spell.status}
+                      status={
+                        spell.unresolved
+                          ? 'Unresolved source'
+                          : spell.sourceUnavailable
+                            ? `${spell.status} · Source unavailable`
+                            : spell.status
+                      }
                     >
                       <p>
                         {spell.level === 0
@@ -737,17 +769,23 @@ export function CharacterOverview({
                       name={`${item.name} ×${item.quantity}`}
                       source={item.source}
                       status={
-                        item._unresolved
-                          ? 'Unresolved source'
-                          : item.equipped
-                            ? 'Equipped'
-                            : item.attuned
-                              ? 'Attuned'
-                              : undefined
+                        [
+                          item._unresolved
+                            ? 'Unresolved source'
+                            : resolved &&
+                                !availableItemKeys.has(
+                                  getEntityLookupKey(resolved.name, resolved.source),
+                                )
+                              ? 'Source unavailable'
+                              : undefined,
+                          item.equipped ? 'Equipped' : undefined,
+                          item.attuned ? 'Attuned' : undefined,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || undefined
                       }
                     >
                       <div className="space-y-1">
-                        {item.attuned && item.equipped && <Badge variant="outline">Attuned</Badge>}
                         {item.rarity && <p>{item.rarity}</p>}
                         {resolved?.entries?.length ? (
                           <GameContent entry={resolved.entries} />
@@ -842,13 +880,6 @@ export function CharacterOverview({
                   values={character.conditionImmunities ?? []}
                 />
               )}
-              {resources.length === 0 &&
-                spellcasting.slots.length === 0 &&
-                !character.conditions?.length &&
-                !character.exhaustion &&
-                !character.inspiration && (
-                  <p className="text-muted-foreground">No active resources or conditions.</p>
-                )}
             </div>
           </OverviewSection>
 
