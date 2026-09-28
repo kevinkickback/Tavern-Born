@@ -40,6 +40,7 @@ import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { RARITY_COLORS } from '@/lib/5etools/constants'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
@@ -77,23 +78,6 @@ function getItemCategoryIcon(category: Exclude<ItemCategory, 'All'>) {
   if (category === 'Potions') return Flask
   if (category === 'Scrolls') return Scroll
   return Package
-}
-
-function getRarityClass(rarity: string): string {
-  switch (rarity.toLowerCase()) {
-    case 'uncommon':
-      return 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400'
-    case 'rare':
-      return 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400'
-    case 'very rare':
-      return 'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-400'
-    case 'legendary':
-      return 'border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400'
-    case 'artifact':
-      return 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400'
-    default:
-      return 'border-border text-muted-foreground'
-  }
 }
 
 export function EquipmentPage() {
@@ -442,19 +426,15 @@ export function EquipmentPage() {
                       className="h-8 pl-8 text-sm"
                     />
                   </div>
-                  <div
-                    className="flex min-w-0 max-w-full shrink items-stretch gap-4 overflow-x-auto @min-[680px]:self-stretch"
-                    role="tablist"
-                    aria-label="Inventory category"
-                  >
+                  <fieldset className="flex min-w-0 max-w-full shrink items-stretch gap-4 overflow-x-auto border-0 p-0 @min-[680px]:self-stretch">
+                    <legend className="sr-only">Inventory category filters</legend>
                     {FILTER_CHIPS.map((chip) => {
                       const active = itemTypeFilter === chip
                       return (
                         <button
                           key={chip}
                           type="button"
-                          role="tab"
-                          aria-selected={active}
+                          aria-pressed={active}
                           onClick={(event) => {
                             setItemTypeFilter(chip)
                             event.currentTarget.scrollIntoView({
@@ -473,7 +453,7 @@ export function EquipmentPage() {
                         </button>
                       )
                     })}
-                  </div>
+                  </fieldset>
                 </div>
               </div>
 
@@ -559,7 +539,8 @@ export function EquipmentPage() {
                                         variant="outline"
                                         className={cn(
                                           'h-5 shrink-0 px-1.5 text-[10px] capitalize',
-                                          getRarityClass(item.rarity),
+                                          RARITY_COLORS[item.rarity.toLowerCase()] ??
+                                            RARITY_COLORS.unknown,
                                         )}
                                       >
                                         {item.rarity}
@@ -687,7 +668,11 @@ export function EquipmentPage() {
                           {selectedItem.rarity && selectedItem.rarity !== 'none' && (
                             <Badge
                               variant="outline"
-                              className={cn('capitalize', getRarityClass(selectedItem.rarity))}
+                              className={cn(
+                                'capitalize',
+                                RARITY_COLORS[selectedItem.rarity.toLowerCase()] ??
+                                  RARITY_COLORS.unknown,
+                              )}
                             >
                               {selectedItem.rarity}
                             </Badge>

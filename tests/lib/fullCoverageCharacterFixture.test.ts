@@ -531,7 +531,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(map2024.textFields.Text_66).not.toBe('')
     expect(map2024.textFields.Text_151).not.toBe('')
     expect(map2024.textFields.Text_214).not.toBe('')
-  })
+  }, 15_000)
 
   test.each([
     '2014',

@@ -88,23 +88,49 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await expect(addItemDialog.getByText('Spell Scroll (1st Level)')).toBeVisible()
   await expect(addItemDialog.getByText('+1 Wand of the War Mage')).toBeVisible()
   await expect(addItemDialog.getByText('Bag of Holding')).toBeVisible()
+  const potionOption = addItemDialog.getByRole('button', { name: /^Potion of Healing\b/ })
+  const pickerRarityColors = await potionOption
+    .getByText('common', { exact: true })
+    .evaluate((badge) => {
+      const style = getComputedStyle(badge)
+      return {
+        color: style.color,
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderColor,
+      }
+    })
   const leatherArmorOption = addItemDialog.getByRole('button', { name: /^Leather Armor\b/ })
   await expect(leatherArmorOption.getByText('Light Armor', { exact: true })).toBeVisible()
   await expect(leatherArmorOption.getByText('Armor', { exact: true })).toHaveCount(0)
   await expect(addItemDialog.getByText(/Core potions and spell scrolls are included/)).toHaveCount(
     0,
   )
-  await addItemDialog.getByRole('button', { name: /^Potion of Healing\b/ }).click()
+  await potionOption.click()
   await leatherArmorOption.click()
   await addItemDialog.getByRole('button', { name: /^Shield\b/ }).click()
   await addItemDialog.getByRole('button', { name: 'Confirm' }).click()
 
   await expect(page.getByRole('button', { name: 'Inspect Potion of Healing' })).toBeVisible()
+  const inventoryRarityColors = await page
+    .getByRole('button', { name: 'Inspect Potion of Healing' })
+    .getByText('common', { exact: true })
+    .evaluate((badge) => {
+      const style = getComputedStyle(badge)
+      return {
+        color: style.color,
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderColor,
+      }
+    })
+  expect(inventoryRarityColors).toEqual(pickerRarityColors)
   await expect(page.getByRole('button', { name: 'Inspect Leather Armor' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Inspect Shield' })).toBeVisible()
 
-  const inventoryCategoryTabs = page.getByRole('tablist', { name: 'Inventory category' })
-  await inventoryCategoryTabs.getByRole('tab', { name: 'Armor' }).click()
+  const inventoryCategoryFilters = page.getByRole('group', { name: 'Inventory category filters' })
+  const armorFilter = inventoryCategoryFilters.getByRole('button', { name: 'Armor' })
+  await expect(armorFilter).toHaveAttribute('aria-pressed', 'false')
+  await armorFilter.click()
+  await expect(armorFilter).toHaveAttribute('aria-pressed', 'true')
   await expect(
     page.getByRole('button', { name: 'Inspect Leather Armor' }).getByText('Light Armor'),
   ).toBeVisible()
@@ -112,7 +138,8 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
     page.getByRole('button', { name: 'Inspect Shield' }).getByText('Shields'),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Inspect Potion of Healing' })).toHaveCount(0)
-  await inventoryCategoryTabs.getByRole('tab', { name: 'All', exact: true }).click()
+  await inventoryCategoryFilters.getByRole('button', { name: 'All', exact: true }).click()
+  await expect(armorFilter).toHaveAttribute('aria-pressed', 'false')
 
   // Use the same accessible controls a keyboard or assistive-technology user reaches.
   await page.getByRole('button', { name: 'Increase Ring of Testing quantity' }).click()
@@ -156,12 +183,12 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   expect(Math.abs((attunementBox?.y ?? 0) - (weightBox?.y ?? 0))).toBeLessThan(2)
   expect(currencyBox?.y).toBeGreaterThan(weightBox?.y ?? 0)
 
-  const categoryTabs = page.getByRole('tablist', { name: 'Inventory category' })
-  const scrollsTab = categoryTabs.getByRole('tab', { name: 'Scrolls' })
-  await scrollsTab.click()
-  await expect(scrollsTab).toHaveAttribute('aria-selected', 'true')
-  const categoryBox = await categoryTabs.boundingBox()
-  const scrollsBox = await scrollsTab.boundingBox()
+  const categoryFilters = page.getByRole('group', { name: 'Inventory category filters' })
+  const scrollsFilter = categoryFilters.getByRole('button', { name: 'Scrolls' })
+  await scrollsFilter.click()
+  await expect(scrollsFilter).toHaveAttribute('aria-pressed', 'true')
+  const categoryBox = await categoryFilters.boundingBox()
+  const scrollsBox = await scrollsFilter.boundingBox()
   expect(scrollsBox?.x).toBeGreaterThanOrEqual(categoryBox?.x ?? 0)
   expect((scrollsBox?.x ?? 0) + (scrollsBox?.width ?? 0)).toBeLessThanOrEqual(
     (categoryBox?.x ?? 0) + (categoryBox?.width ?? 0) + 1,
@@ -173,7 +200,8 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await paneSwitcher.getByRole('tab', { name: 'Inventory' }).click()
   await expect(summary).toBeVisible()
 
-  await categoryTabs.getByRole('tab', { name: 'All', exact: true }).click()
+  await categoryFilters.getByRole('button', { name: 'All', exact: true }).click()
+  await expect(scrollsFilter).toHaveAttribute('aria-pressed', 'false')
   await page.getByRole('button', { name: 'Inspect Ring of Testing' }).click()
   await expect(paneSwitcher.getByRole('tab', { name: 'Item details' })).toHaveAttribute(
     'aria-selected',

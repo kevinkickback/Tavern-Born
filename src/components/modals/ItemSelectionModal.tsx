@@ -222,7 +222,7 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
   const description = getItemDescription(item, itemTypeByAbbr)
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
-  const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? ''
+  const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? RARITY_COLORS.unknown
   const itemPropertyByAbbr = useItemPropertyLookup()
   const armorCategoryLabel = getArmorCategoryLabel(
     getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory,
