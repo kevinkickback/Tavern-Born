@@ -113,6 +113,24 @@ describe('RulesPage', () => {
     expect(container.querySelectorAll('[data-slot="rules-section"]')).toHaveLength(2)
   })
 
+  test('moves keyboard focus between rules tabs and labels the selected panel', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const ruleset = screen.getByRole('tab', { name: 'Ruleset' })
+    ruleset.focus()
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1])
+
+    await user.keyboard('{ArrowRight}')
+    const options = screen.getByRole('tab', { name: 'Character Options' })
+    expect(document.activeElement).toBe(options)
+    expect(options.getAttribute('aria-selected')).toBe('true')
+    const panel = document.getElementById(options.getAttribute('aria-controls')!)
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(options.id)
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0])
+  })
+
   test('updates rules on the active character without replacing existing choices', async () => {
     const user = userEvent.setup()
     renderPage()

@@ -48,6 +48,33 @@ describe('settings page categories', () => {
     expect(screen.getByText('About settings panel')).toBeTruthy()
   })
 
+  test('moves focus and selection through the tab bar with arrow, Home, and End keys', async () => {
+    const user = userEvent.setup()
+    renderSettings('/settings')
+
+    const general = screen.getByRole('tab', { name: 'General' })
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1])
+    general.focus()
+
+    await user.keyboard('{ArrowRight}')
+    const appearance = screen.getByRole('tab', { name: 'Appearance' })
+    expect(document.activeElement).toBe(appearance)
+    expect(appearance.getAttribute('aria-selected')).toBe('true')
+    const panel = document.getElementById(appearance.getAttribute('aria-controls')!)
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(appearance.id)
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0, -1, -1])
+
+    await user.keyboard('{End}')
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
+    expect(screen.getByText('About settings panel')).toBeTruthy()
+
+    await user.keyboard('{Home}')
+    expect(document.activeElement).toBe(general)
+    await user.keyboard('{ArrowLeft}')
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
+  })
+
   test('supports direct links to a settings section', () => {
     renderSettings('/settings?section=appearance')
 

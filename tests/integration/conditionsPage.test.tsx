@@ -128,6 +128,24 @@ describe('ConditionsPage', () => {
     expect(useCharacterStore.getState().activeCharacter?.exhaustion).toBe(4)
   })
 
+  test('moves keyboard focus between condition tabs and labels the selected panel', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const combat = screen.getByRole('tab', { name: 'Combat State' })
+    combat.focus()
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1])
+
+    await user.keyboard('{ArrowRight}')
+    const exhaustion = screen.getByRole('tab', { name: 'Exhaustion' })
+    expect(document.activeElement).toBe(exhaustion)
+    expect(exhaustion.getAttribute('aria-selected')).toBe('true')
+    const panel = document.getElementById(exhaustion.getAttribute('aria-controls')!)
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(exhaustion.id)
+    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0, -1, -1])
+  })
+
   test('renders tooltip-aware condition rules and toggles from the whole card', async () => {
     const user = userEvent.setup()
     const { container } = renderPage('/details/conditions?section=conditions')
