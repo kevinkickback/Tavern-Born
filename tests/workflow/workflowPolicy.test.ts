@@ -15,6 +15,15 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain("if: '!github.event.pull_request.draft'")
     expect(workflow).toContain('name: Lint, type-check, coverage, and build')
     expect(workflow).toContain('name: Browser end-to-end tests')
+    expect(workflow).toContain(
+      ['group: ci-pr-$', '{{ github.event.pull_request.number }}'].join(''),
+    )
+    expect(workflow).toContain('cancel-in-progress: true')
+    const bundleIndex = workflow.indexOf('name: Enforce bundle budgets')
+    const coverageIndex = workflow.indexOf('name: Test with coverage thresholds')
+    expect(bundleIndex).toBeGreaterThanOrEqual(0)
+    expect(coverageIndex).toBeGreaterThanOrEqual(0)
+    expect(bundleIndex).toBeLessThan(coverageIndex)
     await expect(readWorkflow('merge.yml')).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
