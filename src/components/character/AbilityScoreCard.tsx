@@ -37,7 +37,9 @@ export function AbilityScoreCard({
         <div
           className={cn(
             'mt-2.5 min-w-14 rounded-full border-2 bg-background px-2.5 py-1 font-mono text-base font-bold leading-none tabular-nums',
-            mod >= 0 ? 'border-success/70 text-success' : 'border-destructive/70 text-destructive',
+            mod >= 0
+              ? 'border-success/70 text-success-foreground'
+              : 'border-destructive/70 text-destructive',
           )}
         >
           {formatModifier(mod)}
@@ -104,7 +106,7 @@ export function AbilityScoreCard({
       <div
         className={cn(
           'text-base font-bold mt-2 tabular-nums',
-          mod >= 0 ? 'text-emerald-500' : 'text-destructive',
+          mod >= 0 ? 'text-success-foreground' : 'text-destructive',
         )}
       >
         {formatModifier(mod)}
@@ -139,7 +141,7 @@ export function AbilityScoreCard({
             className={cn(
               'ml-auto text-[11px] font-bold rounded px-1.5 py-0.5 leading-none',
               bonus > 0
-                ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/25'
+                ? 'border border-success/25 bg-success/10 text-success-foreground'
                 : 'text-destructive bg-destructive/10 border border-destructive/20',
             )}
           >
@@ -159,7 +161,7 @@ export function AbilityScoreCard({
           <div
             className={cn(
               'text-base font-bold mt-2 tabular-nums',
-              mod >= 0 ? 'text-emerald-500' : 'text-destructive',
+              mod >= 0 ? 'text-success-foreground' : 'text-destructive',
             )}
           >
             {formatModifier(mod)}
