@@ -50,12 +50,12 @@ gh pr create --base main --fill
 gh pr merge --auto --squash
 ```
 
-`check:pr` runs the required PR checks locally before the push: architecture and dead-code checks,
-read-only linting, type checking, the production build and bundle budgets, full coverage, browser
-E2E, and Electron smoke. Run focused tests during development, then use this command once the branch
-is ready for review. Install Chromium with `npx playwright install chromium` if Playwright has not
-been set up on the machine. The Electron smoke test skips affected Windows builds as described in
-the testing guide; CI still runs it on Linux.
+`check:pr` runs the main PR checks locally before the push: architecture and dead-code checks,
+read-only linting, the production build (which type-checks) and bundle budgets, full coverage, and
+browser E2E. Run focused tests during development, then use this command once the branch is ready
+for review. Install Chromium with `npx playwright install chromium` if Playwright has not been set
+up on the machine. Electron smoke remains a separate local command because headless Linux needs a
+virtual display and the test skips affected Windows builds; CI runs it on Linux.
 
 The final command opts that pull request into GitHub native auto-merge. It does not bypass CI,
 branch protection, or an out-of-date base.

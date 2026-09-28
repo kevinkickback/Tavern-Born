@@ -76,8 +76,9 @@ source-qualified dependencies without diagnostics.
 ## Commands
 
 During development, run the narrowest relevant Vitest/Playwright files first. Before pushing a
-branch for review, run `npm run check:pr`. It runs the individual PR checks below in one local
-command. The same checks remain required in CI.
+branch for review, run `npm run check:pr`. It covers the PR checks below in one local command,
+except Electron smoke. The build includes type checking. Electron smoke needs a display on Linux
+and remains required in CI.
 
 To run or diagnose a check individually:
 
