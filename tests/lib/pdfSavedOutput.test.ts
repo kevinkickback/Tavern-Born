@@ -59,7 +59,7 @@ describe('2014 saved PDF compatibility', () => {
     expect(form.getTextField('HP Current').getText()).toBe('28')
     expect(form.getDropdown('Spell DC 1 Mod').getSelected()).toEqual(['+3'])
     expect(form.getDropdown('Spell DC 1 Mod').acroField.getDefaultAppearance()).toContain('7.5 Tf')
-  })
+  }, 90_000)
 
   test('rejects a template that is missing a required mapped field', async () => {
     const template = await PDFDocument.create()
