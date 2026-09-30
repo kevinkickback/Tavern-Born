@@ -343,7 +343,7 @@ describe('class choice option resolution', () => {
             name: 'Greatsword',
             source: 'PHB',
             type: 'M',
-            property: ['H'],
+            property: [{ uid: 'H|PHB' }],
             weaponCategory: 'martial',
           },
           {

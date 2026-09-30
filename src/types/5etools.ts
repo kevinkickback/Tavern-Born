@@ -357,6 +357,8 @@ export interface Raw5ePrereq {
   patron?: string
 }
 
+export type ItemPropertyReference = string | { uid: string; note?: string }
+
 export interface Item5e {
   name: string
   source: string
@@ -377,7 +379,7 @@ export interface Item5e {
   dmg1?: string
   dmg2?: string
   dmgType?: string
-  property?: string[]
+  property?: ItemPropertyReference[]
   range?: string
   mastery?: string[]
   ac?: number

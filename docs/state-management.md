@@ -126,6 +126,10 @@ Starting-equipment option keys and concrete generic-item choices are stored sepa
 and equipment provenance change through the same equipment command. Derived AC and capacity read
 equipped state; they are not copied into equipment records.
 
+Inventory weapon properties preserve 5etools references as abbreviations or source-qualified
+`{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;
+the structured form retains item-specific notes without changing existing saved abbreviations.
+
 ## Character transfers
 
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved

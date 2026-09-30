@@ -391,7 +391,9 @@ const equipmentSchema = z.object({
   dmg1: z.string().optional(),
   dmg2: z.string().optional(),
   dmgType: z.string().optional(),
-  properties: z.array(z.string()).optional(),
+  properties: z
+    .array(z.union([z.string(), z.object({ uid: z.string().min(1), note: z.string().optional() })]))
+    .optional(),
   range: z.string().optional(),
   wondrous: z.boolean().optional(),
   tattoo: z.boolean().optional(),

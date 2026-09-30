@@ -8,6 +8,7 @@ import {
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const item: Item5e = {
@@ -57,6 +58,27 @@ describe('equipment commands', () => {
     ])
     expect(result.provenanceUpdate.equipment['chain shirt']).toHaveLength(1)
     expect(result.provenanceUpdate.equipment.shield).toHaveLength(1)
+  })
+
+  test('preserves a source-qualified property note through a valid character save', () => {
+    const character = makeCharacterFixture()
+    const result = addManualEquipmentCommand(character, character.provenance ?? emptyProvenance(), {
+      name: 'Lance',
+      source: 'XPHB',
+      type: 'M',
+      property: [{ uid: '2H|XPHB', note: 'unless mounted' }],
+    })
+
+    expect(result.characterPatch.equipment?.[0]?.properties).toEqual([
+      { uid: '2H|XPHB', note: 'unless mounted' },
+    ])
+    expect(
+      characterPersistenceSchema.safeParse({
+        ...character,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      }).success,
+    ).toBe(true)
   })
 
   test('keeps manual provenance while another matching inventory row remains', () => {

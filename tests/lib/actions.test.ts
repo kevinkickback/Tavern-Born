@@ -33,7 +33,7 @@ describe('character action projection', () => {
           weaponCategory: 'test category',
           dmg1: '1d8',
           dmgType: 'test damage',
-          properties: ['F'],
+          properties: [{ uid: 'F|PHB', note: 'while held' }],
           range: 'test range',
         },
       ],
@@ -109,7 +109,7 @@ describe('character action projection', () => {
         attackBonus: 6,
         range: 'test range',
         damage: [{ dice: '1d8', bonus: 5, damageType: 'test damage' }],
-        properties: ['Test Property'],
+        properties: ['Test Property (while held)'],
         mastery: [{ name: 'Test Mastery', source: 'TEST' }],
       }),
     ])

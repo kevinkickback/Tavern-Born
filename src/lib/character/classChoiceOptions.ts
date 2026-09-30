@@ -172,7 +172,7 @@ function getItemPropertyReferences(item: Item5e): string[] {
     if (typeof value === 'string') return [value]
     if (!value || typeof value !== 'object') return []
     const record = value as Record<string, unknown>
-    const reference = record.property ?? record.abbreviation ?? record.name
+    const reference = record.uid ?? record.property ?? record.abbreviation ?? record.name
     return typeof reference === 'string' ? [reference] : []
   })
 }
