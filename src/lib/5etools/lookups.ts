@@ -153,10 +153,13 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
 function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const prop of itemProperties) {
-    if (!prop.abbreviation || result[prop.abbreviation]) continue
+    const abbreviation = prop.abbreviation?.toUpperCase()
+    if (!abbreviation || result[abbreviation]) continue
     const first = Array.isArray(prop.entries) && prop.entries.length > 0 ? prop.entries[0] : null
-    const name = (first as { name?: string } | null)?.name ?? prop.abbreviation
-    result[prop.abbreviation] = name
+    const name =
+      (first as { name?: string } | null)?.name ??
+      (typeof prop.name === 'string' ? prop.name : undefined)
+    if (name) result[abbreviation] = name
   }
   return result
 }

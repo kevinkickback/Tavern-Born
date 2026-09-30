@@ -61,7 +61,8 @@ Description and overflow controls are independent:
 - MPMB Action, Bonus Action, and Reaction list fields contain names only. With full descriptions,
   selected action mechanics and rules text go on its notes page even in the default overflow mode;
   disabling notes reports those details as omitted. Unknown weapon-property labels display their
-  abbreviation without the saved source suffix.
+  abbreviation without the saved source suffix. Known weapon properties use full catalog names;
+  Versatile appears once with its two-handed damage die.
 - **Shorten with ellipsis** is the default overflow mode. Aside from MPMB action details, explicit
   notes pages remain blank.
 - **Continue in notes** preserves full reference text and keeps a useful fitted beginning in each
@@ -81,7 +82,9 @@ all entries, including every class's Hit Dice pool, before applying template lim
 Text fitting uses widget geometry, padding, font metrics, and readable minimum sizes. Binary
 searches stop at word boundaries; prewrapping avoids repeated scans of long prose.
 `official2024Text.ts` accounts for different page scales and spell-row heights. Ruled MPMB boxes
-retain their printed line pitch when content fits. Compaction removes whitespace only; no AI
+retain their printed line pitch when content fits. MPMB current HP and primary ability/save DC
+numbers use centered, larger text; spellcasting ability modifiers use larger dropdown text.
+Compaction removes whitespace only; no AI
 summarizer rewrites rules, costs, conditions, or exceptions.
 
 `sheetNotes.ts` fills shared MPMB columns at 9 pt and paginates against their geometry. Continue

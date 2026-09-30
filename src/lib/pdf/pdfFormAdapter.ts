@@ -21,6 +21,7 @@ import {
   rgb,
   setFillingRgbColor,
   setTextMatrix,
+  TextAlignment,
 } from '@cantoo/pdf-lib'
 import { getOfficial2014FontBounds } from '@/lib/pdf/official2014Text'
 import { fitOfficial2024Text, getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
@@ -68,6 +69,18 @@ const MPMB_RULED_TEXT_FIELDS = new Set([
   'P5.ASnotes.Notes.Left',
   'P5.ASnotes.Notes.Right',
 ])
+const MPMB_LARGE_NUMBER_FIELDS = new Set([
+  'HP Current',
+  'Spell save DC 1',
+  'Spell save DC 2',
+  'Str Mod',
+  'Dex Mod',
+  'Con Mod',
+  'Int Mod',
+  'Wis Mod',
+  'Cha Mod',
+])
+const MPMB_SPELL_ABILITY_MODIFIER_FIELDS = ['Spell DC 1 Mod', 'Spell DC 2 Mod'] as const
 
 export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
@@ -180,6 +193,7 @@ export async function fillCharacterSheetDocument(
     stripFormActions(form, fields)
     makeCalculatedFieldsEditable(form)
     fitMpmbText(form, fields.textFields, onTextTruncated)
+    enlargeMpmbSpellAbilityModifiers(form)
     updateDirtyFieldAppearances(form)
     alignMpmbRuledText(form)
     hideUnwantedFields(form)
@@ -290,14 +304,17 @@ function fitMpmbText(
     if (!widget) continue
     const { width, height } = widget.getRectangle()
     if (width < 1 || height < 1) continue
+    const isLargeNumber = MPMB_LARGE_NUMBER_FIELDS.has(name)
+    if (name === 'HP Current') field.disableMultiline()
+    if (isLargeNumber) field.setAlignment(TextAlignment.Center)
     const fitted = fitPdfText(
       field.getText() ?? '',
       font,
       width,
       height,
       {
-        min: field.isMultiline() ? 8 : 7,
-        max: field.isMultiline() ? 9 : 11,
+        min: isLargeNumber ? 16 : field.isMultiline() ? 8 : 7,
+        max: isLargeNumber ? 18 : field.isMultiline() ? 9 : 11,
         multiline: field.isMultiline(),
       },
       widget.getBorderStyle()?.getWidth() ?? 0,
@@ -309,6 +326,18 @@ function fitMpmbText(
     field.acroField.dict.set(PDFName.of('DV'), PDFHexString.fromText(fitted.text))
     field.defaultUpdateAppearances(font)
     if (fitted.truncated) onTextTruncated(name)
+  }
+}
+
+function enlargeMpmbSpellAbilityModifiers(form: ReturnType<PDFDocument['getForm']>) {
+  const font = form.getDefaultFont()
+  for (const name of MPMB_SPELL_ABILITY_MODIFIER_FIELDS) {
+    const field = form.getFieldMaybe(name)
+    if (!(field instanceof PDFDropdown) || field.getSelected().length === 0) continue
+    field.setFontSize(7.5)
+    const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
+    for (const widget of field.acroField.getWidgets()) widget.dict.set(PDFName.of('DA'), appearance)
+    field.defaultUpdateAppearances(font)
   }
 }
 

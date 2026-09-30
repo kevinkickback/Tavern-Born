@@ -176,6 +176,10 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
     ).toContain('Cleric')
   }
   if (template.id === '2014-custom') {
+    expect(output.getForm().getTextField('Attack.1.Description').getText()).toBe('Versatile 1d10')
+    expect(output.getForm().getTextField('Attack.2.Description').getText()).toBe(
+      'Ammunition, Heavy, Two-Handed',
+    )
     expect(output.getForm().getTextField('WotC__Spellcasting Class 2').getText()).toBe('Wizard')
     expect(
       output
@@ -237,7 +241,17 @@ test('@focused exports every official and custom character-sheet template', asyn
       lookups: {
         classesByKey: buildClassLookup(gameData.classes),
         spellsByKey: buildSpellLookup(gameData.spells),
-      } as GameDataLookups,
+        itemPropertyByAbbr: {
+          V: 'Versatile',
+          A: 'Ammunition',
+          H: 'Heavy',
+          '2H': 'Two-Handed',
+          F: 'Finesse',
+          L: 'Light',
+          T: 'Thrown',
+          LD: 'Loading',
+        },
+      } as Partial<GameDataLookups> as GameDataLookups,
     },
   })
   await page.reload()

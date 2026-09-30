@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { type PDFDict, PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
+import { type PDFDict, PDFDocument, PDFName, PDFRawStream, TextAlignment } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import {
   asFieldWithInternals,
@@ -27,6 +27,40 @@ const AFFECTED_CHECKBOX_FIELDS = {
 }
 
 describe('2014 saved PDF compatibility', () => {
+  test('centers and enlarges MPMB hit points, ability modifiers, and save DC values', async () => {
+    const templateBytes = new Uint8Array(
+      readFileSync(join(process.cwd(), 'scripts', 'pdf-sources', '2014_MPMB_Character_Sheet.pdf')),
+    )
+    const output = await PDFDocument.load(
+      await fillCharacterSheetPdf(
+        templateBytes,
+        {
+          textFields: {
+            'HP Current': '28',
+            'Str Mod': '+3',
+            'Dex Mod': '+2',
+            'Spell save DC 1': '15',
+            'Spell DC 1 Mod': '+3',
+          },
+          checkboxFields: {},
+        },
+        { templateId: '2014' },
+      ),
+    )
+    const form = output.getForm()
+    for (const name of ['HP Current', 'Str Mod', 'Dex Mod', 'Spell save DC 1']) {
+      const field = form.getTextField(name)
+      expect(field.getAlignment()).toBe(TextAlignment.Center)
+      expect(
+        Number(field.acroField.getDefaultAppearance()?.match(/([\d.]+) Tf/u)?.[1]),
+      ).toBeGreaterThanOrEqual(16)
+    }
+    expect(form.getTextField('HP Current').isMultiline()).toBe(false)
+    expect(form.getTextField('HP Current').getText()).toBe('28')
+    expect(form.getDropdown('Spell DC 1 Mod').getSelected()).toEqual(['+3'])
+    expect(form.getDropdown('Spell DC 1 Mod').acroField.getDefaultAppearance()).toContain('7.5 Tf')
+  })
+
   test('rejects a template that is missing a required mapped field', async () => {
     const template = await PDFDocument.create()
     template.addPage()
