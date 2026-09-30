@@ -42,6 +42,20 @@ describe('named game data lookup hooks', () => {
     expect(result.current.skills).toBe(first.skills)
   })
 
+  test('fills incomplete property lookups from parsed definitions', () => {
+    const data = makeGameDataFixture({
+      itemProperties: [
+        { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] },
+        { abbreviation: '2H', source: 'PHB', entries: [{ name: 'Two-Handed' }] },
+      ],
+    })
+    data.lookups = { ...buildGameDataLookups(data), itemPropertyByAbbr: { V: 'Versatile' } }
+    useGameDataStore.setState({ gameData: data })
+
+    const { result } = renderHook(() => useItemPropertyLookup())
+    expect(result.current).toMatchObject({ H: 'Heavy', '2H': 'Two-Handed', V: 'Versatile' })
+  })
+
   test('exposes all shared lookups built by ingestion', () => {
     const data = makeGameDataFixture({
       races: [{ name: 'Elf', source: 'PHB' }],

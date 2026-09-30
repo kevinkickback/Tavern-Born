@@ -201,6 +201,9 @@ item data.
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
 output or layer composition changes in a way that makes previous cached data unsafe. Character
 schema changes are a separate concern and follow [State Management](state-management.md).
+The item-property display update invalidates version 11 caches so the Included SRD property
+definitions are reloaded; the property hook can also rebuild missing lookup entries from the
+parsed definitions in a cached catalog.
 
 Layered cache identity includes the stable bundled pack ID/version and the selected external source.
 An application update therefore invalidates a composition built on an older bundled snapshot, while

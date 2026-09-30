@@ -150,7 +150,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
 }
 
 /** Build an abbreviation → display name map from parsed itemProperty records. */
-function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
+export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const prop of itemProperties) {
     if (!prop.abbreviation || result[prop.abbreviation]) continue
