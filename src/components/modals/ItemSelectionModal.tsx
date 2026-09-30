@@ -10,6 +10,7 @@ import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
 import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
+  isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
@@ -308,14 +309,7 @@ export function ItemSelectionModal({
   onManageSources,
 }: ItemSelectionModalProps) {
   const itemTypeByAbbr = useItemTypeLookup()
-  const filteredItems = useMemo(
-    () =>
-      items.filter((item) => {
-        if (Array.isArray((item as { items?: unknown }).items)) return false
-        return true
-      }),
-    [items],
-  )
+  const filteredItems = useMemo(() => items.filter(isSelectableEquipmentItem), [items])
 
   const typeOptions = useMemo(() => {
     const hasOther = filteredItems.some((item) =>

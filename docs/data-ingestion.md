@@ -189,6 +189,14 @@ items. The character stores the selected concrete `name|source` separately from 
 `items-base.json` supplies base items and mastery definitions; mastery records are not ordinary
 inventory entries.
 
+5etools `_copy` records for items and creatures are resolved by source-qualified parent identity
+after their respective catalogs have loaded. Bestiary copies can also apply `bestiary/template.json`
+ancestry templates. The resolver reports missing parents, cycles, and unsupported transformations
+instead of inventing missing mechanics; layered composition retries copies against the completed
+base-plus-additional catalog before rebuilding lookups. Generic magic variants (`GV`) remain in
+the reference catalog, but inventory and filtered item choices exclude these templates because
+they lack a selected base item and its equipment properties.
+
 Public SRD items housed in DMG/XDMG are admitted by the shared player-item policy without enabling
 the full source. The Included SRD remains the base catalog when additional content is configured,
 so these items stay available in both the bundled-only and layered views without presenting DMG,

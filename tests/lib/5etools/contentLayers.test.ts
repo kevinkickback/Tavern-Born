@@ -3,6 +3,28 @@ import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
+  test('resolves an added copied item against its base-layer parent', () => {
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({
+        items: [{ name: 'Base Blade', source: 'PHB', type: 'M', dmg1: '1d8' }],
+      }),
+      makeGameDataFixture({
+        items: [
+          {
+            name: 'Special Blade',
+            source: 'HB',
+            type: 'M',
+            _copy: {
+              name: 'Base Blade',
+              source: 'PHB',
+            },
+          },
+        ],
+      }),
+    ])
+    expect(composed.lookups?.itemLookup.get('special blade|hb')).toMatchObject({ dmg1: '1d8' })
+  })
+
   test('keeps omitted SRD entities while additional content replaces exact identities', () => {
     const srdWizard = makeClassFixture({ name: 'Wizard', source: 'PHB', page: 1 })
     const srdFighter = makeClassFixture({ name: 'Fighter', source: 'PHB', page: 2 })

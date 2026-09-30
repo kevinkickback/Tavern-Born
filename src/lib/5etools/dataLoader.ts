@@ -9,6 +9,7 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
+import { resolveCopiedRecords } from './copyResolution'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -66,6 +67,15 @@ interface ExtractIndexFilesOptions {
 }
 
 export const DATA_FETCH_CONCURRENCY = 6
+
+const loadedCreatureTemplates = new WeakMap<
+  GameData,
+  Array<{ name: string; source: string; [key: string]: unknown }>
+>()
+
+export function getLoadedCreatureTemplates(gameData: GameData) {
+  return loadedCreatureTemplates.get(gameData) ?? []
+}
 
 const BUNDLED_SRD_SELECTABLE_SOURCES = new Set(['PHB', 'XPHB'])
 
@@ -343,6 +353,13 @@ export class FiveEToolsDataLoader {
     throwIfAborted(options?.signal)
 
     gameData.items.push(...magicVariants)
+    const itemCount = gameData.items.length
+    const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
+    gameData.items = resolvedItems.records.slice(0, itemCount)
+    gameData.itemsBase = resolvedItems.records.slice(itemCount)
+    if (resolvedItems.diagnostics.length && import.meta.env.DEV) {
+      console.warn('Unresolved copied items:', resolvedItems.diagnostics)
+    }
 
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
@@ -549,7 +566,37 @@ export class FiveEToolsDataLoader {
       },
     )
 
-    gameData.creatures = results.flat()
+    const creatures = results.flat()
+    let templates: Array<{ name: string; source: string; [key: string]: unknown }> = []
+    if (
+      creatures.some((creature) =>
+        Array.isArray((creature._copy as { _templates?: unknown[] } | undefined)?._templates),
+      )
+    ) {
+      try {
+        const templateData = await this.loadResource('bestiary/template.json', options?.signal)
+        const templateRecord = templateData as { monsterTemplate?: unknown[] }
+        templates = (templateRecord.monsterTemplate ?? []).filter(
+          (value): value is (typeof templates)[number] =>
+            Boolean(
+              value &&
+                typeof value === 'object' &&
+                typeof (value as { name?: unknown }).name === 'string' &&
+                typeof (value as { source?: unknown }).source === 'string',
+            ),
+        )
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        options?.onResourceFailure?.('bestiary/template.json', { required: true })
+        console.warn('Failed to load bestiary templates:', error)
+      }
+    }
+    const resolved = resolveCopiedRecords(creatures, 'monster', templates)
+    gameData.creatures = resolved.records
+    loadedCreatureTemplates.set(gameData, templates)
+    if (resolved.diagnostics.length && import.meta.env.DEV) {
+      console.warn('Unresolved copied creatures:', resolved.diagnostics)
+    }
   }
 
   private extractIndexFiles(

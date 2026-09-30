@@ -1,8 +1,9 @@
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { normalizeClassRules } from './classRuleNormalization'
+import { resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
-import { loadDataFromSource } from './dataLoader'
+import { getLoadedCreatureTemplates, loadDataFromSource } from './dataLoader'
 import { buildGameDataLookups } from './lookups'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
@@ -342,6 +343,19 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   }
 
   resolveComposedFeatureReferences(composed, layers)
+  const itemCount = composed.items.length
+  const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
+  composed.items = items.records.slice(0, itemCount)
+  composed.itemsBase = items.records.slice(itemCount)
+  const templates = layers.flatMap(getLoadedCreatureTemplates)
+  const creatures = resolveCopiedRecords(composed.creatures ?? [], 'monster', templates)
+  composed.creatures = creatures.records
+  if (import.meta.env.DEV && (items.diagnostics.length || creatures.diagnostics.length)) {
+    console.warn('Unresolved copied records after content layering:', [
+      ...items.diagnostics,
+      ...creatures.diagnostics,
+    ])
+  }
   composed.lookups = buildGameDataLookups(composed)
   return composed
 }

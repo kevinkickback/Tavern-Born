@@ -100,6 +100,51 @@ describe('5etools/dataLoader', () => {
     )
   })
 
+  test('resolves cross-file creatures and templates after loading the bestiary index', async () => {
+    const payloads: Record<string, unknown> = {
+      'bestiary/index.json': { MM: 'bestiary-mm.json', HB: 'bestiary-hb.json' },
+      'bestiary/bestiary-mm.json': {
+        monster: [{ name: 'Base', source: 'MM', cr: '1/4', ac: [12], hp: { average: 5 } }],
+      },
+      'bestiary/bestiary-hb.json': {
+        monster: [
+          {
+            name: 'Named',
+            source: 'HB',
+            _copy: {
+              name: 'Base',
+              source: 'MM',
+              _templates: [{ name: 'Ancestry', source: 'HB' }],
+            },
+          },
+        ],
+      },
+      'bestiary/template.json': {
+        monsterTemplate: [
+          { name: 'Ancestry', source: 'HB', apply: { _root: { languages: ['Common'] } } },
+        ],
+      },
+    }
+    const readJson = vi.fn(async (path: string) => payloads[path] ?? {})
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:\\data',
+        isValid: true,
+        availableResources: ['bestiary/index.json'],
+      },
+      { type: 'local', readJson },
+    )
+    const data = await loader.loadAllData()
+    expect(data.creatures?.find((creature) => creature.name === 'Named')).toMatchObject({
+      cr: '1/4',
+      ac: [12],
+      hp: { average: 5 },
+      languages: ['Common'],
+    })
+    expect(readJson).toHaveBeenCalledWith('bestiary/template.json', undefined)
+  })
+
   test('times out a stalled remote request', async () => {
     vi.useFakeTimers()
     globalThis.fetch = vi.fn((_input, init) => {

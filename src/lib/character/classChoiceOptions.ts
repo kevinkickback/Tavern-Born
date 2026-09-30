@@ -4,7 +4,10 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
-import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
+import {
+  getNormalizedItemTraits,
+  isSelectableEquipmentItem,
+} from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
   ClassFeature,
@@ -109,7 +112,10 @@ function getFilteredCatalog(
   const includesMagicItems =
     (filter.rarities?.length ?? 0) > 0 ||
     filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate))
-  return includesMagicItems ? [...catalogs.itemsBase, ...catalogs.items] : catalogs.itemsBase
+  const candidates = includesMagicItems
+    ? [...catalogs.itemsBase, ...catalogs.items]
+    : catalogs.itemsBase
+  return candidates.filter(isSelectableEquipmentItem)
 }
 
 function getFilteredCatalogIncludesMagicItems(filter: NormalizedChoiceOptionFilter): boolean {
