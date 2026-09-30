@@ -48,9 +48,10 @@ optional-feature catalogs.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names
-such as Ability Score Improvement do not collapse during composition. External-source configuration
-remains persisted in its existing shape for upgrade compatibility, while the effective cache
-identity records both the bundled base and external layer.
+such as Ability Score Improvement do not collapse during composition. Item-property records have no
+top-level name, so composition identifies each by abbreviation and source before rebuilding the
+display lookup. External-source configuration remains persisted in its existing shape for upgrade
+compatibility, while the effective cache identity records both the bundled base and external layer.
 
 The external directory/URL validator inventories every recognized top-level resource it can validate.
 A partial source is accepted when it contains at least one valid supported family; readable malformed
@@ -201,8 +202,8 @@ item data.
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
 output or layer composition changes in a way that makes previous cached data unsafe. Character
 schema changes are a separate concern and follow [State Management](state-management.md).
-The item-property display update invalidates version 11 caches so the Included SRD property
-definitions are reloaded; the property hook can also rebuild missing lookup entries from the
+The item-property display update invalidates older caches so property definitions collapsed by
+layer composition are rebuilt; the property hook can also rebuild missing lookup entries from the
 parsed definitions in a cached catalog.
 
 Layered cache identity includes the stable bundled pack ID/version and the selected external source.

@@ -1,8 +1,46 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
+  test('keeps each source-qualified item property when definitions have no top-level name', () => {
+    const ammunition = { abbreviation: 'A', source: 'PHB', entries: [{ name: 'Ammunition' }] }
+    const heavy = { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] }
+    const twoHanded = { abbreviation: '2H', source: 'PHB', entries: [{ name: 'Two-Handed' }] }
+    const additionalHeavy = { ...heavy, entries: [{ name: 'Heavy (updated)' }] }
+
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: [ammunition, heavy, twoHanded] }),
+      makeGameDataFixture({ itemProperties: [additionalHeavy] }),
+    ])
+
+    expect(composed.itemProperties).toEqual([ammunition, additionalHeavy, twoHanded])
+    expect(composed.lookups?.itemPropertyByAbbr).toMatchObject({
+      A: 'Ammunition',
+      H: 'Heavy (updated)',
+      '2H': 'Two-Handed',
+    })
+  })
+
+  test('retains bundled weapon property names after layering', () => {
+    const bundledItems = JSON.parse(
+      readFileSync(join(process.cwd(), 'resources/srd/core/data/items-base.json'), 'utf8'),
+    )
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: parseItemProperties(bundledItems) }),
+      makeGameDataFixture(),
+    ])
+
+    expect(composed.lookups?.itemPropertyByAbbr).toMatchObject({
+      A: 'Ammunition',
+      H: 'Heavy',
+      '2H': 'Two-Handed',
+    })
+  })
+
   test('keeps omitted SRD entities while additional content replaces exact identities', () => {
     const srdWizard = makeClassFixture({ name: 'Wizard', source: 'PHB', page: 1 })
     const srdFighter = makeClassFixture({ name: 'Fighter', source: 'PHB', page: 2 })

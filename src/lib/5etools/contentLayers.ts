@@ -19,12 +19,14 @@ function recordIdentity(value: unknown): string {
   const record = value as Record<string, unknown>
   const name = normalizeIdentityPart(record.name)
   const source = normalizeIdentityPart(record.source)
-  if (name || source) {
+  if (name) {
     return `entity:${name}|${source}|${normalizeIdentityPart(record._sourceType)}`
   }
 
   const abbreviation = normalizeIdentityPart(record.abbreviation)
   if (abbreviation) return `abbreviation:${abbreviation}|${source}`
+
+  if (source) return `entity:|${source}|${normalizeIdentityPart(record._sourceType)}`
 
   const id = normalizeIdentityPart(record.id)
   if (id) return `id:${id}|${source}`
