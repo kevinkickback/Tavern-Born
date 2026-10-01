@@ -1,4 +1,5 @@
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { renderEntriesToText } from '@/lib/entryText'
 import {
   type CharacterSheetViewModel,
   formatViewModelModifier,
@@ -330,7 +331,10 @@ export function mapCharacterSheet2014Official(
     Skin: character.details.skin || '',
     Hair: character.details.hair || '',
     Allies: viewModel.alliesAndOrganizationsSummary,
-    FactionName: [character.details.faction, character.details.rank].filter(Boolean).join(' — '),
+    FactionName: [character.details.faction, character.details.rank]
+      .filter(Boolean)
+      .map((value) => renderEntriesToText([value]))
+      .join(' — '),
     Backstory: viewModel.historyAndPersonalitySummary,
     'Feat+Traits': limitOfficial2014SectionText('Feat+Traits', sections['Feat+Traits']),
     Treasure: limitOfficial2014SectionText('Treasure', sections.Treasure),

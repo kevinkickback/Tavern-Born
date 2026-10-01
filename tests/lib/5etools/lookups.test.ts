@@ -12,6 +12,40 @@ import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { makeClassFixture, makeSpellFixture } from '../../fixtures/gameDataFixtures'
 
 describe('5etools/lookups', () => {
+  test('resolves property names from later records when an earlier record has no label', () => {
+    const lookups = buildGameDataLookups({
+      races: [],
+      classes: [],
+      backgrounds: [],
+      spells: [],
+      feats: [],
+      items: [],
+      itemsBase: [],
+      itemProperties: [
+        { abbreviation: 'ld', source: 'TEST' },
+        { abbreviation: 'LD', source: 'PHB', entries: [{ name: 'Loading' }] },
+        { abbreviation: 'L', source: 'PHB', name: 'Light' },
+      ],
+      itemTypes: [],
+      classFeatures: [],
+      actions: [],
+      conditions: [],
+      deities: [],
+      skills: [],
+      senses: [],
+      languages: [],
+      optionalfeatures: [],
+      variantrules: [],
+      trapHazards: [],
+      rewards: [],
+      cultsBoons: [],
+      organizations: [],
+      sources: [],
+    })
+
+    expect(lookups.itemPropertyByAbbr).toMatchObject({ LD: 'Loading', L: 'Light' })
+  })
+
   test('indexes source-qualified property names and keeps the first abbreviation fallback', () => {
     const lookup = buildItemPropertyLookup([
       { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] },

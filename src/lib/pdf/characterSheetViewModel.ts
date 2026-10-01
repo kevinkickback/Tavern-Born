@@ -409,6 +409,10 @@ function buildHistoryAndPersonalitySummary(character: Character): string {
   ])
 }
 
+function toPdfPlainText(value: string | undefined): string {
+  return value ? renderEntriesToText([value]) : ''
+}
+
 function buildAlliesAndOrganizationsSummary(
   character: Character,
   organizations: readonly Organization5e[],
@@ -416,26 +420,26 @@ function buildAlliesAndOrganizationsSummary(
   const allies = character.details.allies ?? []
   const allySummary = allies
     .map((ally) => {
-      const relationship = ally.relationship ? ` (${ally.relationship})` : ''
-      const description = ally.description ? `: ${ally.description}` : ''
-      return `${ally.name}${relationship}${description}`
+      const relationship = ally.relationship ? ` (${toPdfPlainText(ally.relationship)})` : ''
+      const description = ally.description ? `: ${toPdfPlainText(ally.description)}` : ''
+      return `${toPdfPlainText(ally.name)}${relationship}${description}`
     })
     .join('\n')
   const selectionKey = character.details.organizationSelectionKey
   const organizationDescription = organizations.find(
     (organization) => getOrganizationKey(organization.name, organization.source) === selectionKey,
   )?.description
-  return [organizationDescription, allySummary].filter(Boolean).join('\n\n')
+  return [toPdfPlainText(organizationDescription), allySummary].filter(Boolean).join('\n\n')
 }
 
 function buildOrganizationDetailsSummary(character: Character): string {
   const details = character.details
   return buildLabeledSummary([
-    ['Faction', details.faction],
-    ['Rank', details.rank],
-    ['Faction notes', details.factionNotes],
-    ['Patron', details.patron],
-    ['Patron details', details.patronDetails],
+    ['Faction', toPdfPlainText(details.faction)],
+    ['Rank', toPdfPlainText(details.rank)],
+    ['Faction notes', toPdfPlainText(details.factionNotes)],
+    ['Patron', toPdfPlainText(details.patron)],
+    ['Patron details', toPdfPlainText(details.patronDetails)],
   ])
 }
 
@@ -818,6 +822,7 @@ export function createCharacterSheetViewModel(
       character.details.organizationCustomDescription,
     ]
       .filter((part) => !!part && part.trim().length > 0)
+      .map(toPdfPlainText)
       .join('\n'),
     carriedWeight: character.equipment
       .reduce((sum, item) => sum + (item.weight ?? 0) * (item.quantity ?? 1), 0)

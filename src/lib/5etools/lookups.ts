@@ -152,6 +152,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
 /** Index each property's source-qualified UID and retain an abbreviation fallback for legacy data. */
 export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
+  const labeledAbbreviations = new Set<string>()
   for (const prop of itemProperties) {
     if (!prop || typeof prop !== 'object' || typeof prop.abbreviation !== 'string') continue
     const abbreviation = prop.abbreviation.trim().toUpperCase()
@@ -166,7 +167,10 @@ export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Recor
     const entryName = namedEntry?.name?.trim()
     const name = directName || entryName || prop.abbreviation
     if (source) result[`${abbreviation}|${source}`] = name
-    result[abbreviation] ??= name
+    if (!labeledAbbreviations.has(abbreviation)) {
+      result[abbreviation] = name
+      if (directName || entryName) labeledAbbreviations.add(abbreviation)
+    }
   }
   return result
 }
