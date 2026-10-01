@@ -1,4 +1,5 @@
 import {
+  CheckCircle,
   CheckSquare,
   CopySimple,
   DotsThreeVertical,
@@ -10,7 +11,9 @@ import {
   SquaresFour,
   Trash,
   Upload,
+  UserCircle,
   Users,
+  WarningCircle,
 } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -818,25 +821,36 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Character import results</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="size-5 text-primary" weight="duotone" aria-hidden="true" />
+              Character import results
+            </DialogTitle>
             <DialogDescription>
               {importReport?.imported.length ?? 0} imported · {importReport?.failures.length ?? 0}{' '}
-              failed. Valid characters were added even when other entries failed.
+              failed.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-80">
             <div className="space-y-4 pr-4 text-sm">
               {(importReport?.imported.length ?? 0) > 0 && (
                 <section>
-                  <h3 className="mb-1 font-semibold">Imported</h3>
+                  <h3 className="mb-1 flex items-center gap-1.5 font-semibold">
+                    <CheckCircle className="size-4 text-success" weight="fill" aria-hidden="true" />
+                    Imported
+                  </h3>
                   <ul className="space-y-1">
                     {importReport?.imported.map((entry) => (
-                      <li key={`${entry.label}:${entry.name}`}>
-                        {entry.name}
-                        {entry.name !== entry.originalName &&
-                          ' (renamed to avoid a name collision)'}
-                        {entry.idChanged && ' · assigned a new ID'}
-                        {entry.missingContent && ' · needs additional game content'}
+                      <li key={`${entry.label}:${entry.name}`} className="flex items-start gap-2">
+                        <UserCircle
+                          className="mt-0.5 size-4 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {entry.name}
+                          {entry.name !== entry.originalName &&
+                            ' (renamed to avoid a name collision)'}
+                          {entry.idChanged && ' · assigned a new ID'}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -844,7 +858,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
               )}
               {(importReport?.failures.length ?? 0) > 0 && (
                 <section>
-                  <h3 className="mb-1 font-semibold">Could not import</h3>
+                  <h3 className="mb-1 flex items-center gap-1.5 font-semibold">
+                    <WarningCircle
+                      className="size-4 text-warning"
+                      weight="fill"
+                      aria-hidden="true"
+                    />
+                    Could not import
+                  </h3>
                   <ul className="space-y-1">
                     {importReport?.failures.map((entry) => (
                       <li key={`${entry.label}:${entry.reason}`}>

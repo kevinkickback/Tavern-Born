@@ -454,7 +454,9 @@ describe('home page integration workflows', () => {
     expect(imported[1]?.id).not.toBe('same-id')
     expect(await screen.findByText(/2 imported · 1 failed/)).toBeTruthy()
     expect(screen.getByText(/assigned a new ID/)).toBeTruthy()
-    expect(screen.getAllByText(/needs additional game content/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/needs additional game content/)).toBeNull()
+    expect(screen.queryByText(/Valid characters were added/)).toBeNull()
+    expect(screen.getByText(/Some characters reference game content/)).toBeTruthy()
     expect(screen.getByText(/broken.tbc: Could not parse JSON/)).toBeTruthy()
   })
 
