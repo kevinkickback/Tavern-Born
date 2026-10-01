@@ -1,10 +1,9 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { getArmorCategory } from '@/lib/calculations/armorClass'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
-import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
+import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
   addManualEquipmentCommand,
@@ -169,25 +168,18 @@ export function useEquipment(): EquipmentState {
       if (!item) return
 
       if (!item.equipped && !(character.variantRules?.ignoreEquipRestrictions ?? false)) {
-        const armorType = getArmorCategory(item)
-        if (armorType !== 'none') {
-          const isShield = armorType === 'shield'
-          const conflict = equipment.find((other) => {
-            if (other.id === id || !other.equipped) return false
-            const otherArmorType = getArmorCategory(other)
-            if (otherArmorType === 'none') return false
-            return isShield ? otherArmorType === 'shield' : otherArmorType !== 'shield'
-          })
-          if (conflict) {
-            toast.warning(`${conflict.name} is already equipped. Unequip it first.`)
-            return
-          }
-
-          if (!hasArmorProficiency(character.proficiencies.armor, armorType)) {
-            const label = armorType === 'shield' ? 'shields' : `${armorType} armor`
-            toast.warning(`${character.name} is not proficient with ${label}.`)
-            return
-          }
+        const restriction = getArmorEquipRestriction(item, equipment, character.proficiencies.armor)
+        if (restriction?.kind === 'slot-conflict') {
+          toast.warning(
+            `${restriction.conflictingItem.name} is already equipped. Unequip it first.`,
+          )
+          return
+        }
+        if (restriction?.kind === 'missing-proficiency') {
+          const label =
+            restriction.armorType === 'shield' ? 'shields' : `${restriction.armorType} armor`
+          toast.warning(`${character.name} is not proficient with ${label}.`)
+          return
         }
       }
 
