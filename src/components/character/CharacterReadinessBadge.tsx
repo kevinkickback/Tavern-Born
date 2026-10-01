@@ -28,14 +28,14 @@ export function CharacterReadinessBadge({
       aria-label={
         ready
           ? 'Character ready'
-          : `${readiness.blockingIssues.length} ${readiness.blockingIssues.length === 1 ? 'issue' : 'issues'} requiring attention`
+          : `${readiness.blockingIssues.length} ${readiness.blockingIssues.length === 1 ? 'item' : 'items'} to review`
       }
     >
       {ready
         ? 'Ready'
         : compact
           ? readiness.blockingIssues.length
-          : `${readiness.blockingIssues.length} required`}
+          : `${readiness.blockingIssues.length} to review`}
     </Badge>
   )
 }
