@@ -613,6 +613,34 @@ export function applyLevelUp(
   if (characterLevel !== getTotalCharacterLevel(character) + 1) {
     throw new RangeError('Level up must add exactly one character level.')
   }
+  const previousProgression = getCharacterClassEntries(character)
+  const entryKey = (entry: CharacterClassEntry) => JSON.stringify([entry.name, entry.source])
+  const previousByKey = new Map(previousProgression.map((entry) => [entryKey(entry), entry]))
+  const nextByKey = new Map(nextProgression.map((entry) => [entryKey(entry), entry]))
+  const targetKey = JSON.stringify([hpChoice.className, hpChoice.classSource])
+  const invalidProgression =
+    previousByKey.size !== previousProgression.length ||
+    nextByKey.size !== nextProgression.length ||
+    [...previousByKey.keys()].some((key) => !nextByKey.has(key)) ||
+    nextProgression.filter((entry) => {
+      const previous = previousByKey.get(entryKey(entry))
+      return !previous || entry.levels !== previous.levels
+    }).length !== 1 ||
+    nextProgression.some((entry) => {
+      const previous = previousByKey.get(entryKey(entry))
+      if (!previous) return entry.levels !== 1 || entryKey(entry) !== targetKey
+      const delta = entry.levels - previous.levels
+      return (
+        delta < 0 ||
+        delta > 1 ||
+        (delta === 1 && entryKey(entry) !== targetKey) ||
+        entry.subclass !== previous.subclass ||
+        entry.subclassSource !== previous.subclassSource
+      )
+    })
+  if (invalidProgression) {
+    throw new RangeError('Level up must add exactly one source-qualified class level.')
+  }
 
   const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
   const gain: HitPointGain = { ...hpChoice, characterLevel }

@@ -417,6 +417,41 @@ describe('Class Commands', () => {
     expect(result.characterPatch.hitPointsInitialized).toBe(true)
   })
 
+  test('applyLevelUp rejects a redistributed multiclass progression with a one-level net gain', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Fighter', source: 'PHB', levels: 2 },
+        { name: 'Wizard', source: 'PHB', levels: 2 },
+      ],
+    })
+    const context = createCharacterCalculationContext(character, {
+      classesByKey: buildClassLookup([
+        makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } }),
+        makeClassFixture({ name: 'Wizard', source: 'PHB', hd: { faces: 6 } }),
+      ]),
+    })
+
+    expect(() =>
+      applyLevelUp(
+        character,
+        character.provenance,
+        [
+          { name: 'Fighter', source: 'PHB', levels: 1 },
+          { name: 'Wizard', source: 'PHB', levels: 4 },
+        ],
+        {
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel: 4,
+          hitDie: 6,
+          dieResult: 4,
+          method: 'manual',
+        },
+        context,
+      ),
+    ).toThrow('Level up must add exactly one source-qualified class level.')
+  })
+
   test('level-up refills to the effective maximum including typed and per-level HP effects', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
