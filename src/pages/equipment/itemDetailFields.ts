@@ -1,3 +1,4 @@
+import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
 import { getArmorCategory } from '@/lib/calculations/armorClass'
 import { formatCopperValue } from '@/lib/calculations/currency'
 import {
@@ -74,11 +75,6 @@ export function getDamageSummary(item: Equipment, itemData?: Item5e): string | n
   return `${primaryDamage}${damageType}`
 }
 
-function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
-  const key = tag.trim().split('|')[0].toUpperCase()
-  return propertyByAbbr[key] ?? tag
-}
-
 export function getPropertySummary(
   item: Equipment,
   propertyByAbbr: Record<string, string>,
@@ -86,7 +82,7 @@ export function getPropertySummary(
 ): string | null {
   const properties = item.properties ?? itemData?.property
   if (!properties?.length) return null
-  return properties.map((property) => resolvePropertyLabel(property, propertyByAbbr)).join(', ')
+  return properties.map((property) => getItemPropertyLabel(property, propertyByAbbr)).join(', ')
 }
 
 function getArmorTypeLabel(item: Equipment): string | null {

@@ -7,6 +7,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
+import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
@@ -53,11 +54,6 @@ const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'consumable', label: 'Consumable' },
   { value: 'cursed', label: 'Cursed' },
 ]
-
-function getPropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
-  const key = tag.trim().split('|')[0].toUpperCase()
-  return propertyByAbbr[key] ?? tag
-}
 
 function toPlainText(html: string): string {
   return html
@@ -266,15 +262,15 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
         )}
         {properties.slice(0, 6).map((prop) => (
           <Badge
-            key={prop}
+            key={getItemPropertyUid(prop)}
             variant="outline"
             className={cn(
               'text-xs px-1.5 py-0 h-5',
               'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-400',
             )}
-            title={getPropertyLabel(prop, itemPropertyByAbbr)}
+            title={getItemPropertyLabel(prop, itemPropertyByAbbr)}
           >
-            {getPropertyLabel(prop, itemPropertyByAbbr)}
+            {getItemPropertyLabel(prop, itemPropertyByAbbr)}
           </Badge>
         ))}
         {properties.length > 6 && (

@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
@@ -23,6 +26,54 @@ describe('game-data content layers', () => {
       }),
     ])
     expect(composed.lookups?.itemLookup.get('special blade|hb')).toMatchObject({ dmg1: '1d8' })
+  })
+
+  test('keeps each source-qualified item property when definitions have no top-level name', () => {
+    const ammunition = { abbreviation: 'A', source: 'PHB', entries: [{ name: 'Ammunition' }] }
+    const heavy = { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] }
+    const twoHanded = { abbreviation: '2H', source: 'PHB', entries: [{ name: 'Two-Handed' }] }
+    const additionalHeavy = { ...heavy, entries: [{ name: 'Heavy (updated)' }] }
+
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: [ammunition, heavy, twoHanded] }),
+      makeGameDataFixture({ itemProperties: [additionalHeavy] }),
+    ])
+
+    expect(composed.itemProperties).toEqual([ammunition, additionalHeavy, twoHanded])
+    expect(composed.lookups?.itemPropertyByAbbr).toMatchObject({
+      A: 'Ammunition',
+      H: 'Heavy (updated)',
+      '2H': 'Two-Handed',
+    })
+  })
+
+  test('replaces a named property with an entry-named definition of the same UID', () => {
+    const bundled = { abbreviation: 'S', source: 'PHB', name: 'special' }
+    const overlay = { abbreviation: 'S', source: 'PHB', entries: [{ name: 'Special updated' }] }
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: [bundled] }),
+      makeGameDataFixture({ itemProperties: [overlay] }),
+    ])
+
+    expect(composed.itemProperties).toEqual([overlay])
+    expect(composed.lookups?.itemPropertyByAbbr['S|PHB']).toBe('Special updated')
+  })
+
+  test('retains bundled weapon property names after layering', () => {
+    const bundledItems = JSON.parse(
+      readFileSync(join(process.cwd(), 'resources/srd/core/data/items-base.json'), 'utf8'),
+    )
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: parseItemProperties(bundledItems) }),
+      makeGameDataFixture(),
+    ])
+
+    expect(composed.lookups?.itemPropertyByAbbr).toMatchObject({
+      A: 'Ammunition',
+      H: 'Heavy',
+      '2H': 'Two-Handed',
+      'S|PHB': 'special',
+    })
   })
 
   test('keeps omitted SRD entities while additional content replaces exact identities', () => {

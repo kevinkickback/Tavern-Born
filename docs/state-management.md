@@ -128,6 +128,10 @@ equipped state; they are not copied into equipment records.
 Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
 restrictions from either page applies the rule and unequips invalid armor in one character patch.
 
+Inventory weapon properties preserve 5etools references as abbreviations or source-qualified
+`{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;
+the structured form retains item-specific notes without changing existing saved abbreviations.
+
 ## Character transfers
 
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved
