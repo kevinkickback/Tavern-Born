@@ -242,11 +242,9 @@ export function CharacterOverview({
       character.details.organizationSelectionKey,
   )
   const customOrganization = character.details.organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
-  const organizationName =
-    (customOrganization
-      ? character.details.organizationCustomName
-      : selectedOrganization?.name
-    )?.trim() || character.details.faction?.trim()
+  const organizationName = customOrganization
+    ? character.details.organizationCustomName?.trim() || 'Custom Organization'
+    : selectedOrganization?.name?.trim() || character.details.faction?.trim()
   const organizationDescription = customOrganization
     ? character.details.organizationCustomDescription
     : selectedOrganization?.description

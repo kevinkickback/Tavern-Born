@@ -361,6 +361,35 @@ describe('BuildReviewPage', () => {
     expect(screen.queryByRole('img', { name: 'The Lantern Circle emblem' })).toBeNull()
     expect(iconContainer?.querySelector('svg')).not.toBeNull()
   })
+
+  test('shows unnamed custom organization details under the editor fallback title', async () => {
+    const user = userEvent.setup()
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      details: {
+        ...current.details,
+        faction: 'Old Faction',
+        organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
+        organizationCustomName: '',
+        organizationCustomDescription: 'A group without a name yet.',
+        organizationCustomImage: 'data:image/png;base64,custom-emblem',
+      },
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByText('Organization'))
+    expect(screen.getByText('Custom Organization')).toBeTruthy()
+    expect(screen.getByText('A group without a name yet.')).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'Custom Organization emblem' })).toBeTruthy()
+    expect(screen.queryByText('Old Faction')).toBeNull()
+  })
 })
 
 function ProficiencyDestination() {
