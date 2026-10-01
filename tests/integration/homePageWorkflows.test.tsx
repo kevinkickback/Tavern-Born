@@ -474,6 +474,28 @@ describe('home page integration workflows', () => {
     expect(toast.success).not.toHaveBeenCalledWith('Character imported successfully')
   })
 
+  test('shows the assigned name and ID for a single import with collisions', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      characters: [makeCharacterFixture({ id: 'existing-id', name: 'Hero' })],
+    })
+    useGameDataStore.setState({ gameData: makeGameDataFixture() })
+    const fileInput = mockDynamicFileInput()
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    const file = new File(
+      [JSON.stringify(makeCharacterFixture({ id: 'existing-id', name: 'Hero' }))],
+      'hero.tbc',
+    )
+    Object.defineProperty(fileInput, 'files', { configurable: true, get: () => [file] })
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(await screen.findByText(/1 imported · 0 failed/)).toBeTruthy()
+    expect(screen.getByText(/Hero \(Imported\).*renamed to avoid a name collision/)).toBeTruthy()
+    expect(screen.getByText(/assigned a new ID/)).toBeTruthy()
+    expect(toast.success).not.toHaveBeenCalledWith('Character imported successfully')
+  })
+
   test('does not show a content warning when no backup entry was imported', async () => {
     const user = userEvent.setup()
     const invalid = { ...makeCharacterFixture(), name: '' }

@@ -68,7 +68,6 @@ import {
 import {
   duplicateCharacter,
   getDuplicateCharacterName,
-  getImportedCharacterName,
   LIBRARY_BACKUP_EXTENSION,
   MAX_LIBRARY_BACKUP_SIZE,
   type PreparedCharacterDownload,
@@ -444,7 +443,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       }
       const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
       let isBulkImport = files.length > 1
-      const existingNames = useCharacterStore.getState().characters.map((value) => value.name)
       const pendingImports: Array<{
         label: string
         originalName: string
@@ -472,13 +470,10 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
           isBulkImport ||= prepared.isLibraryBackup
           report.failures.push(...prepared.failures)
           for (const entry of prepared.characters) {
-            const name = getImportedCharacterName(entry.character.name, existingNames)
-            existingNames.push(name)
             pendingImports.push({
               label: entry.label,
               originalName: entry.character.name,
-              character:
-                name === entry.character.name ? entry.character : { ...entry.character, name },
+              character: entry.character,
             })
           }
         } catch (error) {
@@ -529,7 +524,12 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         return
       }
       if (report.imported.length === 1 && report.failures.length === 0) {
-        if (report.contentCheckUnavailable || report.imported[0]?.missingContent) {
+        if (
+          report.contentCheckUnavailable ||
+          report.imported[0]?.missingContent ||
+          report.imported[0]?.name !== report.imported[0]?.originalName ||
+          report.imported[0]?.idChanged
+        ) {
           setImportReport(report)
         } else {
           toast.success('Character imported successfully')

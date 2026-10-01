@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
+import { getImportedCharacterName } from '@/lib/character/characterTransfer'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
@@ -244,10 +245,16 @@ export const useCharacterStore = create<CharacterState>()(
           if (candidates.length === 0) return []
 
           const existingIds = new Set(get().characters.map((character) => character.id))
+          const existingNames = get().characters.map((character) => character.name)
           const imported = candidates.map((candidate) => {
             const parsed = parseCharacterData(candidate)
             if (!parsed.data) throw new Error(parsed.error ?? 'Character could not be imported')
-            return ensureUniqueCharacterId(parsed.data, existingIds)
+            const name = getImportedCharacterName(parsed.data.name, existingNames)
+            existingNames.push(name)
+            return ensureUniqueCharacterId(
+              name === parsed.data.name ? parsed.data : { ...parsed.data, name },
+              existingIds,
+            )
           })
           const importedIds = new Set(imported.map((character) => character.id))
 

@@ -160,6 +160,29 @@ describe('characterStore', () => {
     expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
   })
 
+  test('importCharacters resolves names against characters added while an import starts', async () => {
+    const importPromise = useCharacterStore
+      .getState()
+      .importCharacters([
+        makeCharacterFixture({ id: 'first-import', name: 'Hero' }),
+        makeCharacterFixture({ id: 'second-import', name: 'Hero' }),
+      ])
+    useCharacterStore
+      .getState()
+      .addCharacter(makeCharacterFixture({ id: 'newly-added', name: 'Hero' }))
+
+    const imported = await importPromise
+    expect(imported.map((character) => character.name)).toEqual([
+      'Hero (Imported)',
+      'Hero (Imported 2)',
+    ])
+    expect(useCharacterStore.getState().characters.map((character) => character.name)).toEqual([
+      'Hero',
+      'Hero (Imported)',
+      'Hero (Imported 2)',
+    ])
+  })
+
   test('importCharacters rolls back the batch when persistence fails', async () => {
     const existing = makeCharacterFixture({ id: 'existing', name: 'Original' })
     useCharacterStore.setState({ characters: [existing] })
