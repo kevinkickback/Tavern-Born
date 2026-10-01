@@ -80,7 +80,7 @@ export function CompendiumPage() {
   const sourceNameMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const source of gameData?.sources ?? []) {
-      map.set(source.abbreviation, source.name)
+      map.set(source.abbreviation.trim().toUpperCase(), source.name)
     }
     return map
   }, [gameData?.sources])
@@ -89,11 +89,13 @@ export function CompendiumPage() {
 
   const allSources = useMemo(
     () =>
-      Array.from(new Set(allEntries.map((entry) => entry.source))).sort((a, b) => {
-        const nameA = sourceNameMap.get(a) ?? a
-        const nameB = sourceNameMap.get(b) ?? b
-        return nameA.localeCompare(nameB)
-      }),
+      Array.from(new Set(allEntries.map((entry) => entry.source.trim().toUpperCase()))).sort(
+        (a, b) => {
+          const nameA = sourceNameMap.get(a) ?? a
+          const nameB = sourceNameMap.get(b) ?? b
+          return nameA.localeCompare(nameB)
+        },
+      ),
     [allEntries, sourceNameMap],
   )
 

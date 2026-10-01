@@ -138,8 +138,37 @@ export function parseMagicVariants(data: unknown): Item5e[] {
           ? variant.source
           : ''
     if (!name || !source || typeof variant.type !== 'string') return []
-    return [{ ...variant, ...inherits, name, source, type: variant.type } as unknown as Item5e]
+    const parsed: Record<string, unknown> = {
+      ...variant,
+      ...inherits,
+      name,
+      source,
+      type: variant.type,
+    }
+    // The variant's own entries describe the reference item. Inherited entries are templates
+    // for a concrete base item and should only be used when no reference text is supplied.
+    const entries = variant.entries ?? inherits.entries
+    if (entries !== undefined) parsed.entries = resolveMagicVariantEntries(entries, parsed)
+    return [parsed as unknown as Item5e]
   })
+}
+
+function resolveMagicVariantEntries(value: unknown, fields: Record<string, unknown>): unknown {
+  if (typeof value === 'string') {
+    return value.replace(/\{=([^}]+)\}/g, (_token, field: string) => {
+      const replacement = fields[field]
+      return typeof replacement === 'string' || typeof replacement === 'number'
+        ? String(replacement)
+        : '[value unavailable]'
+    })
+  }
+  if (Array.isArray(value)) return value.map((entry) => resolveMagicVariantEntries(entry, fields))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, resolveMagicVariantEntries(entry, fields)]),
+    )
+  }
+  return value
 }
 
 export function parseOptionalFeatures(data: unknown): unknown[] {
@@ -250,16 +279,21 @@ export function buildSourcesList(
   const booksList = parseBooks(booksData)
   const adventuresList = adventuresData ? parseBooks(adventuresData) : []
   const allEntries = [...booksList, ...adventuresList]
+  const sourceKey = (source: string) => source.trim().toUpperCase()
+  const fallbacks = new Map(
+    Object.entries(SOURCE_FALLBACKS).map(([source, fallback]) => [sourceKey(source), fallback]),
+  )
   // Key by both id AND source so entries like {id:"PS-A", source:"PSA"} resolve under both keys
   const booksMap = new Map<string, ParsedObject>()
   for (const entry of allEntries) {
     const entryObj = asObject(entry)
     const id = typeof entryObj.id === 'string' ? entryObj.id : undefined
     const source = typeof entryObj.source === 'string' ? entryObj.source : undefined
-    if (id) booksMap.set(id, entryObj)
+    if (id) booksMap.set(sourceKey(id), entryObj)
     // Only add source key if not already present — prevents adventure source fields from
     // overwriting book entries (e.g., MOT-NSS with source:"MOT" must not shadow MOT book entry)
-    if (source && source !== id && !booksMap.has(source)) booksMap.set(source, entryObj)
+    if (source && sourceKey(source) !== sourceKey(id ?? '') && !booksMap.has(sourceKey(source)))
+      booksMap.set(sourceKey(source), entryObj)
   }
 
   const characterRelevantGroups = [
@@ -273,11 +307,10 @@ export function buildSourcesList(
   ]
   const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
-  return sourceAbbreviations
+  return [...new Set(sourceAbbreviations.map(sourceKey).filter(Boolean))]
     .map((abbr) => {
-      const book =
-        booksMap.get(abbr) ??
-        (SOURCE_FALLBACKS[abbr] ? { id: abbr, source: abbr, ...SOURCE_FALLBACKS[abbr] } : null)
+      const fallback = fallbacks.get(abbr)
+      const book = booksMap.get(abbr) ?? (fallback ? { id: abbr, source: abbr, ...fallback } : null)
       if (!book) {
         const abbreviation = abbr.toUpperCase()
         return {

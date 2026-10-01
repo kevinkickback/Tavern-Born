@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CompendiumPage } from '@/pages/compendium/CompendiumPage'
@@ -82,5 +83,35 @@ describe('CompendiumPage edition filtering', () => {
     )
     expect(screen.getByText('Legacy Fighter')).toBeTruthy()
     expect(screen.getByText('Revised Fighter')).toBeTruthy()
+  })
+
+  test('shows full source names for mixed-case adventure IDs and filters their entries', async () => {
+    useGameDataStore.setState({
+      gameData: {
+        classes: [
+          { name: 'Tiamat Option', source: 'RoT' },
+          { name: 'Storm Option', source: 'SLW' },
+          { name: 'Tomb Option', source: 'ToA' },
+        ],
+        sources: [
+          { abbreviation: 'ROT', name: 'The Rise of Tiamat', group: 'adventure' },
+          { abbreviation: 'SLW', name: "Storm Lord's Wrath", group: 'adventure' },
+          { abbreviation: 'TOA', name: 'Tomb of Annihilation', group: 'adventure' },
+        ],
+      } as GameData,
+    })
+
+    renderPage()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Sources' }))
+
+    expect(screen.getByText('The Rise of Tiamat')).toBeTruthy()
+    expect(screen.getByText("Storm Lord's Wrath")).toBeTruthy()
+    expect(screen.getByText('Tomb of Annihilation')).toBeTruthy()
+
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /The Rise of Tiamat/ }))
+    expect(screen.getByText('Tiamat Option')).toBeTruthy()
+    expect(screen.queryByText('Storm Option')).toBeNull()
+    expect(screen.queryByText('Tomb Option')).toBeNull()
   })
 })

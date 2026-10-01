@@ -267,6 +267,59 @@ describe('5etools/parsers', () => {
     expect(variant).toMatchObject({ name: '+1 Shield', source: 'XDMG', rarity: 'uncommon' })
   })
 
+  test('resolves structured magic-variant values in reference text', () => {
+    const variants = parseMagicVariants([
+      {
+        name: '+1 Armor',
+        type: 'GV|DMG',
+        inherits: {
+          source: 'DMG',
+          bonusAc: '+1',
+          entries: ['You have a {=bonusAc} bonus to AC.'],
+        },
+      },
+      {
+        name: '+2 Shield',
+        type: 'GV|DMG',
+        inherits: {
+          source: 'DMG',
+          bonusAc: '+2',
+          entries: [{ type: 'entries', entries: ['Gain a {=bonusAc} bonus.'] }],
+        },
+      },
+    ])
+
+    expect(variants[0]?.entries).toEqual(['You have a +1 bonus to AC.'])
+    expect(variants[1]?.entries).toEqual([{ type: 'entries', entries: ['Gain a +2 bonus.'] }])
+  })
+
+  test('uses finished variant reference text before inherited base-item templates', () => {
+    const [variant] = parseMagicVariants([
+      {
+        name: 'Ammunition of Slaying',
+        type: 'GV|DMG',
+        entries: ['An arrow of slaying is a magic weapon.'],
+        inherits: {
+          source: 'DMG',
+          entries: ['{=baseName/at} {=baseName/l} of slaying is a magic weapon.'],
+        },
+      },
+    ])
+
+    expect(variant?.entries).toEqual(['An arrow of slaying is a magic weapon.'])
+  })
+
+  test('marks unsupported magic-variant values without showing raw tokens', () => {
+    const [variant] = parseMagicVariants([
+      {
+        name: 'Unresolved Variant',
+        type: 'GV|TEST',
+        inherits: { source: 'TEST', entries: ['Gain {=missing} to AC.'] },
+      },
+    ])
+    expect(variant?.entries).toEqual(['Gain [value unavailable] to AC.'])
+  })
+
   test('parseItemMasteries preserves data-driven mastery descriptions', () => {
     expect(
       parseItemMasteries({
@@ -386,6 +439,26 @@ describe('5etools/parsers', () => {
 
     expect(list.map((s) => s.abbreviation)).toEqual(['XPHB', 'DMG'])
     expect(list[0]?.minimumRuleset).toBe('2024')
+  })
+
+  test('buildSourcesList matches mixed-case book and adventure IDs', () => {
+    const sources = buildSourcesList(
+      ['ROT', 'SLW', 'ToA', 'toa'],
+      { book: [] },
+      {
+        adventure: [
+          { id: 'RoT', source: 'RoT', name: 'The Rise of Tiamat', group: 'adventure' },
+          { id: 'SLW', source: 'SLW', name: "Storm Lord's Wrath", group: 'adventure' },
+          { id: 'ToA', source: 'ToA', name: 'Tomb of Annihilation', group: 'adventure' },
+        ],
+      },
+    )
+
+    expect(sources.map(({ abbreviation, name }) => [abbreviation, name])).toEqual([
+      ['SLW', "Storm Lord's Wrath"],
+      ['ROT', 'The Rise of Tiamat'],
+      ['TOA', 'Tomb of Annihilation'],
+    ])
   })
 
   test('buildSourcesList is deterministic for mixed dates and equal names', () => {
