@@ -10,7 +10,7 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useItemLookup, useOrganizations, useSpellLookup } from '@/hooks/data/useGameData'
+import { useItemLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
@@ -212,7 +212,6 @@ export function CharacterOverview({
   const spellcasting = useSpellSlots()
   const spellLookup = useSpellLookup()
   const itemLookup = useItemLookup()
-  const organizations = useOrganizations()
   const [failedOrganizationImage, setFailedOrganizationImage] = useState('')
   const filteredData = useFilteredGameData()
   const rawData = useGameDataStore((state) => state.gameData)
@@ -236,7 +235,7 @@ export function CharacterOverview({
   )
   const level = getTotalCharacterLevel(character)
   const classes = getCharacterClassEntries(character)
-  const selectedOrganization = organizations.find(
+  const selectedOrganization = filteredData.organizations.find(
     (organization) =>
       getOrganizationKey(organization.name, organization.source) ===
       character.details.organizationSelectionKey,
