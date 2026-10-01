@@ -476,7 +476,7 @@ export function EquipmentPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex h-full min-w-[760px] flex-col overflow-hidden rounded-md border border-border bg-background">
+                  <div className="flex h-full min-w-[760px] flex-col overflow-hidden rounded-md border border-border bg-workspace-pane">
                     <div className="grid shrink-0 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center border-b border-border bg-surface-raised px-3 py-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.08em] text-muted-foreground">
                       <span>Item</span>
                       <span className="text-center">Quantity</span>

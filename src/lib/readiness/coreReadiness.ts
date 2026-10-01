@@ -22,7 +22,7 @@ export function validateIdentity(character: Character): CharacterReadinessIssue[
         'blocking',
         'identity',
         'Name the character',
-        'A character name is required for a complete sheet.',
+        'A name has not been added to this sheet.',
       ),
     )
   }
@@ -179,7 +179,7 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
         'blocking',
         sectionByDomain[choice.domain],
         `Finish ${choice.sourceTag.label}`,
-        `${choice.sourceTag.sourceName} requires ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} are stored.`,
+        `${choice.sourceTag.sourceName} offers ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} chosen.`,
         targetForChoice(choice),
       ),
     )
@@ -247,7 +247,7 @@ export function validateFeatSetup(
         'blocking',
         'feats',
         `Finish setting up ${data.name}`,
-        'This feat has required follow-up choices that have not been stored.',
+        'Follow-up choices for this feat are unfinished.',
       ),
     ]
   })

@@ -402,9 +402,12 @@ export function AppSidebar() {
           {activeWorkspace.groups.map((group, groupIndex) => (
             <div key={group.label ?? 'primary'} className={cn(groupIndex > 0 && 'mt-5')}>
               {group.label && (
-                <p className="mb-1 px-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.1em] text-muted-foreground/80">
-                  {group.label}
-                </p>
+                <div className="mb-1 flex items-center gap-2 px-2">
+                  <p className="shrink-0 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.1em] text-muted-foreground/80">
+                    {group.label}
+                  </p>
+                  <span aria-hidden="true" className="h-px min-w-0 flex-1 bg-border" />
+                </div>
               )}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {

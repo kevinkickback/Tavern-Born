@@ -76,7 +76,7 @@ export function validateClassChoices(
           'blocking',
           'class',
           'Choose a subclass',
-          `${entry.name} requires a subclass choice at class level ${subclassInfo.subclassLevel}.`,
+          `${entry.name} offers a subclass choice at class level ${subclassInfo.subclassLevel}.`,
           classChoiceTarget(entry, subclassInfo.subclassLevel),
         ),
       )
@@ -123,7 +123,7 @@ export function validateClassChoices(
             'blocking',
             'class',
             `Finish ${choice.label}`,
-            `${entry.name} requires ${required} eligible ${required === 1 ? 'selection' : 'selections'} here; ${count} are stored.`,
+            `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
             classChoiceTarget(entry, choice.level, choice.id),
           ),
         )
