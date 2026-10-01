@@ -28,6 +28,23 @@ describe('game-data content layers', () => {
     expect(composed.lookups?.itemLookup.get('special blade|hb')).toMatchObject({ dmg1: '1d8' })
   })
 
+  test('rejects unresolved copies after the final layer retry', () => {
+    expect(() =>
+      composeGameDataLayers([
+        makeGameDataFixture({
+          items: [
+            {
+              name: 'Broken Blade',
+              source: 'HB',
+              type: 'M',
+              _copy: { name: 'Missing Blade', source: 'PHB' },
+            },
+          ],
+        }),
+      ]),
+    ).toThrow(/Unable to resolve 1 copied record after content layering.*Broken Blade\|HB/)
+  })
+
   test('keeps each source-qualified item property when definitions have no top-level name', () => {
     const ammunition = { abbreviation: 'A', source: 'PHB', entries: [{ name: 'Ammunition' }] }
     const heavy = { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] }

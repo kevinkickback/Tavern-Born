@@ -186,10 +186,17 @@ describe('5etools copy resolution', () => {
         { name: 'A', source: 'X', _copy: { name: 'B', source: 'X' } },
         { name: 'B', source: 'X', _copy: { name: 'A', source: 'X' } },
         { name: 'Missing', source: 'X', _copy: { name: 'Absent', source: 'X' } },
+        { name: 'Malformed', source: 'X', _copy: { source: 'X' } },
       ],
       'monster',
     )
-    expect(result.diagnostics).toHaveLength(3)
+    expect(result.diagnostics).toHaveLength(4)
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        entity: 'Malformed|X',
+        reason: expect.stringContaining('invalid parent reference'),
+      }),
+    )
     expect(result.records.every((record) => '_copy' in record)).toBe(true)
   })
 })

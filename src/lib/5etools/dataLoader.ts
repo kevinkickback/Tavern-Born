@@ -9,7 +9,11 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
-import { resolveCopiedRecords } from './copyResolution'
+import {
+  type CopyResolutionDiagnostic,
+  CopyResolutionError,
+  resolveCopiedRecords,
+} from './copyResolution'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -51,6 +55,8 @@ export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
   onResourceFailure?: (resource: string, failure: DataResourceFailure) => void
   signal?: AbortSignal
+  /** A source stack retries copies after layering its catalogs. */
+  deferCopyResolutionErrors?: boolean
 }
 
 interface DataResourceFailure {
@@ -365,8 +371,16 @@ export class FiveEToolsDataLoader {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
 
-    if (bestiaryIndexData) {
-      await this.loadCreatureData(bestiaryIndexData, gameData, options)
+    const creatureDiagnostics = bestiaryIndexData
+      ? await this.loadCreatureData(bestiaryIndexData, gameData, options)
+      : []
+
+    const copyDiagnostics = [...resolvedItems.diagnostics, ...creatureDiagnostics]
+    if (copyDiagnostics.length > 0 && !options?.deferCopyResolutionErrors) {
+      for (const diagnostic of copyDiagnostics) {
+        options?.onResourceFailure?.(`Copied entity: ${diagnostic.entity}`, { required: true })
+      }
+      throw new CopyResolutionError(copyDiagnostics, 'in the selected source')
     }
 
     const sourceCatalog = buildSourcesList(
@@ -546,7 +560,7 @@ export class FiveEToolsDataLoader {
     indexData: unknown,
     gameData: GameData,
     options?: DataLoaderOptions,
-  ): Promise<void> {
+  ): Promise<CopyResolutionDiagnostic[]> {
     const creatureFiles = this.extractIndexFiles(indexData)
     const results = await mapWithConcurrency(
       creatureFiles,
@@ -597,6 +611,7 @@ export class FiveEToolsDataLoader {
     if (resolved.diagnostics.length && import.meta.env.DEV) {
       console.warn('Unresolved copied creatures:', resolved.diagnostics)
     }
+    return resolved.diagnostics
   }
 
   private extractIndexFiles(

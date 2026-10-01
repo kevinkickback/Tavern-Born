@@ -13,6 +13,19 @@ export interface CopyResolutionDiagnostic {
   reason: string
 }
 
+export class CopyResolutionError extends Error {
+  constructor(
+    readonly diagnostics: CopyResolutionDiagnostic[],
+    context: string,
+  ) {
+    const first = diagnostics[0]
+    super(
+      `Unable to resolve ${diagnostics.length} copied ${diagnostics.length === 1 ? 'record' : 'records'} ${context}. ${first.entity}: ${first.reason}`,
+    )
+    this.name = 'CopyResolutionError'
+  }
+}
+
 const PRESERVED = new Set([
   'page',
   'otherSources',
@@ -471,8 +484,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
   const visit = (record: T): T => {
     const identity = key(record)
     if (resolved.has(identity)) return resolved.get(identity) as T
+    if (!('_copy' in record)) return record
     const copy = object((record as Record5e)._copy)
-    if (!copy.name) return record
     try {
       if (active.has(identity)) throw new Error('copy cycle')
       active.add(identity)

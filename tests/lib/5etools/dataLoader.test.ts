@@ -145,6 +145,60 @@ describe('5etools/dataLoader', () => {
     expect(readJson).toHaveBeenCalledWith('bestiary/template.json', undefined)
   })
 
+  test('reports unresolved item copies before returning standalone data', async () => {
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: async () => ({
+        item: [
+          {
+            name: 'Broken Blade',
+            source: 'HB',
+            type: 'M',
+            _copy: { name: 'Missing Blade', source: 'PHB' },
+          },
+        ],
+      }),
+    }
+    const loader = new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:\\data', isValid: true, availableResources: ['items.json'] },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(/Broken Blade\|HB/)
+    expect(onResourceFailure).toHaveBeenCalledWith('Copied entity: Broken Blade|HB', {
+      required: true,
+    })
+  })
+
+  test('reports unresolved creature copies before returning standalone data', async () => {
+    const payloads: Record<string, unknown> = {
+      'bestiary/index.json': { HB: 'bestiary-hb.json' },
+      'bestiary/bestiary-hb.json': {
+        monster: [{ name: 'Broken Beast', source: 'HB', _copy: { name: 'Missing', source: 'MM' } }],
+      },
+    }
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: async (path) => payloads[path] ?? {},
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:\\data',
+        isValid: true,
+        availableResources: ['bestiary/index.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(/Broken Beast\|HB/)
+    expect(onResourceFailure).toHaveBeenCalledWith('Copied entity: Broken Beast|HB', {
+      required: true,
+    })
+  })
+
   test('times out a stalled remote request', async () => {
     vi.useFakeTimers()
     globalThis.fetch = vi.fn((_input, init) => {
