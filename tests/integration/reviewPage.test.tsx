@@ -1,8 +1,9 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -325,6 +326,38 @@ describe('BuildReviewPage', () => {
     expect(screen.getByText('Always ready for danger.')).toBeTruthy()
     expect(screen.getAllByText('Three glowing darts.').length).toBeGreaterThan(0)
     expect(screen.getByText('A carved wand.')).toBeTruthy()
+  })
+
+  test('shows custom organization details and falls back to an icon if its image fails', async () => {
+    const user = userEvent.setup()
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      details: {
+        ...current.details,
+        organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
+        organizationCustomName: 'The Lantern Circle',
+        organizationCustomDescription: 'A local group of night watch volunteers.',
+        organizationCustomImage: 'data:image/png;base64,custom-emblem',
+      },
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByText('Organization'))
+    expect(screen.getByText('The Lantern Circle')).toBeTruthy()
+    expect(screen.getByText('A local group of night watch volunteers.')).toBeTruthy()
+    const emblem = screen.getByRole('img', { name: 'The Lantern Circle emblem' })
+    expect(emblem.getAttribute('src')).toBe('data:image/png;base64,custom-emblem')
+    const iconContainer = emblem.parentElement
+    fireEvent.error(emblem)
+    expect(screen.queryByRole('img', { name: 'The Lantern Circle emblem' })).toBeNull()
+    expect(iconContainer?.querySelector('svg')).not.toBeNull()
   })
 })
 

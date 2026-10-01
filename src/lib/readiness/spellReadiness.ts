@@ -35,7 +35,7 @@ function validateSpellProfile(
         'blocking',
         'spells',
         `Finish ${detail.className} cantrip choices`,
-        `${detail.cantripLimit} cantrip slots are available; ${counts.cantrips} chosen.`,
+        `${detail.cantripLimit} cantrip choices are available; ${counts.cantrips} chosen.`,
         classSpellChoiceTarget(detail),
       ),
     )

@@ -809,7 +809,7 @@ describe('getCharacterReadiness', () => {
       'spells:known:class:Rogue|PHB',
     ])
     expect(spellIssues.map((issue) => issue.explanation)).toEqual([
-      '2 cantrip slots are available; 0 chosen.',
+      '2 cantrip choices are available; 0 chosen.',
       '3 spell choices are available; 0 chosen.',
     ])
     for (const issue of spellIssues) {
