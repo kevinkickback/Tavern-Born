@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 
+import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import {
   useBackgroundLookup,
   useItemLookup,
@@ -12,6 +13,7 @@ import {
 } from '@/hooks/data/useGameData'
 import { buildGameDataLookups, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 describe('named game data lookup hooks', () => {
@@ -54,6 +56,34 @@ describe('named game data lookup hooks', () => {
 
     const { result } = renderHook(() => useItemPropertyLookup())
     expect(result.current).toMatchObject({ H: 'Heavy', '2H': 'Two-Handed', V: 'Versatile' })
+  })
+
+  test('uses repaired property labels in character actions', () => {
+    const data = makeGameDataFixture({
+      itemProperties: [{ abbreviation: 'F', source: 'PHB', entries: [{ name: 'Finesse' }] }],
+    })
+    data.lookups = { ...buildGameDataLookups(data), itemPropertyByAbbr: {} }
+    useGameDataStore.setState({ gameData: data })
+    const character = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'weapon-1',
+          name: 'Test Weapon',
+          source: 'PHB',
+          type: 'M',
+          quantity: 1,
+          equipped: true,
+          dmg1: '1d8',
+          dmgType: 'slashing',
+          properties: ['F'],
+        },
+      ],
+    })
+
+    const { result } = renderHook(() => useCharacterActions(character))
+    expect(result.current.find((action) => action.kind === 'attack')?.properties).toContain(
+      'Finesse',
+    )
   })
 
   test('exposes all shared lookups built by ingestion', () => {
