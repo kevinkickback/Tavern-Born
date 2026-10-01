@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'vitest'
+import { buildClassLookup } from '@/lib/5etools/lookups'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
 import { applyClassProgressionUpdate, applyLevelUp } from '@/lib/character/commands/classCommands'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 const CORE_CLASSES = [
   ['Barbarian', 12],
@@ -49,6 +52,11 @@ describe('core class level progression matrix', () => {
     const constitutionModifier = 2
     const averageDieResult = Math.floor(hitDie / 2) + 1
     let expectedMaximum = hitDie + constitutionModifier
+    const lookups = {
+      classesByKey: buildClassLookup([
+        makeClassFixture({ name: className, source, hd: { faces: hitDie } }),
+      ]),
+    }
     let character = makeCharacterFixture({
       id: `${originSystem}-${className.toLowerCase()}-matrix`,
       originSystem,
@@ -80,7 +88,7 @@ describe('core class level progression matrix', () => {
           dieResult: averageDieResult,
           method: 'average',
         },
-        expectedMaximum,
+        createCharacterCalculationContext(character, lookups),
       )
       character = mergeCommandResult(character, result)
 
@@ -125,7 +133,11 @@ describe('core class level progression matrix', () => {
           dieResult: 6,
           method: 'average',
         },
-        200,
+        createCharacterCalculationContext(character, {
+          classesByKey: buildClassLookup([
+            makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } }),
+          ]),
+        }),
       ),
     ).toThrow(RangeError)
     expect(character.classProgression[0]?.levels).toBe(MAX_CHARACTER_LEVEL)
