@@ -98,6 +98,8 @@ centered width convention; `SplitPane` owns compact one-pane behavior and deskto
 
 - Character creation composes the same race, class, and background commands used by edit pages.
 - Class changes retract unavailable choices, ASIs, spell grants, and replacement events atomically.
+- Level changes reconcile those grants in a class command, then calculate effective maximum HP
+  from the projected character and its resolved game data before refilling or clamping current HP.
 - HP and AC are live derivations plus explicit adjustments/overrides; their header modals do not
   take ownership of class progression or equipment.
 - Character actions and effects are view-neutral projections shared by Review, Builder, and PDF.

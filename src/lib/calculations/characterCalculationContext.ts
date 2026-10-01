@@ -62,6 +62,7 @@ interface CharacterEquipmentCalculationState {
 
 export interface CharacterCalculationContext {
   character: Character
+  lookups: { primary: EntityLookupSet; raw: EntityLookupSet }
   rules: CoreRulesMetadata
   raceResolution: ResolvedRaceReference
   background: Background5e | undefined
@@ -296,6 +297,7 @@ export function createCharacterCalculationContext(
 
   return {
     character,
+    lookups: { primary: primaryLookups, raw: rawLookups },
     rules: {
       originSystem: character.originSystem,
       ...CORE_RULES_METADATA[character.originSystem],
