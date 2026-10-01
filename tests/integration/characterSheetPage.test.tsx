@@ -97,6 +97,18 @@ describe('CharacterSheetPage', () => {
     vi.clearAllMocks()
   })
 
+  test('labels outstanding sheet choices as items to review', () => {
+    const character = makeCharacterFixture({ name: '' })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    renderPage()
+    expect(screen.getByText(/^\d+ to review$/)).toBeTruthy()
+  })
+
   test('uses the flat workspace layout with full-width export controls', () => {
     const { container } = renderPage()
 

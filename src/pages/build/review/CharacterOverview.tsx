@@ -1000,7 +1000,7 @@ export function CharacterOverview({
             <p className="text-sm text-muted-foreground">
               {ready
                 ? 'You can export or print this character sheet.'
-                : 'Some character details are unfinished. You can still export or print this sheet and return to them later.'}
+                : 'There are character choices to review. You can still export or print this sheet and return to them later.'}
             </p>
             <Button
               size="sm"
