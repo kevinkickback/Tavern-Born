@@ -1,5 +1,6 @@
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { FeatOptionSelections } from '@/types/feat'
+import type { ItemPropertyReference } from './5etools'
 import type { CharacterAction } from './actions'
 import type { CharacterEffect } from './effects'
 
@@ -407,8 +408,8 @@ export interface Equipment {
   dmg2?: string
   /** Weapon damage type key (for example: slashing). */
   dmgType?: string
-  /** 5etools weapon property abbreviations (for example: F, T, RLD). */
-  properties?: string[]
+  /** 5etools weapon property references, including source and any item-specific note. */
+  properties?: ItemPropertyReference[]
   /** Weapon range text. */
   range?: string
   /** True for wondrous items (rings, amulets, cloaks, belts, etc.) — used to show equip toggle. */

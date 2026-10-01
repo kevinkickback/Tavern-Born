@@ -149,17 +149,28 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
   }
 }
 
-/** Build an abbreviation → display name map from parsed itemProperty records. */
-function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
+/** Index each property's source-qualified UID and retain an abbreviation fallback for legacy data. */
+export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
+  const labeledAbbreviations = new Set<string>()
   for (const prop of itemProperties) {
-    const abbreviation = prop.abbreviation?.toUpperCase()
-    if (!abbreviation || result[abbreviation]) continue
-    const first = Array.isArray(prop.entries) && prop.entries.length > 0 ? prop.entries[0] : null
-    const name =
-      (first as { name?: string } | null)?.name ??
-      (typeof prop.name === 'string' ? prop.name : undefined)
-    if (name) result[abbreviation] = name
+    if (!prop || typeof prop !== 'object' || typeof prop.abbreviation !== 'string') continue
+    const abbreviation = prop.abbreviation.trim().toUpperCase()
+    if (!abbreviation) continue
+    const source = typeof prop.source === 'string' ? prop.source.trim().toUpperCase() : ''
+    const directName = typeof prop.name === 'string' ? prop.name.trim() : ''
+    const entries = Array.isArray(prop.entries) ? prop.entries : []
+    const namedEntry = entries.find(
+      (entry) =>
+        entry && typeof entry === 'object' && typeof entry.name === 'string' && entry.name.trim(),
+    )
+    const entryName = namedEntry?.name?.trim()
+    const name = directName || entryName || prop.abbreviation
+    if (source) result[`${abbreviation}|${source}`] = name
+    if (!labeledAbbreviations.has(abbreviation)) {
+      result[abbreviation] = name
+      if (directName || entryName) labeledAbbreviations.add(abbreviation)
+    }
   }
   return result
 }

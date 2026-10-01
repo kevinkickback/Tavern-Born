@@ -6,6 +6,7 @@ import {
   searchByName,
   sortByName,
 } from '@/lib/5etools'
+import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
@@ -78,9 +79,14 @@ export function useItemLookup() {
 }
 
 export function useItemPropertyLookup(): Readonly<Record<string, string>> {
-  return (
-    useGameDataStore((state) => state.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_STRING_LOOKUP
-  )
+  const itemProperties = useGameDataStore((state) => state.gameData?.itemProperties)
+  const cachedLookup = useGameDataStore((state) => state.gameData?.lookups?.itemPropertyByAbbr)
+
+  return useMemo(() => {
+    if (!itemProperties?.length) return cachedLookup ?? EMPTY_STRING_LOOKUP
+    const parsedLookup = buildItemPropertyLookup(itemProperties)
+    return { ...cachedLookup, ...parsedLookup }
+  }, [itemProperties, cachedLookup])
 }
 
 export function useItemTypeLookup(): Readonly<Record<string, string>> {

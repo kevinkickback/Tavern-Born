@@ -2,11 +2,13 @@ import { describe, expect, test } from 'vitest'
 import {
   buildBackgroundLookup,
   buildGameDataLookups,
+  buildItemPropertyLookup,
   buildRaceLookup,
   buildSpellLookup,
   getEntityLookupKey,
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
+import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { makeClassFixture, makeSpellFixture } from '../../fixtures/gameDataFixtures'
 
 describe('5etools/lookups', () => {
@@ -42,6 +44,39 @@ describe('5etools/lookups', () => {
     })
 
     expect(lookups.itemPropertyByAbbr).toMatchObject({ LD: 'Loading', L: 'Light' })
+  })
+
+  test('indexes source-qualified property names and keeps the first abbreviation fallback', () => {
+    const lookup = buildItemPropertyLookup([
+      { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] },
+      { abbreviation: 'H', source: 'HB', entries: [{ name: 'Hafted' }] },
+      { abbreviation: 'S', source: 'PHB', name: 'special' },
+    ])
+
+    expect(lookup).toMatchObject({
+      H: 'Heavy',
+      'H|PHB': 'Heavy',
+      'H|HB': 'Hafted',
+      S: 'special',
+      'S|PHB': 'special',
+    })
+  })
+
+  test('ignores malformed property fields accepted by the parser', () => {
+    const properties = parseItemProperties({
+      itemProperty: [
+        null,
+        { abbreviation: 5, source: 'PHB', entries: 'invalid' },
+        { abbreviation: 'S', source: 5, entries: 'invalid' },
+        { abbreviation: 'H', source: 'PHB', entries: [null, 5, { name: 'Heavy' }] },
+      ],
+    })
+
+    expect(buildItemPropertyLookup(properties)).toMatchObject({
+      S: 'S',
+      H: 'Heavy',
+      'H|PHB': 'Heavy',
+    })
   })
 
   test('buildGameDataLookups creates composite-key lookups for classes, feats, spells, features, optional features, and subclasses', () => {

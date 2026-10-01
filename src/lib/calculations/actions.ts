@@ -1,4 +1,5 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
+import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
@@ -395,7 +396,9 @@ export function deriveWeaponActions(
     )
     .map((item) => {
       const properties = item.properties ?? []
-      const propertyKeys = properties.map((property) => property.split('|')[0].toUpperCase())
+      const propertyKeys = properties.map((property) =>
+        getItemPropertyUid(property).split('|')[0].toUpperCase(),
+      )
       const ability: AbilityName = propertyKeys.includes('F')
         ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
           ? 'dexterity'
@@ -429,10 +432,16 @@ export function deriveWeaponActions(
             return parsed ? [parsed] : []
           })
         : []
-      const propertyLabels = [...new Set(propertyKeys)].map((key) => {
-        if (key === 'V' && item.dmg2) return `Versatile ${item.dmg2}`
-        return context.propertyLookup?.[key] ?? key
-      })
+      const propertyLabels = [
+        ...new Set(
+          properties.map((property) => {
+            if (getItemPropertyUid(property).split('|')[0].toUpperCase() === 'V' && item.dmg2) {
+              return `Versatile ${item.dmg2}`
+            }
+            return getItemPropertyLabel(property, context.propertyLookup ?? {})
+          }),
+        ),
+      ]
       if (item.dmg2 && !propertyKeys.includes('V')) propertyLabels.push(`Versatile ${item.dmg2}`)
 
       return {

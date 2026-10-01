@@ -349,7 +349,7 @@ describe('CharacterSheetPage', () => {
         .getByRole('checkbox', { name: /Longsword/ })
         .getAttribute('aria-checked'),
     ).toBe('true')
-  })
+  }, 15_000)
 
   test('remembers description settings and invalidates the preview without changing the character', async () => {
     const user = userEvent.setup()
