@@ -68,6 +68,7 @@ describe('character transfer', () => {
     const single = prepareCharacterDownload(second)
     expect(single.filename).toBe('Second_Hero.tbc')
     expect(JSON.parse(single.text)).toEqual(second)
+    expect(JSON.parse(prepareCharacterDownload(first).text).portrait).toBe(first.portrait)
 
     const backup = prepareLibraryDownload([first, second], '2026-09-28T10:00:00.000Z')
     expect(backup.filename).toBe('tavern-born-library-2026-09-28.tbclib')

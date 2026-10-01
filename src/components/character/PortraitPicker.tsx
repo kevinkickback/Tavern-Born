@@ -1,4 +1,4 @@
-import { Crop, Image, Images, Upload, X } from '@phosphor-icons/react'
+import { Crop, Image, Images, Trash, Upload, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
@@ -12,6 +12,12 @@ import {
   PLACEHOLDER_PORTRAITS,
   resolvePortraitSrc,
 } from '@/lib/portraitConstants'
+import {
+  deleteSavedPortrait,
+  listSavedPortraits,
+  type SavedPortrait,
+  savePortrait,
+} from '@/lib/portraitLibrary'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 
@@ -48,6 +54,8 @@ export function PortraitPicker({
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
   const [previewWidth, setPreviewWidth] = useState<number | null>(null)
+  const [savedPortraits, setSavedPortraits] = useState<SavedPortrait[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(true)
   const [draftTransform, setDraftTransform] = useState<PortraitTransform>(
     () => transform ?? DEFAULT_PORTRAIT_TRANSFORM,
   )
@@ -56,6 +64,21 @@ export function PortraitPicker({
   useEffect(() => {
     setDraftTransform(transform ?? DEFAULT_PORTRAIT_TRANSFORM)
   }, [transform])
+
+  useEffect(() => {
+    let active = true
+    listSavedPortraits()
+      .then((images) => {
+        if (active) setSavedPortraits(images)
+      })
+      .catch(() => toast.error('Saved portraits could not be loaded.'))
+      .finally(() => {
+        if (active) setLibraryLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const resetTransform = () => {
     setDraftTransform(DEFAULT_PORTRAIT_TRANSFORM)
@@ -74,14 +97,31 @@ export function PortraitPicker({
       return
     }
     const reader = new FileReader()
-    reader.onloadend = () => {
-      onPortraitChange(reader.result as string)
-      resetTransform()
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return
+      const image = reader.result
+      void savePortrait(image)
+        .then((saved) => {
+          setSavedPortraits(saved)
+          onPortraitChange(image)
+          resetTransform()
+        })
+        .catch((error: unknown) =>
+          toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
+        )
     }
+    reader.onerror = () => toast.error('Portrait could not be read.')
     reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleDeleteSaved = (id: string) => {
+    void deleteSavedPortrait(id)
+      .then((saved) => {
+        setSavedPortraits(saved)
+        toast.success('Removed from gallery. Character portraits are unchanged.')
+      })
+      .catch(() => toast.error('Uploaded portrait could not be deleted.'))
   }
 
   const handleClear = () => {
@@ -261,11 +301,44 @@ export function PortraitPicker({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={libraryLoading}
                   className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-primary"
                 >
                   <Upload className="h-5 w-5" />
                   <span className="text-xs leading-tight">Upload</span>
                 </button>
+
+                {savedPortraits.map((saved, index) => (
+                  <div key={saved.id} className="relative aspect-square">
+                    <button
+                      type="button"
+                      onClick={() => handlePlaceholder(saved.src)}
+                      aria-label={`Use uploaded portrait ${index + 1}`}
+                      aria-pressed={portrait === saved.src}
+                      className={cn(
+                        'size-full cursor-pointer overflow-hidden rounded-lg border transition-colors',
+                        portrait === saved.src
+                          ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
+                          : 'border-border hover:border-accent/50 hover:bg-surface-hover',
+                      )}
+                    >
+                      <img
+                        src={saved.src}
+                        alt={`Uploaded portrait ${index + 1}`}
+                        className="size-full object-cover"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSaved(saved.id)}
+                      aria-label={`Delete uploaded portrait ${index + 1}`}
+                      title="Delete from gallery"
+                      className="absolute right-1 top-1 flex size-7 cursor-pointer items-center justify-center rounded-md bg-surface-raised/90 text-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
 
                 {PLACEHOLDER_PORTRAITS.map((src, i) => (
                   <button
