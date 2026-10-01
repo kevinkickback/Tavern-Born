@@ -152,6 +152,40 @@ describe('RulesPage', () => {
     )
   })
 
+  test('enforcing equipment restrictions in Character Rules unequips invalid armor and slot conflicts', async () => {
+    const user = userEvent.setup()
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = makeCharacterFixture({
+      variantRules: { ...current.variantRules, ignoreEquipRestrictions: true },
+      proficiencies: { ...current.proficiencies, armor: ['light armor', 'shields'] },
+      equipment: [
+        { id: 'heavy', name: 'Plate', type: 'HA', quantity: 1, equipped: true },
+        { id: 'light-first', name: 'Leather', type: 'LA', quantity: 1, equipped: true },
+        { id: 'light-second', name: 'Studded Leather', type: 'LA', quantity: 1, equipped: true },
+        { id: 'shield', name: 'Shield', type: 'S', quantity: 1, equipped: true },
+        { id: 'shield-second', name: 'Other Shield', type: 'S', quantity: 1, equipped: true },
+        { id: 'sword', name: 'Sword', type: 'M', quantity: 1, equipped: true },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    renderPage()
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
+    await user.click(screen.getByLabelText('Ignore Equipment Restrictions'))
+
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.variantRules?.ignoreEquipRestrictions).toBe(false)
+    expect(updated?.equipment.filter((entry) => entry.equipped).map((entry) => entry.id)).toEqual([
+      'light-first',
+      'shield',
+      'sword',
+    ])
+  })
+
   test('switches active replacement grants while preserving the dormant choice', async () => {
     const original = {
       id: 'original-training',

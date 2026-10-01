@@ -186,6 +186,14 @@ describe('EquipmentPage item details', () => {
           equipped: true,
         },
         {
+          id: 'shield-second',
+          name: 'Other Shield',
+          type: 'S',
+          armorType: 'shield',
+          quantity: 1,
+          equipped: true,
+        },
+        {
           id: 'sword',
           name: 'Longsword',
           type: 'M',
