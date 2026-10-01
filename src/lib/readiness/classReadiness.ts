@@ -123,7 +123,7 @@ export function validateClassChoices(
             'blocking',
             'class',
             `Finish ${choice.label}`,
-            `${entry.name} has ${required} eligible ${required === 1 ? 'selection' : 'selections'} here; ${count} chosen.`,
+            `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
             classChoiceTarget(entry, choice.level, choice.id),
           ),
         )

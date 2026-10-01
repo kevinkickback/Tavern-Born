@@ -132,7 +132,7 @@ export function BuildReviewPage() {
                     <p className="text-sm text-muted-foreground">
                       {readiness.status === 'ready'
                         ? 'You can print this character sheet. Review any suggestions below if you like.'
-                        : `${readiness.blockingIssues.length} ${readiness.blockingIssues.length === 1 ? 'item' : 'items'} to review. You can still save and print this character sheet.`}
+                        : `${readiness.issues.length} ${readiness.issues.length === 1 ? 'item' : 'items'} to review. You can still save and print this character sheet.`}
                     </p>
                   </div>
                 </div>

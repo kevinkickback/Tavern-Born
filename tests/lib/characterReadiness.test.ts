@@ -147,6 +147,9 @@ describe('getCharacterReadiness', () => {
     })
 
     expect(issues.map((issue) => issue.id)).toContain(`class-choice:${primalCompanion.id}`)
+    expect(
+      issues.find((issue) => issue.id === `class-choice:${primalCompanion.id}`)?.explanation,
+    ).toBe('Ranger: choose 1 selection; 0 chosen.')
   })
 
   test('validates point-buy against allocated scores when a feat grants an ability bonus', () => {

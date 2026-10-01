@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -120,6 +120,8 @@ describe('BuildReviewPage', () => {
     ])
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Character needs attention')).toBeTruthy()
+    const issueCount = within(screen.getByTestId('readiness-summary')).getAllByRole('button').length
+    expect(screen.getByText(new RegExp(`^${issueCount} items? to review`))).toBeTruthy()
     expect(screen.getByText(/You can still save and print this character sheet/)).toBeTruthy()
     expect(screen.queryByText('Calculated totals')).toBeNull()
 
