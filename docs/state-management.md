@@ -15,6 +15,11 @@ Zustand persistence uses `src/lib/storage/idb-storage.ts`. Parsed game data has 
 `dataCache.ts`. Accordion/sidebar collapse state uses local storage, and Electron stores native
 window bounds separately. PDF export page/content overrides and description/overflow settings are local UI preferences keyed by character and template (`sheetExportPreferences.ts`); they never alter character inventory, preparation, or rules text. Missing or invalid text settings fall back to full descriptions with ellipsis shortening.
 
+Uploaded portraits also have a separate IndexedDB gallery (`portraitLibrary.ts`), capped at 20 images
+and 40 MB of encoded data. Repeated uploads of the same image reuse its gallery entry. A character
+stores its selected image data directly, so `.tbc` and `.tbclib` transfers remain self-contained and
+deleting a gallery image does not change existing characters.
+
 ## Character write APIs
 
 | API | Use |
