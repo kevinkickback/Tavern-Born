@@ -120,6 +120,34 @@ describe('class choice option resolution', () => {
     expect(result[0]?.searchText).toContain('Pack Tactics')
   })
 
+  test('collects table-contained references, preserves repeated names by level, and handles cycles', () => {
+    const later = { name: 'Shared Ward', source: 'HB', level: 6 }
+    const entry: Record<string, unknown> = {
+      type: 'table',
+      rows: [[{ type: 'refSubclassFeature', feature: later }]],
+    }
+    entry.loop = entry
+    const earlier = { name: 'Shared Ward', source: 'HB', level: 3, entries: [entry] }
+    const subclass: Subclass5e = {
+      name: 'School of Tests',
+      shortName: 'Tests',
+      source: 'HB',
+      className: 'Wizard',
+      subclassFeatures: [earlier],
+      subclassFeatureRefs: [
+        {
+          ref: 'earlier',
+          name: earlier.name,
+          className: 'Wizard',
+          subclassShortName: 'Tests',
+          feature: earlier,
+        },
+      ],
+      levelFeatures: [{ level: 6, features: [later] }],
+    }
+    expect(collectSubclassFeatures(subclass)).toEqual([earlier, later])
+  })
+
   test('resolves explicit references by name and source', () => {
     const result = resolveClassChoiceOptions(
       choice({

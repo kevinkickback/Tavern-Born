@@ -17,6 +17,8 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 
+export { useRetainedCharacterDetails } from './useRetainedCharacterDetails'
+
 const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
 const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()

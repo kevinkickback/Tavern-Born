@@ -1,4 +1,18 @@
 <details>
+<summary><strong>v0.6.0</strong></summary>
+
+## ✨ Changes
+
+* Redesigned Character Review page
+* Added bulk character backup and import
+* Uploaded images are now saved to the portrait library for reuse
+* Equipment item details now show full property names instead of abbreviations
+* Polished PDF exports, including weapon details and character organizations
+* Fixed level-up hit points, equipment restrictions, and 5etools content display
+
+</details>
+
+<details>
 <summary><strong>v0.5.0</strong></summary>
 
 ## ✨ Changes
@@ -9,7 +23,6 @@
 * Creature stat blocks and subclass features are now searchable in the Compendium
 * Fixed additional content not being ruleset-aware (no more combining 2014 & 2024 core books)
 * Fixed character portrait previews showing a different crop from the finished character card
-* Equipment item details now show full property names instead of abbreviations
 * Fixed startup not finishing game data checks/updates before app became available
 
 </details>

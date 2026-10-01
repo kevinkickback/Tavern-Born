@@ -96,7 +96,16 @@ export function getClassChoiceOptionKey(
 
 function getCatalog(
   entityType: ChoiceOptionEntityType,
-  catalogs: ClassChoiceCatalogs,
+  catalogs: Pick<
+    ClassChoiceCatalogs,
+    | 'classFeatures'
+    | 'subclassFeatures'
+    | 'creatures'
+    | 'feats'
+    | 'items'
+    | 'itemsBase'
+    | 'optionalFeatures'
+  >,
 ): readonly ChoiceCatalogEntity[] {
   if (entityType === 'classFeature') return catalogs.classFeatures
   if (entityType === 'subclassFeature') return catalogs.subclassFeatures
@@ -335,8 +344,7 @@ function isCreatureSwarm(creature: Creature5e): boolean {
   return typeof creature.type === 'object' && creature.type?.swarmSize != null
 }
 
-function creatureEntries(creature: Creature5e): unknown[] {
-  if ((creature.entries?.length ?? 0) > 0) return creature.entries ?? []
+export function getCreatureChoiceEntries(creature: Creature5e): unknown[] {
   const summary = [
     creature.size?.length ? `Size: ${creature.size.join(', ')}` : undefined,
     getCreatureTypes(creature).length
@@ -346,7 +354,16 @@ function creatureEntries(creature: Creature5e): unknown[] {
       ? `Challenge Rating: ${typeof creature.cr === 'object' ? creature.cr.cr : creature.cr}`
       : undefined,
   ].filter((entry): entry is string => Boolean(entry))
-  return [...summary, ...(creature.trait ?? []), ...(creature.action ?? [])]
+  return [
+    ...(creature.entries?.length ? creature.entries : summary),
+    ...(['trait', 'action', 'bonus', 'reaction'] as const).flatMap((kind) =>
+      (creature[kind] ?? []).map((entry) => ({
+        type: 'entries',
+        name: entry.name,
+        entries: entry.entries ?? [],
+      })),
+    ),
+  ]
 }
 
 function getItemTypeDisplayLabels(
@@ -495,7 +512,7 @@ function toView(
       ...(entity.source ? { source: entity.source } : {}),
     },
     entries: creature
-      ? creatureEntries(creature)
+      ? getCreatureChoiceEntries(creature)
       : Array.isArray(entity.entries)
         ? entity.entries
         : [],
@@ -512,16 +529,23 @@ function toView(
   }
 }
 
+export function resolveClassChoiceOptionEntity(
+  option: NormalizedChoiceOptionReference,
+  catalogs: Parameters<typeof getCatalog>[1],
+): ChoiceCatalogEntity | undefined {
+  return getCatalog(option.entityType, catalogs).find(
+    (entity) =>
+      normalized(entity.name) === normalized(option.name) &&
+      (!option.source || normalized(entity.source) === normalized(option.source)),
+  )
+}
+
 function resolveExplicitOption(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceCatalogs,
   availability: ClassChoiceOptionView['availability'] = 'eligible',
 ): ClassChoiceOptionView {
-  const match = getCatalog(option.entityType, catalogs).find(
-    (entity) =>
-      normalized(entity.name) === normalized(option.name) &&
-      (!option.source || normalized(entity.source) === normalized(option.source)),
-  )
+  const match = resolveClassChoiceOptionEntity(option, catalogs)
   return match
     ? toView(option.entityType, match, catalogs, availability)
     : {
@@ -690,23 +714,23 @@ export function getCharacterClassChoiceDiagnostics(
 }
 
 export function collectSubclassFeatures(subclass: Subclass5e | undefined): SubclassFeature[] {
-  const features = new Map<string, SubclassFeature>()
+  const features = new Set<SubclassFeature>()
+  const traversed = new Set<object>()
   const visit = (feature: SubclassFeature | undefined) => {
-    if (!feature) return
-    const key = `${normalized(feature.name)}|${normalized(feature.source)}`
-    if (features.has(key)) return
-    features.set(key, feature)
+    if (!feature || features.has(feature)) return
+    features.add(feature)
     const walk = (value: unknown) => {
+      if (!value || typeof value !== 'object' || traversed.has(value)) return
+      traversed.add(value)
       if (Array.isArray(value)) {
         value.forEach(walk)
         return
       }
-      if (!value || typeof value !== 'object') return
       const record = value as Record<string, unknown>
       if (record.type === 'refSubclassFeature' && record.feature) {
         visit(record.feature as SubclassFeature)
       }
-      if (Array.isArray(record.entries)) walk(record.entries)
+      Object.values(record).forEach(walk)
     }
     walk(feature.entries)
   }
@@ -715,5 +739,5 @@ export function collectSubclassFeatures(subclass: Subclass5e | undefined): Subcl
   }
   for (const reference of subclass?.subclassFeatureRefs ?? []) visit(reference.feature)
   for (const group of subclass?.levelFeatures ?? []) group.features.forEach(visit)
-  return [...features.values()]
+  return [...features]
 }

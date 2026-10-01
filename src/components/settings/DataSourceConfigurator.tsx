@@ -553,14 +553,14 @@ export function DataSourceConfigurator({
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     Not sure where to begin? The{' '}
                     <a
-                      href="https://wiki.tercept.net/en/5eTools/InstallGuide"
+                      href="https://wiki.tercept.net/en/5eTools/InstallGuide#step-1-downloading-the-site"
                       target="_blank"
                       rel="noreferrer"
                       className="font-medium text-primary underline underline-offset-2"
                     >
                       5etools community wiki
                     </a>{' '}
-                    might know a thing or two about finding compatible files and getting set up.
+                    might know a thing or two about finding compatible files.
                   </p>
                 </div>
               )}

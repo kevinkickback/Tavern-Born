@@ -1,3 +1,4 @@
+import { collectSubclassFeatures as collectParsedSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import type {
   Background5e,
   Class5e,
@@ -247,7 +248,6 @@ function collectSubclassFeatures(classes: readonly Class5e[]): CollectedSubclass
 
   for (const classData of classes) {
     for (const subclass of classData.subclasses ?? []) {
-      const traversedObjects = new WeakSet<object>()
       const fallback = {
         className: classData.name,
         classSource: classData.source,
@@ -255,8 +255,8 @@ function collectSubclassFeatures(classes: readonly Class5e[]): CollectedSubclass
         subclassSource: subclass.source,
       }
 
-      const visit = (feature: SubclassFeature | undefined) => {
-        if (!feature?.name) return
+      for (const feature of collectParsedSubclassFeatures(subclass)) {
+        if (!feature.name) continue
         const className = feature.className || fallback.className
         const classSource = feature.classSource || fallback.classSource
         const subclassName = feature.subclassShortName || fallback.subclassName
@@ -266,7 +266,7 @@ function collectSubclassFeatures(classes: readonly Class5e[]): CollectedSubclass
           .join('|')
           .toLowerCase()
         const key = `${feature.name}|${feature.source}|${identity}`.toLowerCase()
-        if (collected.has(key)) return
+        if (collected.has(key)) continue
 
         const context = [
           className,
@@ -276,29 +276,7 @@ function collectSubclassFeatures(classes: readonly Class5e[]): CollectedSubclass
           .filter(Boolean)
           .join(' · ')
         collected.set(key, { feature, context, identity })
-
-        const walk = (value: unknown) => {
-          if (Array.isArray(value)) {
-            value.forEach(walk)
-            return
-          }
-          if (!value || typeof value !== 'object') return
-          if (traversedObjects.has(value)) return
-          traversedObjects.add(value)
-          const record = value as Record<string, unknown>
-          if (record.type === 'refSubclassFeature' && record.feature) {
-            visit(record.feature as SubclassFeature)
-          }
-          Object.values(record).forEach(walk)
-        }
-        walk(feature.entries)
       }
-
-      for (const feature of subclass.subclassFeatures ?? []) {
-        if (typeof feature !== 'string') visit(feature)
-      }
-      for (const reference of subclass.subclassFeatureRefs ?? []) visit(reference.feature)
-      for (const group of subclass.levelFeatures ?? []) group.features.forEach(visit)
     }
   }
 

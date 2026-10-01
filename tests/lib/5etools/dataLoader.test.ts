@@ -171,6 +171,58 @@ describe('5etools/dataLoader', () => {
     })
   })
 
+  test.each([
+    ['item', '__proto__'],
+    ['item', 'constructor'],
+    ['item', 'prototype'],
+    ['monster', '__proto__'],
+    ['monster', 'constructor'],
+    ['monster', 'prototype'],
+  ])('rejects schema-valid copied %s content with a %s path', async (kind, reserved) => {
+    const prototypeBefore = Object.getOwnPropertyDescriptors(Object.prototype)
+    const records = [
+      { name: 'Base', source: 'HB' },
+      {
+        name: 'Unsafe Copy',
+        source: 'HB',
+        _copy: {
+          name: 'Base',
+          source: 'HB',
+          _mod: {
+            _: { mode: 'setProp', prop: `${reserved}.__copySecurityMarker`, value: 'unsafe' },
+          },
+        },
+      },
+    ]
+    const payloads: Record<string, unknown> =
+      kind === 'item'
+        ? { 'items.json': { item: records } }
+        : {
+            'bestiary/index.json': { HB: 'bestiary-hb.json' },
+            'bestiary/bestiary-hb.json': { monster: records },
+          }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:\\data',
+        isValid: true,
+        availableResources: [kind === 'item' ? 'items.json' : 'bestiary/index.json'],
+      },
+      {
+        type: 'local',
+        readJson: async (path) => JSON.parse(JSON.stringify(payloads[path] ?? {})),
+      },
+    )
+    const onResourceFailure = vi.fn()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(/unsafe copy property/)
+    expect(onResourceFailure).toHaveBeenCalledWith('Copied entity: Unsafe Copy|HB', {
+      required: true,
+    })
+    expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(prototypeBefore)
+    expect(Reflect.get({}, '__copySecurityMarker')).toBeUndefined()
+  })
+
   test('reports unresolved creature copies before returning standalone data', async () => {
     const payloads: Record<string, unknown> = {
       'bestiary/index.json': { HB: 'bestiary-hb.json' },
