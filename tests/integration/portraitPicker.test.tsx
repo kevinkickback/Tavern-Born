@@ -3,7 +3,8 @@ import { del } from 'idb-keyval'
 import { useState } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
-import { PORTRAIT_LIBRARY_STORAGE_KEY } from '@/lib/portraitLibrary'
+import { PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
+import { listSavedPortraits, PORTRAIT_LIBRARY_STORAGE_KEY } from '@/lib/portraitLibrary'
 
 const sliderProps = vi.hoisted(() => [] as Array<Record<string, unknown>>)
 
@@ -115,5 +116,46 @@ describe('PortraitPicker transform controls', () => {
       expect(screen.getByRole('button', { name: 'Upload' }).hasAttribute('disabled')).toBe(false),
     )
     expect(screen.queryByRole('button', { name: 'Use uploaded portrait 1' })).toBeNull()
+  })
+
+  test('a pending upload cannot replace a later portrait choice', async () => {
+    const onPortraitChange = vi.fn()
+    render(<PortraitPicker onPortraitChange={onPortraitChange} onTransformChange={vi.fn()} />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Upload' }).hasAttribute('disabled')).toBe(false),
+    )
+
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'later.png', {
+      type: 'image/png',
+    })
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Placeholder 1' }))
+    await screen.findByRole('button', { name: 'Use uploaded portrait 1' })
+
+    expect(onPortraitChange).toHaveBeenCalledTimes(1)
+    expect(onPortraitChange).toHaveBeenLastCalledWith(PLACEHOLDER_PORTRAITS[0])
+  })
+
+  test('an upload from an unmounted picker cannot change another character', async () => {
+    const firstOnChange = vi.fn()
+    const secondOnChange = vi.fn()
+    const { rerender } = render(
+      <PortraitPicker key="first" onPortraitChange={firstOnChange} onTransformChange={vi.fn()} />,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Upload' }).hasAttribute('disabled')).toBe(false),
+    )
+
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'first.png', {
+      type: 'image/png',
+    })
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } })
+    rerender(
+      <PortraitPicker key="second" onPortraitChange={secondOnChange} onTransformChange={vi.fn()} />,
+    )
+    await waitFor(async () => expect(await listSavedPortraits()).toHaveLength(1))
+
+    expect(firstOnChange).not.toHaveBeenCalled()
+    expect(secondOnChange).not.toHaveBeenCalled()
   })
 })

@@ -32,6 +32,7 @@ export function PortraitPage({ readinessFocus }: PortraitPageProps = {}) {
           className={cn('h-full rounded-lg', portraitHighlighted && 'animate-route-focus')}
         >
           <PortraitPicker
+            key={activeCharacter.id}
             portrait={activeCharacter.portrait ?? null}
             transform={activeCharacter.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
             name={activeCharacter.name}

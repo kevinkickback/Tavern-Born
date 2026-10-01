@@ -51,6 +51,8 @@ export function PortraitPicker({
   collapsible = true,
 }: PortraitPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const selectionVersionRef = useRef(0)
+  const mountedRef = useRef(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
   const [previewWidth, setPreviewWidth] = useState<number | null>(null)
@@ -66,6 +68,7 @@ export function PortraitPicker({
   }, [transform])
 
   useEffect(() => {
+    mountedRef.current = true
     let active = true
     listSavedPortraits()
       .then((images) => {
@@ -77,6 +80,8 @@ export function PortraitPicker({
       })
     return () => {
       active = false
+      mountedRef.current = false
+      selectionVersionRef.current += 1
     }
   }, [])
 
@@ -96,15 +101,18 @@ export function PortraitPicker({
       toast.error('File size must be less than 5MB')
       return
     }
+    const selectionVersion = ++selectionVersionRef.current
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result !== 'string') return
       const image = reader.result
+      if (mountedRef.current && selectionVersion === selectionVersionRef.current) {
+        onPortraitChange(image)
+        resetTransform()
+      }
       void savePortrait(image)
         .then((saved) => {
-          setSavedPortraits(saved)
-          onPortraitChange(image)
-          resetTransform()
+          if (mountedRef.current) setSavedPortraits(saved)
         })
         .catch((error: unknown) =>
           toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
@@ -125,6 +133,7 @@ export function PortraitPicker({
   }
 
   const handleClear = () => {
+    selectionVersionRef.current += 1
     onPortraitChange(null)
     resetTransform()
     if (fileInputRef.current) {
@@ -133,6 +142,7 @@ export function PortraitPicker({
   }
 
   const handlePlaceholder = (src: string) => {
+    selectionVersionRef.current += 1
     onPortraitChange(src)
     resetTransform()
   }
