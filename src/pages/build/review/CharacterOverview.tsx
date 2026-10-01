@@ -358,9 +358,6 @@ export function CharacterOverview({
     ...(character.specialFeats ?? []),
     ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
   ]
-  const unresolvedAutomation = actions.filter(
-    (action) => action.kind === 'special' || !action.active,
-  )
   const conditionalNotes = calculation.effects.declarations.filter(
     (effect) => effect.operation.kind === 'conditional-note',
   )
@@ -588,7 +585,8 @@ export function CharacterOverview({
               racialFeatures.length +
               raceTraits.length +
               otherFeatures.length +
-              (character.classChoiceSelections?.length ?? 0)
+              (character.classChoiceSelections?.length ?? 0) +
+              conditionalNotes.length
             }
           >
             <div className="space-y-4">
@@ -665,6 +663,22 @@ export function CharacterOverview({
                           </ul>
                         ) : (
                           <p>No option selected.</p>
+                        )}
+                      </DetailEntry>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {conditionalNotes.length > 0 && (
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Conditional notes
+                  </h3>
+                  <ul className="space-y-2">
+                    {conditionalNotes.map((effect) => (
+                      <DetailEntry key={effect.id} name={effect.label}>
+                        {effect.operation.kind === 'conditional-note' && (
+                          <p>{effect.operation.note}</p>
                         )}
                       </DetailEntry>
                     ))}
@@ -941,40 +955,9 @@ export function CharacterOverview({
             </OverviewSection>
           )}
 
-          <OverviewSection
-            title="Rules & reminders"
-            count={unresolvedAutomation.length + conditionalNotes.length}
-          >
-            {unresolvedAutomation.length === 0 && conditionalNotes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No special rules or reminders to show.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {unresolvedAutomation.map((action) => (
-                  <DetailEntry
-                    key={action.id}
-                    name={action.name}
-                    status={!action.active ? 'Inactive' : 'Rules text'}
-                  >
-                    <p>
-                      {action.inactiveReason ??
-                        'Review the rules text for this action’s timing and effects.'}
-                    </p>
-                  </DetailEntry>
-                ))}
-                {conditionalNotes.map((effect) => (
-                  <DetailEntry key={effect.id} name={effect.label}>
-                    {effect.operation.kind === 'conditional-note' && <p>{effect.operation.note}</p>}
-                  </DetailEntry>
-                ))}
-              </ul>
-            )}
-          </OverviewSection>
-
           <OverviewSection title="Content sources">
             {sourceNames.length ? (
-              <ul className="space-y-1 text-sm">
+              <ul className="ml-5 list-disc space-y-1 text-sm">
                 {sourceNames.map((source) => (
                   <li key={source}>{source}</li>
                 ))}
