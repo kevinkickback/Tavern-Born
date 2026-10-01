@@ -64,6 +64,35 @@ describe('equipment item detail fields', () => {
     ])
   })
 
+  test('uses full names and keeps item-specific notes on structured properties', () => {
+    const item = makeItem({
+      type: 'M',
+      properties: ['L|PHB', { uid: '2H|XPHB', note: 'unless mounted' }],
+    })
+
+    expect(
+      buildItemDetailFields(item, undefined, { L: 'Light', '2H': 'Two-Handed' }),
+    ).toContainEqual({
+      label: 'Properties',
+      value: 'Light, Two-Handed (unless mounted)',
+    })
+  })
+
+  test('prefers the source-qualified property name over the abbreviation fallback', () => {
+    const item = makeItem({
+      type: 'M',
+      properties: [{ uid: 'H|HB', note: 'when braced' }, 'H'],
+    })
+
+    expect(
+      buildItemDetailFields(item, undefined, {
+        H: 'Heavy',
+        'H|PHB': 'Heavy',
+        'H|HB': 'Hafted',
+      }),
+    ).toContainEqual({ label: 'Properties', value: 'Hafted (when braced), Heavy' })
+  })
+
   test('enriches armor details from canonical item data', () => {
     const item = makeItem({ type: 'HA', armorType: 'heavy', ac: 18 })
     const itemData: Item5e = {
