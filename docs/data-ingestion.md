@@ -115,6 +115,14 @@ Do not:
 Emergency content substitutions live in `sourceFallbacks.ts`; ruleset metadata gaps live in the
 explicit ruleset metadata module. Both must be testable and removable.
 
+The data-only copy resolver validates copied records, parent data, and applied templates before
+modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected
+with a copy diagnostic, including nested spell groups and property selectors. Traversal reads only
+own properties; newly created path and modification dictionaries have no prototype. A failed copy
+keeps its original record and cannot change shared runtime prototypes. Loader/layer composition
+treats unresolved copies as required failures before publishing the catalog.
+The cache schema is bumped when copy trust rules change so previously resolved catalogs are rebuilt.
+
 ## Normalized capabilities
 
 The parser layer owns normalization that would otherwise be repeated across pages, including:
@@ -152,6 +160,13 @@ class-feature setting can swap the original and replacement choice without showi
 Lookup keys are case-normalized `name|source`. Exact resolution checks the filtered primary lookup,
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Persisted references without a source are rejected rather than matched to the first printing.
+
+Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.
+Its pure resolver indexes class/subclass features with the saved class and subclass owner context,
+including raw nested subclass features when their source is filtered out. Choice details distinguish
+available, loaded but source-unavailable, and missing records without changing saved selections.
+Class choices, retained details, and the Compendium share the recursive subclass-feature collector;
+it traverses nested entry containers safely and preserves distinct records before owner-specific indexing.
 
 ## Ruleset compatibility
 

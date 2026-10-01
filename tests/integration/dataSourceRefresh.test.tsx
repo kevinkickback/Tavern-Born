@@ -224,7 +224,7 @@ describe('data source refresh feedback', () => {
     expect(screen.getByText(/Select 5etools compatible JSON data/)).toBeTruthy()
     expect(screen.getByText(/Not sure where to begin/)).toBeTruthy()
     expect(screen.getByRole('link', { name: '5etools community wiki' }).getAttribute('href')).toBe(
-      'https://wiki.tercept.net/en/5eTools/InstallGuide',
+      'https://wiki.tercept.net/en/5eTools/InstallGuide#step-1-downloading-the-site',
     )
   })
 

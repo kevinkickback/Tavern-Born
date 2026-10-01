@@ -6,6 +6,194 @@ import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import type { Creature5e } from '@/types/5etools'
 
 describe('5etools copy resolution', () => {
+  test.each([
+    '__proto__',
+    'constructor',
+    'prototype',
+  ])('rejects reserved %s segments across modification paths and payloads', (reserved) => {
+    const marker = '__copySecurityMarker'
+    const prototypeBefore = Object.getOwnPropertyDescriptors(Object.prototype)
+    const unsafeObject = JSON.parse(`{"${reserved}":{"${marker}":"unsafe"}}`)
+    const modifications = [
+      { _: { mode: 'setProp', prop: `${reserved}.${marker}`, value: 'unsafe' } },
+      { [`stats.${reserved}.${marker}`]: 'remove' },
+      { [`stats.${reserved}`]: { mode: 'appendArr', items: 'unsafe' } },
+      { [reserved]: { mode: 'setProp', prop: marker, value: 'unsafe' } },
+      { stats: { mode: 'scalarAddProp', prop: reserved, scalar: 1 } },
+      { stats: { mode: 'prefixSuffixStringProp', prop: reserved, prefix: 'unsafe' } },
+      { entries: { mode: 'replaceTxt', props: [reserved], replace: 'old', with: 'new' } },
+      { _: { mode: 'setProp', prop: 'stats', value: unsafeObject } },
+      { spellcasting: { mode: 'addSpells', spells: { 1: unsafeObject } } },
+      { spellcasting: { mode: 'replaceSpells', daily: unsafeObject } },
+      { spellcasting: { mode: 'removeSpells', spells: unsafeObject } },
+    ]
+    for (const kind of ['item', 'monster'] as const) {
+      for (const _mod of modifications) {
+        const copy = { name: 'Copy', source: 'TEST', _copy: { name: 'Base', source: 'TEST', _mod } }
+        const records = [
+          {
+            name: 'Base',
+            source: 'TEST',
+            stats: {},
+            entries: ['old'],
+            spellcasting: [{ spells: {} }],
+          },
+          copy,
+        ]
+        const before = structuredClone(records)
+        const result = resolveCopiedRecords(records, kind)
+        expect(result.diagnostics).toEqual([
+          { entity: 'Copy|TEST', reason: expect.stringContaining('unsafe copy property') },
+        ])
+        expect(result.records[1]).toBe(copy)
+        expect(records).toEqual(before)
+        expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(prototypeBefore)
+        expect(Object.getOwnPropertyDescriptor({}, marker)).toBeUndefined()
+        expect(Reflect.get({}, marker)).toBeUndefined()
+      }
+    }
+  })
+
+  test('validates all operations before a malicious write followed by a failure', () => {
+    const prototypeBefore = Object.getOwnPropertyDescriptors(Object.prototype)
+    const copy = {
+      name: 'Copy',
+      source: 'TEST',
+      _copy: {
+        name: 'Base',
+        source: 'TEST',
+        _mod: {
+          _: [
+            { mode: 'setProp', prop: '__proto__.__copySecurityMarker', value: 'unsafe' },
+            { mode: 'unsupported' },
+          ],
+        },
+      },
+    }
+    const result = resolveCopiedRecords([{ name: 'Base', source: 'TEST' }, copy], 'item')
+    expect(result.records[1]).toBe(copy)
+    expect(result.diagnostics[0].reason).toContain('unsafe copy property')
+    expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(prototypeBefore)
+  })
+
+  test.each([
+    '__proto__',
+    'constructor',
+    'prototype',
+  ])('rejects unsafe %s parent keys and variable-expanded property selectors', (reserved) => {
+    const prototypeBefore = Object.getOwnPropertyDescriptors(Object.prototype)
+    const parent = JSON.parse(
+      `{"name":"Base","source":"TEST","${reserved}":{"__copySecurityMarker":"unsafe"}}`,
+    )
+    const copy = { name: 'Copy', source: 'TEST', _copy: { name: 'Base', source: 'TEST' } }
+    const inherited = resolveCopiedRecords([parent, copy], 'item')
+    expect(inherited.records[1]).toBe(copy)
+    expect(inherited.diagnostics[0].reason).toContain('unsafe copy property')
+    const variableCopy = {
+      name: reserved,
+      source: 'TEST',
+      _copy: {
+        name: 'Base',
+        source: 'TEST',
+        _mod: {
+          _: { mode: 'setProp', prop: '<$name$>.__copySecurityMarker', value: 'unsafe' },
+        },
+      },
+    }
+    const expanded = resolveCopiedRecords(
+      [{ name: 'Base', source: 'TEST' }, variableCopy],
+      'monster',
+    )
+    expect(expanded.records[1]).toBe(variableCopy)
+    expect(expanded.diagnostics[0].reason).toContain('unsafe copy property')
+    expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(prototypeBefore)
+  })
+
+  test.each([
+    '__proto__',
+    'constructor',
+    'prototype',
+  ])('rejects unsafe %s template roots, modifications, and copied templates', (reserved) => {
+    const prototypeBefore = Object.getOwnPropertyDescriptors(Object.prototype)
+    const unsafeRoot = JSON.parse(`{"${reserved}":{"__copySecurityMarker":"unsafe"}}`)
+    const applyCases = [
+      { _root: unsafeRoot },
+      {
+        _mod: { _: { mode: 'setProp', prop: `${reserved}.__copySecurityMarker`, value: 'unsafe' } },
+      },
+    ]
+    for (const apply of applyCases) {
+      const records = [
+        { name: 'Base', source: 'TEST' },
+        {
+          name: 'Copy',
+          source: 'TEST',
+          _copy: {
+            name: 'Base',
+            source: 'TEST',
+            _templates: [{ name: 'Template', source: 'TEST' }],
+          },
+        },
+      ]
+      const result = resolveCopiedRecords(records, 'monster', [
+        { name: 'Template', source: 'TEST', apply },
+      ])
+      expect(result.records[1]).toBe(records[1])
+      expect(result.diagnostics[0].reason).toContain('unsafe copy property')
+    }
+    const result = resolveCopiedRecords(
+      [
+        { name: 'Base Template', source: 'TEST', apply: {} },
+        {
+          name: 'Copy Template',
+          source: 'TEST',
+          _copy: {
+            name: 'Base Template',
+            source: 'TEST',
+            _mod: {
+              'apply._root': {
+                mode: 'setProp',
+                prop: `${reserved}.__copySecurityMarker`,
+                value: 'unsafe',
+              },
+            },
+          },
+        },
+      ],
+      'monster',
+    )
+    expect(result.diagnostics[0].reason).toContain('unsafe copy property')
+    expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(prototypeBefore)
+  })
+
+  test('reads and writes only own properties, including inherited built-in names', () => {
+    const result = resolveCopiedRecords(
+      [
+        { name: 'Base', source: 'TEST' },
+        {
+          name: 'Copy',
+          source: 'TEST',
+          _copy: {
+            name: 'Base',
+            source: 'TEST',
+            _mod: {
+              toString: { mode: 'appendArr', items: 'own entry' },
+              _: { mode: 'setProp', prop: 'valueOf.nested', value: 'own value' },
+              'hasOwnProperty.nested': 'remove',
+            },
+          },
+        },
+      ],
+      'item',
+    )
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1]).toMatchObject({
+      toString: ['own entry'],
+      valueOf: { nested: 'own value' },
+    })
+    expect(Object.getOwnPropertyDescriptor(Object.prototype.valueOf, 'nested')).toBeUndefined()
+  })
+
   test('inherits item metadata through chains and applies item array edits', () => {
     const result = resolveCopiedRecords(
       [

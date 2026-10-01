@@ -109,6 +109,28 @@ Electron issue 52098 on those Windows builds.
 
 `npm run lint` writes formatting/fixes; use `npx biome ci .` for read-only validation.
 
+## Runtime reachability review
+
+`npm run check:dead-code` remains the full-project gate, including tests, corpus reports, manual
+scripts, and build configuration. `npm run report:dead-code:production` adds a diagnostic inventory
+of the runtime graph; findings do not fail this command or CI. Knip's [production markers](https://knip.dev/features/production-mode)
+classify the renderer, Electron main/preload, and HTML-started theme script as runtime roots, with
+runtime source/CSS project patterns. Keep both views; test-only imports must not hide retired app paths.
+
+Review each production finding against its actual consumers before removal or gate rollout:
+
+- Preserve the documented provenance test aggregators and their equipment adapter.
+- Preserve `classChoiceCoverage.ts` for corpus capability reporting.
+- Rest preview and spell-slot mutation modules have domain tests but no current page consumer;
+  their future play-feature role requires a product decision before wiring or removing them.
+- `layoutHeights.ts` currently has only unit-test consumers; removal is a separate cleanup decision.
+- Externally unused exports can still be used inside their module or expose a useful test API.
+- `@tailwindcss/vite` is used by build/test configuration; a runtime-only dependency finding does
+  not establish that it can be uninstalled.
+
+Do not blanket-ignore these findings. Recheck entry/plugin discovery when adding tooling, and use
+the bundle, SRD manifest, and PDF-template checks for packaged assets outside Knip's source graph.
+
 ## Coverage policy
 
 Coverage thresholds are configured in Vitest and are a floor, not a target. Removing duplicate or

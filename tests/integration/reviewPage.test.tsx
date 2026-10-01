@@ -9,7 +9,11 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import {
+  makeClassFixture,
+  makeGameDataFixture,
+  makeSpellFixture,
+} from '../fixtures/gameDataFixtures'
 
 describe('BuildReviewPage', () => {
   beforeEach(() => {
@@ -360,6 +364,112 @@ describe('BuildReviewPage', () => {
     fireEvent.error(emblem)
     expect(screen.queryByRole('img', { name: 'The Lantern Circle emblem' })).toBeNull()
     expect(iconContainer?.querySelector('svg')).not.toBeNull()
+  })
+
+  test.each([
+    ['2014', 'PHB'],
+    ['2024', 'XPHB'],
+  ] as const)('retains loaded subclass-choice details when their source is disabled and re-enabled for %s', async (originSystem, classSource) => {
+    const feature = {
+      name: 'Scholar Option',
+      source: 'SUPP',
+      level: 3,
+      className: 'Wizard',
+      classSource,
+      subclassShortName: 'Scholar',
+      subclassSource: 'SUPP',
+      entries: ['Retained subclass option details.'],
+    }
+    const classData = makeClassFixture({
+      source: classSource,
+      subclasses: [
+        {
+          name: 'Scholar',
+          shortName: 'Scholar',
+          source: 'SUPP',
+          className: 'Wizard',
+          classSource,
+          subclassFeatures: [feature],
+        },
+      ],
+    })
+    const data = makeGameDataFixture({
+      classes: [classData],
+      sources: [
+        { name: 'Player Handbook', abbreviation: classSource, group: 'core' },
+        { name: 'Supplement', abbreviation: 'SUPP', group: 'supplement' },
+      ],
+    })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
+    const character = makeCharacterFixture({
+      originSystem,
+      allowedSources: [classSource, 'SUPP'],
+      classProgression: [
+        {
+          name: 'Wizard',
+          source: classSource,
+          levels: 3,
+          subclass: 'Scholar',
+          subclassSource: 'SUPP',
+        },
+      ],
+      classChoiceSelections: [
+        {
+          choiceId: 'scholar-option',
+          label: 'Scholar Choice',
+          kind: 'subclass-feature',
+          className: 'Wizard',
+          classSource,
+          classLevel: 3,
+          subclassName: 'Scholar',
+          subclassSource: 'SUPP',
+          selected: [
+            { entityType: 'subclassFeature', name: 'Scholar Option', source: 'SUPP', slotLevel: 3 },
+            {
+              entityType: 'subclassFeature',
+              name: 'Unloaded Option',
+              source: 'SUPP',
+              slotLevel: 3,
+            },
+          ],
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+    const loadedOption = screen.getByText('Scholar Option (SUPP)').closest('li')!
+    const missingOption = screen.getByText('Unloaded Option (SUPP)').closest('li')!
+    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
+    expect(within(loadedOption).queryByText('Source unavailable')).toBeNull()
+    expect(within(missingOption).getByText('Unresolved source')).toBeTruthy()
+
+    await act(() => {
+      const restricted = { ...character, allowedSources: [classSource] }
+      useCharacterStore.setState({ characters: [restricted], activeCharacter: restricted })
+    })
+    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
+    expect(within(loadedOption).getByText('Source unavailable')).toBeTruthy()
+    expect(within(loadedOption).queryByText('Unresolved source')).toBeNull()
+    expect(within(missingOption).getByText('Unresolved source')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter?.classChoiceSelections).toEqual(
+      character.classChoiceSelections,
+    )
+
+    await act(() => {
+      useCharacterStore.setState({ characters: [character], activeCharacter: character })
+    })
+    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
+    expect(within(loadedOption).queryByText('Source unavailable')).toBeNull()
+    expect(useGameDataStore.getState().gameData).toBe(data)
   })
 
   test('shows unnamed custom organization details under the editor fallback title', async () => {
