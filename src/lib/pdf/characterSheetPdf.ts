@@ -85,6 +85,7 @@ export async function generateFilledCharacterSheetPdf(
   const original = viewModel
   viewModel = selection.viewModel
   const fullMap = buildCharacterSheetFieldMap(viewModel, templateId)
+  const actionDetails: SheetOverflowSection[] = []
   if (template.id === '2014-official')
     Object.assign(fullMap.textFields, getOfficial2014SectionText(viewModel))
   if (template.id === '2014-custom') {
@@ -99,10 +100,15 @@ export async function generateFilledCharacterSheetPdf(
       ['bonus-action', 'Bonus Action'],
       ['reaction', 'Reaction'],
     ] as const) {
-      viewModel.actions
-        .filter((action) => action.kind === kind)
-        .forEach((action, index) => {
-          fullMap.textFields[`${label} ${index + 1}`] = formatActionEntry(action, true)
+      const details = viewModel.actions
+        .filter((action) => action.kind === kind && action.active)
+        .map((action) => ({ name: action.name, text: formatActionEntry(action, true) }))
+        .filter((entry) => entry.text !== entry.name)
+      if (details.length)
+        actionDetails.push({
+          id: `action-details:${kind}`,
+          title: `${label} details`,
+          text: details.map((entry) => entry.text).join('\n\n'),
         })
     }
     // Let real geometry decide the split; remove the mapper's historical character estimates.
@@ -139,7 +145,7 @@ export async function generateFilledCharacterSheetPdf(
   for (const [name, value] of Object.entries(fullMap.textFields))
     fullMap.textFields[name] = compactSheetText(value)
   const plan = getCharacterSheetAssetPlan(original, templateId, options.pages)
-  const overflow: SheetOverflowSection[] = selection.overflow
+  const overflow: SheetOverflowSection[] = [...selection.overflow, ...actionDetails]
   const shortened: string[] = []
   const noteReferences: string[] = []
   const officialSpellMap = mapOfficial2014SpellPage(viewModel)
@@ -261,8 +267,12 @@ export async function generateFilledCharacterSheetPdf(
   ]
   const includeNotes =
     options.pages?.notes !== false &&
-    (plan.some((part) => part.id === 'notes') || (continueInNotes && uniqueOverflow.length > 0))
-  const notesContent = continueInNotes ? uniqueOverflow : []
+    (plan.some((part) => part.id === 'notes') ||
+      actionDetails.length > 0 ||
+      (continueInNotes && uniqueOverflow.length > 0))
+  const notesContent = continueInNotes
+    ? uniqueOverflow
+    : uniqueOverflow.filter((section) => actionDetails.some((detail) => detail.id === section.id))
   let notesPageCount = 0
   if (includeNotes) {
     const source = options.supplements?.notes ?? (await options.loadNotes?.())
@@ -278,7 +288,7 @@ export async function generateFilledCharacterSheetPdf(
   options.onReport?.({
     notesPageCount,
     preserved: includeNotes ? notesContent : [],
-    omitted: includeNotes && notesContent.length ? [] : uniqueOverflow,
+    omitted: uniqueOverflow.filter((section) => !includeNotes || !notesContent.includes(section)),
   })
   output.setTitle(viewModel.character.name)
   return output.save({ updateFieldAppearances: false })

@@ -473,7 +473,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                     <div className="flex items-center justify-end pt-3">
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="default"
                         className="h-8 cursor-pointer px-3 text-xs"
                         onClick={() => onAddSpell?.(profile.id)}
                       >
@@ -498,7 +498,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         {isBonusProfile ? (
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="default"
                             className="mt-4 h-8 cursor-pointer px-3 text-xs"
                             onClick={() => onAddSpell?.(profile.id)}
                           >

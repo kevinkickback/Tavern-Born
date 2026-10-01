@@ -11,9 +11,9 @@ vi.mock('@/hooks/character/useCharacterReadiness', () => ({
 }))
 
 describe('CharacterReadinessBadge', () => {
-  test('describes every blocking issue as requiring attention', () => {
+  test('describes character choices as items to review', () => {
     render(<CharacterReadinessBadge character={makeCharacterFixture()} />)
 
-    expect(screen.getByLabelText('2 issues requiring attention')).toBeTruthy()
+    expect(screen.getByLabelText('2 items to review')).toBeTruthy()
   })
 })
