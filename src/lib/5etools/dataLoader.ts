@@ -601,7 +601,8 @@ export class FiveEToolsDataLoader {
         )
       } catch (error) {
         if (isAbortError(error)) throw error
-        options?.onResourceFailure?.('bestiary/template.json', { required: true })
+        // A layered source may use a template supplied by another layer. Final copy
+        // resolution reports a required failure if the template remains unavailable.
         console.warn('Failed to load bestiary templates:', error)
       }
     }

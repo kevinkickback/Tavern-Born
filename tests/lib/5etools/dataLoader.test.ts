@@ -199,6 +199,50 @@ describe('5etools/dataLoader', () => {
     })
   })
 
+  test('defers missing creature templates until layered copy resolution', async () => {
+    const payloads: Record<string, unknown> = {
+      'bestiary/index.json': { HB: 'bestiary-hb.json' },
+      'bestiary/bestiary-hb.json': {
+        monster: [
+          {
+            name: 'Layered Beast',
+            source: 'HB',
+            _copy: {
+              name: 'Base Beast',
+              source: 'MM',
+              _templates: [{ name: 'Base Template', source: 'MM' }],
+            },
+          },
+        ],
+      },
+    }
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: (path) =>
+        path === 'bestiary/template.json'
+          ? Promise.reject(new Error('Missing in this layer'))
+          : Promise.resolve(payloads[path] ?? {}),
+    }
+    const loader = new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:\\data',
+        isValid: true,
+        availableResources: ['bestiary/index.json'],
+      },
+      reader,
+    )
+    const onResourceFailure = vi.fn()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const data = await loader.loadAllData({ deferCopyResolutionErrors: true, onResourceFailure })
+      expect(data.creatures?.[0]).toHaveProperty('_copy')
+      expect(onResourceFailure).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   test('times out a stalled remote request', async () => {
     vi.useFakeTimers()
     globalThis.fetch = vi.fn((_input, init) => {
