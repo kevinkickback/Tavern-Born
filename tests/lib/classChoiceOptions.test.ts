@@ -353,13 +353,23 @@ describe('class choice option resolution', () => {
             property: ['S'],
             weaponCategory: 'martial',
           },
+          {
+            name: 'Hafted Staff',
+            source: 'HB',
+            type: 'M',
+            property: [{ uid: 'H|HB' }],
+            weaponCategory: 'martial',
+          },
         ],
-        itemPropertyByAbbr: { H: 'Heavy', S: 'Special', V: 'Versatile' },
+        itemPropertyByAbbr: { H: 'Heavy', 'H|HB': 'Hafted', S: 'Special', V: 'Versatile' },
         itemTypeByAbbr: { M: 'Martial Melee Weapon', R: 'Martial Ranged Weapon' },
       },
     )
 
-    expect(result.map((option) => option.reference.name)).toEqual(['Longsword'])
+    expect(result.map((option) => option.reference.name)).toEqual(['Hafted Staff', 'Longsword'])
+    expect(result.find((option) => option.reference.name === 'Hafted Staff')).toMatchObject({
+      presentation: { propertyLabels: ['Hafted'] },
+    })
   })
 
   test('matches feat and optional-feature filters without name-based rules', () => {

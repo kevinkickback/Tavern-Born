@@ -4,6 +4,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
@@ -159,8 +160,8 @@ function getItemPropertyLabels(
 ): string[] {
   return getItemPropertyReferences(item).flatMap((value) => {
     const code = value.split('|')[0]?.trim() ?? ''
-    return [code, itemPropertyByAbbr[code.toUpperCase()]].filter((label): label is string =>
-      Boolean(label),
+    return [code, getItemPropertyLabel(value, itemPropertyByAbbr)].filter(
+      (label): label is string => Boolean(label),
     )
   })
 }
@@ -355,10 +356,9 @@ function getItemPropertyDisplayLabels(
   item: Item5e,
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
-  return getItemPropertyReferences(item).map((value) => {
-    const code = value.split('|')[0]?.trim() ?? value
-    return itemPropertyByAbbr[code.toUpperCase()] ?? code
-  })
+  return getItemPropertyReferences(item).map((value) =>
+    getItemPropertyLabel(value, itemPropertyByAbbr),
+  )
 }
 
 function getItemPresentation(
