@@ -9,6 +9,11 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
+import {
+  type CopyResolutionDiagnostic,
+  CopyResolutionError,
+  resolveCopiedRecords,
+} from './copyResolution'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -50,6 +55,8 @@ export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
   onResourceFailure?: (resource: string, failure: DataResourceFailure) => void
   signal?: AbortSignal
+  /** A source stack retries copies after layering its catalogs. */
+  deferCopyResolutionErrors?: boolean
 }
 
 interface DataResourceFailure {
@@ -66,6 +73,15 @@ interface ExtractIndexFilesOptions {
 }
 
 export const DATA_FETCH_CONCURRENCY = 6
+
+const loadedCreatureTemplates = new WeakMap<
+  GameData,
+  Array<{ name: string; source: string; [key: string]: unknown }>
+>()
+
+export function getLoadedCreatureTemplates(gameData: GameData) {
+  return loadedCreatureTemplates.get(gameData) ?? []
+}
 
 const BUNDLED_SRD_SELECTABLE_SOURCES = new Set(['PHB', 'XPHB'])
 
@@ -343,13 +359,28 @@ export class FiveEToolsDataLoader {
     throwIfAborted(options?.signal)
 
     gameData.items.push(...magicVariants)
+    const itemCount = gameData.items.length
+    const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
+    gameData.items = resolvedItems.records.slice(0, itemCount)
+    gameData.itemsBase = resolvedItems.records.slice(itemCount)
+    if (resolvedItems.diagnostics.length && import.meta.env.DEV) {
+      console.warn('Unresolved copied items:', resolvedItems.diagnostics)
+    }
 
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
     }
 
-    if (bestiaryIndexData) {
-      await this.loadCreatureData(bestiaryIndexData, gameData, options)
+    const creatureDiagnostics = bestiaryIndexData
+      ? await this.loadCreatureData(bestiaryIndexData, gameData, options)
+      : []
+
+    const copyDiagnostics = [...resolvedItems.diagnostics, ...creatureDiagnostics]
+    if (copyDiagnostics.length > 0 && !options?.deferCopyResolutionErrors) {
+      for (const diagnostic of copyDiagnostics) {
+        options?.onResourceFailure?.(`Copied entity: ${diagnostic.entity}`, { required: true })
+      }
+      throw new CopyResolutionError(copyDiagnostics, 'in the selected source')
     }
 
     const sourceCatalog = buildSourcesList(
@@ -529,7 +560,7 @@ export class FiveEToolsDataLoader {
     indexData: unknown,
     gameData: GameData,
     options?: DataLoaderOptions,
-  ): Promise<void> {
+  ): Promise<CopyResolutionDiagnostic[]> {
     const creatureFiles = this.extractIndexFiles(indexData)
     const results = await mapWithConcurrency(
       creatureFiles,
@@ -549,7 +580,39 @@ export class FiveEToolsDataLoader {
       },
     )
 
-    gameData.creatures = results.flat()
+    const creatures = results.flat()
+    let templates: Array<{ name: string; source: string; [key: string]: unknown }> = []
+    if (
+      creatures.some((creature) =>
+        Array.isArray((creature._copy as { _templates?: unknown[] } | undefined)?._templates),
+      )
+    ) {
+      try {
+        const templateData = await this.loadResource('bestiary/template.json', options?.signal)
+        const templateRecord = templateData as { monsterTemplate?: unknown[] }
+        templates = (templateRecord.monsterTemplate ?? []).filter(
+          (value): value is (typeof templates)[number] =>
+            Boolean(
+              value &&
+                typeof value === 'object' &&
+                typeof (value as { name?: unknown }).name === 'string' &&
+                typeof (value as { source?: unknown }).source === 'string',
+            ),
+        )
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        // A layered source may use a template supplied by another layer. Final copy
+        // resolution reports a required failure if the template remains unavailable.
+        console.warn('Failed to load bestiary templates:', error)
+      }
+    }
+    const resolved = resolveCopiedRecords(creatures, 'monster', templates)
+    gameData.creatures = resolved.records
+    loadedCreatureTemplates.set(gameData, templates)
+    if (resolved.diagnostics.length && import.meta.env.DEV) {
+      console.warn('Unresolved copied creatures:', resolved.diagnostics)
+    }
+    return resolved.diagnostics
   }
 
   private extractIndexFiles(

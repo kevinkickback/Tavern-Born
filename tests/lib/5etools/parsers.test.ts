@@ -260,7 +260,7 @@ describe('5etools/parsers', () => {
     expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
   })
 
-  test('parseMagicVariants exposes inherited item metadata as selectable templates', () => {
+  test('parseMagicVariants preserves generic template metadata for reference', () => {
     const [variant] = parseMagicVariants([
       { name: '+1 Shield (*)', type: 'GV|XDMG', inherits: { source: 'XDMG', rarity: 'uncommon' } },
     ])

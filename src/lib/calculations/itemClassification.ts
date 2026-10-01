@@ -47,6 +47,11 @@ export function getItemTypeCodes(type: ClassifiableItem['type']): string[] {
     .filter(Boolean)
 }
 
+/** Generic 5etools variants (GV) describe a rule for making an item, not an item to carry. */
+export function isSelectableEquipmentItem(item: ClassifiableItem & { items?: unknown }): boolean {
+  return !Array.isArray(item.items) && !getItemTypeCodes(item.type).includes('GV')
+}
+
 export function inferArmorCategory(label: string): ArmorCategory {
   const normalized = label.toLowerCase()
   if (normalized.includes('light armor')) return 'light'

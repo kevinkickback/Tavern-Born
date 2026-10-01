@@ -1,8 +1,9 @@
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { normalizeClassRules } from './classRuleNormalization'
+import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
-import { loadDataFromSource } from './dataLoader'
+import { getLoadedCreatureTemplates, loadDataFromSource } from './dataLoader'
 import { buildGameDataLookups } from './lookups'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
@@ -353,6 +354,17 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   }
 
   resolveComposedFeatureReferences(composed, layers)
+  const itemCount = composed.items.length
+  const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
+  composed.items = items.records.slice(0, itemCount)
+  composed.itemsBase = items.records.slice(itemCount)
+  const templates = layers.flatMap(getLoadedCreatureTemplates)
+  const creatures = resolveCopiedRecords(composed.creatures ?? [], 'monster', templates)
+  composed.creatures = creatures.records
+  const copyDiagnostics = [...items.diagnostics, ...creatures.diagnostics]
+  if (copyDiagnostics.length > 0) {
+    throw new CopyResolutionError(copyDiagnostics, 'after content layering')
+  }
   composed.lookups = buildGameDataLookups(composed)
   return composed
 }
@@ -360,10 +372,12 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
 function optionsForLayer(
   options: DataLoaderOptions | undefined,
   label: string,
+  deferCopyResolutionErrors = false,
 ): DataLoaderOptions | undefined {
-  if (!options) return undefined
+  if (!options) return deferCopyResolutionErrors ? { deferCopyResolutionErrors } : undefined
   return {
     ...options,
+    deferCopyResolutionErrors,
     onProgress: options.onProgress
       ? (current, total, resource) => {
           options.onProgress?.(current, total, `${label}: ${resource}`)
@@ -380,16 +394,29 @@ export async function loadGameDataSourceStack(
   stack: GameDataSourceStack,
   options?: DataSourceStackLoaderOptions,
 ): Promise<GameData> {
-  const base = await loadDataFromSource(stack.base, optionsForLayer(options, 'Included SRD'))
+  const base = await loadDataFromSource(
+    stack.base,
+    optionsForLayer(options, 'Included SRD', Boolean(stack.additional)),
+  )
   options?.onLayerLoaded?.('base', base)
   if (!stack.additional) return base
 
   const additional = await loadDataFromSource(
     stack.additional,
-    optionsForLayer(options, 'Additional content'),
+    optionsForLayer(options, 'Additional content', true),
   )
   options?.onLayerLoaded?.('additional', additional)
-  const composed = composeGameDataLayers([base, additional])
+  let composed: GameData
+  try {
+    composed = composeGameDataLayers([base, additional])
+  } catch (error) {
+    if (error instanceof CopyResolutionError) {
+      for (const diagnostic of error.diagnostics) {
+        options?.onResourceFailure?.(`Copied entity: ${diagnostic.entity}`, { required: true })
+      }
+    }
+    throw error
+  }
   const dependencyIssues = findLayerDependencyIssues(composed, additional)
   if (dependencyIssues.length > 0) {
     for (const issue of dependencyIssues) {
