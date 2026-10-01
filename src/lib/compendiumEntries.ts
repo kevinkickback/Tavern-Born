@@ -776,7 +776,8 @@ export function filterCompendiumEntries(
   }
 
   if (activeSources.size > 0) {
-    filtered = filtered.filter((entry) => activeSources.has(entry.source))
+    const selectedSources = new Set([...activeSources].map((source) => source.trim().toUpperCase()))
+    filtered = filtered.filter((entry) => selectedSources.has(entry.source.trim().toUpperCase()))
   }
 
   if (editionFilter !== 'both') {

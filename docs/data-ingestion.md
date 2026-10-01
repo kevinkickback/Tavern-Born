@@ -130,6 +130,12 @@ The parser layer owns normalization that would otherwise be repeated across page
 - feat fixed references and unconditional lasting effects;
 - fluff summaries and optional images/sections.
 
+Generic magic variants prefer their own reference entries over inherited base-item templates.
+When inherited entries are used, `{=field}` values are filled from the variant's structured
+metadata before display; unknown values receive a visible fallback.
+Sourcebook and adventure metadata IDs are matched without regard to case so their full names
+appear in source lists, including the global Compendium filter.
+
 The shared `getRaceTraits` presentation helper further excludes the descriptive Age entry from
 gameplay-trait lists in the builder, creation wizard, and PDFs. Ingestion retains the original
 entry for ancestry reference text; this display policy does not discard source data or require a
