@@ -184,8 +184,19 @@ function resolveVariables(value: unknown, record: Record5e): unknown {
 }
 
 function applySpellMod(target: Record5e, mode: string, mod: Record<string, unknown>): void {
-  const casting = Array.isArray(target.spellcasting) ? object(target.spellcasting[0]) : null
-  if (!casting) throw new Error('spellcasting is missing')
+  const spellcasting = Array.isArray(target.spellcasting) ? target.spellcasting : []
+  const named = typeof mod.name === 'string' ? mod.name.trim().toLowerCase() : ''
+  const entry = named
+    ? spellcasting.find(
+        (value) =>
+          String(object(value).name ?? '')
+            .trim()
+            .toLowerCase() === named,
+      )
+    : spellcasting[0]
+  if (!entry)
+    throw new Error(named ? `spellcasting ${mod.name} is missing` : 'spellcasting is missing')
+  const casting = object(entry)
   const mergeSpellGroup = (group: Record<string, unknown>, additions: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(additions)) {
       if (Array.isArray(value))
@@ -231,7 +242,7 @@ function applySpellMod(target: Record5e, mode: string, mod: Record<string, unkno
         : spells.filter((spell) => !array(changes).includes(spell))
   }
   for (const [section, changes] of Object.entries(mod)) {
-    if (section === 'mode' || section === 'spells') continue
+    if (section === 'mode' || section === 'name' || section === 'spells') continue
     if (Array.isArray(changes)) {
       if (mode === 'removeSpells')
         casting[section] = (
@@ -451,7 +462,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
   templates: readonly Record5e[] = [],
 ): { records: T[]; diagnostics: CopyResolutionDiagnostic[] } {
   const byKey = new Map(records.map((record) => [key(record), record]))
-  const templateByKey = new Map(templates.map((template) => [key(template), template]))
+  const resolvedTemplates = templates.length ? resolveCopiedRecords(templates, kind).records : []
+  const templateByKey = new Map(resolvedTemplates.map((template) => [key(template), template]))
   const resolved = new Map<string, T>()
   const diagnostics: CopyResolutionDiagnostic[] = []
   const active = new Set<string>()
@@ -491,14 +503,23 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       for (const reference of Array.isArray(copy._templates) ? copy._templates : []) {
         const template = templateByKey.get(key(reference as Record5e))
         if (!template) throw new Error(`missing template ${key(reference as Record5e)}`)
+        if (template._copy) throw new Error(`unresolved template ${key(reference as Record5e)}`)
         appliedTemplates.push(template)
         for (const [field, value] of Object.entries(object(object(template.apply)._root))) {
           if (!(field in record)) own[field] = clone(value)
         }
       }
-      for (const template of appliedTemplates)
-        applyMods(own, object(resolveVariables(object(object(template.apply)._mod), own)))
-      applyMods(own, object(resolveVariables(copy._mod, own)))
+      const mergedMods: Record<string, unknown[]> = {}
+      for (const modMap of [
+        object(copy._mod),
+        ...appliedTemplates.map((template) => object(object(template.apply)._mod)),
+      ]) {
+        for (const [prop, operations] of Object.entries(modMap)) {
+          mergedMods[prop] ??= []
+          mergedMods[prop].push(...array(operations))
+        }
+      }
+      applyMods(own, object(resolveVariables(mergedMods, own)))
       delete own._copy
       resolved.set(identity, own as T)
       return own as T

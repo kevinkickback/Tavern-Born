@@ -72,6 +72,114 @@ describe('5etools copy resolution', () => {
     expect(result.records[1]).toMatchObject({ cr: '1/4', ac: [13], action: [{ name: 'Sword' }] })
   })
 
+  test('resolves copied templates before applying them to creatures', () => {
+    const templates = [
+      { name: 'Base Template', source: 'TEST', apply: { _root: { type: 'base' } } },
+      {
+        name: 'Derived Template',
+        source: 'TEST',
+        _copy: {
+          name: 'Base Template',
+          source: 'TEST',
+          _mod: { 'apply._root': { mode: 'setProp', prop: 'type', value: 'derived' } },
+        },
+      },
+    ]
+    const result = resolveCopiedRecords(
+      [
+        { name: 'Base Creature', source: 'TEST', cr: '1' },
+        {
+          name: 'Templated Creature',
+          source: 'TEST',
+          _copy: {
+            name: 'Base Creature',
+            source: 'TEST',
+            _templates: [{ name: 'Derived Template', source: 'TEST' }],
+          },
+        },
+      ],
+      'monster',
+      templates,
+    )
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1]).toMatchObject({ type: 'derived' })
+  })
+
+  test('applies copy modifications before template modifications on the same field', () => {
+    const result = resolveCopiedRecords(
+      [
+        { name: 'Base', source: 'TEST', action: [{ name: 'First' }] },
+        {
+          name: 'Variant',
+          source: 'TEST',
+          _copy: {
+            name: 'Base',
+            source: 'TEST',
+            _mod: {
+              action: { mode: 'replaceArr', replace: 'First', items: { name: 'Second' } },
+            },
+            _templates: [{ name: 'Action Template', source: 'TEST' }],
+          },
+        },
+      ],
+      'monster',
+      [
+        {
+          name: 'Action Template',
+          source: 'TEST',
+          apply: {
+            _mod: {
+              action: { mode: 'replaceArr', replace: 'Second', items: { name: 'Final' } },
+            },
+          },
+        },
+      ],
+    )
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1]).toMatchObject({ action: [{ name: 'Final' }] })
+  })
+
+  test('adds spells to the named spellcasting block', () => {
+    const result = resolveCopiedRecords(
+      [
+        {
+          name: 'Mage',
+          source: 'TEST',
+          spellcasting: [
+            { name: 'Innate Spellcasting', will: ['light'] },
+            { name: 'Spellcasting', spells: { 1: { spells: ['shield'] } } },
+          ],
+        },
+        {
+          name: 'Archmage',
+          source: 'TEST',
+          _copy: {
+            name: 'Mage',
+            source: 'TEST',
+            _mod: {
+              spellcasting: {
+                mode: 'addSpells',
+                name: 'Spellcasting',
+                spells: { 1: { spells: ['magic missile'] } },
+              },
+            },
+          },
+        },
+      ],
+      'monster',
+    )
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1]).toMatchObject({
+      spellcasting: [
+        { name: 'Innate Spellcasting', will: ['light'] },
+        { name: 'Spellcasting', spells: { 1: { spells: ['shield', 'magic missile'] } } },
+      ],
+    })
+  })
+
   test('reports missing parents and cycles without inventing stats', () => {
     const result = resolveCopiedRecords(
       [
