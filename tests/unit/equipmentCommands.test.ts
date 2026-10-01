@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest'
+import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
   addManualEquipmentCommand,
   applyManualProficiencyCommand,
   removeManualEquipmentCommand,
+  setEquipmentRestrictionsIgnoredCommand,
 } from '@/lib/character/commands/equipmentCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
@@ -21,6 +23,60 @@ const item: Item5e = {
 }
 
 describe('equipment commands', () => {
+  test('equipping and enforcing restrictions use the same proficiency and slot policy', () => {
+    const heavy = { id: 'heavy', name: 'Plate', type: 'HA', quantity: 1, equipped: true }
+    const light = { id: 'light', name: 'Leather', type: 'LA', quantity: 1, equipped: true }
+    const secondLight = {
+      id: 'second-light',
+      name: 'Studded Leather',
+      type: 'LA',
+      quantity: 1,
+      equipped: true,
+    }
+    const shield = { id: 'shield', name: 'Shield', type: 'S', quantity: 1, equipped: true }
+    const secondShield = {
+      id: 'second-shield',
+      name: 'Other Shield',
+      type: 'S',
+      quantity: 1,
+      equipped: true,
+    }
+    const sword = { id: 'sword', name: 'Sword', type: 'M', quantity: 1, equipped: true }
+    const proficiencies = ['light armor', 'shields']
+    const character = makeCharacterFixture({
+      equipment: [heavy, light, secondLight, shield, secondShield, sword],
+      proficiencies: { ...makeCharacterFixture().proficiencies, armor: proficiencies },
+      variantRules: { ignoreEquipRestrictions: true },
+    })
+
+    expect(getArmorEquipRestriction(heavy, [], proficiencies)).toEqual({
+      kind: 'missing-proficiency',
+      armorType: 'heavy',
+    })
+    expect(getArmorEquipRestriction(secondLight, [light], proficiencies)).toEqual({
+      kind: 'slot-conflict',
+      conflictingItem: light,
+    })
+    expect(getArmorEquipRestriction(secondShield, [shield], proficiencies)).toEqual({
+      kind: 'slot-conflict',
+      conflictingItem: shield,
+    })
+    expect(getArmorEquipRestriction(sword, [light, shield], proficiencies)).toBeNull()
+
+    const enforced = setEquipmentRestrictionsIgnoredCommand(character, false)
+    expect(enforced.variantRules?.ignoreEquipRestrictions).toBe(false)
+    expect(enforced.equipment?.filter((entry) => entry.equipped).map((entry) => entry.id)).toEqual([
+      'light',
+      'shield',
+      'sword',
+    ])
+    expect(character.equipment.every((entry) => entry.equipped)).toBe(true)
+
+    const ignored = setEquipmentRestrictionsIgnoredCommand(character, true)
+    expect(ignored.variantRules?.ignoreEquipRestrictions).toBe(true)
+    expect(ignored.equipment).toBeUndefined()
+  })
+
   test('adds inventory and manual provenance in one result', () => {
     const character = makeCharacterFixture()
     const result = addManualEquipmentCommand(

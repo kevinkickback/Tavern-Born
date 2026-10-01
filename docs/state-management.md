@@ -125,6 +125,8 @@ proficiency; `reconcileSkillExpertise()` removes invalid expertise.
 Starting-equipment option keys and concrete generic-item choices are stored separately. Inventory
 and equipment provenance change through the same equipment command. Derived AC and capacity read
 equipped state; they are not copied into equipment records.
+Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
+restrictions from either page applies the rule and unequips invalid armor in one character patch.
 
 Inventory weapon properties preserve 5etools references as abbreviations or source-qualified
 `{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;

@@ -10,6 +10,10 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import {
+  type CharacterCalculationContext,
+  createCharacterCalculationContext,
+} from '@/lib/calculations/characterCalculationContext'
 import { reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
@@ -22,7 +26,11 @@ import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
 } from '@/lib/character/equipmentHelpers'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import {
+  getCharacterClassEntries,
+  getEffectiveMaxHP,
+  getTotalCharacterLevel,
+} from '@/lib/characterUtils'
 import {
   addGrant,
   applyClassGrants,
@@ -84,6 +92,28 @@ export interface LevelUpHitPointChoice {
   hitDie: number
   dieResult: number
   method: HitPointGainMethod
+}
+
+export interface LevelDownResult extends ClassCommandResult {
+  removedClassName: string
+  removedSpellCount: number
+}
+
+function projectMaximumHitPoints(
+  character: Character,
+  calculationContext: CharacterCalculationContext,
+): number {
+  const projectedContext = createCharacterCalculationContext(
+    character,
+    calculationContext.lookups.primary,
+    calculationContext.lookups.raw,
+  )
+  return getEffectiveMaxHP(
+    character,
+    projectedContext.classes,
+    projectedContext.abilityScores.total,
+    projectedContext.effects.sourceDeclarations,
+  )
 }
 
 interface SelectSubclassOptions {
@@ -558,7 +588,7 @@ export function applyLevelUp(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
   hpChoice: LevelUpHitPointChoice,
-  maximumHitPoints: number,
+  calculationContext: CharacterCalculationContext,
 ): ClassCommandResult {
   const characterLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const targetEntry = nextProgression.find(
@@ -580,8 +610,36 @@ export function applyLevelUp(
   ) {
     throw new RangeError('Hit-point die result must be an integer within the hit die range.')
   }
-  if (!Number.isInteger(maximumHitPoints) || maximumHitPoints < 1) {
-    throw new RangeError('Maximum hit points must be a positive integer.')
+  if (characterLevel !== getTotalCharacterLevel(character) + 1) {
+    throw new RangeError('Level up must add exactly one character level.')
+  }
+  const previousProgression = getCharacterClassEntries(character)
+  const entryKey = (entry: CharacterClassEntry) => JSON.stringify([entry.name, entry.source])
+  const previousByKey = new Map(previousProgression.map((entry) => [entryKey(entry), entry]))
+  const nextByKey = new Map(nextProgression.map((entry) => [entryKey(entry), entry]))
+  const targetKey = JSON.stringify([hpChoice.className, hpChoice.classSource])
+  const invalidProgression =
+    previousByKey.size !== previousProgression.length ||
+    nextByKey.size !== nextProgression.length ||
+    [...previousByKey.keys()].some((key) => !nextByKey.has(key)) ||
+    nextProgression.filter((entry) => {
+      const previous = previousByKey.get(entryKey(entry))
+      return !previous || entry.levels !== previous.levels
+    }).length !== 1 ||
+    nextProgression.some((entry) => {
+      const previous = previousByKey.get(entryKey(entry))
+      if (!previous) return entry.levels !== 1 || entryKey(entry) !== targetKey
+      const delta = entry.levels - previous.levels
+      return (
+        delta < 0 ||
+        delta > 1 ||
+        (delta === 1 && entryKey(entry) !== targetKey) ||
+        entry.subclass !== previous.subclass ||
+        entry.subclassSource !== previous.subclassSource
+      )
+    })
+  if (invalidProgression) {
+    throw new RangeError('Level up must add exactly one source-qualified class level.')
   }
 
   const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
@@ -597,6 +655,13 @@ export function applyLevelUp(
     ),
     gain,
   ].sort((a, b) => a.characterLevel - b.characterLevel)
+  const projectedCharacter: Character = {
+    ...character,
+    ...progressionResult.characterPatch,
+    hitPointGains,
+    provenance: progressionResult.provenanceUpdate,
+  }
+  const maximumHitPoints = projectMaximumHitPoints(projectedCharacter, calculationContext)
 
   return {
     ...progressionResult,
@@ -609,6 +674,64 @@ export function applyLevelUp(
       },
       hitPointsInitialized: true,
     },
+  }
+}
+
+/** Remove the last earned level and clamp current HP after every grant has been reconciled. */
+export function applyLevelDown(
+  character: Character,
+  ledger: ProvenanceLedger,
+  calculationContext: CharacterCalculationContext,
+): LevelDownResult {
+  const progression = getCharacterClassEntries(character)
+  if (getTotalCharacterLevel(character) <= 1 || progression.length === 0) {
+    throw new RangeError('Cannot go below level 1.')
+  }
+  const lastGain = [...(character.hitPointGains ?? [])]
+    .sort((a, b) => b.characterLevel - a.characterLevel)
+    .find((gain) =>
+      progression.some(
+        (entry) =>
+          entry.name === gain.className &&
+          entry.source === gain.classSource &&
+          entry.levels === gain.classLevel,
+      ),
+    )
+  const fallback = progression[progression.length - 1]
+  const className = lastGain?.className ?? fallback.name
+  const classSource = lastGain?.classSource ?? fallback.source
+  const classLevel = lastGain?.classLevel ?? fallback.levels
+  const targetIndex = progression.findIndex(
+    (entry) => entry.name === className && entry.source === classSource,
+  )
+  const nextProgression = progression.flatMap((entry, index) => {
+    if (index !== targetIndex) return [entry]
+    return entry.levels > 1 ? [{ ...entry, levels: entry.levels - 1 }] : []
+  })
+  const removedSpellCount = getSpellsGrantedAtLevel(
+    ledger,
+    className,
+    classLevel,
+    classSource,
+  ).length
+  const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
+  const projectedCharacter: Character = {
+    ...character,
+    ...progressionResult.characterPatch,
+    provenance: progressionResult.provenanceUpdate,
+  }
+  const maximumHitPoints = projectMaximumHitPoints(projectedCharacter, calculationContext)
+  return {
+    characterPatch: {
+      ...progressionResult.characterPatch,
+      hitPoints: {
+        ...character.hitPoints,
+        current: Math.min(character.hitPoints.current, maximumHitPoints),
+      },
+    },
+    provenanceUpdate: progressionResult.provenanceUpdate,
+    removedClassName: className,
+    removedSpellCount,
   }
 }
 

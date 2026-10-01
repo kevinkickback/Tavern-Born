@@ -1,4 +1,5 @@
 import { resolveArmorType } from '@/lib/calculations/armorClass'
+import { enforceArmorEquipmentRestrictions } from '@/lib/calculations/itemEquippable'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { generateEquipmentId } from '@/lib/character/ids'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
@@ -15,6 +16,24 @@ export type ManualProficiencyDomain =
   | 'armor'
   | 'weapons'
   | 'savingThrows'
+
+/** Set the rule and reconcile already-equipped armor in one character patch. */
+export function setEquipmentRestrictionsIgnoredCommand(
+  character: Character,
+  ignored: boolean,
+): Partial<Character> {
+  return {
+    variantRules: { ...character.variantRules, ignoreEquipRestrictions: ignored },
+    ...(ignored
+      ? {}
+      : {
+          equipment: enforceArmorEquipmentRestrictions(
+            character.equipment,
+            character.proficiencies.armor,
+          ).equipment,
+        }),
+  }
+}
 
 function buildEquipment(item: Item5e): Equipment {
   const armorType = resolveArmorType(item.type ?? '')
