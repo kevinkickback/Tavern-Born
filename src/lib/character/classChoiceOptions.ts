@@ -4,7 +4,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
-import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
+import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
@@ -13,6 +13,7 @@ import type {
   Feat5e,
   Item5e,
   ItemMastery5e,
+  ItemPropertyReference,
   OptionalFeatureLike,
   Raw5ePrereq,
   Subclass5e,
@@ -159,14 +160,15 @@ function getItemPropertyLabels(
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
   return getItemPropertyReferences(item).flatMap((value) => {
-    const code = value.split('|')[0]?.trim() ?? ''
-    return [code, getItemPropertyLabel(value, itemPropertyByAbbr)].filter(
-      (label): label is string => Boolean(label),
+    const uid = getItemPropertyUid(value)
+    const code = uid.split('|')[0]?.trim() ?? ''
+    return [code, getItemPropertyLabel(uid, itemPropertyByAbbr)].filter((label): label is string =>
+      Boolean(label),
     )
   })
 }
 
-function getItemPropertyReferences(item: Item5e): string[] {
+function getItemPropertyReferences(item: Item5e): ItemPropertyReference[] {
   const raw = (item as Record<string, unknown>).property
   const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
   return values.flatMap((value) => {
@@ -174,7 +176,8 @@ function getItemPropertyReferences(item: Item5e): string[] {
     if (!value || typeof value !== 'object') return []
     const record = value as Record<string, unknown>
     const reference = record.uid ?? record.property ?? record.abbreviation ?? record.name
-    return typeof reference === 'string' ? [reference] : []
+    if (typeof reference !== 'string') return []
+    return [typeof record.note === 'string' ? { uid: reference, note: record.note } : reference]
   })
 }
 

@@ -343,7 +343,7 @@ describe('class choice option resolution', () => {
             name: 'Greatsword',
             source: 'PHB',
             type: 'M',
-            property: [{ uid: 'H|PHB' }],
+            property: [{ uid: 'H|PHB', note: 'when wielded' }],
             weaponCategory: 'martial',
           },
           {
@@ -357,7 +357,7 @@ describe('class choice option resolution', () => {
             name: 'Hafted Staff',
             source: 'HB',
             type: 'M',
-            property: [{ uid: 'H|HB' }],
+            property: [{ uid: 'H|HB', note: 'when braced' }],
             weaponCategory: 'martial',
           },
         ],
@@ -368,7 +368,7 @@ describe('class choice option resolution', () => {
 
     expect(result.map((option) => option.reference.name)).toEqual(['Hafted Staff', 'Longsword'])
     expect(result.find((option) => option.reference.name === 'Hafted Staff')).toMatchObject({
-      presentation: { propertyLabels: ['Hafted'] },
+      presentation: { propertyLabels: ['Hafted (when braced)'] },
     })
   })
 
