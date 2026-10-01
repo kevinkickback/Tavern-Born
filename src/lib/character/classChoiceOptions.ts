@@ -4,6 +4,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
@@ -12,6 +13,7 @@ import type {
   Feat5e,
   Item5e,
   ItemMastery5e,
+  ItemPropertyReference,
   OptionalFeatureLike,
   Raw5ePrereq,
   Subclass5e,
@@ -158,22 +160,24 @@ function getItemPropertyLabels(
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
   return getItemPropertyReferences(item).flatMap((value) => {
-    const code = value.split('|')[0]?.trim() ?? ''
-    return [code, itemPropertyByAbbr[code.toUpperCase()]].filter((label): label is string =>
+    const uid = getItemPropertyUid(value)
+    const code = uid.split('|')[0]?.trim() ?? ''
+    return [code, getItemPropertyLabel(uid, itemPropertyByAbbr)].filter((label): label is string =>
       Boolean(label),
     )
   })
 }
 
-function getItemPropertyReferences(item: Item5e): string[] {
+function getItemPropertyReferences(item: Item5e): ItemPropertyReference[] {
   const raw = (item as Record<string, unknown>).property
   const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
   return values.flatMap((value) => {
     if (typeof value === 'string') return [value]
     if (!value || typeof value !== 'object') return []
     const record = value as Record<string, unknown>
-    const reference = record.property ?? record.abbreviation ?? record.name
-    return typeof reference === 'string' ? [reference] : []
+    const reference = record.uid ?? record.property ?? record.abbreviation ?? record.name
+    if (typeof reference !== 'string') return []
+    return [typeof record.note === 'string' ? { uid: reference, note: record.note } : reference]
   })
 }
 
@@ -355,10 +359,9 @@ function getItemPropertyDisplayLabels(
   item: Item5e,
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
-  return getItemPropertyReferences(item).map((value) => {
-    const code = value.split('|')[0]?.trim() ?? value
-    return itemPropertyByAbbr[code.toUpperCase()] ?? code
-  })
+  return getItemPropertyReferences(item).map((value) =>
+    getItemPropertyLabel(value, itemPropertyByAbbr),
+  )
 }
 
 function getItemPresentation(

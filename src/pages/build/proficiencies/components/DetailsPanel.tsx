@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
+import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { formatCopperValue } from '@/lib/calculations/currency'
 import {
   getArmorCalculationDescription,
@@ -15,7 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
-import type { Item5e, Language5e } from '@/types/5etools'
+import type { Item5e, ItemPropertyReference, Language5e } from '@/types/5etools'
 
 /**
  * Standard language type labels — display-only mapping; no structured
@@ -53,9 +54,12 @@ function formatDamageType(code?: string): string {
   return DAMAGE_TYPE_LABELS[code] ?? code
 }
 
-function formatProperties(props?: string[], propertyByAbbr?: Record<string, string>): string {
+function formatProperties(
+  props?: ItemPropertyReference[],
+  propertyByAbbr?: Readonly<Record<string, string>>,
+): string {
   if (!props?.length) return '—'
-  return props.map((p) => propertyByAbbr?.[p] ?? p).join(', ')
+  return props.map((property) => getItemPropertyLabel(property, propertyByAbbr ?? {})).join(', ')
 }
 
 function formatToolType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
@@ -202,7 +206,12 @@ function WeaponDetails({ item }: { item: Item5e }) {
         {versatileDmg && <DetailRow label="Versatile" value={versatileDmg} />}
         <DetailRow
           label="Range"
-          value={item.range ?? (item.property?.includes('T') ? 'Thrown' : null)}
+          value={
+            item.range ??
+            (item.property?.some((property) => getItemPropertyUid(property).split('|')[0] === 'T')
+              ? 'Thrown'
+              : null)
+          }
         />
         <DetailRow label="Properties" value={formatProperties(item.property, itemPropertyByAbbr)} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />

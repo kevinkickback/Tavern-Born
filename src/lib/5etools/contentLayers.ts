@@ -19,12 +19,14 @@ function recordIdentity(value: unknown): string {
   const record = value as Record<string, unknown>
   const name = normalizeIdentityPart(record.name)
   const source = normalizeIdentityPart(record.source)
-  if (name || source) {
+  if (name) {
     return `entity:${name}|${source}|${normalizeIdentityPart(record._sourceType)}`
   }
 
   const abbreviation = normalizeIdentityPart(record.abbreviation)
   if (abbreviation) return `abbreviation:${abbreviation}|${source}`
+
+  if (source) return `entity:|${source}|${normalizeIdentityPart(record._sourceType)}`
 
   const id = normalizeIdentityPart(record.id)
   if (id) return `id:${id}|${source}`
@@ -63,6 +65,14 @@ function subclassFeatureIdentity(value: unknown): string {
 function sourceIdentity(value: unknown): string {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
   return `source:${normalizeIdentityPart((value as Record<string, unknown>).abbreviation)}`
+}
+
+function itemPropertyIdentity(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
+  const record = value as Record<string, unknown>
+  const abbreviation = normalizeIdentityPart(record.abbreviation)
+  if (!abbreviation) return recordIdentity(value)
+  return `item-property:${abbreviation}|${normalizeIdentityPart(record.source)}`
 }
 
 function mergeCollection<T>(
@@ -310,6 +320,7 @@ export function findLayerDependencyIssues(
 
 const COLLECTION_IDENTITIES: Partial<Record<GameDataCollectionKey, (value: never) => string>> = {
   classFeatures: classFeatureIdentity,
+  itemProperties: itemPropertyIdentity,
   sources: sourceIdentity,
 }
 
