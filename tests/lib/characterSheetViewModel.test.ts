@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
+import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
@@ -116,6 +117,8 @@ describe('createCharacterSheetViewModel', () => {
     const character = makeCharacterFixture({
       details: {
         organizationSelectionKey: 'The Harpers|SCAG',
+        faction: 'The {@skill Perception|PHB} Keepers',
+        rank: 'Lead {@skill Investigation|PHB}',
         factionNotes: 'Watch for {@skill Perception|PHB} clues.',
         allies: [
           {
@@ -145,6 +148,9 @@ describe('createCharacterSheetViewModel', () => {
     expect(
       mapCharacterSheet2014(viewModel).textFields['Background_Organisation.Left'],
     ).not.toContain('{@')
+    expect(mapCharacterSheet2014Official(viewModel).textFields.FactionName).toBe(
+      'The Perception Keepers — Lead Investigation',
+    )
   })
 
   test('resolves source-qualified entities and merges nested subrace data before mapping', () => {
