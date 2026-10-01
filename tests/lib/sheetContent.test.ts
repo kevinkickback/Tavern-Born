@@ -109,6 +109,95 @@ describe('Automatic sheet content and lossless overflow', () => {
     expect(notes(doc)).toContain('1d12; 0 used')
   }, 30_000)
 
+  test('MPMB action lists contain names while full descriptions continue in notes', async () => {
+    const character = createEmptyCharacter({
+      name: 'Action export review',
+      originSystem: '2024',
+      manualActions: [
+        {
+          id: 'manual:action',
+          name: 'Search the room',
+          kind: 'action',
+          description: 'Search for hidden doors.',
+          source: { kind: 'manual', name: 'Search the room' },
+          active: true,
+        },
+        {
+          id: 'manual:bonus',
+          name: 'Rally allies',
+          kind: 'bonus-action',
+          description: 'Give allies a signal.',
+          source: { kind: 'manual', name: 'Rally allies' },
+          active: true,
+        },
+        {
+          id: 'manual:reaction',
+          name: 'Duck for cover',
+          kind: 'reaction',
+          description: 'Move behind nearby cover.',
+          source: { kind: 'manual', name: 'Duck for cover' },
+          active: true,
+        },
+      ],
+    })
+    const vm = createCharacterSheetViewModel(character, {})
+    let report: SheetExportReport | undefined
+    const full = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-custom', {
+        pages: { spells: false },
+        text: { descriptions: 'full', overflow: 'notes' },
+        onReport: (result) => {
+          report = result
+        },
+      }),
+    )
+
+    expect(full.getForm().getTextField('Action 1').getText()).toBe('Search the room')
+    expect(full.getForm().getTextField('Bonus Action 1').getText()).toBe('Rally allies')
+    expect(full.getForm().getTextField('Reaction 1').getText()).toBe('Duck for cover')
+    expect(notes(full)).toContain('Search the room: Search for hidden doors')
+    expect(notes(full)).toContain('Rally allies: Give allies a signal')
+    expect(notes(full)).toContain('Duck for cover: Move behind nearby cover')
+    expect(report?.preserved.map((section) => section.id)).toEqual(
+      expect.arrayContaining([
+        'action-details:action',
+        'action-details:bonus-action',
+        'action-details:reaction',
+      ]),
+    )
+
+    const defaultExport = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-custom', {
+        pages: { spells: false },
+      }),
+    )
+    expect(defaultExport.getForm().getTextField('Action 1').getText()).toBe('Search the room')
+    expect(notes(defaultExport)).toContain('Search the room: Search for hidden doors')
+
+    let noNotesReport: SheetExportReport | undefined
+    const noNotes = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-custom', {
+        pages: { spells: false, notes: false },
+        onReport: (result) => {
+          noNotesReport = result
+        },
+      }),
+    )
+    expect(noNotes.getForm().getTextField('Action 1').getText()).toBe('Search the room')
+    expect(noNotesReport?.omitted.map((section) => section.id)).toContain('action-details:action')
+
+    const namesOnly = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-custom', {
+        pages: { spells: false },
+        text: { descriptions: 'names', overflow: 'notes' },
+      }),
+    )
+    expect(namesOnly.getForm().getTextField('Action 1').getText()).toBe('Search the room')
+    expect(notes(namesOnly)).not.toContain('Search for hidden doors')
+    expect(notes(namesOnly)).not.toContain('Give allies a signal')
+    expect(notes(namesOnly)).not.toContain('Move behind nearby cover')
+  }, 90_000)
+
   test.each([
     '2014-official',
     '2014-custom',

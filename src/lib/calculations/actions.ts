@@ -432,10 +432,17 @@ export function deriveWeaponActions(
             return parsed ? [parsed] : []
           })
         : []
-      const propertyLabels = properties.map((property) =>
-        getItemPropertyLabel(property, context.propertyLookup ?? {}),
-      )
-      if (item.dmg2) propertyLabels.push(`Versatile ${item.dmg2}`)
+      const propertyLabels = [
+        ...new Set(
+          properties.map((property) => {
+            if (getItemPropertyUid(property).split('|')[0].toUpperCase() === 'V' && item.dmg2) {
+              return `Versatile ${item.dmg2}`
+            }
+            return getItemPropertyLabel(property, context.propertyLookup ?? {})
+          }),
+        ),
+      ]
+      if (item.dmg2 && !propertyKeys.includes('V')) propertyLabels.push(`Versatile ${item.dmg2}`)
 
       return {
         id: `weapon:${item.id}`,

@@ -1271,7 +1271,7 @@ describe('characterSheetPdf', () => {
           dmg1: '1d8',
           dmg2: '1d10',
           dmgType: 'S',
-          properties: ['V'],
+          properties: ['V', 'V|XPHB', 'L', 'H', 'LD'],
           weight: 3,
         },
         {
@@ -1309,7 +1309,12 @@ describe('characterSheetPdf', () => {
     })
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as Class5e]
     const map = mapCharacterSheetViewModel(
-      prepareViewModel(character, classesData, [], [], [], { V: 'Versatile' }),
+      prepareViewModel(character, classesData, [], [], [], {
+        V: 'Versatile',
+        L: 'Light',
+        H: 'Heavy',
+        LD: 'Loading',
+      }),
       '2014',
     )
 
@@ -1317,7 +1322,7 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Attack.1.To Hit']).toBe('+6')
     expect(map.textFields['Attack.1.Damage']).toBe('1d8 + 3')
     expect(map.textFields['Attack.1.Damage Type']).toBe('Slashing')
-    expect(map.textFields['Attack.1.Description']).toContain('Versatile 1d10')
+    expect(map.textFields['Attack.1.Description']).toBe('Versatile 1d10, Light, Heavy, Loading')
     expect(map.textFields['HD1 Level']).toBe('5')
     expect(map.textFields['HD1 Die']).toBe('d10')
     expect(map.textFields['HD1 Used']).toBe('2')
