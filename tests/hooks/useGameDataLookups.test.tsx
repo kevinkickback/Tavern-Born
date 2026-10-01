@@ -60,7 +60,10 @@ describe('named game data lookup hooks', () => {
 
   test('uses repaired property labels in character actions', () => {
     const data = makeGameDataFixture({
-      itemProperties: [{ abbreviation: 'F', source: 'PHB', entries: [{ name: 'Finesse' }] }],
+      itemProperties: [
+        { abbreviation: 'F', source: 'PHB', entries: [{ name: 'Finesse' }] },
+        { abbreviation: 'F', source: 'HB', entries: [{ name: 'Flexible' }] },
+      ],
     })
     data.lookups = { ...buildGameDataLookups(data), itemPropertyByAbbr: {} }
     useGameDataStore.setState({ gameData: data })
@@ -75,14 +78,14 @@ describe('named game data lookup hooks', () => {
           equipped: true,
           dmg1: '1d8',
           dmgType: 'slashing',
-          properties: ['F'],
+          properties: ['F|HB'],
         },
       ],
     })
 
     const { result } = renderHook(() => useCharacterActions(character))
     expect(result.current.find((action) => action.kind === 'attack')?.properties).toContain(
-      'Finesse',
+      'Flexible',
     )
   })
 

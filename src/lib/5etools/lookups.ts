@@ -149,14 +149,17 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
   }
 }
 
-/** Build an abbreviation → display name map from parsed itemProperty records. */
+/** Index each property's source-qualified UID and retain an abbreviation fallback for legacy data. */
 export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const prop of itemProperties) {
-    if (!prop.abbreviation || result[prop.abbreviation]) continue
+    if (!prop.abbreviation) continue
+    const abbreviation = prop.abbreviation.trim().toUpperCase()
+    const source = prop.source?.trim().toUpperCase()
     const first = Array.isArray(prop.entries) && prop.entries.length > 0 ? prop.entries[0] : null
     const name = (first as { name?: string } | null)?.name ?? prop.abbreviation
-    result[prop.abbreviation] = name
+    if (source) result[`${abbreviation}|${source}`] = name
+    result[abbreviation] ??= name
   }
   return result
 }

@@ -10,7 +10,10 @@ export function getItemPropertyLabel(
 ): string {
   const uid = getItemPropertyUid(property)
   const abbreviation = uid.trim().split('|')[0]
-  const name = propertyByAbbr[abbreviation.toUpperCase()] ?? abbreviation
+  const name =
+    propertyByAbbr[uid.trim().toUpperCase()] ??
+    propertyByAbbr[abbreviation.toUpperCase()] ??
+    abbreviation
   const note = typeof property === 'string' ? undefined : property.note
   return note ? `${name} (${note})` : name
 }

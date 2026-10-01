@@ -275,7 +275,7 @@ export interface GameDataLookups {
   subclassesByKey: Record<string, Subclass5e>
   creaturesByKey?: Record<string, Creature5e>
   itemLookup: Map<string, Item5e>
-  /** Parsed from data/items-base.json → .itemProperty[]. Maps abbreviation → display name. */
+  /** Maps source-qualified property UIDs and legacy abbreviations to display names. */
   itemPropertyByAbbr: Record<string, string>
   /** Parsed from data/items-base.json → .itemType[]. Maps abbreviation → display name. */
   itemTypeByAbbr: Record<string, string>
