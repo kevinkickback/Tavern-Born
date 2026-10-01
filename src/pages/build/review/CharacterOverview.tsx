@@ -927,11 +927,16 @@ export function CharacterOverview({
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold">{organizationName}</h3>
-                  {organizationDescription && (
+                  {organizationDescription && customOrganization ? (
                     <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                       {organizationDescription}
                     </p>
-                  )}
+                  ) : organizationDescription ? (
+                    <GameContent
+                      entry={organizationDescription}
+                      className="mt-1 text-sm text-muted-foreground"
+                    />
+                  ) : null}
                 </div>
               </div>
             </OverviewSection>

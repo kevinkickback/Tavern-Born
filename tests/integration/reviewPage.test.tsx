@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -389,6 +389,39 @@ describe('BuildReviewPage', () => {
     expect(screen.getByText('A group without a name yet.')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'Custom Organization emblem' })).toBeTruthy()
     expect(screen.queryByText('Old Faction')).toBeNull()
+  })
+
+  test('renders catalog organization descriptions as game content', async () => {
+    const user = userEvent.setup()
+    const data = useGameDataStore.getState().gameData!
+    const organization = {
+      name: 'Arcane Lodge',
+      source: 'TEST',
+      description: 'Members use {@spell magic missile|phb}.',
+    }
+    const updatedData = { ...data, organizations: [organization] }
+    updatedData.lookups = buildGameDataLookups(updatedData)
+    useGameDataStore.setState({ gameData: updatedData })
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      details: {
+        ...current.details,
+        organizationSelectionKey: getOrganizationKey(organization.name, organization.source),
+      },
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByText('Organization'))
+    expect(screen.getByText('Arcane Lodge')).toBeTruthy()
+    expect(screen.getByText(/magic missile/i)).toBeTruthy()
+    expect(screen.queryByText(/\{@spell/)).toBeNull()
   })
 })
 
