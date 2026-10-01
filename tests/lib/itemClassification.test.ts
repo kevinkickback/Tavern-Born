@@ -7,6 +7,7 @@ import {
   getNormalizedItemTraits,
   inferArmorCategory,
   inferWeaponRange,
+  isSelectableEquipmentItem,
   validateItemTypeFallbacks,
 } from '@/lib/calculations/itemClassification'
 
@@ -23,6 +24,11 @@ const TYPES = {
 }
 
 describe('item classification', () => {
+  test('keeps generic magic variant templates out of equipment choices', () => {
+    expect(isSelectableEquipmentItem({ type: 'GV|XDMG' })).toBe(false)
+    expect(isSelectableEquipmentItem({ type: 'HA|PHB' })).toBe(true)
+    expect(isSelectableEquipmentItem({ type: 'G', items: ['nested'] })).toBe(false)
+  })
   test.each([
     ['LA', 'light'],
     ['MA', 'medium'],

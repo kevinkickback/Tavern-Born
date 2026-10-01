@@ -14,8 +14,8 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5427.8 KiB after the interface updates and merged item-property handling.
-  rendererCode: 5.31 * MIB,
+  // Reviewed at 5439.6 KiB after adding 5etools copy resolution and its loader diagnostics.
+  rendererCode: 5440 * KIB,
   // Reviewed at 426.9 KiB with source-qualified subclass choices, filtered-rule rebuilding,
   // and inactive replacement-choice state in the startup data graph.
   initialRendererScript: 428 * KIB,

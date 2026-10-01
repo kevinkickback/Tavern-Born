@@ -41,10 +41,30 @@ git pull --ff-only
 git switch -c feat/short-description
 ```
 
-Commit and push the branch, then open a pull request:
+Before each push, pull current `main` into the branch, inspect the exact branch diff against
+`origin/main`, and run the relevant checks. Review the changed behavior and nearby callers for
+correctness, error handling, and regressions; passing lint and tests is not a substitute for this
+local code review. Check both the committed diff and any uncommitted changes that will be included
+in the push. Fix findings and repeat the review before pushing:
 
 ```bash
+git pull --no-rebase origin main
+git diff --check origin/main...HEAD
+git diff --check
+git diff --stat origin/main...HEAD
+git diff origin/main...HEAD
+git diff
 npm run check:pr
+```
+
+When a reviewer finds an issue on a pull request, inspect the related code paths for other instances or
+missed edge cases while fixing it. Run focused tests and repeat the local diff review before pushing
+the fix. One completed advisory review satisfies the advisory review step; request another only when
+a later change needs fresh review, rather than after every fix push.
+
+Commit and push the reviewed branch, then open a pull request:
+
+```bash
 git push -u origin feat/short-description
 gh pr create --base main --fill
 gh pr merge --auto --squash
