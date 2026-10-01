@@ -8,6 +8,7 @@ import {
   getEntityLookupKey,
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
+import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { makeClassFixture, makeSpellFixture } from '../../fixtures/gameDataFixtures'
 
 describe('5etools/lookups', () => {
@@ -24,6 +25,23 @@ describe('5etools/lookups', () => {
       'H|HB': 'Hafted',
       S: 'special',
       'S|PHB': 'special',
+    })
+  })
+
+  test('ignores malformed property fields accepted by the parser', () => {
+    const properties = parseItemProperties({
+      itemProperty: [
+        null,
+        { abbreviation: 5, source: 'PHB', entries: 'invalid' },
+        { abbreviation: 'S', source: 5, entries: 'invalid' },
+        { abbreviation: 'H', source: 'PHB', entries: [null, 5, { name: 'Heavy' }] },
+      ],
+    })
+
+    expect(buildItemPropertyLookup(properties)).toMatchObject({
+      S: 'S',
+      H: 'Heavy',
+      'H|PHB': 'Heavy',
     })
   })
 

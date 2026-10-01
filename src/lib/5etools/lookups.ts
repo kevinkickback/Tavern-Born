@@ -153,13 +153,17 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
 export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const prop of itemProperties) {
-    if (!prop.abbreviation) continue
+    if (!prop || typeof prop !== 'object' || typeof prop.abbreviation !== 'string') continue
     const abbreviation = prop.abbreviation.trim().toUpperCase()
-    const source = prop.source?.trim().toUpperCase()
+    if (!abbreviation) continue
+    const source = typeof prop.source === 'string' ? prop.source.trim().toUpperCase() : ''
     const directName = typeof prop.name === 'string' ? prop.name.trim() : ''
-    const entryName = prop.entries
-      ?.find((entry) => typeof entry.name === 'string' && entry.name.trim())
-      ?.name?.trim()
+    const entries = Array.isArray(prop.entries) ? prop.entries : []
+    const namedEntry = entries.find(
+      (entry) =>
+        entry && typeof entry === 'object' && typeof entry.name === 'string' && entry.name.trim(),
+    )
+    const entryName = namedEntry?.name?.trim()
     const name = directName || entryName || prop.abbreviation
     if (source) result[`${abbreviation}|${source}`] = name
     result[abbreviation] ??= name
