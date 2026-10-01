@@ -10,8 +10,11 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useItemLookup, useSpellLookup } from '@/hooks/data/useGameData'
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import {
+  useItemLookup,
+  useRetainedCharacterDetails,
+  useSpellLookup,
+} from '@/hooks/data/useGameData'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
@@ -31,7 +34,6 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import {
   CUSTOM_ORGANIZATION_KEY,
   getOrganizationKey,
@@ -39,10 +41,8 @@ import {
 } from '@/lib/character/organizationConstants'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { ClassFeature, OptionalFeatureLike } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
-import type { Character, CharacterClassChoiceOption, Feat, Feature } from '@/types/character'
+import type { Character, Feat, Feature } from '@/types/character'
 
 const ACTION_GROUPS: Array<{ kind: CharacterAction['kind']; label: string }> = [
   { kind: 'attack', label: 'Attacks' },
@@ -214,7 +214,10 @@ export function CharacterOverview({
   const itemLookup = useItemLookup()
   const [failedOrganizationImage, setFailedOrganizationImage] = useState('')
   const filteredData = useFilteredGameData()
-  const rawData = useGameDataStore((state) => state.gameData)
+  const { featureEntriesByKey, choiceDetailsById } = useRetainedCharacterDetails(
+    character,
+    calculation.raceResolution.mergedRace,
+  )
   const availableSpellKeys = useMemo(
     () =>
       new Set(filteredData.spells.map((spell) => getSpellReferenceKey(spell.name, spell.source))),
@@ -251,90 +254,6 @@ export function CharacterOverview({
     (customOrganization
       ? character.details.organizationCustomImage
       : selectedOrganization?.imagePath) || ''
-  const featureEntriesByKey = useMemo(() => {
-    const classFeatureRecords = calculation.classes.flatMap((classData) => {
-      const classEntry = classes.find(
-        (entry) => entry.name === classData.name && entry.source === classData.source,
-      )
-      const selectedSubclass = classEntry
-        ? getSelectedSubclassData(classData, classEntry)
-        : undefined
-      return [
-        ...(classData.classFeatures ?? []).filter(
-          (feature): feature is ClassFeature => typeof feature !== 'string',
-        ),
-        ...(classData.classFeatureRefs ?? []).flatMap((reference) =>
-          reference.feature ? [reference.feature] : [],
-        ),
-        ...collectSubclassFeatures(selectedSubclass),
-      ]
-    })
-    const records: Array<{ name: string; source?: string; entries?: unknown[] }> = [
-      ...filteredData.classFeatures,
-      ...(filteredData.optionalfeatures as OptionalFeatureLike[]),
-      ...classFeatureRecords,
-      ...(rawData?.classFeatures ?? []),
-      ...((rawData?.optionalfeatures ?? []) as OptionalFeatureLike[]),
-    ]
-    const byKey = new Map<string, unknown[]>()
-    for (const record of records) {
-      if (!record.source) continue
-      const key = getEntityLookupKey(record.name, record.source)
-      if (!byKey.has(key) || (!byKey.get(key)?.length && record.entries?.length)) {
-        byKey.set(key, record.entries ?? [])
-      }
-    }
-    const race = calculation.raceResolution.mergedRace
-    if (race) {
-      for (const trait of getRaceTraits(race)) {
-        const key = getEntityLookupKey(trait.name, race.source)
-        if (!byKey.has(key)) byKey.set(key, trait.entries)
-      }
-    }
-    return byKey
-  }, [
-    calculation.classes,
-    calculation.raceResolution.mergedRace,
-    classes,
-    filteredData.classFeatures,
-    filteredData.optionalfeatures,
-    rawData,
-  ])
-  const resolveChoiceOption = (option: CharacterClassChoiceOption): unknown[] | undefined => {
-    if (!option.source) return undefined
-    const key = getEntityLookupKey(option.name, option.source)
-    if (
-      option.entityType === 'classFeature' ||
-      option.entityType === 'subclassFeature' ||
-      option.entityType === 'optionalFeature'
-    ) {
-      return featureEntriesByKey.get(key)
-    }
-    if (option.entityType === 'item') {
-      const item = resolveItemReference(option, itemLookup)
-      return item ? (item.entries ?? []) : undefined
-    }
-    if (option.entityType === 'feat') {
-      const feat = [...filteredData.feats, ...(rawData?.feats ?? [])].find(
-        (entry) => getEntityLookupKey(entry.name, entry.source) === key,
-      )
-      return feat ? (feat.entries ?? []) : undefined
-    }
-    const creature = [...filteredData.creatures, ...(rawData?.creatures ?? [])].find(
-      (entry) => getEntityLookupKey(entry.name, entry.source) === key,
-    )
-    if (!creature) return undefined
-    return [
-      ...(creature.entries ?? []),
-      ...(['trait', 'action', 'bonus', 'reaction'] as const).flatMap((kind) =>
-        (creature[kind] ?? []).map((entry) => ({
-          type: 'entries',
-          name: entry.name,
-          entries: entry.entries ?? [],
-        })),
-      ),
-    ]
-  }
   const racialFeatureNames = new Set(
     Object.entries(character.provenance.features ?? {})
       .filter(([, tags]) =>
@@ -641,8 +560,9 @@ export function CharacterOverview({
                       >
                         {choice.selected.length ? (
                           <ul className="space-y-2">
-                            {choice.selected.map((option) => {
-                              const entries = resolveChoiceOption(option)
+                            {choice.selected.map((option, index) => {
+                              const details = choiceDetailsById.get(choice.choiceId)?.[index]
+                              const entries = details?.entries
                               return (
                                 <li
                                   key={`${option.entityType}|${option.name}|${option.source ?? ''}`}
@@ -652,8 +572,11 @@ export function CharacterOverview({
                                       {option.name}
                                       {option.source ? ` (${option.source})` : ''}
                                     </span>
-                                    {entries === undefined && (
+                                    {(!details || details.availability === 'missing') && (
                                       <Badge variant="outline">Unresolved source</Badge>
+                                    )}
+                                    {details?.availability === 'source-unavailable' && (
+                                      <Badge variant="outline">Source unavailable</Badge>
                                     )}
                                   </div>
                                   {entries?.length ? <GameContent entry={entries} /> : null}

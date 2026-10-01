@@ -97,8 +97,7 @@ npm run dev
 > **⚠️ Important:** Tavern Born only includes content from the 2014/2024 D&D 5e System Reference Documents (SRDs), which offer a limited selection of rules and character options.
 
 For options beyond the SRD, you must provide your own compatible 5etools JSON files from a local folder or remote URL (HTTPS only).
-Unsure where to start? [5etools community wiki](https://wiki.tercept.net/en/5eTools/InstallGuide) might know a thing or two about finding
-compatible files and getting set up.
+Unsure where to begin? The [5etools community wiki](https://wiki.tercept.net/en/5eTools/InstallGuide#step-1-downloading-the-site) might know a thing or two about finding compatible files.
 
 ## 📄 License
 

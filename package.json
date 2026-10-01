@@ -2,7 +2,7 @@
   "name": "tavern-born",
   "description": "A desktop Dungeons & Dragons 5th Edition character creator.",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": {
     "name": "KevinKickback",
     "email": "kevinkickback@users.noreply.github.com"
@@ -24,6 +24,7 @@
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:boundaries": "depcruise --config .dependency-cruiser.cjs src electron",
     "check:dead-code": "knip --no-progress --exclude duplicates",
+    "report:dead-code:production": "knip --production --no-progress --no-exit-code",
     "check:health": "npm run check:dead-code && npm run check:boundaries",
     "check:pr": "npm run check:health && npx biome ci . && npm run build && npm run check:bundle && npm run test:coverage && npm run test:e2e",
     "check:release": "node scripts/check-release.mjs",

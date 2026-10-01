@@ -53,6 +53,7 @@ const MONSTER_PRESERVED = new Set([
   'familiar',
 ])
 const ITEM_PRESERVED = new Set(['lootTables', 'tier'])
+const RESERVED_PROPS = new Set(['__proto__', 'constructor', 'prototype'])
 const ENTRY_PROPS = [
   'action',
   'bonus',
@@ -69,14 +70,55 @@ const ENTRY_PROPS = [
   'mythicHeader',
 ]
 
-function object(value: unknown): Record<string, unknown> {
+function object(value: unknown, field?: string): Record<string, unknown> {
+  if (field !== undefined) value = ownValue(object(value), field)
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
-    : {}
+    : Object.create(null)
+}
+
+function pathParts(path: string): string[] {
+  const parts = path.split('.')
+  if (parts.some((part) => RESERVED_PROPS.has(part)))
+    throw new Error(`unsafe copy property ${path}`)
+  return parts
+}
+
+function assertSafeData(value: unknown): void {
+  if (!value || typeof value !== 'object') return
+  for (const [field, nested] of Object.entries(value)) {
+    pathParts(field)
+    if (field === 'prop' && typeof nested === 'string') pathParts(nested)
+    if (field === 'props' && Array.isArray(nested)) {
+      for (const property of nested) {
+        if (typeof property === 'string') pathParts(property)
+      }
+    }
+    assertSafeData(nested)
+  }
+}
+
+function ownValue(record: Record<string, unknown>, field: string): unknown {
+  return Object.getOwnPropertyDescriptor(record, field)?.value
+}
+
+function directive(value: unknown): Record<string, unknown> {
+  return Object.assign(Object.create(null), object(value))
+}
+
+function ownArray(record: Record<string, unknown>, field: string): unknown[] {
+  const value = ownValue(record, field)
+  return Array.isArray(value) ? value : []
 }
 
 function key(value: { name: string; source: string }): string {
-  return `${value.name.trim().toLowerCase()}|${value.source.trim().toLowerCase()}`
+  return ['name', 'source']
+    .map((field) =>
+      String(ownValue(value, field) ?? '')
+        .trim()
+        .toLowerCase(),
+    )
+    .join('|')
 }
 
 function clone<T>(value: T): T {
@@ -88,24 +130,25 @@ function array(value: unknown): unknown[] {
 }
 
 function at(root: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((value, part) => object(value)[part], root)
+  return pathParts(path).reduce<unknown>((value, part) => ownValue(object(value), part), root)
 }
 
 function setAt(root: Record<string, unknown>, path: string, value: unknown): void {
-  const parts = path.split('.')
+  const parts = pathParts(path)
   let target = root
   for (const part of parts.slice(0, -1)) {
-    if (!target[part] || typeof target[part] !== 'object') target[part] = {}
+    if (!ownValue(target, part) || typeof target[part] !== 'object')
+      target[part] = Object.create(null)
     target = object(target[part])
   }
   target[parts[parts.length - 1]] = value
 }
 
 function removeAt(root: Record<string, unknown>, path: string): void {
-  const parts = path.split('.')
+  const parts = pathParts(path)
   const parent = parts
     .slice(0, -1)
-    .reduce<Record<string, unknown>>((target, part) => object(target[part]), root)
+    .reduce<Record<string, unknown>>((target, part) => object(ownValue(target, part)), root)
   delete parent[parts[parts.length - 1]]
 }
 
@@ -136,11 +179,12 @@ function replaceText(
 }
 
 function itemName(value: unknown): unknown {
-  return object(value).name ?? value
+  return ownValue(object(value), 'name') ?? value
 }
 
 function proficiencyBonus(record: Record5e): number {
-  const cr = object(record.cr).cr ?? record.cr
+  const raw = ownValue(record, 'cr')
+  const cr = raw && typeof raw === 'object' ? ownValue(object(raw), 'cr') : raw
   const number =
     typeof cr === 'string' && cr.includes('/')
       ? Number(cr.split('/')[0]) / Number(cr.split('/')[1])
@@ -149,14 +193,16 @@ function proficiencyBonus(record: Record5e): number {
 }
 
 function shortName(record: Record5e, title: boolean): string {
-  const named = record.isNamedCreature === true
+  const named = ownValue(record, 'isNamedCreature') === true
+  const fullName = String(ownValue(record, 'name') ?? '')
+  const short = ownValue(record, 'shortName')
   const prefix = named ? '' : title ? 'The ' : 'the '
-  if (record.shortName === true) return `${prefix}${record.name}`
+  if (short === true) return `${prefix}${fullName}`
   const raw =
-    typeof record.shortName === 'string'
-      ? record.shortName
-      : record.name.split(',')[0].replace(/(?:adult|ancient|young) \w+ (dragon|dracolich)/gi, '$1')
-  const name = named && !record.shortName ? raw.split(' ')[0] : raw.toLowerCase()
+    typeof short === 'string'
+      ? short
+      : fullName.split(',')[0].replace(/(?:adult|ancient|young) \w+ (dragon|dracolich)/gi, '$1')
+  const name = named && !short ? raw.split(' ')[0] : raw.toLowerCase()
   return `${prefix}${named && title ? name.replace(/^./, (char) => char.toUpperCase()) : name}`
 }
 
@@ -164,11 +210,12 @@ function resolveVariables(value: unknown, record: Record5e): unknown {
   if (typeof value === 'string')
     return value.replace(/<\$([^$]+)\$>/g, (match, token: string) => {
       const [mode, ability] = token.split('__')
-      const score = typeof record[ability] === 'number' ? (record[ability] as number) : Number.NaN
+      const scoreValue = ownValue(record, ability)
+      const score = typeof scoreValue === 'number' ? scoreValue : Number.NaN
       const bonus = Math.floor((score - 10) / 2)
       if (mode === 'short_name') return shortName(record, false)
       if (mode === 'title_short_name') return shortName(record, true)
-      if (mode === 'name') return record.name
+      if (mode === 'name') return String(ownValue(record, 'name') ?? '')
       if (mode === 'spell_dc' || mode === 'dc') return String(8 + bonus + proficiencyBonus(record))
       if (mode === 'to_hit') {
         const total = bonus + proficiencyBonus(record)
@@ -178,7 +225,7 @@ function resolveVariables(value: unknown, record: Record5e): unknown {
         return bonus === 0 ? '' : bonus > 0 ? ` + ${bonus}` : ` - ${-bonus}`
       if (mode === 'damage_avg') {
         const expression = ability.replace(/\b(str|dex|con|int|wis|cha)\b/g, (name) =>
-          String(Math.floor((Number(record[name]) - 10) / 2)),
+          String(Math.floor((Number(ownValue(record, name)) - 10) / 2)),
         )
         if (/^\s*-?\d+(?:\.\d+)?\s*\+\s*-?\d+(?:\.\d+)?\s*$/.test(expression)) {
           return String(
@@ -197,12 +244,12 @@ function resolveVariables(value: unknown, record: Record5e): unknown {
 }
 
 function applySpellMod(target: Record5e, mode: string, mod: Record<string, unknown>): void {
-  const spellcasting = Array.isArray(target.spellcasting) ? target.spellcasting : []
+  const spellcasting = ownArray(target, 'spellcasting')
   const named = typeof mod.name === 'string' ? mod.name.trim().toLowerCase() : ''
   const entry = named
     ? spellcasting.find(
         (value) =>
-          String(object(value).name ?? '')
+          String(ownValue(object(value), 'name') ?? '')
             .trim()
             .toLowerCase() === named,
       )
@@ -212,10 +259,10 @@ function applySpellMod(target: Record5e, mode: string, mod: Record<string, unkno
   const casting = object(entry)
   const mergeSpellGroup = (group: Record<string, unknown>, additions: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(additions)) {
-      if (Array.isArray(value))
-        group[key] = [...(Array.isArray(group[key]) ? (group[key] as unknown[]) : []), ...value]
+      const current = ownValue(group, key)
+      if (Array.isArray(value)) group[key] = [...(Array.isArray(current) ? current : []), ...value]
       else if (value && typeof value === 'object') {
-        if (!group[key]) group[key] = {}
+        if (!current || typeof current !== 'object') group[key] = Object.create(null)
         mergeSpellGroup(object(group[key]), object(value))
       } else group[key] = value
     }
@@ -223,13 +270,9 @@ function applySpellMod(target: Record5e, mode: string, mod: Record<string, unkno
   if (mode === 'addSpells') {
     for (const [section, value] of Object.entries(mod)) {
       if (section === 'mode' || section === 'name') continue
-      if (Array.isArray(value))
-        casting[section] = [
-          ...(Array.isArray(casting[section]) ? (casting[section] as unknown[]) : []),
-          ...value,
-        ]
+      if (Array.isArray(value)) casting[section] = [...ownArray(casting, section), ...value]
       else if (value && typeof value === 'object') {
-        if (!casting[section]) casting[section] = {}
+        if (!ownValue(casting, section)) casting[section] = Object.create(null)
         mergeSpellGroup(object(casting[section]), object(value))
       }
     }
@@ -238,17 +281,17 @@ function applySpellMod(target: Record5e, mode: string, mod: Record<string, unkno
   const replace = (spells: unknown[], edits: unknown[]): unknown[] => {
     const next = [...spells]
     for (const edit of edits) {
-      const change = object(edit)
+      const change = directive(edit)
       const index = next.indexOf(change.replace)
       if (index < 0) throw new Error(`spell ${String(change.replace)} not found`)
       next.splice(index, 1, ...array(change.with))
     }
     return next.sort((a, b) => String(a).localeCompare(String(b)))
   }
-  const spellLevels = object(casting.spells)
+  const spellLevels = object(casting, 'spells')
   for (const [level, changes] of Object.entries(object(mod.spells))) {
-    const block = object(spellLevels[level])
-    const spells = Array.isArray(block.spells) ? block.spells : []
+    const block = object(ownValue(spellLevels, level))
+    const spells = ownArray(block, 'spells')
     block.spells =
       mode === 'replaceSpells'
         ? replace(spells, array(changes))
@@ -258,14 +301,13 @@ function applySpellMod(target: Record5e, mode: string, mod: Record<string, unkno
     if (section === 'mode' || section === 'name' || section === 'spells') continue
     if (Array.isArray(changes)) {
       if (mode === 'removeSpells')
-        casting[section] = (
-          Array.isArray(casting[section]) ? (casting[section] as unknown[]) : []
-        ).filter((spell) => !changes.includes(spell))
+        casting[section] = ownArray(casting, section).filter((spell) => !changes.includes(spell))
       continue
     }
     for (const [usage, edits] of Object.entries(object(changes))) {
-      const sectionRecord = object(casting[section])
-      const spells = Array.isArray(sectionRecord[usage]) ? (sectionRecord[usage] as unknown[]) : []
+      const sectionRecord = object(ownValue(casting, section))
+      const current = ownValue(sectionRecord, usage)
+      const spells = Array.isArray(current) ? current : []
       sectionRecord[usage] =
         mode === 'replaceSpells'
           ? replace(spells, array(edits))
@@ -279,7 +321,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
     removeAt(target, prop)
     return
   }
-  const mod = object(raw)
+  const mod = directive(raw)
   const mode = mod.mode
   const existing = at(target, prop)
   const items = array(mod.items)
@@ -311,14 +353,15 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
       return
     }
     const replace = mod.replace
-    const pattern = object(replace).regex
+    const replacement = directive(replace)
+    const pattern = replacement.regex
     const index =
       typeof pattern === 'string'
         ? existing.findIndex((value) =>
-            new RegExp(pattern, String(object(replace).flags ?? '')).test(String(itemName(value))),
+            new RegExp(pattern, String(replacement.flags ?? '')).test(String(itemName(value))),
           )
-        : typeof object(replace).index === 'number'
-          ? (object(replace).index as number)
+        : typeof replacement.index === 'number'
+          ? replacement.index
           : existing.findIndex((value) => itemName(value) === replace)
     if (index < 0 || index >= existing.length) throw new Error(`${prop} replacement not found`)
     existing.splice(index, 1, ...items)
@@ -343,7 +386,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
             : entry
         const copy = object(entry)
         for (const property of properties) {
-          if (typeof property === 'string' && copy[property]) {
+          if (typeof property === 'string' && ownValue(copy, property)) {
             copy[property] = replaceText(
               copy[property],
               re,
@@ -367,10 +410,10 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
   }
   if (mode === 'addSkills') {
     const proficiency = proficiencyBonus(target)
-    const skills = { ...object(target.skill) }
+    const skills = directive(ownValue(target, 'skill'))
     for (const [skill, rank] of Object.entries(object(mod.skills))) {
       const abilityName = getSkillAbility(skill)
-      const ability = abilityName ? target[toAbilityAbbrev(abilityName) ?? ''] : undefined
+      const ability = abilityName ? ownValue(target, toAbilityAbbrev(abilityName) ?? '') : undefined
       if (typeof ability !== 'number' || !Number.isFinite(proficiency))
         throw new Error(`cannot calculate ${skill}`)
       const bonus = Math.floor((ability - 10) / 2) + Number(rank) * proficiency
@@ -381,9 +424,9 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
     return
   }
   if (mode === 'addSenses') {
-    const senses = Array.isArray(target.senses) ? target.senses : []
+    const senses = ownArray(target, 'senses')
     for (const senseValue of array(mod.senses)) {
-      const sense = object(senseValue)
+      const sense = directive(senseValue)
       const name = String(sense.type)
       const range = Number(sense.range)
       const index = senses.findIndex((value) =>
@@ -399,7 +442,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
   if (mode === 'maxSize') {
     const sizes = ['T', 'S', 'M', 'L', 'H', 'G']
     const max = sizes.indexOf(String(mod.max))
-    const current = Array.isArray(target.size) ? target.size : []
+    const current = ownArray(target, 'size')
     target.size = current.filter((size) => sizes.indexOf(String(size)) <= max)
     if (!(target.size as unknown[]).length) target.size = [mod.max]
     return
@@ -408,7 +451,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
     const record = object(existing)
     const properties = mod.prop === '*' ? Object.keys(record) : [String(mod.prop)]
     for (const property of properties) {
-      const original = record[property]
+      const original = ownValue(record, property)
       let result =
         mode === 'scalarAddProp'
           ? Number(original) + Number(mod.scalar)
@@ -448,9 +491,10 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
   }
   if (mode === 'scalarMultXp') {
     // Tavern Born does not consume the derived CR-to-XP field. Preserve explicit XP if present.
-    const challenge = object(target.cr)
-    if (typeof challenge.xp === 'number') {
-      const value = challenge.xp * Number(mod.scalar)
+    const challenge = object(target, 'cr')
+    const xp = ownValue(challenge, 'xp')
+    if (typeof xp === 'number') {
+      const value = xp * Number(mod.scalar)
       challenge.xp = mod.floor ? Math.floor(value) : value
     }
     return
@@ -459,6 +503,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
 }
 
 function applyMods(target: Record5e, mods: Record<string, unknown>): void {
+  assertSafeData(mods)
   const rank = (prop: string) => (prop === '_' ? 1 : prop === '*' ? 2 : 0)
   const keys = Object.keys(mods).sort((a, b) => rank(a) - rank(b))
   for (const prop of keys) {
@@ -484,9 +529,12 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
   const visit = (record: T): T => {
     const identity = key(record)
     if (resolved.has(identity)) return resolved.get(identity) as T
-    if (!('_copy' in record)) return record
-    const copy = object((record as Record5e)._copy)
+    if (!Object.getOwnPropertyDescriptor(record, '_copy')) return record
     try {
+      // Validate the whole directive before any operation, including later failing operations.
+      assertSafeData(record)
+      const own = clone(record) as Record5e
+      const copy = directive(ownValue(own, '_copy'))
       if (active.has(identity)) throw new Error('copy cycle')
       active.add(identity)
       if (typeof copy.name !== 'string' || typeof copy.source !== 'string')
@@ -494,16 +542,17 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       const parent = byKey.get(key(copy as Record5e))
       if (!parent) throw new Error(`missing parent ${copy.name}|${copy.source}`)
       const inherited = clone(visit(parent)) as Record5e
-      if (inherited._copy) throw new Error(`unresolved parent ${copy.name}|${copy.source}`)
-      const own = clone(record) as Record5e
-      const preserve = object(copy._preserve)
+      assertSafeData(inherited)
+      if (ownValue(inherited, '_copy'))
+        throw new Error(`unresolved parent ${copy.name}|${copy.source}`)
+      const preserve = directive(copy._preserve)
       const protectedProps = kind === 'item' ? ITEM_PRESERVED : MONSTER_PRESERVED
       for (const [field, value] of Object.entries(inherited)) {
-        if (own[field] === null) {
+        if (ownValue(own, field) === null) {
           delete own[field]
           continue
         }
-        if (own[field] !== undefined) continue
+        if (ownValue(own, field) !== undefined) continue
         if (
           (PRESERVED.has(field) || protectedProps.has(field)) &&
           preserve['*'] !== true &&
@@ -516,16 +565,18 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       for (const reference of Array.isArray(copy._templates) ? copy._templates : []) {
         const template = templateByKey.get(key(reference as Record5e))
         if (!template) throw new Error(`missing template ${key(reference as Record5e)}`)
-        if (template._copy) throw new Error(`unresolved template ${key(reference as Record5e)}`)
+        if (ownValue(template, '_copy'))
+          throw new Error(`unresolved template ${key(reference as Record5e)}`)
+        assertSafeData(template)
         appliedTemplates.push(template)
-        for (const [field, value] of Object.entries(object(object(template.apply)._root))) {
-          if (!(field in record)) own[field] = clone(value)
+        for (const [field, value] of Object.entries(object(object(template, 'apply'), '_root'))) {
+          if (!Object.getOwnPropertyDescriptor(record, field)) own[field] = clone(value)
         }
       }
-      const mergedMods: Record<string, unknown[]> = {}
+      const mergedMods: Record<string, unknown[]> = Object.create(null)
       for (const modMap of [
         object(copy._mod),
-        ...appliedTemplates.map((template) => object(object(template.apply)._mod)),
+        ...appliedTemplates.map((template) => object(object(template, 'apply'), '_mod')),
       ]) {
         for (const [prop, operations] of Object.entries(modMap)) {
           mergedMods[prop] ??= []
