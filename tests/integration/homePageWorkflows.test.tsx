@@ -460,6 +460,59 @@ describe('home page integration workflows', () => {
     expect(screen.getByText(/broken.tbc: Could not parse JSON/)).toBeTruthy()
   })
 
+  test('shows import results for one character when game content cannot be checked', async () => {
+    const user = userEvent.setup()
+    const fileInput = mockDynamicFileInput()
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    const file = new File([JSON.stringify(makeCharacterFixture())], 'hero.tbc')
+    Object.defineProperty(fileInput, 'files', { configurable: true, get: () => [file] })
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(await screen.findByText(/1 imported · 0 failed/)).toBeTruthy()
+    expect(screen.getByText(/Game content is not loaded/)).toBeTruthy()
+    expect(toast.success).not.toHaveBeenCalledWith('Character imported successfully')
+  })
+
+  test('does not show a content warning when no backup entry was imported', async () => {
+    const user = userEvent.setup()
+    const invalid = { ...makeCharacterFixture(), name: '' }
+    const backup = new File(
+      [JSON.stringify({ kind: 'tavern-born-library', version: 1, characters: [invalid] })],
+      'invalid.tbclib',
+    )
+    const fileInput = mockDynamicFileInput()
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    Object.defineProperty(fileInput, 'files', { configurable: true, get: () => [backup] })
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(await screen.findByText(/0 imported · 1 failed/)).toBeTruthy()
+    expect(screen.queryByText(/Game content is not loaded/)).toBeNull()
+  })
+
+  test('reports a failed batch write without claiming an import succeeded', async () => {
+    const user = userEvent.setup()
+    const valid = makeCharacterFixture({ name: 'Valid' })
+    const backup = new File(
+      [JSON.stringify({ kind: 'tavern-born-library', version: 1, characters: [valid] })],
+      'party.tbclib',
+    )
+    vi.spyOn(useCharacterStore.getState(), 'importCharacters').mockRejectedValueOnce(
+      new DOMException('Storage full', 'QuotaExceededError'),
+    )
+    const fileInput = mockDynamicFileInput()
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    Object.defineProperty(fileInput, 'files', { configurable: true, get: () => [backup] })
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(await screen.findByText(/0 imported · 1 failed/)).toBeTruthy()
+    expect(screen.getByText(/party.tbclib · Valid: Storage full/)).toBeTruthy()
+    expect(screen.queryByText(/Game content is not loaded/)).toBeNull()
+    expect(useCharacterStore.getState().characters).toHaveLength(0)
+  })
+
   test('imports valid backup entries while showing individual validation failures', async () => {
     const user = userEvent.setup()
     const valid = makeCharacterFixture({ id: 'valid', name: 'Valid' })

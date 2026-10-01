@@ -129,6 +129,54 @@ describe('characterStore', () => {
     expect(state.characters[1]).toEqual(added)
   })
 
+  test('importCharacters waits for one durable write of the whole batch', async () => {
+    const existing = makeCharacterFixture({ id: 'duplicate-id', name: 'Original' })
+    useCharacterStore.setState({ characters: [existing] })
+    storageMocks.setItem.mockClear()
+    let finishWrite: (() => void) | undefined
+    storageMocks.setItem.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve
+        }),
+    )
+
+    const importPromise = useCharacterStore
+      .getState()
+      .importCharacters([
+        makeCharacterFixture({ id: 'duplicate-id', name: 'First' }),
+        makeCharacterFixture({ id: 'second-id', name: 'Second' }),
+      ])
+    await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+    expect(useCharacterStore.getState().characters).toHaveLength(3)
+    finishWrite?.()
+
+    const imported = await importPromise
+    expect(imported).toHaveLength(2)
+    expect(imported[0]?.id).not.toBe(existing.id)
+    expect(
+      new Set(useCharacterStore.getState().characters.map((character) => character.id)).size,
+    ).toBe(3)
+    expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+  })
+
+  test('importCharacters rolls back the batch when persistence fails', async () => {
+    const existing = makeCharacterFixture({ id: 'existing', name: 'Original' })
+    useCharacterStore.setState({ characters: [existing] })
+    storageMocks.setItem.mockClear()
+    storageMocks.setItem.mockRejectedValueOnce(
+      new DOMException('Storage full', 'QuotaExceededError'),
+    )
+
+    await expect(
+      useCharacterStore
+        .getState()
+        .importCharacters([makeCharacterFixture({ id: 'imported', name: 'Imported' })]),
+    ).rejects.toMatchObject({ name: 'QuotaExceededError' })
+    expect(useCharacterStore.getState().characters).toEqual([existing])
+    expect(storageMocks.setItem).toHaveBeenCalledTimes(2)
+  })
+
   test('setCharacters repairs duplicate IDs from persisted data', () => {
     const first = makeCharacterFixture({ id: 'duplicate-id', name: 'First' })
     const second = makeCharacterFixture({ id: 'duplicate-id', name: 'Second' })

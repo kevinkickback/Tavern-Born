@@ -137,7 +137,8 @@ or entire-library backups. Import accepts multiple `.tbc`/JSON files or a `.tbcl
 each character through the store's compatibility path, and retains valid entries when others fail.
 The store resolves ID collisions; transfer preparation assigns collision-free imported names. Saved
 source-qualified choices and portraits remain in each record even if the current catalog lacks their
-content.
+content. `importCharacters()` validates the prepared batch and awaits one durable library write;
+on a write failure it restores the in-memory library before the import result is reported.
 
 ## Schema compatibility
 

@@ -68,6 +68,7 @@ interface CharacterState {
 
   setCharacters: (characters: Character[]) => void
   addCharacter: (character: Character) => Character
+  importCharacters: (characters: readonly Character[]) => Promise<Character[]>
   updateCharacter: (id: string, updates: Partial<Character>) => void
   /** Silent system correction. Clean drafts receive the patch in both snapshots;
    * dirty drafts receive it only in-memory so unrelated user edits are never persisted. */
@@ -235,6 +236,55 @@ export const useCharacterStore = create<CharacterState>()(
           throw new Error('Character could not be added')
         }
         return addedCharacter
+      },
+
+      importCharacters: (candidates) => {
+        const waitForPreviousSave = activeSavePromise?.catch(() => undefined) ?? Promise.resolve()
+        const importPromise = waitForPreviousSave.then(async () => {
+          if (candidates.length === 0) return []
+
+          const existingIds = new Set(get().characters.map((character) => character.id))
+          const imported = candidates.map((candidate) => {
+            const parsed = parseCharacterData(candidate)
+            if (!parsed.data) throw new Error(parsed.error ?? 'Character could not be imported')
+            return ensureUniqueCharacterId(parsed.data, existingIds)
+          })
+          const importedIds = new Set(imported.map((character) => character.id))
+
+          try {
+            await set((state) => ({ characters: [...state.characters, ...imported] }))
+          } catch (error) {
+            try {
+              await set((state) => ({
+                characters: state.characters.filter((character) => !importedIds.has(character.id)),
+                ...(state.activeCharacterId && importedIds.has(state.activeCharacterId)
+                  ? {
+                      activeCharacterId: null,
+                      activeCharacter: null,
+                      isActiveCharacterDirty: false,
+                    }
+                  : {}),
+              }))
+            } catch {
+              // The failed write did not replace the durable library. Keep the
+              // imported records out of memory even if rollback persistence fails.
+            }
+            throw error
+          }
+          return imported
+        })
+
+        const writePromise = importPromise.then(() => undefined)
+        activeSavePromise = writePromise
+        void writePromise.then(
+          () => {
+            if (activeSavePromise === writePromise) activeSavePromise = null
+          },
+          () => {
+            if (activeSavePromise === writePromise) activeSavePromise = null
+          },
+        )
+        return importPromise
       },
 
       updateCharacter: (id, updates) =>

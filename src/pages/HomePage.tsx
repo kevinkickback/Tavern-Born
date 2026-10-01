@@ -444,6 +444,12 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       }
       const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
       let isBulkImport = files.length > 1
+      const existingNames = useCharacterStore.getState().characters.map((value) => value.name)
+      const pendingImports: Array<{
+        label: string
+        originalName: string
+        character: Character
+      }> = []
       for (const file of files) {
         const filename = file.name || 'character.tbc'
         const isBackupFile = filename.toLowerCase().endsWith(LIBRARY_BACKUP_EXTENSION)
@@ -466,32 +472,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
           isBulkImport ||= prepared.isLibraryBackup
           report.failures.push(...prepared.failures)
           for (const entry of prepared.characters) {
-            try {
-              const existingNames = useCharacterStore
-                .getState()
-                .characters.map((value) => value.name)
-              const name = getImportedCharacterName(entry.character.name, existingNames)
-              const added = useCharacterStore
-                .getState()
-                .addCharacter(
-                  name === entry.character.name ? entry.character : { ...entry.character, name },
-                )
-              report.imported.push({
-                label: entry.label,
-                name: added.name,
-                originalName: entry.character.name,
-                idChanged: added.id !== entry.character.id,
-                missingContent: availability
-                  ? characterUsesContentOutsideCatalog(added, availability)
-                  : false,
-              })
-            } catch (error) {
-              report.failures.push({
-                label: entry.label,
-                reason: error instanceof Error ? error.message : 'Unknown error',
-                kind: 'storage',
-              })
-            }
+            const name = getImportedCharacterName(entry.character.name, existingNames)
+            existingNames.push(name)
+            pendingImports.push({
+              label: entry.label,
+              originalName: entry.character.name,
+              character:
+                name === entry.character.name ? entry.character : { ...entry.character, name },
+            })
           }
         } catch (error) {
           report.failures.push({
@@ -501,12 +489,51 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
           })
         }
       }
+      if (pendingImports.length > 0) {
+        try {
+          const added = await useCharacterStore
+            .getState()
+            .importCharacters(pendingImports.map((entry) => entry.character))
+          added.forEach((character, index) => {
+            const entry = pendingImports[index]
+            if (!entry) return
+            report.imported.push({
+              label: entry.label,
+              name: character.name,
+              originalName: entry.originalName,
+              idChanged: character.id !== entry.character.id,
+              missingContent: availability
+                ? characterUsesContentOutsideCatalog(character, availability)
+                : false,
+            })
+          })
+        } catch (error) {
+          const reason =
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof error.message === 'string'
+              ? error.message
+              : 'Unknown storage error'
+          report.failures.push(
+            ...pendingImports.map((entry) => ({
+              label: entry.label,
+              reason,
+              kind: 'storage' as const,
+            })),
+          )
+        }
+      }
       if (isBulkImport) {
         setImportReport(report)
         return
       }
       if (report.imported.length === 1 && report.failures.length === 0) {
-        toast.success('Character imported successfully')
+        if (report.contentCheckUnavailable || report.imported[0]?.missingContent) {
+          setImportReport(report)
+        } else {
+          toast.success('Character imported successfully')
+        }
         return
       }
       const failure = report.failures[0]
@@ -875,14 +902,15 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                   </ul>
                 </section>
               )}
-              {(importReport?.contentCheckUnavailable ||
-                importReport?.imported.some((entry) => entry.missingContent)) && (
-                <p className="text-muted-foreground">
-                  {importReport.contentCheckUnavailable
-                    ? 'Game content is not loaded, so saved source references could not be checked. Load the required content before editing affected characters.'
-                    : 'Some characters reference game content that is not currently loaded. Their saved choices remain intact; load the required content to use them fully.'}
-                </p>
-              )}
+              {(importReport?.imported.length ?? 0) > 0 &&
+                (importReport?.contentCheckUnavailable ||
+                  importReport?.imported.some((entry) => entry.missingContent)) && (
+                  <p className="text-muted-foreground">
+                    {importReport.contentCheckUnavailable
+                      ? 'Game content is not loaded, so saved source references could not be checked. Load the required content before editing affected characters.'
+                      : 'Some characters reference game content that is not currently loaded. Their saved choices remain intact; load the required content to use them fully.'}
+                  </p>
+                )}
             </div>
           </ScrollArea>
           <DialogFooter>

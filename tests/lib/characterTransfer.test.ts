@@ -112,6 +112,13 @@ describe('character transfer', () => {
     expect(getImportedCharacterName('Hero', ['hero'])).toBe('Hero (Imported)')
     expect(getImportedCharacterName('Hero', ['hero', 'HERO (IMPORTED)'])).toBe('Hero (Imported 2)')
     expect(getImportedCharacterName('Other', ['Hero'])).toBe('Other')
+    const longName = 'H'.repeat(100)
+    const firstCollision = getImportedCharacterName(longName, [longName])
+    const secondCollision = getImportedCharacterName(longName, [longName, firstCollision])
+    expect(firstCollision).toHaveLength(100)
+    expect(secondCollision).toHaveLength(100)
+    expect(firstCollision).toMatch(/ \(Imported\)$/)
+    expect(secondCollision).toMatch(/ \(Imported 2\)$/)
     expect(
       prepareUnsupportedCharacterDownloads([
         { name: 'Old/Hero', schemaVersion: 0 },

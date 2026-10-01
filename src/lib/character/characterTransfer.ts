@@ -1,4 +1,5 @@
 import type { Character } from '@/types/character'
+import { MAX_CHARACTER_NAME_LENGTH } from '@/types/characterSchema'
 
 export const MAX_LIBRARY_BACKUP_SIZE = 250 * 1024 * 1024
 export const LIBRARY_BACKUP_EXTENSION = '.tbclib'
@@ -144,13 +145,13 @@ export function getImportedCharacterName(
   const normalized = new Set(existingNames.map((name) => name.trim().toLocaleLowerCase()))
   if (!normalized.has(sourceName.trim().toLocaleLowerCase())) return sourceName
   const baseName = sourceName.trim() || 'Unnamed Character'
-  let candidate = `${baseName} (Imported)`
-  let sequence = 2
-  while (normalized.has(candidate.toLocaleLowerCase())) {
-    candidate = `${baseName} (Imported ${sequence})`
+  let sequence = 1
+  while (true) {
+    const suffix = sequence === 1 ? ' (Imported)' : ` (Imported ${sequence})`
+    const candidate = `${baseName.slice(0, MAX_CHARACTER_NAME_LENGTH - suffix.length).trimEnd()}${suffix}`
+    if (!normalized.has(candidate.toLocaleLowerCase())) return candidate
     sequence += 1
   }
-  return candidate
 }
 
 function cloneCharacter(character: Character): Character {
