@@ -156,8 +156,11 @@ export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Recor
     if (!prop.abbreviation) continue
     const abbreviation = prop.abbreviation.trim().toUpperCase()
     const source = prop.source?.trim().toUpperCase()
-    const first = Array.isArray(prop.entries) && prop.entries.length > 0 ? prop.entries[0] : null
-    const name = (first as { name?: string } | null)?.name ?? prop.abbreviation
+    const directName = typeof prop.name === 'string' ? prop.name.trim() : ''
+    const entryName = prop.entries
+      ?.find((entry) => typeof entry.name === 'string' && entry.name.trim())
+      ?.name?.trim()
+    const name = directName || entryName || prop.abbreviation
     if (source) result[`${abbreviation}|${source}`] = name
     result[abbreviation] ??= name
   }

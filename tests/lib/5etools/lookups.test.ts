@@ -15,9 +15,16 @@ describe('5etools/lookups', () => {
     const lookup = buildItemPropertyLookup([
       { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] },
       { abbreviation: 'H', source: 'HB', entries: [{ name: 'Hafted' }] },
+      { abbreviation: 'S', source: 'PHB', name: 'special' },
     ])
 
-    expect(lookup).toMatchObject({ H: 'Heavy', 'H|PHB': 'Heavy', 'H|HB': 'Hafted' })
+    expect(lookup).toMatchObject({
+      H: 'Heavy',
+      'H|PHB': 'Heavy',
+      'H|HB': 'Hafted',
+      S: 'special',
+      'S|PHB': 'special',
+    })
   })
 
   test('buildGameDataLookups creates composite-key lookups for classes, feats, spells, features, optional features, and subclasses', () => {

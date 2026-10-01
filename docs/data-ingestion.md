@@ -48,10 +48,10 @@ optional-feature catalogs.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names
-such as Ability Score Improvement do not collapse during composition. Item-property records have no
-top-level name, so composition identifies each by abbreviation and source before rebuilding the
-  display lookup. The lookup indexes each source-qualified property UID and retains abbreviation
-  fallbacks for older saved characters. External-source configuration remains persisted in its existing shape for upgrade
+such as Ability Score Improvement do not collapse during composition. Item properties are identified
+by abbreviation and source, whether their display name is top-level or in an entry. The lookup
+indexes each source-qualified property UID and retains abbreviation fallbacks for older saved
+characters. External-source configuration remains persisted in its existing shape for upgrade
 compatibility, while the effective cache identity records both the bundled base and external layer.
 
 The external directory/URL validator inventories every recognized top-level resource it can validate.

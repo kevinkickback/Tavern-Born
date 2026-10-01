@@ -25,6 +25,18 @@ describe('game-data content layers', () => {
     })
   })
 
+  test('replaces a named property with an entry-named definition of the same UID', () => {
+    const bundled = { abbreviation: 'S', source: 'PHB', name: 'special' }
+    const overlay = { abbreviation: 'S', source: 'PHB', entries: [{ name: 'Special updated' }] }
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ itemProperties: [bundled] }),
+      makeGameDataFixture({ itemProperties: [overlay] }),
+    ])
+
+    expect(composed.itemProperties).toEqual([overlay])
+    expect(composed.lookups?.itemPropertyByAbbr['S|PHB']).toBe('Special updated')
+  })
+
   test('retains bundled weapon property names after layering', () => {
     const bundledItems = JSON.parse(
       readFileSync(join(process.cwd(), 'resources/srd/core/data/items-base.json'), 'utf8'),
@@ -38,6 +50,7 @@ describe('game-data content layers', () => {
       A: 'Ammunition',
       H: 'Heavy',
       '2H': 'Two-Handed',
+      'S|PHB': 'special',
     })
   })
 

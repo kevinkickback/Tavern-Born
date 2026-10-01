@@ -67,6 +67,14 @@ function sourceIdentity(value: unknown): string {
   return `source:${normalizeIdentityPart((value as Record<string, unknown>).abbreviation)}`
 }
 
+function itemPropertyIdentity(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
+  const record = value as Record<string, unknown>
+  const abbreviation = normalizeIdentityPart(record.abbreviation)
+  if (!abbreviation) return recordIdentity(value)
+  return `item-property:${abbreviation}|${normalizeIdentityPart(record.source)}`
+}
+
 function mergeCollection<T>(
   base: readonly T[],
   overlay: readonly T[],
@@ -312,6 +320,7 @@ export function findLayerDependencyIssues(
 
 const COLLECTION_IDENTITIES: Partial<Record<GameDataCollectionKey, (value: never) => string>> = {
   classFeatures: classFeatureIdentity,
+  itemProperties: itemPropertyIdentity,
   sources: sourceIdentity,
 }
 
