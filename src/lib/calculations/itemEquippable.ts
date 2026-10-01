@@ -6,7 +6,7 @@ import { getNormalizedItemTraits } from './itemClassification'
  * Returns true if the character's armor proficiency list covers the given armor type.
  * Uses substring matching to handle varying label formats from different source books.
  */
-export function hasArmorProficiency(
+function hasArmorProficiency(
   proficiencies: string[],
   armorType: 'light' | 'medium' | 'heavy' | 'shield',
 ): boolean {
@@ -19,32 +19,48 @@ export interface EnforcedArmorEquipment {
   unequippedIds: string[]
 }
 
+export type ArmorEquipRestriction =
+  | { kind: 'slot-conflict'; conflictingItem: Equipment }
+  | { kind: 'missing-proficiency'; armorType: 'light' | 'medium' | 'heavy' | 'shield' }
+
+/** Check the same armor slots and proficiency policy used when restrictions are re-enabled. */
+export function getArmorEquipRestriction(
+  item: Equipment,
+  equippedItems: readonly Equipment[],
+  armorProficiencies: string[],
+): ArmorEquipRestriction | null {
+  const armorType = getArmorCategory(item)
+  if (armorType === 'none') return null
+
+  const conflictingItem = equippedItems.find((other) => {
+    if (other.id === item.id || !other.equipped) return false
+    const otherArmorType = getArmorCategory(other)
+    return armorType === 'shield'
+      ? otherArmorType === 'shield'
+      : otherArmorType !== 'none' && otherArmorType !== 'shield'
+  })
+  if (conflictingItem) return { kind: 'slot-conflict', conflictingItem }
+  if (!hasArmorProficiency(armorProficiencies, armorType)) {
+    return { kind: 'missing-proficiency', armorType }
+  }
+  return null
+}
+
 /** Unequips armor that violates proficiency or the single body-armor/shield slots. */
 export function enforceArmorEquipmentRestrictions(
   equipment: Equipment[],
   armorProficiencies: string[],
 ): EnforcedArmorEquipment {
-  let bodyArmorSlotFilled = false
-  let shieldSlotFilled = false
+  const retainedEquipped: Equipment[] = []
   const unequippedIds: string[] = []
 
   const nextEquipment = equipment.map((item) => {
     if (!item.equipped) return item
-
-    const armorType = getArmorCategory(item)
-    if (armorType === 'none') return item
-
-    const isShield = armorType === 'shield'
-    const slotIsFilled = isShield ? shieldSlotFilled : bodyArmorSlotFilled
-    const isProficient = hasArmorProficiency(armorProficiencies, armorType)
-
-    if (!isProficient || slotIsFilled) {
+    if (getArmorEquipRestriction(item, retainedEquipped, armorProficiencies)) {
       unequippedIds.push(item.id)
       return { ...item, equipped: false }
     }
-
-    if (isShield) shieldSlotFilled = true
-    else bodyArmorSlotFilled = true
+    if (getArmorCategory(item) !== 'none') retainedEquipped.push(item)
     return item
   })
 

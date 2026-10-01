@@ -183,6 +183,31 @@ describe('useEquipment hook', () => {
     expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(false)
   })
 
+  test('blocks a second body armor slot and nonproficient shield when equipping', () => {
+    const base = makeCharacterFixture()
+    const character = makeCharacterFixture({
+      proficiencies: { ...base.proficiencies, armor: ['light armor'] },
+      equipment: [
+        { id: 'worn', name: 'Leather', type: 'LA', quantity: 1, equipped: true },
+        { id: 'other', name: 'Studded Leather', type: 'LA', quantity: 1, equipped: false },
+        { id: 'shield', name: 'Shield', type: 'S', quantity: 1, equipped: false },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { result } = renderHook(() => useEquipment())
+    act(() => result.current.toggleEquip('other'))
+    act(() => result.current.toggleEquip('shield'))
+
+    expect(
+      useCharacterStore.getState().activeCharacter?.equipment.map((item) => item.equipped),
+    ).toEqual([true, false, false])
+  })
+
   test('updateCurrency should persist denomination counters', () => {
     const character = makeCharacterFixture({
       id: 'equip-hook-currency',
