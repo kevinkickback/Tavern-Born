@@ -13,6 +13,7 @@ import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
+import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -177,6 +178,10 @@ export function RulesPage() {
         provenance: result.provenanceUpdate,
         variantRules: { ...rules, [key]: checked },
       })
+      return
+    }
+    if (key === 'ignoreEquipRestrictions') {
+      updateCharacter(character.id, setEquipmentRestrictionsIgnoredCommand(character, checked))
       return
     }
     updateRules({ [key]: checked })
