@@ -35,7 +35,7 @@ export function CharacterReadinessBadge({
         ? 'Ready'
         : compact
           ? readiness.blockingIssues.length
-          : `${readiness.blockingIssues.length} required`}
+          : `${readiness.blockingIssues.length} to review`}
     </Badge>
   )
 }

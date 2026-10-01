@@ -809,8 +809,8 @@ describe('getCharacterReadiness', () => {
       'spells:known:class:Rogue|PHB',
     ])
     expect(spellIssues.map((issue) => issue.explanation)).toEqual([
-      '2 are required; 0 are stored.',
-      '3 are required; 0 are stored.',
+      '2 cantrip slots are available; 0 chosen.',
+      '3 spell choices are available; 0 chosen.',
     ])
     for (const issue of spellIssues) {
       const target = new URL(issue.navigationTarget, 'https://tavern-born.test')

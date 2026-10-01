@@ -119,6 +119,7 @@ describe('BuildReviewPage', () => {
     ])
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Character needs attention')).toBeTruthy()
+    expect(screen.getByText(/You can still save and print this character sheet/)).toBeTruthy()
     expect(screen.queryByText('Calculated totals')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Character overview' }))
@@ -172,6 +173,14 @@ describe('BuildReviewPage', () => {
     const gameData = useGameDataStore.getState().gameData!
     const enrichedData = {
       ...gameData,
+      organizations: [
+        {
+          name: 'The Harpers',
+          source: 'TEST',
+          description: 'A secret network of allies.',
+          imagePath: 'assets/images/harpers.png',
+        },
+      ],
       feats: [{ name: 'Alert', source: 'TEST', entries: ['Always ready for danger.'] }],
       classFeatures: [
         {
@@ -194,7 +203,10 @@ describe('BuildReviewPage', () => {
       ...current,
       portrait: 'assets/images/characters/placeholder_char_card.jpg',
       hitPoints: { current: 7, temporary: 3 },
-      details: { personality: 'Secret backstory should stay off the overview.' },
+      details: {
+        personality: 'Secret backstory should stay off the overview.',
+        organizationSelectionKey: 'The Harpers|TEST',
+      },
       proficiencies: { ...current.proficiencies, skills: ['perception'], languages: ['Common'] },
       features: [
         {
@@ -273,7 +285,8 @@ describe('BuildReviewPage', () => {
       'Spells & spellcasting',
       'Equipment',
       'Resources & conditions',
-      'Automation notes',
+      'Organization',
+      'Rules & reminders',
       'Content sources',
     ]) {
       expect(screen.getByText(section).closest('details')?.open).toBe(false)
@@ -296,6 +309,10 @@ describe('BuildReviewPage', () => {
     expect(screen.getByText('A carved wand.')).toBeTruthy()
     await user.click(screen.getByText('Resources & conditions'))
     expect(screen.getByText('Poisoned')).toBeTruthy()
+    await user.click(screen.getByText('Organization'))
+    expect(screen.getByText('The Harpers')).toBeTruthy()
+    expect(screen.getByText('A secret network of allies.')).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'The Harpers emblem' })).toBeTruthy()
 
     const restrictedCharacter = { ...character, allowedSources: ['OTHER'] }
     await act(() => {

@@ -35,7 +35,7 @@ function validateSpellProfile(
         'blocking',
         'spells',
         `Finish ${detail.className} cantrip choices`,
-        `${detail.cantripLimit} are required; ${counts.cantrips} are stored.`,
+        `${detail.cantripLimit} cantrip slots are available; ${counts.cantrips} chosen.`,
         classSpellChoiceTarget(detail),
       ),
     )
@@ -51,7 +51,7 @@ function validateSpellProfile(
         'blocking',
         'spells',
         `Finish ${detail.className} spell choices`,
-        `${detail.knownSpellLimit} are required; ${counts.spells} are stored.`,
+        `${detail.knownSpellLimit} spell choices are available; ${counts.spells} chosen.`,
         classSpellChoiceTarget(detail),
       ),
     )
@@ -118,7 +118,7 @@ export function validateSpells(
         'blocking',
         'spells',
         `Configure ${detail.className} spellcasting`,
-        'The required class spell profile is missing.',
+        'Spellcasting details for this class are missing.',
       ),
     ]
   })
@@ -132,7 +132,7 @@ export function validateSpells(
             'blocking',
             'spells',
             `Finish ${profile.label} spell choices`,
-            `${choice.count} are required; ${choice.selected.length} are stored.`,
+            `${choice.count} spell choices are available; ${choice.selected.length} chosen.`,
           ),
         )
       }
