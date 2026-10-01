@@ -144,6 +144,65 @@ describe('EquipmentPage item details', () => {
     ).toBe('Potions')
   })
 
+  test('shows full property names in the item details pane', () => {
+    const character = useCharacterStore.getState().activeCharacter!
+    const withProperties = {
+      ...character,
+      equipment: character.equipment.map((item) =>
+        item.id === 'canonical-item' ? { ...item, properties: ['L|PHB'] } : item,
+      ),
+    }
+    useCharacterStore.setState({
+      characters: [withProperties],
+      activeCharacter: withProperties,
+    })
+    const gameData = useGameDataStore.getState().gameData!
+    useGameDataStore.setState({
+      gameData: {
+        ...gameData,
+        lookups: { ...gameData.lookups!, itemPropertyByAbbr: { L: 'Light' } },
+      },
+    })
+
+    renderPage()
+
+    const statistics = screen.getByRole('region', { name: 'Item statistics' })
+    expect(within(statistics).getByText('Light')).toBeTruthy()
+    expect(within(statistics).queryByText('L')).toBeNull()
+  })
+
+  test('recovers property names when the saved lookup only contains Versatile', () => {
+    const character = useCharacterStore.getState().activeCharacter!
+    const withProperties = {
+      ...character,
+      equipment: character.equipment.map((item) =>
+        item.id === 'canonical-item' ? { ...item, properties: ['A', 'H', '2H'] } : item,
+      ),
+    }
+    useCharacterStore.setState({
+      characters: [withProperties],
+      activeCharacter: withProperties,
+    })
+    const gameData = useGameDataStore.getState().gameData!
+    useGameDataStore.setState({
+      gameData: {
+        ...gameData,
+        itemProperties: [
+          { abbreviation: 'A', source: 'PHB', entries: [{ name: 'Ammunition' }] },
+          { abbreviation: 'H', source: 'PHB', entries: [{ name: 'Heavy' }] },
+          { abbreviation: '2H', source: 'PHB', entries: [{ name: 'Two-Handed' }] },
+        ],
+        lookups: { ...gameData.lookups!, itemPropertyByAbbr: { V: 'Versatile' } },
+      },
+    })
+
+    renderPage()
+
+    const statistics = screen.getByRole('region', { name: 'Item statistics' })
+    expect(within(statistics).getByText('Ammunition, Heavy, Two-Handed')).toBeTruthy()
+    expect(within(statistics).queryByText('A, H, 2H')).toBeNull()
+  })
+
   test('unequips invalid armor when restrictions are enabled', () => {
     const baseCharacter = makeCharacterFixture()
     const character = makeCharacterFixture({

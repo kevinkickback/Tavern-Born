@@ -78,4 +78,30 @@ describe('ItemSelectionModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage additional content' }))
     expect(onManageSources).toHaveBeenCalledOnce()
   })
+
+  test('shows the full name and note for a structured item property', () => {
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        lookups: { ...lookups, itemPropertyByAbbr: { '2H': 'Two-Handed' } },
+      }),
+    })
+
+    render(
+      <ItemSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        items={[
+          {
+            name: 'Lance',
+            source: 'XPHB',
+            type: 'M',
+            property: [{ uid: '2H|XPHB', note: 'unless mounted' }],
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Two-Handed (unless mounted)')).toBeTruthy()
+  })
 })
