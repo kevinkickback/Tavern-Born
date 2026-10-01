@@ -43,7 +43,8 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { RARITY_COLORS } from '@/lib/5etools/constants'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
-import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
+import { isEquippable } from '@/lib/calculations/itemEquippable'
+import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
 import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -130,16 +131,10 @@ export function EquipmentPage() {
   const toggleIgnoreRestrictions = () => {
     if (!character) return
     const nextIgnoreEquipRestrictions = !ignoreEquipRestrictions
-    const enforced = nextIgnoreEquipRestrictions
-      ? null
-      : enforceArmorEquipmentRestrictions(character.equipment, character.proficiencies.armor)
-    updateCharacter(character.id, {
-      variantRules: {
-        ...character.variantRules,
-        ignoreEquipRestrictions: nextIgnoreEquipRestrictions,
-      },
-      ...(enforced ? { equipment: enforced.equipment } : {}),
-    })
+    updateCharacter(
+      character.id,
+      setEquipmentRestrictionsIgnoredCommand(character, nextIgnoreEquipRestrictions),
+    )
   }
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const equipmentItems = useMemo(
