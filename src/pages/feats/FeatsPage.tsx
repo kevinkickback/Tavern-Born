@@ -668,7 +668,7 @@ export function FeatsPage() {
         open={bonusModalOpen}
         onOpenChange={setBonusModalOpen}
         feats={feats as Feat5e[]}
-        maxSelections={999}
+        maxSelections={Number.POSITIVE_INFINITY}
         initialSelectedIds={bonusInitialSelectedIds}
         characterSnapshot={characterSnapshot}
         onConfirm={handleBonusModalConfirm}

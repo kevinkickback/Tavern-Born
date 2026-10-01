@@ -808,7 +808,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                       <Upload className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                       <span className="text-sm font-semibold">Import</span>
                       <span className="text-[11px] text-muted-foreground">
-                        Open a .tbc or JSON file
+                        Open a .tbc or .tbclib file
                       </span>
                     </button>
                   </div>

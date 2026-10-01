@@ -133,7 +133,8 @@ describe('BuildReviewPage', () => {
     expect(screen.getAllByText('Test Manual Action')).toHaveLength(2)
     expect(screen.getByText('+4 to hit')).toBeTruthy()
     await user.click(screen.getByText('Content sources'))
-    expect(screen.getByText('Test Source')).toBeTruthy()
+    expect(screen.getByText('Test Source').closest('ul')?.className).toContain('list-disc')
+    expect(screen.queryByText('Rules & reminders')).toBeNull()
     expect(screen.getByText('walk 35 ft.')).toBeTruthy()
 
     await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
@@ -289,7 +290,6 @@ describe('BuildReviewPage', () => {
       'Equipment',
       'Resources & conditions',
       'Organization',
-      'Rules & reminders',
       'Content sources',
     ]) {
       expect(screen.getByText(section).closest('details')?.open).toBe(false)
