@@ -33,8 +33,6 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   checkMulticlassRequirements,
   getAbilityModifier,
@@ -44,25 +42,22 @@ import {
 } from '@/lib/calculations/gameRules'
 import {
   addMulticlass,
-  applyClassProgressionUpdate,
+  applyLevelDown,
   applyLevelUp,
   type LevelUpHitPointChoice,
 } from '@/lib/character/commands/classCommands'
 import {
-  calculateHitPointAdjustmentTotal,
-  calculateMaxHP,
   getCharacterClassEntries,
   getEffectiveMaxHP,
   getMaxHitPointsOverride,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
-import { getSpellsGrantedAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { CharacterClassEntry } from '@/types/character'
 
 interface LevelUpModalProps {
   open: boolean
@@ -95,16 +90,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [pendingLevelUp, setPendingLevelUp] = useState<PendingLevelUp | null>(null)
   const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
   const [hpDieResult, setHpDieResult] = useState('')
-  const [levelHistory, setLevelHistory] = useState<
-    Array<{ className: string; classSource: string; classLevel: number }>
-  >([])
   const ignoreRestrictionsId = useId()
   const manualHpRollId = useId()
 
-  if (!character) return null
+  if (!character || !calculationContext) return null
 
-  const effectiveAbilityScores =
-    calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total
+  const effectiveAbilityScores = calculationContext.abilityScores.total
 
   const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
@@ -166,20 +157,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         character.provenance,
         newProgression,
         hpChoice,
-        getProjectedMaximumHitPoints(hpChoice),
+        calculationContext,
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
-      setLevelHistory((previous) => [
-        ...previous,
-        {
-          className: pending.className,
-          classSource: pending.classSource,
-          classLevel: pending.classLevel,
-        },
-      ])
       toast.success(`${pending.className} is now level ${pending.classLevel}.`)
       return
     }
@@ -209,7 +192,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       nextProvenance,
       newProgression,
       hpChoice,
-      getProjectedMaximumHitPoints(hpChoice),
+      calculationContext,
     )
 
     updateCharacter(character.id, {
@@ -219,10 +202,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     })
     toast.success(`Added ${pending.className} (level 1).`)
     setMulticlassSelection('')
-    setLevelHistory((previous) => [
-      ...previous,
-      { className: pending.className, classSource: pending.classSource, classLevel: 1 },
-    ])
   }
 
   const beginLevelUp = (pending: PendingLevelUp) => {
@@ -296,98 +275,24 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       return
     }
 
-    const lastRecordedGain = [...(character.hitPointGains ?? [])].sort(
-      (a, b) => b.characterLevel - a.characterLevel,
-    )[0]
-    const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
-    const fallbackProgressionEntry = classProgression[classProgression.length - 1]
-    const targetClassName = lastHistoryEntry?.className ?? fallbackProgressionEntry.name
-    const targetClassSource = lastHistoryEntry?.classSource ?? fallbackProgressionEntry.source
-    const targetClassLevel = lastHistoryEntry?.classLevel ?? fallbackProgressionEntry.levels
-
-    const targetIndices = classProgression.flatMap((entry, index) =>
-      entry.name === targetClassName && entry.source === targetClassSource ? [index] : [],
-    )
-    if (targetIndices.length !== 1) {
-      toast.error('Could not find the target class to remove a level from.')
-      setConfirmRemoveOpen(false)
-      return
-    }
-    const targetIdx = targetIndices[0]
-
-    const ledger = character.provenance
-    const affectedSpells = getSpellsGrantedAtLevel(
-      ledger,
-      targetClassName,
-      targetClassLevel,
-      targetClassSource,
-    )
-    let newProgression = classProgression.map((e, i) =>
-      i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
-    )
-    if (newProgression[targetIdx].levels <= 0) {
-      newProgression = newProgression.filter((_, i) => i !== targetIdx)
-    }
-
-    const progressionResult = applyClassProgressionUpdate(character, ledger, newProgression)
-    const projectedCharacter: Character = {
-      ...character,
-      ...progressionResult.characterPatch,
-      provenance: progressionResult.provenanceUpdate,
-    }
-    const retainedFeatKeys = new Set(
-      [
-        ...(projectedCharacter.feats ?? []),
-        ...(projectedCharacter.specialFeats ?? []),
-        ...(projectedCharacter.classFeatChoices ?? []).flatMap((choice) => choice.feats),
-      ].map((feat) => getEntityLookupKey(feat.name, feat.source)),
-    )
-    const projectedSourceEffects = (calculationContext?.effects.sourceDeclarations ?? []).filter(
-      (effect) =>
-        effect.source.kind !== 'feat' ||
-        retainedFeatKeys.has(getEntityLookupKey(effect.source.name, effect.source.source)),
-    )
-    const projectedAbilityScores = deriveEffectiveAbilityScores(
-      projectedCharacter,
-      calculationContext?.raceResolution.parentRace,
-      calculationContext?.raceResolution.subraceData,
-      calculationContext?.background,
-      projectedSourceEffects,
-    ).total
-    const projectedMaximumHitPoints = getEffectiveMaxHP(
-      projectedCharacter,
-      allClasses,
-      projectedAbilityScores,
-      projectedSourceEffects,
-    )
+    const result = applyLevelDown(character, character.provenance, calculationContext)
     updateCharacter(character.id, {
-      ...progressionResult.characterPatch,
-      hitPoints: {
-        ...character.hitPoints,
-        current: Math.min(character.hitPoints.current, projectedMaximumHitPoints),
-      },
-      provenance: progressionResult.provenanceUpdate,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
     })
-
-    setLevelHistory((prev) => prev.slice(0, -1))
-
     const removedMsg =
-      affectedSpells.length > 0
-        ? ` Removed ${affectedSpells.length} spell${affectedSpells.length > 1 ? 's' : ''} gained at that level.`
+      result.removedSpellCount > 0
+        ? ` Removed ${result.removedSpellCount} spell${result.removedSpellCount > 1 ? 's' : ''} gained at that level.`
         : ''
-    toast.success(`Removed a level from ${targetClassName}.${removedMsg}`)
+    toast.success(`Removed a level from ${result.removedClassName}.${removedMsg}`)
     setConfirmRemoveOpen(false)
   }
 
-  const lastHistoryEntry = levelHistory[levelHistory.length - 1]
   const lastPersistedGain = [...(character.hitPointGains ?? [])].sort(
     (a, b) => b.characterLevel - a.characterLevel,
   )[0]
   const lastClassName =
-    lastHistoryEntry?.className ??
-    lastPersistedGain?.className ??
-    classProgression[classProgression.length - 1]?.name ??
-    ''
+    lastPersistedGain?.className ?? classProgression[classProgression.length - 1]?.name ?? ''
 
   const parsedHpDieResult = Number.parseInt(hpDieResult, 10)
   const validHpDieResult =
@@ -397,31 +302,49 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     parsedHpDieResult <= pendingLevelUp.hitDie
   const conModifier = getAbilityModifier(effectiveAbilityScores.constitution)
   const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
-  const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
-    averageHp: character.variantRules?.averageHitPoints !== false,
-    classesData: allClasses,
-    hitPointGains: character.hitPointGains,
-  })
-  const currentAdjustmentTotal = calculateHitPointAdjustmentTotal(
-    character.hitPointAdjustments,
-    totalLevel,
-  )
-  const projectedAdjustmentTotal = calculateHitPointAdjustmentTotal(
-    character.hitPointAdjustments,
-    totalLevel + 1,
-  )
-  const currentAdjustedMaxHp = Math.max(1, calculatedMaxHp + currentAdjustmentTotal)
-  const projectedAdjustedMaxHp = Math.max(
-    1,
-    calculatedMaxHp + (hpIncrease ?? 0) + projectedAdjustmentTotal,
-  )
   const maximumOverride = getMaxHitPointsOverride(character)
-  const currentEffectiveMaxHp = maximumOverride ?? currentAdjustedMaxHp
-  const projectedEffectiveMaxHp = maximumOverride ?? projectedAdjustedMaxHp
-  const getProjectedMaximumHitPoints = (choice: LevelUpHitPointChoice) => {
-    const levelGain = Math.max(1, choice.dieResult + conModifier)
-    return maximumOverride ?? Math.max(1, calculatedMaxHp + levelGain + projectedAdjustmentTotal)
-  }
+  const currentEffectiveMaxHp = getEffectiveMaxHP(
+    character,
+    calculationContext.classes,
+    effectiveAbilityScores,
+    calculationContext.effects.sourceDeclarations,
+  )
+  const projectedEffectiveMaxHp =
+    pendingLevelUp && validHpDieResult
+      ? (() => {
+          const nextProgression =
+            pendingLevelUp.kind === 'existing'
+              ? classProgression.map((entry) =>
+                  entry.name === pendingLevelUp.className &&
+                  entry.source === pendingLevelUp.classSource
+                    ? { ...entry, levels: pendingLevelUp.classLevel }
+                    : entry,
+                )
+              : [
+                  ...classProgression,
+                  {
+                    name: pendingLevelUp.className,
+                    source: pendingLevelUp.classSource,
+                    levels: 1,
+                  },
+                ]
+          const preview = applyLevelUp(
+            character,
+            character.provenance,
+            nextProgression,
+            {
+              className: pendingLevelUp.className,
+              classSource: pendingLevelUp.classSource,
+              classLevel: pendingLevelUp.classLevel,
+              hitDie: pendingLevelUp.hitDie,
+              dieResult: parsedHpDieResult,
+              method: hpEntryMethod,
+            },
+            calculationContext,
+          )
+          return preview.characterPatch.hitPoints?.current ?? currentEffectiveMaxHp
+        })()
+      : currentEffectiveMaxHp
 
   const handleConfirmHitPoints = () => {
     if (!pendingLevelUp || !validHpDieResult) return
