@@ -2,6 +2,7 @@
 
 The ingestion layer turns a configured 5etools source into stable, source-qualified application
 data. UI code consumes parsed results through hooks; it never imports source JSON.
+The loader and unloaded hook views share `createEmptyGameData`; each call owns fresh collections.
 
 ## Pipeline
 
@@ -118,7 +119,7 @@ explicit ruleset metadata module. Both must be testable and removable.
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected
 with a copy diagnostic, including nested spell groups and property selectors. Traversal reads only
-own properties; newly created path and modification dictionaries have no prototype. A failed copy
+own properties; newly created path and directive dictionaries have no prototype. A failed copy
 keeps its original record and cannot change shared runtime prototypes. Loader/layer composition
 treats unresolved copies as required failures before publishing the catalog.
 The cache schema is bumped when copy trust rules change so previously resolved catalogs are rebuilt.
@@ -165,6 +166,8 @@ Overview reads retained features and class-choice details through `useRetainedCh
 Its pure resolver indexes class/subclass features with the saved class and subclass owner context,
 including raw nested subclass features when their source is filtered out. Choice details distinguish
 available, loaded but source-unavailable, and missing records without changing saved selections.
+The hook applies the character's implicit core source and reprint preference through the same filtering
+policy as other character data hooks.
 Class choices, retained details, and the Compendium share the recursive subclass-feature collector;
 it traverses nested entry containers safely and preserves distinct records before owner-specific indexing.
 

@@ -6,6 +6,99 @@ import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import type { Creature5e } from '@/types/5etools'
 
 describe('5etools copy resolution', () => {
+  test('ignores polluted non-reserved properties throughout copied working data', () => {
+    const pollution = {
+      spellcasting: [{ spells: { 1: { spells: ['old spell'] } } }],
+      spells: { 1: { spells: ['old spell'] } },
+      daily: { 1: ['old spell'] },
+      senses: ['darkvision 120 ft.'],
+      size: ['T'],
+      cr: { xp: 100 },
+      xp: 100,
+      skill: { arcana: '+99' },
+    }
+    const before = structuredClone(pollution)
+    const descriptors = Object.getOwnPropertyDescriptors(Object.prototype)
+    try {
+      for (const [field, value] of Object.entries(pollution))
+        Object.defineProperty(Object.prototype, field, {
+          configurable: true,
+          value,
+          writable: true,
+        })
+      const base = { name: 'Base', source: 'TEST', int: 10 }
+      const inheritedCasting = {
+        name: 'Inherited Casting',
+        source: 'TEST',
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _mod: { _: { mode: 'addSpells', spells: { 1: { spells: ['new spell'] } } } },
+        },
+      }
+      const withoutCasting = resolveCopiedRecords([base, inheritedCasting], 'monster')
+      expect(withoutCasting.records[1]).toBe(inheritedCasting)
+      expect(withoutCasting.diagnostics[0].reason).toContain('spellcasting is missing')
+      const ownCasting = { ...base, spellcasting: [{}], cr: { cr: '2' } }
+      const records = [
+        ownCasting,
+        {
+          name: 'Copy',
+          source: 'TEST',
+          _copy: {
+            name: base.name,
+            source: base.source,
+            _mod: {
+              _: [
+                { mode: 'removeSpells', spells: { 1: ['old spell'] } },
+                { mode: 'addSpells', daily: { 1: ['new spell'] } },
+                { mode: 'addSenses', senses: [{ type: 'darkvision', range: 60 }] },
+                { mode: 'addSkills', skills: { arcana: 1 } },
+                { mode: 'maxSize', max: 'M' },
+                { mode: 'scalarMultXp', scalar: 2 },
+              ],
+            },
+          },
+        },
+      ]
+      const recordsBefore = structuredClone(records)
+      const result = resolveCopiedRecords(records, 'monster')
+      expect(result.diagnostics).toEqual([])
+      expect(result.records[1]).toMatchObject({
+        senses: ['darkvision 60 ft.'],
+        size: ['M'],
+        skill: { arcana: '+2' },
+        spellcasting: [{ daily: { 1: ['new spell'] } }],
+      })
+      const copiedCr = Object.getOwnPropertyDescriptor(result.records[1], 'cr')?.value
+      expect(Object.getOwnPropertyDescriptor(copiedCr, 'xp')).toBeUndefined()
+      expect(pollution).toEqual(before)
+      expect(records).toEqual(recordsBefore)
+    } finally {
+      for (const field of Object.keys(pollution)) {
+        const descriptor = Object.getOwnPropertyDescriptor(descriptors, field)?.value
+        if (descriptor) Object.defineProperty(Object.prototype, field, descriptor)
+        else Reflect.deleteProperty(Object.prototype, field)
+      }
+    }
+    expect(Object.getOwnPropertyDescriptors(Object.prototype)).toEqual(descriptors)
+  })
+
+  test('does not treat an inherited copy directive as a copied record', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Object.prototype, '_copy')
+    const record = { name: 'Uncopied', source: 'TEST' }
+    try {
+      Object.defineProperty(Object.prototype, '_copy', {
+        configurable: true,
+        value: { name: 'Missing', source: 'TEST' },
+      })
+      expect(resolveCopiedRecords([record], 'item')).toEqual({ records: [record], diagnostics: [] })
+    } finally {
+      if (descriptor) Object.defineProperty(Object.prototype, '_copy', descriptor)
+      else Reflect.deleteProperty(Object.prototype, '_copy')
+    }
+  })
+
   test.each([
     '__proto__',
     'constructor',

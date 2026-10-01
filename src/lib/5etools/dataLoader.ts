@@ -14,6 +14,7 @@ import {
   CopyResolutionError,
   resolveCopiedRecords,
 } from './copyResolution'
+import { createEmptyGameData } from './emptyGameData'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -147,33 +148,7 @@ export class FiveEToolsDataLoader {
       ? resources.filter((resource) => this.availableResources?.has(resource.file))
       : resources
 
-    const gameData: GameData = {
-      races: [],
-      classes: [],
-      backgrounds: [],
-      organizations: [],
-      spells: [],
-      feats: [],
-      items: [],
-      itemsBase: [],
-      itemProperties: [],
-      itemTypes: [],
-      itemMasteries: [],
-      classFeatures: [],
-      creatures: [],
-      actions: [],
-      conditions: [],
-      deities: [],
-      skills: [],
-      senses: [],
-      languages: [],
-      optionalfeatures: [],
-      variantrules: [],
-      trapHazards: [],
-      rewards: [],
-      cultsBoons: [],
-      sources: [],
-    }
+    const gameData = createEmptyGameData()
 
     const sourcesSet = new Set<string>()
     let booksData: unknown = null

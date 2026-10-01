@@ -453,7 +453,7 @@ describe('BuildReviewPage', () => {
     expect(within(missingOption).getByText('Unresolved source')).toBeTruthy()
 
     await act(() => {
-      const restricted = { ...character, allowedSources: [classSource] }
+      const restricted = { ...character, allowedSources: [] }
       useCharacterStore.setState({ characters: [restricted], activeCharacter: restricted })
     })
     expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()

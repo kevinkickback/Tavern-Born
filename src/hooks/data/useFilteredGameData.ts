@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { DataFilter } from '@/lib/5etools/filters'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { buildSuppressedKeys, collectReprintableEntities } from '@/lib/5etools/reprints'
@@ -10,19 +11,7 @@ import {
 import { getEffectiveSources, normalizeAllowedSources } from '@/lib/sourceCompatibility'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type {
-  Background5e,
-  Class5e,
-  ClassFeature,
-  Creature5e,
-  Feat5e,
-  GameData,
-  Item5e,
-  ItemMastery5e,
-  Language5e,
-  Race5e,
-  SourceBook,
-} from '@/types/5etools'
+import type { Creature5e, GameData, ItemMastery5e } from '@/types/5etools'
 
 interface FilterParams {
   allowedSources?: string[]
@@ -63,35 +52,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
   const { allowedSources, preferNewerPrintings = false, originSystem } = params
 
   const filteredData = useMemo<FilteredGameData>(() => {
-    if (!gameData) {
-      return {
-        races: [] as Race5e[],
-        classes: [] as Class5e[],
-        backgrounds: [] as Background5e[],
-        organizations: [],
-        spells: [],
-        feats: [] as Feat5e[],
-        items: [] as Item5e[],
-        itemsBase: [] as Item5e[],
-        itemProperties: [],
-        itemTypes: [],
-        itemMasteries: [] as ItemMastery5e[],
-        classFeatures: [] as ClassFeature[],
-        creatures: [] as Creature5e[],
-        optionalfeatures: [],
-        sources: [] as SourceBook[],
-        actions: [],
-        conditions: [],
-        deities: [],
-        skills: [],
-        senses: [],
-        languages: [] as Language5e[],
-        variantrules: [],
-        trapHazards: [],
-        rewards: [],
-        cultsBoons: [],
-      }
-    }
+    if (!gameData) return createEmptyGameData()
 
     const cacheKey = JSON.stringify([
       originSystem ?? '',
@@ -225,26 +186,30 @@ export function useFilteredGameDataParams(params: FilterParams) {
   return filteredData
 }
 
-/**
- * Game data filtered by the active character's source settings.
- * Thin wrapper around {@link useFilteredGameDataParams} that reads filter
- * params from the active character in `characterStore`.
- */
+/** Explicit character filters include the implicit core source. */
+export function useCharacterGameDataParams({
+  allowedSources,
+  originSystem = '2014',
+  preferNewerPrintings,
+}: FilterParams) {
+  const effectiveSources = useMemo(() => {
+    if (!allowedSources) return undefined
+    return getEffectiveSources(allowedSources, originSystem)
+  }, [allowedSources, originSystem])
+
+  return useFilteredGameDataParams({
+    allowedSources: effectiveSources,
+    preferNewerPrintings,
+    originSystem,
+  })
+}
+
+/** Game data filtered by the active character's source settings. */
 export function useFilteredGameData() {
   const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
   const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   const preferNewerPrintings = useCharacterStore(
     (state) => state.activeCharacter?.variantRules?.preferNewerPrintings ?? false,
   )
-
-  const effectiveSources = useMemo(() => {
-    if (!allowedSources) return undefined
-    return getEffectiveSources(allowedSources, originSystem ?? '2014')
-  }, [allowedSources, originSystem])
-
-  return useFilteredGameDataParams({
-    allowedSources: effectiveSources,
-    preferNewerPrintings,
-    originSystem: originSystem ?? '2014',
-  })
+  return useCharacterGameDataParams({ allowedSources, originSystem, preferNewerPrintings })
 }

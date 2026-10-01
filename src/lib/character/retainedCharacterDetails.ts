@@ -83,8 +83,8 @@ export function buildRetainedCharacterDetails(
       ).forEach(addFeature)
     }
     for (const choice of character.classChoiceSelections ?? []) {
-      const classData =
-        lookups.classesByKey[getEntityLookupKey(choice.className, choice.classSource)]
+      const classKey = getEntityLookupKey(choice.className, choice.classSource)
+      const classData = lookups.classesByKey[classKey]
       const catalogs = {
         ...data,
         creatures: data.creatures ?? [],
@@ -92,9 +92,7 @@ export function buildRetainedCharacterDetails(
         classFeatures: [
           ...classFeatures(classData),
           ...data.classFeatures.filter(
-            (feature) =>
-              getEntityLookupKey(feature.className, feature.classSource) ===
-              getEntityLookupKey(choice.className, choice.classSource),
+            (feature) => getEntityLookupKey(feature.className, feature.classSource) === classKey,
           ),
         ],
         subclassFeatures: collectSubclassFeatures(
