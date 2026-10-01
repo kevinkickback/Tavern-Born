@@ -1,5 +1,5 @@
-import { ArrowRight, FilePdf } from '@phosphor-icons/react'
-import { type ReactNode, useMemo } from 'react'
+import { ArrowRight, Buildings, FilePdf } from '@phosphor-icons/react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +32,11 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
+import {
+  CUSTOM_ORGANIZATION_KEY,
+  getOrganizationKey,
+  resolveOrganizationImageSrc,
+} from '@/lib/character/organizationConstants'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -207,6 +212,7 @@ export function CharacterOverview({
   const spellcasting = useSpellSlots()
   const spellLookup = useSpellLookup()
   const itemLookup = useItemLookup()
+  const [failedOrganizationImage, setFailedOrganizationImage] = useState('')
   const filteredData = useFilteredGameData()
   const rawData = useGameDataStore((state) => state.gameData)
   const availableSpellKeys = useMemo(
@@ -229,6 +235,22 @@ export function CharacterOverview({
   )
   const level = getTotalCharacterLevel(character)
   const classes = getCharacterClassEntries(character)
+  const selectedOrganization = filteredData.organizations.find(
+    (organization) =>
+      getOrganizationKey(organization.name, organization.source) ===
+      character.details.organizationSelectionKey,
+  )
+  const customOrganization = character.details.organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+  const organizationName = customOrganization
+    ? character.details.organizationCustomName?.trim() || 'Custom Organization'
+    : selectedOrganization?.name?.trim() || character.details.faction?.trim()
+  const organizationDescription = customOrganization
+    ? character.details.organizationCustomDescription
+    : selectedOrganization?.description
+  const organizationImage =
+    (customOrganization
+      ? character.details.organizationCustomImage
+      : selectedOrganization?.imagePath) || ''
   const featureEntriesByKey = useMemo(() => {
     const classFeatureRecords = calculation.classes.flatMap((classData) => {
       const classEntry = classes.find(
@@ -883,13 +905,49 @@ export function CharacterOverview({
             </div>
           </OverviewSection>
 
+          {organizationName && (
+            <OverviewSection title="Organization">
+              <div className="flex items-start gap-3">
+                <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-raised">
+                  {organizationImage && failedOrganizationImage !== organizationImage ? (
+                    <img
+                      src={resolveOrganizationImageSrc(organizationImage)}
+                      alt={`${organizationName} emblem`}
+                      className="size-full object-contain"
+                      onError={() => setFailedOrganizationImage(organizationImage)}
+                    />
+                  ) : (
+                    <Buildings
+                      className="size-6 text-primary"
+                      weight="duotone"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold">{organizationName}</h3>
+                  {organizationDescription && customOrganization ? (
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {organizationDescription}
+                    </p>
+                  ) : organizationDescription ? (
+                    <GameContent
+                      entry={organizationDescription}
+                      className="mt-1 text-sm text-muted-foreground"
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </OverviewSection>
+          )}
+
           <OverviewSection
-            title="Automation notes"
+            title="Rules & reminders"
             count={unresolvedAutomation.length + conditionalNotes.length}
           >
             {unresolvedAutomation.length === 0 && conditionalNotes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No inactive or rules-text-only mechanics need attention.
+                No special rules or reminders to show.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -901,7 +959,7 @@ export function CharacterOverview({
                   >
                     <p>
                       {action.inactiveReason ??
-                        'Rules text is preserved, but its timing or mechanics are not automated.'}
+                        'Review the rules text for this action’s timing and effects.'}
                     </p>
                   </DetailEntry>
                 ))}
@@ -939,12 +997,12 @@ export function CharacterOverview({
           <Card className="gap-3 p-4">
             <div className="flex items-center gap-2">
               <FilePdf className="size-5 text-primary" weight="fill" />
-              <h2 className="font-semibold">PDF readiness</h2>
+              <h2 className="font-semibold">Character sheet</h2>
             </div>
             <p className="text-sm text-muted-foreground">
               {ready
-                ? 'Required choices are complete. The sheet can be exported without an incomplete marker.'
-                : 'The character can be saved, but required choices should be resolved before relying on an exported sheet.'}
+                ? 'You can export or print this character sheet.'
+                : 'There are character choices to review. You can still export or print this sheet and return to them later.'}
             </p>
             <Button
               size="sm"

@@ -367,7 +367,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         {readiness?.status === 'incomplete' && (
           <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning-foreground">
             <Warning className="size-3.5" />
-            {readiness.blockingIssues.length} required
+            {readiness.blockingIssues.length} to review
           </Badge>
         )}
 

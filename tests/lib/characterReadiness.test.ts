@@ -147,6 +147,9 @@ describe('getCharacterReadiness', () => {
     })
 
     expect(issues.map((issue) => issue.id)).toContain(`class-choice:${primalCompanion.id}`)
+    expect(
+      issues.find((issue) => issue.id === `class-choice:${primalCompanion.id}`)?.explanation,
+    ).toBe('Ranger: choose 1 selection; 0 chosen.')
   })
 
   test('validates point-buy against allocated scores when a feat grants an ability bonus', () => {
@@ -809,8 +812,8 @@ describe('getCharacterReadiness', () => {
       'spells:known:class:Rogue|PHB',
     ])
     expect(spellIssues.map((issue) => issue.explanation)).toEqual([
-      '2 are required; 0 are stored.',
-      '3 are required; 0 are stored.',
+      '2 cantrip choices are available; 0 chosen.',
+      '3 spell choices are available; 0 chosen.',
     ])
     for (const issue of spellIssues) {
       const target = new URL(issue.navigationTarget, 'https://tavern-born.test')
