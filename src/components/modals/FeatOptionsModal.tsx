@@ -313,15 +313,15 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
                 />
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-medium">{f.name}</span>
-                  {f.source && (
-                    <Badge
-                      variant="outline"
-                      className="ml-2 h-4 px-1 py-0 text-xs text-muted-foreground"
-                    >
-                      {f.source}
-                    </Badge>
-                  )}
                 </div>
+                {f.source && (
+                  <Badge
+                    variant="outline"
+                    className="h-4 shrink-0 px-1 py-0 text-xs text-muted-foreground"
+                  >
+                    {f.source}
+                  </Badge>
+                )}
               </label>
             )
           })

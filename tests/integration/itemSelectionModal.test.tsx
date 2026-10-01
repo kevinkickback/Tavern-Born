@@ -72,7 +72,10 @@ describe('ItemSelectionModal', () => {
 
     expect(screen.queryByText('Armor', { exact: true })).toBeNull()
     expect(screen.getByText('Light Armor')).toBeTruthy()
-    expect(screen.getByText('PHB')).toBeTruthy()
+    const source = screen.getByText('PHB')
+    expect(source.parentElement?.parentElement).toBe(
+      screen.getByText('Leather Armor').parentElement,
+    )
     expect(screen.queryByText(/Core potions and spell scrolls are included/)).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage additional content' }))

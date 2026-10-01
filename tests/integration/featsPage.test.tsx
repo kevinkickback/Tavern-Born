@@ -52,13 +52,15 @@ vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
 vi.mock('@/components/modals/FeatSelectionModal', () => ({
   FeatSelectionModal: ({
     open,
+    maxSelections,
     onConfirm,
   }: {
     open: boolean
+    maxSelections: number
     onConfirm: (feats: Feat5e[]) => void
   }) =>
     open ? (
-      <div role="dialog" aria-label="Select bonus feat">
+      <div role="dialog" aria-label="Select bonus feat" data-max-selections={maxSelections}>
         <button type="button" onClick={() => onConfirm([configurableFeat])}>
           Select Skilled
         </button>
@@ -123,6 +125,9 @@ describe('FeatsPage bonus feat configuration', () => {
     const addBonusFeat = screen.getByRole('button', { name: 'Add Bonus Feat' })
     expect(addBonusFeat.className).toContain('bg-primary')
     fireEvent.click(addBonusFeat)
+    expect(
+      screen.getByRole('dialog', { name: 'Select bonus feat' }).getAttribute('data-max-selections'),
+    ).toBe('Infinity')
     fireEvent.click(screen.getByRole('button', { name: 'Select Skilled' }))
 
     expect(screen.queryByRole('dialog', { name: 'Select bonus feat' })).toBeNull()

@@ -22,9 +22,9 @@ test('review opens with one expanded section and fills a fixed portrait frame', 
 
   const panel = page.locator('[data-slot="tabs-content"][data-state="active"]')
   const sections = panel.locator('details')
-  await expect(sections).toHaveCount(9)
+  await expect(sections).toHaveCount(8)
   await expect(sections.first()).toHaveAttribute('open', '')
-  for (let index = 1; index < 9; index += 1) {
+  for (let index = 1; index < 8; index += 1) {
     await expect(sections.nth(index)).not.toHaveAttribute('open', '')
   }
 

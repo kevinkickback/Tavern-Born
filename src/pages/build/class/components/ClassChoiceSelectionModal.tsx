@@ -207,6 +207,11 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           {option.reference.name}
         </span>
         <div className="flex shrink-0 gap-1">
+          {option.reference.source && (
+            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
+              {option.reference.source}
+            </Badge>
+          )}
           {!isClassChoiceOptionEligible(option) && (
             <Badge variant="outline" className="h-5 border-warning/40 px-1.5 py-0 text-xs">
               Unavailable
@@ -217,11 +222,6 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
               ? 'Weapon'
               : ENTITY_LABELS[option.reference.entityType]}
           </Badge>
-          {option.reference.source && (
-            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
-              {option.reference.source}
-            </Badge>
-          )}
           {selected && <Badge className="h-5 bg-accent px-1.5 py-0 text-xs">Selected</Badge>}
         </div>
       </div>

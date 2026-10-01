@@ -231,6 +231,11 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <span className="font-semibold text-sm leading-tight">{item.name}</span>
         <div className="flex gap-1 flex-wrap flex-shrink-0">
+          {item.source && (
+            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
+              {item.source}
+            </Badge>
+          )}
           {isSelected && (
             <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">✓</Badge>
           )}
@@ -283,9 +288,6 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
             {item.weight} lb
           </Badge>
         )}
-        <Badge variant="outline" title="Source">
-          {item.source}
-        </Badge>
       </div>
       {description && (
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">

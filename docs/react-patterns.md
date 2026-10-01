@@ -58,6 +58,10 @@ const [steps, setSteps] = useState<Step[]>(() => deriveSteps(feat))
 
 `SelectionModal` virtualizes its complete filtered result set with `@tanstack/react-virtual`. Keep search, filters, and virtualizer state local to the modal, use stable item IDs for virtual row keys, and keep the canonical item arrays in `gameDataStore`. Do not replace the complete virtual range with incremental batches: the scrollbar and any result must remain available immediately.
 
+Selection cards that show a source badge place it in the upper-right card header. Use
+`Number.POSITIVE_INFINITY` for an uncapped selection category; the shared modal displays it as `∞`
+and skips the selection limit check.
+
 ---
 
 ## Ref-Based Dep Narrowing for Trigger-Only Effects
