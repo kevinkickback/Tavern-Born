@@ -7,6 +7,8 @@ import {
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
+export const MAX_CHARACTER_NAME_LENGTH = 100
+
 const sourceSchema = z
   .string()
   .min(1)
@@ -720,7 +722,7 @@ export const characterSchema = z
     name: z
       .string()
       .min(1)
-      .max(100)
+      .max(MAX_CHARACTER_NAME_LENGTH)
       .refine((s) => s.trim().length > 0, {
         message: 'Character name cannot be only whitespace',
       }),
