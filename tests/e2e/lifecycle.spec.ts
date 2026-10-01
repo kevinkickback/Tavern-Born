@@ -112,6 +112,10 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   const fileChooser = await fileChooserPromise
   await fileChooser.setFiles(fixturePath)
 
+  const importResults = page.getByRole('dialog', { name: 'Character import results' })
+  await expect(importResults).toContainText('1 imported · 0 failed')
+  await importResults.getByRole('button', { name: 'Done' }).click()
+
   await expect(page.getByText(fixture.name).first()).toBeVisible()
   await selectCharacterFromHome(page, fixture.name)
   await page.getByRole('button', { name: 'Details' }).click()
