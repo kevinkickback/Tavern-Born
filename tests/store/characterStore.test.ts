@@ -32,6 +32,23 @@ describe('characterStore', () => {
   })
 
   describe('durable library transactions', () => {
+    test('an ignored clean-correction failure stays handled and dirty until explicit Save retry', async () => {
+      const character = makeCharacterFixture({ id: 'correction-retry', name: 'Saved' })
+      await useCharacterStore.setState({ characters: [character] })
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      storageMocks.setItem.mockClear()
+      storageMocks.setItem.mockRejectedValueOnce(new Error('Storage unavailable'))
+      void useCharacterStore.getState().reconcileCharacter(character.id, { name: 'Corrected' })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(useCharacterStore.getState().characters[0].name).toBe('Saved')
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe('Corrected')
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+      await useCharacterStore.getState().saveActiveCharacter()
+      expect(useCharacterStore.getState().characters[0].name).toBe('Corrected')
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    })
+
     test('an already queued transaction continues after an earlier write fails', async () => {
       const first = makeCharacterFixture({ id: 'first', name: 'First' })
       await useCharacterStore.setState({ characters: [first] })

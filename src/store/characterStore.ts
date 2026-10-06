@@ -100,12 +100,15 @@ let durableLibrary: CharacterLibrary | null = null
 let readLibrary: () => CharacterLibrary
 let characterHydration = Promise.resolve()
 let characterHydrationError: unknown = null
-let isCharacterHydrating = false
 let finishCharacterRead: () => void = () => undefined
 
 function enqueueLibraryOperation<T>(operation: () => Promise<T>): Promise<T> {
   const result = (pendingLibraryOperation ?? Promise.resolve()).then(async () => {
-    await characterHydration
+    let hydration: Promise<void>
+    do {
+      hydration = characterHydration
+      await hydration
+    } while (hydration !== characterHydration)
     if (characterHydrationError !== null)
       throw Object.assign(
         new Error('Character library could not be loaded. Reload the app and try again.'),
@@ -539,24 +542,25 @@ export const useCharacterStore = create<CharacterState>()(
         unsupportedCharacters: state.unsupportedCharacters,
       }),
       onRehydrateStorage: () => {
+        const finishPreviousRead = finishCharacterRead
         characterHydrationError = null
-        // Zustand ignores superseded reads; keep their waiting operations on the shared gate.
-        if (!isCharacterHydrating) {
-          isCharacterHydrating = true
-          characterHydration = new Promise<void>((resolve) => {
-            finishCharacterRead = () => {
-              isCharacterHydrating = false
-              resolve()
-            }
-          })
-        }
+        const hydration = new Promise<void>((resolve) => {
+          finishCharacterRead = resolve
+        })
+        characterHydration = hydration
+        // Wake superseded waiters so they can recheck and wait for the newest read.
+        finishPreviousRead()
         const finishHydration = finishCharacterRead
         return (state, error) => {
+          if (hydration !== characterHydration) return
           characterHydrationError = error ?? null
           try {
             state?.finishCharacterHydration()
+          } catch (error) {
+            if (hydration === characterHydration) characterHydrationError = error
+            throw error
           } finally {
-            finishHydration()
+            if (hydration === characterHydration) finishHydration()
           }
         }
       },

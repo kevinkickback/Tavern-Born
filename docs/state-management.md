@@ -49,6 +49,9 @@ committed library inside the shared queue. Bulk deletion uses one transaction.
 All library transactions share one serialized persistence boundary with Save and clean system
 corrections. The queue waits for character hydration before reading the saved library; a failed
 read rejects queued mutations without writing. Successful rehydration releases later retry work.
+Replacement reads, including those started during hydration callbacks, keep queued writes waiting
+for the latest load. Ignored automatic correction failures remain handled and dirty for explicit
+Save retry.
 Transactions write before publishing `characters`, so rejected writes need no optimistic
 rollback. Draft edits and active selection never rewrite an unchanged library. Persist middleware
 continues to own hydration and quarantine; its writes share the queue and read the latest library

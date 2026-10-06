@@ -39,6 +39,8 @@ and cross-surface contracts.
   deletion selection survive failure, and that bulk deletion is a single transaction. Delay
   initial hydration and verify queued operations retain loaded records; failed reads must reject
   mutations without writing, with retry possible after successful rehydration.
+  Include superseded read failures, reentrant hydration callbacks, and an ignored correction
+  failure followed by explicit Save retry; unhandled rejections must fail the run.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
 - Test accessibility through roles/names and keyboard behavior where practical.

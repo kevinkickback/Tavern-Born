@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -14,6 +14,7 @@ beforeEach(() => {
   storage.getItem.mockReset()
   storage.setItem.mockClear()
 })
+afterEach(() => vi.restoreAllMocks())
 
 function delayHydration() {
   let finish: (characters: Character[]) => void = () => undefined
@@ -82,6 +83,92 @@ test('a superseding hydration keeps queued mutations waiting for its latest load
     'Latest',
     'Created',
   ])
+})
+
+test('an older failed read cannot reject mutations waiting for a newer hydration', async () => {
+  let rejectInitial: (error: Error) => void = () => undefined
+  storage.getItem.mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        rejectInitial = reject
+      }),
+  )
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  const created = store.getState().createNewCharacter({ name: 'Created' })
+  const finishLatest = delayHydration()
+  const rehydrated = store.persist.rehydrate()
+  rejectInitial(new Error('Superseded read failed'))
+  await Promise.resolve()
+  expect(storage.setItem).not.toHaveBeenCalled()
+  finishLatest([makeCharacterFixture({ id: 'latest', name: 'Latest' })])
+  await rehydrated
+  await created
+  expect(store.getState().characters.map((character) => character.name)).toEqual([
+    'Latest',
+    'Created',
+  ])
+})
+
+test('a hydration completion listener can start another read before queued mutations proceed', async () => {
+  const finishInitial = delayHydration()
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  const created = store.getState().createNewCharacter({ name: 'Created' })
+  const finishLatest = delayHydration()
+  let rehydrated: void | Promise<void> | null = null
+  const unsubscribe = store.persist.onFinishHydration(() => {
+    unsubscribe()
+    rehydrated = store.persist.rehydrate()
+  })
+  finishInitial([makeCharacterFixture({ id: 'initial', name: 'Initial' })])
+  await vi.waitFor(() => expect(storage.getItem).toHaveBeenCalledTimes(2))
+  expect(storage.setItem).not.toHaveBeenCalled()
+  finishLatest([makeCharacterFixture({ id: 'latest', name: 'Latest' })])
+  expect(rehydrated).not.toBeNull()
+  await rehydrated
+  await created
+  expect(store.getState().characters.map((character) => character.name)).toEqual([
+    'Latest',
+    'Created',
+  ])
+})
+
+test('a state subscriber can restart hydration during normalization without releasing queued writes', async () => {
+  const finishInitial = delayHydration()
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  const created = store.getState().createNewCharacter({ name: 'Created' })
+  const finishLatest = delayHydration()
+  let notifications = 0
+  let rehydrated: void | Promise<void> | null = null
+  const unsubscribe = store.subscribe(() => {
+    if (++notifications !== 2) return
+    unsubscribe()
+    rehydrated = store.persist.rehydrate()
+  })
+  finishInitial([makeCharacterFixture({ id: 'initial', name: 'Initial' })])
+  await vi.waitFor(() => expect(storage.getItem).toHaveBeenCalledTimes(2))
+  expect(storage.setItem).not.toHaveBeenCalled()
+  finishLatest([makeCharacterFixture({ id: 'latest', name: 'Latest' })])
+  expect(rehydrated).not.toBeNull()
+  await rehydrated
+  await created
+  expect(store.getState().characters.map((character) => character.name)).toEqual([
+    'Latest',
+    'Created',
+  ])
+})
+
+test('a normalization failure rejects queued mutations before releasing the read gate', async () => {
+  const finish = delayHydration()
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  vi.spyOn(store.getState(), 'finishCharacterHydration').mockImplementationOnce(() => {
+    throw new Error('Normalization unavailable')
+  })
+  const created = store.getState().createNewCharacter({ name: 'Created' })
+  const rejection = expect(created).rejects.toThrow('Character library could not be loaded')
+  finish([makeCharacterFixture({ id: 'existing', name: 'Existing' })])
+  await rejection
+  expect(storage.setItem).not.toHaveBeenCalled()
+  expect(store.persist.hasHydrated()).toBe(false)
 })
 
 test('a failed hydration rejects mutations without writing and permits retry after successful rehydration', async () => {
