@@ -237,6 +237,60 @@ test('changed choice rules discard incompatible saved selections and casting abi
   expect(result.provenanceUpdate.spells.light).toBeUndefined()
 })
 
+test.each([
+  { rule: 'chosen', ability: { choose: ['int', 'wis'] }, savedAbility: 'wis' as const },
+  { rule: 'fixed', ability: 'wis', savedAbility: 'wis' as const },
+])('removing a $rule casting ability rule clears the historical ability on either race command', ({
+  ability,
+  savedAbility,
+}) => {
+  const race = {
+    name: 'Caster',
+    source: 'PHB',
+    additionalSpells: [{ ability, known: { 1: ['shocking grasp#c'] } }],
+  } as Race5e
+  const fixture = makeCharacterFixture({ race: 'Caster', raceSource: 'PHB' })
+  const initial = {
+    ...fixture,
+    spells: {
+      ...fixture.spells,
+      spellProfiles: [
+        ...fixture.spells.spellProfiles,
+        {
+          ...buildRacialSpellProfile({
+            raceName: 'Caster',
+            raceSource: 'PHB',
+            additionalSpells: race.additionalSpells ?? [],
+            totalLevel: 1,
+          }),
+          castingAbility: savedAbility,
+        },
+      ],
+    },
+  }
+  const before = structuredClone(initial)
+  const current = {
+    ...race,
+    additionalSpells: [{ known: { 1: ['shocking grasp#c'] } }],
+  } as Race5e
+  const results = [
+    applyRaceSelectionCommand(initial, emptyProvenance(), current, undefined, 0, () => []),
+    applySubraceSelectionCommand(initial, emptyProvenance(), current, undefined, () => []),
+  ]
+  for (const result of results) {
+    const profile = result.characterPatch.spells?.spellProfiles.find(
+      (entry) => entry.type === 'racial',
+    )
+    expect(profile?.castingAbilityOptions).toBeUndefined()
+    expect(profile?.castingAbility).toBeUndefined()
+    expect(profile?.cantrips).toEqual(['shocking grasp'])
+    expect(result.provenanceUpdate.spells['shocking grasp']).toEqual([
+      expect.objectContaining({ sourceType: 'race', sourceName: 'Caster', sourceRef: 'PHB' }),
+    ])
+  }
+  expect(initial).toEqual(before)
+})
+
 test('traditional child replacement keeps fixed parent ownership and replaces child spells', () => {
   const race = {
     name: 'Caster',

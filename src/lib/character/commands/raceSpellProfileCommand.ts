@@ -41,7 +41,7 @@ export function reconcileRaceSpellProfileCommand(
     previousProfile?.castingAbility &&
     (profile.castingAbilityOptions
       ? profile.castingAbilityOptions.includes(previousProfile.castingAbility)
-      : !profile.castingAbility || profile.castingAbility === previousProfile.castingAbility)
+      : profile.castingAbility === previousProfile.castingAbility)
   ) {
     profile = { ...profile, castingAbility: previousProfile.castingAbility }
   }
