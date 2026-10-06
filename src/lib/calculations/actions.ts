@@ -131,17 +131,15 @@ export function deriveSpellActions(
     const sourceLessId = toClassProfileId(classData.name)
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
-  const selection = options.raceResolution?.parentRace
-    ? deriveRaceSpellSelection(
-        options.raceResolution.parentRace,
-        options.raceResolution.subraceData,
-        {
+  const resolution = options.raceResolution
+  const selection =
+    resolution?.parentRace && (!character.subrace || resolution.subraceData)
+      ? deriveRaceSpellSelection(resolution.parentRace, resolution.subraceData, {
           raceName: character.race,
           subraceName: character.subrace,
-          subraceIsNested: options.raceResolution.subraceIsNested,
-        },
-      )
-    : undefined
+          subraceIsNested: resolution.subraceIsNested,
+        })
+      : undefined
   const raceData = selection
     ? {
         name: selection.name ?? character.race,

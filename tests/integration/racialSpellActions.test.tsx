@@ -294,3 +294,27 @@ test('unavailable race data preserves the existing saved-profile projection fall
   expect(createCharacterSheetViewModel(character, catalog.lookups).actions).toContainEqual(expected)
   expect(character).toEqual(before)
 })
+
+test.each([
+  'missing child',
+  'other child printing',
+] as const)('%s preserves the existing fallback when the saved child cannot resolve', (availability) => {
+  const parent = { name: 'Parent', source: 'PHB' } as Race5e
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  const character = savedChoice(parent, child, 'Child Parent')
+  install([
+    availability === 'missing child'
+      ? parent
+      : { ...parent, subraces: [{ ...child, source: 'PHB' }] },
+  ])
+  const before = structuredClone(character)
+  const expected = expect.objectContaining({
+    name: 'Shocking Grasp',
+    active: true,
+    source: expect.objectContaining({ source: 'PHB' }),
+  })
+  const { result } = renderHook(() => useCharacterActions(character))
+  expect(result.current).toContainEqual(expected)
+  expect(createCharacterSheetViewModel(character, catalog.lookups).actions).toContainEqual(expected)
+  expect(character).toEqual(before)
+})

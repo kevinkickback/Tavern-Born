@@ -105,7 +105,9 @@ Per-level overflow continues onto extra spell-page copies independently of the l
 PDF action projection uses the resolved race selection and the same spell-block/profile-label policy
 as the Spells and Actions pages. Source-qualified saved racial choices retain their existing profile
 identity; complete versions use their own grants, including explicit removal, and named traditional
-parent blocks are filtered to the selected child. Projection does not change saved choices or state.
+parent blocks are filtered to the selected child. An unavailable selected child preserves the
+existing action projection fallback instead of inferring spell removal from its parent. Projection
+does not change saved choices or state.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries
