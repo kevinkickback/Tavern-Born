@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5453.1 KiB (up 2.8 KiB from 5450.3) for shared race copy/version resolution,
-  // raw race layering, complete-version grants, and list traversal; the duplicate wizard merge was removed.
-  rendererCode: 5454 * KIB,
-  // Reviewed at 432.0 KiB (up 3.2 KiB from 428.8) for the shared normalization boundary.
+  // Measured at 5456.1 KiB (up 2.8 KiB from 5453.3) for pinned parent/subrace composition,
+  // nested version expansion and its required diagnostics. The bounded change requires fresh review.
+  rendererCode: 5457 * KIB,
+  // Measured at 434.8 KiB (up 2.8 KiB from 432.0) for that ingestion adapter.
   // No dependency added; all other budgets remain unchanged.
-  initialRendererScript: 433 * KIB,
+  initialRendererScript: 435 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

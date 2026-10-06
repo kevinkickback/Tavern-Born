@@ -146,6 +146,19 @@ Traditional subraces retain their existing additive merge behavior. Normalized r
 unapplied `_copy`, `_mod`, or `_versions` directives from this race pipeline. Named race templates
 are currently unsupported and reported as missing rather than silently skipped.
 
+Subrace `_versions` expand after composing the resolved subrace with its exact parent, using a
+data-only adaptation of the pinned upstream
+[`Renderer.race._getMergedSubrace`](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/render.js).
+This merges corresponding ability blocks, applies explicit array overwrites and named entry
+replacement, and removes null fields before version modifications can refer to inherited rules.
+Parent-level version definitions are not reapplied to child families. Ambiguous ability/skill
+merges or unsupported version operations are required diagnostics in a completed catalog; a raw
+source stack can defer them until composition. Named and nameless subrace families use the same
+pipeline. Parenthesized family labels retain internal semicolons so versions from distinct families
+keep distinct source-qualified selection identities. Existing ordinary subrace entries remain
+available with their previous names; their consumed `_versions` definitions are removed. Cache
+schema 17 rebuilds catalogs that previously retained unmaterialized subrace versions.
+
 Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
 objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys
 retain their character-level requirement. Parsed filtered choices retain a positive integer `count`

@@ -1,5 +1,6 @@
 import { RACE_STRUCTURED_ENTRY_FIELDS } from '@/lib/5etools/rulesetMetadata'
 import { CopyResolutionError, resolveCopiedRecords, resolveRecordVersions } from '../copyResolution'
+import { mergeSubraceForVersions } from '../mergeSubrace'
 import { asArray, asObject } from './shared'
 
 function raceKey(name: unknown, source: unknown): string {
@@ -95,24 +96,52 @@ export function parseRaces(
       'overwrite',
     ])
     const allSubraces = [
-      ...nested.map((subrace) => {
+      ...nested.flatMap((subrace) => {
         const subraceObj = asObject(subrace)
         if (subraceObj._copy)
           diagnostics.push({
             entity: `${String(subraceObj.name ?? 'Default')}|${String(subraceObj.source ?? '')}`,
             reason: 'inline subrace copies must be supplied in the subrace collection',
           })
-        if (typeof subraceObj.name === 'string' && subraceObj.name.trim().length > 0) {
-          return normalizeRacePresentationEntries(subraceObj)
+        let subraceVersions: ReturnType<typeof resolveRecordVersions> = {
+          records: [],
+          diagnostics: [],
         }
+        if (subraceObj._versions !== undefined && !subraceObj._copy && !raceObj._copy) {
+          try {
+            subraceVersions = resolveRecordVersions(
+              mergeSubraceForVersions(race, subraceObj),
+              'race',
+            )
+          } catch (error) {
+            subraceVersions.diagnostics.push({
+              entity: `${race.name}|${race.source}/subrace:${String(subraceObj.name ?? 'Default')}|${String(subraceObj.source ?? race.source)}`,
+              reason: String(error),
+            })
+          }
+        }
+        diagnostics.push(...subraceVersions.diagnostics)
         // Nameless entries become 'Default'. Tag metadata-only ones so the display
         // layer can suppress a lone Default that adds nothing to the base race.
         const hasGameplay = Object.keys(subraceObj).some((k) => GAMEPLAY_KEYS.has(k))
-        return normalizeRacePresentationEntries({
+        const ordinary = normalizeRacePresentationEntries({
           ...subraceObj,
-          name: 'Default',
-          _isMetadataDefault: !hasGameplay,
+          ...(typeof subraceObj.name === 'string' && subraceObj.name.trim().length > 0
+            ? {}
+            : { name: 'Default', _isMetadataDefault: !hasGameplay }),
         })
+        if (!subraceObj._copy && !raceObj._copy && !subraceVersions.diagnostics.length)
+          delete ordinary._versions
+        return [
+          ordinary,
+          ...subraceVersions.records.map((version) =>
+            normalizeRacePresentationEntries({
+              ...version,
+              name: extractVersionDisplayName(version.name, race.name),
+              _isVersion: true,
+            }),
+          ),
+        ]
       }),
       ...versionSubraces.map((version) => normalizeRacePresentationEntries(asObject(version))),
     ]
@@ -133,10 +162,9 @@ export function parseRaces(
  */
 function extractVersionDisplayName(fullName: string, parentName: string): string {
   const semiIdx = fullName.indexOf(';')
-  if (semiIdx >= 0) return fullName.substring(semiIdx + 1).trim()
-  // Handle parenthesized form: "Dragonborn (Black)" -> "Black"
   const parenMatch = fullName.match(/\(([^)]+)\)/)
-  if (parenMatch) return parenMatch[1]
+  if (parenMatch && (semiIdx < 0 || fullName.indexOf('(') < semiIdx)) return parenMatch[1]
+  if (semiIdx >= 0) return fullName.substring(semiIdx + 1).trim()
   // Fallback: strip parent name prefix
   if (fullName.startsWith(parentName))
     return fullName.substring(parentName.length).trim() || fullName
