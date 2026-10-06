@@ -194,14 +194,12 @@ describe('character creation and proficiencies validation', () => {
 
     // Verify character passes schema validation
     const addCharacter = useCharacterStore.getState().addCharacter
-    expect(() => {
-      addCharacter(character)
-    }).not.toThrow()
+    const added = await addCharacter(character)
 
     // Verify persisted character maintains valid structure
     const state = useCharacterStore.getState()
-    const persistedChar = state.characters.find((c) => c.id === character.id)
-    expect(persistedChar).toBeTruthy()
+    const persistedChar = state.characters.find((c) => c.id === added.id)
+    expect(persistedChar).toEqual(added)
     if (persistedChar) {
       expect(Array.isArray(persistedChar.proficiencies.weapons)).toBe(true)
       persistedChar.proficiencies.weapons.forEach((w) => {
