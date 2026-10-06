@@ -49,11 +49,18 @@ export function useSubclassSelectionController({
         isSubclassEligible({
           subclass,
           className: viewingClass,
+          classSource: viewingClassSource,
           character,
           effectiveAbilityScores: calculationContext?.abilityScores.total,
         }),
     )
-  }, [character, calculationContext, viewingClass, viewingClassData?.subclasses])
+  }, [
+    character,
+    calculationContext,
+    viewingClass,
+    viewingClassSource,
+    viewingClassData?.subclasses,
+  ])
   const subclassTitle =
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle

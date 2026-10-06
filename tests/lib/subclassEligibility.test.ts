@@ -15,6 +15,29 @@ function subclass(name: string, overrides: Partial<Subclass5e> = {}): Subclass5e
 }
 
 describe('isSubclassEligible', () => {
+  test('uses the subclass parent printing for contextual level prerequisites', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 5 },
+        { name: 'Wizard', source: 'XPHB', levels: 2 },
+      ],
+    })
+    expect(
+      isSubclassEligible({
+        subclass: subclass('Revised School', { classSource: 'XPHB', prerequisite: [{ level: 3 }] }),
+        className: 'Wizard',
+        character,
+      }),
+    ).toBe(false)
+    expect(
+      isSubclassEligible({
+        subclass: subclass('Legacy School', { prerequisite: [{ level: 3 }] }),
+        className: 'Wizard',
+        character,
+      }),
+    ).toBe(true)
+  })
+
   test('applies the legacy Bladesinger race restriction and override', () => {
     const bladesinger = subclass('Bladesinger', { source: 'SCAG' })
 

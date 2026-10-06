@@ -6,6 +6,7 @@ import type { AbilityScores, Character } from '@/types/character'
 interface SubclassEligibilityParams {
   subclass: Subclass5e
   className: string
+  classSource?: string
   character: Character
   effectiveAbilityScores?: AbilityScores
 }
@@ -17,6 +18,7 @@ interface LegacyRestriction {
 export function isSubclassEligible({
   subclass,
   className,
+  classSource = subclass.classSource,
   character,
   effectiveAbilityScores,
 }: SubclassEligibilityParams): boolean {
@@ -25,7 +27,7 @@ export function isSubclassEligible({
     return checkAllPrerequisites(
       { prerequisite },
       buildPrerequisiteSnapshot({ character, effectiveAbilityScores }),
-      { className },
+      { className, classSource },
     ).met
   }
 

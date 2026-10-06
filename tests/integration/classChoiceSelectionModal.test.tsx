@@ -37,6 +37,87 @@ const choice: NormalizedCharacterChoice = {
 }
 
 describe('ClassChoiceSelectionModal', () => {
+  test('checks a choice against the selected class printing', () => {
+    const option: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'optionalFeature', name: 'Revised Training', source: 'XPHB' },
+      entries: [],
+      prerequisite: [{ level: 3 }],
+    }
+    render(
+      <ClassChoiceSelectionModal
+        choice={choice}
+        options={[option]}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture({
+          progression: [
+            { name: 'Wizard', source: 'PHB', levels: 5 },
+            { name: 'Wizard', source: 'XPHB', levels: 2 },
+          ],
+        })}
+        className="Wizard"
+        classSource="XPHB"
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+    const props = selectionModalCapture.props as {
+      canSelect: (
+        item: ClassChoiceOptionView,
+        selected: Set<string>,
+        allItems: ClassChoiceOptionView[],
+      ) => boolean
+      matchItem: (
+        item: ClassChoiceOptionView,
+        search: string,
+        filters: Record<string, Set<string>>,
+      ) => boolean
+    }
+    expect(props.canSelect(option, new Set(), [option])).toBe(false)
+    expect(props.matchItem(option, '', {})).toBe(false)
+  })
+
+  test('explains unverified prerequisites and does not automatically enable an unsupported choice', () => {
+    const option: ClassChoiceOptionView = {
+      availability: 'eligible',
+      reference: { entityType: 'optionalFeature', name: 'Filtered Spell Training', source: 'TEST' },
+      entries: [],
+      prerequisite: [{ spell: [{ choose: 'level=0', entry: 'a cantrip' }] }],
+    }
+    render(
+      <ClassChoiceSelectionModal
+        choice={choice}
+        options={[option]}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+    const props = selectionModalCapture.props as {
+      matchItem: (
+        item: ClassChoiceOptionView,
+        search: string,
+        filters: Record<string, Set<string>>,
+      ) => boolean
+      canSelect: (
+        item: ClassChoiceOptionView,
+        selected: Set<string>,
+        allItems: ClassChoiceOptionView[],
+      ) => boolean
+      renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
+      filterSections: Array<{ options: Array<{ label: string }> }>
+    }
+    expect(props.matchItem(option, '', {})).toBe(false)
+    expect(props.matchItem(option, '', { prerequisite: new Set(['showUnmet']) })).toBe(true)
+    expect(props.canSelect(option, new Set(), [option])).toBe(false)
+    expect(props.filterSections[0].options[0].label).toContain('unverified')
+    render(props.renderCard(option, false))
+    expect(screen.getByText('Requires manual review: spell requirement')).toBeTruthy()
+  })
+
   test('hides unmet options by default and prevents selecting them when revealed', () => {
     const available: ClassChoiceOptionView = {
       availability: 'eligible',

@@ -161,7 +161,7 @@ export function FeatSelectionModal({
               options: [
                 {
                   value: 'showUnmet',
-                  label: 'Show feats with unmet prerequisites',
+                  label: 'Show feats with unmet or unverified prerequisites',
                 },
               ],
             },
