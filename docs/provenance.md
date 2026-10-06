@@ -69,6 +69,12 @@ Switching to or from a version rebuilds both race and subrace ownership in one c
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
 changes retain the existing additive ownership behavior.
 
+Spell-profile adapters use the same complete-version boundary: `useCharacterRaceData` omits parent
+spell blocks for a materialized version, including inherited blocks already present on that version
+and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named
+parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
+from the unfiltered catalog.
+
 ## Class ownership
 
 Class tags include source-qualified class identity and, where needed, the granting level/choice.

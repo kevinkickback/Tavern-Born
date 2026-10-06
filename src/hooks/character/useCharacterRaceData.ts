@@ -3,6 +3,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useRaceLookup } from '@/hooks/data/useGameData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { buildRaceLookup } from '@/lib/5etools/lookups'
+import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
@@ -54,7 +55,9 @@ export function useCharacterRaceData(character: Character | null | undefined): C
       { racesByKey: rawRaceLookup },
     )
 
-    const parentSpells = parentMatch?.additionalSpells ?? []
+    const parentSpells = parentMatch
+      ? (getRaceSelectionParent(parentMatch, subraceMatch).additionalSpells ?? [])
+      : []
     const filteredParentSpells =
       character.subrace && parentSpells.some((s) => !!s.name)
         ? parentSpells.filter(

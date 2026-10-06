@@ -171,6 +171,7 @@ export function buildRacialSpellProfile(params: {
     }
 
     for (const choiceDesc of block.choices) {
+      if (choiceDesc.level > totalLevel) continue
       const existingChoice = existingProfile?.choices?.find((c) => c.id === choiceDesc.id)
       const selected = existingChoice?.selected ?? []
       const choice: RaceSpellChoice = {

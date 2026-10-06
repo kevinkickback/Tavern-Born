@@ -146,6 +146,14 @@ Traditional subraces retain their existing additive merge behavior. Normalized r
 unapplied `_copy`, `_mod`, or `_versions` directives from this race pipeline. Named race templates
 are currently unsupported and reported as missing rather than silently skipped.
 
+Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
+objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys
+retain their character-level requirement. Parsed filtered choices retain a positive integer `count`
+(default one when omitted). Innate direct arrays and daily-use groups retain spell identity, level,
+and daily limits where supplied. Complete-version spell consumers use the version's blocks without
+reapplying parent blocks; traditional subraces retain their existing composition behavior. Other
+racial spell schedules and choice shapes need their own supported adapter before automation.
+
 ## Prerequisite eligibility
 
 The shared prerequisite checker consumes the upstream raw shape. Blocks in `prerequisite[]` are

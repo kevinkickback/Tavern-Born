@@ -12,6 +12,7 @@ export interface RaceSpellGrant {
 
 interface RaceSpellChoiceDescriptor {
   id: string
+  level: number
   count: number
   isCantrip: boolean
   filter?: { level: number; classes: string[] }
@@ -52,7 +53,7 @@ export function parseChooseFilter(filter: string): { level: number; classes: str
 }
 
 function parseKnownBlock(
-  levelEntries: Record<string, string[] | { _: Array<string | { choose: string }> }>,
+  levelEntries: NonNullable<RaceAdditionalSpells['known']>,
   ability: string | undefined,
 ): { grants: RaceSpellGrant[]; choices: RaceSpellChoiceDescriptor[] } {
   const grants: RaceSpellGrant[] = []
@@ -60,13 +61,14 @@ function parseKnownBlock(
   let choiceIdx = 0
 
   for (const [levelText, spellData] of Object.entries(levelEntries)) {
-    const level = Number.parseInt(levelText, 10)
+    const level = levelText === '_' ? 0 : Number.parseInt(levelText, 10)
     if (!Number.isFinite(level)) continue
 
-    if (Array.isArray(spellData)) {
-      for (const rawSpell of spellData) {
-        if (typeof rawSpell !== 'string') continue
-        const parsed = parseSpellToken(rawSpell)
+    const items = Array.isArray(spellData) ? spellData : spellData?._
+    if (!Array.isArray(items)) continue
+    for (const item of items) {
+      if (typeof item === 'string') {
+        const parsed = parseSpellToken(item)
         grants.push({
           spellName: parsed.name,
           level,
@@ -74,29 +76,17 @@ function parseKnownBlock(
           castingAbility: ability,
           source: 'known',
         })
-      }
-    } else if (spellData && typeof spellData === 'object' && '_' in spellData) {
-      const items = spellData._
-      if (!Array.isArray(items)) continue
-      for (const item of items) {
-        if (typeof item === 'string') {
-          const parsed = parseSpellToken(item)
-          grants.push({
-            spellName: parsed.name,
-            level,
-            isCantrip: parsed.isCantrip,
-            castingAbility: ability,
-            source: 'known',
-          })
-        } else if (item && typeof item === 'object' && 'choose' in item) {
-          const filter = parseChooseFilter(item.choose as string)
-          choices.push({
-            id: `choose-${choiceIdx++}`,
-            count: 1,
-            isCantrip: filter.level === 0,
-            filter,
-          })
-        }
+      } else if (item && typeof item === 'object' && typeof item.choose === 'string') {
+        const count = item.count ?? 1
+        if (!Number.isInteger(count) || count <= 0) continue
+        const filter = parseChooseFilter(item.choose)
+        choices.push({
+          id: `choose-${choiceIdx++}`,
+          level,
+          count,
+          isCantrip: filter.level === 0,
+          filter,
+        })
       }
     }
   }
@@ -105,14 +95,29 @@ function parseKnownBlock(
 }
 
 function parseInnateBlock(
-  innateEntries: Record<string, Record<string, Record<string, string[]>>>,
+  innateEntries: NonNullable<RaceAdditionalSpells['innate']>,
   ability: string | undefined,
 ): RaceSpellGrant[] {
   const grants: RaceSpellGrant[] = []
 
   for (const [levelText, usageMap] of Object.entries(innateEntries)) {
-    const level = Number.parseInt(levelText, 10)
+    const level = levelText === '_' ? 0 : Number.parseInt(levelText, 10)
     if (!Number.isFinite(level) || !usageMap || typeof usageMap !== 'object') continue
+
+    if (Array.isArray(usageMap)) {
+      for (const rawSpell of usageMap) {
+        if (typeof rawSpell !== 'string') continue
+        const parsed = parseSpellToken(rawSpell)
+        grants.push({
+          spellName: parsed.name,
+          level,
+          isCantrip: parsed.isCantrip,
+          castingAbility: ability,
+          source: 'innate',
+        })
+      }
+      continue
+    }
 
     const daily = (usageMap as Record<string, unknown>).daily
     if (!daily || typeof daily !== 'object') continue

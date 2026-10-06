@@ -12,6 +12,52 @@ describe('toRacialProfileId', () => {
 })
 
 describe('buildRacialSpellProfile', () => {
+  test('level-gates direct known choices while retaining ungated choices', () => {
+    const additionalSpells = [
+      {
+        known: {
+          _: [{ choose: 'level=0|class=Sorcerer' }],
+          5: [{ choose: 'level=1|class=Wizard', count: 2 }],
+        },
+      },
+    ]
+    const level1 = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells,
+      totalLevel: 1,
+    })
+    expect(level1.choices).toEqual([
+      {
+        id: 'choose-1',
+        count: 1,
+        isCantrip: true,
+        selected: [],
+        filter: { level: 0, classes: ['Sorcerer'] },
+      },
+    ])
+    const level5 = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells,
+      totalLevel: 5,
+    })
+    expect(level5.choices).toEqual([
+      {
+        id: 'choose-0',
+        count: 2,
+        isCantrip: false,
+        selected: [],
+        filter: { level: 1, classes: ['Wizard'] },
+      },
+      {
+        id: 'choose-1',
+        count: 1,
+        isCantrip: true,
+        selected: [],
+        filter: { level: 0, classes: ['Sorcerer'] },
+      },
+    ])
+  })
+
   test('creates profile with fixed spells from single block', () => {
     const profile = buildRacialSpellProfile({
       raceName: 'Tiefling',
