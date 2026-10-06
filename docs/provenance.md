@@ -69,6 +69,16 @@ Switching to or from a version rebuilds both race and subrace ownership in one c
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
 changes retain the existing additive ownership behavior.
 
+Complete versions also derive the legacy language fallback from their own string-valued lineage
+when explicit language blocks are absent. The version owns both the fixed language and its choice;
+traditional subraces do not synthesize a second parent fallback. The 2024 origin policy suppresses
+racial language grants and retains its independent baseline.
+
+Race commands compare proficiency ownership before removal with the ledger after all replaced
+owners are removed, then apply the new grants. A value shared only by the old race and subrace
+leaves with their final owner. Values still owned by a manual or unrelated source, and untracked
+manual values, remain. Skill expertise is pruned with any proficiency that becomes unavailable.
+
 Spell-profile adapters use the same complete-version boundary: `useCharacterRaceData` omits parent
 spell blocks for a materialized version, including inherited blocks already present on that version
 and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named

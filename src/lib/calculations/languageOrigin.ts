@@ -34,6 +34,17 @@ export function deriveEffectiveRaceLanguageBlocks(race: {
     : []
 }
 
+export function deriveEffectiveSubraceLanguageBlocks(subrace?: {
+  languageProficiencies?: unknown[]
+  lineage?: string | boolean
+  _isVersion?: unknown
+}): unknown[] {
+  if (!subrace) return []
+  return subrace._isVersion === true
+    ? deriveEffectiveRaceLanguageBlocks(subrace)
+    : (subrace.languageProficiencies ?? [])
+}
+
 function makeOriginLanguageTag(grantType: SourceTag['grantType']): SourceTag {
   return makeSourceTag('manual', ORIGIN_2024_LANGUAGE_SOURCE, grantType)
 }

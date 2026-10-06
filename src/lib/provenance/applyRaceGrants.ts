@@ -1,7 +1,10 @@
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
 import { ARMOR_CATEGORY_LABEL_TO_CODE } from '@/lib/calculations/armorClass'
-import { deriveEffectiveRaceLanguageBlocks } from '@/lib/calculations/languageOrigin'
+import {
+  deriveEffectiveRaceLanguageBlocks,
+  deriveEffectiveSubraceLanguageBlocks,
+} from '@/lib/calculations/languageOrigin'
 import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
 import type { Item5e } from '@/types/5etools'
 import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
@@ -139,6 +142,7 @@ export function applyRaceGrants(
     | {
         name: string
         source?: string
+        lineage?: string | boolean
         skillProficiencies?: unknown[]
         languageProficiencies?: unknown[]
         toolProficiencies?: unknown[]
@@ -348,7 +352,7 @@ export function applyRaceGrants(
       result = applyProficiencyBlocks(
         result,
         'languages',
-        toProficiencyBlocks(subrace.languageProficiencies),
+        toProficiencyBlocks(deriveEffectiveSubraceLanguageBlocks(subrace)),
         subraceTag,
         `subrace:${normalizeKey(subrace.name)}`,
         resolveFilterOptions,
