@@ -86,6 +86,16 @@ and blocks explicitly removed by it. Traditional subrace spell blocks remain add
 parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
 from the unfiltered catalog.
 
+Race selection commands rebuild the persisted racial spell profile at the actual total character
+level. They remove obsolete racial profiles and choice ownership, then restore saved choices only
+for the same source-qualified profile and compatible choice rules. Existing choice commands enforce
+current pool and count limits. Casting ability selections survive only while valid for the current
+grant. Independent class and special profiles and spell-slot usage remain intact. A shared pure
+selection adapter keeps command and spell-hook labels and blocks consistent; legacy profile labels
+and choice identifiers remain stable.
+Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
+Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
+
 ## Class ownership
 
 Class tags include source-qualified class identity and, where needed, the granting level/choice.

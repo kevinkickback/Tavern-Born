@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Pinned parent/subrace composition, version diagnostics and canonical identities add about 3 KiB
-  // to the 5453.3 KiB dependency build. This bounded allowance requires fresh review.
-  rendererCode: 5457 * KIB,
+  // Atomic racial-profile reconciliation and canonical selection context add about 3 KiB
+  // to the 5456.1 KiB accepted dependency build. This bounded allowance requires fresh review.
+  rendererCode: 5460 * KIB,
   // The same adapter adds about 3 KiB to the 432.0 KiB initial script.
   // No dependency added; all other budgets remain unchanged.
   initialRendererScript: 435 * KIB,

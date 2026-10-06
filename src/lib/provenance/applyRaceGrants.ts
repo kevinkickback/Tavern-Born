@@ -101,7 +101,7 @@ export function resolveRaceGrantFilterOptions(
   return results.sort((left, right) => left.localeCompare(right))
 }
 
-function applyRaceSpellGrants(
+export function applyRaceSpellGrants(
   race: {
     additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
   },
@@ -159,7 +159,7 @@ export function applyRaceGrants(
   resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
   totalCharacterLevel = 1,
-  options?: { suppressLanguageGrants?: boolean },
+  options?: { suppressLanguageGrants?: boolean; suppressSpellGrants?: boolean },
 ): ProvenanceLedger {
   race = getRaceSelectionParent(race, subrace)
   let result = ledger
@@ -217,7 +217,9 @@ export function applyRaceGrants(
   result = applyFeatGrantBlocks(result, race.feats, 'race', race.name, race.source)
 
   // Apply race additional spells independently of ability score parsing.
-  result = applyRaceSpellGrants(race, totalCharacterLevel, result, raceTag)
+  if (!options?.suppressSpellGrants) {
+    result = applyRaceSpellGrants(race, totalCharacterLevel, result, raceTag)
+  }
 
   if (!usesTashasLineageAsi) {
     for (const block of race.ability ?? []) {
@@ -286,7 +288,9 @@ export function applyRaceGrants(
     result = applyFeatGrantBlocks(result, subrace.feats, 'subrace', subrace.name, subrace.source)
 
     // Apply subrace additional spells independently of ability score parsing.
-    result = applyRaceSpellGrants(subrace, totalCharacterLevel, result, subraceTag)
+    if (!options?.suppressSpellGrants) {
+      result = applyRaceSpellGrants(subrace, totalCharacterLevel, result, subraceTag)
+    }
 
     const replace = subrace.overwrite?.ability === true
 

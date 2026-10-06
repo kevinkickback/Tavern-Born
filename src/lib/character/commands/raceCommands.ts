@@ -10,9 +10,11 @@ import {
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
+import type { RaceSpellSelectionOptions } from '@/lib/calculations/raceSpellSelection'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
   applyRaceGrants,
   reconcileRaceChange,
@@ -24,8 +26,12 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileRaceSpellProfileCommand } from './raceSpellProfileCommand'
 
 export type ResolveRaceChoiceOptions = (domain: 'armor' | 'weapons', fromFilter: string) => string[]
+export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subraceIsNested'> & {
+  previousSubrace?: Race5e
+}
 
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
@@ -142,6 +148,7 @@ export function applyRaceSelectionCommand(
   subrace: Race5e | undefined,
   raceAsiBlockIndex: 0 | 1,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
+  options?: RaceSelectionCommandOptions,
 ): CharacterCommandResult {
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
@@ -164,12 +171,20 @@ export function applyRaceSelectionCommand(
     retainedProvenance,
     resolveRaceChoiceOptions,
     raceAsiBlockIndex,
-    1,
-    { suppressLanguageGrants: character.originSystem === '2024' },
+    getTotalCharacterLevel(character),
+    { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
+  const racialSpells = reconcileRaceSpellProfileCommand(
+    workingCharacter,
+    provenanceUpdate,
+    race,
+    subrace,
+    options,
+  )
+  provenanceUpdate = racialSpells.provenanceUpdate
 
   return {
     characterPatch: {
@@ -180,7 +195,7 @@ export function applyRaceSelectionCommand(
       raceAsiBlockIndex,
       raceAsiChoices: [],
       movement,
-      spells: workingCharacter.spells,
+      spells: racialSpells.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
         workingCharacter,
@@ -200,8 +215,13 @@ export function applySubraceSelectionCommand(
   race: Race5e,
   subrace: Race5e | undefined,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
+  options?: RaceSelectionCommandOptions,
 ): CharacterCommandResult {
-  const previous = race.subraces?.find(
+  const previousCandidates = [
+    ...(options?.previousSubrace ? [options.previousSubrace] : []),
+    ...(race.subraces ?? []),
+  ]
+  const previous = previousCandidates.find(
     (candidate) =>
       candidate.name === character.subrace &&
       (!character.subraceSource || candidate.source === character.subraceSource),
@@ -214,6 +234,7 @@ export function applySubraceSelectionCommand(
       subrace,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
       resolveRaceChoiceOptions,
+      options,
     )
   }
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
@@ -241,13 +262,21 @@ export function applySubraceSelectionCommand(
       provenanceUpdate,
       resolveRaceChoiceOptions,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-      1,
-      { suppressLanguageGrants: character.originSystem === '2024' },
+      getTotalCharacterLevel(character),
+      { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
     )
   }
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
+  const racialSpells = reconcileRaceSpellProfileCommand(
+    workingCharacter,
+    provenanceUpdate,
+    race,
+    subrace,
+    options,
+  )
+  provenanceUpdate = racialSpells.provenanceUpdate
 
   return {
     characterPatch: {
@@ -255,7 +284,7 @@ export function applySubraceSelectionCommand(
       subraceSource: subrace?.source || undefined,
       raceAsiChoices: [],
       movement,
-      spells: workingCharacter.spells,
+      spells: racialSpells.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
         workingCharacter,

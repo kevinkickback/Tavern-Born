@@ -3,7 +3,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useRaceLookup } from '@/hooks/data/useGameData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { buildRaceLookup } from '@/lib/5etools/lookups'
-import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
+import { deriveRaceSpellSelection } from '@/lib/calculations/raceSpellSelection'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
@@ -55,30 +55,18 @@ export function useCharacterRaceData(character: Character | null | undefined): C
       { racesByKey: rawRaceLookup },
     )
 
-    const parentSpells = parentMatch
-      ? (getRaceSelectionParent(parentMatch, subraceMatch).additionalSpells ?? [])
-      : []
-    const filteredParentSpells =
-      character.subrace && parentSpells.some((s) => !!s.name)
-        ? parentSpells.filter(
-            (s) => !s.name || s.name.toLowerCase() === character.subrace?.toLowerCase(),
-          )
-        : parentSpells
-    const subraceSpells = subraceMatch?.additionalSpells ?? []
-    const mergedSpells = [...filteredParentSpells, ...subraceSpells]
-
-    const displayName =
-      subraceIsNested && subraceMatch
-        ? `${subraceMatch.name} ${parentMatch?.name ?? character.race ?? ''}`
-        : (subraceMatch?.name ?? character.subrace ?? parentMatch?.name ?? character.race)
-    const displaySource = subraceMatch?.source ?? parentMatch?.source
+    const selection = deriveRaceSpellSelection(parentMatch, subraceMatch, {
+      raceName: character.race,
+      subraceName: character.subrace,
+      subraceIsNested,
+    })
 
     return {
       parentRace: parentMatch,
       subraceData: subraceMatch,
-      mergedAdditionalSpells: mergedSpells,
-      displayName,
-      displaySource,
+      mergedAdditionalSpells: selection.additionalSpells,
+      displayName: selection.name,
+      displaySource: selection.source,
     }
   }, [
     character?.race,
