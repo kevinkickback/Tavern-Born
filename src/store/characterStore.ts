@@ -96,6 +96,7 @@ interface CharacterLibrary {
 const CHARACTER_STORAGE_NAME = 'character-storage'
 const characterStorage = createIdbStorage<CharacterLibrary>()
 let pendingLibraryOperation: Promise<void> | null = null
+let runningLibraryOperation = Promise.resolve()
 let durableLibrary: CharacterLibrary | null = null
 let readLibrary: () => CharacterLibrary
 let characterHydration = Promise.resolve()
@@ -114,7 +115,12 @@ function enqueueLibraryOperation<T>(operation: () => Promise<T>): Promise<T> {
         new Error('Character library could not be loaded. Reload the app and try again.'),
         { cause: characterHydrationError },
       )
-    return operation()
+    const running = Promise.resolve().then(operation)
+    runningLibraryOperation = running.then(
+      () => undefined,
+      () => undefined,
+    )
+    return running
   })
   const settled = result.then(
     () => undefined,
@@ -142,7 +148,11 @@ async function writeLibrary(library: CharacterLibrary): Promise<void> {
 // Persist handles hydration and quarantine changes. Explicit library transactions write before
 // publishing; draft-only changes and the publication of an acknowledged snapshot need no write.
 const libraryStorage: PersistStorage<CharacterLibrary> = {
-  getItem: (name) => characterStorage.getItem(name),
+  getItem: async (name) => {
+    // Queued operations can await hydration; only an executing transaction may delay this read.
+    await runningLibraryOperation
+    return characterStorage.getItem(name)
+  },
   removeItem: (name) =>
     enqueueLibraryOperation(async () => {
       await characterStorage.removeItem(name)

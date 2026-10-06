@@ -43,6 +43,8 @@ and cross-surface contracts.
   failure followed by explicit Save retry; unhandled rejections must fail the run.
   Quarantine acknowledgment must retain backups through rejection and later library writes,
   permit export/retry in the dialog, and be absent from a fresh storage read only after success.
+  Start a reload during a delayed transaction, then complete the read after acknowledgment;
+  neither a successful nor rejected write may be undone or deadlock later queued actions.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
 - Test accessibility through roles/names and keyboard behavior where practical.

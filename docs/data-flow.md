@@ -88,6 +88,9 @@ transaction. Pending creation/deletion cannot dismiss its form, and success noti
 the durable write rather than the initial click.
 The compatibility dialog also awaits durable acknowledgment before discarding quarantined originals.
 A failed acknowledgment retains the backups, export action, and Continue retry.
+An explicit character reload waits for an executing library transaction before reading storage,
+so it cannot merge an older snapshot over an acknowledged write. Pending actions waiting for
+hydration do not block the read.
 
 ## Domain mutation
 

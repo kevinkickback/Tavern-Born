@@ -52,6 +52,10 @@ read rejects queued mutations without writing. Successful rehydration releases l
 Replacement reads, including those started during hydration callbacks, keep queued writes waiting
 for the latest load. Ignored automatic correction failures remain handled and dirty for explicit
 Save retry.
+Reload reads wait for an already executing transaction to finish, including publication of its
+acknowledged library. They do not wait for queued actions that are themselves awaiting hydration;
+this avoids a read/write deadlock. A rejected transaction releases the read without hiding its
+failure from the caller, and later actions use the reloaded library.
 Transactions write before publishing `characters`, so rejected writes need no optimistic
 rollback. Draft edits and active selection never rewrite an unchanged library. Persist middleware
 continues to own hydration and quarantine normalization; its writes share the queue and read the
