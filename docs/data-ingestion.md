@@ -132,6 +132,9 @@ such as `{ dex: 13 }`: every score in a map is required, and separate maps in `a
 alternatives. Never substitute the checker-specific `{ ability, score }` shape or an implicit
 threshold for source data. Class-qualified level requirements use the matching class/subclass
 progression and supplied source, not total multiclass level or just the primary class.
+Class-choice snapshots resolve the selected subclass's upstream short name from the exact
+source-qualified class catalog. An unavailable subclass identity requires review rather than
+guessing an alias; levels belonging to distinct class entries are never added to meet one owner.
 
 The aggregate result distinguishes `met`, `unmet`, and `unsupported`. Unknown condition keys or
 malformed supported conditions require manual review and cannot prove eligibility. A satisfied

@@ -1,13 +1,14 @@
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { buildSpellNameKeySet, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
-import type { Raw5ePrereq } from '@/types/5etools'
+import type { Class5e, Raw5ePrereq } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityName } from './abilityScores'
 
 export interface PrereqCharacterSnapshot {
-  progression: readonly CharacterClassEntry[]
+  progression: readonly (CharacterClassEntry & { subclassShortName?: string })[]
   race?: string
   raceSource?: string
   abilityScores?: Partial<Record<AbilityName, number>>
@@ -22,18 +23,28 @@ export interface PrereqCharacterSnapshot {
 interface BuildPrerequisiteSnapshotParams {
   character: Character | null
   classProgression?: CharacterClassEntry[]
+  classLookup?: Readonly<Record<string, Class5e | undefined>>
   effectiveAbilityScores?: Partial<Record<AbilityName, number>>
 }
 
 export function buildPrerequisiteSnapshot({
   character,
   classProgression = getCharacterClassEntries(character),
+  classLookup,
   effectiveAbilityScores,
 }: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
   const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
 
   return {
-    progression: classProgression,
+    progression: classProgression.map((entry) => {
+      const subclass = classLookup?.[
+        getEntityLookupKey(entry.name, entry.source)
+      ]?.subclasses?.find(
+        (candidate) =>
+          candidate.name === entry.subclass && candidate.source === entry.subclassSource,
+      )
+      return subclass ? { ...entry, subclassShortName: subclass.shortName } : entry
+    }),
     race: character?.race,
     raceSource: character?.raceSource,
     abilityScores: effectiveAbilityScores ?? {},
@@ -216,21 +227,36 @@ function checkLevelPrerequisite(
         : options.className
   const hasOwner =
     classReference !== undefined || subclassReference !== undefined || className !== undefined
-  const charLevel = hasOwner
-    ? character.progression
-        .filter(
-          (entry) =>
-            (classReference === undefined
-              ? !className || entry.name.toLowerCase() === className.toLowerCase()
-              : matchesReference(entry.name, entry.source, classReference)) &&
-            (subclassReference === undefined ||
-              matchesReference(entry.subclass ?? '', entry.subclassSource, subclassReference)),
-        )
-        .reduce((total, entry) => total + entry.levels, 0)
-    : getTotalClassLevels(character.progression)
-  return charLevel >= required
-    ? { met: true }
-    : { met: false, reason: `Requires ${className ?? 'character'} level ${required}` }
+  const unmet: PrereqResult = {
+    met: false,
+    reason: `Requires ${className ?? 'character'} level ${required}`,
+  }
+  if (!hasOwner)
+    return getTotalClassLevels(character.progression) >= required ? { met: true } : unmet
+  const owners = character.progression.filter((entry) =>
+    classReference === undefined
+      ? !className || entry.name.toLowerCase() === className.toLowerCase()
+      : matchesReference(entry.name, entry.source, classReference),
+  )
+  if (!owners.length) return unmet
+  return anyPrerequisite(
+    owners.map((entry): PrereqResult => {
+      if (entry.levels < required) return unmet
+      if (subclassReference === undefined) return { met: true }
+      if (
+        matchesReference(entry.subclass ?? '', entry.subclassSource, subclassReference) ||
+        matchesReference(entry.subclassShortName ?? '', entry.subclassSource, subclassReference)
+      )
+        return { met: true }
+      const sourceMatches =
+        !isRecord(subclassReference) ||
+        subclassReference.source === undefined ||
+        entry.subclassSource?.toLowerCase() === (subclassReference.source as string).toLowerCase()
+      return entry.subclass && entry.subclassShortName === undefined && sourceMatches
+        ? unsupported('subclass identity requirement')
+        : unmet
+    }),
+  )
 }
 
 const CHECKED_PREREQUISITE_KEYS = new Set([
@@ -256,7 +282,8 @@ export function checkPrerequisite(
   options: CheckPrereqOptions = {},
 ): PrereqResult {
   if (!character) return { met: false, reason: 'No character' }
-  if (!isRecord(prereq)) return unsupported('prerequisite data')
+  if (!isRecord(prereq) || Object.keys(prereq).every((key) => key === 'note'))
+    return unsupported('prerequisite data')
   const reviewReasons = Object.keys(prereq).filter((key) => !CHECKED_PREREQUISITE_KEYS.has(key))
   if (prereq.level !== undefined) {
     const result = checkLevelPrerequisite(prereq.level, character, options)

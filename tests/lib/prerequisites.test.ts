@@ -417,6 +417,8 @@ describe('prerequisites', () => {
     null,
     {},
     [null],
+    [{}],
+    [{ note: 'Requires manual approval' }],
     [{ level: 0 }],
     [{ level: { level: 3, class: { name: '' } } }],
     [{ level: { level: 3, other: true } }],
@@ -510,5 +512,71 @@ describe('prerequisites', () => {
       ),
     ).toEqual({ met: true })
     expect(checkPrerequisite({ spell: ['Hex|PHB#c'] }, character).met).toBe(false)
+  })
+
+  test('uses the authoritative subclass short name without guessing another printing', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Monk',
+          source: 'PHB',
+          levels: 17,
+          subclass: 'Way of the Four Elements',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    const prerequisite: Raw5ePrereq = {
+      level: { level: 17, class: { name: 'Monk' }, subclass: { name: 'Four Elements' } },
+    }
+    const classLookup = {
+      'Monk|PHB': {
+        name: 'Monk',
+        source: 'PHB',
+        subclasses: [
+          {
+            name: 'Way of the Four Elements',
+            shortName: 'Four Elements',
+            className: 'Monk',
+            classSource: 'PHB',
+            source: 'PHB',
+          },
+        ],
+      },
+    }
+    const snapshot = buildPrerequisiteSnapshot({ character, classLookup })
+    expect(checkPrerequisite(prerequisite, snapshot)).toEqual({ met: true })
+    expect(checkPrerequisite(prerequisite, buildPrerequisiteSnapshot({ character }))).toMatchObject(
+      { met: false, status: 'unsupported' },
+    )
+    expect(
+      checkPrerequisite(
+        prerequisite,
+        buildPrerequisiteSnapshot({
+          character,
+          classLookup: { 'Monk|XPHB': { ...classLookup['Monk|PHB'], source: 'XPHB' } },
+        }),
+      ),
+    ).toMatchObject({ met: false, status: 'unsupported' })
+    expect(
+      checkPrerequisite(prerequisite, {
+        ...snapshot,
+        progression: [
+          { ...snapshot.progression[0], subclass: 'Way of Shadow', subclassShortName: 'Shadow' },
+        ],
+      }).met,
+    ).toBe(false)
+  })
+
+  test('does not combine separate class identities to satisfy one class level requirement', () => {
+    const character = makePrereqCharacterSnapshotFixture({
+      progression: [
+        { name: 'Wizard', source: 'PHB', levels: 2 },
+        { name: 'Wizard', source: 'OTHER', levels: 2 },
+      ],
+    })
+    expect(
+      checkPrerequisite({ level: { level: 3, class: { name: 'Wizard' } } }, character).met,
+    ).toBe(false)
   })
 })
