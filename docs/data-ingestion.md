@@ -140,8 +140,9 @@ after those overrides. Versions use the shared ordered array/path modification e
 mechanics, and honor explicit null removals. Missing variables and unsupported transformations
 produce diagnostics. The adapter excludes upstream browser cache, exclusion, and hash globals;
 Tavern Born supplies source-qualified identity and its nested lineage presentation instead.
-Resolved versions carry `_isVersion` and complete mechanics with a short selection label. Selecting
-one uses that complete record, so parent abilities are not doubled and removed traits stay absent.
+Resolved versions carry `_isVersion` and complete mechanics. Existing top-level versions retain
+their saved short selection labels for compatibility. Selecting a version uses its complete record,
+so parent abilities are not doubled and removed traits stay absent.
 Traditional subraces retain their existing additive merge behavior. Normalized records contain no
 unapplied `_copy`, `_mod`, or `_versions` directives from this race pipeline. Named race templates
 are currently unsupported and reported as missing rather than silently skipped.
@@ -155,11 +156,11 @@ Parent-level version definitions are not reapplied to child families. Ambiguous 
 merges or unsupported version operations are required diagnostics in a completed catalog; a raw
 source stack can defer them until composition. Named and nameless subrace families use the same
 pipeline. Empty child version arrays do not require composing ordinary subrace mechanics.
-New child-version family labels retain nested parentheses and internal semicolons; semicolons
-outside parentheses still separate the selection label from its parent. Existing top-level version
-labels retain their saved identities, including historical punctuation. Existing ordinary subrace
-entries remain available with their previous names; their consumed `_versions` definitions are removed. Cache
-schema 17 rebuilds catalogs that previously retained unmaterialized subrace versions.
+New child versions preserve their complete upstream `name|source` identities; shortening them can
+collapse distinct families or nested names. Existing top-level version labels retain their saved
+identities, including historical punctuation. Existing ordinary subrace entries remain available
+with their previous names; their consumed `_versions` definitions are removed. Cache
+schema 18 rebuilds older catalogs, including unreleased schema-17 child labels.
 
 Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
 objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys

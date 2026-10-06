@@ -140,7 +140,6 @@ export function parseRaces(
           ...subraceVersions.records.map((version) =>
             normalizeRacePresentationEntries({
               ...version,
-              name: extractSubraceVersionDisplayName(version.name, race.name),
               _isVersion: true,
             }),
           ),
@@ -173,26 +172,6 @@ function extractVersionDisplayName(fullName: string, parentName: string): string
   if (fullName.startsWith(parentName))
     return fullName.substring(parentName.length).trim() || fullName
   return fullName
-}
-
-/** Newly supported child versions retain family names inside parentheses. */
-function extractSubraceVersionDisplayName(fullName: string, parentName: string): string {
-  let depth = 0
-  let groupStart = -1
-  let groupEnd = -1
-  for (let index = 0; index < fullName.length; index++) {
-    const character = fullName[index]
-    if (character === '(') {
-      if (depth === 0) groupStart = index + 1
-      depth++
-    } else if (character === ')' && depth > 0) {
-      depth--
-      if (depth === 0) groupEnd = index
-    } else if (character === ';' && depth === 0) return fullName.substring(index + 1).trim()
-  }
-  return groupStart >= 0 && groupEnd > groupStart
-    ? fullName.substring(groupStart, groupEnd)
-    : extractVersionDisplayName(fullName, parentName)
 }
 
 function getFirstStringFromEntries(entries: unknown[]): string | null {

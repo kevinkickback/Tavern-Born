@@ -31,6 +31,33 @@ function load(data: { race: unknown[]; subrace?: unknown[] }) {
 }
 
 describe('subrace version materialization', () => {
+  test('preserves complete upstream identities when distinct families share an external suffix', () => {
+    const input = {
+      race: [parent],
+      subrace: ['First Family', 'Second Family'].map((name, index) => ({
+        name,
+        source: 'HB',
+        raceName: parent.name,
+        raceSource: parent.source,
+        _versions: [{ name: `Test Race (${name}); Black`, speed: 35 + index * 5 }],
+      })),
+    }
+    const races = parse(input)
+    expect(
+      races[0].subraces?.filter((entry) => entry._isVersion).map((entry) => entry.name),
+    ).toEqual(['Test Race (First Family); Black', 'Test Race (Second Family); Black'])
+    const resolved = resolveRaceReference(
+      {
+        name: parent.name,
+        source: parent.source,
+        subraceName: 'Test Race (Second Family); Black',
+        subraceSource: 'HB',
+      },
+      { racesByKey: buildRaceLookup(races) },
+    )
+    expect(resolved.mergedRace?.speed).toBe(40)
+  })
+
   test('retains complete nested-parenthesis family labels and resolves distinct versions', () => {
     const races = parse({
       race: [
@@ -51,14 +78,14 @@ describe('subrace version materialization', () => {
     })
     const versions = races[0].subraces?.filter((entry) => entry._isVersion) ?? []
     expect(versions.map((entry) => entry.name)).toEqual([
-      'Family (Legacy); First',
-      'Family (Legacy); Second',
+      'Test Race (Family (Legacy); First)',
+      'Test Race (Family (Legacy); Second)',
     ])
     const resolved = resolveRaceReference(
       {
         name: parent.name,
         source: parent.source,
-        subraceName: 'Family (Legacy); Second',
+        subraceName: 'Test Race (Family (Legacy); Second)',
         subraceSource: 'HB',
       },
       { racesByKey: buildRaceLookup(races) },
@@ -131,9 +158,14 @@ describe('subrace version materialization', () => {
     })
     expect(
       races[0].subraces?.filter((entry) => entry._isVersion).map((entry) => entry.name),
-    ).toEqual(['First', 'Second'])
+    ).toEqual(['Test (2024); First', 'Test (2024); Second'])
     const resolved = resolveRaceReference(
-      { name: 'Test (2024)', source: 'PHB', subraceName: 'Second', subraceSource: 'HB' },
+      {
+        name: 'Test (2024)',
+        source: 'PHB',
+        subraceName: 'Test (2024); Second',
+        subraceSource: 'HB',
+      },
       { racesByKey: buildRaceLookup(races) },
     )
     expect(resolved.mergedRace?.speed).toBe(40)
@@ -171,7 +203,7 @@ describe('subrace version materialization', () => {
     const race = parse(input)[0]
     const version = race.subraces?.find((entry) => entry._isVersion)
     expect(version).toMatchObject({
-      name: 'Branch; First',
+      name: 'Test Race (Branch; First)',
       source: 'VERSION',
       speed: 30,
       ability: [{ dex: 2, wis: 1 }],
@@ -232,7 +264,7 @@ describe('subrace version materialization', () => {
     }
     const race = parse(input)[0]
     const versions = race.subraces?.filter((entry) => entry._isVersion) ?? []
-    expect(versions.map((entry) => entry.name)).toEqual(['First', 'Second'])
+    expect(versions.map((entry) => entry.name)).toEqual(['Test Race (First)', 'Test Race (Second)'])
     expect(versions[0]).toMatchObject({
       source: 'HB',
       speed: 30,
@@ -266,8 +298,8 @@ describe('subrace version materialization', () => {
     })[0]
     const versions = race.subraces?.filter((entry) => entry._isVersion) ?? []
     expect(versions.map((entry) => entry.name)).toEqual([
-      'First Family; Black',
-      'Second Family; Black',
+      'Test Race (First Family; Black)',
+      'Test Race (Second Family; Black)',
     ])
     expect(versions[0]).toMatchObject({
       ability: [{ wis: 3 }],
@@ -290,7 +322,10 @@ describe('subrace version materialization', () => {
       ],
     })[0]
     const versions = race.subraces?.filter((entry) => entry._isVersion) ?? []
-    expect(versions.map((entry) => entry.name)).toEqual(['Child Option', 'Parent Option'])
+    expect(versions.map((entry) => entry.name)).toEqual([
+      'Test Race (Child Option)',
+      'Parent Option',
+    ])
     expect(versions.map((entry) => entry.speed)).toEqual([30, 50])
   })
 
@@ -320,7 +355,7 @@ describe('subrace version materialization', () => {
       ],
     })[0]
     expect(race.subraces?.find((entry) => entry._isVersion)).toMatchObject({
-      name: 'Copied; Complete',
+      name: 'Test Race (Copied; Complete)',
       source: 'COPY',
       speed: 30,
       ability: [{ dex: 2, wis: 1 }],
@@ -449,17 +484,21 @@ describe.runIf(existsSync(corpusPath))('real subrace version families', () => {
     const versions = dragonborn.subraces?.filter((entry) => entry._isVersion) ?? []
     expect(versions).toHaveLength(30)
     expect(
-      versions.find((entry) => entry.name === 'Black' && entry.source === 'PHB'),
+      versions.find((entry) => entry.name === 'Dragonborn (Black)' && entry.source === 'PHB'),
     ).toMatchObject({
       resist: ['acid'],
       speed: 30,
       ability: [{ str: 2, cha: 1 }],
     })
     expect(
-      versions.find((entry) => entry.name === 'Draconblood; Black' && entry.source === 'EGW'),
+      versions.find(
+        (entry) => entry.name === 'Dragonborn (Draconblood; Black)' && entry.source === 'EGW',
+      ),
     ).toMatchObject({ ability: [{ int: 2, cha: 1 }], darkvision: 60 })
     expect(
-      versions.find((entry) => entry.name === 'Ravenite; Black' && entry.source === 'EGW'),
+      versions.find(
+        (entry) => entry.name === 'Dragonborn (Ravenite; Black)' && entry.source === 'EGW',
+      ),
     ).toMatchObject({ ability: [{ str: 2, con: 1 }], darkvision: 60 })
     expect(new Set(versions.map((entry) => `${entry.name}|${entry.source}`)).size).toBe(30)
     const halfElf = races.find((race) => race.name === 'Half-Elf' && race.source === 'PHB')!
