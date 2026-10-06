@@ -26,7 +26,7 @@ export function deriveEffectiveRaceLanguageBlocks(race: {
   languageProficiencies?: unknown[]
   lineage?: string | boolean
 }): unknown[] {
-  if (Array.isArray(race.languageProficiencies) && race.languageProficiencies.length > 0) {
+  if (Array.isArray(race.languageProficiencies)) {
     return race.languageProficiencies
   }
   return typeof race.lineage === 'string'

@@ -63,6 +63,7 @@ describe('race grant reconciliation', () => {
   })
 
   test.each([
+    { lineage: 'VRGR', languageProficiencies: [], languages: [] },
     { lineage: 'VRGR', languageProficiencies: [{ elvish: true }], languages: ['elvish'] },
     { lineage: true, languageProficiencies: undefined, languages: [] },
     { lineage: null, languageProficiencies: undefined, languages: [] },
@@ -99,6 +100,31 @@ describe('race grant reconciliation', () => {
     expect(
       result.provenanceUpdate.choices.filter((choice) => choice.domain === 'languages'),
     ).toEqual([])
+  })
+
+  test.each([
+    { languageProficiencies: undefined, languages: ['common'], choices: 1 },
+    { languageProficiencies: [], languages: [], choices: 0 },
+  ])('parents preserve explicit empty language blocks and use fallback only when absent: %j', (entry) => {
+    const race = {
+      name: 'Lineage',
+      source: 'MPMM',
+      lineage: 'VRGR',
+      languageProficiencies: entry.languageProficiencies,
+    } as Race5e
+    const result = applyRaceSelectionCommand(
+      makeCharacterFixture({ race: '', raceSource: '' }),
+      emptyProvenance(),
+      race,
+      undefined,
+      0,
+      noChoices,
+    )
+    expect(result.characterPatch.proficiencies?.languages).toEqual(entry.languages)
+    expect(Object.keys(result.provenanceUpdate.proficiencies.languages)).toEqual(entry.languages)
+    expect(
+      result.provenanceUpdate.choices.filter((choice) => choice.domain === 'languages'),
+    ).toHaveLength(entry.choices)
   })
 
   test('a traditional subrace does not duplicate its string-lineage parent fallback', () => {

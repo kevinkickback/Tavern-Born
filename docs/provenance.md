@@ -70,7 +70,8 @@ removed proficiencies, spells, feats, and abilities are not restored or doubled.
 changes retain the existing additive ownership behavior.
 
 Complete versions also derive the legacy language fallback from their own string-valued lineage
-when explicit language blocks are absent. The version owns both the fixed language and its choice;
+when explicit language blocks are absent. Explicit arrays, including an empty array, suppress that
+fallback for both parents and versions. The version owns both the fixed language and its choice;
 traditional subraces do not synthesize a second parent fallback. The 2024 origin policy suppresses
 racial language grants and retains its independent baseline.
 
