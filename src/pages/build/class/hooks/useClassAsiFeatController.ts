@@ -69,9 +69,10 @@ export function useClassAsiFeatController({
       buildPrerequisiteSnapshot({
         character,
         classProgression,
+        classLookup,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
       }),
-    [character, calculationContext, classProgression],
+    [character, calculationContext, classProgression, classLookup],
   )
   const totalAsi = useMemo(
     () =>

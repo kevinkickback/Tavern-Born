@@ -515,6 +515,7 @@ export function BuildClassPage() {
           initialSelectedIds={classChoiceController.activeInitialSelectedIds}
           characterSnapshot={characterSnapshot}
           className={viewingClass}
+          classSource={viewingClassSource}
           onClose={classChoiceController.close}
           onConfirm={classChoiceController.confirm}
         />

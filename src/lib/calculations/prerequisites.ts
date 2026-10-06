@@ -1,13 +1,16 @@
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
+import { buildSpellNameKeySet, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
-import type { Raw5ePrereq } from '@/types/5etools'
+import type { Class5e, Raw5ePrereq } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityName } from './abilityScores'
 
 export interface PrereqCharacterSnapshot {
-  progression: readonly CharacterClassEntry[]
+  progression: readonly (CharacterClassEntry & { subclassShortName?: string })[]
   race?: string
+  raceSource?: string
   abilityScores?: Partial<Record<AbilityName, number>>
   features?: Array<{ name: string }>
   spells?: {
@@ -20,19 +23,30 @@ export interface PrereqCharacterSnapshot {
 interface BuildPrerequisiteSnapshotParams {
   character: Character | null
   classProgression?: CharacterClassEntry[]
+  classLookup?: Readonly<Record<string, Class5e | undefined>>
   effectiveAbilityScores?: Partial<Record<AbilityName, number>>
 }
 
 export function buildPrerequisiteSnapshot({
   character,
   classProgression = getCharacterClassEntries(character),
+  classLookup,
   effectiveAbilityScores,
 }: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
   const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
 
   return {
-    progression: classProgression,
+    progression: classProgression.map((entry) => {
+      const subclass = classLookup?.[
+        getEntityLookupKey(entry.name, entry.source)
+      ]?.subclasses?.find(
+        (candidate) =>
+          candidate.name === entry.subclass && candidate.source === entry.subclassSource,
+      )
+      return subclass ? { ...entry, subclassShortName: subclass.shortName } : entry
+    }),
     race: character?.race,
+    raceSource: character?.raceSource,
     abilityScores: effectiveAbilityScores ?? {},
     features: character?.features ?? [],
     spells: {
@@ -54,8 +68,7 @@ export function prereqPactToFull(pact: string): string {
 
 /** Canonical 5etools spell prerequisite text normalizer (Parser.prereqSpellToFull). */
 export function prereqSpellToFull(spell: string): string {
-  const [namePart] = spell.split('|')
-  const [spellName, suffix] = namePart.split('#')
+  const { name: spellName, suffix } = parseSpellPrereqRef(spell)
   if (!suffix) return spellName
   if (suffix === 'c') return `${spellName} cantrip`
   if (suffix === 'x') return 'Hex spell or a warlock feature that curses'
@@ -66,13 +79,14 @@ function parseSpellPrereqRef(ref: string): {
   name: string
   suffix?: string
 } {
-  const [namePart] = ref.split('|')
-  const [name, suffix] = namePart.split('#')
-  return { name, suffix }
+  const [spellRef, suffix] = ref.split('#')
+  // Accept both canonical source|suffix ordering and older source-decorated selections.
+  return { name: parseSpellReference(spellRef).name, suffix: suffix?.split('|')[0] }
 }
 
 function normalizeAbilityName(input: string): AbilityName | null {
-  return toAbilityName(input) as AbilityName | null
+  const name = toAbilityName(input)
+  return typeof name === 'string' ? (name as AbilityName) : null
 }
 
 export interface CheckPrereqOptions {
@@ -81,6 +95,8 @@ export interface CheckPrereqOptions {
    * rather than total character level.
    */
   className?: string
+  /** Source printing of the contextual class owner. */
+  classSource?: string
   /**
    * Skip the race prerequisite check entirely (e.g. when browsing feats in
    * a race-selector context before race is finalised).
@@ -89,8 +105,7 @@ export interface CheckPrereqOptions {
   /**
    * Set of class names known to grant spellcasting (from game data).
    * Required for the `spellcasting: true` prerequisite check.
-   * If omitted, spellcasting prerequisites are assumed not met unless
-   * the character has at least one class entry with a known spellcasting class.
+   * If omitted, the existing fallback checks the character's known spell lists.
    */
   spellcastingClasses?: Set<string>
 }
@@ -98,7 +113,178 @@ export interface CheckPrereqOptions {
 export interface PrereqResult {
   met: boolean
   reason?: string
+  status?: 'unsupported'
 }
+
+type PrerequisiteStatus = 'met' | 'unmet' | 'unsupported'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function unsupported(condition: string): PrereqResult {
+  return { met: false, status: 'unsupported', reason: `Requires manual review: ${condition}` }
+}
+
+function matchesReference(name: string, source: string | undefined, reference: unknown): boolean {
+  if (typeof reference === 'string') return name.toLowerCase() === reference.toLowerCase()
+  if (!isRecord(reference) || typeof reference.name !== 'string') return false
+  return (
+    name.toLowerCase() === reference.name.toLowerCase() &&
+    (reference.source === undefined ||
+      (typeof reference.source === 'string' &&
+        source?.toLowerCase() === reference.source.toLowerCase()))
+  )
+}
+
+function isNamedReference(value: unknown): value is string | { name: string; source?: string } {
+  return (
+    (typeof value === 'string' && value.trim().length > 0) ||
+    (isRecord(value) &&
+      typeof value.name === 'string' &&
+      value.name.trim().length > 0 &&
+      (value.source === undefined ||
+        (typeof value.source === 'string' && value.source.trim().length > 0)) &&
+      Object.keys(value).every((key) =>
+        ['name', 'source', 'displayEntry', 'visible', 'visibleStats', 'visibleList'].includes(key),
+      ))
+  )
+}
+
+function anyPrerequisite(results: PrereqResult[]): PrereqResult {
+  if (results.some((result) => result.met)) return { met: true }
+  return results.find((result) => result.status === 'unsupported') ?? results[0]
+}
+
+function checkReferenceAlternatives(
+  value: unknown,
+  candidates: Array<{ name: string; source?: string }>,
+  kind: string,
+): PrereqResult {
+  if (!Array.isArray(value) || !value.length)
+    return unsupported(`${kind.toLowerCase()} requirement`)
+  return anyPrerequisite(
+    value.map((reference): PrereqResult => {
+      if (!isNamedReference(reference)) return unsupported(`${kind.toLowerCase()} requirement`)
+      return candidates.some((candidate) =>
+        matchesReference(candidate.name, candidate.source, reference),
+      )
+        ? { met: true }
+        : { met: false, reason: `${kind} requirement not met` }
+    }),
+  )
+}
+
+function checkAbilityPrerequisite(
+  value: unknown,
+  character: PrereqCharacterSnapshot,
+): PrereqResult {
+  if (!Array.isArray(value) || value.length === 0) return unsupported('ability score requirement')
+  const alternatives = value.map((requirements): PrereqResult => {
+    if (!isRecord(requirements) || Object.keys(requirements).length === 0)
+      return unsupported('ability score requirement')
+    let needsReview = false
+    let unmet = false
+    for (const [name, required] of Object.entries(requirements)) {
+      const ability = normalizeAbilityName(name)
+      if (!ability || typeof required !== 'number' || !Number.isInteger(required) || required < 0) {
+        needsReview = true
+        continue
+      }
+      const actual = character.abilityScores?.[ability]
+      if (actual === undefined || !Number.isFinite(actual)) needsReview = true
+      else if (actual < required) unmet = true
+    }
+    if (unmet) return { met: false, reason: 'Does not meet ability score requirement' }
+    return needsReview ? unsupported('ability score requirement') : { met: true }
+  })
+  return anyPrerequisite(alternatives)
+}
+
+function checkLevelPrerequisite(
+  value: unknown,
+  character: PrereqCharacterSnapshot,
+  options: CheckPrereqOptions,
+): PrereqResult {
+  const required = isRecord(value) ? value.level : value
+  if (
+    isRecord(value) &&
+    Object.keys(value).some((key) => !['level', 'class', 'subclass'].includes(key))
+  )
+    return unsupported('level requirement')
+  if (typeof required !== 'number' || !Number.isInteger(required) || required < 1)
+    return unsupported('level requirement')
+  const classReference = isRecord(value) ? value.class : undefined
+  const subclassReference = isRecord(value) ? value.subclass : undefined
+  if (
+    (classReference !== undefined && !isNamedReference(classReference)) ||
+    (subclassReference !== undefined && !isNamedReference(subclassReference))
+  )
+    return unsupported('class level requirement')
+  const className =
+    isNamedReference(classReference) && typeof classReference !== 'string'
+      ? classReference.name
+      : typeof classReference === 'string'
+        ? classReference
+        : options.className
+  const hasOwner =
+    classReference !== undefined || subclassReference !== undefined || className !== undefined
+  const classSource =
+    isRecord(classReference) && typeof classReference.source === 'string'
+      ? classReference.source
+      : className?.toLowerCase() === options.className?.toLowerCase()
+        ? options.classSource
+        : undefined
+  const unmet: PrereqResult = {
+    met: false,
+    reason: `Requires ${className ?? 'character'} level ${required}`,
+  }
+  if (!hasOwner)
+    return getTotalClassLevels(character.progression) >= required ? { met: true } : unmet
+  const owners = character.progression.filter(
+    (entry) =>
+      !className ||
+      matchesReference(entry.name, entry.source, { name: className, source: classSource }),
+  )
+  if (!owners.length) return unmet
+  return anyPrerequisite(
+    owners.map((entry): PrereqResult => {
+      if (entry.levels < required) return unmet
+      if (subclassReference === undefined) return { met: true }
+      if (
+        entry.subclass &&
+        isRecord(subclassReference) &&
+        subclassReference.source !== undefined &&
+        !entry.subclassSource
+      )
+        return unsupported('subclass source requirement')
+      if (
+        matchesReference(entry.subclass ?? '', entry.subclassSource, subclassReference) ||
+        matchesReference(entry.subclassShortName ?? '', entry.subclassSource, subclassReference)
+      )
+        return { met: true }
+      const sourceMatches =
+        !isRecord(subclassReference) ||
+        subclassReference.source === undefined ||
+        entry.subclassSource?.toLowerCase() === (subclassReference.source as string).toLowerCase()
+      return entry.subclass && entry.subclassShortName === undefined && sourceMatches
+        ? unsupported('subclass identity requirement')
+        : unmet
+    }),
+  )
+}
+
+const CHECKED_PREREQUISITE_KEYS = new Set([
+  'level',
+  'ability',
+  'race',
+  'class',
+  'spellcasting',
+  'spell',
+  'pact',
+  'patron',
+  'note',
+])
 
 /**
  * Check a single 5etools prerequisite object against a character snapshot.
@@ -111,72 +297,40 @@ export function checkPrerequisite(
   options: CheckPrereqOptions = {},
 ): PrereqResult {
   if (!character) return { met: false, reason: 'No character' }
+  if (!isRecord(prereq) || Object.keys(prereq).every((key) => key === 'note'))
+    return unsupported('prerequisite data')
+  const reviewReasons = Object.keys(prereq).filter((key) => !CHECKED_PREREQUISITE_KEYS.has(key))
   if (prereq.level !== undefined) {
-    let charLevel: number
-
-    if (options.className) {
-      const entry = character.progression.find(
-        (c) => c.name.toLowerCase() === options.className?.toLowerCase(),
-      )
-      charLevel = entry?.levels ?? 0
-    } else {
-      charLevel = getTotalClassLevels(character.progression)
-    }
-
-    const required = typeof prereq.level === 'object' ? (prereq.level.level ?? 1) : prereq.level
-
-    if (charLevel < required) {
-      return {
-        met: false,
-        reason: `Requires ${options.className ?? 'character'} level ${required}`,
-      }
-    }
+    const result = checkLevelPrerequisite(prereq.level, character, options)
+    if (!result.met && result.status !== 'unsupported') return result
+    if (result.status === 'unsupported') reviewReasons.push('level requirement')
   }
-  if (Array.isArray(prereq.ability)) {
-    const scores = character.abilityScores ?? {}
-    const meetsAbility = prereq.ability.some((req) => {
-      if (typeof req === 'string') {
-        const ability = normalizeAbilityName(req)
-        if (!ability) return false
-        // String-form ability requirements should be rare; all prerequisites should
-        // normalize to object form during parsing with explicit score (e.g., { ability: "str", score: 15 }).
-        // String form defaults to 13, which may not be accurate for non-standard thresholds
-        // (e.g., Epic Boon feats). Prefer object form with explicit score.
-        return (scores[ability] ?? 0) >= 13
-      }
-      if (req && typeof req === 'object' && req.ability) {
-        const ability = normalizeAbilityName(req.ability)
-        if (!ability) return false
-        return (scores[ability] ?? 0) >= (req.score ?? 13)
-      }
-      return false
-    })
-    if (!meetsAbility) {
-      return { met: false, reason: 'Does not meet ability score requirement' }
-    }
+  if (prereq.ability !== undefined) {
+    const result = checkAbilityPrerequisite(prereq.ability, character)
+    if (!result.met && result.status !== 'unsupported') return result
+    if (result.status === 'unsupported') reviewReasons.push('ability score requirement')
   }
-  if (!options.ignoreRacePrereq && Array.isArray(prereq.race)) {
-    const charRace = (character.race ?? '').toLowerCase()
-    const meetsRace = prereq.race.some((req) => {
-      const name = typeof req === 'string' ? req : req.name
-      return name && charRace === name.toLowerCase()
-    })
-    if (!meetsRace) {
-      return { met: false, reason: 'Race requirement not met' }
-    }
+  if (!options.ignoreRacePrereq && prereq.race !== undefined) {
+    const result = checkReferenceAlternatives(
+      prereq.race,
+      [{ name: character.race ?? '', source: character.raceSource }],
+      'Race',
+    )
+    if (!result.met && result.status !== 'unsupported') return result
+    if (result.status === 'unsupported') reviewReasons.push('race requirement')
   }
 
-  if (Array.isArray(prereq.class)) {
-    const primaryClass = character.progression[0]?.name ?? ''
-    const charClass = primaryClass.toLowerCase()
-    const meetsClass = prereq.class.some((req) => {
-      const name = typeof req === 'string' ? req : req.name
-      return name && charClass === name.toLowerCase()
-    })
-    if (!meetsClass) {
-      return { met: false, reason: 'Class requirement not met' }
-    }
+  if (prereq.class !== undefined) {
+    const result = checkReferenceAlternatives(
+      prereq.class,
+      character.progression.map((entry) => ({ name: entry.name, source: entry.source })),
+      'Class',
+    )
+    if (!result.met && result.status !== 'unsupported') return result
+    if (result.status === 'unsupported') reviewReasons.push('class requirement')
   }
+  if (prereq.spellcasting !== undefined && prereq.spellcasting !== true)
+    reviewReasons.push('spellcasting requirement')
   if (prereq.spellcasting === true) {
     const casterClasses = options.spellcastingClasses
     let hasSpellcasting = false
@@ -196,40 +350,40 @@ export function checkPrerequisite(
       return { met: false, reason: 'Requires spellcasting ability' }
     }
   }
-  if (prereq.spell) {
+  if (prereq.spell !== undefined) {
     const required = Array.isArray(prereq.spell) ? prereq.spell : [prereq.spell]
-    const knownCantrips = new Set((character.spells?.cantrips ?? []).map((s) => s.toLowerCase()))
-    const knownNames = new Set(
-      [
-        ...(character.spells?.cantrips ?? []),
-        ...(character.spells?.spellsKnown ?? []),
-        ...(character.spells?.preparedSpells ?? []),
-      ].map((s) => s.toLowerCase()),
-    )
+    const knownCantrips = buildSpellNameKeySet(character.spells?.cantrips ?? [])
+    const knownNames = buildSpellNameKeySet([
+      ...(character.spells?.cantrips ?? []),
+      ...(character.spells?.spellsKnown ?? []),
+      ...(character.spells?.preparedSpells ?? []),
+    ])
     const hasCurseFeature =
       character.features?.some((f) => f.name.toLowerCase().includes('curse')) ?? false
 
-    const missing = required.filter((ref) => {
+    const results = required.map((ref): PrereqResult => {
+      if (typeof ref !== 'string' || !ref.trim()) return unsupported('spell requirement')
       const parsed = parseSpellPrereqRef(ref)
       const name = parsed.name.toLowerCase()
-
-      if (parsed.suffix === 'c') {
-        return !knownCantrips.has(name)
-      }
-
-      if (parsed.suffix === 'x') {
-        return !(knownNames.has('hex') || hasCurseFeature)
-      }
-
-      return !knownNames.has(name)
+      if (!name || (parsed.suffix && parsed.suffix !== 'c' && parsed.suffix !== 'x'))
+        return unsupported('spell requirement')
+      const met =
+        parsed.suffix === 'c'
+          ? knownCantrips.has(name)
+          : parsed.suffix === 'x'
+            ? knownNames.has('hex') || hasCurseFeature
+            : knownNames.has(name)
+      return met
+        ? { met: true }
+        : { met: false, reason: `Requires spell: ${prereqSpellToFull(ref)}` }
     })
-
-    if (missing.length > 0) {
-      const names = missing.map((r) => prereqSpellToFull(r)).join(', ')
-      return { met: false, reason: `Requires spell: ${names}` }
-    }
+    const result = results.length ? anyPrerequisite(results) : unsupported('spell requirement')
+    if (!result.met && result.status !== 'unsupported') return result
+    if (result.status === 'unsupported') reviewReasons.push('spell requirement')
   }
-  if (prereq.pact) {
+  if (prereq.pact !== undefined && (typeof prereq.pact !== 'string' || !prereq.pact.trim()))
+    reviewReasons.push('pact requirement')
+  else if (prereq.pact) {
     const requiredPact = prereqPactToFull(prereq.pact)
     const hasPact = character.features?.some((f) =>
       f.name.toLowerCase().includes(requiredPact.toLowerCase()),
@@ -239,7 +393,9 @@ export function checkPrerequisite(
     }
   }
 
-  if (prereq.patron) {
+  if (prereq.patron !== undefined && (typeof prereq.patron !== 'string' || !prereq.patron.trim()))
+    reviewReasons.push('patron requirement')
+  else if (prereq.patron) {
     const patronLower = prereq.patron.toLowerCase()
     const hasPatron = character.features?.some((f) => f.name.toLowerCase().includes(patronLower))
     if (!hasPatron) {
@@ -247,19 +403,19 @@ export function checkPrerequisite(
     }
   }
 
-  return { met: true }
+  return reviewReasons.length ? unsupported(reviewReasons.join(', ')) : { met: true }
 }
 
 export interface AllPrereqsResult {
   met: boolean
+  status: PrerequisiteStatus
   /** Human-readable failure reasons, one per failing prereq block. */
   failures: string[]
 }
 
 /**
- * Check all prerequisites on a 5etools feat/feature entry (AND logic across
- * the `prerequisite` array, OR within individual condition objects that list
- * multiple abilities/races/classes).
+ * Prerequisite blocks are alternatives (OR); conditions within a block are AND.
+ * Ability maps require every named score; maps within ability[] are alternatives.
  *
  * @param item - Any 5etools object with an optional `prerequisite` array
  * @param character - Character snapshot
@@ -270,17 +426,24 @@ export function checkAllPrerequisites(
   character: PrereqCharacterSnapshot,
   options: CheckPrereqOptions = {},
 ): AllPrereqsResult {
-  if (!item.prerequisite || !Array.isArray(item.prerequisite)) {
-    return { met: true, failures: [] }
+  if (
+    item.prerequisite === undefined ||
+    (Array.isArray(item.prerequisite) && item.prerequisite.length === 0)
+  ) {
+    return { met: true, status: 'met', failures: [] }
   }
-
-  const failures: string[] = []
-  for (const prereq of item.prerequisite) {
-    const result = checkPrerequisite(prereq, character, options)
-    if (!result.met && result.reason) {
-      failures.push(result.reason)
+  if (!Array.isArray(item.prerequisite)) {
+    return {
+      met: false,
+      status: 'unsupported',
+      failures: ['Requires manual review: prerequisite data'],
     }
   }
-
-  return { met: failures.length === 0, failures }
+  const results = item.prerequisite.map((prereq) => checkPrerequisite(prereq, character, options))
+  if (results.some((result) => result.met)) return { met: true, status: 'met', failures: [] }
+  return {
+    met: false,
+    status: results.some((result) => result.status === 'unsupported') ? 'unsupported' : 'unmet',
+    failures: [...new Set(results.flatMap((result) => (result.reason ? [result.reason] : [])))],
+  }
 }

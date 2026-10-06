@@ -79,11 +79,11 @@ export const FeatDetailCard = memo(function FeatDetailCard({
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
       : null
-  const { met, failures } = useMemo(
+  const { met, failures, status } = useMemo(
     () =>
       featData
         ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
-        : { met: true, failures: [] },
+        : { met: true, failures: [], status: 'met' },
     [featData, characterSnapshot],
   )
   const originLabel = isOrigin
@@ -171,7 +171,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                     variant="outline"
                     className="h-5 border-destructive/50 px-1.5 py-0 text-xs text-destructive"
                   >
-                    Prereqs unmet
+                    {status === 'unsupported' ? 'Prereqs need review' : 'Prereqs unmet'}
                   </Badge>
                 )}
                 {optionsPending && (
@@ -284,7 +284,7 @@ export function FeatDetailsInspector({
       : null
   const prerequisiteResult = featData
     ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
-    : { met: true, failures: [] }
+    : { met: true, failures: [], status: 'met' }
   const descriptionEntries = featData?.entries ?? []
 
   return (
@@ -311,7 +311,11 @@ export function FeatDetailsInspector({
                         : 'border-warning/50 text-warning-foreground',
                     )}
                   >
-                    {prerequisiteResult.met ? 'Prerequisites met' : 'Prerequisites unmet'}
+                    {prerequisiteResult.met
+                      ? 'Prerequisites met'
+                      : prerequisiteResult.status === 'unsupported'
+                        ? 'Prerequisites need review'
+                        : 'Prerequisites unmet'}
                   </Badge>
                 </div>
               </div>
