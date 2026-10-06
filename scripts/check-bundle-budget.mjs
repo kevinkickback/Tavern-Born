@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5447.7 KiB for upstream prerequisite maps, alternatives, and manual-review
-  // diagnostics (up 3.8 KiB from 5443.9). No new dependency or initial-script increase.
-  rendererCode: 5448 * KIB,
-  // Reviewed at 426.9 KiB with source-qualified subclass choices, filtered-rule rebuilding,
-  // and inactive replacement-choice state in the startup data graph.
-  initialRendererScript: 428 * KIB,
+  // Reviewed at 5450.3 KiB for hydration-safe library transactions and pending/retry controls,
+  // including quarantine, reload ordering, and shared Save requests (up 2.6 KiB from 5447.7).
+  rendererCode: 5451 * KIB,
+  // Reviewed at 428.8 KiB (up 1.3 KiB from 427.5) for the serialized library write boundary,
+  // duplication, quarantine, reload ordering, and shared Saves; no dependency added.
+  initialRendererScript: 429 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

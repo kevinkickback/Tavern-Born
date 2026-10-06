@@ -59,6 +59,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
+import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import {
@@ -66,8 +67,6 @@ import {
   createGameDataAvailabilityIndex,
 } from '@/lib/character/additionalContentAvailability'
 import {
-  duplicateCharacter,
-  getDuplicateCharacterName,
   LIBRARY_BACKUP_EXTENSION,
   MAX_LIBRARY_BACKUP_SIZE,
   type PreparedCharacterDownload,
@@ -126,6 +125,7 @@ interface CharacterListRowProps {
   onDelete: (id: string) => void
   highlighted?: boolean
   usesAdditionalContent?: boolean
+  isLibraryPending?: boolean
 }
 
 function CharacterListRow({
@@ -140,6 +140,7 @@ function CharacterListRow({
   onDelete,
   highlighted = false,
   usesAdditionalContent = false,
+  isLibraryPending = false,
 }: CharacterListRowProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
@@ -161,6 +162,7 @@ function CharacterListRow({
       {isActive && <span className="absolute inset-y-2 left-0 w-0.5 bg-primary" />}
       {selectionMode && (
         <Checkbox
+          disabled={isLibraryPending}
           checked={isSelected}
           onCheckedChange={() => onToggleSelect(character.id)}
           aria-label={`Select ${name}`}
@@ -169,6 +171,7 @@ function CharacterListRow({
       )}
       <button
         type="button"
+        disabled={selectionMode && isLibraryPending}
         onClick={() => (selectionMode ? onToggleSelect(character.id) : onLoad(character.id))}
         className="flex min-w-0 flex-1 items-center gap-3 py-2 text-left"
       >
@@ -216,13 +219,17 @@ function CharacterListRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onDuplicate(character)}>
+            <DropdownMenuItem disabled={isLibraryPending} onSelect={() => onDuplicate(character)}>
               <CopySimple /> Duplicate
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExport(character)}>
               <DownloadSimple /> Export
             </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={() => onDelete(character.id)}>
+            <DropdownMenuItem
+              disabled={isLibraryPending}
+              variant="destructive"
+              onSelect={() => onDelete(character.id)}
+            >
               <Trash /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -241,8 +248,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
-  const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
-  const addCharacter = useCharacterStore((state) => state.addCharacter)
+  const deleteCharacters = useCharacterStore((state) => state.deleteCharacters)
+  const duplicateCharacter = useCharacterStore((state) => state.duplicateCharacter)
+  const { isPending: isLibraryPending, run: runLibraryAction } = useAsyncAction()
   const unsupportedCharacters = useCharacterStore((state) => state.unsupportedCharacters)
   const dismissUnsupportedCharacters = useCharacterStore(
     (state) => state.dismissUnsupportedCharacters,
@@ -340,23 +348,35 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     setConfirmSwitchOpen(false)
   }
 
-  const handleDeleteCharacter = useCallback((id: string) => {
-    setPendingDeleteCharacterId(id)
-    setConfirmDeleteOpen(true)
-  }, [])
+  const handleDeleteCharacter = useCallback(
+    (id: string) => {
+      if (isLibraryPending) return
+      setPendingDeleteCharacterId(id)
+      setConfirmDeleteOpen(true)
+    },
+    [isLibraryPending],
+  )
 
-  const confirmDeleteCharacter = useCallback(() => {
-    if (!pendingDeleteCharacterId) return
-    deleteCharacter(pendingDeleteCharacterId)
-    toast.success('Character deleted')
-    setSelectedCharacterIds((previous) =>
-      previous.filter((selectedId) => selectedId !== pendingDeleteCharacterId),
+  const reportLibraryError = (error: unknown) => {
+    toast.error(
+      error instanceof Error ? error.message : 'Could not save library changes. Please try again.',
     )
-    setPendingDeleteCharacterId(null)
-    setConfirmDeleteOpen(false)
-  }, [deleteCharacter, pendingDeleteCharacterId])
+  }
+
+  const confirmDeleteCharacter = () =>
+    runLibraryAction(async () => {
+      if (!pendingDeleteCharacterId) return
+      await deleteCharacters([pendingDeleteCharacterId])
+      toast.success('Character deleted')
+      setSelectedCharacterIds((previous) =>
+        previous.filter((selectedId) => selectedId !== pendingDeleteCharacterId),
+      )
+      setPendingDeleteCharacterId(null)
+      setConfirmDeleteOpen(false)
+    }, reportLibraryError)
 
   const handleToggleCharacterSelection = (id: string) => {
+    if (isLibraryPending) return
     setSelectedCharacterIds((previous) =>
       previous.includes(id)
         ? previous.filter((selectedId) => selectedId !== id)
@@ -365,6 +385,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   }
 
   const handleToggleAllSelection = () => {
+    if (isLibraryPending) return
     const visibleIds = sortedCharacters.map((character) => character.id)
     setSelectedCharacterIds((previous) =>
       allSelected
@@ -373,15 +394,17 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     )
   }
 
-  const confirmDeleteSelected = useCallback(() => {
-    selectedCharacterIds.forEach(deleteCharacter)
-    setSelectedCharacterIds([])
-    setSelectionMode(false)
-    setConfirmBulkDeleteOpen(false)
-    toast.success('Selected characters deleted')
-  }, [deleteCharacter, selectedCharacterIds])
+  const confirmDeleteSelected = () =>
+    runLibraryAction(async () => {
+      await deleteCharacters(selectedCharacterIds)
+      setSelectedCharacterIds([])
+      setSelectionMode(false)
+      setConfirmBulkDeleteOpen(false)
+      toast.success('Selected characters deleted')
+    }, reportLibraryError)
 
   const handleToggleSelectionMode = () => {
+    if (isLibraryPending) return
     setSelectionMode((enabled) => {
       if (enabled) setSelectedCharacterIds([])
       return !enabled
@@ -414,21 +437,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     exportLibrary(selected)
   }
 
-  const handleDuplicateCharacter = useCallback(
-    (source: Character) => {
-      const copy = duplicateCharacter(source, {
-        name: getDuplicateCharacterName(
-          source.name,
-          characters.map((character) => character.name),
-        ),
-      })
-      addCharacter(copy)
+  const handleDuplicateCharacter = (source: Character) =>
+    runLibraryAction(async () => {
+      await duplicateCharacter(source.id)
       toast.success('Character duplicated')
-    },
-    [addCharacter, characters],
-  )
+    }, reportLibraryError)
 
   const handleImportCharacter = () => {
+    if (isLibraryPending) return
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = `.tbc,.json,${LIBRARY_BACKUP_EXTENSION}`
@@ -436,111 +452,113 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     input.onchange = async (event) => {
       const files = Array.from((event.target as HTMLInputElement).files ?? [])
       if (files.length === 0) return
-      const report: CharacterImportReport = {
-        imported: [],
-        failures: [],
-        contentCheckUnavailable: !gameData,
-      }
-      const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
-      let isBulkImport = files.length > 1
-      const pendingImports: Array<{
-        label: string
-        originalName: string
-        character: Character
-      }> = []
-      for (const file of files) {
-        const filename = file.name || 'character.tbc'
-        const isBackupFile = filename.toLowerCase().endsWith(LIBRARY_BACKUP_EXTENSION)
-        const limit = isBackupFile ? MAX_LIBRARY_BACKUP_SIZE : MAX_CHARACTER_SIZE
-        if (file.size > limit) {
-          const maxMB = (limit / (1024 * 1024)).toFixed(0)
-          report.failures.push({
-            label: filename,
-            reason: `${isBackupFile ? 'Library backup' : 'Character file'} exceeds the ${maxMB}MB safety limit.`,
-            kind: 'size',
-          })
-          continue
+      await runLibraryAction(async () => {
+        const report: CharacterImportReport = {
+          imported: [],
+          failures: [],
+          contentCheckUnavailable: !gameData,
         }
-        try {
-          const prepared = prepareCharacterImport(
-            await file.text(),
-            filename,
-            validateCharacterData,
-          )
-          isBulkImport ||= prepared.isLibraryBackup
-          report.failures.push(...prepared.failures)
-          for (const entry of prepared.characters) {
-            pendingImports.push({
-              label: entry.label,
-              originalName: entry.character.name,
-              character: entry.character,
+        const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
+        let isBulkImport = files.length > 1
+        const pendingImports: Array<{
+          label: string
+          originalName: string
+          character: Character
+        }> = []
+        for (const file of files) {
+          const filename = file.name || 'character.tbc'
+          const isBackupFile = filename.toLowerCase().endsWith(LIBRARY_BACKUP_EXTENSION)
+          const limit = isBackupFile ? MAX_LIBRARY_BACKUP_SIZE : MAX_CHARACTER_SIZE
+          if (file.size > limit) {
+            const maxMB = (limit / (1024 * 1024)).toFixed(0)
+            report.failures.push({
+              label: filename,
+              reason: `${isBackupFile ? 'Library backup' : 'Character file'} exceeds the ${maxMB}MB safety limit.`,
+              kind: 'size',
+            })
+            continue
+          }
+          try {
+            const prepared = prepareCharacterImport(
+              await file.text(),
+              filename,
+              validateCharacterData,
+            )
+            isBulkImport ||= prepared.isLibraryBackup
+            report.failures.push(...prepared.failures)
+            for (const entry of prepared.characters) {
+              pendingImports.push({
+                label: entry.label,
+                originalName: entry.character.name,
+                character: entry.character,
+              })
+            }
+          } catch (error) {
+            report.failures.push({
+              label: filename,
+              reason: error instanceof Error ? error.message : 'Unknown error',
+              kind: 'storage',
             })
           }
-        } catch (error) {
-          report.failures.push({
-            label: filename,
-            reason: error instanceof Error ? error.message : 'Unknown error',
-            kind: 'storage',
-          })
         }
-      }
-      if (pendingImports.length > 0) {
-        try {
-          const added = await useCharacterStore
-            .getState()
-            .importCharacters(pendingImports.map((entry) => entry.character))
-          added.forEach((character, index) => {
-            const entry = pendingImports[index]
-            if (!entry) return
-            report.imported.push({
-              label: entry.label,
-              name: character.name,
-              originalName: entry.originalName,
-              idChanged: character.id !== entry.character.id,
-              missingContent: availability
-                ? characterUsesContentOutsideCatalog(character, availability)
-                : false,
+        if (pendingImports.length > 0) {
+          try {
+            const added = await useCharacterStore
+              .getState()
+              .importCharacters(pendingImports.map((entry) => entry.character))
+            added.forEach((character, index) => {
+              const entry = pendingImports[index]
+              if (!entry) return
+              report.imported.push({
+                label: entry.label,
+                name: character.name,
+                originalName: entry.originalName,
+                idChanged: character.id !== entry.character.id,
+                missingContent: availability
+                  ? characterUsesContentOutsideCatalog(character, availability)
+                  : false,
+              })
             })
-          })
-        } catch (error) {
-          const reason =
-            error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof error.message === 'string'
-              ? error.message
-              : 'Unknown storage error'
-          report.failures.push(
-            ...pendingImports.map((entry) => ({
-              label: entry.label,
-              reason,
-              kind: 'storage' as const,
-            })),
-          )
+          } catch (error) {
+            const reason =
+              error &&
+              typeof error === 'object' &&
+              'message' in error &&
+              typeof error.message === 'string'
+                ? error.message
+                : 'Unknown storage error'
+            report.failures.push(
+              ...pendingImports.map((entry) => ({
+                label: entry.label,
+                reason,
+                kind: 'storage' as const,
+              })),
+            )
+          }
         }
-      }
-      if (isBulkImport) {
-        setImportReport(report)
-        return
-      }
-      if (report.imported.length === 1 && report.failures.length === 0) {
-        if (
-          report.contentCheckUnavailable ||
-          report.imported[0]?.missingContent ||
-          report.imported[0]?.name !== report.imported[0]?.originalName ||
-          report.imported[0]?.idChanged
-        ) {
+        if (isBulkImport) {
           setImportReport(report)
-        } else {
-          toast.success('Character imported successfully')
+          return
         }
-        return
-      }
-      const failure = report.failures[0]
-      if (!failure) return
-      if (failure.kind === 'size') toast.error(failure.reason)
-      else if (failure.kind === 'validation') toast.error(`Invalid character: ${failure.reason}`)
-      else toast.error(`Failed to import character: ${failure.reason}`)
+        if (report.imported.length === 1 && report.failures.length === 0) {
+          if (
+            report.contentCheckUnavailable ||
+            report.imported[0]?.missingContent ||
+            report.imported[0]?.name !== report.imported[0]?.originalName ||
+            report.imported[0]?.idChanged
+          ) {
+            setImportReport(report)
+          } else {
+            toast.success('Character imported successfully')
+          }
+          return
+        }
+        const failure = report.failures[0]
+        if (!failure) return
+        if (failure.kind === 'size') toast.error(failure.reason)
+        else if (failure.kind === 'validation') toast.error(`Invalid character: ${failure.reason}`)
+        else toast.error(`Failed to import character: ${failure.reason}`)
+      }, reportLibraryError)
     }
     input.click()
   }
@@ -561,6 +579,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         cardSize={360}
         highlighted={focusCharacterName && character.id === activeCharacterId}
         usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
+        isLibraryPending={isLibraryPending}
       />
     ) : (
       <CharacterListRow
@@ -576,6 +595,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         onToggleSelect={handleToggleCharacterSelection}
         highlighted={focusCharacterName && character.id === activeCharacterId}
         usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
+        isLibraryPending={isLibraryPending}
       />
     )
 
@@ -583,6 +603,11 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     <WorkspacePage>
       <div className="shrink-0 bg-surface-raised">
         <WorkspaceToolbar className="h-11 gap-3 border-b border-border-subtle bg-transparent px-4">
+          {isLibraryPending && (
+            <span role="status" className="text-xs text-muted-foreground">
+              Saving changes…
+            </span>
+          )}
           <div className="relative min-w-56 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
             <Input
@@ -675,6 +700,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
               variant={selectionMode ? 'secondary' : 'ghost'}
               size="sm"
               className="ml-auto h-8 gap-1.5"
+              disabled={isLibraryPending}
               onClick={handleToggleSelectionMode}
             >
               <CheckSquare /> {selectionMode ? 'Cancel Selection' : 'Select Multiple'}
@@ -685,8 +711,17 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
 
       {selectionMode && (
         <div className="flex h-10 shrink-0 items-center gap-3 border-b border-primary/30 bg-primary/10 px-3">
-          <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
-          <button type="button" className="text-xs font-medium" onClick={handleToggleAllSelection}>
+          <Checkbox
+            disabled={isLibraryPending}
+            checked={allSelected}
+            onCheckedChange={handleToggleAllSelection}
+          />
+          <button
+            type="button"
+            disabled={isLibraryPending}
+            className="text-xs font-medium"
+            onClick={handleToggleAllSelection}
+          >
             {allSelected ? 'Deselect visible' : 'Select visible'}
           </button>
           <span className="text-xs text-muted-foreground">
@@ -696,7 +731,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             variant="outline"
             size="sm"
             className="ml-auto h-7 gap-1.5"
-            disabled={selectedCharacterIds.length === 0}
+            disabled={isLibraryPending || selectedCharacterIds.length === 0}
             onClick={handleExportSelected}
           >
             <DownloadSimple /> Export Selected
@@ -705,7 +740,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             variant="destructive"
             size="sm"
             className="h-7 gap-1.5"
-            disabled={selectedCharacterIds.length === 0}
+            disabled={isLibraryPending || selectedCharacterIds.length === 0}
             onClick={() => setConfirmBulkDeleteOpen(true)}
           >
             <Trash /> Delete
@@ -722,13 +757,19 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
               Create your first character or import an existing Tavern-Born file.
             </p>
             <div className="mt-4 flex gap-2">
-              <Button size="sm" className="gap-1.5" onClick={() => setShowCreateWizard(true)}>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={isLibraryPending}
+                onClick={() => setShowCreateWizard(true)}
+              >
                 <Plus /> New Character
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
+                disabled={isLibraryPending}
                 onClick={handleImportCharacter}
               >
                 <Upload /> Import
@@ -748,6 +789,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                   <button
                     type="button"
                     className="cursor-pointer font-medium hover:text-primary"
+                    disabled={isLibraryPending}
                     onClick={() => setShowCreateWizard(true)}
                   >
                     New Character
@@ -756,6 +798,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                   <button
                     type="button"
                     className="cursor-pointer text-muted-foreground hover:text-primary"
+                    disabled={isLibraryPending}
                     onClick={handleImportCharacter}
                   >
                     Import
@@ -792,6 +835,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                       aria-label="New Character"
                       data-character-action="new"
                       className="group relative flex min-h-0 cursor-pointer flex-col items-center justify-center gap-1.5 px-4 transition-colors hover:bg-primary/10 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                      disabled={isLibraryPending}
                       onClick={() => setShowCreateWizard(true)}
                     >
                       <Plus className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -803,6 +847,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                       aria-label="Import"
                       data-character-action="import"
                       className="group relative flex min-h-0 cursor-pointer flex-col items-center justify-center gap-1.5 border-t border-dashed border-border px-4 transition-colors hover:bg-primary/10 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                      disabled={isLibraryPending}
                       onClick={handleImportCharacter}
                     >
                       <Upload className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -818,6 +863,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                     <button
                       type="button"
                       className="cursor-pointer font-medium hover:text-primary"
+                      disabled={isLibraryPending}
                       onClick={() => setShowCreateWizard(true)}
                     >
                       New Character
@@ -826,6 +872,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                     <button
                       type="button"
                       className="cursor-pointer text-muted-foreground hover:text-primary"
+                      disabled={isLibraryPending}
                       onClick={handleImportCharacter}
                     >
                       Import
@@ -843,7 +890,8 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       <UnsupportedCharactersDialog
         count={unsupportedCharacters.length}
         onExport={handleExportUnsupportedCharacters}
-        onAcknowledge={dismissUnsupportedCharacters}
+        isPending={isLibraryPending}
+        onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
       />
       <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
         <DialogContent className="sm:max-w-xl">
@@ -938,6 +986,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       <AlertDialog
         open={confirmDeleteOpen}
         onOpenChange={(open) => {
+          if (isLibraryPending) return
           setConfirmDeleteOpen(open)
           if (!open) setPendingDeleteCharacterId(null)
         }}
@@ -948,17 +997,27 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLibraryPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDeleteCharacter}
+              disabled={isLibraryPending}
+              aria-busy={isLibraryPending}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDeleteCharacter()
+              }}
             >
-              Delete Character
+              {isLibraryPending ? 'Deleting…' : 'Delete Character'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
+      <AlertDialog
+        open={confirmBulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!isLibraryPending) setConfirmBulkDeleteOpen(open)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete selected characters?</AlertDialogTitle>
@@ -968,12 +1027,17 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLibraryPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDeleteSelected}
+              disabled={isLibraryPending}
+              aria-busy={isLibraryPending}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDeleteSelected()
+              }}
             >
-              Delete Selected
+              {isLibraryPending ? 'Deleting…' : 'Delete Selected'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

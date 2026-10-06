@@ -14,12 +14,14 @@ interface UnsupportedCharactersDialogProps {
   count: number
   onExport: () => void
   onAcknowledge: () => void
+  isPending?: boolean
 }
 
 export function UnsupportedCharactersDialog({
   count,
   onExport,
   onAcknowledge,
+  isPending = false,
 }: UnsupportedCharactersDialogProps) {
   const plural = count === 1 ? '' : 's'
   const compatibilityDescription = `Tavern Born found ${count} character${plural} that ${count === 1 ? 'is incompatible with the current version or contains invalid data' : 'are incompatible with the current version or contain invalid data'}. ${count === 1 ? 'It has' : 'They have'} been removed from the character list.`
@@ -37,7 +39,15 @@ export function UnsupportedCharactersDialog({
           <Button variant="outline" onClick={onExport}>
             <DownloadSimple /> Download Backup{plural}
           </Button>
-          <AlertDialogAction onClick={onAcknowledge}>Continue</AlertDialogAction>
+          <AlertDialogAction
+            disabled={isPending}
+            onClick={(event) => {
+              event.preventDefault()
+              onAcknowledge()
+            }}
+          >
+            {isPending ? 'Continuing…' : 'Continue'}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

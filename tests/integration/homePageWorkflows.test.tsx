@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -79,6 +79,13 @@ function resetCharacterStore() {
   })
 }
 
+const libraryActions = {
+  deleteCharacters: useCharacterStore.getState().deleteCharacters,
+  duplicateCharacter: useCharacterStore.getState().duplicateCharacter,
+  importCharacters: useCharacterStore.getState().importCharacters,
+  dismissUnsupportedCharacters: useCharacterStore.getState().dismissUnsupportedCharacters,
+}
+
 function mockDynamicFileInput() {
   const originalCreateElement = document.createElement.bind(document)
   const realInput = originalCreateElement('input') as HTMLInputElement
@@ -96,6 +103,7 @@ function mockDynamicFileInput() {
 
 describe('home page integration workflows', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     resetCharacterStore()
     useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
     useAppPreferencesStore.setState({ characterViewMode: 'gallery' })
@@ -104,6 +112,92 @@ describe('home page integration workflows', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    useCharacterStore.setState(libraryActions)
+  })
+
+  test('keeps a failed deletion open for retry and announces completion after it commits', async () => {
+    const user = userEvent.setup()
+    const first = makeCharacterFixture({ id: 'first', name: 'First' })
+    useCharacterStore.setState({ characters: [first] })
+    let rejectDelete: (error: Error) => void = () => undefined
+    const deletion = vi
+      .spyOn(useCharacterStore.getState(), 'deleteCharacters')
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectDelete = reject
+          }),
+      )
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'delete-first' }))
+    const successesBefore = vi.mocked(toast.success).mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Delete Character' }))
+    expect(screen.getByRole('button', { name: 'Deleting…' }).hasAttribute('disabled')).toBe(true)
+    expect(useCharacterStore.getState().characters).toEqual([first])
+    expect(vi.mocked(toast.success).mock.calls.length).toBe(successesBefore)
+    await act(() => {
+      rejectDelete(new Error('Storage unavailable'))
+    })
+    expect(toast.error).toHaveBeenCalledWith('Storage unavailable')
+    expect(screen.getByText('Delete character?')).toBeTruthy()
+    expect(useCharacterStore.getState().characters).toEqual([first])
+    await user.click(screen.getByRole('button', { name: 'Delete Character' }))
+    await waitFor(() => expect(screen.queryByText('Delete character?')).toBeNull())
+    expect(deletion).toHaveBeenCalledTimes(2)
+    expect(toast.success).toHaveBeenCalledWith('Character deleted')
+    expect(useCharacterStore.getState().characters).toEqual([])
+  })
+
+  test('retains bulk selection after failure and deletes the entire selection in one operation', async () => {
+    const user = userEvent.setup()
+    const first = makeCharacterFixture({ id: 'first', name: 'First' })
+    const second = makeCharacterFixture({ id: 'second', name: 'Second' })
+    useCharacterStore.setState({ characters: [first, second] })
+    const deletion = vi
+      .spyOn(useCharacterStore.getState(), 'deleteCharacters')
+      .mockRejectedValueOnce(new Error('Storage unavailable'))
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
+    await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
+    await user.click(screen.getByRole('button', { name: 'select-first' }))
+    await user.click(screen.getByRole('button', { name: 'select-second' }))
+    await user.click(screen.getByRole('button', { name: /^Delete$/ }))
+    await user.click(screen.getByRole('button', { name: 'Delete Selected' }))
+    expect(screen.getByText('2 selected')).toBeTruthy()
+    expect(screen.getByText('Delete selected characters?')).toBeTruthy()
+    expect(useCharacterStore.getState().characters).toEqual([first, second])
+    await user.click(screen.getByRole('button', { name: 'Delete Selected' }))
+    await waitFor(() => expect(screen.queryByText('Delete selected characters?')).toBeNull())
+    expect(deletion.mock.calls).toEqual([[['first', 'second']], [['first', 'second']]])
+    expect(useCharacterStore.getState().characters).toEqual([])
+  })
+
+  test('blocks repeated duplicate requests while pending and exposes storage failures', async () => {
+    const user = userEvent.setup()
+    const first = makeCharacterFixture({ id: 'first', name: 'First' })
+    useCharacterStore.setState({ characters: [first] })
+    let rejectDuplicate: (error: Error) => void = () => undefined
+    const duplication = vi
+      .spyOn(useCharacterStore.getState(), 'duplicateCharacter')
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectDuplicate = reject
+          }),
+      )
+    render(<HomePage />)
+    await user.dblClick(screen.getByRole('button', { name: 'duplicate-first' }))
+    expect(duplication).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('status').textContent).toBe('Saving changes…')
+    expect(useCharacterStore.getState().characters).toEqual([first])
+    await act(() => {
+      rejectDuplicate(new Error('Storage unavailable'))
+    })
+    expect(toast.error).toHaveBeenCalledWith('Storage unavailable')
+    expect(screen.queryByRole('status')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'duplicate-first' }))
+    await waitFor(() => expect(useCharacterStore.getState().characters).toHaveLength(2))
+    expect(toast.success).toHaveBeenCalledWith('Character duplicated')
   })
 
   test('shows empty-state actions when there are no characters', async () => {
@@ -197,8 +291,43 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: 'Continue' }))
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  })
+
+  test('quarantine acknowledgment keeps export and retry available after storage failure', async () => {
+    const user = userEvent.setup()
+    const unsupported = { ...makeCharacterFixture({ id: 'backup' }), schemaVersion: 0 }
+    await useCharacterStore.setState({ unsupportedCharacters: [unsupported] })
+    let rejectWrite: (error: Error) => void = () => undefined
+    const dismissed = vi
+      .spyOn(useCharacterStore.getState(), 'dismissUnsupportedCharacters')
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectWrite = reject
+          }),
+      )
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    const pendingButton = screen.getByRole('button', { name: 'Continuing…' })
+    expect((pendingButton as HTMLButtonElement).disabled).toBe(true)
+    await user.click(pendingButton)
+    expect(dismissed).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([unsupported])
+    await act(async () => rejectWrite(new Error('Storage unavailable')))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Storage unavailable'))
+    expect(
+      (screen.getByRole('button', { name: 'Download Backup' }) as HTMLButtonElement).disabled,
+    ).toBe(false)
+    expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    )
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    expect(dismissed).toHaveBeenCalledTimes(2)
   })
 
   test('supports multi-select deletion workflow', async () => {

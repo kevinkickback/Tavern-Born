@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
+import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
 import {
   makeDefaultAbilityScores,
@@ -54,6 +55,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+  const { isPending: isCreating, run: runCreation } = useAsyncAction()
   const wizardData = useWizardGameData({
     allowedSources: characterData.allowedSources,
     originSystem: characterData.originSystem,
@@ -90,7 +92,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     })
   }, [open, wizardData.sources])
 
-  const handleClose = () => {
+  const resetAndClose = () => {
     setCurrentStep(1)
     setCharacterData(INITIAL_CHARACTER_DATA)
     setValidationError(null)
@@ -98,62 +100,75 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     onOpenChange(false)
   }
 
-  const handleFinish = () => {
-    const raceResolution = wizardData.resolveRace({
-      name: characterData.race,
-      source: characterData.raceSource,
-      subraceName: characterData.subrace,
-      subraceSource: characterData.subraceSource,
-    })
-    const classEntity = wizardData.resolveClass({
-      name: characterData.class,
-      source: characterData.classSource,
-    })
-    const background = wizardData.resolveBackground({
-      name: characterData.background,
-      source: characterData.backgroundSource,
-    })
-    const character = buildInitialCharacter(
-      {
-        initial: {
-          name: characterData.name,
-          originSystem: characterData.originSystem as '2014' | '2024',
-          portrait: characterData.portrait,
-          portraitTransform: characterData.portraitTransform,
-          allowedSources: characterData.allowedSources,
-          abilityScores: characterData.abilityScores as unknown as AbilityScores,
-          variantRules: {
-            ...characterData.variantRules,
-            abilityScoreMethod:
-              (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
-              'standard-array',
-          },
-          details: {
-            playerName: characterData.playerName,
-            age: characterData.age ?? undefined,
-            gender: characterData.gender,
-          },
-        },
-        race: raceResolution.parentRace,
-        subrace: raceResolution.subraceData,
-        classEntity,
-        background,
-        raceAsiChoices: characterData.raceAsiChoices,
-        raceAsiBlockIndex: characterData.raceAsiBlockIndex,
-      },
-      wizardData.itemLookup,
-      (domain, fromFilter) =>
-        resolveRaceGrantFilterOptions(domain, fromFilter, {
-          items: wizardData.items,
-          itemsBase: wizardData.itemsBase,
-          allowedSources: characterData.allowedSources,
-        }),
-    )
-    addCharacter(character)
-    setActiveCharacter(character.id)
-    handleClose()
-    toast.success('Character created')
+  const handleClose = () => {
+    if (!isCreating) resetAndClose()
   }
+
+  const handleFinish = () =>
+    runCreation(
+      async () => {
+        const raceResolution = wizardData.resolveRace({
+          name: characterData.race,
+          source: characterData.raceSource,
+          subraceName: characterData.subrace,
+          subraceSource: characterData.subraceSource,
+        })
+        const classEntity = wizardData.resolveClass({
+          name: characterData.class,
+          source: characterData.classSource,
+        })
+        const background = wizardData.resolveBackground({
+          name: characterData.background,
+          source: characterData.backgroundSource,
+        })
+        const character = buildInitialCharacter(
+          {
+            initial: {
+              name: characterData.name,
+              originSystem: characterData.originSystem as '2014' | '2024',
+              portrait: characterData.portrait,
+              portraitTransform: characterData.portraitTransform,
+              allowedSources: characterData.allowedSources,
+              abilityScores: characterData.abilityScores as unknown as AbilityScores,
+              variantRules: {
+                ...characterData.variantRules,
+                abilityScoreMethod:
+                  (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
+                  'standard-array',
+              },
+              details: {
+                playerName: characterData.playerName,
+                age: characterData.age ?? undefined,
+                gender: characterData.gender,
+              },
+            },
+            race: raceResolution.parentRace,
+            subrace: raceResolution.subraceData,
+            classEntity,
+            background,
+            raceAsiChoices: characterData.raceAsiChoices,
+            raceAsiBlockIndex: characterData.raceAsiBlockIndex,
+          },
+          wizardData.itemLookup,
+          (domain, fromFilter) =>
+            resolveRaceGrantFilterOptions(domain, fromFilter, {
+              items: wizardData.items,
+              itemsBase: wizardData.itemsBase,
+              allowedSources: characterData.allowedSources,
+            }),
+        )
+        const saved = await addCharacter(character)
+        setActiveCharacter(saved.id)
+        resetAndClose()
+        toast.success('Character created')
+      },
+      (error) => {
+        const message =
+          error instanceof Error ? error.message : 'Could not save the character. Please try again.'
+        setValidationError(message)
+        toast.error(message)
+      },
+    )
 
   const handleNext = () => {
     const validation = validateStep(currentStep, characterData, wizardData)
@@ -202,7 +217,11 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane">
+      <DialogContent
+        closeDisabled={isCreating}
+        aria-busy={isCreating}
+        className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane"
+      >
         <DialogTitle className="sr-only">Create New Character</DialogTitle>
         <DialogDescription className="sr-only">
           Step through the wizard to configure your new character.
@@ -282,6 +301,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
               onBack={handleBack}
               onNext={handleNext}
               onCancel={handleClose}
+              isPending={isCreating}
             />
           </div>
         </div>
