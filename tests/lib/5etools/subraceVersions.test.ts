@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { describe, expect, test, vi } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { getRaceAbilityData } from '@/lib/calculations/abilityScores'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
@@ -29,6 +31,53 @@ function load(data: { race: unknown[]; subrace?: unknown[] }) {
 }
 
 describe('subrace version materialization', () => {
+  test.each([
+    { name: 'Test (Family)', fullName: 'Test (Family; First)', savedName: 'First)' },
+    { name: 'Test (2024)', fullName: 'Test (2024); First', savedName: 'First' },
+  ])('preserves existing top-level version identities: $fullName', ({
+    name,
+    fullName,
+    savedName,
+  }) => {
+    const races = parse({
+      race: [{ ...parent, name, _versions: [{ name: fullName, resist: ['acid'] }] }],
+    })
+    const resolved = resolveRaceReference(
+      { name, source: 'PHB', subraceName: savedName, subraceSource: 'PHB' },
+      { racesByKey: buildRaceLookup(races) },
+    )
+    expect(resolved.subraceData?.name).toBe(savedName)
+    expect(resolved.mergedRace?.resist).toEqual(['acid'])
+  })
+
+  test('keeps new version labels distinct when a parenthetical parent precedes an external semicolon', () => {
+    const races = parse({
+      race: [
+        {
+          ...parent,
+          name: 'Test (2024)',
+          subraces: [
+            {
+              source: 'HB',
+              _versions: [
+                { name: 'Test (2024); First', speed: 35 },
+                { name: 'Test (2024); Second', speed: 40 },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(
+      races[0].subraces?.filter((entry) => entry._isVersion).map((entry) => entry.name),
+    ).toEqual(['First', 'Second'])
+    const resolved = resolveRaceReference(
+      { name: 'Test (2024)', source: 'PHB', subraceName: 'Second', subraceSource: 'HB' },
+      { racesByKey: buildRaceLookup(races) },
+    )
+    expect(resolved.mergedRace?.speed).toBe(40)
+  })
+
   test('merges parent mechanics and overwritten entries before version modifications', () => {
     const input = {
       race: [parent],
@@ -309,6 +358,28 @@ describe('subrace version materialization', () => {
 
 const corpusPath = join(process.cwd(), 'data/races.json')
 describe.runIf(existsSync(corpusPath))('real subrace version families', () => {
+  test.each([
+    {
+      name: 'Dragonborn (Chromatic)',
+      savedName: 'Black)',
+      resist: [{ choose: { from: ['acid', 'lightning', 'poison', 'fire', 'cold'] } }],
+    },
+    { name: 'Dragonborn (Gem)', savedName: 'Amethyst)', resist: ['force'] },
+    { name: 'Dragonborn (Metallic)', savedName: 'Brass)', resist: ['fire'] },
+  ])('resolves saved FTD selections without changing their identities: $name', ({
+    name,
+    savedName,
+    resist,
+  }) => {
+    const races = parse(JSON.parse(readFileSync(corpusPath, 'utf8')))
+    const resolved = resolveRaceReference(
+      { name, source: 'FTD', subraceName: savedName, subraceSource: 'FTD' },
+      { racesByKey: buildRaceLookup(races) },
+    )
+    expect(resolved.subraceData?.name).toBe(savedName)
+    expect(resolved.mergedRace?.resist).toEqual(resist)
+  })
+
   test('materializes all seven omitted families with inherited and overwritten mechanics', () => {
     const raw = JSON.parse(readFileSync(corpusPath, 'utf8'))
     const before = structuredClone(raw)

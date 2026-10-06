@@ -154,9 +154,10 @@ replacement, and removes null fields before version modifications can refer to i
 Parent-level version definitions are not reapplied to child families. Ambiguous ability/skill
 merges or unsupported version operations are required diagnostics in a completed catalog; a raw
 source stack can defer them until composition. Named and nameless subrace families use the same
-pipeline. Parenthesized family labels retain internal semicolons so versions from distinct families
-keep distinct source-qualified selection identities. Existing ordinary subrace entries remain
-available with their previous names; their consumed `_versions` definitions are removed. Cache
+pipeline. New child-version family labels retain internal semicolons inside parentheses; semicolons
+outside parentheses still separate the selection label from its parent. Existing top-level version
+labels retain their saved identities, including historical punctuation. Existing ordinary subrace
+entries remain available with their previous names; their consumed `_versions` definitions are removed. Cache
 schema 17 rebuilds catalogs that previously retained unmaterialized subrace versions.
 
 Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice

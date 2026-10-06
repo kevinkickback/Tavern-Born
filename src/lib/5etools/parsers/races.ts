@@ -137,7 +137,7 @@ export function parseRaces(
           ...subraceVersions.records.map((version) =>
             normalizeRacePresentationEntries({
               ...version,
-              name: extractVersionDisplayName(version.name, race.name),
+              name: extractSubraceVersionDisplayName(version.name, race.name),
               _isVersion: true,
             }),
           ),
@@ -162,13 +162,27 @@ export function parseRaces(
  */
 function extractVersionDisplayName(fullName: string, parentName: string): string {
   const semiIdx = fullName.indexOf(';')
-  const parenMatch = fullName.match(/\(([^)]+)\)/)
-  if (parenMatch && (semiIdx < 0 || fullName.indexOf('(') < semiIdx)) return parenMatch[1]
   if (semiIdx >= 0) return fullName.substring(semiIdx + 1).trim()
+  // These labels are persisted identities for existing top-level versions.
+  const parenMatch = fullName.match(/\(([^)]+)\)/)
+  if (parenMatch) return parenMatch[1]
   // Fallback: strip parent name prefix
   if (fullName.startsWith(parentName))
     return fullName.substring(parentName.length).trim() || fullName
   return fullName
+}
+
+/** Newly supported child versions retain family names inside parentheses. */
+function extractSubraceVersionDisplayName(fullName: string, parentName: string): string {
+  let depth = 0
+  for (let index = 0; index < fullName.length; index++) {
+    const character = fullName[index]
+    if (character === '(') depth++
+    else if (character === ')') depth = Math.max(0, depth - 1)
+    else if (character === ';' && depth === 0) return fullName.substring(index + 1).trim()
+  }
+  const parenMatch = fullName.match(/\(([^)]+)\)/)
+  return parenMatch ? parenMatch[1] : extractVersionDisplayName(fullName, parentName)
 }
 
 function getFirstStringFromEntries(entries: unknown[]): string | null {
