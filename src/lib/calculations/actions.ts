@@ -1,4 +1,5 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
@@ -22,6 +23,7 @@ import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { deriveRaceSpellSelection } from './raceSpellSelection'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -62,6 +64,7 @@ export interface WeaponActionProjectionContext {
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
+  raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
@@ -120,7 +123,7 @@ export function inferRulesTextActionKind(
 export function deriveSpellActions(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
-  options: Pick<CharacterActionProjectionContext, 'classes' | 'race'> = {},
+  options: Pick<CharacterActionProjectionContext, 'classes' | 'race' | 'raceResolution'> = {},
 ): CharacterAction[] {
   const classesById = new Map<string, Class5e>()
   for (const classData of options.classes ?? []) {
@@ -128,20 +131,31 @@ export function deriveSpellActions(
     const sourceLessId = toClassProfileId(classData.name)
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
+  const selection = options.raceResolution?.parentRace
+    ? deriveRaceSpellSelection(
+        options.raceResolution.parentRace,
+        options.raceResolution.subraceData,
+        {
+          raceName: character.race,
+          subraceName: character.subrace,
+          subraceIsNested: options.raceResolution.subraceIsNested,
+        },
+      )
+    : undefined
+  const raceData = selection
+    ? {
+        name: selection.name ?? character.race,
+        source: selection.source,
+        additionalSpells: selection.additionalSpells,
+      }
+    : options.race
+  // Without class data, removing racial spells must not rebuild unrelated class grants.
   const profiles =
-    classesById.size > 0 || options.race?.additionalSpells
-      ? ensureSpellProfiles(
-          character,
-          classesById,
-          options.race
-            ? {
-                name: options.race.name,
-                source: options.race.source,
-                additionalSpells: options.race.additionalSpells,
-              }
-            : undefined,
-        )
-      : character.spells.spellProfiles
+    selection && selection.additionalSpells.length === 0 && classesById.size === 0
+      ? character.spells.spellProfiles.filter((profile) => profile.type !== 'racial')
+      : classesById.size > 0 || raceData?.additionalSpells
+        ? ensureSpellProfiles(character, classesById, raceData)
+        : character.spells.spellProfiles
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {

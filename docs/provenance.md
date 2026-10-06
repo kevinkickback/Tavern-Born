@@ -94,6 +94,9 @@ fixed ability or choice options; removing that rule clears a historical ability.
 and special profiles and spell-slot usage remain intact. A shared pure selection adapter keeps
 command and spell-hook labels and blocks consistent; legacy profile labels and choice identifiers
 remain stable.
+Actions and PDF action projection consume the same resolved parent/subrace context and selection
+adapter as the spell hook. They preserve those profile identities when projecting saved choices,
+filter named parent blocks to the selected child, and respect complete-version spell removal.
 Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
 Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
 

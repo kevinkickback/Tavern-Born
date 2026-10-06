@@ -731,6 +731,7 @@ export function createCharacterSheetViewModel(
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
     race: raceResolution.mergedRace,
+    raceResolution,
     classes: resolvedClasses,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
