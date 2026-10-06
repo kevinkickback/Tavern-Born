@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5449.5 KiB for acknowledged library transactions and pending/retry controls
-  // (up 1.8 KiB from 5447.7). Shared update parsing limits growth; no dependency added.
+  // Reviewed at 5449.8 KiB for hydration-safe library transactions and pending/retry controls
+  // (up 2.1 KiB from 5447.7). Shared update parsing limits growth; no dependency added.
   rendererCode: 5450 * KIB,
-  // Reviewed at 428.1 KiB (up 0.6 KiB from 427.5) for the serialized library write boundary
+  // Reviewed at 428.4 KiB (up 0.9 KiB from 427.5) for the serialized library write boundary
   // and collision-safe duplication in the startup store.
   initialRendererScript: 429 * KIB,
   initialStylesheet: 185 * KIB,

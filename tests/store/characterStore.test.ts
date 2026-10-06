@@ -244,6 +244,7 @@ describe('characterStore', () => {
         activeCharacter: { ...first, name: 'Requested First' },
         isActiveCharacterDirty: true,
       })
+      storageMocks.setItem.mockClear()
       let finishWrite: () => void = () => undefined
       storageMocks.setItem.mockImplementationOnce(
         () =>
@@ -255,7 +256,7 @@ describe('characterStore', () => {
       const saved = useCharacterStore.getState().saveActiveCharacter()
       useCharacterStore.getState().setActiveCharacter(second.id)
       useCharacterStore.getState().updateActiveCharacter({ name: 'Unsaved Second' })
-      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(2))
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
       finishWrite()
       await Promise.all([added, saved])
       expect(useCharacterStore.getState().characters.map((character) => character.name)).toEqual([

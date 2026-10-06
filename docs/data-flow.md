@@ -76,9 +76,10 @@ confirms before closing. Preferences and layout state do not participate in char
 
 Create, duplicate, import, inactive update, replacement, and batch deletion use the same ordered
 library transaction boundary. Each computes against the latest committed library, writes once,
-then publishes its result. A failed transaction does not block later queued work. Draft-only edits
-and selection changes do not trigger library persistence. Clean system corrections share this
-boundary without persisting unrelated player edits.
+then publishes its result. Queued operations wait for character hydration, and a failed read
+rejects mutations without replacing storage. A failed transaction does not block later queued work.
+Draft-only edits and selection changes do not trigger library persistence. Clean system
+corrections share this boundary without persisting unrelated player edits.
 
 The creation wizard retains its completed input and shows an error when storage rejects creation.
 It selects the returned saved ID and closes only after acknowledgement. The library keeps deletion

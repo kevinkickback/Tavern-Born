@@ -98,9 +98,21 @@ const characterStorage = createIdbStorage<CharacterLibrary>()
 let pendingLibraryOperation: Promise<void> | null = null
 let durableLibrary: CharacterLibrary | null = null
 let readLibrary: () => CharacterLibrary
+let characterHydration = Promise.resolve()
+let characterHydrationError: unknown = null
+let isCharacterHydrating = false
+let finishCharacterRead: () => void = () => undefined
 
 function enqueueLibraryOperation<T>(operation: () => Promise<T>): Promise<T> {
-  const result = (pendingLibraryOperation ?? Promise.resolve()).then(operation)
+  const result = (pendingLibraryOperation ?? Promise.resolve()).then(async () => {
+    await characterHydration
+    if (characterHydrationError !== null)
+      throw Object.assign(
+        new Error('Character library could not be loaded. Reload the app and try again.'),
+        { cause: characterHydrationError },
+      )
+    return operation()
+  })
   const settled = result.then(
     () => undefined,
     () => undefined,
@@ -526,8 +538,27 @@ export const useCharacterStore = create<CharacterState>()(
         characters: state.characters,
         unsupportedCharacters: state.unsupportedCharacters,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.finishCharacterHydration()
+      onRehydrateStorage: () => {
+        characterHydrationError = null
+        // Zustand ignores superseded reads; keep their waiting operations on the shared gate.
+        if (!isCharacterHydrating) {
+          isCharacterHydrating = true
+          characterHydration = new Promise<void>((resolve) => {
+            finishCharacterRead = () => {
+              isCharacterHydrating = false
+              resolve()
+            }
+          })
+        }
+        const finishHydration = finishCharacterRead
+        return (state, error) => {
+          characterHydrationError = error ?? null
+          try {
+            state?.finishCharacterHydration()
+          } finally {
+            finishHydration()
+          }
+        }
       },
     },
   ),

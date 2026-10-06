@@ -36,7 +36,9 @@ and cross-surface contracts.
 - For ownership changes, assert materialized state and provenance together.
 - For library transactions, cover pending success, rejection/retry, overlapping writes, an edit
   made while saving, and a fresh IndexedDB read after acknowledgement. Verify wizard input and
-  deletion selection survive failure, and that bulk deletion is a single transaction.
+  deletion selection survive failure, and that bulk deletion is a single transaction. Delay
+  initial hydration and verify queued operations retain loaded records; failed reads must reject
+  mutations without writing, with retry possible after successful rehydration.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
 - Test accessibility through roles/names and keyboard behavior where practical.
