@@ -2,6 +2,7 @@ import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
 import { ARMOR_CATEGORY_LABEL_TO_CODE } from '@/lib/calculations/armorClass'
 import { deriveEffectiveRaceLanguageBlocks } from '@/lib/calculations/languageOrigin'
+import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
 import type { Item5e } from '@/types/5etools'
 import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
 import {
@@ -147,6 +148,7 @@ export function applyRaceGrants(
         feats?: unknown[]
         additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
         overwrite?: { ability?: boolean }
+        _isVersion?: unknown
       }
     | undefined,
   ledger: ProvenanceLedger,
@@ -155,6 +157,7 @@ export function applyRaceGrants(
   totalCharacterLevel = 1,
   options?: { suppressLanguageGrants?: boolean },
 ): ProvenanceLedger {
+  race = getRaceSelectionParent(race, subrace)
   let result = ledger
   const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
 

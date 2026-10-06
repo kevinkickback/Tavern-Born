@@ -80,6 +80,20 @@ const loadedCreatureTemplates = new WeakMap<
   Array<{ name: string; source: string; [key: string]: unknown }>
 >()
 
+export interface RawRaceData {
+  race: unknown[]
+  subrace: unknown[]
+}
+const loadedRaceData = new WeakMap<GameData, RawRaceData>()
+
+export function getLoadedRaceData(gameData: GameData): RawRaceData {
+  return loadedRaceData.get(gameData) ?? { race: gameData.races, subrace: [] }
+}
+
+export function setLoadedRaceData(gameData: GameData, data: RawRaceData): void {
+  loadedRaceData.set(gameData, data)
+}
+
 export function getLoadedCreatureTemplates(gameData: GameData) {
   return loadedCreatureTemplates.get(gameData) ?? []
 }
@@ -156,6 +170,7 @@ export class FiveEToolsDataLoader {
     let classIndexData: unknown = null
     let spellIndexData: unknown = null
     let bestiaryIndexData: unknown = null
+    let raceData: unknown = null
     let spellSourceLookupData: unknown = null
     let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
@@ -190,8 +205,7 @@ export class FiveEToolsDataLoader {
             spellSourceLookupData = data
             break
           case 'races':
-            gameData.races = parseRaces(data) as GameData['races']
-            this.addItemSources(gameData.races, sourcesSet)
+            raceData = data
             break
           case 'raceFluff':
             raceFluffSummaryByKey = new Map(
@@ -315,11 +329,41 @@ export class FiveEToolsDataLoader {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options)
     }
 
-    if (raceFluffSummaryByKey.size > 0) {
-      gameData.races = gameData.races.map((race) => {
-        const summary = raceFluffSummaryByKey.get(`${race.name}|${race.source}`)
-        return summary ? { ...race, fluffEntries: [summary] } : race
-      })
+    if (raceData) {
+      const payload = raceData as Partial<RawRaceData>
+      const raw: RawRaceData = {
+        race: (Array.isArray(raceData)
+          ? raceData
+          : Array.isArray(payload.race)
+            ? payload.race
+            : []
+        ).map((value) => {
+          const race = value as { name: string; source: string }
+          const summary = raceFluffSummaryByKey.get(`${race.name}|${race.source}`)
+          return summary ? { ...race, fluffEntries: [summary] } : race
+        }),
+        subrace: Array.isArray(payload.subrace) ? payload.subrace : [],
+      }
+      setLoadedRaceData(gameData, raw)
+      try {
+        gameData.races = parseRaces(raw, {
+          deferResolutionErrors: options?.deferCopyResolutionErrors,
+        }) as GameData['races']
+      } catch (error) {
+        if (error instanceof CopyResolutionError) {
+          for (const diagnostic of error.diagnostics)
+            options?.onResourceFailure?.(`Copied entity: ${diagnostic.entity}`, { required: true })
+        }
+        throw error
+      }
+      this.addItemSources(
+        [
+          ...gameData.races,
+          ...gameData.races.flatMap((race) => race.subraces ?? []),
+          ...raw.subrace,
+        ],
+        sourcesSet,
+      )
     }
 
     if (backgroundFluffEntriesByKey.size > 0) {

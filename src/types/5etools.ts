@@ -31,6 +31,8 @@ export interface Race5e {
   conditionImmune?: string[]
   traitTags?: string[]
   subraces?: Race5e[]
+  /** Complete copy-engine version, presented as a nested lineage selection. */
+  _isVersion?: boolean
   [key: string]: unknown
 }
 

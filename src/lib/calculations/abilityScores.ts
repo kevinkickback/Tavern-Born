@@ -358,7 +358,7 @@ export function getRaceAbilityData(
     _tavernBornFlexibleAsi?: boolean
     _tavernBornSuppressFlexibleAsi?: boolean
   } | null,
-  subrace?: { ability?: RaceAbilityEntry[] } | null,
+  subrace?: { ability?: RaceAbilityEntry[]; _isVersion?: unknown } | null,
   lineageAsiBlockIndex: RaceLineageAsiBlockIndex = 0,
 ): RaceAbilityData {
   const fixed: FixedAbilityBonus[] = []
@@ -390,7 +390,7 @@ export function getRaceAbilityData(
 
   // For lineage races (including Tasha's Custom Lineage), we synthesize the
   // ASI blocks from the selected lineage mode instead of consuming race.ability.
-  if (!usesTashasLineageAsi) {
+  if (!usesTashasLineageAsi && subrace?._isVersion !== true) {
     processEntries(race?.ability, 'race')
   }
   processEntries(subrace?.ability, 'subrace')

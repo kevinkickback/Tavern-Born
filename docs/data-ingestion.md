@@ -13,7 +13,7 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 | Resource loading | `dataLoader.ts` | Load each known source independently with cancellation, timeouts, and bounded concurrency. |
 | Validation | `validator.ts`, `schemas.ts` | Reject invalid required shapes; report optional degradation. |
 | Parsing/normalization | `parsers/`, rule normalizers | Produce stable application entities and diagnostics. |
-| Layer composition | `contentLayers.ts` | Overlay normalized collections by canonical identity and rebuild lookups. |
+| Layer composition | `contentLayers.ts` | Overlay collections by canonical identity, rebuild races from raw records, and rebuild lookups. |
 | Lookup construction | `lookups.ts` | Build collision-safe `name|source` maps. |
 | Filtering/resolution | `filters.ts`, `entityResolvers.ts` | Filter catalogs while preserving exact saved-reference fallback. |
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
@@ -39,8 +39,12 @@ timeouts, and Electron capability checks cannot drift between validation and ing
 The Included SRD is the permanent base catalog. When a local directory or remote 5etools root is
 configured, both sources are loaded and parsed independently. `contentLayers.ts` then overlays the
 external normalized collections on the SRD collections: an exact external identity wins, while an
-SRD identity omitted by the external source remains available. Raw source JSON is never
-concatenated. Unresolved class-feature references are re-linked against the completed catalog and
+SRD identity omitted by the external source remains available. Race data is retained as raw records
+during loading: race identities and parent-qualified subrace identities are overlaid before copy
+resolution, version expansion, and presentation normalization. This also rebuilds copies that resolved
+within an earlier layer when a later layer replaces their parent. The loader retains these inputs
+outside serializable `GameData`; only completed normalized catalogs enter the cache. Other families
+currently compose their normalized collections. Unresolved class-feature references are re-linked against the completed catalog and
 their normalized class rules are rebuilt before the final lookups are constructed. Subclass-feature
 references are re-linked the same way, their level groupings are rebuilt, and their source-owned
 choice descriptors are normalized after layering. Explicit class and subclass choice references
@@ -123,6 +127,24 @@ own properties; newly created path and directive dictionaries have no prototype.
 keeps its original record and cannot change shared runtime prototypes. Loader/layer composition
 treats unresolved copies as required failures before publishing the catalog.
 The cache schema is bumped when copy trust rules change so previously resolved catalogs are rebuilt.
+
+Race and subrace copies use this same data-only engine. Race parents use `name|source`; subrace
+parents additionally require `raceName|raceSource`. Missing parents, unattached subraces, cycles,
+invalid directives, and unsupported operations fail a completed catalog. A source-stack load can
+defer these errors until all raw race inputs are composed; it cannot persist that incomplete view.
+
+Race versions adapt `DataUtil.generic.getVersions` from the bundled snapshot's pinned
+[5etools v2.35.1 revision](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js).
+Template variables are substituted before implementation overrides, and copy modifications run
+after those overrides. Versions use the shared ordered array/path modification engine, inherit
+mechanics, and honor explicit null removals. Missing variables and unsupported transformations
+produce diagnostics. The adapter excludes upstream browser cache, exclusion, and hash globals;
+Tavern Born supplies source-qualified identity and its nested lineage presentation instead.
+Resolved versions carry `_isVersion` and complete mechanics with a short selection label. Selecting
+one uses that complete record, so parent abilities are not doubled and removed traits stay absent.
+Traditional subraces retain their existing additive merge behavior. Normalized records contain no
+unapplied `_copy`, `_mod`, or `_versions` directives from this race pipeline. Named race templates
+are currently unsupported and reported as missing rather than silently skipped.
 
 ## Prerequisite eligibility
 

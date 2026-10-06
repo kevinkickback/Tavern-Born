@@ -49,6 +49,10 @@ and cross-surface contracts.
   retain a dirty draft after failure until an explicit retry succeeds.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
+- For race normalization, cover ordered version modifications, template override ordering, null
+  removals through selection, parent-qualified subrace copies, immutable inputs, and rebuilding
+  already-resolved copies from later raw parent overrides. Committed fixtures own deterministic
+  expectations; guarded corpus checks cover real copied races and appended version rules.
 - Test accessibility through roles/names and keyboard behavior where practical.
 - Avoid comments that narrate obvious test steps; name the behavior instead.
 

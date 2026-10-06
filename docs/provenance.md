@@ -63,6 +63,12 @@ parsed blocks. Unresolved choices remain explicit readiness issues; commands do 
 Allocated base scores are never modified by origin or feat contributions. Effective scores consume
 the ledger through `CharacterCalculationContext`.
 
+Materialized race versions own their complete mechanics under the selected subrace identity. Their
+parent contributes selection identity and origin-policy flags, without reapplying parent grants.
+Switching to or from a version rebuilds both race and subrace ownership in one command so explicitly
+removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
+changes retain the existing additive ownership behavior.
+
 ## Class ownership
 
 Class tags include source-qualified class identity and, where needed, the granting level/choice.

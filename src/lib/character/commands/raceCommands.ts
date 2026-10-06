@@ -8,6 +8,7 @@ import {
   ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
@@ -61,6 +62,7 @@ function buildRaceMaterializedPatch(
   Character,
   'proficiencies' | 'visions' | 'damageResistances' | 'damageImmunities' | 'conditionImmunities'
 > {
+  race = getRaceSelectionParent(race, subrace)
   let proficiencies = removeSourceProficiencies(character, ledger, sourcesToRemove)
   const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
     includeAnyStandard: false,
@@ -196,6 +198,21 @@ export function applySubraceSelectionCommand(
   subrace: Race5e | undefined,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
 ): CharacterCommandResult {
+  const previous = race.subraces?.find(
+    (candidate) =>
+      candidate.name === character.subrace &&
+      (!character.subraceSource || candidate.source === character.subraceSource),
+  )
+  if (subrace?._isVersion === true || previous?._isVersion === true) {
+    return applyRaceSelectionCommand(
+      character,
+      ledger,
+      race,
+      subrace,
+      (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+      resolveRaceChoiceOptions,
+    )
+  }
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
   const oldSubraceName = character.subrace || undefined

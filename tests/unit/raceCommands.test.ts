@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { parseRaces } from '@/lib/5etools/parsers/races'
 import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
@@ -11,6 +12,92 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 const resolveNoChoices = () => []
 
 describe('race commands', () => {
+  test('version selection replaces parent mechanics atomically and returning to the base restores them once', () => {
+    const race = (
+      parseRaces({
+        race: [
+          {
+            name: 'Test Race',
+            source: 'PHB',
+            speed: 30,
+            ability: [{ dex: 2 }],
+            darkvision: 60,
+            resist: ['fire'],
+            skillProficiencies: [{ perception: true }],
+            feats: [{ any: 1 }],
+            additionalSpells: [{ innate: { 1: ['light'] } }],
+            _versions: [
+              {
+                name: 'Test Race; Changed',
+                source: 'HB',
+                darkvision: null,
+                resist: null,
+                skillProficiencies: null,
+                feats: null,
+                additionalSpells: null,
+              },
+            ],
+          },
+        ],
+      }) as Race5e[]
+    )[0]
+    const original = makeCharacterFixture({ race: '', raceSource: '' })
+    const baseResult = applyRaceSelectionCommand(
+      original,
+      emptyProvenance(),
+      race,
+      undefined,
+      0,
+      resolveNoChoices,
+    )
+    const baseCharacter = { ...original, ...baseResult.characterPatch }
+    const changed = applySubraceSelectionCommand(
+      baseCharacter,
+      baseResult.provenanceUpdate,
+      race,
+      race.subraces?.[0],
+      resolveNoChoices,
+    )
+    expect(changed.characterPatch).toMatchObject({
+      race: 'Test Race',
+      raceSource: 'PHB',
+      subrace: 'Changed',
+      subraceSource: 'HB',
+    })
+    expect(changed.characterPatch.proficiencies?.skills).not.toContain('perception')
+    expect(changed.characterPatch.visions).toBeUndefined()
+    expect(changed.characterPatch.damageResistances).toBeUndefined()
+    expect(changed.provenanceUpdate.abilityBonuses).toEqual([
+      expect.objectContaining({
+        ability: 'dex',
+        value: 2,
+        sourceTag: expect.objectContaining({ sourceType: 'subrace', sourceName: 'Changed' }),
+      }),
+    ])
+    expect(changed.provenanceUpdate.proficiencies.skills.perception).toBeUndefined()
+    expect(changed.provenanceUpdate.choices.filter((choice) => choice.domain === 'feats')).toEqual(
+      [],
+    )
+    expect(changed.provenanceUpdate.spells.light).toBeUndefined()
+    const restored = applySubraceSelectionCommand(
+      { ...baseCharacter, ...changed.characterPatch },
+      changed.provenanceUpdate,
+      race,
+      undefined,
+      resolveNoChoices,
+    )
+    expect(restored.characterPatch.proficiencies?.skills).toContain('perception')
+    expect(restored.characterPatch.visions).toEqual([{ type: 'darkvision', range: 60 }])
+    expect(restored.characterPatch.damageResistances).toEqual(['fire'])
+    expect(restored.provenanceUpdate.abilityBonuses).toEqual([
+      expect.objectContaining({
+        ability: 'dex',
+        value: 2,
+        sourceTag: expect.objectContaining({ sourceType: 'race' }),
+      }),
+    ])
+  })
+
   test('applies identity, proficiencies, and traits in one result', () => {
     const character = makeCharacterFixture({ race: '', raceSource: '' })
     const race = {

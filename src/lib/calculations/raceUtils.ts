@@ -16,6 +16,8 @@ type RaceTraitEntry = {
 
 export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   const isVersion = (subrace as Race5e & { _isVersion?: boolean })._isVersion === true
+  // Versions are complete records; overlaying the parent would restore explicitly removed fields.
+  if (isVersion) return subrace
   const replacesAbility =
     (subrace as Race5e & { overwrite?: { ability?: boolean } }).overwrite?.ability === true
   return {
@@ -24,17 +26,11 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
     ability: replacesAbility
       ? (subrace.ability ?? [])
       : [...(parent.ability ?? []), ...(subrace.ability ?? [])],
-    // Version subraces carry fully-resolved entries (parent entries with _mod applied);
-    // traditional subraces append their entries after the parent's.
-    entries: isVersion
-      ? (subrace.entries ?? [])
-      : [...(parent.entries ?? []), ...(subrace.entries ?? [])],
-    presentationEntries: isVersion
-      ? (subrace.presentationEntries ?? subrace.entries ?? [])
-      : [
-          ...(parent.presentationEntries ?? parent.entries ?? []),
-          ...(subrace.presentationEntries ?? subrace.entries ?? []),
-        ],
+    entries: [...(parent.entries ?? []), ...(subrace.entries ?? [])],
+    presentationEntries: [
+      ...(parent.presentationEntries ?? parent.entries ?? []),
+      ...(subrace.presentationEntries ?? subrace.entries ?? []),
+    ],
     size: subrace.size ?? parent.size,
     speed: subrace.speed ?? parent.speed,
     darkvision: subrace.darkvision ?? parent.darkvision,
