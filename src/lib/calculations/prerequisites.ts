@@ -95,6 +95,8 @@ export interface CheckPrereqOptions {
    * rather than total character level.
    */
   className?: string
+  /** Source printing of the contextual class owner. */
+  classSource?: string
   /**
    * Skip the race prerequisite check entirely (e.g. when browsing feats in
    * a race-selector context before race is finalised).
@@ -227,22 +229,35 @@ function checkLevelPrerequisite(
         : options.className
   const hasOwner =
     classReference !== undefined || subclassReference !== undefined || className !== undefined
+  const classSource =
+    isRecord(classReference) && typeof classReference.source === 'string'
+      ? classReference.source
+      : className?.toLowerCase() === options.className?.toLowerCase()
+        ? options.classSource
+        : undefined
   const unmet: PrereqResult = {
     met: false,
     reason: `Requires ${className ?? 'character'} level ${required}`,
   }
   if (!hasOwner)
     return getTotalClassLevels(character.progression) >= required ? { met: true } : unmet
-  const owners = character.progression.filter((entry) =>
-    classReference === undefined
-      ? !className || entry.name.toLowerCase() === className.toLowerCase()
-      : matchesReference(entry.name, entry.source, classReference),
+  const owners = character.progression.filter(
+    (entry) =>
+      !className ||
+      matchesReference(entry.name, entry.source, { name: className, source: classSource }),
   )
   if (!owners.length) return unmet
   return anyPrerequisite(
     owners.map((entry): PrereqResult => {
       if (entry.levels < required) return unmet
       if (subclassReference === undefined) return { met: true }
+      if (
+        entry.subclass &&
+        isRecord(subclassReference) &&
+        subclassReference.source !== undefined &&
+        !entry.subclassSource
+      )
+        return unsupported('subclass source requirement')
       if (
         matchesReference(entry.subclass ?? '', entry.subclassSource, subclassReference) ||
         matchesReference(entry.subclassShortName ?? '', entry.subclassSource, subclassReference)

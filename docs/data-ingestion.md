@@ -135,6 +135,8 @@ progression and supplied source, not total multiclass level or just the primary 
 Class-choice snapshots resolve the selected subclass's upstream short name from the exact
 source-qualified class catalog. An unavailable subclass identity requires review rather than
 guessing an alias; levels belonging to distinct class entries are never added to meet one owner.
+Contextual class choices and subclass eligibility carry the selected parent class source into
+numeric level checks. A missing saved source cannot prove a source-qualified subclass condition.
 
 The aggregate result distinguishes `met`, `unmet`, and `unsupported`. Unknown condition keys or
 malformed supported conditions require manual review and cannot prove eligibility. A satisfied

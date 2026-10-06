@@ -280,6 +280,7 @@ interface ClassChoiceSelectionModalProps {
   initialSelectedIds: string[]
   characterSnapshot: PrereqCharacterSnapshot
   className?: string
+  classSource?: string
   onClose: () => void
   onConfirm: (selected: ClassChoiceOptionView[]) => void
 }
@@ -291,6 +292,7 @@ export function ClassChoiceSelectionModal({
   initialSelectedIds,
   characterSnapshot,
   className,
+  classSource,
   onClose,
   onConfirm,
 }: ClassChoiceSelectionModalProps) {
@@ -309,7 +311,7 @@ export function ClassChoiceSelectionModal({
     const results = new Map<string, { met: boolean; reasons: string[] }>()
     let hasUnmet = false
     for (const option of options) {
-      const result = checkAllPrerequisites(option, characterSnapshot, { className })
+      const result = checkAllPrerequisites(option, characterSnapshot, { className, classSource })
       results.set(getClassChoiceOptionKey(option.reference), {
         met: result.met,
         reasons: result.failures,
@@ -317,7 +319,7 @@ export function ClassChoiceSelectionModal({
       if (!result.met) hasUnmet = true
     }
     return { prerequisiteByOptionKey: results, hasUnmetPrerequisites: hasUnmet }
-  }, [characterSnapshot, className, options])
+  }, [characterSnapshot, className, classSource, options])
   const filterSections = useMemo<FilterSection[]>(() => {
     const sections: FilterSection[] = []
     const masteries = new Map<string, string>()

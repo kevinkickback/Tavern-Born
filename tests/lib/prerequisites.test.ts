@@ -579,4 +579,53 @@ describe('prerequisites', () => {
       checkPrerequisite({ level: { level: 3, class: { name: 'Wizard' } } }, character).met,
     ).toBe(false)
   })
+
+  test('checks numeric levels against the contextual class printing', () => {
+    const character = makePrereqCharacterSnapshotFixture({
+      progression: [
+        { name: 'Wizard', source: 'PHB', levels: 5 },
+        { name: 'Wizard', source: 'XPHB', levels: 2 },
+      ],
+    })
+    expect(
+      checkPrerequisite({ level: 3 }, character, { className: 'Wizard', classSource: 'XPHB' }).met,
+    ).toBe(false)
+    expect(
+      checkPrerequisite({ level: 2 }, character, { className: 'Wizard', classSource: 'XPHB' }).met,
+    ).toBe(true)
+    expect(
+      checkPrerequisite({ level: 3 }, character, { className: 'Wizard', classSource: 'PHB' }).met,
+    ).toBe(true)
+    expect(
+      checkPrerequisite({ level: { level: 3, class: { name: 'Wizard' } } }, character, {
+        className: 'Wizard',
+        classSource: 'XPHB',
+      }).met,
+    ).toBe(false)
+    expect(
+      checkPrerequisite(
+        { level: { level: 3, class: { name: 'Wizard', source: 'PHB' } } },
+        character,
+        { className: 'Fighter', classSource: 'XPHB' },
+      ).met,
+    ).toBe(true)
+  })
+
+  test('requires review when a saved subclass lacks the source needed by a qualified condition', () => {
+    const character = makePrereqCharacterSnapshotFixture({
+      progression: [{ name: 'Fighter', source: 'PHB', levels: 7, subclass: 'Rune Knight' }],
+    })
+    expect(
+      checkPrerequisite(
+        {
+          level: {
+            level: 7,
+            class: { name: 'Fighter' },
+            subclass: { name: 'Rune Knight', source: 'TCE' },
+          },
+        },
+        character,
+      ),
+    ).toMatchObject({ met: false, status: 'unsupported' })
+  })
 })
