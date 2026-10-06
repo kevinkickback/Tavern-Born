@@ -31,6 +31,67 @@ function load(data: { race: unknown[]; subrace?: unknown[] }) {
 }
 
 describe('subrace version materialization', () => {
+  test('retains complete nested-parenthesis family labels and resolves distinct versions', () => {
+    const races = parse({
+      race: [
+        {
+          ...parent,
+          subraces: [
+            {
+              name: 'Family (Legacy)',
+              source: 'HB',
+              _versions: [
+                { name: 'Test Race (Family (Legacy); First)', speed: 35 },
+                { name: 'Test Race (Family (Legacy); Second)', speed: 40 },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    const versions = races[0].subraces?.filter((entry) => entry._isVersion) ?? []
+    expect(versions.map((entry) => entry.name)).toEqual([
+      'Family (Legacy); First',
+      'Family (Legacy); Second',
+    ])
+    const resolved = resolveRaceReference(
+      {
+        name: parent.name,
+        source: parent.source,
+        subraceName: 'Family (Legacy); Second',
+        subraceSource: 'HB',
+      },
+      { racesByKey: buildRaceLookup(races) },
+    )
+    expect(resolved.mergedRace?.speed).toBe(40)
+  })
+
+  test.each([
+    { ability: [{ wis: 1 }, { con: 1 }] },
+    { skillProficiencies: [{ arcana: true }, { survival: true }] },
+  ])('does not require a complete merge for an ordinary subrace with no versions: %j', (mechanics) => {
+    const input = {
+      race: [parent],
+      subrace: [
+        {
+          name: 'Ordinary',
+          source: 'HB',
+          raceName: parent.name,
+          raceSource: parent.source,
+          ...mechanics,
+          _versions: [],
+        },
+      ],
+    }
+    const before = structuredClone(input)
+    const race = parse(input)[0]
+    expect(race.subraces).toHaveLength(1)
+    expect(race.subraces?.[0]).toMatchObject({ name: 'Ordinary', ...mechanics })
+    expect(race.subraces?.[0]).not.toHaveProperty('_isVersion')
+    expect(race.subraces?.[0]).not.toHaveProperty('_versions')
+    expect(input).toEqual(before)
+  })
+
   test.each([
     { name: 'Test (Family)', fullName: 'Test (Family; First)', savedName: 'First)' },
     { name: 'Test (2024)', fullName: 'Test (2024); First', savedName: 'First' },

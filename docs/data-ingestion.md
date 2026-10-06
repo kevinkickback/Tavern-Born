@@ -154,7 +154,8 @@ replacement, and removes null fields before version modifications can refer to i
 Parent-level version definitions are not reapplied to child families. Ambiguous ability/skill
 merges or unsupported version operations are required diagnostics in a completed catalog; a raw
 source stack can defer them until composition. Named and nameless subrace families use the same
-pipeline. New child-version family labels retain internal semicolons inside parentheses; semicolons
+pipeline. Empty child version arrays do not require composing ordinary subrace mechanics.
+New child-version family labels retain nested parentheses and internal semicolons; semicolons
 outside parentheses still separate the selection label from its parent. Existing top-level version
 labels retain their saved identities, including historical punctuation. Existing ordinary subrace
 entries remain available with their previous names; their consumed `_versions` definitions are removed. Cache

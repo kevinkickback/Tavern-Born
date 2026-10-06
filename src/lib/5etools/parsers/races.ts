@@ -107,7 +107,10 @@ export function parseRaces(
           records: [],
           diagnostics: [],
         }
-        if (subraceObj._versions !== undefined && !subraceObj._copy && !raceObj._copy) {
+        const hasVersions =
+          subraceObj._versions !== undefined &&
+          (!Array.isArray(subraceObj._versions) || subraceObj._versions.length > 0)
+        if (hasVersions && !subraceObj._copy && !raceObj._copy) {
           try {
             subraceVersions = resolveRecordVersions(
               mergeSubraceForVersions(race, subraceObj),
@@ -175,14 +178,21 @@ function extractVersionDisplayName(fullName: string, parentName: string): string
 /** Newly supported child versions retain family names inside parentheses. */
 function extractSubraceVersionDisplayName(fullName: string, parentName: string): string {
   let depth = 0
+  let groupStart = -1
+  let groupEnd = -1
   for (let index = 0; index < fullName.length; index++) {
     const character = fullName[index]
-    if (character === '(') depth++
-    else if (character === ')') depth = Math.max(0, depth - 1)
-    else if (character === ';' && depth === 0) return fullName.substring(index + 1).trim()
+    if (character === '(') {
+      if (depth === 0) groupStart = index + 1
+      depth++
+    } else if (character === ')' && depth > 0) {
+      depth--
+      if (depth === 0) groupEnd = index
+    } else if (character === ';' && depth === 0) return fullName.substring(index + 1).trim()
   }
-  const parenMatch = fullName.match(/\(([^)]+)\)/)
-  return parenMatch ? parenMatch[1] : extractVersionDisplayName(fullName, parentName)
+  return groupStart >= 0 && groupEnd > groupStart
+    ? fullName.substring(groupStart, groupEnd)
+    : extractVersionDisplayName(fullName, parentName)
 }
 
 function getFirstStringFromEntries(entries: unknown[]): string | null {

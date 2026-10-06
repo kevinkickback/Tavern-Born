@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured at 5456.1 KiB (up 2.8 KiB from 5453.3) for pinned parent/subrace composition,
-  // nested version expansion and its required diagnostics. The bounded change requires fresh review.
+  // Pinned parent/subrace composition, version diagnostics and compatible labels add about 3 KiB
+  // to the 5453.3 KiB dependency build. This bounded allowance requires fresh review.
   rendererCode: 5457 * KIB,
-  // Measured at 434.8 KiB (up 2.8 KiB from 432.0) for that ingestion adapter.
+  // The same adapter adds about 3 KiB to the 432.0 KiB initial script; rounded up after edge fixes.
   // No dependency added; all other budgets remain unchanged.
-  initialRendererScript: 435 * KIB,
+  initialRendererScript: 436 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
