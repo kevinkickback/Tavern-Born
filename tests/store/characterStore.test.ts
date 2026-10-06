@@ -32,6 +32,45 @@ describe('characterStore', () => {
   })
 
   describe('durable library transactions', () => {
+    test.each([
+      false,
+      true,
+    ])('overlapping saves of the same draft share an outcome, including rejection=%s', async (rejectWrite) => {
+      const character = await useCharacterStore.getState().createNewCharacter({ name: 'Saved' })
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      useCharacterStore.getState().updateActiveCharacter({ name: 'Draft' })
+      storageMocks.setItem.mockClear()
+      let finishWrite: () => void = () => undefined
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            finishWrite = () => (rejectWrite ? reject(new Error('Storage unavailable')) : resolve())
+          }),
+      )
+      const first = useCharacterStore.getState().saveActiveCharacter()
+      const second = useCharacterStore.getState().saveActiveCharacter()
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      expect(useCharacterStore.getState().characters[0].name).toBe('Saved')
+      finishWrite()
+      const outcomes = await Promise.allSettled([first, second])
+      expect(outcomes.map((outcome) => outcome.status)).toEqual(
+        rejectWrite ? ['rejected', 'rejected'] : ['fulfilled', 'fulfilled'],
+      )
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+      if (rejectWrite) {
+        expect(useCharacterStore.getState().characters[0].name).toBe('Saved')
+        expect(useCharacterStore.getState().activeCharacter?.name).toBe('Draft')
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+        await useCharacterStore.getState().saveActiveCharacter()
+        expect(storageMocks.setItem).toHaveBeenCalledTimes(2)
+      }
+      expect(useCharacterStore.getState().characters[0].name).toBe('Draft')
+      expect(useCharacterStore.getState().activeCharacter).toBe(
+        useCharacterStore.getState().characters[0],
+      )
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    })
+
     test('failed quarantine acknowledgment retains backups through later writes and allows durable retry', async () => {
       const saved = makeCharacterFixture({ id: 'supported', name: 'Supported' })
       const unsupported = { ...makeCharacterFixture({ id: 'backup' }), schemaVersion: 0 }

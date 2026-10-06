@@ -37,6 +37,8 @@ dirty draft.
 until that revision is durable and does not mark later edits as saved. A failed write leaves the
 previous saved snapshot intact. Switching the active character cannot redirect a queued save;
 deleting its target before the save starts cannot resurrect that record.
+Overlapping Save requests for the same immutable draft share one write and outcome. Newer drafts
+remain separate saves, and rejection releases the shared request so explicit retry can succeed.
 
 ## Saved-library transactions
 

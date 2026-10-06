@@ -257,6 +257,7 @@ export const useCharacterStore = create<CharacterState>()(
   persist(
     (set, get) => {
       let pendingReconciliation: Character | null = null
+      const pendingDraftSaves = new Map<Character, Promise<void>>()
       readLibrary = () => ({
         characters: get().characters,
         unsupportedCharacters: get().unsupportedCharacters,
@@ -270,8 +271,10 @@ export const useCharacterStore = create<CharacterState>()(
         set((state) => ({ characters, ...afterWrite?.(state) }))
       }
 
-      const saveDraft = (draft: Character): Promise<void> =>
-        enqueueLibraryOperation(async () => {
+      const saveDraft = (draft: Character): Promise<void> => {
+        const pending = pendingDraftSaves.get(draft)
+        if (pending) return pending
+        const saving = enqueueLibraryOperation(async () => {
           if (!get().characters.some((character) => character.id === draft.id))
             throw new Error('Character is no longer in the library')
           const parsed = parseCharacterData({ ...draft, lastModified: new Date().toISOString() })
@@ -288,6 +291,13 @@ export const useCharacterStore = create<CharacterState>()(
             },
           )
         })
+        pendingDraftSaves.set(draft, saving)
+        const finish = () => {
+          pendingDraftSaves.delete(draft)
+        }
+        void saving.then(finish, finish)
+        return saving
+      }
 
       return {
         characters: [],

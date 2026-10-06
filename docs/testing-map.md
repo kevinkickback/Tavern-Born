@@ -45,6 +45,8 @@ and cross-surface contracts.
   permit export/retry in the dialog, and be absent from a fresh storage read only after success.
   Start a reload during a delayed transaction, then complete the read after acknowledgment;
   neither a successful nor rejected write may be undone or deadlock later queued actions.
+  Overlapping saves of one draft must share one write/outcome, remain clean after success, and
+  retain a dirty draft after failure until an explicit retry succeeds.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
 - Test accessibility through roles/names and keyboard behavior where practical.
