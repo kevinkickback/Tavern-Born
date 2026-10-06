@@ -852,7 +852,7 @@ export const REPRESENTATIVE_CHARACTER_FIXTURES: RepresentativeCharacterFixture[]
     label: '2014 dwarf martial with racial Constitution and 25-foot speed',
     character: dwarfMartialCharacter,
     gameData: dwarfMartialData,
-    prerequisite: { ability: [{ ability: 'con', score: 16 }] },
+    prerequisite: { ability: [{ con: 16 }] },
     expected: {
       abilityScores: { strength: 16, constitution: 16 },
       armorClass: 17,
@@ -871,7 +871,7 @@ export const REPRESENTATIVE_CHARACTER_FIXTURES: RepresentativeCharacterFixture[]
     label: '2014 elf wizard with spellcasting, armor, skills, saves, and carrying values',
     character: elfWizardCharacter,
     gameData: elfWizardData,
-    prerequisite: { ability: [{ ability: 'dex', score: 16 }], spellcasting: true },
+    prerequisite: { ability: [{ dex: 16 }], spellcasting: true },
     prerequisiteOptions: { spellcastingClasses: new Set(['Wizard']) },
     expected: {
       abilityScores: { dexterity: 16, constitution: 14, intelligence: 16 },
@@ -896,7 +896,7 @@ export const REPRESENTATIVE_CHARACTER_FIXTURES: RepresentativeCharacterFixture[]
     label: '2024 cleric with background ASIs and Divine Order',
     character: clericCharacter,
     gameData: clericData,
-    prerequisite: { ability: [{ ability: 'wis', score: 17 }] },
+    prerequisite: { ability: [{ wis: 17 }] },
     expected: {
       abilityScores: { wisdom: 17, charisma: 9 },
       armorClass: 17,
@@ -939,7 +939,7 @@ export const REPRESENTATIVE_CHARACTER_FIXTURES: RepresentativeCharacterFixture[]
     label: '2024 weapon-using character with a source-qualified mastery choice',
     character: weaponMasteryCharacter,
     gameData: weaponMasteryData,
-    prerequisite: { ability: [{ ability: 'str', score: 17 }] },
+    prerequisite: { ability: [{ str: 17 }] },
     expected: {
       abilityScores: { strength: 17, constitution: 14 },
       armorClass: 18,

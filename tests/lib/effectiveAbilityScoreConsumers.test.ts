@@ -97,9 +97,7 @@ describe('effective ability score consumers', () => {
       spellAttackBonus: 5,
       preparedSpellLimit: 7,
     })
-    expect(
-      checkPrerequisite({ ability: [{ ability: 'int', score: 16 }] }, prerequisiteSnapshot).met,
-    ).toBe(true)
+    expect(checkPrerequisite({ ability: [{ int: 16 }] }, prerequisiteSnapshot).met).toBe(true)
     expect(pdf2014.textFields).toMatchObject({
       Dex: '16',
       Con: '14',

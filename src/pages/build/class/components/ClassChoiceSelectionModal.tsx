@@ -437,7 +437,7 @@ export function ClassChoiceSelectionModal({
         options: [
           {
             value: 'showUnmet',
-            label: 'Show options with unmet prerequisites',
+            label: 'Show options with unmet or unverified prerequisites',
           },
         ],
       })

@@ -342,19 +342,27 @@ export interface Feat5e {
   [key: string]: unknown
 }
 
-type Raw5eAbilityPrereq = string | { ability: string; score?: number }
-type Raw5eRacePrereq = string | { name: string }
-type Raw5eClassPrereq = string | { name: string }
+type Raw5eAbilityPrereq = Record<string, number>
+type Raw5eRacePrereq = string | { name: string; source?: string; [key: string]: unknown }
+type Raw5eClassPrereq = string | { name: string; source?: string; [key: string]: unknown }
 
 export interface Raw5ePrereq {
-  level?: number | { level: number }
+  level?:
+    | number
+    | {
+        level: number
+        class?: { name: string; source?: string; [key: string]: unknown }
+        subclass?: { name: string; source?: string; [key: string]: unknown }
+      }
   ability?: Raw5eAbilityPrereq[]
   race?: Raw5eRacePrereq[]
   class?: Raw5eClassPrereq[]
   spellcasting?: boolean
-  spell?: string | string[]
+  spell?: string | Array<string | { choose: string; entry: string; entrySummary?: string }>
   pact?: string
   patron?: string
+  /** Preserve conditions the eligibility checker cannot yet evaluate. */
+  [key: string]: unknown
 }
 
 export type ItemPropertyReference = string | { uid: string; note?: string }
