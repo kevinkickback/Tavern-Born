@@ -25,6 +25,7 @@ interface CharacterCardProps {
   cardSize?: number
   highlighted?: boolean
   usesAdditionalContent?: boolean
+  isLibraryPending?: boolean
 }
 
 export const CharacterCard = memo(function CharacterCard({
@@ -40,6 +41,7 @@ export const CharacterCard = memo(function CharacterCard({
   cardSize = 340,
   highlighted = false,
   usesAdditionalContent = false,
+  isLibraryPending = false,
 }: CharacterCardProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
@@ -54,6 +56,7 @@ export const CharacterCard = memo(function CharacterCard({
 
   const handleCardClick = () => {
     if (selectionMode) {
+      if (isLibraryPending) return
       onToggleSelect?.(character.id)
     } else {
       onLoad(character.id)
@@ -91,6 +94,7 @@ export const CharacterCard = memo(function CharacterCard({
                       variant="outline"
                       size="default"
                       aria-label={`Duplicate ${character.name || 'character'}`}
+                      disabled={isLibraryPending}
                       className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
                       onClick={(event) => {
                         event.stopPropagation()
@@ -125,6 +129,7 @@ export const CharacterCard = memo(function CharacterCard({
                       variant="destructive"
                       size="default"
                       aria-label={`Delete ${character.name || 'character'}`}
+                      disabled={isLibraryPending}
                       className={actionButtonClass}
                       onClick={(event) => {
                         event.stopPropagation()
@@ -152,6 +157,7 @@ export const CharacterCard = memo(function CharacterCard({
       {selectionMode && (
         <div className="absolute left-3 top-3 z-10">
           <Checkbox
+            disabled={isLibraryPending}
             checked={isSelected}
             onCheckedChange={() => onToggleSelect?.(character.id)}
             onClick={(event) => event.stopPropagation()}

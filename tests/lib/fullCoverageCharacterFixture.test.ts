@@ -267,9 +267,8 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(
       existsSync(join(process.cwd(), 'public', organization?.imagePath?.replace(/^\//, '') ?? '')),
     ).toBe(true)
-    expect(createCharacterSheetViewModel(character, lookups).organizationImage).toBe(
-      organization?.imagePath,
-    )
+    const viewModel = createCharacterSheetViewModel(character, lookups)
+    expect(viewModel.organizationImage).toBe(organization?.imagePath)
 
     const calculation = createCharacterCalculationContext(character, lookups)
     expect(character.movement).toEqual(
@@ -278,7 +277,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         calculation.raceResolution.subraceData,
       ),
     )
-    expect(createCharacterSheetViewModel(character, lookups).walkingSpeed).toBeGreaterThan(0)
+    expect(viewModel.walkingSpeed).toBeGreaterThan(0)
     const classChoiceCatalogs = buildClassChoiceCatalogs(character)
     const readiness = getCharacterReadiness(character, {
       calculation,

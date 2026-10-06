@@ -76,7 +76,7 @@ describe('character creation and proficiencies validation', () => {
     expect(result.fields).toContain('originSystem')
   })
 
-  test('createNewCharacter with class proficiencies produces valid character with string proficiencies', () => {
+  test('createNewCharacter with class proficiencies produces valid character with string proficiencies', async () => {
     // This test validates that the character creation produces proper data structures.
     // It tests the core logic of proficiency handling that was broken in the bug:
     // proficiencies.weapons contained objects instead of strings.
@@ -137,7 +137,7 @@ describe('character creation and proficiencies validation', () => {
     // Simulate what the wizard does: create character with proficiencies extracted from class
     const createNewCharacter = useCharacterStore.getState().createNewCharacter
 
-    const character = createNewCharacter({
+    const character = await createNewCharacter({
       name: 'Haldir',
       race: 'Elf',
       raceSource: 'PHB',
@@ -210,13 +210,12 @@ describe('character creation and proficiencies validation', () => {
     }
   })
 
-  test('rejects character creation with invalid non-string proficiencies', () => {
+  test('rejects character creation with invalid non-string proficiencies', async () => {
     // Create a character with invalid proficiencies on purpose
     // The validation should reject this when createNewCharacter calls addCharacter internally
     const createNewCharacter = useCharacterStore.getState().createNewCharacter
 
-    // createNewCharacter should throw when it tries to add invalid data
-    expect(() => {
+    await expect(
       createNewCharacter({
         name: 'BadCharacter',
         proficiencies: {
@@ -229,7 +228,7 @@ describe('character creation and proficiencies validation', () => {
           languages: ['Common'],
           savingThrows: [],
         },
-      })
-    }).toThrow(/proficiencies\.weapons/)
+      }),
+    ).rejects.toThrow(/proficiencies\.weapons/)
   })
 })
