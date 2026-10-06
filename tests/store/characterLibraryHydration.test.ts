@@ -109,6 +109,27 @@ test('an older failed read cannot reject mutations waiting for a newer hydration
   ])
 })
 
+test('an older read completing after the latest write cannot merge or persist stale records', async () => {
+  const finishInitial = delayHydration()
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  const created = store.getState().createNewCharacter({ name: 'Created' })
+  const finishLatest = delayHydration()
+  const rehydrated = store.persist.rehydrate()
+  finishLatest([makeCharacterFixture({ id: 'latest', name: 'Latest' })])
+  await rehydrated
+  await created
+  const committed = store.getState().characters
+  expect(committed.map((character) => character.name)).toEqual(['Latest', 'Created'])
+  expect(storage.setItem).toHaveBeenCalledTimes(1)
+
+  finishInitial([makeCharacterFixture({ id: 'superseded', name: 'Superseded' })])
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(store.getState().characters).toBe(committed)
+  expect(store.getState().unsupportedCharacters).toEqual([])
+  expect(storage.setItem).toHaveBeenCalledTimes(1)
+  expect(store.persist.hasHydrated()).toBe(true)
+})
+
 test('a hydration completion listener can start another read before queued mutations proceed', async () => {
   const finishInitial = delayHydration()
   const { useCharacterStore: store } = await import('@/store/characterStore')
