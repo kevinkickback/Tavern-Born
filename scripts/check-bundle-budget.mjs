@@ -14,11 +14,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5449.9 KiB for hydration-safe library transactions and pending/retry controls
-  // (up 2.2 KiB from 5447.7). Shared update parsing limits growth; no dependency added.
-  rendererCode: 5450 * KIB,
-  // Reviewed at 428.5 KiB (up 1.0 KiB from 427.5) for the serialized library write boundary
-  // and collision-safe duplication in the startup store.
+  // Reviewed at 5450.1 KiB for hydration-safe library transactions and pending/retry controls,
+  // including quarantine acknowledgment (up 2.4 KiB from 5447.7). No dependency added.
+  rendererCode: 5451 * KIB,
+  // Reviewed at 428.6 KiB (up 1.1 KiB from 427.5) for the serialized library write boundary
+  // and collision-safe duplication in the startup store; quarantine acknowledgment also fits.
   initialRendererScript: 429 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

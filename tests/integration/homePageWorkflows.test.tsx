@@ -83,6 +83,7 @@ const libraryActions = {
   deleteCharacters: useCharacterStore.getState().deleteCharacters,
   duplicateCharacter: useCharacterStore.getState().duplicateCharacter,
   importCharacters: useCharacterStore.getState().importCharacters,
+  dismissUnsupportedCharacters: useCharacterStore.getState().dismissUnsupportedCharacters,
 }
 
 function mockDynamicFileInput() {
@@ -290,8 +291,43 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: 'Continue' }))
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  })
+
+  test('quarantine acknowledgment keeps export and retry available after storage failure', async () => {
+    const user = userEvent.setup()
+    const unsupported = { ...makeCharacterFixture({ id: 'backup' }), schemaVersion: 0 }
+    await useCharacterStore.setState({ unsupportedCharacters: [unsupported] })
+    let rejectWrite: (error: Error) => void = () => undefined
+    const dismissed = vi
+      .spyOn(useCharacterStore.getState(), 'dismissUnsupportedCharacters')
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectWrite = reject
+          }),
+      )
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    const pendingButton = screen.getByRole('button', { name: 'Continuing…' })
+    expect((pendingButton as HTMLButtonElement).disabled).toBe(true)
+    await user.click(pendingButton)
+    expect(dismissed).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([unsupported])
+    await act(async () => rejectWrite(new Error('Storage unavailable')))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Storage unavailable'))
+    expect(
+      (screen.getByRole('button', { name: 'Download Backup' }) as HTMLButtonElement).disabled,
+    ).toBe(false)
+    expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    )
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    expect(dismissed).toHaveBeenCalledTimes(2)
   })
 
   test('supports multi-select deletion workflow', async () => {

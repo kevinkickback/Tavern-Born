@@ -86,6 +86,8 @@ It selects the returned saved ID and closes only after acknowledgement. The libr
 confirmation and selected records available for retry after failure; bulk deletion waits for one
 transaction. Pending creation/deletion cannot dismiss its form, and success notifications follow
 the durable write rather than the initial click.
+The compatibility dialog also awaits durable acknowledgment before discarding quarantined originals.
+A failed acknowledgment retains the backups, export action, and Continue retry.
 
 ## Domain mutation
 

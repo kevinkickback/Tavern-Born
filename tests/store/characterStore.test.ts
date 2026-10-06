@@ -32,6 +32,56 @@ describe('characterStore', () => {
   })
 
   describe('durable library transactions', () => {
+    test('failed quarantine acknowledgment retains backups through later writes and allows durable retry', async () => {
+      const saved = makeCharacterFixture({ id: 'supported', name: 'Supported' })
+      const unsupported = { ...makeCharacterFixture({ id: 'backup' }), schemaVersion: 0 }
+      await useCharacterStore.setState({
+        characters: [saved],
+        unsupportedCharacters: [unsupported],
+      })
+      storageMocks.setItem.mockClear()
+      let rejectWrite: (error: Error) => void = () => undefined
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectWrite = reject
+          }),
+      )
+      const dismissed = useCharacterStore.getState().dismissUnsupportedCharacters()
+      const rejection = expect(dismissed).rejects.toThrow('Storage unavailable')
+      const added = useCharacterStore.getState().createNewCharacter({ name: 'Later' })
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      expect(useCharacterStore.getState().unsupportedCharacters).toEqual([unsupported])
+      rejectWrite(new Error('Storage unavailable'))
+      await rejection
+      const created = await added
+      expect(useCharacterStore.getState().unsupportedCharacters).toEqual([unsupported])
+      expect(storageMocks.setItem).toHaveBeenLastCalledWith(
+        'character-storage',
+        expect.objectContaining({
+          state: { characters: [saved, created], unsupportedCharacters: [unsupported] },
+        }),
+      )
+
+      storageMocks.setItem.mockClear()
+      let finishWrite: () => void = () => undefined
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishWrite = () => resolve()
+          }),
+      )
+      const retried = useCharacterStore.getState().dismissUnsupportedCharacters()
+      const repeated = useCharacterStore.getState().dismissUnsupportedCharacters()
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      expect(useCharacterStore.getState().unsupportedCharacters).toEqual([unsupported])
+      finishWrite()
+      await Promise.all([retried, repeated])
+      expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+      expect(useCharacterStore.getState().characters).toEqual([saved, created])
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+    })
+
     test('an ignored clean-correction failure stays handled and dirty until explicit Save retry', async () => {
       const character = makeCharacterFixture({ id: 'correction-retry', name: 'Saved' })
       await useCharacterStore.setState({ characters: [character] })
@@ -804,7 +854,7 @@ describe('characterStore', () => {
       }),
     )
     storageMocks.setItem.mockClear()
-    state.dismissUnsupportedCharacters()
+    await state.dismissUnsupportedCharacters()
     expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
     await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
     expect(storageMocks.setItem).toHaveBeenLastCalledWith(

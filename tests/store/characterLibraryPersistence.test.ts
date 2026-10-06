@@ -27,6 +27,17 @@ describe('acknowledged character library in IndexedDB', () => {
     expect(await readCharacters()).toEqual([created])
   })
 
+  test('quarantine acknowledgment is durable and retains the supported library', async () => {
+    const saved = await useCharacterStore.getState().createNewCharacter({ name: 'Supported' })
+    const unsupported = { ...makeCharacterFixture({ id: 'backup' }), schemaVersion: 0 }
+    await useCharacterStore.setState({ unsupportedCharacters: [unsupported] })
+    await useCharacterStore.getState().dismissUnsupportedCharacters()
+    expect((await reader.getItem('character-storage'))?.state).toEqual({
+      characters: [saved],
+      unsupportedCharacters: [],
+    })
+  })
+
   test('overlapping duplicates receive independent identities and collision-free names', async () => {
     const source = await useCharacterStore
       .getState()

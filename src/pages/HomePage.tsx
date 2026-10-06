@@ -890,7 +890,8 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       <UnsupportedCharactersDialog
         count={unsupportedCharacters.length}
         onExport={handleExportUnsupportedCharacters}
-        onAcknowledge={dismissUnsupportedCharacters}
+        isPending={isLibraryPending}
+        onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
       />
       <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
         <DialogContent className="sm:max-w-xl">

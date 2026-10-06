@@ -54,8 +54,11 @@ for the latest load. Ignored automatic correction failures remain handled and di
 Save retry.
 Transactions write before publishing `characters`, so rejected writes need no optimistic
 rollback. Draft edits and active selection never rewrite an unchanged library. Persist middleware
-continues to own hydration and quarantine; its writes share the queue and read the latest library
-when their turn starts.
+continues to own hydration and quarantine normalization; its writes share the queue and read the
+latest library when their turn starts.
+Quarantine acknowledgment is an awaited transaction: original backups remain exportable until
+the removal is acknowledged. Failure keeps the dialog open and permits retry; later library
+writes retain the unacknowledged backups.
 
 Clean reconciliation updates the draft immediately and keeps it dirty until its correction commits.
 Consecutive clean corrections remain ordered and become clean after the latest acknowledgement;

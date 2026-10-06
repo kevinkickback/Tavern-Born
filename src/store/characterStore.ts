@@ -68,7 +68,7 @@ interface CharacterState {
   isActiveCharacterDirty: boolean
   unsupportedCharacters: unknown[]
   finishCharacterHydration: () => void
-  dismissUnsupportedCharacters: () => void
+  dismissUnsupportedCharacters: () => Promise<void>
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => Promise<void>
@@ -306,7 +306,13 @@ export const useCharacterStore = create<CharacterState>()(
             }
           }),
 
-        dismissUnsupportedCharacters: () => set({ unsupportedCharacters: [] }),
+        dismissUnsupportedCharacters: () =>
+          enqueueLibraryOperation(async () => {
+            if (get().unsupportedCharacters.length === 0) return
+            const unsupportedCharacters: unknown[] = []
+            await writeLibrary({ characters: get().characters, unsupportedCharacters })
+            set({ unsupportedCharacters })
+          }),
 
         hasUnsavedChanges: () => {
           const { characters, activeCharacter, activeCharacterId, isActiveCharacterDirty } = get()
