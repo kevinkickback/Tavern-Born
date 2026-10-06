@@ -33,8 +33,45 @@ Never mutate a character object directly. User mutations update `lastModified` a
 dirty state. Reconciliation writes both clean snapshots when possible and never clears an already
 dirty draft.
 
-`saveActiveCharacter()` is awaitable. It keeps the draft dirty until the exact staged revision is
-durable, restores the prior saved snapshot on failure, and does not mark later edits as saved.
+`saveActiveCharacter()` captures the requested draft and is awaitable. It keeps the draft dirty
+until that revision is durable and does not mark later edits as saved. A failed write leaves the
+previous saved snapshot intact. Switching the active character cannot redirect a queued save;
+deleting its target before the save starts cannot resurrect that record.
+Overlapping Save requests for the same immutable draft share one write and outcome. Newer drafts
+remain separate saves, and rejection releases the shared request so explicit retry can succeed.
+
+## Saved-library transactions
+
+`addCharacter`, `createNewCharacter`, `duplicateCharacter`, `deleteCharacter`, `deleteCharacters`,
+`setCharacters`, and `importCharacters` return promises that resolve after the library write commits.
+`updateCharacter` still changes an active draft immediately; for an inactive record it returns an
+awaitable durable transaction. Duplicate name/ID allocation and import collisions use the latest
+committed library inside the shared queue. Bulk deletion uses one transaction.
+
+All library transactions share one serialized persistence boundary with Save and clean system
+corrections. The queue waits for character hydration before reading the saved library; a failed
+read rejects queued mutations without writing. Successful rehydration releases later retry work.
+Replacement reads, including those started during hydration callbacks, keep queued writes waiting
+for the latest load. Ignored automatic correction failures remain handled and dirty for explicit
+Save retry.
+Reload reads wait for an already executing transaction to finish, including publication of its
+acknowledged library. They do not wait for queued actions that are themselves awaiting hydration;
+this avoids a read/write deadlock. A rejected transaction releases the read without hiding its
+failure from the caller, and later actions use the reloaded library.
+Transactions write before publishing `characters`, so rejected writes need no optimistic
+rollback. Draft edits and active selection never rewrite an unchanged library. Persist middleware
+continues to own hydration and quarantine normalization; its writes share the queue and read the
+latest library when their turn starts.
+Quarantine acknowledgment is an awaited transaction: original backups remain exportable until
+the removal is acknowledged. Failure keeps the dialog open and permits retry; later library
+writes retain the unacknowledged backups.
+
+Clean reconciliation updates the draft immediately and keeps it dirty until its correction commits.
+Consecutive clean corrections remain ordered and become clean after the latest acknowledgement;
+intervening player edits keep subsequent corrections in the draft until explicit Save. Creation
+and library UI must await transactions before closing, clearing selections, or announcing success.
+Pending actions block duplicate submissions. Storage errors leave the wizard or deletion selection
+available for retry; creation selects the ID actually returned by the committed addition.
 
 ## Stored versus derived
 
@@ -147,7 +184,7 @@ each character through the store's compatibility path, and retains valid entries
   The store resolves ID and name collisions against the latest library state. Saved
 source-qualified choices and portraits remain in each record even if the current catalog lacks their
 content. `importCharacters()` validates the prepared batch and awaits one durable library write;
-on a write failure it restores the in-memory library before the import result is reported.
+on a write failure it leaves the prior library intact before the import result is reported.
 
 ## Schema compatibility
 

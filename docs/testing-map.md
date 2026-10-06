@@ -34,7 +34,19 @@ and cross-surface contracts.
 - Use `test.each` for input/output matrices and ruleset/class variants.
 - Assert the public command/hook result, not intermediate implementation calls.
 - For ownership changes, assert materialized state and provenance together.
-- For store saves, cover pending success, rejection/retry, and an edit made while saving.
+- For library transactions, cover pending success, rejection/retry, overlapping writes, an edit
+  made while saving, and a fresh IndexedDB read after acknowledgement. Verify wizard input and
+  deletion selection survive failure, and that bulk deletion is a single transaction. Delay
+  initial hydration and verify queued operations retain loaded records; failed reads must reject
+  mutations without writing, with retry possible after successful rehydration.
+  Include superseded read failures, reentrant hydration callbacks, and an ignored correction
+  failure followed by explicit Save retry; unhandled rejections must fail the run.
+  Quarantine acknowledgment must retain backups through rejection and later library writes,
+  permit export/retry in the dialog, and be absent from a fresh storage read only after success.
+  Start a reload during a delayed transaction, then complete the read after acknowledgment;
+  neither a successful nor rejected write may be undone or deadlock later queued actions.
+  Overlapping saves of one draft must share one write/outcome, remain clean after success, and
+  retain a dirty draft after failure until an explicit retry succeeds.
 - For source-qualified data, include same-name/different-source cases.
 - For parser resilience, distinguish required failure from optional degradation.
 - Test accessibility through roles/names and keyboard behavior where practical.

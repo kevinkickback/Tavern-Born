@@ -67,12 +67,30 @@ Entry point: `src/store/characterStore.ts`.
 2. Selecting a character copies its saved snapshot into `activeCharacter`.
 3. Hooks derive current UI values from the draft and parsed game data.
 4. User edits call a store mutation and mark the draft dirty.
-5. `saveActiveCharacter()` stages one draft revision and awaits IndexedDB persistence.
-6. Success clears dirty state only if that revision is still current. Failure restores the prior
-   saved snapshot while keeping the draft available for retry.
+5. `saveActiveCharacter()` captures the requested draft revision and queues its IndexedDB write.
+6. Success publishes the saved snapshot and clears dirty state only if that draft is still current.
+   Failure leaves the prior saved snapshot unchanged and keeps the draft available for retry.
 
 Edits made while a save is pending remain dirty. Electron receives the unsaved-state signal and
 confirms before closing. Preferences and layout state do not participate in character dirty state.
+
+Create, duplicate, import, inactive update, replacement, and batch deletion use the same ordered
+library transaction boundary. Each computes against the latest committed library, writes once,
+then publishes its result. Queued operations wait for character hydration, and a failed read
+rejects mutations without replacing storage. A failed transaction does not block later queued work.
+Draft-only edits and selection changes do not trigger library persistence. Clean system
+corrections share this boundary without persisting unrelated player edits.
+
+The creation wizard retains its completed input and shows an error when storage rejects creation.
+It selects the returned saved ID and closes only after acknowledgement. The library keeps deletion
+confirmation and selected records available for retry after failure; bulk deletion waits for one
+transaction. Pending creation/deletion cannot dismiss its form, and success notifications follow
+the durable write rather than the initial click.
+The compatibility dialog also awaits durable acknowledgment before discarding quarantined originals.
+A failed acknowledgment retains the backups, export action, and Continue retry.
+An explicit character reload waits for an executing library transaction before reading storage,
+so it cannot merge an older snapshot over an acknowledged write. Pending actions waiting for
+hydration do not block the read.
 
 ## Domain mutation
 
