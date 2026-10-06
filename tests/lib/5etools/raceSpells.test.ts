@@ -87,7 +87,7 @@ describe('parseRaceSpellBlocks', () => {
     ])
     expect(block.choices).toEqual([
       {
-        id: 'choose-0',
+        id: 'direct-_-choose-0',
         level: 0,
         count: 2,
         isCantrip: true,

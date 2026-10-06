@@ -153,6 +153,9 @@ retain their character-level requirement. Parsed filtered choices retain a posit
 and daily limits where supplied. Complete-version spell consumers use the version's blocks without
 reapplying parent blocks; traditional subraces retain their existing composition behavior. Other
 racial spell schedules and choice shapes need their own supported adapter before automation.
+Previously supported nested choices keep their saved `choose-N` identifiers. Newly supported direct
+lists use a separate identifier per granting level/list so they cannot inherit an older nested
+choice's saved selection.
 
 ## Prerequisite eligibility
 

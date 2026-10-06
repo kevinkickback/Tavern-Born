@@ -58,7 +58,7 @@ function parseKnownBlock(
 ): { grants: RaceSpellGrant[]; choices: RaceSpellChoiceDescriptor[] } {
   const grants: RaceSpellGrant[] = []
   const choices: RaceSpellChoiceDescriptor[] = []
-  let choiceIdx = 0
+  let legacyChoiceIndex = 0
 
   for (const [levelText, spellData] of Object.entries(levelEntries)) {
     const level = levelText === '_' ? 0 : Number.parseInt(levelText, 10)
@@ -66,6 +66,7 @@ function parseKnownBlock(
 
     const items = Array.isArray(spellData) ? spellData : spellData?._
     if (!Array.isArray(items)) continue
+    let directChoiceIndex = 0
     for (const item of items) {
       if (typeof item === 'string') {
         const parsed = parseSpellToken(item)
@@ -80,8 +81,12 @@ function parseKnownBlock(
         const count = item.count ?? 1
         if (!Number.isInteger(count) || count <= 0) continue
         const filter = parseChooseFilter(item.choose)
+        // Newly supported direct lists must not shift saved nested-list choice IDs.
+        const id = Array.isArray(spellData)
+          ? `direct-${levelText}-choose-${directChoiceIndex++}`
+          : `choose-${legacyChoiceIndex++}`
         choices.push({
-          id: `choose-${choiceIdx++}`,
+          id,
           level,
           count,
           isCantrip: filter.level === 0,
