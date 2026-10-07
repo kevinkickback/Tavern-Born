@@ -978,9 +978,14 @@ function buildFixture(seed, edition) {
             source: version.source ?? race.source,
           }))
           .find((version) => version.name)
-  const movementOwner = selectedSubrace?.speed !== undefined ? selectedSubrace : race
-  const walkSpeed =
-    typeof movementOwner.speed === 'number' ? movementOwner.speed : movementOwner.speed?.walk
+  const movementOwner =
+    selectedSubrace && (edition === '2024' || selectedSubrace.speed !== undefined)
+      ? selectedSubrace
+      : race
+  // The revised fixture selects a complete version, which owns even inherited movement.
+  const movementSpeed =
+    edition === '2024' && selectedSubrace?.speed === undefined ? race.speed : movementOwner.speed
+  const walkSpeed = typeof movementSpeed === 'number' ? movementSpeed : movementSpeed?.walk
   if (typeof walkSpeed !== 'number')
     throw new Error(`Missing walking speed for fixture race: ${key(movementOwner)}`)
   const { profiles: mappedProfiles, spellAttributions } = buildSpellProfiles(

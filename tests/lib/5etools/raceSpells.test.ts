@@ -78,6 +78,47 @@ describe('parseChooseFilter', () => {
 })
 
 describe('parseRaceSpellBlocks', () => {
+  test('parses ungated direct known arrays with fixed spells and the supplied choice count', () => {
+    const [block] = parseRaceSpellBlocks([
+      { known: { _: ['light#c', { choose: 'level=0|class=Sorcerer', count: 2 }] } },
+    ])
+    expect(block.grants).toEqual([
+      expect.objectContaining({ spellName: 'light', level: 0, isCantrip: true, source: 'known' }),
+    ])
+    expect(block.choices).toEqual([
+      {
+        id: 'direct-_-choose-0',
+        level: 0,
+        count: 2,
+        isCantrip: true,
+        filter: { level: 0, classes: ['Sorcerer'] },
+      },
+    ])
+  })
+
+  test('parses innate direct arrays at ungated and later levels without inventing daily limits', () => {
+    const grants = parseRaceSpells([
+      { innate: { _: ['light#c'], 3: ['misty step'] }, ability: 'cha' },
+    ])
+    expect(grants).toEqual([
+      {
+        spellName: 'misty step',
+        level: 3,
+        isCantrip: false,
+        castingAbility: 'cha',
+        source: 'innate',
+      },
+      { spellName: 'light', level: 0, isCantrip: true, castingAbility: 'cha', source: 'innate' },
+    ])
+  })
+
+  test.each([0, -1, 1.5])('does not grant a filtered choice with invalid count %s', (count) => {
+    const [block] = parseRaceSpellBlocks([
+      { known: { _: [{ choose: 'level=0|class=Sorcerer', count }] } },
+    ])
+    expect(block.choices).toEqual([])
+  })
+
   test('returns empty for undefined input', () => {
     expect(parseRaceSpellBlocks(undefined)).toEqual([])
   })
@@ -121,6 +162,7 @@ describe('parseRaceSpellBlocks', () => {
     expect(blocks[0].choices).toHaveLength(1)
     expect(blocks[0].choices[0]).toEqual({
       id: 'choose-0',
+      level: 1,
       count: 1,
       isCantrip: true,
       filter: { level: 0, classes: ['Wizard'] },

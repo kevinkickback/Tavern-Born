@@ -12,6 +12,89 @@ describe('toRacialProfileId', () => {
 })
 
 describe('buildRacialSpellProfile', () => {
+  test('newly supported direct choices cannot inherit a saved nested choice selection', () => {
+    const existing = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells: [{ known: { 2: { _: [{ choose: 'level=1|class=Wizard' }] } } }],
+      totalLevel: 2,
+    })
+    const saved = {
+      ...existing,
+      choices: existing.choices?.map((choice) => ({ ...choice, selected: ['Find Familiar|PHB'] })),
+      spellsKnown: ['Find Familiar|PHB'],
+    }
+    const updated = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells: [
+        {
+          known: {
+            1: [{ choose: 'level=0|class=Sorcerer' }],
+            2: { _: [{ choose: 'level=1|class=Wizard' }] },
+          },
+        },
+      ],
+      totalLevel: 2,
+      existingProfile: saved,
+    })
+    expect(
+      updated.choices?.find((choice) => choice.filter?.classes.includes('Sorcerer'))?.selected,
+    ).toEqual([])
+    expect(
+      updated.choices?.find((choice) => choice.filter?.classes.includes('Wizard')),
+    ).toMatchObject({
+      id: 'choose-0',
+      selected: ['Find Familiar|PHB'],
+    })
+    expect(updated.cantrips).toEqual([])
+    expect(updated.spellsKnown).toEqual(['Find Familiar|PHB'])
+  })
+
+  test('level-gates direct known choices while retaining ungated choices', () => {
+    const additionalSpells = [
+      {
+        known: {
+          _: [{ choose: 'level=0|class=Sorcerer' }],
+          5: [{ choose: 'level=1|class=Wizard', count: 2 }],
+        },
+      },
+    ]
+    const level1 = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells,
+      totalLevel: 1,
+    })
+    expect(level1.choices).toEqual([
+      {
+        id: 'direct-_-choose-0',
+        count: 1,
+        isCantrip: true,
+        selected: [],
+        filter: { level: 0, classes: ['Sorcerer'] },
+      },
+    ])
+    const level5 = buildRacialSpellProfile({
+      raceName: 'Test Race',
+      additionalSpells,
+      totalLevel: 5,
+    })
+    expect(level5.choices).toEqual([
+      {
+        id: 'direct-5-choose-0',
+        count: 2,
+        isCantrip: false,
+        selected: [],
+        filter: { level: 1, classes: ['Wizard'] },
+      },
+      {
+        id: 'direct-_-choose-0',
+        count: 1,
+        isCantrip: true,
+        selected: [],
+        filter: { level: 0, classes: ['Sorcerer'] },
+      },
+    ])
+  })
+
   test('creates profile with fixed spells from single block', () => {
     const profile = buildRacialSpellProfile({
       raceName: 'Tiefling',

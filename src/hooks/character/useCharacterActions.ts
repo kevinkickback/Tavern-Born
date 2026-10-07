@@ -23,6 +23,7 @@ export function useCharacterActions(character: Character | null | undefined) {
       effectContext: calculation.effects.resolutionContext,
       spellsByKey: lookups?.spellsByKey,
       race: calculation.raceResolution.mergedRace,
+      raceResolution: calculation.raceResolution,
       classes: calculation.classes,
       feats: calculation.feats,
       classFeaturesByKey: lookups?.classFeaturesByKey,

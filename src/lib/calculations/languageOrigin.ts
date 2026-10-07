@@ -26,12 +26,23 @@ export function deriveEffectiveRaceLanguageBlocks(race: {
   languageProficiencies?: unknown[]
   lineage?: string | boolean
 }): unknown[] {
-  if (Array.isArray(race.languageProficiencies) && race.languageProficiencies.length > 0) {
+  if (Array.isArray(race.languageProficiencies)) {
     return race.languageProficiencies
   }
   return typeof race.lineage === 'string'
     ? LANGUAGE_GRANT_FALLBACKS.lineage.blocks.map((block) => ({ ...block }))
     : []
+}
+
+export function deriveEffectiveSubraceLanguageBlocks(subrace?: {
+  languageProficiencies?: unknown[]
+  lineage?: string | boolean
+  _isVersion?: unknown
+}): unknown[] {
+  if (!subrace) return []
+  return subrace._isVersion === true
+    ? deriveEffectiveRaceLanguageBlocks(subrace)
+    : (subrace.languageProficiencies ?? [])
 }
 
 function makeOriginLanguageTag(grantType: SourceTag['grantType']): SourceTag {

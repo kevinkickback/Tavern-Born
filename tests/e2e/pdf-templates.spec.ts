@@ -190,6 +190,7 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
     ).toContain('Cleric')
   }
   if (originalViewport) await page.setViewportSize(originalViewport)
+  return generatedPageCount
 }
 
 test('@focused exports every official and custom character-sheet template', async ({
@@ -263,9 +264,9 @@ test('@focused exports every official and custom character-sheet template', asyn
     await selectCharacterFromHome(page, String(character.name))
 
     for (const template of TEMPLATE_CASES[edition]) {
-      await exportTemplate(page, template, testInfo.outputDir)
+      // Viewport restoration can rerender canvases; use the already verified PDF page count.
+      const pagesBeforeCompanion = await exportTemplate(page, template, testInfo.outputDir)
       if (template.id.startsWith('2024')) {
-        const pagesBeforeCompanion = await page.locator('canvas').count()
         const usesNotesContinuation = template.id === '2024-official'
         const addedPages = usesNotesContinuation ? 1 : 2
         await page.getByRole('button', { name: 'Optional Pages', exact: true }).click()

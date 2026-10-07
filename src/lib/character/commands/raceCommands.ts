@@ -1,6 +1,7 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
   deriveEffectiveRaceLanguageBlocks,
+  deriveEffectiveSubraceLanguageBlocks,
   ensureOriginLanguageBaseline,
 } from '@/lib/calculations/languageOrigin'
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
@@ -8,12 +9,14 @@ import {
   ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
+import type { RaceSpellSelectionOptions } from '@/lib/calculations/raceSpellSelection'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
   applyRaceGrants,
-  diffProficiencyGrants,
   reconcileRaceChange,
   reconcileSubraceChange,
   resolveRaceAsiChoicesInLedger,
@@ -23,8 +26,12 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileRaceSpellProfileCommand } from './raceSpellProfileCommand'
 
 export type ResolveRaceChoiceOptions = (domain: 'armor' | 'weapons', fromFilter: string) => string[]
+export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subraceIsNested'> & {
+  previousSubrace?: Race5e
+}
 
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
@@ -34,18 +41,21 @@ function dedupeValues(values: string[]): string[] | undefined {
 function removeSourceProficiencies(
   character: Character,
   ledger: ProvenanceLedger,
-  sources: Array<readonly ['race' | 'subrace', string | undefined]>,
+  retainedLedger: ProvenanceLedger,
 ): Character['proficiencies'] {
-  let proficiencies = { ...character.proficiencies }
-  for (const [sourceType, sourceName] of sources) {
-    if (!sourceName) continue
-    for (const domain of ['skills', 'languages', 'tools', 'armor', 'weapons'] as const) {
-      const { toRemove } = diffProficiencyGrants(ledger, domain, sourceType, sourceName)
-      if (toRemove.length === 0) continue
-      proficiencies = {
-        ...proficiencies,
-        [domain]: proficiencies[domain].filter((name) => !toRemove.includes(normalizeKey(name))),
-      }
+  const proficiencies = { ...character.proficiencies }
+  for (const domain of ['skills', 'languages', 'tools', 'armor', 'weapons'] as const) {
+    const toRemove = new Set(
+      Object.entries(ledger.proficiencies[domain])
+        .filter(
+          ([key, tags]) => tags.length > 0 && !retainedLedger.proficiencies[domain][key]?.length,
+        )
+        .map(([key]) => normalizeKey(key)),
+    )
+    if (toRemove.size > 0) {
+      proficiencies[domain] = proficiencies[domain].filter(
+        (name) => !toRemove.has(normalizeKey(name)),
+      )
     }
   }
   return proficiencies
@@ -54,14 +64,15 @@ function removeSourceProficiencies(
 function buildRaceMaterializedPatch(
   character: Character,
   ledger: ProvenanceLedger,
+  retainedLedger: ProvenanceLedger,
   race: Race5e,
   subrace: Race5e | undefined,
-  sourcesToRemove: Array<readonly ['race' | 'subrace', string | undefined]>,
 ): Pick<
   Character,
   'proficiencies' | 'visions' | 'damageResistances' | 'damageImmunities' | 'conditionImmunities'
 > {
-  let proficiencies = removeSourceProficiencies(character, ledger, sourcesToRemove)
+  race = getRaceSelectionParent(race, subrace)
+  let proficiencies = removeSourceProficiencies(character, ledger, retainedLedger)
   const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
     includeAnyStandard: false,
   }).filter((name) => !name.toLowerCase().startsWith('choose '))
@@ -71,9 +82,12 @@ function buildRaceMaterializedPatch(
   const subraceSkills = extractProficiencyBlockNames(subrace?.skillProficiencies ?? [], {
     includeAnyStandard: false,
   }).filter((name) => !name.toLowerCase().startsWith('choose '))
-  const subraceLanguages = extractProficiencyBlockNames(subrace?.languageProficiencies ?? [], {
-    includeAnyStandard: false,
-  }).filter((name) => !name.toLowerCase().startsWith('choose '))
+  const subraceLanguages = extractProficiencyBlockNames(
+    deriveEffectiveSubraceLanguageBlocks(subrace),
+    {
+      includeAnyStandard: false,
+    },
+  ).filter((name) => !name.toLowerCase().startsWith('choose '))
   const languages = character.originSystem === '2024' ? [] : [...raceLanguages, ...subraceLanguages]
 
   proficiencies = {
@@ -134,6 +148,7 @@ export function applyRaceSelectionCommand(
   subrace: Race5e | undefined,
   raceAsiBlockIndex: 0 | 1,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
+  options?: RaceSelectionCommandOptions,
 ): CharacterCommandResult {
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
@@ -145,23 +160,31 @@ export function applyRaceSelectionCommand(
     { sourceType: 'subrace', sourceName: oldSubraceName },
   ])
   const workingCharacter = { ...character, ...retracted.characterPatch }
-  let provenanceUpdate = reconcileRaceChange(
+  const retainedProvenance = reconcileRaceChange(
     retracted.provenanceUpdate,
     oldRaceName,
     oldSubraceName,
   )
-  provenanceUpdate = applyRaceGrants(
+  let provenanceUpdate = applyRaceGrants(
     normalized.race,
     normalized.subrace,
-    provenanceUpdate,
+    retainedProvenance,
     resolveRaceChoiceOptions,
     raceAsiBlockIndex,
-    1,
-    { suppressLanguageGrants: character.originSystem === '2024' },
+    getTotalCharacterLevel(character),
+    { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
+  const racialSpells = reconcileRaceSpellProfileCommand(
+    workingCharacter,
+    provenanceUpdate,
+    race,
+    subrace,
+    options,
+  )
+  provenanceUpdate = racialSpells.provenanceUpdate
 
   return {
     characterPatch: {
@@ -172,17 +195,14 @@ export function applyRaceSelectionCommand(
       raceAsiBlockIndex,
       raceAsiChoices: [],
       movement,
-      spells: workingCharacter.spells,
+      spells: racialSpells.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
         workingCharacter,
         retracted.provenanceUpdate,
+        retainedProvenance,
         normalized.race,
         normalized.subrace,
-        [
-          ['race', oldRaceName],
-          ['subrace', oldSubraceName],
-        ],
       ),
     },
     provenanceUpdate,
@@ -195,7 +215,34 @@ export function applySubraceSelectionCommand(
   race: Race5e,
   subrace: Race5e | undefined,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
+  options?: RaceSelectionCommandOptions,
 ): CharacterCommandResult {
+  const previousCandidates = [
+    ...(options?.previousSubrace ? [options.previousSubrace] : []),
+    ...(race.subraces ?? []),
+  ]
+  const previous = previousCandidates.find(
+    (candidate) =>
+      candidate.name === character.subrace &&
+      (!character.subraceSource || candidate.source === character.subraceSource),
+  )
+  // An unavailable previous child may have replaced all parent mechanics. Rebuild the
+  // complete selection rather than assume that parent ownership can be retained.
+  if (
+    subrace?._isVersion === true ||
+    previous?._isVersion === true ||
+    (character.subrace && !previous)
+  ) {
+    return applyRaceSelectionCommand(
+      character,
+      ledger,
+      race,
+      subrace,
+      (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+      resolveRaceChoiceOptions,
+      options,
+    )
+  }
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
   const oldSubraceName = character.subrace || undefined
@@ -203,7 +250,8 @@ export function applySubraceSelectionCommand(
     { sourceType: 'subrace', sourceName: oldSubraceName },
   ])
   const workingCharacter = { ...character, ...retracted.characterPatch }
-  let provenanceUpdate = reconcileSubraceChange(retracted.provenanceUpdate, oldSubraceName)
+  const retainedProvenance = reconcileSubraceChange(retracted.provenanceUpdate, oldSubraceName)
+  let provenanceUpdate = retainedProvenance
   if (normalized.subrace) {
     provenanceUpdate = applyRaceGrants(
       {
@@ -220,13 +268,21 @@ export function applySubraceSelectionCommand(
       provenanceUpdate,
       resolveRaceChoiceOptions,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-      1,
-      { suppressLanguageGrants: character.originSystem === '2024' },
+      getTotalCharacterLevel(character),
+      { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
     )
   }
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
+  const racialSpells = reconcileRaceSpellProfileCommand(
+    workingCharacter,
+    provenanceUpdate,
+    race,
+    subrace,
+    options,
+  )
+  provenanceUpdate = racialSpells.provenanceUpdate
 
   return {
     characterPatch: {
@@ -234,14 +290,14 @@ export function applySubraceSelectionCommand(
       subraceSource: subrace?.source || undefined,
       raceAsiChoices: [],
       movement,
-      spells: workingCharacter.spells,
+      spells: racialSpells.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
         workingCharacter,
         retracted.provenanceUpdate,
+        retainedProvenance,
         normalized.race,
         normalized.subrace,
-        [['subrace', oldSubraceName]],
       ),
     },
     provenanceUpdate,

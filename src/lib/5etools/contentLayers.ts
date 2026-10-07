@@ -1,10 +1,18 @@
+import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { normalizeClassRules } from './classRuleNormalization'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
-import { getLoadedCreatureTemplates, loadDataFromSource } from './dataLoader'
+import {
+  getLoadedCreatureTemplates,
+  getLoadedRaceData,
+  loadDataFromSource,
+  setLoadedRaceData,
+} from './dataLoader'
 import { buildGameDataLookups } from './lookups'
+import { buildSourcesList } from './parsers/basic'
+import { parseRaces } from './parsers/races'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
 
@@ -74,6 +82,20 @@ function itemPropertyIdentity(value: unknown): string {
   const abbreviation = normalizeIdentityPart(record.abbreviation)
   if (!abbreviation) return recordIdentity(value)
   return `item-property:${abbreviation}|${normalizeIdentityPart(record.source)}`
+}
+
+function subraceIdentity(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
+  const record = value as Record<string, unknown>
+  const copy = record._copy as Record<string, unknown> | undefined
+  return [
+    record.name,
+    record.source,
+    record.raceName ?? copy?.raceName,
+    record.raceSource ?? copy?.raceSource,
+  ]
+    .map(normalizeIdentityPart)
+    .join('|')
 }
 
 function mergeCollection<T>(
@@ -354,6 +376,35 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   }
 
   resolveComposedFeatureReferences(composed, layers)
+  // Race copies and versions must see the winning raw parents, including already-resolved copies.
+  const rawRaces = layers.map(getLoadedRaceData).reduce(
+    (merged, layer) => ({
+      race: mergeCollection(merged.race, layer.race),
+      subrace: mergeCollection(merged.subrace, layer.subrace, subraceIdentity),
+    }),
+    { race: [] as unknown[], subrace: [] as unknown[] },
+  )
+  setLoadedRaceData(composed, rawRaces)
+  composed.races = parseRaces(rawRaces) as GameData['races']
+  const knownSources = new Set(
+    composed.sources.map((source) => normalizeIdentityPart(source.abbreviation)),
+  )
+  const addedRaceSources = [
+    ...new Set(
+      composed.races
+        .flatMap((race) => [race, ...(race.subraces ?? [])])
+        .map((race) => race.source)
+        .filter((source) => source && !knownSources.has(normalizeIdentityPart(source))),
+    ),
+  ]
+  composed.sources.push(
+    ...buildSourcesList(
+      addedRaceSources,
+      undefined,
+      undefined,
+      collectRevisedSourceAbbreviations(composed),
+    ),
+  )
   const itemCount = composed.items.length
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
   composed.items = items.records.slice(0, itemCount)

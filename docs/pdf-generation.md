@@ -102,6 +102,13 @@ deduplicates and determines preparation independently, including always-prepared
 known-caster spells. Racial, bonus, and unresolved-profile spells stay on the first page.
 Per-level overflow continues onto extra spell-page copies independently of the long-text setting.
 
+PDF action projection uses the resolved race selection and the same spell-block/profile-label policy
+as the Spells and Actions pages. Source-qualified saved racial choices retain their existing profile
+identity; complete versions use their own grants, including explicit removal, and named traditional
+parent blocks are filtered to the selected child. An unavailable selected child preserves saved
+profiles rather than substituting the available parent's grants. Projection does not change saved
+choices or state.
+
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries
 continue in notes when enabled, rather than duplicating mixed-content core pages.

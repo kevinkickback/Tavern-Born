@@ -63,6 +63,62 @@ parsed blocks. Unresolved choices remain explicit readiness issues; commands do 
 Allocated base scores are never modified by origin or feat contributions. Effective scores consume
 the ledger through `CharacterCalculationContext`.
 
+Materialized race versions own their complete mechanics under the selected subrace identity. Their
+parent contributes selection identity and origin-policy flags, without reapplying parent grants.
+Switching to or from a version rebuilds both race and subrace ownership in one command so explicitly
+removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
+changes retain the existing additive ownership behavior.
+
+Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
+recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
+feats when saved selections are resolved from the raw catalog.
+
+Complete versions also derive the legacy language fallback from their own string-valued lineage
+when explicit language blocks are absent. Explicit arrays, including an empty array, suppress that
+fallback for both parents and versions. The version owns both the fixed language and its choice;
+traditional subraces do not synthesize a second parent fallback. The 2024 origin policy suppresses
+racial language grants and retains its independent baseline.
+
+Race commands compare proficiency ownership before removal with the ledger after all replaced
+owners are removed, then apply the new grants. A value shared only by the old race and subrace
+leaves with their final owner. Values still owned by a manual or unrelated source, and untracked
+manual values, remain. Skill expertise is pruned with any proficiency that becomes unavailable.
+
+Spell-profile adapters use the same complete-version boundary: `useCharacterRaceData` omits parent
+spell blocks for a materialized version, including inherited blocks already present on that version
+and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named
+parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
+from the unfiltered catalog.
+
+Race selection commands rebuild the persisted racial spell profile at the actual total character
+level. They remove obsolete racial profiles and choice ownership, then restore saved choices only
+for the same source-qualified profile and compatible choice rules. Existing choice commands enforce
+current pool and count limits. Casting ability selections survive only while allowed by the current
+fixed ability or choice options; removing that rule clears a historical ability. Independent class
+and special profiles and spell-slot usage remain intact. A shared pure selection adapter keeps
+command and spell-hook labels and blocks consistent; legacy profile labels and choice identifiers
+remain stable.
+Actions and PDF action projection consume the same resolved parent/subrace context and selection
+adapter as the spell hook. They preserve those profile identities when projecting saved choices,
+filter named parent blocks to the selected child, and respect complete-version spell removal.
+An unavailable selected child projects its existing saved racial profiles, even when the available
+parent has spell grants. Available class and subclass data still derive current grants at the
+character's level. Each unavailable exact class or selected subclass retains its own saved profile
+even when another class resolves. When all class data is unavailable, the full saved-profile fallback remains.
+This fallback derives available subclass grants with their explicit spell source qualifiers, including
+new level grants, so a competing printing cannot replace the requested spell. The shared spell-token
+adapter accepts source-preserving decoding; existing callers retain their legacy decoding contract.
+The same fallback uses spell-reference identity for class grant merging, preparation, and action
+aggregation. A newly granted printing cannot prepare or hide an independently saved printing.
+Source-less legacy fixed metadata still retracts its prior name-based grants; action aggregation
+resolves legacy references before deduplication so equivalent references do not duplicate actions.
+Only a resolved race selection can establish which racial spell blocks apply or were removed.
+Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
+Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
+If the previous saved child is unavailable even in that catalog, its mechanics cannot establish an
+additive transition. The command rebuilds the complete race selection and resets racial choices
+against the newly selected data, preserving manual and unrelated ownership.
+
 ## Class ownership
 
 Class tags include source-qualified class identity and, where needed, the granting level/choice.

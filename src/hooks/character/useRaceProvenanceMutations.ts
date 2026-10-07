@@ -1,4 +1,6 @@
 import { useCallback, useMemo } from 'react'
+import { useRaceLookup } from '@/hooks/data/useGameData'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   applyRaceAsiChoicesCommand,
   applyRaceSelectionCommand,
@@ -9,8 +11,39 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
 
 const EMPTY_ITEMS: never[] = []
+
+function getSpellSelectionContext(
+  race: Race5e,
+  subrace: Race5e | undefined,
+  racesByKey: Readonly<Record<string, Race5e>>,
+  character: Character,
+) {
+  const resolved = resolveRaceReference(
+    {
+      name: race.name,
+      source: race.source,
+      subraceName: subrace?.name,
+      subraceSource: subrace?.source,
+    },
+    { racesByKey },
+  )
+  const previous = resolveRaceReference(
+    {
+      name: character.race,
+      source: character.raceSource,
+      subraceName: character.subrace,
+      subraceSource: character.subraceSource,
+    },
+    { racesByKey },
+  )
+  return {
+    subraceIsNested: resolved.subraceData ? resolved.subraceIsNested : undefined,
+    previousSubrace: previous.subraceData,
+  }
+}
 
 export function useRaceProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -18,12 +51,11 @@ export function useRaceProvenanceMutations() {
   const gameData = useGameDataStore((s) => s.gameData)
   const items = gameData?.items ?? EMPTY_ITEMS
   const itemsBase = gameData?.itemsBase ?? EMPTY_ITEMS
-
+  const racesByKey = useRaceLookup()
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
     [character],
   )
-
   const resolveRaceChoiceOptions = useCallback(
     (domain: 'armor' | 'weapons', fromFilter: string) =>
       resolveRaceGrantFilterOptions(domain, fromFilter, {
@@ -33,106 +65,43 @@ export function useRaceProvenanceMutations() {
       }),
     [character?.allowedSources, items, itemsBase],
   )
-
   const applyRaceSelection = useCallback(
-    (
-      race: {
-        name: string
-        source?: string
-        lineage?: string | boolean
-        darkvision?: number
-        resist?: string[]
-        immune?: string[]
-        conditionImmune?: string[]
-        skillProficiencies?: unknown[]
-        languageProficiencies?: unknown[]
-        toolProficiencies?: unknown[]
-        weaponProficiencies?: unknown[]
-        armorProficiencies?: unknown[]
-        ability?: unknown[]
-        feats?: unknown[]
-      },
-      subrace?: {
-        name: string
-        source?: string
-        darkvision?: number
-        resist?: string[]
-        immune?: string[]
-        conditionImmune?: string[]
-        skillProficiencies?: unknown[]
-        languageProficiencies?: unknown[]
-        toolProficiencies?: unknown[]
-        weaponProficiencies?: unknown[]
-        armorProficiencies?: unknown[]
-        ability?: unknown[]
-        feats?: unknown[]
-        overwrite?: { ability?: boolean }
-      },
-      raceAsiBlockIndex: 0 | 1 = 0,
-    ) => {
+    (race: Race5e, subrace?: Race5e, raceAsiBlockIndex: 0 | 1 = 0) => {
       if (!character) return
       const result = applyRaceSelectionCommand(
         character,
         ledger,
-        race as Race5e,
-        subrace as Race5e | undefined,
+        race,
+        subrace,
         raceAsiBlockIndex,
         resolveRaceChoiceOptions,
+        getSpellSelectionContext(race, subrace, racesByKey, character),
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, resolveRaceChoiceOptions, updateCharacter],
+    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey],
   )
-
   const applySubraceChange = useCallback(
-    (
-      race: {
-        name: string
-        source?: string
-        toolProficiencies?: unknown[]
-        weaponProficiencies?: unknown[]
-        armorProficiencies?: unknown[]
-        darkvision?: number
-        resist?: string[]
-        immune?: string[]
-        conditionImmune?: string[]
-      },
-      subrace?: {
-        name: string
-        source?: string
-        darkvision?: number
-        resist?: string[]
-        immune?: string[]
-        conditionImmune?: string[]
-        skillProficiencies?: unknown[]
-        languageProficiencies?: unknown[]
-        toolProficiencies?: unknown[]
-        weaponProficiencies?: unknown[]
-        armorProficiencies?: unknown[]
-        ability?: unknown[]
-        feats?: unknown[]
-        overwrite?: { ability?: boolean }
-      },
-    ) => {
+    (race: Race5e, subrace?: Race5e) => {
       if (!character) return
       const result = applySubraceSelectionCommand(
         character,
         ledger,
-        race as Race5e,
-        subrace as Race5e | undefined,
+        race,
+        subrace,
         resolveRaceChoiceOptions,
+        getSpellSelectionContext(race, subrace, racesByKey, character),
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, resolveRaceChoiceOptions, updateCharacter],
+    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey],
   )
-
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {
       if (!character) return
@@ -144,6 +113,5 @@ export function useRaceProvenanceMutations() {
     },
     [character, ledger, updateCharacter],
   )
-
   return { applyRaceSelection, applySubraceChange, applyRaceAsiChoices }
 }

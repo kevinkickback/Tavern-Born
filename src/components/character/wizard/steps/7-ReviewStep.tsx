@@ -17,10 +17,10 @@ import {
   normalizeRaceSelectionForOriginSystem,
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
-import { getSpeedDisplay } from '@/lib/calculations/raceUtils'
+import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
-import type { Race5e, SourceBook } from '@/types/5etools'
+import type { SourceBook } from '@/types/5etools'
 import type { CharacterWizardData } from '../types'
 
 interface ReviewStepProps {
@@ -28,36 +28,6 @@ interface ReviewStepProps {
   raceResolution: ResolvedRaceReference
   sources: SourceBook[]
   variantRuleAvailability?: VariantRuleContentAvailability
-}
-
-type RaceWithOverwrite = Race5e & {
-  overwrite?: {
-    ability?: boolean
-  }
-}
-
-function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
-  const replacesAbility = (subrace as RaceWithOverwrite).overwrite?.ability === true
-
-  return {
-    ...parent,
-    ...subrace,
-    ability: replacesAbility
-      ? (subrace.ability ?? [])
-      : [...(parent.ability ?? []), ...(subrace.ability ?? [])],
-    entries: [...(parent.entries ?? []), ...(subrace.entries ?? [])],
-    size: subrace.size ?? parent.size,
-    speed: subrace.speed ?? parent.speed,
-    darkvision: subrace.darkvision ?? parent.darkvision,
-    languageProficiencies: subrace.languageProficiencies ?? parent.languageProficiencies,
-    skillProficiencies: subrace.skillProficiencies ?? parent.skillProficiencies,
-    traitTags: [...new Set([...(parent.traitTags ?? []), ...(subrace.traitTags ?? [])])],
-    resist: [...new Set([...(parent.resist ?? []), ...(subrace.resist ?? [])])],
-    immune: [...new Set([...(parent.immune ?? []), ...(subrace.immune ?? [])])],
-    conditionImmune: [
-      ...new Set([...(parent.conditionImmune ?? []), ...(subrace.conditionImmune ?? [])]),
-    ],
-  } as Race5e
 }
 
 function InfoRow({ label, value, warn }: { label: string; value?: string; warn?: boolean }) {

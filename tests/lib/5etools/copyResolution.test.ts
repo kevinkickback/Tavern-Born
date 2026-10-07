@@ -6,6 +6,49 @@ import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import type { Creature5e } from '@/types/5etools'
 
 describe('5etools copy resolution', () => {
+  test.each([
+    'item',
+    'monster',
+    'race',
+    'subrace',
+  ] as const)('compares array additions structurally for %s copies', (kind) => {
+    const retained = { name: 'Shared', entries: [{ type: 'entries', entries: ['One', 'Two'] }] }
+    const reordered = { entries: [{ entries: ['One', 'Two'], type: 'entries' }], name: 'Shared' }
+    const differentOrder = {
+      name: 'Shared',
+      entries: [{ type: 'entries', entries: ['Two', 'One'] }],
+    }
+    const records = [
+      { name: 'Base', source: 'TEST', entries: [retained, null, '1'] },
+      {
+        name: 'Copy',
+        source: 'TEST',
+        _copy: {
+          name: 'Base',
+          source: 'TEST',
+          _mod: {
+            entries: {
+              mode: 'appendIfNotExistsArr',
+              items: [reordered, differentOrder, null, 1, { name: 'Shared' }],
+            },
+          },
+        },
+      },
+    ]
+    const before = structuredClone(records)
+    const result = resolveCopiedRecords(records, kind)
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1].entries).toEqual([
+      retained,
+      null,
+      '1',
+      differentOrder,
+      1,
+      { name: 'Shared' },
+    ])
+    expect(records).toEqual(before)
+  })
+
   test('ignores polluted non-reserved properties throughout copied working data', () => {
     const pollution = {
       spellcasting: [{ spells: { 1: { spells: ['old spell'] } } }],

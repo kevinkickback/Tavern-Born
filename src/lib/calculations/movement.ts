@@ -26,7 +26,8 @@ function normalizeDistance(value: unknown): number | undefined {
 
 /** Converts a resolved race/subrace speed shape into Tavern-Born's persisted movement contract. */
 export function normalizeRaceMovement(race: Race5e, subrace?: Race5e): CharacterMovement {
-  const owner = subrace?.speed !== undefined ? subrace : race
+  const owner =
+    subrace && (subrace._isVersion === true || subrace.speed !== undefined) ? subrace : race
   const rawSpeed = owner.speed
   const speeds: Partial<Record<MovementMode, number>> = {}
   const other: Record<string, number | boolean> = {}

@@ -14,12 +14,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Reviewed at 5450.3 KiB for hydration-safe library transactions and pending/retry controls,
-  // including quarantine, reload ordering, and shared Save requests (up 2.6 KiB from 5447.7).
-  rendererCode: 5451 * KIB,
-  // Reviewed at 428.8 KiB (up 1.3 KiB from 427.5) for the serialized library write boundary,
-  // duplication, quarantine, reload ordering, and shared Saves; no dependency added.
-  initialRendererScript: 429 * KIB,
+  // Racial-profile reconciliation and canonical selection context add about 3 KiB to 5456.1 KiB.
+  // Structural copy-value comparison adds 0.3 KiB; measured total is 5460.0 KiB.
+  // This bounded allowance requires fresh review.
+  rendererCode: 5461 * KIB,
+  // The same adapters bring the measured initial script from 432.0 to 435.2 KiB.
+  // No dependency added; all other budgets remain unchanged.
+  initialRendererScript: 436 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

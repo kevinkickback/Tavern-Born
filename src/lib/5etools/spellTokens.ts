@@ -3,19 +3,29 @@ export interface ParsedSpellToken {
   isCantrip: boolean
 }
 
-export function parseSpellToken(raw: string): ParsedSpellToken {
+export function parseSpellToken(
+  raw: string,
+  options?: { preserveSource?: boolean },
+): ParsedSpellToken {
   const token = raw.trim()
-  // Strip source disambiguation suffix (e.g. "spell name|PHB") first
-  const [nameWithSuffix] = token.split('|')
+  // Decode the name and optional printing before removing casting modifiers.
+  const [nameWithSuffix, sourceWithSuffix] = token.split('|')
   // Strip hash modifiers: #c = cantrip, #2 = cast at level 2, etc.
   const hashIdx = (nameWithSuffix ?? '').indexOf('#')
   const baseName =
     hashIdx >= 0 ? (nameWithSuffix ?? '').slice(0, hashIdx).trim() : (nameWithSuffix ?? '').trim()
-  const suffix = hashIdx >= 0 ? (nameWithSuffix ?? '').slice(hashIdx + 1).toLowerCase() : ''
+  const sourceHashIdx = sourceWithSuffix?.indexOf('#') ?? -1
+  const source = (sourceWithSuffix ?? '').split('#')[0].trim()
+  const suffix =
+    hashIdx >= 0
+      ? (nameWithSuffix ?? '').slice(hashIdx + 1).toLowerCase()
+      : options?.preserveSource && sourceHashIdx >= 0
+        ? (sourceWithSuffix ?? '').slice(sourceHashIdx + 1).toLowerCase()
+        : ''
   const isCantrip = suffix === 'c'
 
   return {
-    name: baseName,
+    name: options?.preserveSource && baseName && source ? `${baseName}|${source}` : baseName,
     isCantrip,
   }
 }

@@ -6,6 +6,7 @@ import {
   ORIGIN_2024_BASE_LANGUAGE,
   ORIGIN_2024_LANGUAGE_CHOICE_COUNT,
 } from './languageOrigin'
+import { getRaceSelectionParent } from './raceSelection'
 
 type OriginNormalizedRace = Race5e & {
   _tavernBornFlexibleAsi?: boolean
@@ -31,7 +32,12 @@ function stripRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
 }
 
 function isRevisedRace(race: Race5e | undefined): boolean {
-  return race?.edition === 'one' || race?.source === 'XPHB' || race?.basicRules2024 === true
+  return (
+    race?.edition === 'one' ||
+    race?.source === 'XPHB' ||
+    race?.basicRules2024 === true ||
+    (race?._isVersion === true && race._baseFreeRules2024 === true)
+  )
 }
 
 function stripRevisedRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
@@ -65,7 +71,7 @@ export function normalizeRaceSelectionForOriginSystem(
   if (originSystem === '2024') {
     return {
       race: {
-        ...(stripRaceOriginBenefits(race) as OriginNormalizedRace),
+        ...(stripRaceOriginBenefits(getRaceSelectionParent(race, subrace)) as OriginNormalizedRace),
         _tavernBornSuppressFlexibleAsi: true,
       },
       subrace: subrace
@@ -77,6 +83,7 @@ export function normalizeRaceSelectionForOriginSystem(
     }
   }
 
+  race = getRaceSelectionParent(race, subrace)
   const normalizedRace = stripRevisedRaceOriginFeats(race) as OriginNormalizedRace
   const normalizedSubrace = stripRevisedRaceOriginFeats(subrace) as OriginNormalizedRace | undefined
   const hasAnyRaceAsi = hasAbilityEntries(race) || hasAbilityEntries(subrace)
@@ -90,7 +97,9 @@ export function normalizeRaceSelectionForOriginSystem(
       ...normalizedRace,
       _tavernBornFlexibleAsi: true,
     },
-    subrace: normalizedSubrace,
+    subrace: normalizedSubrace?._isVersion
+      ? { ...normalizedSubrace, _tavernBornFlexibleAsi: true }
+      : normalizedSubrace,
   }
 }
 

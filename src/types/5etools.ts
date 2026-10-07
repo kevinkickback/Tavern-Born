@@ -31,6 +31,8 @@ export interface Race5e {
   conditionImmune?: string[]
   traitTags?: string[]
   subraces?: Race5e[]
+  /** Complete copy-engine version, presented as a nested lineage selection. */
+  _isVersion?: boolean
   [key: string]: unknown
 }
 
@@ -158,8 +160,12 @@ export interface Subclass5e {
 
 export interface RaceAdditionalSpells {
   name?: string
-  innate?: Record<string, Record<string, Record<string, string[]>>>
-  known?: Record<string, string[] | { _: Array<string | { choose: string }> }>
+  innate?: Record<string, string[] | Record<string, Record<string, string[]>>>
+  known?: Record<
+    string,
+    | Array<string | { choose: string; count?: number }>
+    | { _: Array<string | { choose: string; count?: number }> }
+  >
   ability?: string | { choose: string[] }
 }
 
