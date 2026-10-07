@@ -188,7 +188,7 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
     const classFeatureRefs = (classData.classFeatureRefs ?? []).map((reference) => {
       const identity = getClassFeatureIdentity(reference)
       const feature = identity ? features.get(identity) : undefined
-      if (!feature || reference.feature === feature) return reference
+      if (reference.feature === feature) return reference
       changed = true
       return { ...reference, feature }
     })

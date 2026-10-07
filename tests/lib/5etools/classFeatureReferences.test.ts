@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
@@ -154,6 +154,49 @@ describe('class-feature encoded identity', () => {
 })
 
 describe('class-feature reference composition', () => {
+  test.each([
+    false,
+    true,
+  ])('clears a stale embedded target and its choices (%s incomplete)', (incomplete) => {
+    const target = {
+      ...feature,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [{ type: 'refOptionalfeature', optionalfeature: 'Shared Option|PHB' }],
+        },
+      ],
+    }
+    const owner = parse(
+      [{ classFeature: 'Shared|Wizard|PHB|8', gainSubclassFeature: true }],
+      [target],
+    )
+    expect(owner.normalizedRules?.choices).toHaveLength(1)
+    if (incomplete && owner.classFeatureRefs?.[0]) {
+      owner.classFeatureRefs[0] = {
+        ...owner.classFeatureRefs[0],
+        ref: 'Shared||PHB|8',
+        className: '',
+      }
+    }
+    const layer = makeGameDataFixture({
+      classes: [owner],
+      classFeatures: incomplete ? [target] : [{ ...target, className: 'Bard' }],
+    })
+    const before = structuredClone(layer)
+    const composed = composeGameDataLayers([layer])
+    const reference = composed.classes[0].classFeatureRefs?.[0]
+    expect(reference?.feature).toBeUndefined()
+    expect(reference?.ref).toBe(incomplete ? 'Shared||PHB|8' : 'Shared|Wizard|PHB|8')
+    expect(reference?.gainSubclassFeature).toBe(true)
+    expect(composed.classes[0].normalizedRules?.choices).toEqual([])
+    expect(findLayerDependencyIssues(composed, layer)).toEqual([
+      { owner: 'Wizard|PHB', path: 'classFeatureRefs[0]', reference: reference?.ref },
+    ])
+    expect(layer).toEqual(before)
+  })
+
   test.each([
     ['PHB', '', undefined],
     ['PHB', '', ''],

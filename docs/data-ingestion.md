@@ -130,7 +130,9 @@ exact target or incomplete UID remains unresolved; another owner, level or print
 it, and a resolved record never rewrites the reference's encoded identity. Source-stack composition
 uses the same identity codec for overlays and can resolve an absent target later using the retained
 identity, including upstream default source fields. Incomplete reference fields remain unresolved
-after layering. Choice owners and option references use the resolved feature source, falling back
+after layering. Embedded targets absent from the completed catalog are cleared, and their owning
+class rules are rebuilt before required-reference validation. Choice owners and option references
+use the resolved feature source, falling back
 to the decoded UID source for omitted or blank target sources before considering the enclosing
 class source.
 This contract covers class-feature ingestion; global search/display lookups and stored-feature
