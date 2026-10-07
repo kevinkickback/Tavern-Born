@@ -97,6 +97,24 @@ describe('originSystem normalization', () => {
     expect(normalized.race?.feats).toBeUndefined()
   })
 
+  test.each([
+    true,
+    false,
+  ])('retained revised metadata suppresses feats only for complete versions: %s', (isVersion) => {
+    const race: Race5e = { name: 'Parent', source: 'EXT' }
+    const child: Race5e = {
+      name: 'Child',
+      source: 'EXTCHILD',
+      _isVersion: isVersion,
+      _baseFreeRules2024: true,
+      feats: [{ any: 1 }],
+    }
+    const before = structuredClone({ race, child })
+    const normalized = normalizeRaceSelectionForOriginSystem(race, child, '2014')
+    expect(normalized.subrace?.feats).toEqual(isVersion ? undefined : [{ any: 1 }])
+    expect({ race, child }).toEqual(before)
+  })
+
   test('2024 synthesizes background ASI and origin feat when missing', () => {
     const background: Background5e = {
       name: 'Soldier',

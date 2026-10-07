@@ -32,7 +32,12 @@ function stripRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
 }
 
 function isRevisedRace(race: Race5e | undefined): boolean {
-  return race?.edition === 'one' || race?.source === 'XPHB' || race?.basicRules2024 === true
+  return (
+    race?.edition === 'one' ||
+    race?.source === 'XPHB' ||
+    race?.basicRules2024 === true ||
+    (race?._isVersion === true && race._baseFreeRules2024 === true)
+  )
 }
 
 function stripRevisedRaceOriginFeats<T extends Race5e | undefined>(race: T): T {

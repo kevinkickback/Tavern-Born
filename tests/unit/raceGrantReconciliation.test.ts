@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
 import {
@@ -9,6 +11,7 @@ import {
 } from '@/lib/character/commands/raceCommands'
 import { addGrant, emptyProvenance, makeSourceTag } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const noChoices = () => []
@@ -463,6 +466,83 @@ test('an unavailable previous child rebuilds racial choices from the current par
     }),
   )
   expect(saved).toEqual(before)
+})
+
+test.each([
+  true,
+  false,
+  undefined,
+])('complete child origin policy retains its base revised marker: %s', (basicRules2024) => {
+  const input = {
+    race: [
+      {
+        name: 'Parent',
+        source: 'EXT',
+        ...(basicRules2024 !== undefined ? { basicRules2024 } : {}),
+        feats: [{ 'Skilled|PHB': true }],
+        subraces: [
+          {
+            name: 'Child',
+            source: 'EXTCHILD',
+            _versions: [{ name: 'Parent (Child); Complete' }],
+          },
+        ],
+      },
+    ],
+  }
+  const before = structuredClone(input)
+  const parent = parse(input)[0]
+  const ordinary = parent.subraces!.find((child) => !child._isVersion)!
+  const version = parent.subraces!.find((child) => child._isVersion)!
+  const original = makeCharacterFixture({ originSystem: '2014', race: '', raceSource: '' })
+  const initial = applyRaceSelectionCommand(
+    original,
+    emptyProvenance(),
+    parent,
+    ordinary,
+    0,
+    noChoices,
+  )
+  const saved = { ...original, ...initial.characterPatch, provenance: initial.provenanceUpdate }
+  const savedBefore = structuredClone(saved)
+  expect(characterPersistenceSchema.safeParse(saved).success).toBe(true)
+  expect(Boolean(initial.provenanceUpdate.feats.skilled)).toBe(basicRules2024 !== true)
+
+  const resolved = resolveRaceReference(
+    {
+      name: parent.name,
+      source: parent.source,
+      subraceName: version.name,
+      subraceSource: version.source,
+    },
+    { racesByKey: {} },
+    { racesByKey: buildRaceLookup([parent]) },
+  )
+  expect(resolved.parentRace).toBe(parent)
+  expect(resolved.subraceData).toBe(version)
+  expect(resolved.subraceIsNested).toBe(true)
+  const result = applySubraceSelectionCommand(
+    saved,
+    saved.provenance,
+    resolved.parentRace!,
+    resolved.subraceData,
+    noChoices,
+  )
+  expect(Boolean(result.provenanceUpdate.feats.skilled)).toBe(basicRules2024 !== true)
+  if (basicRules2024 !== true) {
+    expect(result.provenanceUpdate.feats.skilled).toContainEqual(
+      expect.objectContaining({ sourceType: 'subrace', sourceName: version.name }),
+    )
+  }
+  expect(
+    characterPersistenceSchema.safeParse({
+      ...saved,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    }).success,
+  ).toBe(true)
+  expect(saved).toEqual(savedBefore)
+  expect(input).toEqual(before)
 })
 
 const racesPath = join(process.cwd(), 'data/races.json')

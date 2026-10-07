@@ -69,6 +69,10 @@ Switching to or from a version rebuilds both race and subrace ownership in one c
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
 changes retain the existing additive ownership behavior.
 
+Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
+recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
+feats when saved selections are resolved from the raw catalog.
+
 Complete versions also derive the legacy language fallback from their own string-valued lineage
 when explicit language blocks are absent. Explicit arrays, including an empty array, suppress that
 fallback for both parents and versions. The version owns both the fixed language and its choice;
