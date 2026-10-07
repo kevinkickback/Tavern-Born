@@ -38,6 +38,73 @@ function loader(race: unknown[], subrace: unknown[] = []): FiveEToolsDataLoader 
 }
 
 describe('race copy and version normalization', () => {
+  test.each([
+    'race',
+    'subrace',
+  ])('does not double reordered ability bonuses in %s versions', (kind) => {
+    const parent = { ...base, ability: [{ dex: 2, con: 1 }] }
+    const version = {
+      name: 'Test Race; Variant',
+      _mod: { ability: { mode: 'appendIfNotExistsArr', items: { con: 1, dex: 2 } } },
+    }
+    const input =
+      kind === 'race'
+        ? { race: [{ ...parent, _versions: [version] }] }
+        : {
+            race: [parent],
+            subrace: [
+              {
+                name: 'Family',
+                source: 'HB',
+                raceName: base.name,
+                raceSource: base.source,
+                _versions: [version],
+              },
+            ],
+          }
+    const before = structuredClone(input)
+    const race = parse(input)[0]
+    const resolved = race.subraces?.find((entry) => entry._isVersion)
+    expect(resolved?.ability).toEqual([{ dex: 2, con: 1 }])
+    expect(getRaceAbilityData(race, resolved).fixed).toEqual([
+      { ability: 'dexterity', value: 2, source: 'subrace' },
+      { ability: 'constitution', value: 1, source: 'subrace' },
+    ])
+    expect(input).toEqual(before)
+  })
+
+  test.each(['race', 'subrace'])('does not duplicate reordered traits in %s versions', (kind) => {
+    const trait = { name: 'Shared Trait', entries: [{ type: 'entries', entries: ['Once'] }] }
+    const version = {
+      name: 'Test Race; Variant',
+      _mod: {
+        entries: {
+          mode: 'appendIfNotExistsArr',
+          items: { entries: [{ entries: ['Once'], type: 'entries' }], name: 'Shared Trait' },
+        },
+      },
+    }
+    const input =
+      kind === 'race'
+        ? { race: [{ ...base, entries: [trait], _versions: [version] }] }
+        : {
+            race: [{ ...base, entries: [trait] }],
+            subrace: [
+              {
+                name: 'Family',
+                source: 'HB',
+                raceName: base.name,
+                raceSource: base.source,
+                _versions: [version],
+              },
+            ],
+          }
+    const before = structuredClone(input)
+    const resolved = parse(input)[0].subraces?.find((entry) => entry._isVersion)
+    expect(resolved?.entries).toEqual([trait])
+    expect(input).toEqual(before)
+  })
+
   test('attaches subraces to their exact printing, with case-insensitive identity', () => {
     const races = parse({
       race: [base, { ...base, source: 'XPHB' }],

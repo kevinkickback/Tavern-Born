@@ -44,6 +44,7 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
     .click()
   await page.getByRole('button', { name: 'Character Sheet' }).click()
   await page.getByRole('link', { name: '5e (2014) MorePurpleMoreBetter' }).click()
+  await expect(page.getByText('MorePurpleMoreBetter (2014)', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Generate Preview' }).click()
   await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({ timeout: 30_000 })
 
@@ -63,6 +64,7 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
   ])
 
   await page.getByRole('link', { name: '5e (2014) Wizards of the Coast' }).click()
+  await expect(page.getByText('Wizards of the Coast (2014)', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Optional Pages', exact: true }).click()
   await expect(page.getByRole('menuitemcheckbox', { name: 'Companion pages' })).toHaveAttribute(
     'aria-checked',

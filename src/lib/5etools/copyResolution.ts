@@ -156,6 +156,28 @@ function array(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [value]
 }
 
+function dataEquals(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => dataEquals(value, right[index]))
+    )
+  }
+  const fields = Object.keys(left)
+  return (
+    fields.length === Object.keys(right).length &&
+    fields.every(
+      (field) =>
+        Object.getOwnPropertyDescriptor(right, field) !== undefined &&
+        dataEquals(ownValue(object(left), field), ownValue(object(right), field)),
+    )
+  )
+}
+
 function pathContainer(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object'
     ? (value as Record<string, unknown>)
@@ -365,9 +387,7 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
     const current = Array.isArray(existing) ? existing : []
     const added =
       mode === 'appendIfNotExistsArr'
-        ? items.filter(
-            (item) => !current.some((value) => JSON.stringify(value) === JSON.stringify(item)),
-          )
+        ? items.filter((item) => !current.some((value) => dataEquals(value, item)))
         : items
     setAt(target, prop, mode === 'prependArr' ? [...added, ...current] : [...current, ...added])
     return

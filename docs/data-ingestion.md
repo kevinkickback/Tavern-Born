@@ -162,6 +162,11 @@ identities, including historical punctuation. Existing ordinary subrace entries 
 with their previous names; their consumed `_versions` definitions are removed. Cache
 schema 18 rebuilds older catalogs, including unreleased schema-17 child labels.
 
+Array additions that use `appendIfNotExistsArr` compare JSON values structurally: object member
+order does not create a second trait, while array order and distinct values remain significant.
+Cache schema 23 rebuilds catalogs resolved with the older string-based comparison, including
+unreleased normalization schemas 18 through 22.
+
 Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
 objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys
 retain their character-level requirement. Parsed filtered choices retain a positive integer `count`
