@@ -346,12 +346,24 @@ test.each([
     actions.filter((action) => action.source.kind === 'spell').map((action) => action.name)
   expect(names(result.current)).toEqual(['Shocking Grasp'])
   expect(names(pdf.actions)).toEqual(['Shocking Grasp'])
+  const resolution = resolveRaceReference(
+    {
+      name: character.race,
+      source: character.raceSource,
+      subraceName: character.subrace,
+      subraceSource: character.subraceSource,
+    },
+    catalog.lookups,
+  )
+  expect(resolution.parentRace?.name).toBe(parent.name)
+  expect(resolution.parentRace?.source).toBe(parent.source)
+  expect(resolution.subraceData).toBeUndefined()
   expect(
     names(
       deriveSpellActions(character, catalog.lookups.spellsByKey, {
         classes: [{ name: 'Fighter', source: 'PHB' } as Class5e],
         race: parent,
-        raceResolution: resolveRaceReference(character, catalog.lookups),
+        raceResolution: resolution,
       }),
     ),
   ).toEqual(['Shocking Grasp'])
