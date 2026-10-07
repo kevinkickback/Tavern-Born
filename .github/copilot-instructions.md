@@ -52,5 +52,7 @@ Update the relevant guide in the same change when a stable contract or workflow 
     user explicitly resumes GitHub delivery. Do not push, create or update PRs, merge to `main`,
     or release during this phase. Preserve existing PRs for later Copilot review. Read the private
     `docs/review/workflow-state.md` when present and record dependencies before continuing work.
+    Follow the [scope limits](../docs/cicd-workflow.md#local-remediation-scope): preserve held
+    dependency chains and prioritize independent fixes from the latest accepted policy foundation.
 11. **Keep private findings private.** Audit evidence, reviewer reports, and security-sensitive
     findings under ignored `docs/review/` must not enter public commits, issues, PRs, or attachments.
