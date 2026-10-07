@@ -17,6 +17,11 @@ the [retained PDF sources](../scripts/pdf-sources/README.md).
 Preview and download use the same completed export. Changes to character data, game data, template,
 or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
 
+The export page supplies the raw class-feature and optional-feature lookup catalogs through named
+data hooks, including lookup changes in the projection dependencies. Saved feature action text and
+timing follow the same unique-match and ambiguity policy as Actions. Feat and creature export
+lookups continue to use the character's filtered catalog.
+
 ## Templates and page assembly
 
 Entering Character Sheet selects WotC for the active character's origin ruleset (2024 when

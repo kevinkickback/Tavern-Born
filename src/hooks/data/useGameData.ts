@@ -10,6 +10,7 @@ import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
+  ClassFeature,
   Condition5e,
   Item5e,
   Organization5e,
@@ -21,6 +22,8 @@ export { useRetainedCharacterDetails } from './useRetainedCharacterDetails'
 
 const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
 const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
+const EMPTY_CLASS_FEATURE_LOOKUP: Readonly<Record<string, ClassFeature>> = {}
+const EMPTY_OPTIONAL_FEATURE_LOOKUP: Readonly<Record<string, unknown>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
 const EMPTY_STRING_LIST: readonly string[] = []
@@ -69,6 +72,21 @@ export function useBackgroundLookup() {
   return (
     useGameDataStore((state) => state.gameData?.lookups?.backgroundsByKey) ??
     EMPTY_BACKGROUND_LOOKUP
+  )
+}
+
+/** Raw catalogs retain exact saved feature references independently of source filters. */
+export function useClassFeatureLookup(): Readonly<Record<string, ClassFeature>> {
+  return (
+    useGameDataStore((state) => state.gameData?.lookups?.classFeaturesByKey) ??
+    EMPTY_CLASS_FEATURE_LOOKUP
+  )
+}
+
+export function useOptionalFeatureLookup(): Readonly<Record<string, unknown>> {
+  return (
+    useGameDataStore((state) => state.gameData?.lookups?.optionalFeaturesByKey) ??
+    EMPTY_OPTIONAL_FEATURE_LOOKUP
   )
 }
 

@@ -275,6 +275,7 @@ export interface GameDataLookups {
   racesByKey: Record<string, Race5e>
   backgroundsByKey: Record<string, Background5e>
   featsByKey: Record<string, Feat5e>
+  /** Full class-feature identity keys; incomplete records have opaque catalog-local keys. */
   classFeaturesByKey: Record<string, ClassFeature>
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>

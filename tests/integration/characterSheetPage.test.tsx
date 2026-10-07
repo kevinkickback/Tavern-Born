@@ -1,7 +1,8 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   createCharacterSheetViewModel,
@@ -12,9 +13,9 @@ import { isHintDismissed, resetAllHints } from '@/lib/storage/hints'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Creature5e, Feat5e } from '@/types/5etools'
+import type { ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/components/PdfCanvasPreview', () => ({
   PdfCanvasPreview: () => <div>PDF preview</div>,
@@ -161,6 +162,131 @@ describe('CharacterSheetPage', () => {
     const lookups = vi.mocked(createCharacterSheetViewModel).mock.lastCall?.[1]
     expect(Object.keys(lookups?.featsByKey ?? {})).toEqual(['Alert|PHB'])
     expect(Object.keys(lookups?.creaturesByKey ?? {})).toEqual(['Wolf|MM'])
+  })
+
+  const sharedFeature: ClassFeature = {
+    name: 'Shared',
+    source: 'PHB',
+    className: 'Wizard',
+    classSource: 'PHB',
+    level: 1,
+    entries: ['As a bonus action, use the catalog maneuver.'],
+  }
+
+  function installFeatureCatalog(kind: 'class' | 'optional', ambiguous = false) {
+    const character = makeCharacterFixture({
+      classProgression:
+        kind === 'class' && !ambiguous ? [{ name: 'Wizard', source: 'PHB', levels: 1 }] : [],
+      features: [
+        {
+          id: 'saved-shared',
+          name: kind === 'optional' || ambiguous ? 'Shared' : 'shared',
+          source: kind === 'optional' || ambiguous ? 'PHB' : 'phb',
+          description: 'As a reaction, use the saved maneuver.',
+        },
+      ],
+    })
+    const gameData = makeGameDataFixture({
+      classes: [
+        makeClassFixture({
+          classFeatureRefs: [
+            {
+              ref: 'Shared|Wizard||1',
+              name: 'Shared',
+              source: 'PHB',
+              className: 'Wizard',
+              classSource: 'PHB',
+              level: 1,
+              feature: sharedFeature,
+            },
+          ],
+        }),
+      ],
+      classFeatures:
+        kind === 'optional'
+          ? []
+          : ambiguous
+            ? [sharedFeature, { ...sharedFeature, className: 'Bard' }]
+            : [sharedFeature],
+      optionalfeatures: [{ ...sharedFeature, entries: ['As an action, use optional rules.'] }],
+    })
+    gameData.lookups = buildGameDataLookups(gameData)
+    useCharacterStore.setState({ activeCharacter: character })
+    useGameDataStore.setState({ gameData })
+    return { character, gameData }
+  }
+
+  function exportedSavedActions() {
+    return vi
+      .mocked(createCharacterSheetViewModel)
+      .mock.results.slice(-1)[0]
+      ?.value.actions.filter((action: { id: string }) => action.id === 'feature:saved-shared')
+  }
+
+  test.each([
+    'class',
+    'optional',
+  ] as const)('exports the same uniquely resolved %s feature action as Actions', (kind) => {
+    const { character } = installFeatureCatalog(kind)
+    const { result } = renderHook(() => useCharacterActions(character))
+    const expected = kind === 'class' ? 'bonus-action' : 'action'
+    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    expect(actions).toHaveLength(1)
+    expect(actions[0]?.kind).toBe(expected)
+    expect(actions[0]?.description).toContain(
+      kind === 'class' ? 'catalog maneuver' : 'optional rules',
+    )
+    if (kind === 'class') {
+      expect(
+        result.current.filter((action) => action.name.toLowerCase() === 'shared'),
+      ).toHaveLength(1)
+    }
+
+    renderPage()
+    expect(exportedSavedActions()).toEqual(actions)
+  })
+
+  test('preserves ambiguous saved class rules in both Actions and PDF without optional fallback', () => {
+    const { character } = installFeatureCatalog('class', true)
+    const { result } = renderHook(() => useCharacterActions(character))
+    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    expect(actions).toHaveLength(1)
+    expect(actions[0]?.kind).toBe('reaction')
+    expect(actions[0]?.description).toContain('saved maneuver')
+
+    renderPage()
+    expect(exportedSavedActions()).toEqual(actions)
+  })
+
+  test.each([
+    'class',
+    'optional',
+  ] as const)('refreshes exported actions when only the %s feature lookup changes', (kind) => {
+    const { character, gameData } = installFeatureCatalog(kind)
+    const { result } = renderHook(() => useCharacterActions(character))
+    renderPage()
+    expect(result.current.find((action) => action.id === 'feature:saved-shared')?.kind).toBe(
+      kind === 'class' ? 'bonus-action' : 'action',
+    )
+    const key = kind === 'class' ? 'classFeaturesByKey' : 'optionalFeaturesByKey'
+    const lookup = gameData.lookups![key]
+    const updatedLookup = Object.fromEntries(
+      Object.entries(lookup).map(([identity, feature]) => [
+        identity,
+        { ...(feature as ClassFeature), entries: ['As a reaction, use refreshed catalog rules.'] },
+      ]),
+    )
+    act(() => {
+      useGameDataStore.setState({
+        gameData: { ...gameData, lookups: { ...gameData.lookups!, [key]: updatedLookup } },
+      })
+    })
+
+    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    expect(actions).toHaveLength(1)
+    expect(actions[0]?.kind).toBe('reaction')
+    expect(actions[0]?.description).toContain('refreshed catalog rules')
+    expect(exportedSavedActions()).toEqual(actions)
   })
 
   test('runs an export preflight before downloading a sheet', async () => {

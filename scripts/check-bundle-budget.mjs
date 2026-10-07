@@ -16,8 +16,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   staticAssets: 32 * MIB,
   // Racial-profile reconciliation and canonical selection context add about 3 KiB to 5456.1 KiB.
   // Structural copy-value comparison adds 0.3 KiB; measured total is 5460.0 KiB.
-  // This bounded allowance requires fresh review.
-  rendererCode: 5461 * KIB,
+  // Complete class-feature lookups and compatible Actions/PDF projection add 0.8 KiB;
+  // measured renderer total is 5461.6 KiB. No dependency added; this requires budget review.
+  rendererCode: 5462 * KIB,
   // The same adapters bring the measured initial script from 432.0 to 435.2 KiB.
   // No dependency added; all other budgets remain unchanged.
   initialRendererScript: 436 * KIB,

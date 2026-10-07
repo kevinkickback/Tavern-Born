@@ -4,9 +4,11 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import {
   useBackgroundLookup,
+  useClassFeatureLookup,
   useItemLookup,
   useItemPropertyLookup,
   useItemTypeLookup,
+  useOptionalFeatureLookup,
   useRaceLookup,
   useSkillList,
   useSkillToAbilityMap,
@@ -25,6 +27,8 @@ describe('named game data lookup hooks', () => {
     const { result, rerender } = renderHook(() => ({
       races: useRaceLookup(),
       backgrounds: useBackgroundLookup(),
+      classFeatures: useClassFeatureLookup(),
+      optionalFeatures: useOptionalFeatureLookup(),
       items: useItemLookup(),
       properties: useItemPropertyLookup(),
       types: useItemTypeLookup(),
@@ -37,6 +41,8 @@ describe('named game data lookup hooks', () => {
 
     expect(result.current.races).toBe(first.races)
     expect(result.current.backgrounds).toBe(first.backgrounds)
+    expect(result.current.classFeatures).toBe(first.classFeatures)
+    expect(result.current.optionalFeatures).toBe(first.optionalFeatures)
     expect(result.current.items).toBe(first.items)
     expect(result.current.properties).toBe(first.properties)
     expect(result.current.types).toBe(first.types)
@@ -93,6 +99,11 @@ describe('named game data lookup hooks', () => {
     const data = makeGameDataFixture({
       races: [{ name: 'Elf', source: 'PHB' }],
       backgrounds: [{ name: 'Sage', source: 'PHB' }],
+      classFeatures: [
+        { name: 'Shared', source: 'PHB', className: 'Wizard', classSource: 'PHB', level: 1 },
+        { name: 'Shared', source: 'TCE', className: 'Bard', classSource: 'PHB', level: 2 },
+      ],
+      optionalfeatures: [{ name: 'Optional', source: 'TCE' }],
       items: [{ name: 'Rope', source: 'PHB', type: 'G' }],
       itemProperties: [{ abbreviation: 'F', source: 'PHB', entries: [{ name: 'Finesse' }] }],
       itemTypes: [{ abbreviation: 'G', name: 'Adventuring Gear', source: 'PHB' }],
@@ -103,6 +114,8 @@ describe('named game data lookup hooks', () => {
     const { result } = renderHook(() => ({
       races: useRaceLookup(),
       backgrounds: useBackgroundLookup(),
+      classFeatures: useClassFeatureLookup(),
+      optionalFeatures: useOptionalFeatureLookup(),
       items: useItemLookup(),
       properties: useItemPropertyLookup(),
       types: useItemTypeLookup(),
@@ -112,6 +125,13 @@ describe('named game data lookup hooks', () => {
 
     expect(result.current.races[getEntityLookupKey('Elf', 'PHB')]?.name).toBe('Elf')
     expect(result.current.backgrounds[getEntityLookupKey('Sage', 'PHB')]?.name).toBe('Sage')
+    expect(result.current.classFeatures).toBe(data.lookups.classFeaturesByKey)
+    expect(Object.values(result.current.classFeatures)).toHaveLength(2)
+    expect(result.current.optionalFeatures).toBe(data.lookups.optionalFeaturesByKey)
+    expect(result.current.optionalFeatures['Optional|TCE']).toEqual({
+      name: 'Optional',
+      source: 'TCE',
+    })
     expect(result.current.items.get('rope|phb')?.name).toBe('Rope')
     expect(result.current.properties.F).toBe('Finesse')
     expect(result.current.types.G).toBe('Adventuring Gear')
