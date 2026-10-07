@@ -232,6 +232,7 @@ export function ensureSpellProfiles(
   character: Character,
   classesById?: Map<string, Class5e>,
   raceData?: { name: string; source?: string; additionalSpells?: RaceAdditionalSpells[] },
+  options?: { preserveUnavailableClassProfiles?: boolean },
 ): SpellProfile[] {
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
@@ -247,6 +248,14 @@ export function ensureSpellProfiles(
     const existingProfile = byId.get(id)
     const classData = classesById?.get(id)
     const subclassData = getSelectedSubclassData(classData, entry)
+    if (
+      options?.preserveUnavailableClassProfiles &&
+      existingProfile &&
+      (!classData || (entry.subclass && !subclassData))
+    ) {
+      next.push(existingProfile)
+      continue
+    }
     const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels)
     const grantedSubclassSpells = subclassSpells.filter((grant) => grant.mode !== 'expanded')
     const grantedSubclassCantrips = grantedSubclassSpells

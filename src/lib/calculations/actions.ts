@@ -152,7 +152,9 @@ export function deriveSpellActions(
   const profiles = unresolvedChild
     ? classesById.size > 0
       ? [
-          ...ensureSpellProfiles(character, classesById),
+          ...ensureSpellProfiles(character, classesById, undefined, {
+            preserveUnavailableClassProfiles: true,
+          }),
           ...character.spells.spellProfiles.filter((profile) => profile.type === 'racial'),
         ]
       : character.spells.spellProfiles

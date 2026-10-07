@@ -103,7 +103,8 @@ adapter as the spell hook. They preserve those profile identities when projectin
 filter named parent blocks to the selected child, and respect complete-version spell removal.
 An unavailable selected child projects its existing saved racial profiles, even when the available
 parent has spell grants. Available class and subclass data still derive current grants at the
-character's level. When class data is also unavailable, the full saved-profile fallback remains.
+character's level. Each unavailable exact class or selected subclass retains its own saved profile
+even when another class resolves. When all class data is unavailable, the full saved-profile fallback remains.
 Only a resolved race selection can establish which racial spell blocks apply or were removed.
 Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
 Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.

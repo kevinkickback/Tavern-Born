@@ -213,6 +213,75 @@ test.each([
   expect(character).toEqual(before)
 })
 
+test.each([
+  'missing class',
+  'other class printing',
+  'missing subclass',
+  'other subclass printing',
+] as const)('%s preserves its saved fixed spells when an independent class resolves', (availability) => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    additionalSpells: [{ known: { 1: ['parent spell#c'] } }],
+  } as Race5e
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  install([parent])
+  const cleric = {
+    name: 'Cleric',
+    source: availability === 'other class printing' ? 'XPHB' : 'PHB',
+    spellcastingAbility: 'wis',
+    casterProgression: 'full',
+    subclasses:
+      availability === 'other subclass printing'
+        ? [{ name: 'Light Domain', source: 'XPHB', className: 'Cleric', classSource: 'PHB' }]
+        : [],
+  } as Class5e
+  catalog.lookups.classesByKey = buildClassLookup([
+    { name: 'Fighter', source: 'PHB' } as Class5e,
+    ...(availability === 'missing class' ? [] : [cleric]),
+  ])
+  catalog.lookups.spellsByKey = buildSpellLookup([
+    shockingGrasp,
+    { ...shockingGrasp, name: 'Burning Hands', level: 1 },
+    { ...shockingGrasp, name: 'Parent Spell' },
+  ])
+  const character = savedChoice(parent, child, 'Child Parent')
+  character.classProgression = [
+    { name: 'Cleric', source: 'PHB', levels: 2, subclass: 'Light Domain', subclassSource: 'PHB' },
+    { name: 'Fighter', source: 'PHB', levels: 1 },
+  ]
+  character.abilityScores = { ...character.abilityScores, strength: 13, wisdom: 13 }
+  character.spells.spellProfiles.push({
+    id: 'class:Cleric|PHB',
+    type: 'class',
+    label: 'Cleric (Lv 2)',
+    className: 'Cleric',
+    classSource: 'PHB',
+    cantrips: [],
+    spellsKnown: ['Burning Hands|PHB'],
+    fixedSpells: ['Burning Hands|PHB'],
+    alwaysPreparedSpells: ['Burning Hands|PHB'],
+    preparedSpells: [],
+    alwaysPrepared: false,
+  })
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  const before = structuredClone(character)
+  const { result } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  for (const actions of [result.current, pdf.actions]) {
+    expect(actions).toContainEqual(expect.objectContaining({ name: 'Burning Hands', active: true }))
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        name: 'Shocking Grasp',
+        active: true,
+        source: expect.objectContaining({ source: 'PHB' }),
+      }),
+    )
+    expect(actions.some((action) => action.name === 'Parent Spell')).toBe(false)
+  }
+  expect(character).toEqual(before)
+})
+
 function assertSavedChoiceAcrossConsumers(character: Character, expectedProfileName: string) {
   const before = structuredClone(character)
   const { result: raceResult } = renderHook(() => useCharacterRaceData(character))
