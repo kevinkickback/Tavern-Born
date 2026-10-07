@@ -102,6 +102,9 @@ has spell grants. Only a resolved selection can establish which racial spell blo
 removed.
 Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
 Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
+If the previous saved child is unavailable even in that catalog, its mechanics cannot establish an
+additive transition. The command rebuilds the complete race selection and resets racial choices
+against the newly selected data, preserving manual and unrelated ownership.
 
 ## Class ownership
 

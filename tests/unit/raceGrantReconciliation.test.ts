@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
 import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
@@ -360,6 +361,108 @@ describe('race grant reconciliation', () => {
       ).toEqual([expect.objectContaining({ sourceType: 'race', sourceName: 'Parent' })])
     }
   })
+})
+
+test.each([
+  'ordinary child',
+  'parent only',
+] as const)('an unavailable previous version rebuilds parent ability ownership for %s', (selection) => {
+  const version = {
+    name: 'Version',
+    source: 'HB',
+    _isVersion: true,
+    ability: [{ dex: 4 }],
+  } as Race5e
+  const child = { name: 'Child', source: 'HB', ability: [{ wis: 1 }] } as Race5e
+  const parent = { name: 'Parent', source: 'PHB', ability: [{ str: 2 }] } as Race5e
+  const original = makeCharacterFixture({ race: '', raceSource: '' })
+  const initial = applyRaceSelectionCommand(
+    original,
+    emptyProvenance(),
+    parent,
+    version,
+    0,
+    noChoices,
+  )
+  const saved = { ...original, ...initial.characterPatch, provenance: initial.provenanceUpdate }
+  const before = structuredClone(saved)
+  const result = applySubraceSelectionCommand(
+    saved,
+    saved.provenance,
+    parent,
+    selection === 'ordinary child' ? child : undefined,
+    noChoices,
+  )
+  expect(result.provenanceUpdate.abilityBonuses).toEqual([
+    expect.objectContaining({
+      ability: 'str',
+      value: 2,
+      sourceTag: expect.objectContaining({ sourceType: 'race', sourceName: 'Parent' }),
+    }),
+    ...(selection === 'ordinary child'
+      ? [
+          expect.objectContaining({
+            ability: 'wis',
+            value: 1,
+            sourceTag: expect.objectContaining({ sourceType: 'subrace', sourceName: 'Child' }),
+          }),
+        ]
+      : []),
+  ])
+  expect(result.characterPatch.spells?.spellProfiles).toEqual(saved.spells.spellProfiles)
+  expect(saved).toEqual(before)
+})
+
+test('an unavailable previous child rebuilds racial choices from the current parent data', () => {
+  const oldParent = {
+    name: 'Parent',
+    source: 'PHB',
+    skillProficiencies: [{ choose: { from: ['stealth'], count: 1 } }],
+  } as Race5e
+  const oldChild = { name: 'Old', source: 'HB' } as Race5e
+  const original = makeCharacterFixture({ race: '', raceSource: '' })
+  const initial = applyRaceSelectionCommand(
+    original,
+    emptyProvenance(),
+    oldParent,
+    oldChild,
+    0,
+    noChoices,
+  )
+  const selected = { ...original, ...initial.characterPatch }
+  const choice = initial.provenanceUpdate.choices.find((entry) => entry.domain === 'skills')!
+  const chosen = resolveProficiencyChoiceCommand(
+    selected,
+    initial.provenanceUpdate,
+    'skills',
+    'stealth',
+    true,
+    choice.id,
+  )
+  const saved = { ...selected, ...chosen.characterPatch, provenance: chosen.provenanceUpdate }
+  const before = structuredClone(saved)
+  const currentParent = {
+    ...oldParent,
+    skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+  } as Race5e
+  const result = applySubraceSelectionCommand(
+    saved,
+    saved.provenance,
+    currentParent,
+    undefined,
+    noChoices,
+  )
+  expect(result.characterPatch.proficiencies?.skills).not.toContain('stealth')
+  expect(result.provenanceUpdate.proficiencies.skills.stealth).toBeUndefined()
+  expect(result.provenanceUpdate.choices).toContainEqual(
+    expect.objectContaining({
+      domain: 'skills',
+      optionPool: ['perception'],
+      selected: [],
+      status: 'pending',
+    }),
+  )
+  expect(saved).toEqual(before)
 })
 
 const racesPath = join(process.cwd(), 'data/races.json')

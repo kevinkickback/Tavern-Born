@@ -226,7 +226,13 @@ export function applySubraceSelectionCommand(
       candidate.name === character.subrace &&
       (!character.subraceSource || candidate.source === character.subraceSource),
   )
-  if (subrace?._isVersion === true || previous?._isVersion === true) {
+  // An unavailable previous child may have replaced all parent mechanics. Rebuild the
+  // complete selection rather than assume that parent ownership can be retained.
+  if (
+    subrace?._isVersion === true ||
+    previous?._isVersion === true ||
+    (character.subrace && !previous)
+  ) {
     return applyRaceSelectionCommand(
       character,
       ledger,

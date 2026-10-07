@@ -24,7 +24,11 @@ vi.mock('@/store/gameDataStore', () => ({
 
 beforeEach(() => vi.clearAllMocks())
 
-test('raw-catalog previous version metadata restores parent ownership when leaving a filtered-out version', () => {
+test.each([
+  'filtered',
+  'missing',
+  'other printing',
+] as const)('restores parent ownership when leaving a %s previous version', (availability) => {
   const version = {
     name: 'Version',
     source: 'HB',
@@ -52,8 +56,21 @@ test('raw-catalog previous version metadata restores parent ownership when leavi
   ])
   const saved = { ...original, ...initial.characterPatch, provenance: initial.provenanceUpdate }
   mocks.characterState = { activeCharacter: saved, updateCharacter: mocks.updateCharacter }
+  const catalogParent = {
+    ...parent,
+    subraces:
+      availability === 'filtered'
+        ? [version, child]
+        : availability === 'missing'
+          ? [child]
+          : [{ ...version, source: 'PHB' }, child],
+  }
   mocks.gameDataState = {
-    gameData: { items: [], itemsBase: [], lookups: { racesByKey: buildRaceLookup([parent]) } },
+    gameData: {
+      items: [],
+      itemsBase: [],
+      lookups: { racesByKey: buildRaceLookup([catalogParent]) },
+    },
   }
   const { result } = renderHook(() => useRaceProvenanceMutations())
   act(() => result.current.applySubraceChange({ ...parent, subraces: [] }, child))
