@@ -14,6 +14,7 @@ import type {
   Spell5e,
   Subclass5e,
 } from '@/types/5etools'
+import { getClassFeatureIdentity } from './classFeatureIdentity'
 
 export function getEntityLookupKey(name?: unknown, source?: unknown): string {
   const safeName = typeof name === 'string' ? name.trim() : ''
@@ -36,9 +37,10 @@ export function getSubclassLookupKey(
 }
 
 function buildClassFeatureLookup(classFeatures: ClassFeature[]): Record<string, ClassFeature> {
-  return classFeatures.reduce<Record<string, ClassFeature>>((lookup, feature) => {
-    const key = getEntityLookupKey(feature.name, feature.source)
-    if (key !== '|' && !lookup[key]) {
+  return classFeatures.reduce<Record<string, ClassFeature>>((lookup, feature, index) => {
+    // Incomplete rows remain available for unique legacy matching, without guessed identity.
+    const key = getClassFeatureIdentity(feature) ?? `unresolved-class-feature|${index}`
+    if (!lookup[key]) {
       lookup[key] = feature
     }
     return lookup

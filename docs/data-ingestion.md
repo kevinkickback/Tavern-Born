@@ -14,7 +14,7 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 | Validation | `validator.ts`, `schemas.ts` | Reject invalid required shapes; report optional degradation. |
 | Parsing/normalization | `parsers/`, rule normalizers | Produce stable application entities and diagnostics. |
 | Layer composition | `contentLayers.ts` | Overlay collections by canonical identity, rebuild races from raw records, and rebuild lookups. |
-| Lookup construction | `lookups.ts` | Build collision-safe `name|source` maps. |
+| Lookup construction | `lookups.ts` | Build source-qualified maps; class features use full owner/level identity. |
 | Filtering/resolution | `filters.ts`, `entityResolvers.ts` | Filter catalogs while preserving exact saved-reference fallback. |
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
 
@@ -144,9 +144,23 @@ or the attached feature level when that field is absent. Subclass selection reta
 level-three default only when there is no class-feature reference marked for subclass gain;
 a marked reference with an invalid level remains unknown and cannot enable a selection. Readiness
 navigation for an unavailable selected subclass omits the level when it is unknown.
-Subclass references retain their separate layout and normalization contract. Cache schema 26
-rebuilds older parsed catalogs, including
-normalized class schedules and the existing race/subrace normalization together.
+Subclass references retain their separate layout and normalization contract.
+
+The global `classFeaturesByKey` dictionary uses the same complete identity as ingestion and layers.
+Incomplete records are retained under opaque catalog-local keys, which are not valid feature UIDs.
+Stored features with only name/source may enrich their descriptions from exactly one matching
+catalog record. Multiple owner/level matches preserve saved text; they cannot select a printing or
+fall through to an optional feature. Actions and PDF use this shared description projection.
+An earned class or subclass action is suppressed by a saved feature only when that feature
+actually projects an action; missing or passive saved text cannot hide a qualified earned action.
+Matching a produced saved action uses canonical case and complete class-feature source defaults;
+subclass matching retains its separate source layout. Different saved printings remain distinct.
+Matching uses the codec's name/source case normalization and effective source defaults for complete
+records; incomplete rows use only their supplied name/source. A missing saved printing cannot prove
+a match with a complete canonical record.
+Fully qualified choice persistence and tooltip resolution retain their separate contracts.
+Cache schema 27 rebuilds older cached catalogs, including normalized class schedules, global
+lookup dictionaries, and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected

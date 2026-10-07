@@ -30,8 +30,7 @@ export function decodeClassFeatureReference(uid: string): ClassFeatureReference 
   }
 }
 
-/** A class-feature target must agree with every encoded identity field. */
-export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): string | undefined {
+function normalizeClassFeatureIdentity(feature: ClassFeatureIdentityInput) {
   const name = typeof feature.name === 'string' ? feature.name.trim().toLowerCase() : ''
   const className =
     typeof feature.className === 'string' ? feature.className.trim().toLowerCase() : ''
@@ -47,7 +46,30 @@ export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): str
     feature.level <= 0
   )
     return undefined
-  return ['class-feature', name, className, classSource, feature.level, source].join('|')
+  return { name, className, classSource, level: feature.level, source }
+}
+
+/** A class-feature target must agree with every encoded identity field. */
+export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): string | undefined {
+  const identity = normalizeClassFeatureIdentity(feature)
+  return identity
+    ? [
+        'class-feature',
+        identity.name,
+        identity.className,
+        identity.classSource,
+        identity.level,
+        identity.source,
+      ].join('|')
+    : undefined
+}
+
+/** Compatibility matching requires a unique catalog target for this canonical name/source. */
+export function getClassFeatureLegacyLookupKey(
+  feature: ClassFeatureIdentityInput,
+): string | undefined {
+  const identity = normalizeClassFeatureIdentity(feature)
+  return identity ? `${identity.name}|${identity.source}` : undefined
 }
 
 /** Encoded identity is authoritative; only rows without a UID use materialized levels. */

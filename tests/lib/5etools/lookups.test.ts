@@ -125,7 +125,9 @@ describe('5etools/lookups', () => {
     expect(lookups.classesByKey[getEntityLookupKey('Wizard', 'PHB')]).toBeTruthy()
     expect(lookups.racesByKey).toEqual({})
     expect(lookups.backgroundsByKey).toEqual({})
-    expect(lookups.classFeaturesByKey[getEntityLookupKey('Arcane Recovery', 'PHB')]).toBeTruthy()
+    expect(
+      lookups.classFeaturesByKey['class-feature|arcane recovery|wizard|phb|1|phb'],
+    ).toBeTruthy()
     expect(lookups.featsByKey[getEntityLookupKey('Alert', 'PHB')]).toBeTruthy()
     expect(lookups.spellsByKey[getEntityLookupKey('Magic Missile', 'PHB')]).toBeTruthy()
     expect(
