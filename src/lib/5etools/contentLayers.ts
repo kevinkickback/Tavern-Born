@@ -1,6 +1,7 @@
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
+import { getClassFeatureIdentity } from './classFeatureIdentity'
 import { normalizeClassRules } from './classRuleNormalization'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
@@ -46,8 +47,11 @@ function recordIdentity(value: unknown): string {
 function classFeatureIdentity(value: unknown): string {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
   const record = value as Record<string, unknown>
+  const identity = getClassFeatureIdentity(record)
+  if (identity) return identity
+  // Incomplete rows retain their structural overlay identity.
   return [
-    'class-feature',
+    'opaque-class-feature',
     normalizeIdentityPart(record.name),
     normalizeIdentityPart(record.source),
     normalizeIdentityPart(record.className),
@@ -182,16 +186,9 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
   gameData.classes = gameData.classes.map((classData) => {
     let changed = false
     const classFeatureRefs = (classData.classFeatureRefs ?? []).map((reference) => {
-      const feature = features.get(
-        classFeatureIdentity({
-          name: reference.name,
-          source: reference.source ?? reference.classSource ?? classData.source,
-          className: reference.className || classData.name,
-          classSource: reference.classSource ?? classData.source,
-          level: reference.level,
-        }),
-      )
-      if (!feature || reference.feature === feature) return reference
+      const identity = getClassFeatureIdentity(reference)
+      const feature = identity ? features.get(identity) : undefined
+      if (reference.feature === feature) return reference
       changed = true
       return { ...reference, feature }
     })

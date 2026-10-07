@@ -555,11 +555,17 @@ function getFeatureVariant(
   return { ...(replacesFeatureName ? { replacesFeatureName } : {}) }
 }
 
+function getFeatureSource(ref: ChoiceFeatureReference, fallbackSource: string): string {
+  const featureSource = typeof ref.feature?.source === 'string' ? ref.feature.source.trim() : ''
+  const referenceSource = typeof ref.source === 'string' ? ref.source.trim() : ''
+  return featureSource || referenceSource || fallbackSource
+}
+
 function ownedFeature(owner: ChoiceOwner, ref: ChoiceFeatureReference): ChoiceOwner {
   return {
     ...owner,
     featureName: ref.name,
-    featureSource: ref.feature?.source || ref.source || owner.source,
+    featureSource: getFeatureSource(ref, owner.source),
   }
 }
 
@@ -603,7 +609,7 @@ function normalizeFeatureOptionChoices(
     blocks.forEach((block, blockIndex) => {
       const options = Array.isArray(block.entries)
         ? block.entries.flatMap((entry) => {
-            const option = getOptionReference(entry, feature.source || classData.source)
+            const option = getOptionReference(entry, getFeatureSource(ref, classData.source))
             return option ? [option] : []
           })
         : []
@@ -929,7 +935,7 @@ function normalizeCreatureTagChoices(
     const text = getFeatureText(ref)
     const searchableText = toSearchableText(text)
     if (!/\bchoose (?:its|a|the) stat block\b/i.test(searchableText)) return []
-    const options = parseCreatureTags(text, ref.feature?.source || ref.source || owner.source)
+    const options = parseCreatureTags(text, getFeatureSource(ref, owner.source))
     if (options.length < 2) return []
     return [
       {
