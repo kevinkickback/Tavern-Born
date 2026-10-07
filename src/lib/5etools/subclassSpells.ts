@@ -14,6 +14,7 @@ function pushSpellList(
   levelText: string,
   spells: unknown,
   maxClassLevel: number,
+  options?: { preserveSource?: boolean },
 ): void {
   const level = Number.parseInt(levelText, 10)
   if (!Number.isFinite(level) || level < 1 || level > maxClassLevel) return
@@ -21,7 +22,7 @@ function pushSpellList(
 
   for (const raw of spells) {
     if (typeof raw !== 'string') continue
-    const parsed = parseSpellToken(raw)
+    const parsed = parseSpellToken(raw, options)
     if (!parsed.name) continue
     grants.push({
       spellName: parsed.name,
@@ -35,6 +36,7 @@ function pushSpellList(
 export function parseSubclassSpells(
   additionalSpells: SubclassAdditionalSpells[] | undefined,
   classLevel: number,
+  options?: { preserveSource?: boolean },
 ): SubclassSpellGrant[] {
   if (!additionalSpells || additionalSpells.length === 0 || classLevel < 1) return []
 
@@ -42,15 +44,15 @@ export function parseSubclassSpells(
 
   for (const block of additionalSpells) {
     for (const [levelText, spells] of Object.entries(block.prepared ?? {})) {
-      pushSpellList(grants, 'prepared', levelText, spells, classLevel)
+      pushSpellList(grants, 'prepared', levelText, spells, classLevel, options)
     }
 
     for (const [levelText, spells] of Object.entries(block.known ?? {})) {
-      pushSpellList(grants, 'known', levelText, spells, classLevel)
+      pushSpellList(grants, 'known', levelText, spells, classLevel, options)
     }
 
     for (const [levelText, spells] of Object.entries(block.expanded ?? {})) {
-      pushSpellList(grants, 'expanded', levelText, spells, classLevel)
+      pushSpellList(grants, 'expanded', levelText, spells, classLevel, options)
     }
 
     for (const [levelText, usageConfig] of Object.entries(block.innate ?? {})) {
@@ -65,7 +67,7 @@ export function parseSubclassSpells(
         if (!Array.isArray(spells)) continue
         for (const raw of spells) {
           if (typeof raw !== 'string') continue
-          const parsed = parseSpellToken(raw)
+          const parsed = parseSpellToken(raw, options)
           if (!parsed.name) continue
           grants.push({
             spellName: parsed.name,

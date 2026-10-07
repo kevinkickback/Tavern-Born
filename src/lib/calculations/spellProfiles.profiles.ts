@@ -256,7 +256,9 @@ export function ensureSpellProfiles(
       next.push(existingProfile)
       continue
     }
-    const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels)
+    const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels, {
+      preserveSource: options?.preserveUnavailableClassProfiles,
+    })
     const grantedSubclassSpells = subclassSpells.filter((grant) => grant.mode !== 'expanded')
     const grantedSubclassCantrips = grantedSubclassSpells
       .filter((grant) => grant.isCantrip)

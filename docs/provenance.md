@@ -105,6 +105,9 @@ An unavailable selected child projects its existing saved racial profiles, even 
 parent has spell grants. Available class and subclass data still derive current grants at the
 character's level. Each unavailable exact class or selected subclass retains its own saved profile
 even when another class resolves. When all class data is unavailable, the full saved-profile fallback remains.
+This fallback derives available subclass grants with their explicit spell source qualifiers, including
+new level grants, so a competing printing cannot replace the requested spell. The shared spell-token
+adapter accepts source-preserving decoding; existing callers retain their legacy decoding contract.
 Only a resolved race selection can establish which racial spell blocks apply or were removed.
 Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
 Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.

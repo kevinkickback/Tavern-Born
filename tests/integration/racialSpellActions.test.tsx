@@ -282,6 +282,138 @@ test.each([
   expect(character).toEqual(before)
 })
 
+test.each([
+  'prepared',
+  'known',
+  'innate',
+] as const)('%s subclass grants retain exact spell printings alongside an unavailable child', (mode) => {
+  const parent = { name: 'Parent', source: 'PHB' } as Race5e
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  install([parent])
+  const grants = { 1: ['shocking grasp#c|PHB'], 3: ['burning hands|XPHB'] }
+  catalog.lookups.classesByKey = buildClassLookup([
+    {
+      name: 'Cleric',
+      source: 'PHB',
+      spellcastingAbility: 'wis',
+      casterProgression: 'full',
+      preparedSpells: '<$level$> + <$wis_mod$>',
+      subclasses: [
+        {
+          name: 'Light Domain',
+          shortName: 'Light',
+          source: 'PHB',
+          className: 'Cleric',
+          classSource: 'PHB',
+          additionalSpells: [
+            mode === 'innate'
+              ? { innate: { 1: { daily: { '1': grants[1] } }, 3: { daily: { '1': grants[3] } } } }
+              : { [mode]: grants },
+          ],
+        },
+      ],
+    } as Class5e,
+  ])
+  catalog.lookups.spellsByKey = buildSpellLookup([
+    otherPrinting,
+    shockingGrasp,
+    { ...shockingGrasp, name: 'Burning Hands', level: 2, entries: ['Original rules.'] },
+    { ...otherPrinting, name: 'Burning Hands', level: 2, entries: ['Revised rules.'] },
+  ])
+  const character = savedChoice(parent, child, 'Child Parent')
+  character.classProgression = [
+    { name: 'Cleric', source: 'PHB', levels: 3, subclass: 'Light Domain', subclassSource: 'PHB' },
+  ]
+  character.spells.spellProfiles = character.spells.spellProfiles.filter(
+    (profile) => profile.type !== 'racial',
+  )
+  character.spells.spellProfiles[0] = {
+    id: 'class:Cleric|PHB',
+    type: 'class',
+    label: 'Cleric (Lv 2)',
+    className: 'Cleric',
+    classSource: 'PHB',
+    cantrips: ['Shocking Grasp|PHB'],
+    spellsKnown: [],
+    fixedSpells: ['Shocking Grasp|PHB'],
+    preparedSpells: mode === 'known' ? ['Burning Hands|XPHB'] : [],
+    alwaysPrepared: false,
+  }
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  const before = structuredClone(character)
+  const context = createCharacterCalculationContext(character, catalog.lookups)
+  const direct = deriveSpellActions(character, catalog.lookups.spellsByKey, {
+    classes: context.classes,
+    raceResolution: context.raceResolution,
+  })
+  const { result } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  for (const actions of [direct, result.current, pdf.actions]) {
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        name: 'Shocking Grasp',
+        kind: 'action',
+        source: expect.objectContaining({ source: 'PHB' }),
+        active: true,
+      }),
+    )
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        name: 'Burning Hands',
+        kind: 'bonus-action',
+        source: expect.objectContaining({ source: 'XPHB' }),
+        description: 'Revised rules.',
+        active: true,
+      }),
+    )
+  }
+  expect(character).toEqual(before)
+})
+
+test('an unavailable exact subclass spell printing cannot fall back to a competing printing', () => {
+  install([{ name: 'Parent', source: 'PHB' } as Race5e])
+  catalog.lookups.classesByKey = buildClassLookup([
+    {
+      name: 'Cleric',
+      source: 'PHB',
+      subclasses: [
+        {
+          name: 'Light Domain',
+          shortName: 'Light',
+          source: 'PHB',
+          className: 'Cleric',
+          classSource: 'PHB',
+          additionalSpells: [{ prepared: { 1: ['shocking grasp#c|PHB'] } }],
+        },
+      ],
+    } as Class5e,
+  ])
+  catalog.lookups.spellsByKey = buildSpellLookup([otherPrinting])
+  const character = makeCharacterFixture({
+    race: 'Parent',
+    raceSource: 'PHB',
+    subrace: 'Missing',
+    subraceSource: 'HB',
+    classProgression: [
+      { name: 'Cleric', source: 'PHB', levels: 1, subclass: 'Light Domain', subclassSource: 'PHB' },
+    ],
+  })
+  character.spells.spellProfiles = character.spells.spellProfiles.filter(
+    (profile) => profile.type === 'special',
+  )
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  const context = createCharacterCalculationContext(character, catalog.lookups)
+  const direct = deriveSpellActions(character, catalog.lookups.spellsByKey, {
+    classes: context.classes,
+    raceResolution: context.raceResolution,
+  })
+  const { result } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  for (const actions of [direct, result.current, pdf.actions]) {
+    expect(actions.some((action) => action.name === 'Shocking Grasp')).toBe(false)
+  }
+})
+
 function assertSavedChoiceAcrossConsumers(character: Character, expectedProfileName: string) {
   const before = structuredClone(character)
   const { result: raceResult } = renderHook(() => useCharacterRaceData(character))
