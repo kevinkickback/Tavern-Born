@@ -2,8 +2,10 @@
 
 ## Branches and repository settings
 
-`main` is the only long-lived branch. Start each change from current `main` on a short-lived branch,
-open a pull request back to `main`, and delete the branch after its squash merge.
+`main` is the only long-lived branch. Normally start each change from current `main` on a
+short-lived branch, open a pull request back to `main`, and delete the branch after its squash
+merge. A user-requested [local-only remediation phase](#local-only-remediation) postpones publishing
+and merging while allowing implementation, independent review, validation, and local commits.
 
 Protect `main` with the repository's **Main Protection** ruleset:
 
@@ -33,13 +35,17 @@ when the project has a second maintainer; a solo maintainer cannot provide an in
 
 ## Day-to-day development
 
-Create a branch from current `main`:
+When GitHub delivery is enabled, create a branch from current `main`:
 
 ```bash
 git switch main
 git pull --ff-only
 git switch -c feat/short-description
 ```
+
+Complete the [independent review](#independent-review) for each bounded change, including changes
+kept locally. Local-only delivery follows the section below; the following push/PR commands apply
+only after the user explicitly resumes GitHub delivery.
 
 Before each push, pull current `main` into the branch, inspect the exact branch diff against
 `origin/main`, and run the relevant checks. Review the changed behavior and nearby callers for
@@ -59,8 +65,10 @@ npm run check:pr
 
 When Copilot finds an issue on a pull request, inspect the related code paths for other instances or
 missed edge cases while fixing it. Run focused tests and repeat the local diff review before pushing
-the fix. One completed Copilot review satisfies the advisory review step; request another only when
-a later change needs fresh review, rather than after every fix push.
+the fix. One completed Copilot review satisfies the Copilot advisory review step; request another
+only when a later change needs fresh review, rather than after every fix push. The separate local
+independent review is also required. It does not replace the eventual Copilot review or required
+GitHub checks.
 
 Commit and push the reviewed branch, then open a pull request:
 
@@ -96,6 +104,114 @@ The browser job includes the `@golden` level-1-to-20 journeys and narrower `@foc
 Developers can run those groups independently with `npm run test:e2e:golden` and
 `npm run test:e2e:focused`; `npm run test:e2e:release` runs the complete suite serially for local
 release validation.
+
+---
+
+## Independent review
+
+Each completed change, including a documentation-only change, needs a separate read-only review
+before it is marked locally reviewed or published. The implementer still inspects the exact diff
+and nearby callers; the second review is performed in a fresh session without the implementation
+conversation history. Prefer a dedicated reviewer subagent with `fork_turns="none"`. This is standing
+authorization to delegate that review without asking again. When subagents are unavailable, use a
+fresh dedicated Codex review session or a qualified human reviewer. If no fresh reviewer is available,
+continue implementation and validation but record review pending; do not represent self-review as
+the completed second review.
+
+Give the reviewer the repository path, exact base and final revisions, the task's expected behavior,
+applicable constraints, and report destination. Do not supply the implementer's explanation as proof
+that the change is correct. A completed commit can be reviewed with `codex review --commit <sha>`;
+a complete branch can be reviewed with `codex review --base <base-ref>`. The app's `/review` supports
+review against a base branch. These are review entry points, not substitutes for recording scope and
+checking the resulting evidence.
+
+The review must:
+
+- Inspect the complete final diff, affected callers, and relevant unchanged surrounding code.
+- Challenge failure handling, ordering/concurrency, saved-character compatibility, source-qualified
+  identities, and upstream data contracts where relevant to the change.
+- Check that tests have independently expected outcomes and exercise meaningful edge cases;
+  passing CI or a large test count does not establish correctness.
+- Report actionable findings with priority, file/line, triggering input or sequence, expected and
+  actual behavior, and supporting evidence. Distinguish verified defects from untested concerns.
+- Make no source edits, commits, network publications, or merge/release decisions.
+
+The implementer verifies each finding, reproduces defects where practical, inspects nearby paths,
+and adds behavior regressions for confirmed defects. Record false positives with code or test
+evidence. Repeat focused validation after fixes, then review the final diff. A substantive fix needs
+fresh review of the corrected behavior; unchanged, already-reviewed areas need not be reviewed
+repeatedly. Run `npm run check:pr` before marking a functional change locally validated. For changes
+limited to instructions/documentation, validate the exact diff and referenced paths/anchors; runtime
+tests are needed only when executable behavior also changes. Existing mandatory pre-push validation
+still applies once publishing resumes.
+
+Keep the reviewer report and finding dispositions in ignored `docs/review/`. Record base/head
+revisions, covered paths, pending concerns, and validation results. A report does not cover later
+source changes automatically. Track implementation, local validation, independent review, Copilot
+review, GitHub CI, and merge as separate states. A fresh Codex review adds evidence but can share
+blind spots with the implementing model; neither an empty report nor passing tests certifies a
+defect-free release.
+
+## Local-only remediation
+
+When the user pauses GitHub delivery, including when Copilot review is unavailable, that pause
+persists across new chats until the user explicitly resumes publishing. Read `AGENTS.md`, the
+repository instructions, and private `docs/review/workflow-state.md` when present at the start of
+remediation. The private state file records the active mode, authorization to resume, branch
+dependencies, holds, review reports and checkpoints; it is not source material for public issues
+or PR descriptions. A current explicit user instruction takes precedence over an older mode
+record; update the record before continuing work.
+
+Continue bounded implementations on local branches. Local checkpoint commits may freeze a revision
+for review; mark a checkpoint locally accepted only after validation and independent review.
+Fetching current `origin/main` for comparison is allowed. Do not push branches,
+create/update PRs, enable auto-merge, merge into local or remote `main`, publish findings, or release
+during this phase. Preserve existing PRs and their heads for eventual Copilot review; implement
+follow-ups on separate local branches and record their relationship instead of extending those PRs.
+
+Keep the review-policy commit in the ancestry of subsequent local remediation branches so new chats
+retain these rules. Start unrelated changes from that policy branch. For a dependent change, start
+from the exact local dependency revision and record the parent branch/commit in the private state
+file. Review the bounded change against that dependency base and inspect the accumulated diff
+against `origin/main` for interactions. A deferred merge is not permission to collect unrelated
+changes into one large branch. Do not discard or overwrite another branch's reviewed work.
+
+### Local remediation scope
+
+While Copilot review is unavailable, prioritize independent fixes, regression tests, data-contract
+checks, and profiling. Start each independent implementation from the latest locally accepted
+review-policy revision based on `main`, not from an unrelated functional branch. Read the private
+workflow state to identify that exact revision and any held branch chains before creating a branch.
+
+Preserve dependency chains marked on hold at their exact reviewed checkpoints. Do not extend a
+held chain or begin a larger dependent rewrite, including a saved-character identity migration,
+until the user explicitly authorizes it or the required Copilot review of its foundation completes
+and the hold is updated. Read-only characterization and isolated probes can continue; they do not
+change acceptance status or justify extending a held implementation chain.
+
+For each new bounded change, record why it is independent of held work, its exact base/head,
+validation, and fresh review. Policy updates use their own branch and review; do not silently add
+them to previously reviewed heads. Existing branches still read the private workflow state, and
+new implementation branches inherit the latest accepted policy revision. Do not treat a clean
+merge or passing tests as proof that two changes are independent.
+
+When review findings change an earlier dependency, identify every affected descendant, incorporate
+the correction, resolve interactions, and repeat validation and fresh review at the updated exact
+heads. Prior acceptance records remain historical evidence, not approval of later revisions. After
+a dependency is squash-merged, reconcile its descendants with the resulting `main` history before
+delivery so the parent changes are not submitted again. Keep integration validation separate from
+the acceptance of individual branches.
+
+Mark completed local work as locally implemented/validated/reviewed, with Copilot/CI/merge pending;
+do not close its audit finding or public issue as delivered. Record partial coverage explicitly.
+Keep security-sensitive fixes and evidence local until the user authorizes an appropriate private
+publication path; resuming ordinary GitHub delivery does not authorize public disclosure.
+
+When the user resumes delivery, record that authorization and prepare focused PRs in dependency
+order. Include the policy change, reconcile each branch with current `main`, and review/test the
+exact final diff again after integration.
+Obtain Copilot review, address available actionable findings, and require both GitHub CI jobs before
+using native squash auto-merge. Never bypass these steps merely because a local checkpoint passed.
 
 ---
 
