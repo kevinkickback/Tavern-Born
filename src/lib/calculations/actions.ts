@@ -2,6 +2,7 @@ import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/li
 import {
   getClassFeatureIdentity,
   getClassFeatureLegacyLookupKey,
+  getClassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
@@ -337,8 +338,8 @@ function deriveClassFeatureActions(
 
     for (const reference of classData.classFeatureRefs ?? []) {
       const feature = reference.feature
-      const level = reference.level ?? feature?.level ?? 0
-      if (!feature || level > entry.levels) continue
+      const level = getClassFeatureReferenceLevel(reference)
+      if (!feature || level === undefined || level > entry.levels) continue
       const key = getEntityLookupKey(feature.name, feature.source)
       const storedKey = getClassFeatureLegacyLookupKey(feature) ?? key.toLowerCase()
       if (storedKeys.has(storedKey) || projectedKeys.has(key)) continue
