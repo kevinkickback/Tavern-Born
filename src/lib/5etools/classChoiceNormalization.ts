@@ -13,6 +13,7 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
+import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 
 interface ParsedFilterTag {
   label: string
@@ -91,6 +92,7 @@ function buildChoiceId(owner: ChoiceOwner, label: string, level: number) {
 }
 
 function getReferenceLevel(ref: ChoiceFeatureReference): number | undefined {
+  if (!('subclassShortName' in ref)) return getClassFeatureReferenceLevel(ref)
   if (ref.level !== undefined) return ref.level
   if (ref.feature?.level !== undefined) return ref.feature.level
   const parts = typeof ref.ref === 'string' ? ref.ref.split('|') : []
@@ -276,7 +278,8 @@ function getFeatureTableRules(ref: ClassFeatureReference): {
 } {
   const options = new Map<string, NormalizedChoiceOptionReference>()
   const tags: ParsedFilterTag[] = []
-  const fallbackLevel = getReferenceLevel(ref) ?? 1
+  const fallbackLevel = getClassFeatureReferenceLevel(ref)
+  if (fallbackLevel === undefined) return { options: [], tags: [] }
   visitFeatureRecords(ref.feature?.entries, (table) => {
     if (table.type !== 'table' || !Array.isArray(table.rows)) return
     const minimumClassLevel = getTableMinimumClassLevel(table, fallbackLevel)
@@ -768,6 +771,7 @@ function normalizeTableBackedFilterChoices(
   refs: readonly ClassFeatureReference[],
 ): NormalizedCharacterChoice[] {
   return refs.flatMap((featureRef) => {
+    if (getClassFeatureReferenceLevel(featureRef) === undefined) return []
     const text = getFeatureText(featureRef)
     const tableRules = getFeatureTableRules(featureRef)
     const tags = tableRules.tags.length > 0 ? tableRules.tags : parseFilterTags(text)

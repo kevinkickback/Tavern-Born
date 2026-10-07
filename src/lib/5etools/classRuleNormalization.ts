@@ -5,6 +5,7 @@ import type {
   NormalizedClassRules,
 } from '@/types/classRules'
 import { normalizeClassChoices } from './classChoiceNormalization'
+import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
 const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -41,11 +42,6 @@ const FIGHTER_PROSE_RESOURCE_FIXUPS: readonly ClassResourceDef[] = [
     recovery: LONG_REST_RECOVERY,
   },
 ]
-
-function getReferenceLevel(ref: ClassFeatureReference): number | undefined {
-  const encodedLevel = Number.parseInt(ref.ref.split('|')[3] ?? '', 10)
-  return Number.isNaN(encodedLevel) ? ref.level : encodedLevel
-}
 
 function twenty(value: number): number[] {
   return Array.from({ length: 20 }, () => value)
@@ -282,7 +278,7 @@ export function normalizeClassRules(
 
   const asiLevels = refs
     .filter((ref) => ASI_FEATURE.test(ref.name))
-    .map(getReferenceLevel)
+    .map(getClassFeatureReferenceLevel)
     .filter((level): level is number => typeof level === 'number')
     .filter((level, index, levels) => levels.indexOf(level) === index)
     .sort((left, right) => left - right)

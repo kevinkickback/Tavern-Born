@@ -49,3 +49,16 @@ export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): str
     return undefined
   return ['class-feature', name, className, classSource, feature.level, source].join('|')
 }
+
+/** Encoded identity is authoritative; only rows without a UID use materialized levels. */
+export function getClassFeatureReferenceLevel(
+  ref: Pick<ClassFeatureReference, 'ref' | 'level' | 'feature'>,
+): number | undefined {
+  if (typeof ref.ref === 'string' && ref.ref.trim()) {
+    const decoded = decodeClassFeatureReference(ref.ref)
+    return getClassFeatureIdentity(decoded) ? decoded.level : undefined
+  }
+  if (ref.ref !== undefined && typeof ref.ref !== 'string') return undefined
+  const level = ref.level !== undefined ? ref.level : ref.feature?.level
+  return typeof level === 'number' && Number.isInteger(level) && level > 0 ? level : undefined
+}

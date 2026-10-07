@@ -1,3 +1,4 @@
+import { getClassFeatureReferenceLevel } from '@/lib/5etools/classFeatureIdentity'
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry, Proficiencies } from '@/types/character'
@@ -239,14 +240,7 @@ export function getExpertiseSlotsFromClasses(
     const cls = classesByKey[key]
     if (!cls?.classFeatureRefs) continue
     for (const ref of cls.classFeatureRefs) {
-      // Use the level from the original ref string (e.g. "Expertise|Rogue||6" → 6) rather
-      // than ref.level. The parser's feature-record resolver indexes by name|source only, so
-      // two refs with the same name+source but different levels (e.g. Rogue Expertise at
-      // levels 1 and 6) both resolve to the same record and both end up with level: 1,
-      // causing every level-1 check to count both.
-      const refParts = typeof ref.ref === 'string' ? ref.ref.split('|') : []
-      const parsedLevel = Number.parseInt(refParts[3] ?? '', 10)
-      const level = Number.isNaN(parsedLevel) ? ref.level : parsedLevel
+      const level = getClassFeatureReferenceLevel(ref)
       if (
         typeof level === 'number' &&
         level <= entry.levels &&
