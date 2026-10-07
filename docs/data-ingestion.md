@@ -159,13 +159,12 @@ pipeline. Empty child version arrays do not require composing ordinary subrace m
 New child versions preserve their complete upstream `name|source` identities; shortening them can
 collapse distinct families or nested names. Existing top-level version labels retain their saved
 identities, including historical punctuation. Existing ordinary subrace entries remain available
-with their previous names; their consumed `_versions` definitions are removed. Cache
-schema 18 rebuilds older catalogs, including unreleased schema-17 child labels.
+with their previous names; their consumed `_versions` definitions are removed. Cache schema 24
+rebuilds older catalogs, including unreleased child labels, structural duplicates, and catalogs
+that previously omitted unattached subraces without reporting a required failure.
 
 Array additions that use `appendIfNotExistsArr` compare JSON values structurally: object member
 order does not create a second trait, while array order and distinct values remain significant.
-Cache schema 23 rebuilds catalogs resolved with the older string-based comparison, including
-unreleased normalization schemas 18 through 22.
 
 Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
 objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys

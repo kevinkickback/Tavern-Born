@@ -132,6 +132,7 @@ export function deriveSpellActions(
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
   const resolution = options.raceResolution
+  const unresolvedChild = !!character.subrace && !!resolution && !resolution.subraceData
   const selection =
     resolution?.parentRace && (!character.subrace || resolution.subraceData)
       ? deriveRaceSpellSelection(resolution.parentRace, resolution.subraceData, {
@@ -148,8 +149,9 @@ export function deriveSpellActions(
       }
     : options.race
   // Without class data, removing racial spells must not rebuild unrelated class grants.
-  const profiles =
-    selection && selection.additionalSpells.length === 0 && classesById.size === 0
+  const profiles = unresolvedChild
+    ? character.spells.spellProfiles
+    : selection && selection.additionalSpells.length === 0 && classesById.size === 0
       ? character.spells.spellProfiles.filter((profile) => profile.type !== 'racial')
       : classesById.size > 0 || raceData?.additionalSpells
         ? ensureSpellProfiles(character, classesById, raceData)

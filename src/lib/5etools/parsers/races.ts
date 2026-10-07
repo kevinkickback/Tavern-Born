@@ -49,7 +49,13 @@ export function parseRaces(
       (typeof srObj.raceSource === 'string' ? srObj.raceSource : undefined) ??
       (typeof copyObj.raceSource === 'string' ? copyObj.raceSource : undefined) ??
       (typeof srObj.source === 'string' ? srObj.source : undefined)
-    if (!raceName) continue
+    if (typeof raceName !== 'string' || !raceName.trim()) {
+      diagnostics.push({
+        entity: `${String(srObj.name ?? 'Default')}|${String(srObj.source ?? '')}`,
+        reason: 'missing parent race identity',
+      })
+      continue
+    }
     const key = raceKey(raceName, raceSource)
     if (!raceKeys.has(key)) {
       diagnostics.push({

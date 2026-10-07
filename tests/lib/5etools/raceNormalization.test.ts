@@ -39,6 +39,31 @@ function loader(race: unknown[], subrace: unknown[] = []): FiveEToolsDataLoader 
 
 describe('race copy and version normalization', () => {
   test.each([
+    undefined,
+    null,
+    '',
+    '   ',
+    7,
+  ])('reports a required diagnostic for subraces with absent parent names: %j', async (raceName) => {
+    const child = { name: 'Unattached', source: 'PHB', raceName }
+    const input = { race: [base], subrace: [child] }
+    const before = structuredClone(input)
+    expect(() => parse(input)).toThrow(/missing parent race identity/)
+    const onResourceFailure = vi.fn()
+    await expect(loader([base], [child]).loadAllData({ onResourceFailure })).rejects.toThrow(
+      /missing parent race identity/,
+    )
+    expect(onResourceFailure).toHaveBeenCalledWith('Copied entity: Unattached|PHB', {
+      required: true,
+    })
+    const incomplete = await loader([base], [child]).loadAllData({
+      deferCopyResolutionErrors: true,
+    })
+    expect(() => composeGameDataLayers([incomplete])).toThrow(/missing parent race identity/)
+    expect(input).toEqual(before)
+  })
+
+  test.each([
     'race',
     'subrace',
   ])('does not double reordered ability bonuses in %s versions', (kind) => {

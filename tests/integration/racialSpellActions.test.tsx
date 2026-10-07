@@ -2,11 +2,13 @@ import { cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { deriveSpellActions } from '@/lib/calculations/actions'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import type { Race5e, Spell5e } from '@/types/5etools'
+import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -316,5 +318,46 @@ test.each([
   const { result } = renderHook(() => useCharacterActions(character))
   expect(result.current).toContainEqual(expected)
   expect(createCharacterSheetViewModel(character, catalog.lookups).actions).toContainEqual(expected)
+  expect(character).toEqual(before)
+})
+
+test.each([
+  'missing child',
+  'other child printing',
+] as const)('%s does not replace saved profiles with a parent spell block', (availability) => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    additionalSpells: [{ known: { 1: ['parent spell#c'] } }],
+  } as Race5e
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  const character = savedChoice(parent, child, 'Child Parent')
+  const parentSpell = { ...shockingGrasp, name: 'Parent Spell' }
+  catalog.lookups.spellsByKey = buildSpellLookup([shockingGrasp, parentSpell])
+  install([
+    availability === 'missing child'
+      ? parent
+      : { ...parent, subraces: [{ ...child, source: 'PHB' }] },
+  ])
+  const before = structuredClone(character)
+  const { result, rerender } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  const names = (actions: typeof result.current) =>
+    actions.filter((action) => action.source.kind === 'spell').map((action) => action.name)
+  expect(names(result.current)).toEqual(['Shocking Grasp'])
+  expect(names(pdf.actions)).toEqual(['Shocking Grasp'])
+  expect(
+    names(
+      deriveSpellActions(character, catalog.lookups.spellsByKey, {
+        classes: [{ name: 'Fighter', source: 'PHB' } as Class5e],
+        race: parent,
+        raceResolution: resolveRaceReference(character, catalog.lookups),
+      }),
+    ),
+  ).toEqual(['Shocking Grasp'])
+  install([{ ...parent, subraces: [{ ...child, _isVersion: true, additionalSpells: [] }] }])
+  rerender()
+  expect(names(result.current)).toEqual([])
+  expect(names(createCharacterSheetViewModel(character, catalog.lookups).actions)).toEqual([])
   expect(character).toEqual(before)
 })

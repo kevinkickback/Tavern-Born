@@ -97,8 +97,9 @@ remain stable.
 Actions and PDF action projection consume the same resolved parent/subrace context and selection
 adapter as the spell hook. They preserve those profile identities when projecting saved choices,
 filter named parent blocks to the selected child, and respect complete-version spell removal.
-An unavailable selected child leaves the existing action projection fallback in place; only a
-resolved selection can establish that its racial spell blocks were removed.
+An unavailable selected child projects the existing saved profiles, even when the available parent
+has spell grants. Only a resolved selection can establish which racial spell blocks apply or were
+removed.
 Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
 Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
 
