@@ -137,7 +137,8 @@ to the decoded UID source for omitted or blank target sources before considering
 class source.
 This contract covers class-feature ingestion; global search/display lookups and stored-feature
 consumer identities have separate compatibility requirements. Class ASI, expertise, subclass
-selection and feature-owned choice gain levels use the same codec: a complete encoded UID supplies the level
+selection, automatic class actions, and feature-owned choice gain levels use the same codec:
+a complete encoded UID supplies the level
 even when materialized metadata disagrees. A malformed nonempty UID cannot gain a level from
 metadata or display text. Rows without a UID may use an explicit positive integer numeric level,
 or the attached feature level when that field is absent. Subclass selection retains its legacy
