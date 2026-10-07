@@ -166,6 +166,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                   </Badge>
                 )}
                 {grantVariantLabel && <Badge variant="outline">{grantVariantLabel}</Badge>}
+                {fixedGrant && !featData && <Badge variant="outline">Feat data unavailable</Badge>}
                 {!met && (
                   <Badge
                     variant="outline"
@@ -201,7 +202,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
               <p className="text-sm italic text-muted-foreground">No description available.</p>
             )}
 
-            {optionsPending && onCompleteSetup && (
+            {optionsPending && featData && onCompleteSetup && (
               <Button
                 size="sm"
                 variant="outline"
@@ -222,7 +223,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                 <ArrowRight className="size-3" />
               </Button>
             )}
-            {optionsConfigured && onEditSetup && (
+            {optionsConfigured && featData && onEditSetup && (
               <Button
                 size="sm"
                 variant="accentOutline"

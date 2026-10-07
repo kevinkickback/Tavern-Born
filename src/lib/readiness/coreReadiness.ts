@@ -191,6 +191,7 @@ export function validateFeatSetup(
 ): CharacterReadinessIssue[] {
   if (!featsByKey) return []
   const featCatalog = Object.values(featsByKey)
+  const unresolvedFixedIssues: CharacterReadinessIssue[] = []
   const findFeat = (name: string, source?: string) => {
     const exact = featsByKey[getEntityLookupKey(name, source)]
     if (exact || source) return exact
@@ -225,6 +226,26 @@ export function validateFeatSetup(
     for (const tag of tags) {
       if (tag.grantType !== 'fixed') continue
       const resolved = resolveFixedFeatGrant(featCatalog, ledgerName, tag)
+      if (!resolved.feat) {
+        unresolvedFixedIssues.push(
+          readinessIssue(
+            featSetupReadinessId(
+              getEntityLookupKey(resolved.name, resolved.source),
+              undefined,
+              undefined,
+              `fixed:${tag.sourceType}:${tag.sourceName}:${resolved.variant ?? ''}`,
+            ),
+            'blocking',
+            'feats',
+            `Resolve ${resolved.name}`,
+            resolved.resolution === 'ambiguous'
+              ? 'The saved feat source is ambiguous; identify its printing before configuring it.'
+              : `The requested feat data${resolved.source ? ` (${resolved.source})` : ''} is unavailable. Load that source to view its rules and configure it.`,
+            '/feats?view=character',
+          ),
+        )
+        continue
+      }
       candidates.push({
         name: resolved.name,
         source: resolved.source,
@@ -237,20 +258,23 @@ export function validateFeatSetup(
     }
   }
 
-  return candidates.flatMap((feat) => {
-    const data = findFeat(feat.name, feat.source)
-    if (!data || !hasFeatOptions(data) || feat.options) return []
-    const featKey = getEntityLookupKey(data.name, data.source)
-    return [
-      readinessIssue(
-        featSetupReadinessId(featKey, feat.className, feat.classLevel, feat.ownerKey),
-        'blocking',
-        'feats',
-        `Finish setting up ${data.name}`,
-        'Follow-up choices for this feat are unfinished.',
-      ),
-    ]
-  })
+  return [
+    ...unresolvedFixedIssues,
+    ...candidates.flatMap((feat) => {
+      const data = findFeat(feat.name, feat.source)
+      if (!data || !hasFeatOptions(data) || feat.options) return []
+      const featKey = getEntityLookupKey(data.name, data.source)
+      return [
+        readinessIssue(
+          featSetupReadinessId(featKey, feat.className, feat.classLevel, feat.ownerKey),
+          'blocking',
+          'feats',
+          `Finish setting up ${data.name}`,
+          'Follow-up choices for this feat are unfinished.',
+        ),
+      ]
+    }),
+  ]
 }
 
 export function validateEquipment(character: Character): CharacterReadinessIssue[] {

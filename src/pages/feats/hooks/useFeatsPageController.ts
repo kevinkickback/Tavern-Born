@@ -5,8 +5,9 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useClassLookup } from '@/hooks/data/useGameData'
+import { useClassLookup, useFeatLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   buildPrerequisiteSnapshot,
@@ -59,6 +60,8 @@ export function useFeatsPageController() {
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const { feats, spells } = useFilteredGameData()
+  const rawFeatLookup = useFeatLookup()
+  const rawFeats = useMemo(() => Object.values(rawFeatLookup), [rawFeatLookup])
   const {
     replaceFeatSelections,
     replaceBonusFeatSelections,
@@ -153,7 +156,7 @@ export function useFeatsPageController() {
         tags
           .filter((tag) => tag.grantType === 'fixed')
           .map((tag) => {
-            const resolved = resolveFixedFeatGrant(feats as Feat5e[], name, tag)
+            const resolved = resolveFixedFeatGrant(feats as Feat5e[], name, tag, rawFeats)
             return {
               name: resolved.name,
               source: resolved.source,
@@ -166,7 +169,7 @@ export function useFeatsPageController() {
             }
           }),
       ),
-    [ledger.feats, feats],
+    [ledger.feats, feats, rawFeats],
   )
   const { originFixedFeats, racialFixedFeats } = useMemo(
     () => ({
@@ -251,9 +254,16 @@ export function useFeatsPageController() {
       classFeatChoiceId?: string,
       fixedGrant?: boolean,
     ) => {
-      const feat5e = (feats as Feat5e[]).find(
-        (feat) => feat.name === featName && (feat.source ?? '') === featSource,
-      )
+      const feat5e =
+        (feats as Feat5e[]).find(
+          (feat) => feat.name === featName && (feat.source ?? '') === featSource,
+        ) ??
+        (fixedGrant
+          ? resolveFeatReference(
+              { name: featName, source: featSource },
+              { featsByKey: rawFeatLookup },
+            )
+          : undefined)
       if (!feat5e) return
       setFeatOptionsTarget({
         ...feat5e,
@@ -264,7 +274,7 @@ export function useFeatsPageController() {
         classFeatChoiceId,
       })
     },
-    [feats],
+    [feats, rawFeatLookup],
   )
   const handleFeatOptionsFinish = useCallback(
     (selections: FeatOptionSelections) => {
@@ -283,9 +293,16 @@ export function useFeatsPageController() {
       classFeatChoiceId?: string,
       fixedGrant?: boolean,
     ) => {
-      const feat5e = (feats as Feat5e[]).find(
-        (feat) => feat.name === featName && (feat.source ?? '') === featSource,
-      )
+      const feat5e =
+        (feats as Feat5e[]).find(
+          (feat) => feat.name === featName && (feat.source ?? '') === featSource,
+        ) ??
+        (fixedGrant
+          ? resolveFeatReference(
+              { name: featName, source: featSource },
+              { featsByKey: rawFeatLookup },
+            )
+          : undefined)
       const fixedOptions = fixedGrant
         ? character?.fixedFeatOptions?.[getFixedFeatOptionKey(featName, featSource, grantVariant)]
         : undefined
@@ -320,6 +337,7 @@ export function useFeatsPageController() {
     },
     [
       feats,
+      rawFeatLookup,
       character?.feats,
       character?.fixedFeatOptions,
       character?.provenance?.choices,
@@ -443,10 +461,14 @@ export function useFeatsPageController() {
     pendingOriginChoices.length > 0 ||
     pendingOptionCount > 0
   const activeFeatName = selectedFeat?.name ?? null
-  const activeFeatData = (feats as Feat5e[]).find(
-    (feat) =>
-      feat.name === selectedFeat?.name && (feat.source ?? '') === (selectedFeat?.source ?? ''),
-  )
+  const activeFeatData =
+    (feats as Feat5e[]).find(
+      (feat) =>
+        feat.name === selectedFeat?.name && (feat.source ?? '') === (selectedFeat?.source ?? ''),
+    ) ??
+    fixedGrantedFeats.find(
+      (feat) => feat.name === selectedFeat?.name && feat.source === selectedFeat?.source,
+    )?.featData
 
   return {
     activeFeatData,

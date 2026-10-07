@@ -26,7 +26,7 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useBackgroundLookup, useItemLookup } from '@/hooks/data/useGameData'
+import { useBackgroundLookup, useFeatLookup, useItemLookup } from '@/hooks/data/useGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
@@ -79,6 +79,8 @@ export function BuildBackgroundPage() {
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useItemLookup()
   const rawBackgroundLookup = useBackgroundLookup()
+  const rawFeatLookup = useFeatLookup()
+  const rawFeats = useMemo(() => Object.values(rawFeatLookup), [rawFeatLookup])
   const filteredBackgroundLookup = useMemo(() => buildBackgroundLookup(backgrounds), [backgrounds])
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
@@ -175,9 +177,9 @@ export function BuildBackgroundPage() {
             tag.sourceName === selectedBg.name &&
             tag.grantType === 'fixed',
         )
-        .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
+        .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag, rawFeats)),
     )
-  }, [selectedBg, ledger.feats, feats])
+  }, [selectedBg, ledger.feats, feats, rawFeats])
 
   const activeFeatChoice = useMemo(
     () => originFeatChoices.find((c) => c.id === activeFeatChoiceId),
@@ -312,6 +314,13 @@ export function BuildBackgroundPage() {
                       <Star className="h-3 w-3" weight="duotone" />
                       {label}
                     </Badge>
+                    {!grant.feat && (
+                      <p className="text-xs text-warning-foreground">
+                        {grant.resolution === 'ambiguous'
+                          ? 'Feat source is ambiguous.'
+                          : `Feat data unavailable${grant.source ? ` (${grant.source})` : ''}.`}
+                      </p>
+                    )}
                     {grant.feat && hasFeatOptions(grant.feat) && (
                       <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
                         <Link to={getFeatLinkTarget(grant.name, grant.source)}>Configure feat</Link>

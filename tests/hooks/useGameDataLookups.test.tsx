@@ -5,6 +5,7 @@ import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import {
   useBackgroundLookup,
   useClassFeatureLookup,
+  useFeatLookup,
   useItemLookup,
   useItemPropertyLookup,
   useItemTypeLookup,
@@ -27,6 +28,7 @@ describe('named game data lookup hooks', () => {
     const { result, rerender } = renderHook(() => ({
       races: useRaceLookup(),
       backgrounds: useBackgroundLookup(),
+      feats: useFeatLookup(),
       classFeatures: useClassFeatureLookup(),
       optionalFeatures: useOptionalFeatureLookup(),
       items: useItemLookup(),
@@ -41,6 +43,7 @@ describe('named game data lookup hooks', () => {
 
     expect(result.current.races).toBe(first.races)
     expect(result.current.backgrounds).toBe(first.backgrounds)
+    expect(result.current.feats).toBe(first.feats)
     expect(result.current.classFeatures).toBe(first.classFeatures)
     expect(result.current.optionalFeatures).toBe(first.optionalFeatures)
     expect(result.current.items).toBe(first.items)
@@ -99,6 +102,10 @@ describe('named game data lookup hooks', () => {
     const data = makeGameDataFixture({
       races: [{ name: 'Elf', source: 'PHB' }],
       backgrounds: [{ name: 'Sage', source: 'PHB' }],
+      feats: [
+        { name: 'Shared Feat', source: 'PHB' },
+        { name: 'Shared Feat', source: 'TCE' },
+      ],
       classFeatures: [
         { name: 'Shared', source: 'PHB', className: 'Wizard', classSource: 'PHB', level: 1 },
         { name: 'Shared', source: 'TCE', className: 'Bard', classSource: 'PHB', level: 2 },
@@ -114,6 +121,7 @@ describe('named game data lookup hooks', () => {
     const { result } = renderHook(() => ({
       races: useRaceLookup(),
       backgrounds: useBackgroundLookup(),
+      feats: useFeatLookup(),
       classFeatures: useClassFeatureLookup(),
       optionalFeatures: useOptionalFeatureLookup(),
       items: useItemLookup(),
@@ -125,6 +133,8 @@ describe('named game data lookup hooks', () => {
 
     expect(result.current.races[getEntityLookupKey('Elf', 'PHB')]?.name).toBe('Elf')
     expect(result.current.backgrounds[getEntityLookupKey('Sage', 'PHB')]?.name).toBe('Sage')
+    expect(result.current.feats).toBe(data.lookups.featsByKey)
+    expect(result.current.feats[getEntityLookupKey('Shared Feat', 'TCE')]?.source).toBe('TCE')
     expect(result.current.classFeatures).toBe(data.lookups.classFeaturesByKey)
     expect(Object.values(result.current.classFeatures)).toHaveLength(2)
     expect(result.current.optionalFeatures).toBe(data.lookups.optionalFeaturesByKey)

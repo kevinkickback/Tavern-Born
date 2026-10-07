@@ -32,6 +32,8 @@ const magicInitiate = {
   ],
 } as Feat5e
 
+let rawFeatLookup: Record<string, Feat5e> = {}
+
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
     feats: [configurableFeat, configurableFeat2024, magicInitiate],
@@ -42,6 +44,7 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
 
 vi.mock('@/hooks/data/useGameData', () => ({
   useClassLookup: () => new Map(),
+  useFeatLookup: () => rawFeatLookup,
 }))
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
@@ -105,6 +108,7 @@ describe('FeatsPage bonus feat configuration', () => {
     )
 
   beforeEach(() => {
+    rawFeatLookup = {}
     const character = makeCharacterFixture({ specialFeats: [] })
     useCharacterStore.setState({
       characters: [character],
@@ -252,6 +256,89 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
       expect.objectContaining({ name: 'Skilled', source: 'XPHB' }),
     ])
+  })
+
+  test('keeps a missing fixed source and its saved options without offering another printing', () => {
+    const provenance = emptyProvenance()
+    provenance.feats['magic initiate'] = [
+      {
+        sourceType: 'background',
+        sourceName: 'Acolyte',
+        sourceRef: 'MISSING',
+        grantType: 'fixed',
+        grantVariant: 'cleric',
+        label: 'Acolyte',
+      },
+    ]
+    const character = makeCharacterFixture({
+      provenance,
+      fixedFeatOptions: { 'magic initiate|missing|cleric': { spellcastingClass: 'Cleric Spells' } },
+    })
+    useCharacterStore.setState({
+      activeCharacter: character,
+      activeCharacterId: character.id,
+      characters: [character],
+    })
+    renderPage('/feats?view=character')
+    expect(screen.getByText('Feat data unavailable')).toBeTruthy()
+    expect(screen.getByText('MISSING')).toBeTruthy()
+    expect(screen.getByText('Cleric')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Complete Setup' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit Setup' })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter).toEqual(character)
+  })
+
+  test('configures the exact raw fixed feat hidden from the selection catalog', () => {
+    rawFeatLookup = { 'Magic Initiate|OTHER': { ...magicInitiate, source: 'OTHER' } }
+    const provenance = emptyProvenance()
+    provenance.feats['magic initiate'] = [
+      {
+        sourceType: 'background',
+        sourceName: 'Acolyte',
+        sourceRef: 'OTHER',
+        grantType: 'fixed',
+        grantVariant: 'cleric',
+        label: 'Acolyte',
+      },
+    ]
+    const character = makeCharacterFixture({ provenance })
+    useCharacterStore.setState({
+      activeCharacter: character,
+      activeCharacterId: character.id,
+      characters: [character],
+    })
+    renderPage('/feats?view=character&feat=Magic+Initiate&source=OTHER&focus=feat')
+    fireEvent.click(screen.getByRole('button', { name: 'Complete Setup' }))
+    expect(screen.getByRole('dialog', { name: 'Configure Magic Initiate' }).textContent).toContain(
+      'Cleric Spells',
+    )
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Finish Setup' })))
+    expect(
+      useCharacterStore.getState().activeCharacter?.fixedFeatOptions?.[
+        'magic initiate|other|cleric'
+      ],
+    ).toEqual({ spellcastingClass: 'Cleric Spells' })
+    expect(
+      useCharacterStore.getState().activeCharacter?.fixedFeatOptions?.[
+        'magic initiate|xphb|cleric'
+      ],
+    ).toBeUndefined()
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.feats['magic initiate']?.[0]
+        .sourceRef,
+    ).toBe('OTHER')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Setup' }))
+    expect(screen.getByRole('alertdialog').textContent).toContain('Edit feat setup?')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.getByRole('dialog', { name: 'Configure Magic Initiate' }).textContent).toContain(
+      'Cleric Spells',
+    )
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Finish Setup' })))
+    expect(
+      useCharacterStore.getState().activeCharacter?.fixedFeatOptions?.[
+        'magic initiate|other|cleric'
+      ],
+    ).toEqual({ spellcastingClass: 'Cleric Spells' })
   })
 
   test('opens a source-qualified feat from a route deep link', () => {

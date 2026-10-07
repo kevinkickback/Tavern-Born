@@ -92,4 +92,51 @@ describe('BackgroundPage', () => {
     expect(screen.getAllByText('Origin Feat')).toHaveLength(1)
     expect(screen.getByText('A 2024 background description from the source data.')).toBeTruthy()
   })
+
+  test('reports a missing fixed feat instead of configuring a different source', async () => {
+    const character = useCharacterStore.getState().activeCharacter!
+    useCharacterStore.setState({
+      activeCharacter: { ...character, allowedSources: ['TEST', 'OTHER'] },
+    })
+    const data = makeGameDataFixture({
+      backgrounds: [background],
+      feats: [{ ...feat, source: 'OTHER' }],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildBackgroundPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    await userEvent.setup().click(screen.getByRole('button', { name: /Fixture Background$/ }))
+    expect(screen.getByText('Feat data unavailable (TEST).')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Configure feat' })).toBeNull()
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.feats[
+        'configurable fixture feat'
+      ]?.[0].sourceRef,
+    ).toBe('TEST')
+  })
+
+  test('retains exact fixed feat configuration when its source is filtered out', async () => {
+    const data = makeGameDataFixture({
+      backgrounds: [{ ...background, feats: [{ 'Configurable Fixture Feat|OTHER': true }] }],
+      feats: [{ ...feat, source: 'OTHER' }],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildBackgroundPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    await userEvent.setup().click(screen.getByRole('button', { name: /Fixture Background$/ }))
+    expect(screen.getByRole('link', { name: 'Configure feat' }).getAttribute('href')).toBe(
+      '/feats?view=character&feat=Configurable+Fixture+Feat&source=OTHER&focus=feat',
+    )
+    expect(screen.queryByText(/Feat data unavailable/)).toBeNull()
+  })
 })

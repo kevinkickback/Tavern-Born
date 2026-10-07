@@ -284,6 +284,15 @@ Lookup keys are case-normalized `name|source`. Exact resolution checks the filte
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Persisted references without a source are rejected rather than matched to the first printing.
 
+Fixed feat grants retain their explicit name/source and optional variant when the requested record
+is missing. Their resolver checks the filtered catalog, then the exact raw catalog; it never
+substitutes a same-name printing. Background and Feats projections show unavailable data and do
+not offer setup from another printing; readiness reports unresolved fixed grants even when prior
+options exist. A separately named legacy compatibility path permits a source-less fixed grant
+only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
+merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
+grants remain viewable/configurable after source filtering without entering the selection list.
+
 Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.
 Its pure resolver indexes class/subclass features with the saved class and subclass owner context,
 including raw nested subclass features when their source is filtered out. Choice details distinguish
