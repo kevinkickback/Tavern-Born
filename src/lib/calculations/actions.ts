@@ -4,7 +4,7 @@ import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProp
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
-import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -177,25 +177,28 @@ export function deriveSpellActions(
   }
 
   const spellStates = new Map<string, { reference: string; active: boolean }>()
+  const spellKey = (reference: string) => {
+    if (!unresolvedChild || classesById.size === 0) return getSpellNameKey(reference)
+    const spell = resolveSpellReference(reference, spellsByKey)
+    return spell ? getSpellReferenceKey(spell.name, spell.source) : getSpellReferenceKey(reference)
+  }
   const addSpell = (reference: string, active: boolean) => {
-    const key = getSpellNameKey(reference)
-    if (!key) return
+    if (!getSpellNameKey(reference)) return
+    const key = spellKey(reference)
     const existing = spellStates.get(key)
     if (existing) existing.active ||= active
     else spellStates.set(key, { reference, active })
   }
   for (const profile of profiles) {
     const preparedKeys = new Set(
-      [...profile.preparedSpells, ...(profile.alwaysPreparedSpells ?? [])].map(getSpellNameKey),
+      [...profile.preparedSpells, ...(profile.alwaysPreparedSpells ?? [])].map(spellKey),
     )
     const requiresPreparation = preparationRequiredByProfile.get(profile.id) ?? true
     for (const reference of profile.cantrips) addSpell(reference, true)
     for (const reference of profile.spellsKnown) {
       addSpell(
         reference,
-        !!profile.alwaysPrepared ||
-          !requiresPreparation ||
-          preparedKeys.has(getSpellNameKey(reference)),
+        !!profile.alwaysPrepared || !requiresPreparation || preparedKeys.has(spellKey(reference)),
       )
     }
   }

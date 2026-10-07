@@ -414,6 +414,109 @@ test('an unavailable exact subclass spell printing cannot fall back to a competi
   }
 })
 
+test.each([
+  'class',
+  'racial',
+  'special',
+  'legacy alias',
+  'legacy fixed',
+] as const)('a derived subclass printing respects %s identity and preparation', (owner) => {
+  const parent = { name: 'Parent', source: 'PHB' } as Race5e
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  install([parent])
+  catalog.lookups.classesByKey = buildClassLookup([
+    {
+      name: 'Cleric',
+      source: 'PHB',
+      spellcastingAbility: 'wis',
+      casterProgression: 'full',
+      preparedSpells: '<$level$> + <$wis_mod$>',
+      subclasses: [
+        {
+          name: 'Light Domain',
+          shortName: 'Light',
+          source: 'PHB',
+          className: 'Cleric',
+          classSource: 'PHB',
+          additionalSpells: [
+            {
+              prepared: {
+                3: [owner === 'legacy alias' ? 'burning hands|PHB' : 'burning hands|XPHB'],
+              },
+            },
+          ],
+        },
+      ],
+    } as Class5e,
+  ])
+  catalog.lookups.spellsByKey = buildSpellLookup([
+    { ...shockingGrasp, name: 'Burning Hands', level: 1 },
+    { ...otherPrinting, name: 'Burning Hands', level: 1 },
+  ])
+  const character = savedChoice(parent, child, 'Child Parent')
+  character.classProgression = [
+    { name: 'Cleric', source: 'PHB', levels: 3, subclass: 'Light Domain', subclassSource: 'PHB' },
+  ]
+  const classProfile = character.spells.spellProfiles[0]
+  Object.assign(classProfile, {
+    id: 'class:Cleric|PHB',
+    className: 'Cleric',
+    classSource: 'PHB',
+    spellsKnown: owner === 'class' ? ['Burning Hands|PHB'] : [],
+  })
+  const savedType = owner === 'legacy alias' ? 'racial' : owner === 'legacy fixed' ? 'class' : owner
+  const savedProfile = character.spells.spellProfiles.find((profile) => profile.type === savedType)
+  if (!savedProfile) throw new Error('Missing fixture profile')
+  savedProfile.cantrips = []
+  savedProfile.spellsKnown = [owner === 'legacy alias' ? 'Burning Hands' : 'Burning Hands|PHB']
+  if (owner === 'legacy fixed') savedProfile.fixedSpells = ['Burning Hands']
+  savedProfile.choices = undefined
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  const before = structuredClone(character)
+  const context = createCharacterCalculationContext(character, catalog.lookups)
+  const direct = deriveSpellActions(character, catalog.lookups.spellsByKey, {
+    classes: context.classes,
+    raceResolution: context.raceResolution,
+  })
+  const { result } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  for (const actions of [direct, result.current, pdf.actions]) {
+    const expected =
+      owner === 'legacy alias'
+        ? [{ source: 'PHB', active: true }]
+        : owner === 'legacy fixed'
+          ? [{ source: 'XPHB', active: true }]
+          : [
+              { source: 'PHB', active: owner !== 'class' },
+              { source: 'XPHB', active: true },
+            ]
+    expect(
+      actions
+        .filter((action) => action.name === 'Burning Hands')
+        .map((action) => ({ source: action.source.source, active: action.active }))
+        .sort((left, right) => (left.source ?? '').localeCompare(right.source ?? '')),
+    ).toEqual(expected)
+  }
+  if (owner === 'class') {
+    catalog.lookups.spellsByKey = buildSpellLookup([
+      { ...shockingGrasp, name: 'Burning Hands', level: 1 },
+    ])
+    const missingTarget = deriveSpellActions(character, catalog.lookups.spellsByKey, {
+      classes: context.classes,
+      raceResolution: context.raceResolution,
+    })
+    expect(missingTarget).toContainEqual(
+      expect.objectContaining({
+        name: 'Burning Hands',
+        source: expect.objectContaining({ source: 'PHB' }),
+        active: false,
+      }),
+    )
+    expect(missingTarget.filter((action) => action.name === 'Burning Hands')).toHaveLength(1)
+  }
+  expect(character).toEqual(before)
+})
+
 function assertSavedChoiceAcrossConsumers(character: Character, expectedProfileName: string) {
   const before = structuredClone(character)
   const { result: raceResult } = renderHook(() => useCharacterRaceData(character))

@@ -5,7 +5,12 @@ import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUt
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type { Character, RaceSpellChoice, SpellProfile } from '@/types/character'
-import { buildSpellNameKeySet, getSpellNameKey } from './spellIdentity'
+import {
+  buildSpellNameKeySet,
+  getSpellNameKey,
+  getSpellReferenceKey,
+  parseSpellReference,
+} from './spellIdentity'
 import {
   buildClassProfileLabel,
   RACIAL_SPELL_PROFILE_LABEL,
@@ -34,11 +39,15 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
   }
 }
 
-function mergeSpellNames(existing: string[], additions: string[]): string[] {
+function mergeSpellNames(
+  existing: string[],
+  additions: string[],
+  spellKey = getSpellNameKey,
+): string[] {
   if (additions.length === 0) return existing
-  const byKey = new Map(existing.map((name) => [getSpellNameKey(name), name] as const))
+  const byKey = new Map(existing.map((name) => [spellKey(name), name] as const))
   for (const name of additions) {
-    const key = getSpellNameKey(name)
+    const key = spellKey(name)
     if (!key || byKey.has(key)) continue
     byKey.set(key, name)
   }
@@ -242,6 +251,9 @@ export function ensureSpellProfiles(
   const next: SpellProfile[] = []
 
   const classEntries = getCharacterClassEntries(character)
+  const spellKey = options?.preserveUnavailableClassProfiles
+    ? getSpellReferenceKey
+    : getSpellNameKey
 
   for (const entry of classEntries) {
     const id = toClassProfileId(entry.name, entry.source)
@@ -274,14 +286,19 @@ export function ensureSpellProfiles(
     // derived set before merging so changing subclasses or losing a level cannot
     // leave stale grants behind in the parent class profile.
     const previousFixedKeys = new Set(
-      (existingProfile?.fixedSpells ?? []).map((name) => getSpellNameKey(name)),
+      (existingProfile?.fixedSpells ?? []).map((name) => spellKey(name)),
+    )
+    const legacyFixedKeys = new Set(
+      (existingProfile?.fixedSpells ?? [])
+        .filter((name) => !parseSpellReference(name).source)
+        .map(getSpellNameKey),
     )
     const shouldRetain = (name: string) =>
-      !previousFixedKeys.has(getSpellNameKey(name)) ||
+      (!previousFixedKeys.has(spellKey(name)) && !legacyFixedKeys.has(getSpellNameKey(name))) ||
       hasIndependentClassOwnership(character, entry, name)
     const retainedCantrips = (existingProfile?.cantrips ?? []).filter(shouldRetain)
     const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(shouldRetain)
-    const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map(getSpellNameKey))
+    const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map((name) => spellKey(name)))
 
     next.push({
       id,
@@ -289,10 +306,10 @@ export function ensureSpellProfiles(
       label: buildClassProfileLabel(entry),
       className: entry.name,
       classSource: entry.source,
-      cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips),
-      spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells),
+      cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips, spellKey),
+      spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells, spellKey),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(
-        (name) => !alwaysPreparedKeys.has(getSpellNameKey(name)),
+        (name) => !alwaysPreparedKeys.has(spellKey(name)),
       ),
       fixedSpells:
         grantedSubclassSpells.length > 0
