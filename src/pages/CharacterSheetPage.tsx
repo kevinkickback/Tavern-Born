@@ -33,9 +33,11 @@ import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   useBackgroundLookup,
+  useClassFeatureLookup,
   useClassLookup,
   useItemLookup,
   useItemPropertyLookup,
+  useOptionalFeatureLookup,
   useOrganizations,
   useRaceLookup,
   useSpellLookup,
@@ -107,6 +109,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   useEffect(() => subscribeToHintReset(() => setShowPagesHint(true)), [])
   const character = useCharacterStore((state) => state.activeCharacter)
   const classesByKey = useClassLookup()
+  const classFeaturesByKey = useClassFeatureLookup()
+  const optionalFeaturesByKey = useOptionalFeatureLookup()
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
@@ -150,6 +154,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       character
         ? createCharacterSheetViewModel(character, {
             classesByKey,
+            classFeaturesByKey,
+            optionalFeaturesByKey,
             racesByKey,
             backgroundsByKey,
             spellsByKey,
@@ -163,12 +169,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     [
       backgroundsByKey,
       character,
+      classFeaturesByKey,
       classesByKey,
       creaturesByKey,
       featsByKey,
       itemPropertyByAbbr,
       itemLookup,
       organizations,
+      optionalFeaturesByKey,
       racesByKey,
       spellsByKey,
     ],
