@@ -256,6 +256,12 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
       expect.objectContaining({ name: 'Skilled', source: 'XPHB' }),
     ])
+    expect(
+      screen.getByRole('button', { name: 'Select Skilled' }).getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(screen.getAllByText('Gain proficiency using the revised printing.')).toHaveLength(2)
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Remove Skilled' })))
+    expect(screen.queryByText('Gain proficiency using the revised printing.')).toBeNull()
   })
 
   test('keeps a missing fixed source and its saved options without offering another printing', () => {

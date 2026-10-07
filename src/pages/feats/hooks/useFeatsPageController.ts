@@ -52,7 +52,11 @@ export function isSelectedFeat(
   name: string,
   source: string | undefined,
 ): boolean {
-  return selected?.name === name && selected.source === (source ?? '')
+  return (
+    selected !== null &&
+    getFixedFeatOptionKey(selected.name, selected.source) ===
+      getFixedFeatOptionKey(name, source ?? '')
+  )
 }
 
 export function useFeatsPageController() {
@@ -462,13 +466,8 @@ export function useFeatsPageController() {
     pendingOptionCount > 0
   const activeFeatName = selectedFeat?.name ?? null
   const activeFeatData =
-    (feats as Feat5e[]).find(
-      (feat) =>
-        feat.name === selectedFeat?.name && (feat.source ?? '') === (selectedFeat?.source ?? ''),
-    ) ??
-    fixedGrantedFeats.find(
-      (feat) => feat.name === selectedFeat?.name && feat.source === selectedFeat?.source,
-    )?.featData
+    (feats as Feat5e[]).find((feat) => isSelectedFeat(selectedFeat, feat.name, feat.source)) ??
+    fixedGrantedFeats.find((feat) => isSelectedFeat(selectedFeat, feat.name, feat.source))?.featData
 
   return {
     activeFeatData,

@@ -290,6 +290,9 @@ substitutes a same-name printing. Background and Feats projections show unavaila
 not offer setup from another printing; readiness reports unresolved fixed grants even when prior
 options exist. Cards and details evaluate prerequisites only when the requested feat data is
 available; missing rules cannot establish that prerequisites are met or unmet.
+The selected card and inspector compare the complete normalized name/source identity, so a
+selection made during absence follows its exact printing when rules return without rewriting
+the saved grant or its options.
 A separately named legacy compatibility path permits a source-less fixed grant
 only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
 merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
