@@ -221,7 +221,7 @@ describe('getCharacterReadiness', () => {
       ],
       classFeatureRefs: [
         {
-          ref: 'test',
+          ref: 'Test Choice Level|Test Class|TEST|1|TEST',
           name: 'Test Choice Level',
           className: 'Test Class',
           level: 1,

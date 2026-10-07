@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -59,6 +60,68 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test('offers subclass selection at the encoded gain level rather than stale metadata', () => {
+    const info = getSubclassSelectionInfo({
+      name: 'Artificer',
+      source: 'PHB',
+      classFeatureRefs: [
+        {
+          ref: 'Specialty|Artificer||8',
+          name: 'Specialty',
+          className: 'Artificer',
+          level: 4,
+          gainSubclassFeature: true,
+        },
+      ],
+    })
+    const onOpenSubclassPicker = vi.fn()
+    const { rerender } = render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          ...info,
+          asiLevels: [],
+          onOpenSubclassPicker,
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByText('Level 4 Features'))
+    expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
+    rerender(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          ...info,
+          levelsToShow: [8],
+          viewingClassLevel: 8,
+          asiLevels: [],
+          onOpenSubclassPicker,
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByText('Level 8 Features'))
+    fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    expect(onOpenSubclassPicker).toHaveBeenCalledOnce()
+  })
+
+  test('does not offer subclass selection when a marked reference has an invalid level', () => {
+    const info = getSubclassSelectionInfo({
+      name: 'Artificer',
+      source: 'PHB',
+      classFeatureRefs: [
+        {
+          ref: 'Specialty|Artificer||invalid',
+          name: 'Specialty',
+          className: 'Artificer',
+          level: 4,
+          gainSubclassFeature: true,
+        },
+      ],
+    })
+    render(<BuildClassLevelsPanel {...makeProps({ ...info, asiLevels: [] })} />)
+    fireEvent.click(screen.getByText('Level 4 Features'))
+    expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
+    expect(screen.queryByText('Subclass')).toBeNull()
+  })
+
   test('opens and highlights the advancement control targeted from Review', async () => {
     render(
       <BuildClassLevelsPanel
