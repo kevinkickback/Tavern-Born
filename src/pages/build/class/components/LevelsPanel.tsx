@@ -55,7 +55,7 @@ interface BuildClassLevelsPanelProps {
   onSelectClassTab: (className: string) => void
   character: Character
   levelsToShow: number[]
-  subclassLevel: number
+  subclassLevel: number | undefined
   asiLevels: number[]
   spellChoicesByLevel: Map<
     number,

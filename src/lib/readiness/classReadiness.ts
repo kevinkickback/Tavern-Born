@@ -21,11 +21,15 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import { readinessClassKey, readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
 
-function classChoiceTarget(entry: CharacterClassEntry, level: number, choiceId?: string): string {
+function classChoiceTarget(
+  entry: CharacterClassEntry,
+  level: number | undefined,
+  choiceId?: string,
+): string {
   const params = new URLSearchParams({
     class: `${entry.name}|${entry.source}`,
-    level: String(level),
   })
+  if (level !== undefined) params.set('level', String(level))
   if (choiceId) params.set('choice', choiceId)
   return `/build/class?${params.toString()}`
 }
@@ -67,6 +71,7 @@ export function validateClassChoices(
     const subclassInfo = getSubclassSelectionInfo(classData)
     if (
       (classData.subclasses?.length ?? 0) > 0 &&
+      subclassInfo.subclassLevel !== undefined &&
       entry.levels >= subclassInfo.subclassLevel &&
       !entry.subclass
     ) {

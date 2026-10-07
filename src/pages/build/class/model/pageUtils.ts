@@ -13,7 +13,7 @@ interface CountAsiAndFeatSlotsParams {
 interface BuildLevelsToShowParams {
   allClassFeatures: Array<{ level?: number }>
   asiLevels: number[]
-  subclassLevel: number
+  subclassLevel: number | undefined
   viewingClassLevel: number
   spellChoicesByLevel: Map<number, unknown>
   classChoiceLevels?: number[]
@@ -89,7 +89,7 @@ export function buildLevelsToShow({
       levels.add(level)
     })
 
-  if (subclassLevel <= viewingClassLevel) {
+  if (subclassLevel !== undefined && subclassLevel <= viewingClassLevel) {
     levels.add(subclassLevel)
   }
 

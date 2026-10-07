@@ -1,3 +1,4 @@
+import { getClassFeatureReferenceLevel } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   FEAT_CATEGORY_LABEL_FALLBACKS,
@@ -139,7 +140,7 @@ function groupFeaturesByLevel<T extends { level?: number }>(features: T[]): Map<
 }
 
 export function getSubclassSelectionInfo(classData: Class5e | undefined): {
-  subclassLevel: number
+  subclassLevel: number | undefined
   subclassFeatureName: string | null
 } {
   const ref = (classData?.classFeatureRefs ?? []).find(
@@ -147,7 +148,7 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
   )
 
   return {
-    subclassLevel: ref?.level ?? ref?.feature?.level ?? 3,
+    subclassLevel: ref ? getClassFeatureReferenceLevel(ref) : 3,
     subclassFeatureName: ref?.feature?.name ?? ref?.name ?? null,
   }
 }

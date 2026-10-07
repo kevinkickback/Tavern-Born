@@ -9,7 +9,7 @@ interface SpellGain {
 
 interface ComputeLevelDisplayDataParams {
   level: number
-  subclassLevel: number
+  subclassLevel: number | undefined
   subclassFeatureName: string | null
   asiLevels: number[]
   spellChoicesByLevel: Map<number, SpellGain>

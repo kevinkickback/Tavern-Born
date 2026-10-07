@@ -136,8 +136,17 @@ use the resolved feature source, falling back
 to the decoded UID source for omitted or blank target sources before considering the enclosing
 class source.
 This contract covers class-feature ingestion; global search/display lookups and stored-feature
-consumer identities have separate compatibility requirements. Cache schema 25 rebuilds older
-parsed catalogs with this normalization and the existing race/subrace normalization together.
+consumer identities have separate compatibility requirements. Class ASI, expertise, subclass
+selection and feature-owned choice gain levels use the same codec: a complete encoded UID supplies the level
+even when materialized metadata disagrees. A malformed nonempty UID cannot gain a level from
+metadata or display text. Rows without a UID may use an explicit positive integer numeric level,
+or the attached feature level when that field is absent. Subclass selection retains its legacy
+level-three default only when there is no class-feature reference marked for subclass gain;
+a marked reference with an invalid level remains unknown and cannot enable a selection. Readiness
+navigation for an unavailable selected subclass omits the level when it is unknown.
+Subclass references retain their separate layout and normalization contract. Cache schema 26
+rebuilds older parsed catalogs, including
+normalized class schedules and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected
