@@ -87,6 +87,18 @@ describe('writeGameDataCache', () => {
     await expect(readGameDataCache()).resolves.toBeNull()
   })
 
+  test.each([
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+  ])('rejects catalogs predating class-feature identity schema: %s', async (schema) => {
+    idbGetMock.mockResolvedValue({
+      data: makeGameData(),
+      cacheSchemaVersion: schema,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: { type: config.type, path: config.path },
+    })
+    await expect(readGameDataCache()).resolves.toBeNull()
+  })
+
   test('preserves lastDataChangedAt when fingerprint matches existing cache', async () => {
     const data = makeGameData()
     // First write to establish a cache entry

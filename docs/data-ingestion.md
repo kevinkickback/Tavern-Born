@@ -120,6 +120,21 @@ Do not:
 Emergency content substitutions live in `sourceFallbacks.ts`; ruleset metadata gaps live in the
 explicit ruleset metadata module. Both must be testable and removable.
 
+Class-feature references decode the pinned upstream
+[`DataUtil.class` UID contract](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js)
+through `classFeatureIdentity.ts`. Resolution includes feature name, owner class name/source,
+positive integer gain level and feature source. Empty packed class sources default to PHB; empty
+feature sources default to the decoded class source, independently of the surrounding class.
+Whitespace/case normalization does not change the retained raw UID or subclass-gain flag. An absent
+exact target or incomplete UID remains unresolved; another owner, level or printing cannot supply
+it, and a resolved record never rewrites the reference's encoded identity. Source-stack composition
+uses the same identity codec for overlays and can resolve an absent target later using the retained
+identity, including upstream default source fields. Incomplete reference fields remain unresolved
+after layering. This contract covers class-feature ingestion; global search/display lookups and
+stored-feature consumer identities have separate
+compatibility requirements. Cache schema 25 rebuilds older parsed catalogs with this normalization
+and the existing race/subrace normalization together.
+
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected
 with a copy diagnostic, including nested spell groups and property selectors. Traversal reads only

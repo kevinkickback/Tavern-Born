@@ -1,4 +1,8 @@
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
+import {
+  decodeClassFeatureReference,
+  getClassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import type { ClassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
@@ -8,11 +12,8 @@ function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, Parse
 
   for (const record of classFeatureRecords) {
     const feature = asObject(record)
-    const name = normalizeKey(feature.name)
-    const source = normalizeKey(feature.source)
-    if (!name || !source) continue
-
-    const key = `${name}|${source}`
+    const key = getClassFeatureIdentity(feature)
+    if (!key) continue
     if (!index.has(key)) {
       index.set(key, feature)
     }
@@ -45,53 +46,9 @@ function getIsSpellcasterClass(classObj: ParsedObject): boolean {
   return !!getClassSpellSlotProgression(classObj)
 }
 
-function resolveClassFeatureRecord(
-  ref: ParsedObject,
-  featureIndex: Map<string, ParsedObject>,
-  classFeatureRecords: unknown[],
-): ParsedObject | undefined {
-  const name = normalizeKey(ref.name)
-  const source = normalizeKey(ref.source)
-
-  if (name && source) {
-    const exact = featureIndex.get(`${name}|${source}`)
-    if (exact) return exact
-  }
-
-  const className = normalizeKey(ref.className)
-  const classSource = normalizeKey(ref.classSource)
-  const level = typeof ref.level === 'number' ? ref.level : undefined
-
-  for (const record of classFeatureRecords) {
-    const feature = asObject(record)
-    if (normalizeKey(feature.name) !== name) continue
-    if (className && normalizeKey(feature.className) !== className) continue
-    if (classSource && normalizeKey(feature.classSource) !== classSource) continue
-    if (level !== undefined && feature.level !== level) continue
-    if (source && typeof feature.source === 'string' && normalizeKey(feature.source) !== source)
-      continue
-    return feature
-  }
-
-  if (!source) {
-    for (const record of classFeatureRecords) {
-      const feature = asObject(record)
-      if (normalizeKey(feature.name) !== name) continue
-      if (className && normalizeKey(feature.className) !== className) continue
-      if (classSource && normalizeKey(feature.classSource) !== classSource) continue
-      if (level !== undefined && feature.level !== level) continue
-      return feature
-    }
-  }
-
-  return undefined
-}
-
 function parseClassFeatureReference(
   rawRef: unknown,
-  classObj: ParsedObject,
   featureIndex: Map<string, ParsedObject>,
-  classFeatureRecords: unknown[],
 ): ParsedObject | null {
   const refObj = typeof rawRef === 'object' && rawRef !== null ? asObject(rawRef) : {}
   const refText =
@@ -103,47 +60,22 @@ function parseClassFeatureReference(
 
   if (!refText) return null
 
-  const parts = refText.split('|')
-  const level = Number.parseInt(parts[3] ?? '', 10)
-  const parsedRef: ParsedObject = {
-    ref: refText,
-    name: parts[0] ?? '',
-    className: parts[1] || classObj.name || '',
-    classSource: parts[2] || classObj.source,
-    source: parts[4] || parts[2] || classObj.source,
+  const parsedRef = {
+    ...decodeClassFeatureReference(refText),
     gainSubclassFeature: refObj.gainSubclassFeature === true,
   }
-
-  if (!Number.isNaN(level)) {
-    parsedRef.level = level
-  }
-
-  const feature = resolveClassFeatureRecord(parsedRef, featureIndex, classFeatureRecords)
-  if (!feature) return parsedRef
-
-  return {
-    ...parsedRef,
-    source:
-      typeof feature.source === 'string' && feature.source.length > 0
-        ? feature.source
-        : parsedRef.source,
-    classSource:
-      typeof feature.classSource === 'string' && feature.classSource.length > 0
-        ? feature.classSource
-        : parsedRef.classSource,
-    level: typeof feature.level === 'number' ? feature.level : parsedRef.level,
-    feature,
-  }
+  const key = getClassFeatureIdentity(parsedRef)
+  const feature = key ? featureIndex.get(key) : undefined
+  return feature ? { ...parsedRef, feature } : parsedRef
 }
 
 function parseClassFeatureReferences(
   classObj: ParsedObject,
-  classFeatureRecords: unknown[],
   featureIndex: Map<string, ParsedObject>,
 ): ParsedObject[] {
   const refs = asArray(classObj.classFeatures)
   return refs
-    .map((ref) => parseClassFeatureReference(ref, classObj, featureIndex, classFeatureRecords))
+    .map((ref) => parseClassFeatureReference(ref, featureIndex))
     .filter((ref): ref is ParsedObject => ref !== null)
 }
 
@@ -458,11 +390,7 @@ export function parseClasses(data: unknown): unknown[] {
     const clsObj = asObject(cls)
     const key = `${String(clsObj.name ?? '')}|${String(clsObj.source ?? '')}`
     const nested = subclassMap.get(key)
-    const classFeatureRefs = parseClassFeatureReferences(
-      clsObj,
-      classFeatureRecords,
-      classFeatureIndex,
-    )
+    const classFeatureRefs = parseClassFeatureReferences(clsObj, classFeatureIndex)
     const spellSlotProgression = getClassSpellSlotProgression(clsObj)
 
     return {
