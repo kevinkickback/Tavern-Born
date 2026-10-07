@@ -285,6 +285,9 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByText('Cleric')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Complete Setup' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Edit Setup' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Select magic initiate' }))
+    expect(screen.queryByText('Prerequisites met')).toBeNull()
+    expect(screen.queryByText('Prerequisites unmet')).toBeNull()
     expect(useCharacterStore.getState().activeCharacter).toEqual(character)
   })
 

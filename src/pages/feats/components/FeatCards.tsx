@@ -79,11 +79,11 @@ export const FeatDetailCard = memo(function FeatDetailCard({
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
       : null
-  const { met, failures, status } = useMemo(
+  const prerequisiteResult = useMemo(
     () =>
       featData
         ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
-        : { met: true, failures: [], status: 'met' },
+        : undefined,
     [featData, characterSnapshot],
   )
   const originLabel = isOrigin
@@ -167,12 +167,14 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                 )}
                 {grantVariantLabel && <Badge variant="outline">{grantVariantLabel}</Badge>}
                 {fixedGrant && !featData && <Badge variant="outline">Feat data unavailable</Badge>}
-                {!met && (
+                {prerequisiteResult && !prerequisiteResult.met && (
                   <Badge
                     variant="outline"
                     className="h-5 border-destructive/50 px-1.5 py-0 text-xs text-destructive"
                   >
-                    {status === 'unsupported' ? 'Prereqs need review' : 'Prereqs unmet'}
+                    {prerequisiteResult.status === 'unsupported'
+                      ? 'Prereqs need review'
+                      : 'Prereqs unmet'}
                   </Badge>
                 )}
                 {optionsPending && (
@@ -188,9 +190,13 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                 {[categoryLabel, feat.source].filter(Boolean).join(' · ')}
               </p>
             )}
-            {!met && failures.length > 0 && (
-              <p className="mb-2 text-sm text-warning-foreground">{failures.join(' · ')}</p>
-            )}
+            {prerequisiteResult &&
+              !prerequisiteResult.met &&
+              prerequisiteResult.failures.length > 0 && (
+                <p className="mb-2 text-sm text-warning-foreground">
+                  {prerequisiteResult.failures.join(' · ')}
+                </p>
+              )}
             {descHtml ? (
               <div
                 className="line-clamp-2 text-sm leading-relaxed text-muted-foreground"
@@ -285,7 +291,7 @@ export function FeatDetailsInspector({
       : null
   const prerequisiteResult = featData
     ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
-    : { met: true, failures: [], status: 'met' }
+    : undefined
   const descriptionEntries = featData?.entries ?? []
 
   return (
@@ -307,25 +313,29 @@ export function FeatDetailsInspector({
                   <Badge
                     variant="outline"
                     className={cn(
-                      prerequisiteResult.met
+                      prerequisiteResult?.met
                         ? 'border-success/40 text-success'
                         : 'border-warning/50 text-warning-foreground',
                     )}
                   >
-                    {prerequisiteResult.met
-                      ? 'Prerequisites met'
-                      : prerequisiteResult.status === 'unsupported'
-                        ? 'Prerequisites need review'
-                        : 'Prerequisites unmet'}
+                    {!prerequisiteResult
+                      ? 'Feat data unavailable'
+                      : prerequisiteResult.met
+                        ? 'Prerequisites met'
+                        : prerequisiteResult.status === 'unsupported'
+                          ? 'Prerequisites need review'
+                          : 'Prerequisites unmet'}
                   </Badge>
                 </div>
               </div>
               <Separator />
-              {!prerequisiteResult.met && prerequisiteResult.failures.length > 0 && (
-                <div className="border-warning border-l-2 bg-warning/5 px-3 py-2 text-sm text-warning-foreground">
-                  {prerequisiteResult.failures.join(' · ')}
-                </div>
-              )}
+              {prerequisiteResult &&
+                !prerequisiteResult.met &&
+                prerequisiteResult.failures.length > 0 && (
+                  <div className="border-warning border-l-2 bg-warning/5 px-3 py-2 text-sm text-warning-foreground">
+                    {prerequisiteResult.failures.join(' · ')}
+                  </div>
+                )}
               {descriptionEntries.length > 0 ? (
                 <GameContent
                   entry={descriptionEntries}

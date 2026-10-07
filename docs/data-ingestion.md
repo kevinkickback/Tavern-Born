@@ -288,7 +288,9 @@ Fixed feat grants retain their explicit name/source and optional variant when th
 is missing. Their resolver checks the filtered catalog, then the exact raw catalog; it never
 substitutes a same-name printing. Background and Feats projections show unavailable data and do
 not offer setup from another printing; readiness reports unresolved fixed grants even when prior
-options exist. A separately named legacy compatibility path permits a source-less fixed grant
+options exist. Cards and details evaluate prerequisites only when the requested feat data is
+available; missing rules cannot establish that prerequisites are met or unmet.
+A separately named legacy compatibility path permits a source-less fixed grant
 only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
 merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
 grants remain viewable/configurable after source filtering without entering the selection list.

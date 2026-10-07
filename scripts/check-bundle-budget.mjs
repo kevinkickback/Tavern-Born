@@ -18,8 +18,8 @@ export const BUNDLE_BUDGETS = Object.freeze({
   // Structural copy-value comparison adds 0.3 KiB; measured total is 5460.0 KiB.
   // Complete class-feature lookups and compatible Actions/PDF projection add 0.8 KiB;
   // measured renderer total is 5461.6 KiB. No dependency added; this requires budget review.
-  // Exact fixed feat resolution and missing-data UI/readiness add 1352 bytes; measured total
-  // is 5,594,084 bytes (5463.0 KiB). No dependency added; this requires budget review.
+  // Exact fixed feat resolution and missing-data UI/readiness add 1339 bytes; measured total
+  // is 5,594,071 bytes (5463.0 KiB). No dependency added; this requires budget review.
   rendererCode: 5463 * KIB,
   // The same adapters bring the measured initial script from 432.0 to 435.2 KiB.
   // Fixed feat identity adds 330 bytes: 446,439 bytes, still within the unchanged 436 KiB cap.
