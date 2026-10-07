@@ -130,10 +130,12 @@ exact target or incomplete UID remains unresolved; another owner, level or print
 it, and a resolved record never rewrites the reference's encoded identity. Source-stack composition
 uses the same identity codec for overlays and can resolve an absent target later using the retained
 identity, including upstream default source fields. Incomplete reference fields remain unresolved
-after layering. This contract covers class-feature ingestion; global search/display lookups and
-stored-feature consumer identities have separate
-compatibility requirements. Cache schema 25 rebuilds older parsed catalogs with this normalization
-and the existing race/subrace normalization together.
+after layering. Choice owners and option references use the resolved feature source, falling back
+to the decoded UID source for omitted or blank target sources before considering the enclosing
+class source.
+This contract covers class-feature ingestion; global search/display lookups and stored-feature
+consumer identities have separate compatibility requirements. Cache schema 25 rebuilds older
+parsed catalogs with this normalization and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected

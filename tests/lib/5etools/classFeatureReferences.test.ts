@@ -154,6 +154,45 @@ describe('class-feature encoded identity', () => {
 })
 
 describe('class-feature reference composition', () => {
+  test.each([
+    ['PHB', '', undefined],
+    ['PHB', '', ''],
+    ['PHB', '', ' '],
+    ['TCE', 'TCE', undefined],
+    ['TCE', 'TCE', ''],
+    ['TCE', 'TCE', ' '],
+  ])('qualifies decoded %s source (%s) with blank target source %j', (source, packedSource, rawSource) => {
+    const target = {
+      ...feature,
+      classSource: source,
+      source: rawSource,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [
+            { type: 'refOptionalfeature', optionalfeature: 'Shared Option' },
+            { type: 'refOptionalfeature', optionalfeature: 'Explicit Option|XPHB' },
+          ],
+        },
+      ],
+    }
+    const owner = parse([`Shared|Wizard|${packedSource}|8`], [target], 'HB')
+    expect(owner.classFeatureRefs?.[0]?.source).toBe(source)
+    expect(owner.normalizedRules?.choices[0]?.owner.featureSource).toBe(source)
+    expect(owner.normalizedRules?.choices[0]?.options[0]?.source).toBe(source)
+    expect(owner.normalizedRules?.choices[0]?.options[1]?.source).toBe('XPHB')
+
+    const unresolved = parse([`Shared|Wizard|${packedSource}|8`], [], 'HB')
+    const composed = composeGameDataLayers([
+      makeGameDataFixture({ classes: [unresolved] }),
+      // Raw feature metadata can omit its defaulted source before composition.
+      makeGameDataFixture({ classFeatures: [target as ClassFeature] }),
+    ])
+    expect(composed.classes[0].normalizedRules?.choices[0]?.options[0]?.source).toBe(source)
+    expect(composed.classes[0].normalizedRules?.choices[0]?.options[1]?.source).toBe('XPHB')
+  })
+
   test('uses the same default owner source for exact overlays and references', () => {
     const original = { ...feature, classSource: undefined }
     const replacement = { ...original, entries: ['Winning default-source rules'] }
