@@ -4,7 +4,7 @@
 
 `main` is the only long-lived branch. Normally start each change from current `main` on a
 short-lived branch, open a pull request back to `main`, and delete the branch after its squash
-merge. The current [local-only remediation phase](#local-only-remediation) postpones publishing
+merge. A user-requested [local-only remediation phase](#local-only-remediation) postpones publishing
 and merging while allowing implementation, independent review, validation, and local commits.
 
 Protect `main` with the repository's **Main Protection** ruleset:
@@ -154,11 +154,13 @@ defect-free release.
 
 ## Local-only remediation
 
-The user has paused GitHub delivery while Copilot review is unavailable. This phase remains active
-across new chats until the user explicitly resumes publishing. Read `AGENTS.md`, the repository
-instructions, and private `docs/review/workflow-state.md` when present at the start of remediation.
-The private state file records current branch dependencies, review reports, and checkpoints; it is
-not source material for public issues or PR descriptions.
+When the user pauses GitHub delivery, including when Copilot review is unavailable, that pause
+persists across new chats until the user explicitly resumes publishing. Read `AGENTS.md`, the
+repository instructions, and private `docs/review/workflow-state.md` when present at the start of
+remediation. The private state file records the active mode, authorization to resume, branch
+dependencies, holds, review reports and checkpoints; it is not source material for public issues
+or PR descriptions. A current explicit user instruction takes precedence over an older mode
+record; update the record before continuing work.
 
 Continue bounded implementations on local branches. Local checkpoint commits may freeze a revision
 for review; mark a checkpoint locally accepted only after validation and independent review.
@@ -205,8 +207,9 @@ do not close its audit finding or public issue as delivered. Record partial cove
 Keep security-sensitive fixes and evidence local until the user authorizes an appropriate private
 publication path; resuming ordinary GitHub delivery does not authorize public disclosure.
 
-When the user resumes delivery, prepare focused PRs in dependency order, include the policy change,
-reconcile each branch with current `main`, and review/test the exact final diff again after integration.
+When the user resumes delivery, record that authorization and prepare focused PRs in dependency
+order. Include the policy change, reconcile each branch with current `main`, and review/test the
+exact final diff again after integration.
 Obtain Copilot review, address available actionable findings, and require both GitHub CI jobs before
 using native squash auto-merge. Never bypass these steps merely because a local checkpoint passed.
 

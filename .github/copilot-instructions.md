@@ -48,11 +48,13 @@ Update the relevant guide in the same change when a stable contract or workflow 
    fresh subagent without implementation conversation history. Review the final diff and affected
    callers, verify findings, and record the exact reviewed revision. The implementer's own review
    is additional evidence. Follow [CI/CD Workflow](../docs/cicd-workflow.md#independent-review).
-10. **Keep current audit remediation local-only.** Use scoped local branches and commits until the
-    user explicitly resumes GitHub delivery. Do not push, create or update PRs, merge to `main`,
-    or release during this phase. Preserve existing PRs for later Copilot review. Read the private
+10. **Honor the active delivery mode and dependency holds.** Read the private
     `docs/review/workflow-state.md` when present and record dependencies before continuing work.
-    Follow the [scope limits](../docs/cicd-workflow.md#local-remediation-scope): preserve held
-    dependency chains and prioritize independent fixes from the latest accepted policy foundation.
+    During a user-requested delivery pause, use scoped local branches and commits; do not push,
+    create/update PRs, merge to `main`, or release until the user explicitly resumes delivery.
+    Preserve existing PRs during the pause. After resumption, follow the
+    [reviewed delivery workflow](../docs/cicd-workflow.md#day-to-day-development).
+    Follow the [scope limits](../docs/cicd-workflow.md#local-remediation-scope) while paused or
+    subject to a recorded dependency hold; resumption does not automatically lift those holds.
 11. **Keep private findings private.** Audit evidence, reviewer reports, and security-sensitive
     findings under ignored `docs/review/` must not enter public commits, issues, PRs, or attachments.

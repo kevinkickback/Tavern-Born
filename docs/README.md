@@ -18,7 +18,7 @@ the authority for implementation details; avoid turning this folder into a file-
 - [Provenance](provenance.md): grant ownership and source-change reconciliation.
 - [React Patterns](react-patterns.md): repository-specific component and hook conventions.
 - [Testing Map](testing-map.md): test boundaries, commands, and release checks.
-- [CI/CD Workflow](cicd-workflow.md): independent reviews, local-only remediation, PRs, and releases.
+- [CI/CD Workflow](cicd-workflow.md): independent reviews, delivery pauses/resumption, PRs, and releases.
 - [PDF Generation](pdf-generation.md): template and export boundaries.
 - [Changelog](changelog.md): user-facing release notes.
 
