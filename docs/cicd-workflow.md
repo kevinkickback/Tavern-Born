@@ -4,7 +4,7 @@
 
 `main` is the only long-lived branch. Normally start each change from current `main` on a
 short-lived branch, open a pull request back to `main`, and delete the branch after its squash
-merge. The current [local-only remediation phase](#local-only-remediation) postpones publishing
+merge. A user-requested [local-only remediation phase](#local-only-remediation) postpones publishing
 and merging while allowing implementation, independent review, validation, and local commits.
 
 Protect `main` with the repository's **Main Protection** ruleset:
@@ -154,11 +154,13 @@ defect-free release.
 
 ## Local-only remediation
 
-The user has paused GitHub delivery while Copilot review is unavailable. This phase remains active
-across new chats until the user explicitly resumes publishing. Read `AGENTS.md`, the repository
-instructions, and private `docs/review/workflow-state.md` when present at the start of remediation.
-The private state file records current branch dependencies, review reports, and checkpoints; it is
-not source material for public issues or PR descriptions.
+When the user pauses GitHub delivery, including when Copilot review is unavailable, that pause
+persists across new chats until the user explicitly resumes publishing. Read `AGENTS.md`, the
+repository instructions, and private `docs/review/workflow-state.md` when present at the start of
+remediation. The private state file records the active mode, authorization to resume, branch
+dependencies, holds, review reports and checkpoints; it is not source material for public issues
+or PR descriptions. A current explicit user instruction takes precedence over an older mode
+record; update the record before continuing work.
 
 Continue bounded implementations on local branches. Local checkpoint commits may freeze a revision
 for review; mark a checkpoint locally accepted only after validation and independent review.
@@ -174,13 +176,40 @@ file. Review the bounded change against that dependency base and inspect the acc
 against `origin/main` for interactions. A deferred merge is not permission to collect unrelated
 changes into one large branch. Do not discard or overwrite another branch's reviewed work.
 
+### Local remediation scope
+
+While Copilot review is unavailable, prioritize independent fixes, regression tests, data-contract
+checks, and profiling. Start each independent implementation from the latest locally accepted
+review-policy revision based on `main`, not from an unrelated functional branch. Read the private
+workflow state to identify that exact revision and any held branch chains before creating a branch.
+
+Preserve dependency chains marked on hold at their exact reviewed checkpoints. Do not extend a
+held chain or begin a larger dependent rewrite, including a saved-character identity migration,
+until the user explicitly authorizes it or the required Copilot review of its foundation completes
+and the hold is updated. Read-only characterization and isolated probes can continue; they do not
+change acceptance status or justify extending a held implementation chain.
+
+For each new bounded change, record why it is independent of held work, its exact base/head,
+validation, and fresh review. Policy updates use their own branch and review; do not silently add
+them to previously reviewed heads. Existing branches still read the private workflow state, and
+new implementation branches inherit the latest accepted policy revision. Do not treat a clean
+merge or passing tests as proof that two changes are independent.
+
+When review findings change an earlier dependency, identify every affected descendant, incorporate
+the correction, resolve interactions, and repeat validation and fresh review at the updated exact
+heads. Prior acceptance records remain historical evidence, not approval of later revisions. After
+a dependency is squash-merged, reconcile its descendants with the resulting `main` history before
+delivery so the parent changes are not submitted again. Keep integration validation separate from
+the acceptance of individual branches.
+
 Mark completed local work as locally implemented/validated/reviewed, with Copilot/CI/merge pending;
 do not close its audit finding or public issue as delivered. Record partial coverage explicitly.
 Keep security-sensitive fixes and evidence local until the user authorizes an appropriate private
 publication path; resuming ordinary GitHub delivery does not authorize public disclosure.
 
-When the user resumes delivery, prepare focused PRs in dependency order, include the policy change,
-reconcile each branch with current `main`, and review/test the exact final diff again after integration.
+When the user resumes delivery, record that authorization and prepare focused PRs in dependency
+order. Include the policy change, reconcile each branch with current `main`, and review/test the
+exact final diff again after integration.
 Obtain Copilot review, address available actionable findings, and require both GitHub CI jobs before
 using native squash auto-merge. Never bypass these steps merely because a local checkpoint passed.
 
