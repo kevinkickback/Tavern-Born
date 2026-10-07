@@ -3,19 +3,23 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
-import { buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
+import { buildClassLookup, buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { deriveSpellActions } from '@/lib/calculations/actions'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
+import { applyLevelUp } from '@/lib/character/commands/classCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const catalog = vi.hoisted(() => ({
   filtered: [] as Race5e[],
   lookups: {
     racesByKey: {} as Record<string, Race5e>,
+    classesByKey: {} as Record<string, Class5e>,
     spellsByKey: {} as Record<string, Spell5e>,
   },
 }))
@@ -56,6 +60,7 @@ beforeEach(() => {
   catalog.filtered = []
   catalog.lookups = {
     racesByKey: {},
+    classesByKey: {},
     spellsByKey: buildSpellLookup([otherPrinting, shockingGrasp]),
   }
 })
@@ -96,6 +101,117 @@ function savedChoice(parent: Race5e, child: Race5e, profileName: string): Charac
   })
   return character
 }
+
+test.each([
+  'missing child',
+  'other child printing',
+  'missing parent',
+  'resolved child',
+  'raw fallback',
+] as const)('%s keeps available class level-up grants alongside the saved racial choice', (availability) => {
+  const child = { name: 'Child', source: 'HB', additionalSpells: [choiceBlock] } as Race5e
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    additionalSpells:
+      availability === 'resolved child' || availability === 'raw fallback'
+        ? undefined
+        : [{ known: { 1: ['parent spell#c'] } }],
+  } as Race5e
+  const cleric = {
+    name: 'Cleric',
+    source: 'PHB',
+    hd: { number: 1, faces: 8 },
+    spellcastingAbility: 'wis',
+    casterProgression: 'full',
+    preparedSpells: '<$level$> + <$wis_mod$>',
+    subclasses: [
+      {
+        name: 'Light Domain',
+        shortName: 'Light',
+        source: 'PHB',
+        className: 'Cleric',
+        classSource: 'PHB',
+        additionalSpells: [{ prepared: { 1: ['burning hands'], 3: ['flaming sphere'] } }],
+      },
+    ],
+  } as Class5e
+  const races =
+    availability === 'missing parent'
+      ? []
+      : [
+          availability === 'other child printing'
+            ? { ...parent, subraces: [{ ...child, source: 'PHB' }] }
+            : availability === 'resolved child' || availability === 'raw fallback'
+              ? { ...parent, subraces: [child] }
+              : parent,
+        ]
+  install(races, availability === 'raw fallback' ? [] : races)
+  catalog.lookups.classesByKey = buildClassLookup([cleric])
+  catalog.lookups.spellsByKey = buildSpellLookup([
+    shockingGrasp,
+    { ...shockingGrasp, name: 'Parent Spell' },
+    { ...shockingGrasp, name: 'Burning Hands', level: 1 },
+    { ...shockingGrasp, name: 'Flaming Sphere', level: 2 },
+  ])
+  const previous = savedChoice(parent, child, 'Child Parent')
+  previous.classProgression = [
+    { name: 'Cleric', source: 'PHB', levels: 2, subclass: 'Light Domain', subclassSource: 'PHB' },
+  ]
+  previous.spells.spellProfiles = previous.spells.spellProfiles.map((profile) =>
+    profile.type === 'class'
+      ? {
+          ...profile,
+          id: 'class:Cleric|PHB',
+          className: 'Cleric',
+          classSource: 'PHB',
+          label: 'Cleric (Lv 2)',
+          spellsKnown: ['burning hands'],
+          fixedSpells: ['burning hands'],
+          alwaysPreparedSpells: ['burning hands'],
+        }
+      : profile,
+  )
+  expect(characterPersistenceSchema.safeParse(previous).success).toBe(true)
+  const levelUp = applyLevelUp(
+    previous,
+    previous.provenance,
+    [{ ...previous.classProgression[0], levels: 3 }],
+    {
+      className: 'Cleric',
+      classSource: 'PHB',
+      classLevel: 3,
+      hitDie: 8,
+      dieResult: 5,
+      method: 'average',
+    },
+    createCharacterCalculationContext(previous, catalog.lookups, catalog.lookups),
+  )
+  const character = {
+    ...previous,
+    ...levelUp.characterPatch,
+    provenance: levelUp.provenanceUpdate,
+  }
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  const before = structuredClone(character)
+  const { result } = renderHook(() => useCharacterActions(character))
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  const expected = expect.objectContaining({ name: 'Flaming Sphere', active: true })
+  expect(result.current).toContainEqual(expected)
+  expect(pdf.actions).toContainEqual(expected)
+  const savedSpell = expect.objectContaining({
+    name: 'Shocking Grasp',
+    active: true,
+    source: expect.objectContaining({ source: 'PHB' }),
+  })
+  expect(result.current).toContainEqual(savedSpell)
+  expect(pdf.actions).toContainEqual(savedSpell)
+  if (availability !== 'resolved child' && availability !== 'raw fallback') {
+    expect(result.current.some((action) => action.name === 'Parent Spell')).toBe(false)
+    expect(pdf.actions.some((action) => action.name === 'Parent Spell')).toBe(false)
+  }
+  expect(character).toEqual(before)
+})
 
 function assertSavedChoiceAcrossConsumers(character: Character, expectedProfileName: string) {
   const before = structuredClone(character)

@@ -150,7 +150,12 @@ export function deriveSpellActions(
     : options.race
   // Without class data, removing racial spells must not rebuild unrelated class grants.
   const profiles = unresolvedChild
-    ? character.spells.spellProfiles
+    ? classesById.size > 0
+      ? [
+          ...ensureSpellProfiles(character, classesById),
+          ...character.spells.spellProfiles.filter((profile) => profile.type === 'racial'),
+        ]
+      : character.spells.spellProfiles
     : selection && selection.additionalSpells.length === 0 && classesById.size === 0
       ? character.spells.spellProfiles.filter((profile) => profile.type !== 'racial')
       : classesById.size > 0 || raceData?.additionalSpells
