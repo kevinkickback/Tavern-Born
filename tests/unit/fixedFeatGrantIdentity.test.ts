@@ -264,4 +264,80 @@ describe('fixed feat granting owner and target identity', () => {
     expect(character.fixedFeatOptions).toEqual({})
     expect(character.proficiencies.skills).toEqual(['arcana'])
   })
+
+  test('editing and removing a chosen copy retains fixed same-printing setup ownership and bonuses', () => {
+    const [race] = parseRaces({
+      race: [{ name: 'Gifted', source: 'HB', feats: [{ 'Training|PHB': true }] }],
+    }) as Race5e[]
+    const training = { name: 'Training', source: 'PHB', repeatable: true } as Feat5e
+    let character = makeCharacterFixture({ race: '', background: '' })
+    character = applyCharacterCommandResult(
+      character,
+      applyRaceSelectionCommand(character, character.provenance, race, undefined, 0, noChoices),
+    )
+    character = applyCharacterCommandResult(
+      character,
+      replaceFeatSelectionsCommand(character, character.provenance, [training]),
+    )
+    const initialChosen = { skills: ['Arcana'], abilityScore: 'Strength' }
+    const fixedOptions = { skills: ['History'], abilityScore: 'Wisdom' }
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        commitFeatOptionsCommand(character, character.provenance, training, initialChosen),
+      ),
+    )
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        commitFeatOptionsCommand(
+          character,
+          character.provenance,
+          { ...training, fixedGrant: true },
+          fixedOptions,
+        ),
+      ),
+    )
+    const chosenOptions = { skills: ['Nature'], abilityScore: 'Constitution' }
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        editFeatOptionsCommand(
+          character,
+          character.provenance,
+          training,
+          initialChosen,
+          chosenOptions,
+        ),
+      ),
+    )
+    expect(character.provenance.proficiencies.skills.history).toEqual([
+      expect.objectContaining({ grantVariant: 'fixed:' }),
+    ])
+    expect(character.provenance.abilityBonuses).toEqual([
+      expect.objectContaining({
+        ability: 'wisdom',
+        sourceTag: expect.objectContaining({ grantVariant: 'fixed:' }),
+      }),
+      expect.objectContaining({
+        ability: 'constitution',
+        sourceTag: expect.objectContaining({ sourceType: 'feat', sourceRef: 'PHB' }),
+      }),
+    ])
+    expect(character.provenance.abilityBonuses[1].sourceTag.grantVariant).toBeUndefined()
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        replaceFeatSelectionsCommand(character, character.provenance, []),
+      ),
+    )
+    expect(character.provenance.abilityBonuses).toEqual([
+      expect.objectContaining({
+        ability: 'wisdom',
+        sourceTag: expect.objectContaining({ grantVariant: 'fixed:' }),
+      }),
+    ])
+    expect(character.proficiencies.skills).toEqual(['history'])
+    expect(character.fixedFeatOptions).toEqual({ 'training|phb|': fixedOptions })
+  })
 })

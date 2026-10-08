@@ -360,6 +360,7 @@ export function retractFeatOptionsCommand(
     feat.source,
     ownerKey,
     {
+      exactVariant: true,
       normalizeIdentity: isFixedOwner,
       normalizeFixedVariant: isFixedOwner,
     },
@@ -605,7 +606,7 @@ export function commitFeatOptionsCommand(
         )
       : character.specialFeats
   const classFeatChoices = character.classFeatChoices?.map((choice) =>
-    choice.id === feat.classFeatChoiceId
+    optionOwnerKey === `class:${choice.id}`
       ? {
           ...choice,
           feats: choice.feats.map((entry) =>

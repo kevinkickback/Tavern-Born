@@ -92,6 +92,56 @@ describe('feat commands', () => {
     )
   })
 
+  test('an explicit choice owner takes precedence over a secondary class owner in saved updates', () => {
+    const feat = { id: 'selected', name: 'Training', source: 'PHB', description: '' }
+    const character = makeCharacterFixture({
+      classFeatChoices: [
+        {
+          id: 'class',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Training',
+          categories: [],
+          feats: [{ ...feat, options: { skills: ['History'] } }],
+        },
+      ],
+      provenance: {
+        ...emptyProvenance(),
+        choices: [
+          {
+            id: 'choice',
+            domain: 'feats',
+            sourceTag: makeSourceTag('race', 'Gifted', 'placeholder', 'HB'),
+            chooseCount: 1,
+            optionPool: [],
+            selected: ['Training'],
+            status: 'resolved',
+            selectedRefs: [{ name: 'Training', source: 'PHB', options: { skills: ['Nature'] } }],
+          },
+        ],
+      },
+    })
+    const result = applyResult(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        {
+          name: 'Training',
+          source: 'PHB',
+          provenanceChoiceId: 'choice',
+          classFeatChoiceId: 'class',
+        },
+        { skills: ['Survival'] },
+      ),
+    )
+    expect(result.classFeatChoices?.[0].feats[0].options).toEqual({ skills: ['History'] })
+    expect(result.provenance.choices[0].selectedRefs?.[0].options).toEqual({ skills: ['Survival'] })
+    expect(result.provenance.proficiencies.skills.survival).toEqual([
+      expect.objectContaining({ grantVariant: 'choice:choice' }),
+    ])
+  })
+
   test.each([
     'provenanceChoiceId',
     'classFeatChoiceId',

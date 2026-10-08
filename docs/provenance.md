@@ -61,6 +61,10 @@ Fixed feat option edits opt into normalized name/reference and fixed-variant mat
 with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
 variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
 
+Feat setup retraction also matches an absent option owner key exactly. Editing or removing an
+ordinary selected copy does not treat that absent key as a wildcard for fixed/class/choice setup.
+Whole-source callers keep their existing all-variant removal behavior.
+
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
 ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the
 final matching grant's removal retracts saved fixed options and their benefits; independently

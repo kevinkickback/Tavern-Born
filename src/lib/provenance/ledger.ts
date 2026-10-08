@@ -175,14 +175,18 @@ export function removeGrantsBySource(
   return result
 }
 
-/** Remove one source entity across domains; normalized name/reference matching is opt-in. */
+/** Remove one source entity; exact variant selection (including absent) and normalization are opt-in. */
 export function removeGrantsBySourceRef(
   ledger: ProvenanceLedger,
   sourceType: string,
   sourceName: string,
   sourceRef: string | undefined,
   grantVariant?: string,
-  options?: { normalizeIdentity?: boolean; normalizeFixedVariant?: boolean },
+  options?: {
+    normalizeIdentity?: boolean
+    normalizeFixedVariant?: boolean
+    exactVariant?: boolean
+  },
 ): ProvenanceLedger {
   const matchesIdentity = (left: string, right: string) =>
     options?.normalizeIdentity ? normalizeKey(left) === normalizeKey(right) : left === right
@@ -190,7 +194,7 @@ export function removeGrantsBySourceRef(
     tag.sourceType === sourceType &&
     matchesIdentity(tag.sourceName, sourceName) &&
     matchesIdentity(tag.sourceRef ?? '', sourceRef ?? '') &&
-    (grantVariant === undefined ||
+    ((grantVariant === undefined && !options?.exactVariant) ||
       (options?.normalizeFixedVariant
         ? normalizeKey(tag.grantVariant ?? '') === normalizeKey(grantVariant)
         : tag.grantVariant === grantVariant))
