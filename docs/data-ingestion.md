@@ -302,7 +302,9 @@ in the dialog, while new spell, optional-feature, and language choices remain ch
 An eligible row retains the original saved reference after complete name/source normalization,
 so source changes and catalog casing changes preserve selection and removal without rewriting it.
 Finishing resolves spell metadata by complete name/source; a competing printing cannot determine
-cantrip classification. An unavailable saved spell must be replaced or its rules restored before
+cantrip classification. Materialized spell names use the shared reference parser and normalized
+deduplication; the original full reference remains in saved options, and retraction uses the same
+parsed name. An unavailable saved spell must be replaced or its rules restored before
 completion; merely opening the dialog leaves saved options and provenance intact.
 
 Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.

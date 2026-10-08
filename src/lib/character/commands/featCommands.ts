@@ -2,6 +2,7 @@ import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
+import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import { type ClassFeatChoiceOwner, getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
@@ -357,7 +358,7 @@ export function retractFeatOptionsCommand(
     getFeatOptionOwnerKey(feat),
   )
   const removedSpells = new Set(
-    (selections.spells ?? []).map((key) => normalizeKey(key.split('|')[0])),
+    (selections.spells ?? []).map((key) => normalizeKey(parseSpellReference(key).name)),
   )
   const spellProfiles = character.spells.spellProfiles.map((profile) => {
     if (profile.id !== SPECIAL_SPELL_PROFILE_ID) return profile
@@ -442,11 +443,12 @@ export function commitFeatOptionsCommand(
   const fixedSpells = [...(existingSpecial?.fixedSpells ?? [])]
   const spellLookup = buildSpellLookup(allSpells ?? [])
   for (const compositeKey of selections.spells ?? []) {
-    const spellName = compositeKey.split('|')[0]
+    const spellName = parseSpellReference(compositeKey).name
     provenanceUpdate = addSpellGrant(provenanceUpdate, spellName, sourceTag)
     const spell = resolveSpellReference(compositeKey, spellLookup)
     const target = spell?.level === 0 ? cantrips : spellsKnown
-    if (!target.includes(spellName)) target.push(spellName)
+    if (!target.some((name) => normalizeKey(name) === normalizeKey(spellName)))
+      target.push(spellName)
     if (!fixedSpells.some((name) => normalizeKey(name) === normalizeKey(spellName))) {
       fixedSpells.push(spellName)
     }

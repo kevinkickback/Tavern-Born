@@ -107,6 +107,37 @@ test('an unchanged fixed setup edit preserves a saved hidden-source cantrip and 
   expect(after?.provenance).toEqual(before.provenance)
 })
 
+test('editing a padded saved reference preserves canonical materialized spells and original options', () => {
+  const seeded = seed([requested], true, ' Secret Spark | OTHER ')
+  const before = {
+    ...seeded,
+    spells: {
+      ...seeded.spells,
+      spellProfiles: seeded.spells.spellProfiles.map((profile) =>
+        profile.type === 'special'
+          ? {
+              ...profile,
+              cantrips: ['Secret Spark'],
+              spellsKnown: [],
+              fixedSpells: ['Secret Spark'],
+            }
+          : profile,
+      ),
+    },
+  }
+  act(() => {
+    useCharacterStore.setState({ activeCharacter: before, characters: [before] })
+  })
+  editSetup()
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  })
+  const after = useCharacterStore.getState().activeCharacter
+  expect(after?.spells).toEqual(before.spells)
+  expect(after?.fixedFeatOptions).toEqual(before.fixedFeatOptions)
+  expect(after?.provenance).toEqual(before.provenance)
+})
+
 test('the saved printing controls classification even when a same-name competing spell is first', () => {
   const before = seed([competitor, requested])
   editSetup()
