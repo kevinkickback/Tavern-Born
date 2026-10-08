@@ -95,6 +95,53 @@ function editSetup() {
 
 afterEach(cleanup)
 
+test.each([
+  0, 1,
+])('a cleared out-of-filter saved spell cannot be selected in spell step %s', (stepIndex) => {
+  seed([requested])
+  act(() => {
+    const active = useCharacterStore.getState().activeCharacter!
+    useCharacterStore.setState({
+      activeCharacter: {
+        ...active,
+        fixedFeatOptions: {
+          'training|other|': { spells: ['Secret Spark|OTHER', 'Saved Ray|OTHER'] },
+        },
+      },
+    })
+    const data = makeGameDataFixture({
+      feats: [
+        {
+          ...feat,
+          additionalSpells: [
+            {
+              known: {
+                _: [
+                  { choose: 'level=0', count: 1 },
+                  { choose: 'level=1', count: 1 },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      spells: [requested, { ...requested, name: 'Saved Ray', level: 1 }],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  })
+  editSetup()
+  if (stepIndex === 1) fireEvent.click(screen.getByRole('button', { name: /Next/ }))
+  const rejectedName = stepIndex === 0 ? /Saved Ray/ : /Secret Spark/
+  const retainedName = stepIndex === 0 ? /Secret Spark/ : /Saved Ray/
+  const rejected = screen.getByRole('checkbox', { name: rejectedName })
+  expect(rejected.getAttribute('aria-checked')).toBe('true')
+  fireEvent.click(rejected)
+  expect(screen.queryByRole('checkbox', { name: rejectedName })).toBeNull()
+  expect(screen.getByRole('checkbox', { name: retainedName }).getAttribute('aria-checked')).toBe(
+    'true',
+  )
+})
+
 test('refreshing feat catalog casing does not duplicate option ownership on unchanged Finish', () => {
   const before = seed([requested])
   act(() => {

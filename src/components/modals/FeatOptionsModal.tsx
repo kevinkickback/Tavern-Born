@@ -125,12 +125,15 @@ const SpellPickStep = memo(function SpellPickStep({
     }))
     const keys = new Set(available.map(({ id }) => getSpellReferenceKey(id)))
     for (const [id, spell] of Object.entries(savedSpells)) {
-      if (!keys.has(getSpellReferenceKey(id))) {
+      if (
+        !keys.has(getSpellReferenceKey(id)) &&
+        (selected.includes(id) || (spell && matches(spell)))
+      ) {
         available.push({ spell, id, saved: true })
       }
     }
     return available
-  }, [spells, parsed, savedSpells])
+  }, [spells, parsed, savedSpells, selected])
 
   return (
     <div className="space-y-3">
