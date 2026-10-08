@@ -28,7 +28,6 @@ import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
-import { deriveRaceSpellSelection } from './raceSpellSelection'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -137,37 +136,15 @@ export function deriveSpellActions(
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
   const resolution = options.raceResolution
-  const unresolvedChild = !!character.subrace && !!resolution && !resolution.subraceData
-  const selection =
-    resolution?.parentRace && (!character.subrace || resolution.subraceData)
-      ? deriveRaceSpellSelection(resolution.parentRace, resolution.subraceData, {
-          raceName: character.race,
-          subraceName: character.subrace,
-          subraceIsNested: resolution.subraceIsNested,
-        })
-      : undefined
-  const raceData = selection
-    ? {
-        name: selection.name ?? character.race,
-        source: selection.source,
-        additionalSpells: selection.additionalSpells,
-      }
-    : options.race
-  // Without class data, removing racial spells must not rebuild unrelated class grants.
-  const profiles = unresolvedChild
-    ? classesById.size > 0
-      ? [
-          ...ensureSpellProfiles(character, classesById, undefined, {
-            preserveUnavailableClassProfiles: true,
-          }),
-          ...character.spells.spellProfiles.filter((profile) => profile.type === 'racial'),
-        ]
-      : character.spells.spellProfiles
-    : selection && selection.additionalSpells.length === 0 && classesById.size === 0
-      ? character.spells.spellProfiles.filter((profile) => profile.type !== 'racial')
-      : classesById.size > 0 || raceData?.additionalSpells
-        ? ensureSpellProfiles(character, classesById, raceData)
-        : character.spells.spellProfiles
+  const unresolvedRace =
+    !!character.race &&
+    (resolution
+      ? !resolution.parentRace || (!!character.subrace && !resolution.subraceData)
+      : !options.race)
+  const profiles = ensureSpellProfiles(character, classesById, options.race, {
+    raceResolution: resolution,
+    preserveUnavailableClassProfiles: true,
+  })
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {
@@ -183,7 +160,7 @@ export function deriveSpellActions(
 
   const spellStates = new Map<string, { reference: string; active: boolean }>()
   const spellKey = (reference: string) => {
-    if (!unresolvedChild || classesById.size === 0) return getSpellNameKey(reference)
+    if (!unresolvedRace || classesById.size === 0) return getSpellNameKey(reference)
     const spell = resolveSpellReference(reference, spellsByKey)
     return spell ? getSpellReferenceKey(spell.name, spell.source) : getSpellReferenceKey(reference)
   }

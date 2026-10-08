@@ -1,7 +1,6 @@
 import { cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
-import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup, buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
@@ -519,14 +518,16 @@ test.each([
 
 function assertSavedChoiceAcrossConsumers(character: Character, expectedProfileName: string) {
   const before = structuredClone(character)
-  const { result: raceResult } = renderHook(() => useCharacterRaceData(character))
   const { result: actionsResult } = renderHook(() => useCharacterActions(character))
-  expect(raceResult.current.displayName).toBe(expectedProfileName)
-  const racial = ensureSpellProfiles(character, new Map(), {
-    name: raceResult.current.displayName ?? '',
-    source: raceResult.current.displaySource,
-    additionalSpells: raceResult.current.mergedAdditionalSpells,
+  const context = createCharacterCalculationContext(
+    character,
+    { racesByKey: buildRaceLookup(catalog.filtered) },
+    catalog.lookups,
+  )
+  const racial = ensureSpellProfiles(character, new Map(), undefined, {
+    raceResolution: context.raceResolution,
   }).find((profile) => profile.type === 'racial')
+  expect(racial?.raceName).toBe(expectedProfileName)
   expect(racial?.cantrips).toEqual(['Shocking Grasp|PHB'])
   expect(racial?.choices?.[0].selected).toEqual(['Shocking Grasp|PHB'])
   expect(racial?.castingAbility).toBe('wis')
@@ -620,9 +621,13 @@ test.each([
   if (!child) throw new Error('Expected the parsed version')
   const character = savedChoice(parent, child, 'Removed Parent')
   const before = structuredClone(character)
-  const { result: raceResult } = renderHook(() => useCharacterRaceData(character))
   const { result: actionsResult } = renderHook(() => useCharacterActions(character))
-  expect(raceResult.current.mergedAdditionalSpells).toEqual([])
+  const context = createCharacterCalculationContext(character, catalog.lookups)
+  expect(
+    ensureSpellProfiles(character, new Map(), undefined, {
+      raceResolution: context.raceResolution,
+    }).some((profile) => profile.type === 'racial'),
+  ).toBe(false)
   expect(actionsResult.current.some((action) => action.source.kind === 'spell')).toBe(false)
   expect(
     createCharacterSheetViewModel(character, catalog.lookups).actions.some(

@@ -1,10 +1,12 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type { Character, RaceSpellChoice, SpellProfile } from '@/types/character'
+import { deriveRaceSpellSelection } from './raceSpellSelection'
 import {
   buildSpellNameKeySet,
   getSpellNameKey,
@@ -237,11 +239,15 @@ export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
   return names
 }
 
+/** Exact race resolution establishes grants/removals; missing metadata retains saved racial state. */
 export function ensureSpellProfiles(
   character: Character,
   classesById?: Map<string, Class5e>,
   raceData?: { name: string; source?: string; additionalSpells?: RaceAdditionalSpells[] },
-  options?: { preserveUnavailableClassProfiles?: boolean },
+  options?: {
+    preserveUnavailableClassProfiles?: boolean
+    raceResolution?: ResolvedRaceReference
+  },
 ): SpellProfile[] {
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
@@ -322,15 +328,29 @@ export function ensureSpellProfiles(
     })
   }
 
-  if (raceData?.additionalSpells && raceData.additionalSpells.length > 0) {
-    const racialId = toRacialProfileId(raceData.name, raceData.source)
+  const resolution = options?.raceResolution
+  const selection =
+    resolution?.parentRace && (!character.subrace || resolution.subraceData)
+      ? deriveRaceSpellSelection(resolution.parentRace, resolution.subraceData, {
+          raceName: character.race,
+          subraceName: character.subrace,
+          subraceIsNested: resolution.subraceIsNested,
+        })
+      : undefined
+  const selectedRaceData = resolution ? selection : raceData
+  if (!selectedRaceData && character.race) {
+    // Missing exact metadata cannot establish a replacement or a spell removal.
+    next.push(...existing.filter((profile) => profile.type === 'racial'))
+  } else if (selectedRaceData?.additionalSpells?.length) {
+    const raceName = selectedRaceData.name ?? character.race
+    const racialId = toRacialProfileId(raceName, selectedRaceData.source)
     const existingRacial = byId.get(racialId)
     const totalLevel = getTotalClassLevels(getCharacterClassEntries(character))
     next.push(
       buildRacialSpellProfile({
-        raceName: raceData.name,
-        raceSource: raceData.source,
-        additionalSpells: raceData.additionalSpells,
+        raceName,
+        raceSource: selectedRaceData.source,
+        additionalSpells: selectedRaceData.additionalSpells,
         totalLevel,
         existingProfile: existingRacial,
       }),
