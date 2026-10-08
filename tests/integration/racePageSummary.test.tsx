@@ -1,16 +1,22 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { BuildRacePage } from '@/pages/build/race/RacePage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeRaceFixture } from '../fixtures/gameDataFixtures'
 
 Element.prototype.scrollIntoView = () => undefined
+Element.prototype.hasPointerCapture = () => false
+Element.prototype.setPointerCapture = () => undefined
+Element.prototype.releasePointerCapture = () => undefined
 
 describe('Race page summary', () => {
   beforeEach(() => {
@@ -45,6 +51,129 @@ describe('Race page summary', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test.each([
+    'parent',
+    'child',
+  ])('displays the exact saved selection when its %s printing is filtered out', async (filtered) => {
+    const savedChild = {
+      name: 'Saved child',
+      source: 'CHILD',
+      ability: [{ con: 1 }],
+      entries: ['Saved child details'],
+    } as Race5e
+    const parent = makeRaceFixture({
+      name: 'Choice Lineage',
+      source: 'TEST',
+      ability: [{ choose: { count: 1, amount: 2, from: ['str', 'dex'] } }],
+      subraces: [savedChild, { ...savedChild, source: 'TEST', entries: ['Competing details'] }],
+    })
+    const character = buildInitialCharacter(
+      {
+        initial: {
+          name: 'Filtered selection',
+          originSystem: '2014',
+          allowedSources: filtered === 'parent' ? ['OTHER'] : ['TEST'],
+        },
+        race: parent,
+        subrace: savedChild,
+        raceAsiChoices: [['strength']],
+      },
+      new Map(),
+      () => [],
+    )
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+      isActiveCharacterDirty: false,
+    })
+    const data = makeGameDataFixture({ races: [parent] })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    expect.soft(screen.queryByRole('heading', { name: 'Choice Lineage' })).not.toBeNull()
+    expect.soft(screen.queryByText('Saved child details')).not.toBeNull()
+    expect.soft(screen.queryByText('Competing details')).toBeNull()
+    expect.soft(screen.queryByText('Select a race to view details')).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    if (filtered === 'parent') {
+      expect(screen.queryByRole('combobox', { name: 'Subrace' })).toBeNull()
+    } else {
+      const user = userEvent.setup()
+      const selector = screen.getByRole('combobox', { name: 'Subrace' })
+      expect(selector.textContent).toBe('Saved child')
+      await user.click(selector)
+      expect(screen.getAllByRole('option')).toHaveLength(1)
+      await user.click(screen.getByRole('option', { name: 'Saved child' }))
+      const changed = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+      )
+      expect(changed.subraceSource).toBe('TEST')
+      expect(screen.getByText('Competing details')).toBeTruthy()
+      expect(screen.queryByText('Saved child details')).toBeNull()
+    }
+  })
+
+  test('child selection distinguishes complete name/source pairs with the same joined text', async () => {
+    const children = [
+      { name: 'A|B', source: 'C', ability: [{ con: 1 }] },
+      { name: 'A', source: 'B|C', ability: [{ wis: 1 }] },
+    ] as Race5e[]
+    const parent = makeRaceFixture({ name: 'Parent', source: 'TEST', subraces: children })
+    const character = characterPersistenceSchema.parse(
+      buildInitialCharacter(
+        {
+          initial: {
+            name: 'Literal choice',
+            originSystem: '2014',
+            allowedSources: ['TEST', 'C', 'B|C'],
+          },
+          race: parent,
+          subrace: children[0],
+        },
+        new Map(),
+        () => [],
+      ),
+    )
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const data = makeGameDataFixture({ races: [parent] })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('combobox', { name: 'Subrace' }))
+    await user.click(screen.getByRole('option', { name: /^A$/ }))
+    const changed = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+    )
+    expect(changed.subrace).toBe('A')
+    expect(changed.subraceSource).toBe('B|C')
+    expect(changed.provenance!.abilityBonuses).toContainEqual(
+      expect.objectContaining({
+        ability: 'wisdom',
+        value: 1,
+        sourceTag: expect.objectContaining({ sourceName: 'A', sourceRef: 'B|C' }),
+      }),
+    )
   })
 
   test('shows unresolved parsed bonus options under the custom score method', () => {

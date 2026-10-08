@@ -196,7 +196,11 @@ the separate parent and child rules rather than deriving ability rules from a me
 Missing exact parent or child metadata hides racial choice editing until that selection resolves;
 an available parent alone cannot establish the missing child's layout. Rejected ability commands
 leave the draft, modification timestamp and unsaved-change state untouched.
+Selecting the already active distribution is also a no-op and retains assigned bonuses.
 Opening the race page or refreshing its catalog does not clear or substitute a saved child.
+Saved selection details resolve the exact current reference even when catalog filters hide it;
+new race and child options remain restricted to the filtered catalog. Child option values retain
+the separate complete name and source, without interpreting a joined label as an identity.
 Explicit race selection chooses its initial child; explicit child selection owns later changes.
 
 ## Class ownership

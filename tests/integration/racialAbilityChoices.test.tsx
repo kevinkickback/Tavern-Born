@@ -649,6 +649,42 @@ test('wizard Review displays the same bounded mixed bonuses as Finish', () => {
   }
 })
 
+test.each([
+  [0, false],
+  [0, true],
+  [1, false],
+  [1, true],
+] as const)('repeated active distribution clicks retain the selection and save state (mode: %s, dirty: %s)', async (mode, dirty) => {
+  const choices =
+    mode === 0 ? [['strength'], ['dexterity']] : [['strength', 'dexterity', 'constitution']]
+  const character = characterPersistenceSchema.parse(selectRace(dhampir, mode, choices))
+  const sameMode = applyRaceAsiDistributionCommand(
+    character,
+    character.provenance!,
+    dhampir,
+    undefined,
+    mode,
+  )
+  expect.soft(sameMode.characterPatch).toEqual({})
+  expect.soft(sameMode.provenanceUpdate).toBe(character.provenance)
+  setActiveCharacter(character)
+  useCharacterStore.setState({ isActiveCharacterDirty: dirty })
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  const activeButton = screen.getByRole('button', {
+    name: mode === 0 ? '+2 / +1' : '+1 / +1 / +1',
+  })
+  const user = userEvent.setup()
+  await user.click(activeButton)
+  await user.click(activeButton)
+  await user.keyboard('[Space]')
+  expect.soft(useCharacterStore.getState().activeCharacter).toBe(character)
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(dirty)
+})
+
 test('Builder distribution changes publish only coherent choices and provenance', async () => {
   const character = selectRace(dhampir, 0, [['strength'], ['dexterity']])
   setActiveCharacter(character)

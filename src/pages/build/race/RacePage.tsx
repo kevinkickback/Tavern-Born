@@ -68,6 +68,10 @@ import type { AbilityName } from '@/types/character'
 
 type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
 
+function getSubraceSelectionValue(name: string, source?: string) {
+  return JSON.stringify([name, source ?? ''])
+}
+
 const RACE_BONUSES_LINK = {
   pathname: '/build/ability-scores',
   search: createSearchParams({ focus: 'race-bonuses' }).toString(),
@@ -104,14 +108,12 @@ export function BuildRacePage() {
     selectedRaceRef.current?.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' })
   }, [raceSearch])
 
-  const selectedRace = races.find((r) =>
+  const catalogRace = races.find((r) =>
     matchesGameDataEntry(character?.race, character?.raceSource, r),
   ) as Race5e | undefined
-  const subraces = getAvailableSubraces(selectedRace)
-  const selectedSubrace = subraces.find(
-    (sr) =>
-      sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
-  )
+  const selectedRace = calculationContext?.raceResolution.parentRace
+  const subraces = getAvailableSubraces(catalogRace)
+  const selectedSubrace = calculationContext?.raceResolution.subraceData
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     selectedRace,
     selectedSubrace,
@@ -128,7 +130,7 @@ export function BuildRacePage() {
       calculationContext.abilityScores.raceAsiData,
       character.raceAsiChoices ?? [],
     )
-  const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
+  const selectedRaceKey = catalogRace ? `${catalogRace.name}|${catalogRace.source ?? ''}` : null
   const hasResolvedRaceSelection =
     Boolean(calculationContext?.raceResolution.parentRace) &&
     (!character?.subrace || Boolean(calculationContext?.raceResolution.subraceData))
@@ -355,19 +357,25 @@ export function BuildRacePage() {
                           </span>
                           <Select
                             value={
-                              character.subrace
-                                ? `${character.subrace}|${character.subraceSource ?? ''}`
-                                : ''
+                              selectedSubrace
+                                ? getSubraceSelectionValue(
+                                    selectedSubrace.name,
+                                    selectedSubrace.source,
+                                  )
+                                : character.subrace
+                                  ? getSubraceSelectionValue(
+                                      character.subrace,
+                                      character.subraceSource,
+                                    )
+                                  : ''
                             }
                             onValueChange={(value) => {
-                              const [subraceName, ...sourceParts] = value.split('|')
-                              const subraceSource =
-                                sourceParts.length > 0 ? sourceParts.join('|') : undefined
                               const nextSubrace = subraces.find(
                                 (candidate) =>
-                                  candidate.name === subraceName &&
-                                  (candidate.source ?? '') === (subraceSource ?? ''),
+                                  getSubraceSelectionValue(candidate.name, candidate.source) ===
+                                  value,
                               )
+                              if (!nextSubrace) return
                               applySubraceChange(selectedRace, nextSubrace)
                             }}
                           >
@@ -375,13 +383,15 @@ export function BuildRacePage() {
                               aria-label="Subrace"
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
-                              <SelectValue placeholder="Choose a subrace" />
+                              <SelectValue placeholder="Choose a subrace">
+                                {selectedSubrace?.name}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {subraces.map((subrace) => (
                                 <SelectItem
-                                  key={`${subrace.name}|${subrace.source ?? ''}`}
-                                  value={`${subrace.name}|${subrace.source ?? ''}`}
+                                  key={getSubraceSelectionValue(subrace.name, subrace.source)}
+                                  value={getSubraceSelectionValue(subrace.name, subrace.source)}
                                   className="text-xs"
                                 >
                                   {subrace.name}

@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Active racial ownership validation and shared ability projection measure 5,599,276
+  // Active racial ownership validation and shared ability projection measure 5,599,296
   // renderer bytes (5468.0 KiB), without new dependencies. Use the smallest whole-KiB
   // allowance; this measured increase requires explicit budget review.
   rendererCode: 5469 * KIB,
