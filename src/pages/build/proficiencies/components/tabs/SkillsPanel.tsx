@@ -103,7 +103,10 @@ export function SkillsPanel({
               const canDeselect = isChoiceSelected
               const canAddExpertise =
                 isSelected && !skill.expertise && usedExpertiseSlots < availableExpertiseSlots
-              const canRemoveExpertise = isSelected && skill.expertise
+              const hasIndependentExpertise = (
+                ledger.proficiencies.expertise?.[normName] ?? []
+              ).some((tag) => tag.sourceType !== 'manual' || tag.sourceName !== 'User Choice')
+              const canRemoveExpertise = isSelected && skill.expertise && !hasIndependentExpertise
               const canToggleExpertise = canAddExpertise || canRemoveExpertise
               const rowState: ProficiencyRowState = isChoiceSelected
                 ? 'chosen'
@@ -143,6 +146,7 @@ export function SkillsPanel({
                 >
                   <button
                     type="button"
+                    disabled={!canToggleExpertise}
                     tabIndex={canToggleExpertise ? 0 : -1}
                     data-expertise-hint={canToggleExpertise ? 'true' : undefined}
                     title={
@@ -150,7 +154,9 @@ export function SkillsPanel({
                         ? `Remove expertise: ${formatProfLabel(skill.name)}`
                         : canAddExpertise
                           ? `Add expertise: ${formatProfLabel(skill.name)}`
-                          : undefined
+                          : hasIndependentExpertise
+                            ? 'Expertise granted by another source'
+                            : undefined
                     }
                     onClick={() => {
                       if (canToggleExpertise) onToggleExpertise(skill.name)

@@ -66,7 +66,7 @@ export function diffProficiencyGrants(
   sourceType: string,
   sourceName: string,
 ): { toRemove: string[] } {
-  const map = ledger.proficiencies[domain]
+  const map = ledger.proficiencies[domain] ?? {}
 
   // Keys that are exclusively attributed to this source (removing safe)
   const toRemove = Object.entries(map)

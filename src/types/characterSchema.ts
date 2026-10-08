@@ -560,6 +560,7 @@ const proficiencyProvenanceSchema = z.object({
   tools: sourceTagListMapSchema,
   languages: sourceTagListMapSchema,
   skills: sourceTagListMapSchema,
+  expertise: sourceTagListMapSchema.optional(),
   savingThrows: sourceTagListMapSchema,
 })
 

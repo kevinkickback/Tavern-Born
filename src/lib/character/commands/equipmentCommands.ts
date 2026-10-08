@@ -8,6 +8,7 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Item5e } from '@/types/5etools'
 import type { Character, Equipment } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileExpertiseOwnership } from './expertiseCommands'
 
 export type ManualProficiencyDomain =
   | 'skills'
@@ -175,10 +176,10 @@ export function applyManualProficiencyCommand(
       : current.filter((entry) => normalizeKey(entry) !== normalizedName)
   const proficiencies = { ...character.proficiencies, [domain]: next }
 
-  return {
+  return reconcileExpertiseOwnership({
     characterPatch: {
       proficiencies: domain === 'skills' ? reconcileSkillExpertise(proficiencies) : proficiencies,
     },
     provenanceUpdate,
-  }
+  })
 }

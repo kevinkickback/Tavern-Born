@@ -20,6 +20,7 @@ import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance
 import type { Spell5e } from '@/types/5etools'
 import type { Character, Feat, FeatOptionSelections } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileExpertiseOwnership } from './expertiseCommands'
 import {
   type FeatOptionTarget,
   getFeatOptionOwnerKey,
@@ -324,12 +325,12 @@ export function resolveProficiencyChoiceCommand(
     const skills = hasRemainingGrant
       ? character.proficiencies.skills
       : character.proficiencies.skills.filter((entry) => normalizeKey(entry) !== normalized)
-    return {
+    return reconcileExpertiseOwnership({
       characterPatch: {
         proficiencies: reconcileSkillExpertise({ ...character.proficiencies, skills }),
       },
       provenanceUpdate,
-    }
+    })
   }
   return {
     characterPatch: {
@@ -350,13 +351,18 @@ export function retractFeatOptionsCommand(
   feat: FeatOptionTarget,
   selections: FeatOptionSelections,
 ): CharacterCommandResult {
+  const ownerKey = getFeatOptionOwnerKey(feat)
+  const isFixedOwner = ownerKey?.startsWith('fixed:') === true
   const provenanceUpdate = removeGrantsBySourceRef(
     ledger,
     'feat',
     getFeatOptionSourceName(feat),
     feat.source,
-    getFeatOptionOwnerKey(feat),
-    { normalizeIdentity: feat.fixedGrant || feat.grantVariant !== undefined },
+    ownerKey,
+    {
+      normalizeIdentity: isFixedOwner,
+      normalizeFixedVariant: isFixedOwner,
+    },
   )
   const removedSpells = new Set(
     (selections.spells ?? []).map((key) => normalizeKey(parseSpellReference(key).name)),
@@ -399,31 +405,46 @@ export function retractFeatOptionsCommand(
     if (provenanceUpdate.proficiencies.languages[normalizeKey(language)]) continue
     proficiencies = {
       ...proficiencies,
-      languages: proficiencies.languages.filter((entry) => entry !== language),
+      languages: proficiencies.languages.filter(
+        (entry) => normalizeKey(entry) !== normalizeKey(language),
+      ),
     }
   }
   for (const tool of selections.tools ?? []) {
     if (provenanceUpdate.proficiencies.tools[normalizeKey(tool)]) continue
     proficiencies = {
       ...proficiencies,
-      tools: proficiencies.tools.filter((entry) => entry !== tool),
+      tools: proficiencies.tools.filter((entry) => normalizeKey(entry) !== normalizeKey(tool)),
     }
   }
 
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    proficiencies.expertise = proficiencies.expertise.filter(
-      (name) => normalizeKey(name) !== normalized,
-    )
+    if (
+      ledger.proficiencies.expertise?.[normalized]?.length &&
+      !provenanceUpdate.proficiencies.expertise?.[normalized]?.length
+    ) {
+      proficiencies.expertise = proficiencies.expertise.filter(
+        (name) => normalizeKey(name) !== normalized,
+      )
+    }
+    if (
+      ledger.proficiencies.skills[normalized]?.length &&
+      !provenanceUpdate.proficiencies.skills[normalized]?.length
+    ) {
+      proficiencies.skills = proficiencies.skills.filter(
+        (name) => normalizeKey(name) !== normalized,
+      )
+    }
   }
 
-  return {
+  return reconcileExpertiseOwnership({
     characterPatch: {
       spells: { ...character.spells, spellProfiles },
       proficiencies: reconcileSkillExpertise(proficiencies),
     },
     provenanceUpdate,
-  }
+  })
 }
 
 export function commitFeatOptionsCommand(
@@ -475,8 +496,23 @@ export function commitFeatOptionsCommand(
       ]
 
   let proficiencies = { ...character.proficiencies }
+  const retainUntrackedProficiency = (domain: 'skills' | 'languages' | 'tools', name: string) => {
+    const key = normalizeKey(name)
+    if (
+      proficiencies[domain].some((entry) => normalizeKey(entry) === key) &&
+      !provenanceUpdate.proficiencies[domain][key]?.length
+    ) {
+      provenanceUpdate = addGrant(
+        provenanceUpdate,
+        domain,
+        name,
+        makeSourceTag('manual', 'User Choice', 'choice'),
+      )
+    }
+  }
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
+    retainUntrackedProficiency('skills', skillName)
     provenanceUpdate = addGrant(provenanceUpdate, 'skills', skillName, sourceTag)
     proficiencies = {
       ...proficiencies,
@@ -484,6 +520,7 @@ export function commitFeatOptionsCommand(
     }
   }
   for (const language of selections.languages ?? []) {
+    retainUntrackedProficiency('languages', language)
     provenanceUpdate = addGrant(provenanceUpdate, 'languages', language, sourceTag)
     proficiencies = {
       ...proficiencies,
@@ -491,6 +528,7 @@ export function commitFeatOptionsCommand(
     }
   }
   for (const tool of selections.tools ?? []) {
+    retainUntrackedProficiency('tools', tool)
     provenanceUpdate = addGrant(provenanceUpdate, 'tools', tool, sourceTag)
     proficiencies = { ...proficiencies, tools: [...new Set([...proficiencies.tools, tool])] }
   }
@@ -510,6 +548,21 @@ export function commitFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
+    // Legacy/manual selections without ownership must survive a newly configured feat.
+    for (const domain of ['skills', 'expertise'] as const) {
+      if (
+        proficiencies[domain].some((name) => normalizeKey(name) === normalized) &&
+        !provenanceUpdate.proficiencies[domain]?.[normalized]?.length
+      ) {
+        provenanceUpdate = addGrant(
+          provenanceUpdate,
+          domain,
+          normalized,
+          makeSourceTag('manual', 'User Choice', 'choice'),
+        )
+      }
+      provenanceUpdate = addGrant(provenanceUpdate, domain, normalized, sourceTag)
+    }
     proficiencies = {
       ...proficiencies,
       skills: [...new Set([...proficiencies.skills, normalized])],

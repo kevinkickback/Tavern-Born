@@ -11,6 +11,7 @@ import {
 } from '@/lib/calculations/originSystem'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
+import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -130,7 +131,7 @@ export function applyBackgroundSelectionCommand(
     currency[key] += resolvedPackage.currency[key] ?? 0
   }
 
-  return {
+  return reconcileFixedFeatOptionsCommand(character, ledger, {
     characterPatch: {
       background: background.name,
       backgroundSource: background.source || undefined,
@@ -156,7 +157,7 @@ export function applyBackgroundSelectionCommand(
           : undefined,
     },
     provenanceUpdate,
-  }
+  })
 }
 
 export function applyBackgroundAbilityChoicesCommand(

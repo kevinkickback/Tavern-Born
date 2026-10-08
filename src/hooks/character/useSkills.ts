@@ -9,6 +9,8 @@ import {
   getExpertiseSlotsFromClasses,
   type SkillResult,
 } from '@/lib/calculations/skills'
+import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
+import { emptyProvenance } from '@/lib/character/createCharacter'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
@@ -89,17 +91,14 @@ export function useSkills(): SkillsState {
   const toggleExpertise = useCallback(
     (skillName: string) => {
       if (!activeCharacter) return
-      const key = skillName.toLowerCase()
-      if (!activeCharacter.proficiencies.skills.some((skill) => skill.toLowerCase() === key)) return
-      const expertise = activeCharacter.proficiencies.expertise
-      const hasExpertise = expertise.some((skill) => skill.toLowerCase() === key)
+      const result = toggleExpertiseCommand(
+        activeCharacter,
+        activeCharacter.provenance ?? emptyProvenance(),
+        skillName,
+      )
       updateCharacter(activeCharacter.id, {
-        proficiencies: {
-          ...activeCharacter.proficiencies,
-          expertise: hasExpertise
-            ? expertise.filter((skill) => skill.toLowerCase() !== key)
-            : [...expertise, key],
-        },
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [activeCharacter, updateCharacter],

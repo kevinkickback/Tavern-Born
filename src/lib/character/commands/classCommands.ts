@@ -61,6 +61,7 @@ import {
 } from './classChoiceCommands'
 import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileExpertiseOwnership } from './expertiseCommands'
 
 export { buildInitialCharacterProficiencies } from './classProficiencies'
 
@@ -364,7 +365,7 @@ function computeClassSelectionEffects(
     classEquipment.items.map((item) => item.name),
   )
 
-  return {
+  return reconcileExpertiseOwnership({
     characterPatch: {
       proficiencies: reconcileSkillExpertise(proficiencies),
       equipment: upsertGrantedEquipment(equipment, classEquipment.items),
@@ -380,7 +381,7 @@ function computeClassSelectionEffects(
       },
     },
     provenanceUpdate,
-  }
+  })
 }
 
 /**
@@ -573,10 +574,10 @@ export function applyClassProgressionUpdate(
     abilityScores: workingCharacter.abilityScores,
   }
 
-  return {
+  return reconcileExpertiseOwnership({
     characterPatch,
     provenanceUpdate,
-  }
+  })
 }
 
 /**
@@ -799,11 +800,11 @@ export function selectBaseClass(
 
   const provenanceUpdate = ledger
 
-  return {
+  return reconcileExpertiseOwnership({
     classEntity,
     characterPatch,
     provenanceUpdate,
-  }
+  })
 }
 
 /**
@@ -883,11 +884,11 @@ export function applyClassSelectionCommand(
   }
   const nextProgression = identity.characterPatch.classProgression
   if (!nextProgression) {
-    return {
+    return reconcileExpertiseOwnership({
       classEntity: cls as Class5e,
       characterPatch: selectionPatch,
       provenanceUpdate: effects.provenanceUpdate,
-    }
+    })
   }
 
   const progressionResult = applyClassProgressionUpdate(
@@ -900,11 +901,11 @@ export function applyClassSelectionCommand(
     effects.provenanceUpdate,
     nextProgression,
   )
-  return {
+  return reconcileExpertiseOwnership({
     classEntity: cls as Class5e,
     characterPatch: { ...selectionPatch, ...progressionResult.characterPatch },
     provenanceUpdate: progressionResult.provenanceUpdate,
-  }
+  })
 }
 
 /**
@@ -1029,11 +1030,11 @@ export function addMulticlass(
 
   const provenanceUpdate = applyMulticlassGrants({ ...classEntity, source: classSource }, ledger)
 
-  return {
+  return reconcileExpertiseOwnership({
     classEntity,
     characterPatch,
     provenanceUpdate,
-  }
+  })
 }
 
 /**
