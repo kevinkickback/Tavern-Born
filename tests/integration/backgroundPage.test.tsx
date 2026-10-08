@@ -120,6 +120,34 @@ describe('BackgroundPage', () => {
     ).toBe('TEST')
   })
 
+  test('explains an unqualified fixed grant even when its unique feat printing is loaded', async () => {
+    const data = makeGameDataFixture({
+      backgrounds: [{ ...background, feats: [{ 'Configurable Fixture Feat': true }] }],
+      feats: [feat],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildBackgroundPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    await userEvent.setup().click(screen.getByRole('button', { name: /Fixture Background$/ }))
+    expect(
+      screen.getByText(
+        'The granted feat does not identify its source. Reload its granting content before configuring it.',
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText(/Feat data unavailable/)).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Configure feat' })).toBeNull()
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.feats[
+        'configurable fixture feat'
+      ]?.[0],
+    ).toMatchObject({ sourceRef: 'TEST', grantSource: '' })
+  })
+
   test('retains exact fixed feat configuration when its source is filtered out', async () => {
     const data = makeGameDataFixture({
       backgrounds: [{ ...background, feats: [{ 'Configurable Fixture Feat|OTHER': true }] }],
