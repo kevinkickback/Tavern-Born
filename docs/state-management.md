@@ -193,8 +193,10 @@ are not carried forward through breaking changes while preparing for 1.0. Older 
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
 
-Schema 3 separates a fixed feat's granting owner printing from the granted feat printing. Schema 2
-characters must be recreated; relabeling their version cannot restore missing ownership information.
+Schema 4 requires one active source-qualified racial owner set: the selected parent and optional
+child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
+Schema 3 separated fixed feat owner and target printings but accepted inactive racial owners.
+Schema 2 and 3 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 
 For a breaking change, update together:

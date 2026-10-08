@@ -273,21 +273,25 @@ export function addChoicePlaceholder(
 }
 
 /** Mark a choice as resolved with the given selected items. */
+export function resolveChoiceRecord(choice: ChoiceRecord, selected: string[]): ChoiceRecord {
+  const status: ChoiceStatus =
+    selected.length === 0
+      ? 'pending'
+      : selected.length < choice.chooseCount
+        ? 'partially-resolved'
+        : 'resolved'
+  return { ...choice, selected, status }
+}
+
+/** Resolve every record with this ID; owner-scoped callers use resolveChoiceRecord instead. */
 export function resolveChoice(
   ledger: ProvenanceLedger,
   choiceId: string,
   selected: string[],
 ): ProvenanceLedger {
-  const choices = ledger.choices.map((c) => {
-    if (c.id !== choiceId) return c
-    const status: ChoiceStatus =
-      selected.length === 0
-        ? 'pending'
-        : selected.length < c.chooseCount
-          ? 'partially-resolved'
-          : 'resolved'
-    return { ...c, selected, status }
-  })
+  const choices = ledger.choices.map((c) =>
+    c.id === choiceId ? resolveChoiceRecord(c, selected) : c,
+  )
   return { ...ledger, choices }
 }
 

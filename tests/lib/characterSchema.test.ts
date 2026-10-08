@@ -164,7 +164,7 @@ describe('characterPersistenceSchema', () => {
   })
 
   test('round-trips provenance ability-choice amounts', () => {
-    const character = makeCharacterFixture()
+    const character = makeCharacterFixture({ race: 'Test Race', raceSource: 'TEST' })
     character.provenance.choices = [
       {
         id: 'race:test:abilityBonuses:choose:0',

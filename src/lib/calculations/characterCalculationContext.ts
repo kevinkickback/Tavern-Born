@@ -8,7 +8,7 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
-import type { SourceTag } from '@/lib/provenance/types'
+import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -126,25 +126,16 @@ function deriveEffectiveSenses(
 function getProvenanceRacialBonuses(
   character: Character | null | undefined,
 ): Partial<Record<AbilityName, number>> {
-  if (!character || character.originSystem === '2024') return {}
-  const isCurrentOwner = ({ sourceType, sourceName, sourceRef }: SourceTag) => {
-    const isCurrentRace =
-      sourceType === 'race' &&
-      sourceName === character?.race &&
-      (sourceRef ?? '') === (character?.raceSource ?? '')
-    const isCurrentSubrace =
-      sourceType === 'subrace' &&
-      sourceName === (character?.subrace ?? '') &&
-      (sourceRef ?? '') === (character?.subraceSource ?? '')
-    return isCurrentRace || isCurrentSubrace
-  }
+  if (!character?.race || character.originSystem === '2024') return {}
   const fixed = (character.provenance?.abilityBonuses ?? []).flatMap((record) => {
     const ability = normalizeAbilityName(record.ability)
-    return ability && isCurrentOwner(record.sourceTag) ? [{ ability, value: record.value }] : []
+    return ability && isSelectedRaceOwner(record.sourceTag, character)
+      ? [{ ability, value: record.value }]
+      : []
   })
-  const records = (character.provenance?.choices ?? []).filter(
-    (record) => record.domain === 'abilityBonuses' && isCurrentOwner(record.sourceTag),
-  )
+  const records = character.provenance
+    ? getSelectedRaceAbilityChoices(character.provenance, character)
+    : []
   return buildRacialBonuses(
     {
       fixed,

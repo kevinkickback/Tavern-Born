@@ -413,7 +413,7 @@ export function getRaceAbilityData(
     }
   }
 
-  const replacesParentAbility = subrace?.overwrite?.ability === true
+  const replacesParentAbility = subrace?._isVersion !== true && subrace?.overwrite?.ability === true
   if (!replacesParentAbility && subrace?._isVersion !== true) {
     processEntries(race?.ability, 'race')
   }

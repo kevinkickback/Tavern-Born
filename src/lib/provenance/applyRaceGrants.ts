@@ -13,8 +13,9 @@ import {
   type ProficiencyBlock,
   toProficiencyBlocks,
 } from './applyProficiencyBlocks'
-import { addAbilityBonus, addChoicePlaceholder, addSpellGrant } from './ledger'
+import { addAbilityBonus, addSpellGrant } from './ledger'
 import { normalizeKey } from './normalization'
+import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from './raceOwnership'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger } from './types'
 
@@ -293,12 +294,16 @@ export function applyRaceAbilityGrants(
   lineageAsiBlockIndex: 0 | 1 = 0,
 ): ProvenanceLedger {
   race = getRaceSelectionParent(race, subrace)
+  const selection = {
+    race: race.name,
+    raceSource: race.source,
+    subrace: subrace?.name,
+    subraceSource: subrace?.source,
+  }
   let result = ledger
   if (subrace?.overwrite?.ability === true) {
     const isParentOwner = (tag: import('./types').SourceTag) =>
-      tag.sourceType === 'race' &&
-      tag.sourceName === race.name &&
-      (tag.sourceRef ?? '') === (race.source ?? '')
+      tag.sourceType === 'race' && isSelectedRaceOwner(tag, selection)
     result = {
       ...result,
       abilityBonuses: result.abilityBonuses.filter((record) => !isParentOwner(record.sourceTag)),
@@ -323,7 +328,7 @@ export function applyRaceAbilityGrants(
   for (const choice of abilityData.choices) {
     const tag = abilityTags[choice.source]
     const choiceRecord: ChoiceRecord = {
-      id: `${choice.source}:${normalizeKey(tag.sourceName)}:abilityBonuses:choose:${choiceIndices[choice.source]++}`,
+      id: `${choice.source}:${encodeURIComponent(normalizeKey(tag.sourceName))}|${encodeURIComponent(normalizeKey(tag.sourceRef ?? ''))}:abilityBonuses:choose:${choiceIndices[choice.source]++}`,
       domain: 'abilityBonuses',
       sourceTag: { ...tag, grantType: 'placeholder' },
       chooseCount: choice.count,
@@ -332,7 +337,10 @@ export function applyRaceAbilityGrants(
       selected: [],
       status: 'pending',
     }
-    result = addChoicePlaceholder(result, choiceRecord)
+    const alreadyApplied = getSelectedRaceAbilityChoices(result, selection).some(
+      (record) => record.id === choiceRecord.id && record.sourceTag.sourceType === tag.sourceType,
+    )
+    if (!alreadyApplied) result = { ...result, choices: [...result.choices, choiceRecord] }
   }
   return result
 }

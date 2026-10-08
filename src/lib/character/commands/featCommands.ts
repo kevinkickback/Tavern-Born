@@ -39,10 +39,11 @@ import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 export type { FeatOptionTarget, SelectedFeat } from './featCommandIdentity'
 
+/** A supplied sourceRef, including an empty string, limits retraction to that exact printing. */
 export function retractFeatChoiceOptionsForSources(
   character: Character,
   ledger: ProvenanceLedger,
-  sources: Array<{ sourceType: SourceTag['sourceType']; sourceName?: string }>,
+  sources: Array<{ sourceType: SourceTag['sourceType']; sourceName?: string; sourceRef?: string }>,
 ): CharacterCommandResult {
   let workingCharacter = character
   let provenanceUpdate = ledger
@@ -53,7 +54,10 @@ export function retractFeatChoiceOptionsForSources(
         (source) =>
           source.sourceName != null &&
           choice.sourceTag.sourceType === source.sourceType &&
-          choice.sourceTag.sourceName === source.sourceName,
+          (source.sourceRef === undefined
+            ? choice.sourceTag.sourceName === source.sourceName
+            : normalizeKey(choice.sourceTag.sourceName) === normalizeKey(source.sourceName) &&
+              normalizeKey(choice.sourceTag.sourceRef ?? '') === normalizeKey(source.sourceRef)),
       )
     if (!matches) continue
     const selectedRefs = getFeatChoiceSelectedRefs(choice)

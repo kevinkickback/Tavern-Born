@@ -288,4 +288,48 @@ describe('race commands', () => {
     expect(result.characterPatch.proficiencies?.expertise).toEqual([])
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
+
+  test.each([
+    false,
+    true,
+  ])("race removal retains another printing's feat follow-up (overlap: %s)", (overlap) => {
+    const choice = (id: string, source: string) => ({
+      id,
+      domain: 'feats' as const,
+      sourceTag: makeSourceTag('race', 'Parent', 'placeholder', source),
+      chooseCount: 1,
+      optionPool: [],
+      selected: ['Skill Expert'],
+      selectedRefs: [{ name: 'Skill Expert', source: 'TCE', options: { skills: ['Arcana'] } }],
+      status: 'resolved' as const,
+    })
+    const foreign = choice('foreign-feat', 'OTHER')
+    const selected = choice('selected-feat', 'PHB')
+    const featTag = (id: string) => ({
+      ...makeSourceTag('feat', 'Skill Expert', 'choice', 'TCE'),
+      grantVariant: `choice:${id}`,
+    })
+    const character = makeCharacterFixture({ race: 'Parent', raceSource: 'PHB' })
+    character.proficiencies.skills = ['arcana']
+    const ledger = emptyProvenance()
+    ledger.choices = overlap ? [foreign, selected] : [foreign]
+    ledger.proficiencies.skills.arcana = overlap
+      ? [featTag(foreign.id), featTag(selected.id)]
+      : [featTag(foreign.id)]
+    const before = structuredClone(ledger)
+    const result = applyRaceSelectionCommand(
+      character,
+      ledger,
+      { name: 'Replacement', source: 'PHB' } as Race5e,
+      undefined,
+      0,
+      resolveNoChoices,
+    )
+    expect(result.characterPatch.proficiencies!.skills).toEqual(['arcana'])
+    expect(result.provenanceUpdate.choices.filter((record) => record.domain === 'feats')).toEqual([
+      foreign,
+    ])
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toEqual([featTag(foreign.id)])
+    expect(ledger).toEqual(before)
+  })
 })

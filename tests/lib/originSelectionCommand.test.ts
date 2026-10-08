@@ -164,7 +164,7 @@ describe('buildInitialCharacter', () => {
       (issue) => issue.id,
     )
     expect(issueIds).not.toContain('race:ability-choice:0')
-    expect(issueIds).not.toContain('choice:subrace:variant:abilityBonuses:choose:0')
+    expect(issueIds).not.toContain('choice:subrace:variant|phb:abilityBonuses:choose:0')
     expect(issueIds).toContain('choice:subrace:variant:feats:any:0')
   })
 })

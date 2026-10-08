@@ -1,18 +1,30 @@
-import { removeGrantsBySource } from './ledger'
+import type { EntityReference } from '@/lib/5etools/entityResolvers'
+import { removeGrantsBySource, removeGrantsBySourceRef } from './ledger'
 import type { ProvenanceLedger } from './types'
 
 /**
  * Reconcile ledger when a race selection changes.
- * Removes all grants from the old race and old subrace.
+ * Removes only the previous selected race and subrace printings.
  */
 export function reconcileRaceChange(
   ledger: ProvenanceLedger,
-  oldRaceName: string | undefined,
-  oldSubraceName: string | undefined,
+  oldRace: EntityReference | undefined,
+  oldSubrace: EntityReference | undefined,
 ): ProvenanceLedger {
   let result = ledger
-  if (oldRaceName) result = removeGrantsBySource(result, 'race', oldRaceName)
-  if (oldSubraceName) result = removeGrantsBySource(result, 'subrace', oldSubraceName)
+  if (oldRace?.name)
+    result = removeGrantsBySourceRef(result, 'race', oldRace.name, oldRace.source, undefined, {
+      normalizeIdentity: true,
+    })
+  if (oldSubrace?.name)
+    result = removeGrantsBySourceRef(
+      result,
+      'subrace',
+      oldSubrace.name,
+      oldSubrace.source,
+      undefined,
+      { normalizeIdentity: true },
+    )
   return result
 }
 
@@ -21,10 +33,12 @@ export function reconcileRaceChange(
  */
 export function reconcileSubraceChange(
   ledger: ProvenanceLedger,
-  oldSubraceName: string | undefined,
+  oldSubrace: EntityReference | undefined,
 ): ProvenanceLedger {
-  if (!oldSubraceName) return ledger
-  return removeGrantsBySource(ledger, 'subrace', oldSubraceName)
+  if (!oldSubrace?.name) return ledger
+  return removeGrantsBySourceRef(ledger, 'subrace', oldSubrace.name, oldSubrace.source, undefined, {
+    normalizeIdentity: true,
+  })
 }
 
 /**

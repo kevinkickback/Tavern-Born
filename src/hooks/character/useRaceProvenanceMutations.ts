@@ -106,7 +106,7 @@ export function useRaceProvenanceMutations() {
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {
       if (!character) return
-      const result = applyRaceAsiChoicesCommand(ledger, choices)
+      const result = applyRaceAsiChoicesCommand(character, ledger, choices)
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,

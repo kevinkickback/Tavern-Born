@@ -185,7 +185,7 @@ describe('originSystem normalization', () => {
     expect(() => ensureOriginSystemInvariants(ledger, '2024')).not.toThrow()
 
     // Switch race to Elf — reconcile then re-apply
-    ledger = reconcileRaceChange(ledger, raceA.name, undefined)
+    ledger = reconcileRaceChange(ledger, { name: raceA.name, source: raceA.source }, undefined)
     const normB = normalizeRaceSelectionForOriginSystem(raceB, undefined, '2024')
     ledger = applyRaceGrants(normB.race!, undefined, ledger)
     ledger = ensureOriginLanguageBaseline(ledger, '2024')

@@ -63,7 +63,7 @@ describe('provenance/reconciliation', () => {
     ledger = addGrant(ledger, 'languages', 'Common', raceTag)
     ledger = addSpellGrant(ledger, 'Fire Bolt', subraceTag)
 
-    const reconciled = reconcileRaceChange(ledger, 'Elf', 'High Elf')
+    const reconciled = reconcileRaceChange(ledger, { name: 'Elf' }, { name: 'High Elf' })
 
     expect(reconciled.proficiencies.languages.common).toBeUndefined()
     expect(reconciled.spells['fire bolt']).toBeUndefined()
@@ -74,7 +74,7 @@ describe('provenance/reconciliation', () => {
     ledger = addGrant(ledger, 'languages', 'Common', raceTag)
     ledger = addSpellGrant(ledger, 'Fire Bolt', subraceTag)
 
-    const reconciled = reconcileSubraceChange(ledger, 'High Elf')
+    const reconciled = reconcileSubraceChange(ledger, { name: 'High Elf' })
 
     expect(reconciled.proficiencies.languages.common).toEqual([raceTag])
     expect(reconciled.spells['fire bolt']).toBeUndefined()
@@ -117,7 +117,7 @@ describe('provenance/reconciliation', () => {
     ledger = addGrant(ledger, 'skills', 'History', classTag)
     ledger = addGrant(ledger, 'skills', 'Perception', raceTag)
 
-    const reconciled = reconcileRaceChange(ledger, 'Elf', undefined)
+    const reconciled = reconcileRaceChange(ledger, { name: 'Elf' }, undefined)
 
     expect(reconciled.proficiencies.skills.history).toEqual([classTag])
     expect(reconciled.proficiencies.skills.perception).toBeUndefined()

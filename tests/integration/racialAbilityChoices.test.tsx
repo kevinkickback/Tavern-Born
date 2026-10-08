@@ -1,9 +1,10 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, renderHook, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
+import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildRacialBonuses, getRaceAbilityData } from '@/lib/calculations/abilityScores'
@@ -71,7 +72,11 @@ function selectRace(race: Race5e, mode: 0 | 1, choices: string[][], subrace?: Ra
     mode,
     () => [],
   )
-  const chosen = applyRaceAsiChoicesCommand(selected.provenanceUpdate, choices)
+  const chosen = applyRaceAsiChoicesCommand(
+    { ...initial, ...selected.characterPatch },
+    selected.provenanceUpdate,
+    choices,
+  )
   return {
     ...initial,
     ...selected.characterPatch,
@@ -283,13 +288,13 @@ test('multiple supported entry choices keep distinct per-owner ordinals', () => 
       })),
   ).toEqual([
     {
-      id: 'race:parent:abilityBonuses:choose:0',
+      id: 'race:parent|phb:abilityBonuses:choose:0',
       amount: 2,
       selected: ['strength'],
       status: 'resolved',
     },
     {
-      id: 'race:parent:abilityBonuses:choose:1',
+      id: 'race:parent|phb:abilityBonuses:choose:1',
       amount: 1,
       selected: ['dexterity'],
       status: 'resolved',
@@ -460,7 +465,7 @@ test.each([
     () => [],
   )
   initial.provenance!.abilityBonuses.push(
-    { ability: 'wisdom', value: 1, sourceTag: makeSourceTag('race', 'Parent', 'fixed', 'OTHER') },
+    { ability: 'wisdom', value: 1, sourceTag: makeSourceTag('class', 'Fighter', 'fixed', 'PHB') },
     { ability: 'charisma', value: 1, sourceTag: makeSourceTag('manual', 'Manual', 'fixed') },
   )
   const before = structuredClone(initial)
@@ -508,15 +513,27 @@ test.each([
 })
 
 test.each([
-  0, 1,
-] as const)('a complete flexible version owns valid synthesized bonuses in mode %s', (mode) => {
+  { mode: 0, overwrite: false },
+  { mode: 1, overwrite: false },
+  { mode: 0, overwrite: true },
+  { mode: 1, overwrite: true },
+] as const)('a complete flexible version owns valid synthesized bonuses in mode $mode (overwrite: $overwrite)', ({
+  mode,
+  overwrite,
+}) => {
   const [parent] = parseRaces({
     race: [
       {
         name: 'Dhampir',
         source: 'VRGR',
         lineage: 'VRGR',
-        _versions: [{ name: 'Dhampir; Version', source: 'VRGR' }],
+        _versions: [
+          {
+            name: 'Dhampir; Version',
+            source: 'VRGR',
+            ...(overwrite ? { overwrite: { ability: true } } : {}),
+          },
+        ],
       },
     ],
   }) as Race5e[]
@@ -767,4 +784,424 @@ test.each([
   expect(result.characterPatch).toEqual({})
   expect(result.provenanceUpdate).toBe(character.provenance)
   expect(character).toEqual(before)
+})
+
+test.each([
+  0, 1,
+] as const)('distribution mode %s creates current-printing choices without replacing independent class choices', (mode) => {
+  const current = selectRace(dhampir, mode === 0 ? 1 : 0, [])
+  const foreign = selectRace({ ...dhampir, source: 'OTHER' }, 0, [['wisdom'], ['charisma']])
+  const foreignChoices = structuredClone(
+    foreign.provenance!.choices.filter((record) => record.domain === 'abilityBonuses'),
+  ).map((record) => ({
+    ...record,
+    sourceTag: makeSourceTag('class', 'Independent', 'placeholder', 'OTHER'),
+  }))
+  const ledger = {
+    ...current.provenance!,
+    choices: [...foreignChoices, ...current.provenance!.choices],
+  }
+  const redistributed = applyRaceAsiDistributionCommand(current, ledger, dhampir, undefined, mode)
+  const choices =
+    mode === 0 ? [['strength'], ['dexterity']] : [['strength', 'dexterity', 'constitution']]
+  const chosen = applyRaceAsiChoicesCommand(
+    { ...current, ...redistributed.characterPatch },
+    redistributed.provenanceUpdate,
+    choices,
+  )
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({
+        ...current,
+        ...redistributed.characterPatch,
+        ...chosen.characterPatch,
+        provenance: chosen.provenanceUpdate,
+      }),
+    ),
+  )
+  expect
+    .soft(reopened.provenance!.choices.filter((record) => record.sourceTag.sourceRef === 'OTHER'))
+    .toEqual(foreignChoices)
+  const currentChoices = reopened.provenance!.choices.filter(
+    (record) => record.domain === 'abilityBonuses' && record.sourceTag.sourceRef === 'VRGR',
+  )
+  expect.soft(currentChoices.map((record) => record.selected)).toEqual(choices)
+  expect
+    .soft(
+      new Set(
+        reopened
+          .provenance!.choices.filter((record) => record.domain === 'abilityBonuses')
+          .map((record) => record.id),
+      ).size,
+    )
+    .toBe(
+      reopened.provenance!.choices.filter((record) => record.domain === 'abilityBonuses').length,
+    )
+  const expected =
+    mode === 0 ? { strength: 2, dexterity: 1 } : { strength: 1, dexterity: 1, constitution: 1 }
+  expect
+    .soft(
+      createCharacterCalculationContext(reopened, install([dhampir]).lookups!).abilityScores
+        .racialBonuses,
+    )
+    .toEqual(expected)
+  expect(
+    createCharacterCalculationContext(reopened, install([]).lookups!).abilityScores.racialBonuses,
+  ).toEqual(expected)
+  expect(ledger.choices.filter((record) => record.sourceTag.sourceRef === 'OTHER')).toEqual(
+    foreignChoices,
+  )
+})
+
+test.each([
+  false,
+  true,
+])('ASI edits and clears use selected parent then child, regardless of ledger order (reverse: %s)', (reverse) => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str'], amount: 2 } }],
+  } as Race5e
+  const child = {
+    name: 'Child',
+    source: 'HB',
+    ability: [{ choose: { from: ['dex'], amount: 1 } }],
+  } as Race5e
+  const current = selectRace(parent, 0, [], child)
+  const foreign = selectRace(
+    { ...parent, source: 'OTHER', ability: [{ choose: { from: ['wis'], count: 1, amount: 2 } }] },
+    0,
+    [['wisdom']],
+  )
+  const foreignChoice = structuredClone(foreign.provenance!.choices[0])
+  const independentChoice = {
+    ...foreignChoice,
+    id: current.provenance!.choices[0].id,
+    sourceTag: makeSourceTag('class', 'Independent', 'placeholder', 'PHB'),
+  }
+  const ordered = [...current.provenance!.choices]
+  if (reverse) ordered.reverse()
+  const ledger = { ...current.provenance!, choices: [independentChoice, ...ordered] }
+  const before = structuredClone(ledger)
+  const chosen = applyRaceAsiChoicesCommand(current, ledger, [['strength'], ['dexterity']])
+  expect.soft(chosen.provenanceUpdate.choices[0]).toEqual(before.choices[0])
+  expect
+    .soft(
+      chosen.provenanceUpdate.choices.find(
+        (record) => record.sourceTag.sourceType === 'race' && record.sourceTag.sourceRef === 'PHB',
+      )!.selected,
+    )
+    .toEqual(['strength'])
+  expect
+    .soft(
+      chosen.provenanceUpdate.choices.find((record) => record.sourceTag.sourceType === 'subrace')!
+        .selected,
+    )
+    .toEqual(['dexterity'])
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({
+        ...current,
+        ...chosen.characterPatch,
+        provenance: chosen.provenanceUpdate,
+      }),
+    ),
+  )
+  expect
+    .soft(
+      createCharacterCalculationContext(reopened, install([]).lookups!).abilityScores.racialBonuses,
+    )
+    .toEqual({ strength: 2, dexterity: 1 })
+  const cleared = applyRaceAsiChoicesCommand(reopened, chosen.provenanceUpdate, [])
+  expect.soft(cleared.provenanceUpdate.choices[0]).toEqual(before.choices[0])
+  expect(cleared.provenanceUpdate.choices.slice(1).map((record) => record.selected)).toEqual([
+    [],
+    [],
+  ])
+  expect(ledger).toEqual(before)
+})
+
+test('entering and leaving a complete version retains independent class ability choices and fixed bonuses', () => {
+  const parent = { name: 'Parent', source: 'PHB', ability: [{ dex: 2 }] } as Race5e
+  const version = {
+    name: 'Version',
+    source: 'HB',
+    _isVersion: true,
+    ability: [{ int: 1 }],
+  } as Race5e
+  const foreign = selectRace(
+    {
+      ...parent,
+      source: 'OTHER',
+      ability: [{ wis: 1, choose: { from: ['cha'], count: 1, amount: 2 } }],
+    },
+    0,
+    [['charisma']],
+  )
+  let character = selectRace(parent, 0, [])
+  const foreignLedger = structuredClone(foreign.provenance!)
+  foreignLedger.abilityBonuses = foreignLedger.abilityBonuses.map((record) => ({
+    ...record,
+    sourceTag: makeSourceTag('class', 'Independent', 'fixed', 'OTHER'),
+  }))
+  foreignLedger.choices = foreignLedger.choices.map((record) => ({
+    ...record,
+    sourceTag: makeSourceTag('class', 'Independent', 'placeholder', 'OTHER'),
+  }))
+  character.provenance = {
+    ...character.provenance!,
+    abilityBonuses: [...foreignLedger.abilityBonuses, ...character.provenance!.abilityBonuses],
+    choices: [...foreignLedger.choices, ...character.provenance!.choices],
+  }
+  for (const child of [version, undefined]) {
+    const result = applySubraceSelectionCommand(
+      character,
+      character.provenance!,
+      parent,
+      child,
+      () => [],
+      { previousSubrace: version },
+    )
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    character = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+    expect
+      .soft(
+        character.provenance!.abilityBonuses.filter(
+          (record) => record.sourceTag.sourceRef === 'OTHER',
+        ),
+      )
+      .toEqual(foreignLedger.abilityBonuses)
+    expect
+      .soft(
+        character.provenance!.choices.filter((record) => record.sourceTag.sourceRef === 'OTHER'),
+      )
+      .toEqual(foreignLedger.choices)
+    expect
+      .soft(
+        createCharacterCalculationContext(
+          character,
+          install([{ ...parent, subraces: [version] }]).lookups!,
+        ).abilityScores.racialBonuses,
+      )
+      .toEqual(child ? { intelligence: 1 } : { dexterity: 2 })
+  }
+})
+
+test('inactive child ownership is rejected instead of carried through child clear', () => {
+  const parent = { name: 'Parent', source: 'PHB' } as Race5e
+  const child = { name: 'Child', source: 'HB', ability: [{ int: 1 }] } as Race5e
+  const foreign = selectRace(parent, 0, [], { ...child, source: 'OTHER', ability: [{ wis: 2 }] })
+  const character = selectRace(parent, 0, [], child)
+  const foreignBonus = foreign.provenance!.abilityBonuses[0]
+  const ledger = {
+    ...character.provenance!,
+    abilityBonuses: [foreignBonus, ...character.provenance!.abilityBonuses],
+  }
+  expect(characterPersistenceSchema.safeParse({ ...character, provenance: ledger }).success).toBe(
+    false,
+  )
+})
+
+test('a leftover child without a selected race is rejected at persistence', () => {
+  const parent = { name: 'Parent', source: 'PHB' } as Race5e
+  const child = { name: 'Child', source: 'HB', ability: [{ int: 1 }] } as Race5e
+  const character = selectRace(parent, 0, [], child)
+  const reopened = characterPersistenceSchema.safeParse({
+    ...character,
+    race: '',
+    raceSource: undefined,
+  })
+  expect(reopened.success).toBe(false)
+})
+
+test('current-format saved ability ownership tolerates reference casing without selecting another printing', () => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ dex: 2, choose: { from: ['str'], count: 1, amount: 1 } }],
+  } as Race5e
+  const character = selectRace(parent, 0, [['strength']])
+  const reopened = characterPersistenceSchema.parse({
+    ...character,
+    race: 'pARENT',
+    raceSource: 'phb',
+  })
+  expect(
+    createCharacterCalculationContext(reopened, install([]).lookups!).abilityScores.racialBonuses,
+  ).toEqual({ dexterity: 2, strength: 1 })
+})
+
+test.each([
+  'absent-race',
+  'revised-origin',
+])('ability edits cannot activate orphan choices: %s', (suppressed) => {
+  const selected = selectRace(dhampir, 0, [])
+  if (suppressed === 'absent-race') {
+    expect(
+      characterPersistenceSchema.safeParse({ ...selected, race: '', raceSource: undefined })
+        .success,
+    ).toBe(false)
+    return
+  }
+  const character = characterPersistenceSchema.parse({
+    ...selected,
+    ...(suppressed === 'absent-race'
+      ? { race: '', raceSource: undefined }
+      : { originSystem: '2024' }),
+  })
+  const before = structuredClone(character)
+  setActiveCharacter(character)
+  const { result } = renderHook(useRaceProvenanceMutations)
+  act(() => result.current.applyRaceAsiChoices([['strength'], ['dexterity']]))
+  expect(useCharacterStore.getState().activeCharacter!.provenance).toEqual(before.provenance)
+  expect(useCharacterStore.getState().activeCharacter!.raceAsiChoices).toEqual(
+    before.raceAsiChoices,
+  )
+})
+
+test('an independent domain with the generated ability ID cannot block insertion or be edited', () => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str'], amount: 2 } }],
+  } as Race5e
+  const current = selectRace(parent, 0, [])
+  const independent = {
+    id: current.provenance!.choices[0].id,
+    domain: 'skills' as const,
+    sourceTag: makeSourceTag('manual', 'Independent', 'choice'),
+    chooseCount: 1,
+    optionPool: ['perception'],
+    selected: ['perception'],
+    status: 'resolved' as const,
+  }
+  const ledger = { ...emptyProvenance(), choices: [independent] }
+  const applied = applyRaceGrants(parent, undefined, ledger)
+  expect(applied.choices.filter((record) => record.domain === 'abilityBonuses')).toHaveLength(1)
+  expect(applied.choices[0]).toBe(independent)
+  expect(applyRaceGrants(parent, undefined, applied)).toEqual(applied)
+  const chosen = applyRaceAsiChoicesCommand(current, applied, [['strength']])
+  expect(chosen.provenanceUpdate.choices[0]).toBe(independent)
+  expect(chosen.provenanceUpdate.choices[1].selected).toEqual(['strength'])
+  expect(ledger.choices).toEqual([independent])
+})
+
+test('missing and restored metadata give the parent duplicate precedence even when the child is stored first', () => {
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str'], amount: 2 } }],
+  } as Race5e
+  const child = {
+    name: 'Child',
+    source: 'HB',
+    ability: [{ choose: { from: ['str'], amount: 1 } }],
+  } as Race5e
+  const character = selectRace(parent, 0, [['strength'], ['strength']], child)
+  const reopened = characterPersistenceSchema.parse({
+    ...character,
+    provenance: {
+      ...character.provenance!,
+      choices: [...character.provenance!.choices].reverse().map((record) => ({
+        ...record,
+        selected: ['strength'],
+        status: 'resolved',
+      })),
+    },
+  })
+  expect
+    .soft(
+      createCharacterCalculationContext(reopened, install([]).lookups!).abilityScores.racialBonuses,
+    )
+    .toEqual({ strength: 2 })
+  expect(
+    createCharacterCalculationContext(
+      reopened,
+      install([{ ...parent, subraces: [child] }]).lookups!,
+    ).abilityScores.racialBonuses,
+  ).toEqual({ strength: 2 })
+})
+
+test.each([
+  false,
+  true,
+])('clearing an available ordinary child retains parent proficiency choices (case refresh: %s)', (caseRefresh) => {
+  const [parent] = parseRaces({
+    race: [
+      {
+        name: 'Parent',
+        source: 'PHB',
+        ability: [{ dex: 2 }],
+        skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+      },
+    ],
+  }) as Race5e[]
+  const child = { name: 'Child', source: 'HB', ability: [{ con: 1 }] } as Race5e
+  const initial = selectRace(parent, 0, [], child)
+  const choice = initial.provenance!.choices.find((record) => record.domain === 'skills')!
+  const chosen = resolveProficiencyChoiceCommand(
+    initial,
+    initial.provenance!,
+    'skills',
+    'perception',
+    true,
+    choice.id,
+  )
+  const saved = characterPersistenceSchema.parse({
+    ...initial,
+    ...chosen.characterPatch,
+    provenance: chosen.provenanceUpdate,
+    ...(caseRefresh ? { subrace: 'cHILD', subraceSource: 'hb' } : {}),
+  })
+  const before = structuredClone(saved)
+  const cleared = applySubraceSelectionCommand(
+    saved,
+    saved.provenance!,
+    parent,
+    undefined,
+    () => [],
+    { previousSubrace: child },
+  )
+  expect.soft(cleared.characterPatch.proficiencies!.skills).toEqual(['perception'])
+  expect
+    .soft(cleared.provenanceUpdate.choices.find((record) => record.domain === 'skills'))
+    .toEqual(saved.provenance!.choices.find((record) => record.id === choice.id))
+  expect(
+    cleared.provenanceUpdate.abilityBonuses.map((record) => ({
+      ability: record.ability,
+      value: record.value,
+    })),
+  ).toEqual([{ ability: 'dexterity', value: 2 }])
+  expect(saved).toEqual(before)
+})
+
+test.each([
+  false,
+  true,
+])('clearing a source-less complete child never treats another printing as previous (exact available: %s)', (available) => {
+  const competitor = { name: 'Child', source: 'OTHER', ability: [{ wis: 1 }] } as Race5e
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ dex: 2 }],
+    skillProficiencies: [{ history: true }],
+    subraces: [competitor],
+  } as Race5e
+  const version = { name: 'Child', source: '', _isVersion: true, ability: [{ con: 1 }] } as Race5e
+  const saved = selectRace(parent, 0, [], version)
+  expect(saved.subraceSource).toBeUndefined()
+  const before = structuredClone(saved)
+  const cleared = applySubraceSelectionCommand(
+    saved,
+    saved.provenance!,
+    parent,
+    undefined,
+    () => [],
+    available ? { previousSubrace: version } : undefined,
+  )
+  expect.soft(cleared.characterPatch.proficiencies!.skills).toEqual(['history'])
+  expect(cleared.provenanceUpdate.proficiencies.skills.history).toEqual([
+    makeSourceTag('race', 'Parent', 'fixed', 'PHB'),
+  ])
+  expect(saved).toEqual(before)
 })

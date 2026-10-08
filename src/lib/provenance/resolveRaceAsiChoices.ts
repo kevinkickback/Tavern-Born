@@ -3,27 +3,25 @@ import {
   getRaceAbilityChoiceSelections,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
-import type { AbilityName } from '@/types/character'
-import { resolveChoice } from './ledger'
+import type { AbilityName, Character } from '@/types/character'
+import { resolveChoiceRecord } from './ledger'
+import { getSelectedRaceAbilityChoices } from './raceOwnership'
 import type { ProvenanceLedger } from './types'
 
 /**
  * Syncs `raceAsiChoices` (stored on the character) into each race/subrace ability-bonus
- * ChoiceRecord's `selected` array. The outer index of `raceAsiChoices` maps positionally
- * to the race/subrace abilityBonuses choice records in ledger insertion order.
+ * ChoiceRecord's `selected` array, in selected parent-then-child block order.
  *
  * Call this before deriving provenance rows so that `getAbilityBonusRows` can read
  * resolved race ASI selections purely from the ledger without external params.
  */
 export function resolveRaceAsiChoicesInLedger(
+  character: Character,
   ledger: ProvenanceLedger,
   raceAsiChoices: string[][],
 ): ProvenanceLedger {
-  const raceAsiRecords = ledger.choices.filter(
-    (c) =>
-      c.domain === 'abilityBonuses' &&
-      (c.sourceTag.sourceType === 'race' || c.sourceTag.sourceType === 'subrace'),
-  )
+  if (character.originSystem === '2024') return ledger
+  const raceAsiRecords = getSelectedRaceAbilityChoices(ledger, character)
 
   if (raceAsiRecords.length === 0) return ledger
 
@@ -41,11 +39,11 @@ export function resolveRaceAsiChoicesInLedger(
     },
     raceAsiChoices,
   )
-  let result = ledger
-  for (let i = 0; i < raceAsiRecords.length; i++) {
-    const record = raceAsiRecords[i]
-    const selections = selectedByBlock[i]
-    result = resolveChoice(result, record.id, selections)
-  }
-  return result
+  const resolved = new Map(
+    raceAsiRecords.map((record, index) => [
+      record,
+      resolveChoiceRecord(record, selectedByBlock[index]),
+    ]),
+  )
+  return { ...ledger, choices: ledger.choices.map((record) => resolved.get(record) ?? record) }
 }

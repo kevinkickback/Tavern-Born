@@ -4,6 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getUnselectedRaceOwnerPaths } from '@/lib/provenance/raceOwnership'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
@@ -822,11 +823,27 @@ export const characterSchema = z
       ['subrace', 'subraceSource'],
       ['background', 'backgroundSource'],
     ] as const) {
-      if (char[nameKey] && !char[sourceKey]) {
+      if (char[nameKey]?.trim() && !char[sourceKey]?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `${sourceKey} is required when ${nameKey} is selected`,
           path: [sourceKey],
+        })
+      }
+    }
+    if (char.subrace?.trim() && !char.race.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A selected subrace requires a selected race',
+        path: ['race'],
+      })
+    }
+    if (char.provenance) {
+      for (const path of getUnselectedRaceOwnerPaths(char.provenance, char)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Racial grants must belong to the selected race or subrace printing',
+          path: ['provenance', ...path],
         })
       }
     }

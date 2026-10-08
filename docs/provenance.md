@@ -19,6 +19,13 @@ Normalization is case-insensitive for identity but preserves readable/source-qua
 display and resolution. Multiple tags may own the same grant; removing one owner must retain the
 grant while another owner remains.
 
+Completed current-format characters have one active racial owner set: the selected source-qualified
+parent and optional child. Every racial tag and choice in every ledger domain must match that set;
+a selected child requires a parent. Persistence validates the complete character and rejects foreign
+or orphan ownership, without requiring loaded metadata or inferring missing references. Empty
+drafts without racial ownership remain valid. Creation and mutation commands commit identity,
+materialized fields and provenance atomically; intermediate Finish patches are not saved characters.
+
 ## Layers
 
 | Layer | Responsibility |
@@ -102,6 +109,13 @@ Switching to or from a version rebuilds both race and subrace ownership in one c
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
 changes retain the existing additive ownership behavior.
 
+Ordinary child replacement or clearing preserves the unchanged parent's nonability selections when
+the previous child resolves exactly as ordinary. If its metadata is unavailable or its kind cannot
+be established, rebuild the whole selection: the old child may have been a complete version.
+Do not guess its kind or treat another printing as the previous child. Parent replacement always
+rebuilds the racial set, even when the child reference stays the same; compatible spell setup retains
+the separate same-profile rule described below.
+
 Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
 recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
 feats when saved selections are resolved from the raw catalog.
@@ -164,6 +178,8 @@ Explicit ability rules take precedence over flexible lineage defaults; fixed bon
 choices. The three-ability distribution is one choice with a count of three. Parent choices precede
 ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
 Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
+Choice IDs include the granting printing; updates target selected ability records rather than every
+record sharing an opaque ID. Unrelated owners and nonability choices cannot consume ability slots.
 Commands retain the player's slot layout while committing validated selections to provenance.
 Ordinary child changes rebuild the selected parent's ability ownership with the cleared slots,
 including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
