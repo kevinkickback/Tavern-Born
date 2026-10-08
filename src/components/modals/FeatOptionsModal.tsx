@@ -113,9 +113,14 @@ const SpellPickStep = memo(function SpellPickStep({
       if (parsed.className && !isSpellOnClassList(s, parsed.className)) return false
       return true
     }
+    const savedReferences = new Map(
+      Object.keys(savedSpells).map((reference) => [getSpellReferenceKey(reference), reference]),
+    )
     const available = spells.filter(matches).map((spell) => ({
       spell: spell as Spell5e | undefined,
-      id: `${spell.name}|${spell.source ?? ''}`,
+      id:
+        savedReferences.get(getSpellReferenceKey(spell.name, spell.source)) ??
+        `${spell.name}|${spell.source ?? ''}`,
       saved: false,
     }))
     const keys = new Set(available.map(({ id }) => getSpellReferenceKey(id)))

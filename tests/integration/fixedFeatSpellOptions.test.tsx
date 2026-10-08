@@ -31,7 +31,12 @@ const requested: Spell5e = {
 const competitor: Spell5e = { ...requested, source: 'TEST', level: 1 }
 const unselected: Spell5e = { ...requested, name: 'Other Spark' }
 
-function seed(spells: Spell5e[], saved = true) {
+function seed(
+  spells: Spell5e[],
+  saved = true,
+  reference = 'Secret Spark|OTHER',
+  allowedSources = ['TEST'],
+) {
   const provenance = emptyProvenance()
   provenance.feats.training = [
     {
@@ -52,7 +57,7 @@ function seed(spells: Spell5e[], saved = true) {
       character,
       provenance,
       { ...feat, fixedGrant: true },
-      { spells: ['Secret Spark|OTHER'] },
+      { spells: [reference] },
       [requested],
     )
     character = {
@@ -61,7 +66,7 @@ function seed(spells: Spell5e[], saved = true) {
       provenance: committed.provenanceUpdate,
     }
   }
-  character = { ...character, allowedSources: ['TEST'] }
+  character = { ...character, allowedSources }
   useCharacterStore.setState({
     activeCharacter: character,
     activeCharacterId: character.id,
@@ -152,4 +157,82 @@ test('a missing saved spell can be replaced with an eligible exact choice', () =
   expect(special?.spellsKnown).toEqual([])
   expect(after?.fixedFeatOptions).toEqual({ 'training|other|': { spells: ['Allowed Spark|TEST'] } })
   expect(after?.provenance?.feats).toEqual(before.provenance?.feats)
+})
+
+test.each([
+  'secret spark|other',
+  ' Secret Spark | OTHER ',
+])('an eligible normalized saved choice stays checked and removable: %s', (reference) => {
+  const before = seed([requested], true, reference, ['OTHER'])
+  editSetup()
+  const checkbox = screen.getByRole('checkbox', { name: /Secret Spark/ })
+  expect(checkbox.getAttribute('aria-checked')).toBe('true')
+  expect(checkbox.hasAttribute('disabled')).toBe(false)
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  })
+  expect(useCharacterStore.getState().activeCharacter?.fixedFeatOptions).toEqual(
+    before.fixedFeatOptions,
+  )
+  editSetup()
+  fireEvent.click(screen.getByRole('checkbox', { name: /Secret Spark/ }))
+  expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(true)
+})
+
+test.each([
+  'secret spark|other',
+  ' Secret Spark | OTHER ',
+])('enabling a source in an open dialog preserves the exact saved selection: %s', (reference) => {
+  seed([requested], true, reference)
+  editSetup()
+  expect(screen.getByRole('checkbox', { name: /Secret Spark/ }).getAttribute('aria-checked')).toBe(
+    'true',
+  )
+  act(() => {
+    const active = useCharacterStore.getState().activeCharacter!
+    useCharacterStore.setState({ activeCharacter: { ...active, allowedSources: ['OTHER'] } })
+  })
+  const checkbox = screen.getByRole('checkbox', { name: /Secret Spark/ })
+  expect(checkbox.getAttribute('aria-checked')).toBe('true')
+  expect(checkbox.hasAttribute('disabled')).toBe(false)
+  fireEvent.click(checkbox)
+  expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(true)
+})
+
+test('normalized saved selection does not select or borrow another same-name printing', () => {
+  seed([{ ...competitor, level: 0 }, requested], true, 'secret spark|other', ['OTHER', 'TEST'])
+  editSetup()
+  const checkboxes = screen.getAllByRole('checkbox', { name: /Secret Spark/ })
+  expect(checkboxes.map((checkbox) => checkbox.getAttribute('aria-checked'))).toEqual([
+    'false',
+    'true',
+  ])
+  fireEvent.click(checkboxes[1])
+  fireEvent.click(checkboxes[0])
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  })
+  expect(useCharacterStore.getState().activeCharacter?.fixedFeatOptions).toEqual({
+    'training|other|': { spells: ['Secret Spark|TEST'] },
+  })
+})
+
+test('catalog casing changes preserve the original saved reference and its removal', () => {
+  const before = seed([requested], true, 'Secret Spark|OTHER', ['OTHER'])
+  editSetup()
+  act(() => {
+    const data = makeGameDataFixture({
+      feats: [feat],
+      spells: [{ ...requested, name: 'secret spark', source: 'other' }],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  })
+  const checkbox = screen.getByRole('checkbox', { name: /secret spark/i })
+  expect(checkbox.getAttribute('aria-checked')).toBe('true')
+  expect(checkbox.hasAttribute('disabled')).toBe(false)
+  expect(useCharacterStore.getState().activeCharacter?.fixedFeatOptions).toEqual(
+    before.fixedFeatOptions,
+  )
+  fireEvent.click(checkbox)
+  expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(true)
 })

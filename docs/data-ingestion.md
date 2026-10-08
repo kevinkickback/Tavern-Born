@@ -299,6 +299,8 @@ merely projecting the grant does not rewrite provenance or saved option keys. Ex
 grants remain viewable/configurable after source filtering without entering the selection list.
 Fixed feat editing resolves saved spell choices against exact raw rule records and retains them
 in the dialog, while new spell, optional-feature, and language choices remain character-filtered.
+An eligible row retains the original saved reference after complete name/source normalization,
+so source changes and catalog casing changes preserve selection and removal without rewriting it.
 Finishing resolves spell metadata by complete name/source; a competing printing cannot determine
 cantrip classification. An unavailable saved spell must be replaced or its rules restored before
 completion; merely opening the dialog leaves saved options and provenance intact.
