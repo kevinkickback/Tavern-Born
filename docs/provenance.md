@@ -51,10 +51,22 @@ Batch choices accumulate the full result before the single store write.
 
 Never clear a whole category because one source changed.
 
-Fixed feat option edits opt into normalized name/reference matching when retracting the old option
-owner after catalog refresh. Grant variants and choice/class owner keys still match exactly, so
-another printing or variant retains its benefits. Other `removeGrantsBySourceRef` callers retain
-the default exact name/reference comparison.
+Fixed feat option edits opt into normalized name/reference and fixed-variant matching, consistent
+with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
+variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
+
+Race, subrace and background commands reconcile fixed feat setup after the complete replacement
+ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the
+final matching grant's removal retracts saved fixed options and their benefits; independently
+configured feat choices and other printings/variants retain their own ownership. Source-less
+legacy grants cannot establish which qualified saved setup to retract and are not guessed.
+
+New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
+ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
+Older saves without expertise ownership remain valid: unknown expertise is retained while its
+proficiency remains, and a pre-existing untracked selection is preserved as manual when a new
+feat grants the same expertise. Removing proficiency still prunes expertise. This compatibility
+rule does not reconstruct the origin of historical untracked expertise.
 
 ## Origin ability scores
 

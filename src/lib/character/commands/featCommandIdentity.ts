@@ -20,14 +20,14 @@ export interface SelectedFeat {
 }
 
 export function getFeatOptionSourceName(feat: FeatOptionTarget): string {
-  return feat.grantVariant ? `${feat.name}; ${feat.grantVariant}` : feat.name
+  return feat.grantVariant ? `${feat.name.trim()}; ${feat.grantVariant.trim()}` : feat.name
 }
 
 export function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {
   if (feat.provenanceChoiceId) return `choice:${feat.provenanceChoiceId}`
   if (feat.classFeatChoiceId) return `class:${feat.classFeatChoiceId}`
   return feat.fixedGrant || feat.grantVariant !== undefined
-    ? `fixed:${feat.grantVariant ?? ''}`
+    ? `fixed:${feat.grantVariant?.trim() ?? ''}`
     : undefined
 }
 

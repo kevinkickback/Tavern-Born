@@ -86,6 +86,8 @@ export interface ProficiencyProvenance {
   tools: Record<string, SourceTag[]>
   languages: Record<string, SourceTag[]>
   skills: Record<string, SourceTag[]>
+  /** Absent in older saves; absence cannot establish ownership of existing expertise. */
+  expertise?: Record<string, SourceTag[]>
   savingThrows: Record<string, SourceTag[]>
 }
 

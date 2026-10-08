@@ -356,7 +356,10 @@ export function retractFeatOptionsCommand(
     getFeatOptionSourceName(feat),
     feat.source,
     getFeatOptionOwnerKey(feat),
-    { normalizeIdentity: feat.fixedGrant || feat.grantVariant !== undefined },
+    {
+      normalizeIdentity: feat.fixedGrant || feat.grantVariant !== undefined,
+      normalizeFixedVariant: feat.fixedGrant || feat.grantVariant !== undefined,
+    },
   )
   const removedSpells = new Set(
     (selections.spells ?? []).map((key) => normalizeKey(parseSpellReference(key).name)),
@@ -399,22 +402,37 @@ export function retractFeatOptionsCommand(
     if (provenanceUpdate.proficiencies.languages[normalizeKey(language)]) continue
     proficiencies = {
       ...proficiencies,
-      languages: proficiencies.languages.filter((entry) => entry !== language),
+      languages: proficiencies.languages.filter(
+        (entry) => normalizeKey(entry) !== normalizeKey(language),
+      ),
     }
   }
   for (const tool of selections.tools ?? []) {
     if (provenanceUpdate.proficiencies.tools[normalizeKey(tool)]) continue
     proficiencies = {
       ...proficiencies,
-      tools: proficiencies.tools.filter((entry) => entry !== tool),
+      tools: proficiencies.tools.filter((entry) => normalizeKey(entry) !== normalizeKey(tool)),
     }
   }
 
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    proficiencies.expertise = proficiencies.expertise.filter(
-      (name) => normalizeKey(name) !== normalized,
-    )
+    if (
+      ledger.proficiencies.expertise?.[normalized]?.length &&
+      !provenanceUpdate.proficiencies.expertise?.[normalized]?.length
+    ) {
+      proficiencies.expertise = proficiencies.expertise.filter(
+        (name) => normalizeKey(name) !== normalized,
+      )
+    }
+    if (
+      ledger.proficiencies.skills[normalized]?.length &&
+      !provenanceUpdate.proficiencies.skills[normalized]?.length
+    ) {
+      proficiencies.skills = proficiencies.skills.filter(
+        (name) => normalizeKey(name) !== normalized,
+      )
+    }
   }
 
   return {
@@ -475,8 +493,23 @@ export function commitFeatOptionsCommand(
       ]
 
   let proficiencies = { ...character.proficiencies }
+  const retainUntrackedProficiency = (domain: 'skills' | 'languages' | 'tools', name: string) => {
+    const key = normalizeKey(name)
+    if (
+      proficiencies[domain].some((entry) => normalizeKey(entry) === key) &&
+      !provenanceUpdate.proficiencies[domain][key]?.length
+    ) {
+      provenanceUpdate = addGrant(
+        provenanceUpdate,
+        domain,
+        name,
+        makeSourceTag('manual', 'User Choice', 'choice'),
+      )
+    }
+  }
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
+    retainUntrackedProficiency('skills', skillName)
     provenanceUpdate = addGrant(provenanceUpdate, 'skills', skillName, sourceTag)
     proficiencies = {
       ...proficiencies,
@@ -484,6 +517,7 @@ export function commitFeatOptionsCommand(
     }
   }
   for (const language of selections.languages ?? []) {
+    retainUntrackedProficiency('languages', language)
     provenanceUpdate = addGrant(provenanceUpdate, 'languages', language, sourceTag)
     proficiencies = {
       ...proficiencies,
@@ -491,6 +525,7 @@ export function commitFeatOptionsCommand(
     }
   }
   for (const tool of selections.tools ?? []) {
+    retainUntrackedProficiency('tools', tool)
     provenanceUpdate = addGrant(provenanceUpdate, 'tools', tool, sourceTag)
     proficiencies = { ...proficiencies, tools: [...new Set([...proficiencies.tools, tool])] }
   }
@@ -510,6 +545,21 @@ export function commitFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
+    // Legacy/manual selections without ownership must survive a newly configured feat.
+    for (const domain of ['skills', 'expertise'] as const) {
+      if (
+        proficiencies[domain].some((name) => normalizeKey(name) === normalized) &&
+        !provenanceUpdate.proficiencies[domain]?.[normalized]?.length
+      ) {
+        provenanceUpdate = addGrant(
+          provenanceUpdate,
+          domain,
+          normalized,
+          makeSourceTag('manual', 'User Choice', 'choice'),
+        )
+      }
+      provenanceUpdate = addGrant(provenanceUpdate, domain, normalized, sourceTag)
+    }
     proficiencies = {
       ...proficiencies,
       skills: [...new Set([...proficiencies.skills, normalized])],

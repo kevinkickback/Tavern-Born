@@ -20,6 +20,7 @@ const PROFICIENCY_DOMAINS = new Set<string>([
   'tools',
   'languages',
   'skills',
+  'expertise',
   'savingThrows',
 ])
 
@@ -28,7 +29,7 @@ function isProficiencyDomain(domain: MapDomain): domain is ProficiencyDomain {
 }
 
 function getMap(ledger: ProvenanceLedger, domain: MapDomain): Record<string, SourceTag[]> {
-  if (isProficiencyDomain(domain)) return ledger.proficiencies[domain]
+  if (isProficiencyDomain(domain)) return ledger.proficiencies[domain] ?? {}
   return getNonProficiencyMap(ledger, domain)
 }
 
@@ -55,6 +56,8 @@ function setMap(
   map: Record<string, SourceTag[]>,
 ): ProvenanceLedger {
   if (isProficiencyDomain(domain)) {
+    if (domain === 'expertise' && !ledger.proficiencies.expertise && !Object.keys(map).length)
+      return ledger
     return {
       ...ledger,
       proficiencies: { ...ledger.proficiencies, [domain]: map },
@@ -136,6 +139,7 @@ const ALL_MAP_DOMAINS: MapDomain[] = [
   'tools',
   'languages',
   'skills',
+  'expertise',
   'savingThrows',
   'features',
   'feats',
@@ -177,7 +181,7 @@ export function removeGrantsBySourceRef(
   sourceName: string,
   sourceRef: string | undefined,
   grantVariant?: string,
-  options?: { normalizeIdentity?: boolean },
+  options?: { normalizeIdentity?: boolean; normalizeFixedVariant?: boolean },
 ): ProvenanceLedger {
   const matchesIdentity = (left: string, right: string) =>
     options?.normalizeIdentity ? normalizeKey(left) === normalizeKey(right) : left === right
@@ -185,7 +189,10 @@ export function removeGrantsBySourceRef(
     tag.sourceType === sourceType &&
     matchesIdentity(tag.sourceName, sourceName) &&
     matchesIdentity(tag.sourceRef ?? '', sourceRef ?? '') &&
-    (grantVariant === undefined || tag.grantVariant === grantVariant)
+    (grantVariant === undefined ||
+      (options?.normalizeFixedVariant
+        ? normalizeKey(tag.grantVariant ?? '') === normalizeKey(grantVariant)
+        : tag.grantVariant === grantVariant))
   let result = ledger
 
   for (const domain of ALL_MAP_DOMAINS) {

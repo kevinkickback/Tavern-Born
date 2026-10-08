@@ -13,6 +13,7 @@ import { getRaceSelectionParent } from '@/lib/calculations/raceSelection'
 import type { RaceSpellSelectionOptions } from '@/lib/calculations/raceSpellSelection'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
+import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
@@ -186,7 +187,7 @@ export function applyRaceSelectionCommand(
   )
   provenanceUpdate = racialSpells.provenanceUpdate
 
-  return {
+  return reconcileFixedFeatOptionsCommand(character, ledger, {
     characterPatch: {
       race: race.name,
       raceSource: race.source || undefined,
@@ -206,7 +207,7 @@ export function applyRaceSelectionCommand(
       ),
     },
     provenanceUpdate,
-  }
+  })
 }
 
 export function applySubraceSelectionCommand(
@@ -284,7 +285,7 @@ export function applySubraceSelectionCommand(
   )
   provenanceUpdate = racialSpells.provenanceUpdate
 
-  return {
+  return reconcileFixedFeatOptionsCommand(character, ledger, {
     characterPatch: {
       subrace: subrace?.name,
       subraceSource: subrace?.source || undefined,
@@ -301,7 +302,7 @@ export function applySubraceSelectionCommand(
       ),
     },
     provenanceUpdate,
-  }
+  })
 }
 
 export function applyRaceAsiChoicesCommand(
