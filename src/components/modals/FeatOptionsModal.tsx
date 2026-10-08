@@ -125,7 +125,7 @@ const SpellPickStep = memo(function SpellPickStep({
     }))
     const keys = new Set(available.map(({ id }) => getSpellReferenceKey(id)))
     for (const [id, spell] of Object.entries(savedSpells)) {
-      if (!keys.has(getSpellReferenceKey(id)) && (!spell || matches(spell))) {
+      if (!keys.has(getSpellReferenceKey(id))) {
         available.push({ spell, id, saved: true })
       }
     }

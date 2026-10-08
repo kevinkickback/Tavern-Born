@@ -170,18 +170,21 @@ export function removeGrantsBySource(
   return result
 }
 
-/** Remove grants attributed to one exact source entity across every domain. */
+/** Remove one source entity across domains; normalized name/reference matching is opt-in. */
 export function removeGrantsBySourceRef(
   ledger: ProvenanceLedger,
   sourceType: string,
   sourceName: string,
   sourceRef: string | undefined,
   grantVariant?: string,
+  options?: { normalizeIdentity?: boolean },
 ): ProvenanceLedger {
+  const matchesIdentity = (left: string, right: string) =>
+    options?.normalizeIdentity ? normalizeKey(left) === normalizeKey(right) : left === right
   const matchesSource = (tag: SourceTag) =>
     tag.sourceType === sourceType &&
-    tag.sourceName === sourceName &&
-    (tag.sourceRef ?? '') === (sourceRef ?? '') &&
+    matchesIdentity(tag.sourceName, sourceName) &&
+    matchesIdentity(tag.sourceRef ?? '', sourceRef ?? '') &&
     (grantVariant === undefined || tag.grantVariant === grantVariant)
   let result = ledger
 

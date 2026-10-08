@@ -95,6 +95,62 @@ function editSetup() {
 
 afterEach(cleanup)
 
+test('refreshing feat catalog casing does not duplicate option ownership on unchanged Finish', () => {
+  const before = seed([requested])
+  act(() => {
+    const data = makeGameDataFixture({
+      feats: [{ ...feat, name: 'training', source: 'other' }],
+      spells: [requested],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  })
+  editSetup()
+  fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  const after = useCharacterStore.getState().activeCharacter!
+  expect(after.provenance.spells['secret spark']).toHaveLength(1)
+  expect(after.spells).toEqual(before.spells)
+  expect(after.fixedFeatOptions).toEqual(before.fixedFeatOptions)
+})
+
+test('a retained spell outside the refreshed feat filter stays visible and replaceable', () => {
+  seed([requested])
+  act(() => {
+    const data = makeGameDataFixture({
+      feats: [feat],
+      spells: [
+        { ...requested, level: 1 },
+        { ...requested, name: 'Allowed Spark', source: 'TEST' },
+      ],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  })
+  editSetup()
+  const saved = screen.getByRole('checkbox', { name: /Secret Spark/ })
+  expect(saved.getAttribute('aria-checked')).toBe('true')
+  expect(screen.getByText('Saved choice')).toBeTruthy()
+  fireEvent.click(saved)
+  fireEvent.click(screen.getByRole('checkbox', { name: /Allowed Spark/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  const after = useCharacterStore.getState().activeCharacter!
+  expect(after.fixedFeatOptions).toEqual({ 'training|other|': { spells: ['Allowed Spark|TEST'] } })
+  expect(after.provenance.spells['secret spark']).toBeUndefined()
+})
+
+test('a complete tagged saved spell resolves its exact printing and preserves its literal option', () => {
+  const before = seed([competitor, requested], true, '{@spell Secret Spark|OTHER|Saved display}')
+  editSetup()
+  expect(screen.getByRole('checkbox', { name: /Secret Spark/ }).getAttribute('aria-checked')).toBe(
+    'true',
+  )
+  expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+  const after = useCharacterStore.getState().activeCharacter!
+  const special = after.spells.spellProfiles.find((profile) => profile.type === 'special')
+  expect(special?.cantrips).toEqual(['Secret Spark'])
+  expect(special?.spellsKnown).toEqual([])
+  expect(after.fixedFeatOptions).toEqual(before.fixedFeatOptions)
+})
+
 test('an unchanged fixed setup edit preserves a saved hidden-source cantrip and its exact options', () => {
   const before = seed([requested])
   editSetup()

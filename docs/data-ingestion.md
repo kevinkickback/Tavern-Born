@@ -306,6 +306,10 @@ cantrip classification. Materialized spell names use the shared reference parser
 deduplication; the original full reference remains in saved options, and retraction uses the same
 parsed name. An unavailable saved spell must be replaced or its rules restored before
 completion; merely opening the dialog leaves saved options and provenance intact.
+Retained saved spells remain visible and removable even when refreshed metadata no longer matches
+the current feat filter; that filter still governs new choices. Plain and tagged spell references
+use the same shared parser for exact source resolution. Fixed option teardown compares normalized
+feat name/source while preserving the distinct granting owner and variant.
 
 Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.
 Its pure resolver indexes class/subclass features with the saved class and subclass owner context,

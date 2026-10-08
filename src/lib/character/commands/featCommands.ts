@@ -356,6 +356,7 @@ export function retractFeatOptionsCommand(
     getFeatOptionSourceName(feat),
     feat.source,
     getFeatOptionOwnerKey(feat),
+    { normalizeIdentity: feat.fixedGrant || feat.grantVariant !== undefined },
   )
   const removedSpells = new Set(
     (selections.spells ?? []).map((key) => normalizeKey(parseSpellReference(key).name)),

@@ -51,6 +51,11 @@ Batch choices accumulate the full result before the single store write.
 
 Never clear a whole category because one source changed.
 
+Fixed feat option edits opt into normalized name/reference matching when retracting the old option
+owner after catalog refresh. Grant variants and choice/class owner keys still match exactly, so
+another printing or variant retains its benefits. Other `removeGrantsBySourceRef` callers retain
+the default exact name/reference comparison.
+
 ## Origin ability scores
 
 Origin rules depend on `character.originSystem`:

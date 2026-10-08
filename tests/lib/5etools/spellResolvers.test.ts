@@ -18,4 +18,20 @@ describe('resolveSpellReference', () => {
 
     expect(resolveSpellReference('alarm', { z: xphb, a: phb })).toBe(phb)
   })
+
+  test.each([
+    '{@spell Alarm|XPHB}',
+    ' {@spell alarm| xphb |Displayed text} ',
+  ])('resolves tagged references with exact source identity: %s', (reference) => {
+    const phb = { name: 'Alarm', source: 'PHB', level: 0 } as Spell5e
+    const xphb = { name: 'Alarm', source: 'XPHB', level: 1 } as Spell5e
+    expect(resolveSpellReference(reference, { phb, xphb })).toBe(xphb)
+    expect(resolveSpellReference(reference, { phb })).toBeUndefined()
+  })
+
+  test('tagged source-less references retain the deterministic legacy fallback', () => {
+    const phb = { name: 'Alarm', source: 'PHB' } as Spell5e
+    const xphb = { name: 'Alarm', source: 'XPHB' } as Spell5e
+    expect(resolveSpellReference('{@spell Alarm}', { z: xphb, a: phb })).toBe(phb)
+  })
 })
