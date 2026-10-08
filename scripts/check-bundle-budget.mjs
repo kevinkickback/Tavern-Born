@@ -14,11 +14,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Strict racial block identity and shared ability projection measure 5,600,991
-  // renderer bytes (5469.7 KiB), without new dependencies. Use the smallest whole-KiB
+  // Strict racial block identity and shared ability projection measure 5,601,178
+  // renderer bytes (5469.9 KiB), without new dependencies. Use the smallest whole-KiB
   // allowance; this measured increase requires explicit budget review.
   rendererCode: 5470 * KIB,
-  // The same measured artifact has a 453,084-byte initial script (442.5 KiB).
+  // The same measured artifact has a 453,271-byte initial script (442.6 KiB).
   // Other budgets and their enforcement remain unchanged; explicit budget review required.
   initialRendererScript: 443 * KIB,
   initialStylesheet: 185 * KIB,

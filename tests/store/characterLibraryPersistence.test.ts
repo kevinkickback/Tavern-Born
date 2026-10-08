@@ -56,11 +56,16 @@ describe('acknowledged character library in IndexedDB', () => {
       new Map(),
       () => [],
     )
+    const malformedRevised = structuredClone(malformed)
+    malformedRevised.originSystem = '2024'
+    malformedRevised.provenance!.choices[0].selected = ['dexterity']
+    malformedRevised.provenance!.choices[0].status = 'pending'
     malformed.provenance!.choices.push(structuredClone(malformed.provenance!.choices[0]))
     const originals = [
       { ...makeCharacterFixture({ id: 'old', name: 'Old' }), schemaVersion: 4 },
       { ...makeCharacterFixture({ id: 'newer', name: 'Newer' }), schemaVersion: 6 },
       malformed,
+      malformedRevised,
     ]
     const before = structuredClone(originals)
     const rawStorage = createIdbStorage<{
@@ -89,6 +94,12 @@ describe('acknowledged character library in IndexedDB', () => {
     ).toEqual(before)
     expect(originals).toEqual(before)
     const library = useCharacterStore.getState().characters
+    await expect(
+      useCharacterStore.getState().importCharacters([valid, malformedRevised]),
+    ).rejects.toThrow()
+    expect(useCharacterStore.getState().characters).toBe(library)
+    expect((await reader.getItem('character-storage'))?.state.characters).toEqual(library)
+    expect(originals).toEqual(before)
     await expect(
       useCharacterStore.getState().importCharacters([valid, malformed]),
     ).rejects.toThrow()

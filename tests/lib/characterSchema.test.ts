@@ -299,6 +299,66 @@ describe('characterPersistenceSchema', () => {
     expect(saved.provenance.choices.slice(0, 3)).toEqual(unrelated)
   })
 
+  test.each([
+    false,
+    true,
+  ])('2024 rejects retained racial blocks, whether their slots are coherent: %s', (coherent) => {
+    const character = abilityCharacter()
+    character.originSystem = '2024'
+    if (!coherent) {
+      character.provenance!.choices[0].selected = ['wisdom']
+      character.provenance!.choices[0].status = 'pending'
+    }
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test.each([
+    'race',
+    'subrace',
+  ] as const)('2024 rejects fixed racial ability grants from %s while retaining independent ability owners', (sourceType) => {
+    const current = buildInitialCharacter(
+      {
+        initial: { name: 'Revised origin', originSystem: '2024' },
+        race: { name: 'Parent', source: 'TEST', ability: [{ con: 2 }] } as Race5e,
+        subrace: { name: 'Child', source: 'TEST', ability: [{ dex: 1 }] } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    const independent = ['manual', 'class', 'background'].map((owner) => ({
+      ability: 'wisdom',
+      value: 1,
+      sourceTag: {
+        sourceType: owner as 'manual' | 'class' | 'background',
+        sourceName: 'Independent',
+        sourceRef: 'TEST',
+        grantType: 'fixed' as const,
+        label: 'Independent',
+      },
+    }))
+    current.provenance!.abilityBonuses.push(...independent)
+    expect(
+      characterPersistenceSchema.parse(JSON.parse(JSON.stringify(current))).provenance
+        .abilityBonuses,
+    ).toEqual(independent)
+    const malformed = structuredClone(current)
+    malformed.provenance!.abilityBonuses.push({
+      ability: 'constitution',
+      value: 2,
+      sourceTag: {
+        sourceType,
+        sourceName: sourceType === 'race' ? 'Parent' : 'Child',
+        sourceRef: 'TEST',
+        grantType: 'fixed',
+        label: 'Retained racial grant',
+      },
+    })
+    expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+    expect(characterPersistenceSchema.safeParse(current).success).toBe(true)
+  })
+
   test('round-trips typed manual effects and their activation state', () => {
     const character = makeCharacterFixture({
       manualEffects: [

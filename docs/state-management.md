@@ -199,6 +199,8 @@ Racial ability choices use canonical encoded full owner references and dense num
 within each represented owner. Array order does not change block identity; integer amounts are
 explicit, and selections/status agree with the bounded saved player slots. Ambiguous or incoherent
 records are rejected rather than repaired. Schema 4 did not validate those block associations.
+Revised (2024) origin saves contain no racial ability grants or choice blocks; independent
+background, class and manual ability ownership remains supported.
 Schema 2–4 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 

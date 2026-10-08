@@ -4,6 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { hasRaceAbilityOriginGrants } from '@/lib/calculations/originSystem'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import { getUnselectedRaceOwnerPaths } from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
@@ -841,6 +842,13 @@ export const characterSchema = z
       })
     }
     if (char.provenance) {
+      if (char.originSystem === '2024' && hasRaceAbilityOriginGrants(char.provenance)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Revised origin cannot retain racial ability grants or choice blocks',
+          path: ['provenance'],
+        })
+      }
       const invalidAbilityPaths = getInvalidRaceAbilityChoicePaths(char.provenance)
       for (const path of invalidAbilityPaths) {
         ctx.addIssue({

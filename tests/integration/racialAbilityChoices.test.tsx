@@ -877,10 +877,23 @@ test.each([
 ] as const)('a rejected racial ability edit does not dirty the saved draft: %s', (reason) => {
   const child = { name: 'Child', source: 'HB' } as Race5e
   const selected = selectRace(dhampir, 0, [['strength'], ['dexterity']], child)
-  const character = characterPersistenceSchema.parse({
-    ...selected,
-    originSystem: reason === 'revised-origin' ? '2024' : '2014',
-  })
+  if (reason === 'revised-origin')
+    expect(
+      characterPersistenceSchema.safeParse({ ...selected, originSystem: '2024' }).success,
+    ).toBe(false)
+  const character = characterPersistenceSchema.parse(
+    reason === 'revised-origin'
+      ? buildInitialCharacter(
+          {
+            initial: { name: 'Revised edit', originSystem: '2024' },
+            race: dhampir,
+            subrace: child,
+          },
+          new Map(),
+          () => [],
+        )
+      : selected,
+  )
   setActiveCharacter(character)
   useCharacterStore.setState({ isActiveCharacterDirty: false })
   const before = structuredClone(character)
@@ -1340,19 +1353,30 @@ test.each([
   'revised-origin',
 ])('ability edits cannot activate orphan choices: %s', (suppressed) => {
   const selected = selectRace(dhampir, 0, [])
-  if (suppressed === 'absent-race') {
-    expect(
-      characterPersistenceSchema.safeParse({ ...selected, race: '', raceSource: undefined })
-        .success,
-    ).toBe(false)
-    return
-  }
-  const character = characterPersistenceSchema.parse({
+  const orphan = {
     ...selected,
     ...(suppressed === 'absent-race'
       ? { race: '', raceSource: undefined }
       : { originSystem: '2024' }),
-  })
+  }
+  expect(characterPersistenceSchema.safeParse(orphan).success).toBe(false)
+  const command = applyRaceAsiChoicesCommand(orphan as Character, orphan.provenance!, [
+    ['strength'],
+    ['dexterity'],
+  ])
+  expect(command.characterPatch).toEqual({})
+  expect(command.provenanceUpdate).toBe(orphan.provenance)
+  if (suppressed === 'absent-race') return
+  const character = characterPersistenceSchema.parse(
+    buildInitialCharacter(
+      {
+        initial: { name: 'Revised current choices', originSystem: '2024' },
+        race: dhampir,
+      },
+      new Map(),
+      () => [],
+    ),
+  )
   const before = structuredClone(character)
   setActiveCharacter(character)
   const { result } = renderHook(useRaceProvenanceMutations)
