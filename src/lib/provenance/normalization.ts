@@ -10,6 +10,10 @@ export function stripItemTag(value: string): string {
   return out.trim()
 }
 
+/** Normalize separate owner name/source fields without interpreting them as item tags or UIDs. */
+export const normalizeOwnerIdentity = (value: string | undefined): string =>
+  value?.trim().toLowerCase() ?? ''
+
 /**
  * Normalize a proficiency/item name to a stable lowercase key.
  * Strips 5etools tags so that "{@item thieves' tools|PHB}" and "thieves' tools"

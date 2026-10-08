@@ -23,7 +23,7 @@ import {
   reconcileSubraceChange,
   resolveRaceAsiChoicesInLedger,
 } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
@@ -255,8 +255,8 @@ export function applySubraceSelectionCommand(
   ]
   const previous = previousCandidates.find(
     (candidate) =>
-      normalizeKey(candidate.name) === normalizeKey(character.subrace) &&
-      normalizeKey(candidate.source ?? '') === normalizeKey(character.subraceSource ?? ''),
+      normalizeOwnerIdentity(candidate.name) === normalizeOwnerIdentity(character.subrace) &&
+      normalizeOwnerIdentity(candidate.source) === normalizeOwnerIdentity(character.subraceSource),
   )
   // An unavailable previous child may have replaced all parent mechanics. Rebuild the
   // complete selection rather than assume that parent ownership can be retained.
@@ -358,10 +358,10 @@ export function applyRaceAsiDistributionCommand(
   mode: 0 | 1,
 ): CharacterCommandResult {
   if (
-    normalizeKey(character.race) !== normalizeKey(race.name) ||
-    normalizeKey(character.raceSource ?? '') !== normalizeKey(race.source ?? '') ||
-    normalizeKey(character.subrace ?? '') !== normalizeKey(subrace?.name ?? '') ||
-    normalizeKey(character.subraceSource ?? '') !== normalizeKey(subrace?.source ?? '')
+    normalizeOwnerIdentity(character.race) !== normalizeOwnerIdentity(race.name) ||
+    normalizeOwnerIdentity(character.raceSource) !== normalizeOwnerIdentity(race.source) ||
+    normalizeOwnerIdentity(character.subrace) !== normalizeOwnerIdentity(subrace?.name) ||
+    normalizeOwnerIdentity(character.subraceSource) !== normalizeOwnerIdentity(subrace?.source)
   )
     return { characterPatch: {}, provenanceUpdate: ledger }
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)

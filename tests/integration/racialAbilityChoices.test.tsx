@@ -1176,6 +1176,170 @@ test.each([
 })
 
 test.each([
+  'name',
+  'source',
+] as const)('a missing complete child cannot be replaced by a different literal %s prefix when clearing', (field) => {
+  const versionName = field === 'name' ? 'Child|Version' : 'Child'
+  const versionSource = field === 'source' ? 'HB|Version' : 'HB'
+  const [parent] = parseRaces({
+    race: [
+      {
+        name: 'Parent',
+        source: 'PHB',
+        skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+        _versions: [{ name: versionName, source: versionSource, skillProficiencies: [] }],
+      },
+    ],
+    subrace: [
+      {
+        name: field === 'name' ? 'Child|Ordinary' : 'Child',
+        source: field === 'source' ? 'HB|Ordinary' : 'HB',
+        raceName: 'Parent',
+        raceSource: 'PHB',
+      },
+    ],
+  }) as Race5e[]
+  const version = parent.subraces!.find((child) => child._isVersion === true)!
+  const ordinary = parent.subraces!.find((child) => child._isVersion !== true)!
+  const saved = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify(
+        buildInitialCharacter(
+          {
+            initial: { name: 'Exact child', originSystem: '2014' },
+            race: parent,
+            subrace: version,
+          },
+          new Map(),
+          () => [],
+        ),
+      ),
+    ),
+  )
+  expect(saved.provenance!.choices.filter((choice) => choice.domain === 'skills')).toHaveLength(0)
+  const before = structuredClone(saved)
+  const cleared = applySubraceSelectionCommand(
+    saved,
+    saved.provenance!,
+    { ...parent, subraces: [ordinary] },
+    undefined,
+    () => [],
+  )
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({ ...saved, ...cleared.characterPatch, provenance: cleared.provenanceUpdate }),
+    ),
+  )
+  expect(reopened.subrace).toBeUndefined()
+  expect(reopened.provenance!.choices.filter((choice) => choice.domain === 'skills')).toMatchObject(
+    [
+      {
+        sourceTag: { sourceType: 'race', sourceName: 'Parent', sourceRef: 'PHB' },
+        selected: [],
+        chooseCount: 1,
+      },
+    ],
+  )
+  expect(saved).toEqual(before)
+})
+
+test('the mutation hook restores parent choices when a missing version has a different literal printing suffix', () => {
+  const [parent] = parseRaces({
+    race: [
+      {
+        name: 'Parent',
+        source: 'PHB',
+        skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+        _versions: [{ name: 'Child', source: 'HB|Version', skillProficiencies: [] }],
+      },
+    ],
+    subrace: [{ name: 'Child', source: 'HB|Ordinary', raceName: 'Parent', raceSource: 'PHB' }],
+  }) as Race5e[]
+  const version = parent.subraces!.find((child) => child._isVersion === true)!
+  const ordinary = parent.subraces!.find((child) => child._isVersion !== true)!
+  const saved = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify(
+        buildInitialCharacter(
+          { initial: { name: 'Exact hook', originSystem: '2014' }, race: parent, subrace: version },
+          new Map(),
+          () => [],
+        ),
+      ),
+    ),
+  )
+  const refreshed = { ...parent, subraces: [ordinary] }
+  install([refreshed])
+  setActiveCharacter(saved)
+  const { result } = renderHook(useRaceProvenanceMutations)
+  act(() => result.current.applySubraceChange(refreshed, ordinary))
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+  )
+  expect(reopened.subraceSource).toBe(ordinary.source)
+  expect(reopened.provenance!.choices.filter((choice) => choice.domain === 'skills')).toMatchObject(
+    [
+      {
+        sourceTag: { sourceType: 'race', sourceName: 'Parent', sourceRef: 'PHB' },
+        selected: [],
+        chooseCount: 1,
+      },
+    ],
+  )
+})
+
+test('ability choice IDs encode the complete literal granting name and source', () => {
+  const parent = { ...dhampir, name: 'Parent|Selected', source: 'HB|Selected' }
+  const saved = characterPersistenceSchema.parse(
+    selectRace(parent, 0, [['strength'], ['dexterity']]),
+  )
+  expect(
+    saved
+      .provenance!.choices.filter((choice) => choice.domain === 'abilityBonuses')
+      .map((choice) => choice.id),
+  ).toEqual([
+    'race:parent%7Cselected|hb%7Cselected:abilityBonuses:choose:0',
+    'race:parent%7Cselected|hb%7Cselected:abilityBonuses:choose:1',
+  ])
+})
+
+test.each([
+  'race',
+  'raceSource',
+  'subrace',
+  'subraceSource',
+] as const)('distribution edits cannot substitute a different literal %s prefix for the selected identity', (field) => {
+  const parent = { ...dhampir, name: 'Parent', source: 'PHB' }
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  if (field === 'race') parent.name = 'Parent|Selected'
+  if (field === 'raceSource') parent.source = 'PHB|Selected'
+  if (field === 'subrace') child.name = 'Child|Selected'
+  if (field === 'subraceSource') child.source = 'HB|Selected'
+  const saved = characterPersistenceSchema.parse(
+    selectRace(parent, 0, [['strength'], ['dexterity']], child),
+  )
+  const replacementParent = {
+    ...parent,
+    ...(field === 'race' ? { name: 'Parent|Other' } : {}),
+    ...(field === 'raceSource' ? { source: 'PHB|Other' } : {}),
+  }
+  const replacementChild = {
+    ...child,
+    ...(field === 'subrace' ? { name: 'Child|Other' } : {}),
+    ...(field === 'subraceSource' ? { source: 'HB|Other' } : {}),
+  }
+  const result = applyRaceAsiDistributionCommand(
+    saved,
+    saved.provenance!,
+    replacementParent,
+    replacementChild,
+    1,
+  )
+  expect(result.characterPatch).toEqual({})
+  expect(result.provenanceUpdate).toBe(saved.provenance)
+})
+
+test.each([
   false,
   true,
 ])('clearing a source-less complete child never treats another printing as previous (exact available: %s)', (available) => {

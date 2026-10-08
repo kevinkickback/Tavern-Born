@@ -9,6 +9,7 @@ import {
   getSpellsGrantedAtLevel,
   removeGrantsBySource,
   removeGrantsBySourceFromDomain,
+  removeGrantsBySourceRef,
   removeSpellChoicesAtLevel,
   removeSpellGrantsAtLevel,
   replaceSourceGrants,
@@ -33,6 +34,38 @@ const classTag: SourceTag = {
 }
 
 describe('provenance/ledger', () => {
+  test.each([
+    'name',
+    'source',
+  ] as const)('normalized exact source removal retains a distinct literal %s suffix', (field) => {
+    const selected: SourceTag = {
+      ...classTag,
+      sourceType: 'feat',
+      sourceName: field === 'name' ? 'Feat|Selected' : 'Feat',
+      sourceRef: field === 'source' ? 'HB|Selected' : 'HB',
+    }
+    const independent: SourceTag = {
+      ...selected,
+      ...(field === 'name' ? { sourceName: 'Feat|Other' } : { sourceRef: 'HB|Other' }),
+    }
+    const ledger = addGrant(
+      addGrant(emptyProvenance(), 'skills', 'Arcana', selected),
+      'skills',
+      'Arcana',
+      independent,
+    )
+    const removed = removeGrantsBySourceRef(
+      ledger,
+      'feat',
+      ` ${selected.sourceName.toLowerCase()} `,
+      ` ${selected.sourceRef!.toLowerCase()} `,
+      undefined,
+      { normalizeIdentity: true },
+    )
+    expect(removed.proficiencies.skills.arcana).toEqual([independent])
+    expect(ledger.proficiencies.skills.arcana).toEqual([selected, independent])
+  })
+
   test('addGrant normalizes keys and is idempotent for duplicate tags', () => {
     let ledger = emptyProvenance()
 

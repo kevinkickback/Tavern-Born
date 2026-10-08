@@ -18,6 +18,8 @@ target remains unresolved, even if only one printing is loaded; the owner's prin
 Normalization is case-insensitive for identity but preserves readable/source-qualified data for
 display and resolution. Multiple tags may own the same grant; removing one owner must retain the
 grant while another owner remains.
+Separate owner name/source fields normalize only whitespace and case, preserving their complete
+literal values. Proficiency/item key normalization must not truncate or reinterpret those fields.
 
 Completed current-format characters have one active racial owner set: the selected source-qualified
 parent and optional child. Every racial tag and choice in every ledger domain must match that set;

@@ -14,7 +14,7 @@ import {
   toProficiencyBlocks,
 } from './applyProficiencyBlocks'
 import { addAbilityBonus, addSpellGrant } from './ledger'
-import { normalizeKey } from './normalization'
+import { normalizeKey, normalizeOwnerIdentity } from './normalization'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from './raceOwnership'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger } from './types'
@@ -328,7 +328,7 @@ export function applyRaceAbilityGrants(
   for (const choice of abilityData.choices) {
     const tag = abilityTags[choice.source]
     const choiceRecord: ChoiceRecord = {
-      id: `${choice.source}:${encodeURIComponent(normalizeKey(tag.sourceName))}|${encodeURIComponent(normalizeKey(tag.sourceRef ?? ''))}:abilityBonuses:choose:${choiceIndices[choice.source]++}`,
+      id: `${choice.source}:${encodeURIComponent(normalizeOwnerIdentity(tag.sourceName))}|${encodeURIComponent(normalizeOwnerIdentity(tag.sourceRef))}:abilityBonuses:choose:${choiceIndices[choice.source]++}`,
       domain: 'abilityBonuses',
       sourceTag: { ...tag, grantType: 'placeholder' },
       chooseCount: choice.count,

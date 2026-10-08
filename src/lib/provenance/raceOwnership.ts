@@ -1,8 +1,8 @@
 import type { Character } from '@/types/character'
+import { normalizeOwnerIdentity } from './normalization'
 import type { ProvenanceLedger, SourceTag } from './types'
 
 type RaceSelection = Pick<Character, 'race' | 'raceSource' | 'subrace' | 'subraceSource'>
-const normalizeOwnerIdentity = (value: string | undefined) => value?.trim().toLowerCase() ?? ''
 
 export function isSelectedRaceOwner(tag: SourceTag, selection: RaceSelection): boolean {
   if (!normalizeOwnerIdentity(selection.race)) return false

@@ -15,7 +15,7 @@ import {
   removeGrantsBySourceRef,
   resolveChoice,
 } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, Feat, FeatOptionSelections } from '@/types/character'
@@ -56,8 +56,10 @@ export function retractFeatChoiceOptionsForSources(
           choice.sourceTag.sourceType === source.sourceType &&
           (source.sourceRef === undefined
             ? choice.sourceTag.sourceName === source.sourceName
-            : normalizeKey(choice.sourceTag.sourceName) === normalizeKey(source.sourceName) &&
-              normalizeKey(choice.sourceTag.sourceRef ?? '') === normalizeKey(source.sourceRef)),
+            : normalizeOwnerIdentity(choice.sourceTag.sourceName) ===
+                normalizeOwnerIdentity(source.sourceName) &&
+              normalizeOwnerIdentity(choice.sourceTag.sourceRef) ===
+                normalizeOwnerIdentity(source.sourceRef)),
       )
     if (!matches) continue
     const selectedRefs = getFeatChoiceSelectedRefs(choice)

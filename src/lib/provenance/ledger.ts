@@ -1,5 +1,5 @@
 import { emptyProvenance } from '@/lib/character/createCharacter'
-import { normalizeKey } from './normalization'
+import { normalizeKey, normalizeOwnerIdentity } from './normalization'
 import type {
   AbilityBonusProvenanceRecord,
   ChoiceRecord,
@@ -189,7 +189,9 @@ export function removeGrantsBySourceRef(
   },
 ): ProvenanceLedger {
   const matchesIdentity = (left: string, right: string) =>
-    options?.normalizeIdentity ? normalizeKey(left) === normalizeKey(right) : left === right
+    options?.normalizeIdentity
+      ? normalizeOwnerIdentity(left) === normalizeOwnerIdentity(right)
+      : left === right
   const matchesSource = (tag: SourceTag) =>
     tag.sourceType === sourceType &&
     matchesIdentity(tag.sourceName, sourceName) &&
