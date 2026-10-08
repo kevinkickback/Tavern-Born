@@ -647,13 +647,17 @@ test.each([
     source: 'HB',
     toolProficiencies: [{ choose: { from: ['Flute'], count: 1 } }],
   } as Race5e
-  const parent = {
-    ...dhampir,
-    skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
-    languageProficiencies: [{ anyStandard: 1 }],
-    additionalSpells: [{ ability: 'int', known: { 1: ['light#c'] } }],
-    subraces: [child],
-  } as Race5e
+  const [parent] = parseRaces({
+    race: [
+      {
+        ...dhampir,
+        skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+        languageProficiencies: [{ anyStandard: 1 }],
+        additionalSpells: [{ ability: 'int', known: { 1: ['light#c'] } }],
+        subraces: [child],
+      },
+    ],
+  }) as Race5e[]
   let character = selectRace(parent, mode, [], child)
   for (const [domain, name] of [
     ['skills', 'perception'],
