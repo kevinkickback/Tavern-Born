@@ -20,6 +20,7 @@ import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance
 import type { Spell5e } from '@/types/5etools'
 import type { Character, Feat, FeatOptionSelections } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileExpertiseOwnership } from './expertiseCommands'
 import {
   type FeatOptionTarget,
   getFeatOptionOwnerKey,
@@ -324,12 +325,12 @@ export function resolveProficiencyChoiceCommand(
     const skills = hasRemainingGrant
       ? character.proficiencies.skills
       : character.proficiencies.skills.filter((entry) => normalizeKey(entry) !== normalized)
-    return {
+    return reconcileExpertiseOwnership({
       characterPatch: {
         proficiencies: reconcileSkillExpertise({ ...character.proficiencies, skills }),
       },
       provenanceUpdate,
-    }
+    })
   }
   return {
     characterPatch: {
@@ -350,15 +351,17 @@ export function retractFeatOptionsCommand(
   feat: FeatOptionTarget,
   selections: FeatOptionSelections,
 ): CharacterCommandResult {
+  const ownerKey = getFeatOptionOwnerKey(feat)
+  const isFixedOwner = ownerKey?.startsWith('fixed:') === true
   const provenanceUpdate = removeGrantsBySourceRef(
     ledger,
     'feat',
     getFeatOptionSourceName(feat),
     feat.source,
-    getFeatOptionOwnerKey(feat),
+    ownerKey,
     {
-      normalizeIdentity: feat.fixedGrant || feat.grantVariant !== undefined,
-      normalizeFixedVariant: feat.fixedGrant || feat.grantVariant !== undefined,
+      normalizeIdentity: isFixedOwner,
+      normalizeFixedVariant: isFixedOwner,
     },
   )
   const removedSpells = new Set(
@@ -435,13 +438,13 @@ export function retractFeatOptionsCommand(
     }
   }
 
-  return {
+  return reconcileExpertiseOwnership({
     characterPatch: {
       spells: { ...character.spells, spellProfiles },
       proficiencies: reconcileSkillExpertise(proficiencies),
     },
     provenanceUpdate,
-  }
+  })
 }
 
 export function commitFeatOptionsCommand(

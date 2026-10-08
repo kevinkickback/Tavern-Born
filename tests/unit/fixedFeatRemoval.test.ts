@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
+import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
@@ -69,6 +70,58 @@ function replace(character: Character, child?: Race5e, race = parent, previousSu
 }
 
 describe('fixed feat setup owner lifecycle', () => {
+  test('expired manual expertise cannot revive after proficiency loss, reopen and fixed setup', () => {
+    let character = makeCharacterFixture({ race: '', background: '' })
+    character = applyCharacterCommandResult(
+      character,
+      applyRaceSelectionCommand(
+        character,
+        character.provenance,
+        { name: 'Scholar Race', source: 'PHB', skillProficiencies: [{ arcana: true }] } as Race5e,
+        undefined,
+        0,
+        noChoices,
+      ),
+    )
+    character = applyCharacterCommandResult(
+      character,
+      toggleExpertiseCommand(character, character.provenance, 'Arcana'),
+    )
+    const grantsFeat = { name: 'Grant', source: 'PHB', feats: [{ 'Training|PHB': true }] } as Race5e
+    character = applyCharacterCommandResult(
+      character,
+      applyRaceSelectionCommand(
+        character,
+        character.provenance,
+        grantsFeat,
+        undefined,
+        0,
+        noChoices,
+      ),
+    )
+    expect(character.proficiencies).toMatchObject({ skills: [], expertise: [] })
+    expect(character.provenance.proficiencies.expertise).toEqual({})
+    character = characterSchema.parse(JSON.parse(JSON.stringify(character))) as Character
+    character = applyCharacterCommandResult(
+      character,
+      applyBackgroundSelectionCommand(
+        character,
+        character.provenance,
+        { name: 'Scholar', source: 'PHB', skillProficiencies: [{ arcana: true }] } as Background5e,
+        [],
+        new Map(),
+      ),
+    )
+    expect(character.proficiencies).toMatchObject({ skills: ['arcana'], expertise: [] })
+    character = configure(character, 'PHB', undefined, { expertiseSkill: 'Arcana' })
+    const removed = applyCharacterCommandResult(
+      character,
+      applyRaceSelectionCommand(character, character.provenance, parent, undefined, 0, noChoices),
+    )
+    expect(removed.fixedFeatOptions).toEqual({})
+    expect(removed.proficiencies).toMatchObject({ skills: ['arcana'], expertise: [] })
+    expect(removed.provenance.proficiencies.expertise).toEqual({})
+  })
   test('preserves pre-existing untracked skill, language and tool values', () => {
     const oldChild = { name: 'Old', source: 'PHB', feats: [{ 'Training|PHB': true }] } as Race5e
     const selected = select(oldChild)

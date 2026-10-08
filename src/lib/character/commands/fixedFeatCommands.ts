@@ -2,6 +2,7 @@ import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { applyCharacterCommandResult } from './featCommandSupport'
 import { retractFeatOptionsCommand } from './featCommands'
 
@@ -41,8 +42,8 @@ export function reconcileFixedFeatOptionsCommand(
     delete fixedFeatOptions[key]
     changed = true
   }
-  if (!changed) return result
-  return {
+  if (!changed) return reconcileExpertiseOwnership(result)
+  return reconcileExpertiseOwnership({
     characterPatch: {
       ...result.characterPatch,
       fixedFeatOptions,
@@ -50,5 +51,5 @@ export function reconcileFixedFeatOptionsCommand(
       proficiencies: working.proficiencies,
     },
     provenanceUpdate: working.provenance,
-  }
+  })
 }

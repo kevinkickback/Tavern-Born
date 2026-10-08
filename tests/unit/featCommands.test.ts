@@ -29,6 +29,31 @@ function applyResult(
 }
 
 describe('feat commands', () => {
+  test.each([
+    'provenanceChoiceId',
+    'classFeatChoiceId',
+  ] as const)('fixed metadata cannot relax the exact %s owner key', (ownerField) => {
+    const initial = makeCharacterFixture()
+    const feat = {
+      name: 'Training',
+      source: 'PHB',
+      fixedGrant: true,
+      grantVariant: 'Sage',
+      [ownerField]: 'Owner',
+    }
+    const configured = applyResult(
+      initial,
+      commitFeatOptionsCommand(initial, emptyProvenance(), feat, { skills: ['Arcana'] }),
+    )
+    const result = retractFeatOptionsCommand(
+      configured,
+      configured.provenance,
+      { ...feat, [ownerField]: 'owner' },
+      { skills: ['Arcana'] },
+    )
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toHaveLength(1)
+    expect(result.characterPatch.proficiencies?.skills).toEqual(['arcana'])
+  })
   test('a fixed feat refresh retracts normalized identity without removing other printings or variants', () => {
     const initial = makeCharacterFixture()
     const oldOptions = {

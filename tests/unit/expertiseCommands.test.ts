@@ -1,14 +1,78 @@
 import { describe, expect, test } from 'vitest'
+import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
+import { applyManualProficiencyCommand } from '@/lib/character/commands/equipmentCommands'
 import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
+  resolveProficiencyChoiceCommand,
   retractFeatOptionsCommand,
 } from '@/lib/character/commands/featCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('expertise commands', () => {
+  test.each([
+    'manual',
+    'choice',
+    'class',
+  ] as const)('expires expertise ownership with a removed %s proficiency', (kind) => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
+      proficiencies: {
+        ...makeCharacterFixture().proficiencies,
+        skills: ['arcana'],
+        expertise: [],
+      },
+    })
+    const tag = makeSourceTag(
+      kind === 'class' || kind === 'choice' ? 'class' : 'manual',
+      kind === 'manual' ? 'User Choice' : 'Rogue',
+      kind === 'choice' ? 'choice' : 'fixed',
+      'PHB',
+    )
+    let ledger = addGrant(character.provenance, 'skills', 'Arcana', tag)
+    if (kind === 'choice')
+      ledger = {
+        ...ledger,
+        choices: [
+          {
+            id: 'skills',
+            domain: 'skills',
+            sourceTag: tag,
+            chooseCount: 1,
+            optionPool: ['Arcana'],
+            selected: ['Arcana'],
+            status: 'resolved',
+          },
+        ],
+      }
+    const selected = applyCharacterCommandResult(
+      character,
+      toggleExpertiseCommand(character, ledger, 'Arcana'),
+    )
+    const result =
+      kind === 'manual'
+        ? applyManualProficiencyCommand(selected, selected.provenance, 'skills', 'Arcana', false)
+        : kind === 'choice'
+          ? resolveProficiencyChoiceCommand(
+              selected,
+              selected.provenance,
+              'skills',
+              'Arcana',
+              false,
+              'skills',
+            )
+          : applyClassSelectionCommand(
+              selected,
+              selected.provenance,
+              { name: 'Fighter', source: 'PHB' },
+              undefined,
+              new Map(),
+            )
+    expect(result.characterPatch.proficiencies).toMatchObject({ skills: [], expertise: [] })
+    expect(result.provenanceUpdate.proficiencies.expertise).toEqual({})
+  })
   test('manual expertise toggles atomically and preserves a separate feat owner', () => {
     const character = makeCharacterFixture()
     const feat = { name: 'Training', source: 'PHB', fixedGrant: true }

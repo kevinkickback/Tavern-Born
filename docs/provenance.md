@@ -66,7 +66,9 @@ ownership, separate from skill proficiency. Retraction preserves expertise from 
 Older saves without expertise ownership remain valid: unknown expertise is retained while its
 proficiency remains, and a pre-existing untracked selection is preserved as manual when a new
 feat grants the same expertise. Removing proficiency still prunes expertise. This compatibility
-rule does not reconstruct the origin of historical untracked expertise.
+rule does not reconstruct the origin of historical untracked expertise. Complete proficiency
+removal commands also expire expertise ownership when its materialized selection is pruned, so
+later proficiency grants cannot revive a historical expertise owner.
 
 ## Origin ability scores
 
