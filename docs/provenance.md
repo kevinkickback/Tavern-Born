@@ -201,6 +201,8 @@ Opening the race page or refreshing its catalog does not clear or substitute a s
 Saved selection details resolve the exact current reference even when catalog filters hide it;
 new race and child options remain restricted to the filtered catalog. Child option values retain
 the separate complete name and source, without interpreting a joined label as an identity.
+Nested child resolution compares both complete fields with case and surrounding whitespace
+normalized; a different printing, truncated name or absent source cannot supply that child.
 Explicit race selection chooses its initial child; explicit child selection owns later changes.
 
 ## Class ownership

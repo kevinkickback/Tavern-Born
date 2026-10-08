@@ -69,14 +69,18 @@ function resolveSubraceFromParents(
   primaryParent: Race5e | undefined,
   rawParent: Race5e | undefined,
 ): Race5e | undefined {
-  const name = reference.name?.trim()
+  const name = reference.name?.trim().toLowerCase()
   if (!name) return undefined
-  const source = reference.source?.trim()
+  const source = reference.source?.trim().toLowerCase()
   if (!source) return undefined
   const candidates = [primaryParent, rawParent]
   for (const parent of candidates) {
     const subraces = parent?.subraces ?? []
-    const exact = subraces.find((subrace) => subrace.name === name && subrace.source === source)
+    const exact = subraces.find(
+      (subrace) =>
+        subrace.name.trim().toLowerCase() === name &&
+        subrace.source?.trim().toLowerCase() === source,
+    )
     if (exact) return exact
   }
   return undefined
