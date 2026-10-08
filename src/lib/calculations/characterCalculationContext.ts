@@ -185,13 +185,15 @@ export function deriveEffectiveAbilityScores(
     subrace,
     character?.originSystem ?? '2014',
   )
-  const raceAsiData = getRaceAbilityData(
-    normalizedRaceSelection.race,
-    normalizedRaceSelection.subrace,
-    (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
-  )
-  const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
   const hasResolvedRaceSelection = Boolean(race) && (!character?.subrace || Boolean(subrace))
+  const raceAsiData = hasResolvedRaceSelection
+    ? getRaceAbilityData(
+        normalizedRaceSelection.race,
+        normalizedRaceSelection.subrace,
+        (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
+      )
+    : { fixed: [], choices: [] }
+  const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
   const racialBonuses = hasResolvedRaceSelection
     ? buildRacialBonuses(raceAsiData, character?.raceAsiChoices ?? [])
     : getProvenanceRacialBonuses(character)

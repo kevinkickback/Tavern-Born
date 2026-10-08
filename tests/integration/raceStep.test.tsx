@@ -129,6 +129,28 @@ describe('RaceStep', () => {
     expect(getByText('Versatile')).toBeTruthy()
   })
 
+  test('describes the chosen flexible mode alongside ordinary child fixed bonuses', () => {
+    const child = { name: 'Child', source: 'TEST', ability: [{ con: 1 }] } as Race5e
+    const parent = { name: 'Parent', source: 'TEST', lineage: true, subraces: [child] } as Race5e
+    const { getByText } = render(
+      <RaceStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          originSystem: '2014',
+          race: parent.name,
+          raceSource: parent.source,
+          subrace: child.name,
+          subraceSource: child.source,
+          raceAsiBlockIndex: 1,
+        }}
+        onChange={vi.fn()}
+        races={[parent]}
+      />,
+    )
+    expect(getByText('CON +1')).toBeTruthy()
+    expect(getByText('Choose 3: +1 (any ability)')).toBeTruthy()
+  })
+
   test('renders the filtered race collection supplied by the wizard controller', () => {
     const races: Race5e[] = [
       {

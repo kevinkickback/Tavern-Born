@@ -191,6 +191,13 @@ Changing only the distribution replaces ability records and retains every non-ab
 and benefit. Ability values and choice amounts must be integers to match persistence validation.
 When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
 available to calculation; revised origin rules suppress those racial bonuses.
+Race summaries use the same bounded choices and selected distribution as calculation, preserving
+the separate parent and child rules rather than deriving ability rules from a merged display record.
+Missing exact parent or child metadata hides racial choice editing until that selection resolves;
+an available parent alone cannot establish the missing child's layout. Rejected ability commands
+leave the draft, modification timestamp and unsaved-change state untouched.
+Opening the race page or refreshing its catalog does not clear or substitute a saved child.
+Explicit race selection chooses its initial child; explicit child selection owns later changes.
 
 ## Class ownership
 

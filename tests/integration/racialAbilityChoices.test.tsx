@@ -657,6 +657,95 @@ test('Builder distribution changes publish only coherent choices and provenance'
 })
 
 test.each([
+  'revised-origin',
+  'missing-child',
+] as const)('a rejected racial ability edit does not dirty the saved draft: %s', (reason) => {
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  const selected = selectRace(dhampir, 0, [['strength'], ['dexterity']], child)
+  const character = characterPersistenceSchema.parse({
+    ...selected,
+    originSystem: reason === 'revised-origin' ? '2024' : '2014',
+  })
+  setActiveCharacter(character)
+  useCharacterStore.setState({ isActiveCharacterDirty: false })
+  const before = structuredClone(character)
+  const { result } = renderHook(useRaceProvenanceMutations)
+  act(() => {
+    if (reason === 'revised-origin') result.current.applyRaceAsiChoices([['wisdom']])
+    else result.current.applyRaceAsiDistribution(dhampir, undefined, 1)
+  })
+  expect.soft(useCharacterStore.getState().activeCharacter).toEqual(before)
+  expect.soft(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+})
+
+test.each([
+  'parent',
+  'child',
+] as const)('missing exact %s metadata retains bonuses without exposing guessed choice controls, then restores editing', async (missing) => {
+  const child = { name: 'Child', source: 'HB', ability: [{ con: 1 }] } as Race5e
+  const parent = { ...dhampir, subraces: [child] }
+  const character = characterPersistenceSchema.parse(
+    JSON.parse(JSON.stringify(selectRace(parent, 0, [['strength'], ['dexterity']], child))),
+  )
+  setActiveCharacter(character)
+  useCharacterStore.setState({ isActiveCharacterDirty: false })
+  install(missing === 'parent' ? [] : [{ ...parent, subraces: [{ ...child, source: 'OTHER' }] }])
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  expect.soft(screen.queryByTestId('race-ability-choices')).toBeNull()
+  expect.soft(useCharacterStore.getState().activeCharacter).toEqual(character)
+  expect.soft(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  expect(
+    createCharacterCalculationContext(character, useGameDataStore.getState().gameData!.lookups!)
+      .abilityScores.racialBonuses,
+  ).toEqual({ strength: 2, dexterity: 1, constitution: 1 })
+  act(() => install([parent]))
+  expect(screen.getByTestId('race-ability-choices')).toBeTruthy()
+  await userEvent.setup().click(screen.getByRole('button', { name: '+1 / +1 / +1' }))
+  const edited = characterPersistenceSchema.parse(
+    JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+  )
+  expect(edited.raceAsiBlockIndex).toBe(1)
+  expect(edited.raceAsiChoices).toEqual([])
+  expect(
+    createCharacterCalculationContext(edited, useGameDataStore.getState().gameData!.lookups!)
+      .abilityScores.racialBonuses,
+  ).toEqual({ constitution: 1 })
+})
+
+test('Builder offers the flexible distribution owned by a complete version of an explicit parent', async () => {
+  const [parent] = parseRaces({
+    race: [
+      {
+        name: 'Parent',
+        source: 'HB',
+        lineage: true,
+        ability: [{ dex: 2 }],
+        _versions: [{ name: 'Flexible Version', source: 'HB', ability: null }],
+      },
+    ],
+  }) as Race5e[]
+  const child = parent.subraces![0] as Race5e
+  install([parent])
+  setActiveCharacter(characterPersistenceSchema.parse(selectRace(parent, 0, [], child)))
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  await userEvent.setup().click(screen.getByRole('button', { name: '+1 / +1 / +1' }))
+  const edited = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+  expect(edited.raceAsiBlockIndex).toBe(1)
+  expect(
+    edited.provenance!.choices.filter((record) => record.domain === 'abilityBonuses'),
+  ).toMatchObject([{ chooseCount: 3, amount: 1, sourceTag: { sourceType: 'subrace' } }])
+})
+
+test.each([
   0, 1,
 ] as const)('Builder distribution change from mode %s retains selected non-ability racial grants', async (mode) => {
   const child = {
@@ -1342,7 +1431,7 @@ test.each([
 test.each([
   false,
   true,
-])('clearing a source-less complete child never treats another printing as previous (exact available: %s)', (available) => {
+])('clearing a qualified complete child rebuilds the parent with exact metadata available: %s', (available) => {
   const competitor = { name: 'Child', source: 'OTHER', ability: [{ wis: 1 }] } as Race5e
   const parent = {
     name: 'Parent',
@@ -1351,9 +1440,9 @@ test.each([
     skillProficiencies: [{ history: true }],
     subraces: [competitor],
   } as Race5e
-  const version = { name: 'Child', source: '', _isVersion: true, ability: [{ con: 1 }] } as Race5e
-  const saved = selectRace(parent, 0, [], version)
-  expect(saved.subraceSource).toBeUndefined()
+  const version = { name: 'Child', source: 'HB', _isVersion: true, ability: [{ con: 1 }] } as Race5e
+  const saved = characterPersistenceSchema.parse(selectRace(parent, 0, [], version))
+  expect(saved.subraceSource).toBe('HB')
   const before = structuredClone(saved)
   const cleared = applySubraceSelectionCommand(
     saved,

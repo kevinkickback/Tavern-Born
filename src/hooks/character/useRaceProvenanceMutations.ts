@@ -107,6 +107,8 @@ export function useRaceProvenanceMutations() {
     (choices: string[][]) => {
       if (!character) return
       const result = applyRaceAsiChoicesCommand(character, ledger, choices)
+      if (result.provenanceUpdate === ledger && Object.keys(result.characterPatch).length === 0)
+        return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
@@ -118,6 +120,8 @@ export function useRaceProvenanceMutations() {
     (race: Race5e, subrace: Race5e | undefined, mode: 0 | 1) => {
       if (!character) return
       const result = applyRaceAsiDistributionCommand(character, ledger, race, subrace, mode)
+      if (result.provenanceUpdate === ledger && Object.keys(result.characterPatch).length === 0)
+        return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
