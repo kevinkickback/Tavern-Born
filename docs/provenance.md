@@ -155,6 +155,8 @@ Ordinary child changes rebuild the selected parent's ability ownership with the 
 including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
 origin bonuses under the child identity. Wizard Review shares the bounded calculator, and the
 Builder distribution control commits the new shape and ownership in one command update.
+Changing only the distribution replaces ability records and retains every non-ability racial choice
+and benefit. Ability values and choice amounts must be integers to match persistence validation.
 When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
 available to calculation; revised origin rules suppress those racial bonuses.
 

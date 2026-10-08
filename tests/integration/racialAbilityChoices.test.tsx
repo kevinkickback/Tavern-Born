@@ -10,9 +10,11 @@ import { buildRacialBonuses, getRaceAbilityData } from '@/lib/calculations/abili
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { getAsiDisplay } from '@/lib/calculations/raceUtils'
+import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
   applyRaceAsiChoicesCommand,
+  applyRaceAsiDistributionCommand,
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
@@ -635,4 +637,130 @@ test('Builder distribution changes publish only coherent choices and provenance'
       createCharacterCalculationContext(snapshot, install([]).lookups!).abilityScores.racialBonuses,
     ).toEqual({})
   }
+})
+
+test.each([
+  0, 1,
+] as const)('Builder distribution change from mode %s retains selected non-ability racial grants', async (mode) => {
+  const child = {
+    name: 'Chosen Child',
+    source: 'HB',
+    toolProficiencies: [{ choose: { from: ['Flute'], count: 1 } }],
+  } as Race5e
+  const parent = {
+    ...dhampir,
+    skillProficiencies: [{ choose: { from: ['perception'], count: 1 } }],
+    languageProficiencies: [{ anyStandard: 1 }],
+    additionalSpells: [{ ability: 'int', known: { 1: ['light#c'] } }],
+    subraces: [child],
+  } as Race5e
+  let character = selectRace(parent, mode, [], child)
+  for (const [domain, name] of [
+    ['skills', 'perception'],
+    ['languages', 'Elvish'],
+    ['tools', 'Flute'],
+  ] as const) {
+    const choice = character.provenance!.choices.find((entry) => entry.domain === domain)!
+    const result = resolveProficiencyChoiceCommand(
+      character,
+      character.provenance!,
+      domain,
+      name,
+      true,
+      choice.id,
+    )
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
+  const before = structuredClone(character)
+  install([parent])
+  setActiveCharacter(character)
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  const snapshots: Character[] = []
+  const unsubscribe = useCharacterStore.subscribe((state, previous) => {
+    if (state.activeCharacter && state.activeCharacter !== previous.activeCharacter)
+      snapshots.push(structuredClone(state.activeCharacter))
+  })
+  try {
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: mode === 0 ? '+1 / +1 / +1' : '+2 / +1' }))
+  } finally {
+    unsubscribe()
+  }
+  expect(snapshots).toHaveLength(1)
+  const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(snapshots[0])))
+  expect(reopened.proficiencies).toEqual(before.proficiencies)
+  expect(reopened.spells).toEqual(before.spells)
+  expect(reopened.provenance!.proficiencies).toEqual(before.provenance!.proficiencies)
+  expect(reopened.provenance!.spells).toEqual(before.provenance!.spells)
+  expect(
+    reopened.provenance!.choices.filter((choice) => choice.domain !== 'abilityBonuses'),
+  ).toEqual(before.provenance!.choices.filter((choice) => choice.domain !== 'abilityBonuses'))
+  expect(reopened.raceAsiBlockIndex).toBe(mode === 0 ? 1 : 0)
+  expect(reopened.raceAsiChoices).toEqual([])
+  expect(character).toEqual(before)
+})
+
+test.each([
+  { dex: 1.5 },
+  { choose: { from: ['str'], amount: 1.5 } },
+])('fractional ability metadata is ignored while integer bonuses remain usable: %j', (invalid) => {
+  const race = { name: 'Malformed', source: 'HB', ability: [{ wis: 2 }, invalid] } as Race5e
+  const character = selectRace(race, 0, [['strength']])
+  expect(getRaceAbilityData(race)).toEqual({
+    fixed: [{ ability: 'wisdom', value: 2, source: 'race' }],
+    choices: [],
+  })
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  expect(
+    createCharacterCalculationContext(character, install([race]).lookups!).abilityScores
+      .racialBonuses,
+  ).toEqual({ wisdom: 2 })
+})
+
+test.each([
+  undefined,
+  false,
+])('ordinary child without an explicit ability overwrite (%s) retains parent bonuses', (overwrite) => {
+  const parent = { name: 'Parent', source: 'PHB', ability: [{ dex: 2 }] } as Race5e
+  const child = {
+    name: 'Child',
+    source: 'HB',
+    ability: [{ int: 1 }],
+    overwrite: { ability: overwrite },
+  } as Race5e
+  const character = selectRace(parent, 0, [], child)
+  expect(
+    createCharacterCalculationContext(
+      character,
+      install([{ ...parent, subraces: [child] }]).lookups!,
+    ).abilityScores.racialBonuses,
+  ).toEqual({ dexterity: 2, intelligence: 1 })
+  expect(getAbilityBonusRows(character.provenance!).map((row) => row.itemName)).toEqual([
+    'DEX +2',
+    'INT +1',
+  ])
+})
+
+test.each([
+  'other-printing',
+  'missing-child',
+])('ability distribution preserves the saved selection when exact metadata is unavailable: %s', (unavailable) => {
+  const child = { name: 'Child', source: 'HB' } as Race5e
+  const character = selectRace(dhampir, 0, [['strength'], ['dexterity']], child)
+  const before = structuredClone(character)
+  const result = applyRaceAsiDistributionCommand(
+    character,
+    character.provenance!,
+    unavailable === 'other-printing' ? { ...dhampir, source: 'OTHER' } : dhampir,
+    unavailable === 'missing-child' ? undefined : child,
+    1,
+  )
+  expect(result.characterPatch).toEqual({})
+  expect(result.provenanceUpdate).toBe(character.provenance)
+  expect(character).toEqual(before)
 })

@@ -87,7 +87,7 @@ export function BuildAbilityScoresPage() {
   const skillToAbilityMap = useSkillToAbilityMap()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
-  const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
+  const { applyRaceAsiDistribution, applyRaceAsiChoices } = useRaceProvenanceMutations()
   const { applyBackgroundAbilityChoices, reconcileBackgroundAbilityChoices } =
     useBackgroundProvenanceMutations()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
@@ -412,7 +412,7 @@ export function BuildAbilityScoresPage() {
                                     type="button"
                                     onClick={() => {
                                       if (selectedRace) {
-                                        applyRaceSelection(selectedRace, subraceData, value)
+                                        applyRaceAsiDistribution(selectedRace, subraceData, value)
                                       }
                                     }}
                                     className={cn(

@@ -40,6 +40,35 @@ function dedupeValues(values: string[]): string[] | undefined {
   return deduped.length > 0 ? deduped : undefined
 }
 
+function rebuildRaceAbilityGrants(
+  ledger: ProvenanceLedger,
+  race: Race5e,
+  subrace: Race5e | undefined,
+  mode: 0 | 1,
+): ProvenanceLedger {
+  const isSelectedAbilityOwner = (tag: SourceTag) =>
+    (tag.sourceType === 'race' &&
+      tag.sourceName === race.name &&
+      (tag.sourceRef ?? '') === (race.source ?? '')) ||
+    (tag.sourceType === 'subrace' &&
+      tag.sourceName === subrace?.name &&
+      (tag.sourceRef ?? '') === (subrace?.source ?? ''))
+  return applyRaceAbilityGrants(
+    race,
+    subrace,
+    {
+      ...ledger,
+      abilityBonuses: ledger.abilityBonuses.filter(
+        (record) => !isSelectedAbilityOwner(record.sourceTag),
+      ),
+      choices: ledger.choices.filter(
+        (choice) => choice.domain !== 'abilityBonuses' || !isSelectedAbilityOwner(choice.sourceTag),
+      ),
+    },
+    mode,
+  )
+}
+
 function removeSourceProficiencies(
   character: Character,
   ledger: ProvenanceLedger,
@@ -278,25 +307,10 @@ export function applySubraceSelectionCommand(
       },
     )
   }
-  const isSelectedAbilityOwner = (tag: SourceTag) =>
-    (tag.sourceType === 'race' &&
-      tag.sourceName === race.name &&
-      (tag.sourceRef ?? '') === (race.source ?? '')) ||
-    (tag.sourceType === 'subrace' &&
-      tag.sourceName === subrace?.name &&
-      (tag.sourceRef ?? '') === (subrace?.source ?? ''))
-  provenanceUpdate = applyRaceAbilityGrants(
+  provenanceUpdate = rebuildRaceAbilityGrants(
+    provenanceUpdate,
     normalized.race,
     normalized.subrace,
-    {
-      ...provenanceUpdate,
-      abilityBonuses: provenanceUpdate.abilityBonuses.filter(
-        (record) => !isSelectedAbilityOwner(record.sourceTag),
-      ),
-      choices: provenanceUpdate.choices.filter(
-        (choice) => choice.domain !== 'abilityBonuses' || !isSelectedAbilityOwner(choice.sourceTag),
-      ),
-    },
     (character.raceAsiBlockIndex ?? 0) as 0 | 1,
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
@@ -329,6 +343,29 @@ export function applySubraceSelectionCommand(
     },
     provenanceUpdate,
   })
+}
+
+/** Change only ability distribution; retain all other race benefits and player choices. */
+export function applyRaceAsiDistributionCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  race: Race5e,
+  subrace: Race5e | undefined,
+  mode: 0 | 1,
+): CharacterCommandResult {
+  if (
+    character.race !== race.name ||
+    (character.raceSource ?? '') !== (race.source ?? '') ||
+    (character.subrace ?? '') !== (subrace?.name ?? '') ||
+    (character.subraceSource ?? '') !== (subrace?.source ?? '')
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
+  if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
+  return {
+    characterPatch: { raceAsiBlockIndex: mode, raceAsiChoices: [] },
+    provenanceUpdate: rebuildRaceAbilityGrants(ledger, normalized.race, normalized.subrace, mode),
+  }
 }
 
 export function applyRaceAsiChoicesCommand(

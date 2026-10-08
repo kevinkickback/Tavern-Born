@@ -375,7 +375,7 @@ export function getRaceAbilityData(
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
       for (const [key, val] of Object.entries(entry)) {
         const ability = normalizeAbilityName(key)
-        if (ability && typeof val === 'number' && Number.isFinite(val)) {
+        if (ability && typeof val === 'number' && Number.isInteger(val)) {
           fixed.push({ ability, value: val, source })
         }
       }
@@ -396,7 +396,7 @@ export function getRaceAbilityData(
         !Number.isInteger(count) ||
         count <= 0 ||
         typeof amount !== 'number' ||
-        !Number.isFinite(amount) ||
+        !Number.isInteger(amount) ||
         !Array.isArray(from)
       ) {
         continue
