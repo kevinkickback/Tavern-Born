@@ -17,7 +17,7 @@ export function applyFeatGrant(
 ): ProvenanceLedger {
   const tag = grantedByManual
     ? makeSourceTag('manual', 'User Choice', 'choice', featSource)
-    : makeSourceTag('feat', featName, 'fixed', featSource)
+    : { ...makeSourceTag('feat', featName, 'fixed', featSource), grantSource: featSource ?? '' }
   return addGrant(ledger, 'feats', featName, tag)
 }
 
@@ -104,7 +104,7 @@ export function applyFeatGrantBlocks(
       case 'fixed': {
         result = addGrant(result, 'feats', entry.name, {
           ...tag,
-          sourceRef: entry.source || sourceRef,
+          grantSource: entry.source,
           grantVariant: entry.variant,
         })
         break

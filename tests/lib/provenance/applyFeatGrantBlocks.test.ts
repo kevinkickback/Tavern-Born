@@ -58,7 +58,8 @@ describe('applyFeatGrantBlocks', () => {
       sourceType: 'background',
       sourceName: 'Acolyte',
       grantType: 'fixed',
-      sourceRef: 'xphb',
+      sourceRef: 'XPHB',
+      grantSource: 'xphb',
       grantVariant: 'cleric',
     })
   })

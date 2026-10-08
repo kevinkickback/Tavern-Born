@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
 import {
   ensureStartupPromptResolved,
   seedAppState,
@@ -16,7 +17,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
-    schemaVersion: 2,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: 'Seed Character',
     originSystem: '2014',
     race: 'Human',

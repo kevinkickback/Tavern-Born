@@ -642,7 +642,10 @@ describe('getCharacterReadiness', () => {
       source: 'TEST',
       ability: [{ choose: { count: 1, amount: 1, from: ['str', 'dex'] } }],
     } as Feat5e
-    const fixedTag = makeSourceTag('background', 'Test Background', 'fixed', 'TEST')
+    const fixedTag = {
+      ...makeSourceTag('background', 'Test Background', 'fixed', 'TEST'),
+      grantSource: 'TEST',
+    }
     const character = makeCharacterFixture({
       classFeatChoices: [
         {

@@ -416,9 +416,9 @@ describe('characterStore', () => {
   test.each([
     0,
     1,
-    3,
-    4,
-    '2',
+    2,
+    CURRENT_CHARACTER_SCHEMA_VERSION + 1,
+    String(CURRENT_CHARACTER_SCHEMA_VERSION),
     'invalid',
   ])('rejects unsupported schema version %s', (schemaVersion) => {
     expect(validateCharacterData({ ...makeCharacterFixture(), schemaVersion })).toContain(

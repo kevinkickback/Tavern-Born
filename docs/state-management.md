@@ -188,23 +188,26 @@ on a write failure it leaves the prior library intact before the import result i
 
 ## Schema compatibility
 
-The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Supported older records migrate
-before strict validation; runtime feature code never branches on historical shapes. Current output
-is normalized by `characterPersistenceSchema` before persistence.
+The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
+are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
+are rejected before strict validation; the cutoff performs no conversion or ownership inference.
+Current output is normalized by `characterPersistenceSchema` before persistence.
+
+Schema 3 separates a fixed feat's granting owner printing from the granted feat printing. Schema 2
+characters must be recreated; relabeling their version cannot restore missing ownership information.
+Incompatible originals from the saved library remain exportable for use in a compatible older app.
 
 For a breaking change, update together:
 
 1. version constant;
 2. `Character` type and strict schema;
 3. `createEmptyCharacter` and fixtures;
-4. sequential migration chain;
-5. persistence/import/rejection tests.
+4. current exported fixtures and a documented compatibility cutoff;
+5. persistence/import/rejection and original-export recovery tests.
 
-Before 1.0, prefer a small migration. Reassess the accumulated chain at 1.0 rather than carrying
-unbounded pre-release compatibility debt. Newer, malformed, and unsafe records go to the durable
-exportable quarantine until acknowledged. Do not add downgrade paths or compatibility mirrors in
-feature code. Announce any deliberate compatibility cutoff in advance and retain export-before-removal
-recovery.
+Do not add pre-release migrations, downgrade paths or compatibility mirrors in feature code.
+Newer, malformed, and unsafe records go to the durable exportable quarantine until acknowledged.
+Announce a deliberate compatibility cutoff with the change and retain export-before-removal recovery.
 
 ## Checklist for new state
 

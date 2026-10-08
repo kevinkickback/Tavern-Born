@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
 import {
   ensureStartupPromptResolved,
   readPersistedCharacters,
@@ -106,7 +107,7 @@ test('malformed and schema-invalid imports show distinct errors without changing
           ...fixture,
           id: 'bad',
           name: 'Corrupted',
-          schemaVersion: 2,
+          schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
           proficiencies: {
             ...(fixture.proficiencies as Record<string, unknown>),
             weapons: [{ name: 'Not a valid proficiency' }],

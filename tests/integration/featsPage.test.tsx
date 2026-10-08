@@ -193,12 +193,18 @@ describe('FeatsPage bonus feat configuration', () => {
         sourceType: 'background',
         sourceName: 'Acolyte',
         sourceRef: 'XPHB',
+        grantSource: 'XPHB',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
       },
     ]
-    const character = makeCharacterFixture({ provenance })
+    const character = makeCharacterFixture({
+      provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+    })
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
@@ -271,7 +277,8 @@ describe('FeatsPage bonus feat configuration', () => {
       {
         sourceType: 'background',
         sourceName: 'Acolyte',
-        sourceRef: 'MISSING',
+        sourceRef: 'XPHB',
+        grantSource: 'MISSING',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
@@ -279,6 +286,9 @@ describe('FeatsPage bonus feat configuration', () => {
     ]
     const character = makeCharacterFixture({
       provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
       fixedFeatOptions: { 'magic initiate|missing|cleric': { spellcastingClass: 'Cleric Spells' } },
     })
     useCharacterStore.setState({
@@ -305,13 +315,19 @@ describe('FeatsPage bonus feat configuration', () => {
       {
         sourceType: 'background',
         sourceName: 'Acolyte',
-        sourceRef: 'OTHER',
+        sourceRef: 'XPHB',
+        grantSource: 'OTHER',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
       },
     ]
-    const character = makeCharacterFixture({ provenance })
+    const character = makeCharacterFixture({
+      provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+    })
     useCharacterStore.setState({
       activeCharacter: character,
       activeCharacterId: character.id,
@@ -335,7 +351,7 @@ describe('FeatsPage bonus feat configuration', () => {
     ).toBeUndefined()
     expect(
       useCharacterStore.getState().activeCharacter?.provenance?.feats['magic initiate']?.[0]
-        .sourceRef,
+        .grantSource,
     ).toBe('OTHER')
     fireEvent.click(screen.getByRole('button', { name: 'Edit Setup' }))
     expect(screen.getByRole('alertdialog').textContent).toContain('Edit feat setup?')
