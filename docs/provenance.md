@@ -145,6 +145,15 @@ If the previous saved child is unavailable even in that catalog, its mechanics c
 additive transition. The command rebuilds the complete race selection and resets racial choices
 against the newly selected data, preserving manual and unrelated ownership.
 
+Racial ability grants and calculations use the same parsed fixed bonuses and choice blocks.
+Explicit ability rules take precedence over flexible lineage defaults; fixed bonuses coexist with
+choices. The three-ability distribution is one choice with a count of three. Parent choices precede
+ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
+Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
+Commands retain the player's slot layout while committing validated selections to provenance.
+When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
+available to calculation; revised origin rules suppress those racial bonuses.
+
 ## Class ownership
 
 Class tags include source-qualified class identity and, where needed, the granting level/choice.

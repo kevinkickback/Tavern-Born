@@ -8,16 +8,19 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import type { SourceTag } from '@/lib/provenance/types'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import {
+  ABILITY_NAMES,
   type BackgroundAbilityData,
   buildBackgroundBonuses,
   buildRacialBonuses,
   getBackgroundAbilityData,
   getRaceAbilityData,
   makeDefaultAbilityScores,
+  normalizeAbilityName,
   type RaceAbilityData,
 } from './abilityScores'
 import {
@@ -123,9 +126,8 @@ function deriveEffectiveSenses(
 function getProvenanceRacialBonuses(
   character: Character | null | undefined,
 ): Partial<Record<AbilityName, number>> {
-  const bonuses: Partial<Record<AbilityName, number>> = {}
-  for (const record of character?.provenance?.abilityBonuses ?? []) {
-    const { sourceType, sourceName, sourceRef } = record.sourceTag
+  if (!character || character.originSystem === '2024') return {}
+  const isCurrentOwner = ({ sourceType, sourceName, sourceRef }: SourceTag) => {
     const isCurrentRace =
       sourceType === 'race' &&
       sourceName === character?.race &&
@@ -134,11 +136,31 @@ function getProvenanceRacialBonuses(
       sourceType === 'subrace' &&
       sourceName === (character?.subrace ?? '') &&
       (sourceRef ?? '') === (character?.subraceSource ?? '')
-    if (!isCurrentRace && !isCurrentSubrace) continue
-    const ability = record.ability as AbilityName
-    bonuses[ability] = (bonuses[ability] ?? 0) + record.value
+    return isCurrentRace || isCurrentSubrace
   }
-  return bonuses
+  const fixed = (character.provenance?.abilityBonuses ?? []).flatMap((record) => {
+    const ability = normalizeAbilityName(record.ability)
+    return ability && isCurrentOwner(record.sourceTag) ? [{ ability, value: record.value }] : []
+  })
+  const records = (character.provenance?.choices ?? []).filter(
+    (record) => record.domain === 'abilityBonuses' && isCurrentOwner(record.sourceTag),
+  )
+  return buildRacialBonuses(
+    {
+      fixed,
+      choices: records.map((record) => ({
+        amount: record.amount ?? 1,
+        count: record.chooseCount,
+        from:
+          record.optionPool.length === 0
+            ? [...ABILITY_NAMES]
+            : record.optionPool
+                .map(normalizeAbilityName)
+                .filter((ability): ability is AbilityName => ability !== null),
+      })),
+    },
+    records.map((record) => record.selected),
+  )
 }
 
 function addBonuses(scores: AbilityScores, bonuses: Partial<Record<AbilityName, number>>): void {
@@ -178,7 +200,8 @@ export function deriveEffectiveAbilityScores(
     (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
   )
   const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
-  const racialBonuses = hasDataDrivenRacialBonuses
+  const hasResolvedRaceSelection = Boolean(race) && (!character?.subrace || Boolean(subrace))
+  const racialBonuses = hasResolvedRaceSelection
     ? buildRacialBonuses(raceAsiData, character?.raceAsiChoices ?? [])
     : getProvenanceRacialBonuses(character)
 

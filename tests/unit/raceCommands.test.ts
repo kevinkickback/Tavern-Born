@@ -69,7 +69,7 @@ describe('race commands', () => {
     expect(changed.characterPatch.damageResistances).toBeUndefined()
     expect(changed.provenanceUpdate.abilityBonuses).toEqual([
       expect.objectContaining({
-        ability: 'dex',
+        ability: 'dexterity',
         value: 2,
         sourceTag: expect.objectContaining({ sourceType: 'subrace', sourceName: 'Changed' }),
       }),
@@ -91,7 +91,7 @@ describe('race commands', () => {
     expect(restored.characterPatch.damageResistances).toEqual(['fire'])
     expect(restored.provenanceUpdate.abilityBonuses).toEqual([
       expect.objectContaining({
-        ability: 'dex',
+        ability: 'dexterity',
         value: 2,
         sourceTag: expect.objectContaining({ sourceType: 'race' }),
       }),

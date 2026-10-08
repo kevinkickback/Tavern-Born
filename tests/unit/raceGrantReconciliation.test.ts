@@ -398,14 +398,14 @@ test.each([
   )
   expect(result.provenanceUpdate.abilityBonuses).toEqual([
     expect.objectContaining({
-      ability: 'str',
+      ability: 'strength',
       value: 2,
       sourceTag: expect.objectContaining({ sourceType: 'race', sourceName: 'Parent' }),
     }),
     ...(selection === 'ordinary child'
       ? [
           expect.objectContaining({
-            ability: 'wis',
+            ability: 'wisdom',
             value: 1,
             sourceTag: expect.objectContaining({ sourceType: 'subrace', sourceName: 'Child' }),
           }),

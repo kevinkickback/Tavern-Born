@@ -1,3 +1,9 @@
+import {
+  ABILITY_NAMES,
+  getRaceAbilityChoiceSelections,
+  normalizeAbilityName,
+} from '@/lib/calculations/abilityScores'
+import type { AbilityName } from '@/types/character'
 import { resolveChoice } from './ledger'
 import type { ProvenanceLedger } from './types'
 
@@ -21,10 +27,24 @@ export function resolveRaceAsiChoicesInLedger(
 
   if (raceAsiRecords.length === 0) return ledger
 
+  const selectedByBlock = getRaceAbilityChoiceSelections(
+    {
+      choices: raceAsiRecords.map((record) => ({
+        count: record.chooseCount,
+        from:
+          record.optionPool.length === 0
+            ? [...ABILITY_NAMES]
+            : record.optionPool
+                .map(normalizeAbilityName)
+                .filter((ability): ability is AbilityName => ability !== null),
+      })),
+    },
+    raceAsiChoices,
+  )
   let result = ledger
   for (let i = 0; i < raceAsiRecords.length; i++) {
     const record = raceAsiRecords[i]
-    const selections = (raceAsiChoices[i] ?? []).filter(Boolean)
+    const selections = selectedByBlock[i]
     result = resolveChoice(result, record.id, selections)
   }
   return result

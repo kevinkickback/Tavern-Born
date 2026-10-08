@@ -1,5 +1,5 @@
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
-import { hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
+import { getRaceAbilityData } from '@/lib/calculations/abilityScores'
 import { ARMOR_CATEGORY_LABEL_TO_CODE } from '@/lib/calculations/armorClass'
 import {
   deriveEffectiveRaceLanguageBlocks,
@@ -163,8 +163,6 @@ export function applyRaceGrants(
 ): ProvenanceLedger {
   race = getRaceSelectionParent(race, subrace)
   let result = ledger
-  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
-
   const raceTag = makeSourceTag('race', race.name, 'fixed', race.source)
 
   result = applyProficiencyBlocks(
@@ -221,66 +219,6 @@ export function applyRaceGrants(
     result = applyRaceSpellGrants(race, totalCharacterLevel, result, raceTag)
   }
 
-  if (!usesTashasLineageAsi) {
-    for (const block of race.ability ?? []) {
-      const abilityBlock = block as Record<string, unknown>
-      let choiceIndex = 0
-      for (const [key, val] of Object.entries(abilityBlock)) {
-        if (key === 'choose') {
-          const choose = val as {
-            from?: string[]
-            count?: number
-            amount?: number
-          }
-          const choiceRecord: ChoiceRecord = {
-            id: `race:${normalizeKey(race.name)}:abilityBonuses:choose:${choiceIndex}`,
-            domain: 'abilityBonuses',
-            sourceTag: { ...raceTag, grantType: 'placeholder' },
-            chooseCount: choose.count ?? 1,
-            amount: choose.amount ?? 1,
-            optionPool: choose.from ?? [],
-            selected: [],
-            status: 'pending',
-          }
-          result = addChoicePlaceholder(result, choiceRecord)
-          choiceIndex++
-        } else if (typeof val === 'number') {
-          result = addAbilityBonus(result, {
-            ability: key.toLowerCase(),
-            value: val,
-            sourceTag: raceTag,
-          })
-        }
-      }
-    }
-  }
-
-  // Lineage races: synthesize Tasha ASI choice.
-  const abilityNames = [
-    'strength',
-    'dexterity',
-    'constitution',
-    'intelligence',
-    'wisdom',
-    'charisma',
-  ]
-  if (usesTashasLineageAsi) {
-    const lineageAmounts = lineageAsiBlockIndex === 1 ? [1, 1, 1] : [2, 1]
-    for (let i = 0; i < lineageAmounts.length; i++) {
-      const choiceRecord: ChoiceRecord = {
-        id: `race:${normalizeKey(race.name)}:abilityBonuses:choose:${i}`,
-        domain: 'abilityBonuses',
-        sourceTag: { ...raceTag, grantType: 'placeholder' },
-        chooseCount: 1,
-        amount: lineageAmounts[i],
-        optionPool: abilityNames,
-        selected: [],
-        status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-    }
-  }
-
   if (subrace) {
     const subraceTag = makeSourceTag('subrace', subrace.name, 'fixed', subrace.source)
 
@@ -299,48 +237,20 @@ export function applyRaceGrants(
       result = {
         ...result,
         abilityBonuses: result.abilityBonuses.filter(
-          (r) => r.sourceTag.sourceType !== 'race' || r.sourceTag.sourceName !== race.name,
+          (r) =>
+            r.sourceTag.sourceType !== 'race' ||
+            r.sourceTag.sourceName !== race.name ||
+            (r.sourceTag.sourceRef ?? '') !== (race.source ?? ''),
         ),
         choices: result.choices.filter(
           (c) =>
             !(
               c.domain === 'abilityBonuses' &&
               c.sourceTag.sourceType === 'race' &&
-              c.sourceTag.sourceName === race.name
+              c.sourceTag.sourceName === race.name &&
+              (c.sourceTag.sourceRef ?? '') === (race.source ?? '')
             ),
         ),
-      }
-    }
-
-    for (const block of subrace.ability ?? []) {
-      const abilityBlock = block as Record<string, unknown>
-      let choiceIndex = 0
-      for (const [key, val] of Object.entries(abilityBlock)) {
-        if (key === 'choose') {
-          const choose = val as {
-            from?: string[]
-            count?: number
-            amount?: number
-          }
-          const choiceRecord: ChoiceRecord = {
-            id: `subrace:${normalizeKey(subrace.name)}:abilityBonuses:choose:${choiceIndex}`,
-            domain: 'abilityBonuses',
-            sourceTag: { ...subraceTag, grantType: 'placeholder' },
-            chooseCount: choose.count ?? 1,
-            amount: choose.amount ?? 1,
-            optionPool: choose.from ?? [],
-            selected: [],
-            status: 'pending',
-          }
-          result = addChoicePlaceholder(result, choiceRecord)
-          choiceIndex++
-        } else if (typeof val === 'number') {
-          result = addAbilityBonus(result, {
-            ability: key.toLowerCase(),
-            value: val,
-            sourceTag: subraceTag,
-          })
-        }
       }
     }
 
@@ -388,5 +298,32 @@ export function applyRaceGrants(
     )
   }
 
+  const abilityData = getRaceAbilityData(race, subrace, lineageAsiBlockIndex)
+  const abilityTags = {
+    race: raceTag,
+    subrace: makeSourceTag('subrace', subrace?.name ?? '', 'fixed', subrace?.source),
+  }
+  for (const bonus of abilityData.fixed) {
+    result = addAbilityBonus(result, {
+      ability: bonus.ability,
+      value: bonus.value,
+      sourceTag: abilityTags[bonus.source],
+    })
+  }
+  const choiceIndices = { race: 0, subrace: 0 }
+  for (const choice of abilityData.choices) {
+    const tag = abilityTags[choice.source]
+    const choiceRecord: ChoiceRecord = {
+      id: `${choice.source}:${normalizeKey(tag.sourceName)}:abilityBonuses:choose:${choiceIndices[choice.source]++}`,
+      domain: 'abilityBonuses',
+      sourceTag: { ...tag, grantType: 'placeholder' },
+      chooseCount: choice.count,
+      amount: choice.amount,
+      optionPool: choice.from,
+      selected: [],
+      status: 'pending',
+    }
+    result = addChoicePlaceholder(result, choiceRecord)
+  }
   return result
 }
