@@ -1,7 +1,17 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { makeSourceTag } from '@/lib/provenance'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
+import { useFeatsPageController } from '@/pages/feats/hooks/useFeatsPageController'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Feat5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
@@ -101,6 +111,76 @@ vi.mock('@/components/modals/FeatOptionsModal', () => ({
 }))
 
 describe('FeatsPage bonus feat configuration', () => {
+  test.each([
+    'fixed',
+    'class',
+    'choice',
+  ] as const)('editing a %s copy loads only that owner’s saved setup', (owner) => {
+    const feat = { id: 'chosen', name: 'Skilled', source: 'PHB', description: '' }
+    const character = makeCharacterFixture({
+      feats: [{ ...feat, options: { skills: ['Arcana'] } }],
+      fixedFeatOptions: { 'skilled|phb|': { skills: ['Stealth'] } },
+      classFeatChoices: [
+        {
+          id: 'class',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Training',
+          categories: [],
+          feats: [{ ...feat, options: { skills: ['History'] } }],
+        },
+      ],
+      provenance: {
+        ...emptyProvenance(),
+        choices: [
+          {
+            id: 'choice',
+            domain: 'feats',
+            sourceTag: makeSourceTag('race', 'Human', 'placeholder', 'PHB'),
+            chooseCount: 1,
+            optionPool: [],
+            selected: ['Skilled'],
+            status: 'resolved',
+            selectedRefs: [{ name: 'Skilled', source: 'PHB', options: { skills: ['Nature'] } }],
+          },
+        ],
+      },
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacter: character,
+      activeCharacterId: character.id,
+    })
+    const { result } = renderHook(() => useFeatsPageController(), {
+      wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    })
+    act(() =>
+      result.current.handleEditSetup(
+        'Skilled',
+        'PHB',
+        undefined,
+        owner === 'choice' ? 'choice' : undefined,
+        owner === 'class' ? 'class' : undefined,
+        owner === 'fixed',
+      ),
+    )
+    expect(result.current.featEditCandidate?.priorOptions).toEqual({
+      skills: [owner === 'fixed' ? 'Stealth' : owner === 'class' ? 'History' : 'Nature'],
+    })
+    act(() => result.current.setFeatEditCandidate(null))
+    act(() =>
+      result.current.handleEditSetup(
+        'Skilled',
+        'PHB',
+        owner === 'fixed' ? 'unconfigured' : undefined,
+        owner === 'choice' ? 'missing-choice' : undefined,
+        owner === 'class' ? 'missing-class' : undefined,
+        owner === 'fixed',
+      ),
+    )
+    expect(result.current.featEditCandidate).toBeNull()
+  })
+
   const renderPage = (initialEntry = '/feats') =>
     render(
       <MemoryRouter initialEntries={[initialEntry]}>
@@ -193,12 +273,18 @@ describe('FeatsPage bonus feat configuration', () => {
         sourceType: 'background',
         sourceName: 'Acolyte',
         sourceRef: 'XPHB',
+        grantSource: 'XPHB',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
       },
     ]
-    const character = makeCharacterFixture({ provenance })
+    const character = makeCharacterFixture({
+      provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+    })
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
@@ -271,7 +357,8 @@ describe('FeatsPage bonus feat configuration', () => {
       {
         sourceType: 'background',
         sourceName: 'Acolyte',
-        sourceRef: 'MISSING',
+        sourceRef: 'XPHB',
+        grantSource: 'MISSING',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
@@ -279,6 +366,9 @@ describe('FeatsPage bonus feat configuration', () => {
     ]
     const character = makeCharacterFixture({
       provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
       fixedFeatOptions: { 'magic initiate|missing|cleric': { spellcastingClass: 'Cleric Spells' } },
     })
     useCharacterStore.setState({
@@ -305,13 +395,19 @@ describe('FeatsPage bonus feat configuration', () => {
       {
         sourceType: 'background',
         sourceName: 'Acolyte',
-        sourceRef: 'OTHER',
+        sourceRef: 'XPHB',
+        grantSource: 'OTHER',
         grantType: 'fixed',
         grantVariant: 'cleric',
         label: 'Acolyte',
       },
     ]
-    const character = makeCharacterFixture({ provenance })
+    const character = makeCharacterFixture({
+      provenance,
+      originSystem: '2024',
+      background: 'Acolyte',
+      backgroundSource: 'XPHB',
+    })
     useCharacterStore.setState({
       activeCharacter: character,
       activeCharacterId: character.id,
@@ -335,7 +431,7 @@ describe('FeatsPage bonus feat configuration', () => {
     ).toBeUndefined()
     expect(
       useCharacterStore.getState().activeCharacter?.provenance?.feats['magic initiate']?.[0]
-        .sourceRef,
+        .grantSource,
     ).toBe('OTHER')
     fireEvent.click(screen.getByRole('button', { name: 'Edit Setup' }))
     expect(screen.getByRole('alertdialog').textContent).toContain('Edit feat setup?')

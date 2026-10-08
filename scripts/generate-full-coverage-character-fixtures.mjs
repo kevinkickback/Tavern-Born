@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../src/lib/schema/characterSchemaVersion.ts'
 
 const root = resolve(process.cwd())
-const CURRENT_CHARACTER_SCHEMA_VERSION = 2
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
 const fixture2014Path = join(fixtureRoot, 'full-coverage-character-2014.tbc')
@@ -457,6 +457,7 @@ function addLedgerGrant(map, name, tag) {
       candidate.sourceName === tag.sourceName &&
       candidate.sourceRef === tag.sourceRef &&
       candidate.grantType === tag.grantType &&
+      candidate.grantSource === tag.grantSource &&
       candidate.grantVariant === tag.grantVariant &&
       candidate.spellGrantedAtLevel === tag.spellGrantedAtLevel,
   )
@@ -641,10 +642,13 @@ function buildFixtureProvenance({
     }
   }
   if (edition === '2024') {
+    const fixedFeat = editionEntity(feats, 'Alert', edition)
     addLedgerGrant(
       provenance.feats,
-      'Alert',
-      makeTag('background', background.name, 'fixed', background.source),
+      fixedFeat.name,
+      makeTag('background', background.name, 'fixed', background.source, {
+        grantSource: fixedFeat.source,
+      }),
     )
   }
 

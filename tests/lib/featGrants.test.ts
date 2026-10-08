@@ -23,6 +23,7 @@ function fixedTag(variant?: string): SourceTag {
     sourceType: 'background',
     sourceName: 'Acolyte',
     sourceRef: 'xphb',
+    grantSource: 'xphb',
     grantType: 'fixed',
     grantVariant: variant,
     label: 'Acolyte',

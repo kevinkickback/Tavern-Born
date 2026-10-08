@@ -518,6 +518,17 @@ const sourceTagSchema = z.object({
   grantVariant: z.string().optional(),
   grantType: grantTypeSchema,
   label: z.string(),
+  grantSource: z.string().optional(),
+})
+
+const featSourceTagSchema = sourceTagSchema.superRefine((tag, context) => {
+  if (tag.grantType === 'fixed' && tag.grantSource === undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['grantSource'],
+      message: 'Fixed feat grants require a separate target source.',
+    })
+  }
 })
 
 const spellSourceTagSchema = sourceTagSchema.extend({
@@ -568,7 +579,7 @@ const provenanceLedgerSchema = z.object({
   proficiencies: proficiencyProvenanceSchema,
   abilityBonuses: z.array(abilityBonusProvenanceRecordSchema),
   features: sourceTagListMapSchema,
-  feats: sourceTagListMapSchema,
+  feats: z.record(z.array(featSourceTagSchema)),
   spells: spellSourceTagListMapSchema,
   equipment: sourceTagListMapSchema,
   choices: z.array(choiceRecordSchema),

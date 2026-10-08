@@ -238,9 +238,9 @@ export function validateFeatSetup(
             'blocking',
             'feats',
             `Resolve ${resolved.name}`,
-            resolved.resolution === 'ambiguous'
-              ? 'The saved feat source is ambiguous; identify its printing before configuring it.'
-              : `The requested feat data${resolved.source ? ` (${resolved.source})` : ''} is unavailable. Load that source to view its rules and configure it.`,
+            resolved.source
+              ? `The requested feat data (${resolved.source}) is unavailable. Load that source to view its rules and configure it.`
+              : 'The granted feat does not identify its source. Reload its granting content before configuring it.',
             '/feats?view=character',
           ),
         )
