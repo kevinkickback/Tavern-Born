@@ -167,13 +167,12 @@ describe('character action projection', () => {
         ...makeCharacterFixture().spells,
         spellProfiles: [
           {
-            id: 'test-profile',
-            type: 'class',
-            label: 'Test profile',
+            ...makeCharacterFixture().spells.spellProfiles[0],
             cantrips: [reactionSpell.name],
             spellsKnown: [bonusSpell.name],
             preparedSpells: [],
           },
+          makeCharacterFixture().spells.spellProfiles[1],
         ],
       },
     })
