@@ -135,14 +135,8 @@ export function deriveSpellActions(
     const sourceLessId = toClassProfileId(classData.name)
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
-  const resolution = options.raceResolution
-  const unresolvedRace =
-    !!character.race &&
-    (resolution
-      ? !resolution.parentRace || (!!character.subrace && !resolution.subraceData)
-      : !options.race)
   const profiles = ensureSpellProfiles(character, classesById, options.race, {
-    raceResolution: resolution,
+    raceResolution: options.raceResolution,
     preserveUnavailableClassProfiles: true,
   })
 
@@ -160,7 +154,6 @@ export function deriveSpellActions(
 
   const spellStates = new Map<string, { reference: string; active: boolean }>()
   const spellKey = (reference: string) => {
-    if (!unresolvedRace || classesById.size === 0) return getSpellNameKey(reference)
     const spell = resolveSpellReference(reference, spellsByKey)
     return spell ? getSpellReferenceKey(spell.name, spell.source) : getSpellReferenceKey(reference)
   }

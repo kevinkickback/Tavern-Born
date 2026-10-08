@@ -369,3 +369,83 @@ test('an unavailable catalog preserves the complete saved racial profile and slo
   )
   expect(character).toEqual(before)
 })
+
+test.each([
+  'available',
+  'missing',
+] as const)('restored exact race data preserves a saved printing when the competing class target is %s', (targetAvailability) => {
+  const competingCleric = {
+    ...cleric,
+    subclasses: [
+      {
+        ...cleric.subclasses![0],
+        additionalSpells: [{ prepared: { 1: ['Shocking Grasp|XPHB#c'] } }],
+      },
+    ],
+  }
+  const installSelection = (races: Race5e[]) => {
+    const data = install(races, [competingCleric])
+    if (targetAvailability === 'missing') {
+      data.spells = data.spells.filter((spell) => spell.source !== 'XPHB')
+      data.lookups = buildGameDataLookups(data)
+      useGameDataStore.setState({ gameData: { ...data } })
+    }
+    return data
+  }
+  installSelection([])
+  const character = savedCharacter()
+  const before = structuredClone(character)
+  setActiveCharacter(character)
+  const { result } = renderHook(() => useCharacterActions(character))
+  const savedAction = expect.objectContaining({
+    name: 'Shocking Grasp',
+    kind: 'action',
+    active: true,
+    source: expect.objectContaining({ source: 'PHB' }),
+  })
+  expect(result.current).toContainEqual(savedAction)
+  let restoredData = useGameDataStore.getState().gameData!
+  act(() => {
+    restoredData = installSelection([parent])
+  })
+  const pdf = createCharacterSheetViewModel(character, restoredData.lookups!)
+  for (const actions of [result.current, pdf.actions]) {
+    expect.soft(actions).toContainEqual(savedAction)
+    const matching = actions.filter((action) => action.name === 'Shocking Grasp')
+    expect.soft(matching).toHaveLength(targetAvailability === 'available' ? 2 : 1)
+    if (targetAvailability === 'available')
+      expect(actions).toContainEqual(
+        expect.objectContaining({
+          name: 'Shocking Grasp',
+          kind: 'bonus-action',
+          active: true,
+          source: expect.objectContaining({ source: 'XPHB' }),
+        }),
+      )
+  }
+  expect(character).toEqual(before)
+})
+
+test('equivalent legacy and qualified references resolve to one action after exact race restoration', () => {
+  const data = install([parent], [{ ...cleric, subclasses: [] }])
+  data.spells = [shockingGrasp]
+  data.lookups = buildGameDataLookups(data)
+  useGameDataStore.setState({ gameData: { ...data } })
+  const character = savedCharacter()
+  character.classProgression = [{ name: 'Cleric', source: 'PHB', levels: 2 }]
+  character.spells.spellProfiles[0].cantrips = ['Shocking Grasp', 'Shocking Grasp|PHB']
+  setActiveCharacter(character)
+  const { result } = renderHook(() => useCharacterActions(character))
+  for (const actions of [
+    result.current,
+    createCharacterSheetViewModel(character, data.lookups!).actions,
+  ]) {
+    expect(actions.filter((action) => action.name === 'Shocking Grasp')).toEqual([
+      expect.objectContaining({
+        kind: 'action',
+        active: true,
+        source: expect.objectContaining({ source: 'PHB' }),
+      }),
+    ])
+  }
+})

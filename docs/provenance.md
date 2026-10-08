@@ -133,8 +133,9 @@ even when another class resolves. This unavailable-class policy also applies to 
 This fallback derives available subclass grants with their explicit spell source qualifiers, including
 new level grants, so a competing printing cannot replace the requested spell. The shared spell-token
 adapter accepts source-preserving decoding; existing callers retain their legacy decoding contract.
-The same fallback uses spell-reference identity for class grant merging, preparation, and action
-aggregation. A newly granted printing cannot prepare or hide an independently saved printing.
+The same fallback uses spell-reference identity for class grant merging and preparation. Action
+aggregation always uses resolved spell-reference identity, including after exact race data returns.
+A newly granted printing cannot prepare or hide an independently saved printing.
 Source-less legacy fixed metadata still retracts its prior name-based grants; action aggregation
 resolves legacy references before deduplication so equivalent references do not duplicate actions.
 Only a resolved race selection can establish which racial spell blocks apply or were removed.
