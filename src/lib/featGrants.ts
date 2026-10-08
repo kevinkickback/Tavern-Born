@@ -3,6 +3,7 @@ import type { Feat5e } from '@/types/5etools'
 
 export interface ResolvedFixedFeatGrant {
   feat: Feat5e | undefined
+  resolution: 'resolved' | 'missing' | 'ambiguous'
   name: string
   source: string
   variant?: string
@@ -11,7 +12,17 @@ export interface ResolvedFixedFeatGrant {
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {
-  return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0
+  return left.trim().localeCompare(right.trim(), undefined, { sensitivity: 'accent' }) === 0
+}
+
+/** Compatibility path for source-less saved grants; distinct printings cannot be guessed. */
+function resolveLegacyFixedFeat(feats: readonly Feat5e[], name: string) {
+  const matches = feats.filter((feat) => equalsIgnoreCase(feat.name, name))
+  const sources = new Set(matches.map((feat) => feat.source.trim().toLowerCase()))
+  return {
+    feat: sources.size === 1 ? matches[0] : undefined,
+    ambiguous: sources.size > 1,
+  }
 }
 
 export function getFixedFeatOptionKey(name: string, source: string, variant?: string): string {
@@ -36,16 +47,21 @@ export function resolveFixedFeatGrant(
   feats: readonly Feat5e[],
   ledgerName: string,
   tag: SourceTag,
+  rawFeats: readonly Feat5e[] = [],
 ): ResolvedFixedFeatGrant {
-  const source = tag.sourceRef ?? ''
-  const exact = feats.find(
-    (feat) =>
-      equalsIgnoreCase(feat.name, ledgerName) && equalsIgnoreCase(feat.source ?? '', source),
-  )
-  const feat = exact ?? feats.find((candidate) => equalsIgnoreCase(candidate.name, ledgerName))
+  const source = tag.sourceRef?.trim() ?? ''
+  const catalog = [...feats, ...rawFeats]
+  const legacy = source ? undefined : resolveLegacyFixedFeat(catalog, ledgerName)
+  const feat = source
+    ? catalog.find(
+        (feat) =>
+          equalsIgnoreCase(feat.name, ledgerName) && equalsIgnoreCase(feat.source ?? '', source),
+      )
+    : legacy?.feat
   const variant = tag.grantVariant?.trim() || undefined
   return {
     feat,
+    resolution: feat ? 'resolved' : legacy?.ambiguous ? 'ambiguous' : 'missing',
     name: feat?.name ?? ledgerName,
     source: feat?.source ?? source,
     variant,

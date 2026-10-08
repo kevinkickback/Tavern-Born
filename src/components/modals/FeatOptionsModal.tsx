@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useSkillList } from '@/hooks/data/useGameData'
+import { useSkillList, useSpellLookup } from '@/hooks/data/useGameData'
 import { getFeatureTypes } from '@/lib/5etools/classData'
 import {
   deriveFeatOptionSteps,
@@ -27,7 +27,9 @@ import {
   type FeatOptionStep,
   parseFeatSpellFilter,
 } from '@/lib/5etools/parsers/featOptions'
+import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
+import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
@@ -95,21 +97,43 @@ const SpellPickStep = memo(function SpellPickStep({
   selected,
   onToggle,
   spells,
+  savedSpells,
 }: {
   step: Extract<FeatOptionStep, { kind: 'spells' }>
   selected: string[]
   onToggle: (id: string) => void
   spells: Spell5e[]
+  savedSpells: Readonly<Record<string, Spell5e | undefined>>
 }) {
   const parsed = useMemo(() => parseFeatSpellFilter(step.chooseFilter), [step.chooseFilter])
-  const filtered = useMemo(() => {
-    return spells.filter((s) => {
+  const options = useMemo(() => {
+    const matches = (s: Spell5e) => {
       if (parsed.level && !parsed.level.includes(s.level)) return false
       if (parsed.school && !parsed.school.includes(s.school)) return false
       if (parsed.className && !isSpellOnClassList(s, parsed.className)) return false
       return true
-    })
-  }, [spells, parsed])
+    }
+    const savedReferences = new Map(
+      Object.keys(savedSpells).map((reference) => [getSpellReferenceKey(reference), reference]),
+    )
+    const available = spells.filter(matches).map((spell) => ({
+      spell: spell as Spell5e | undefined,
+      id:
+        savedReferences.get(getSpellReferenceKey(spell.name, spell.source)) ??
+        `${spell.name}|${spell.source ?? ''}`,
+      saved: false,
+    }))
+    const keys = new Set(available.map(({ id }) => getSpellReferenceKey(id)))
+    for (const [id, spell] of Object.entries(savedSpells)) {
+      if (
+        !keys.has(getSpellReferenceKey(id)) &&
+        (selected.includes(id) || (spell && matches(spell)))
+      ) {
+        available.push({ spell, id, saved: true })
+      }
+    }
+    return available
+  }, [spells, parsed, savedSpells, selected])
 
   return (
     <div className="space-y-3">
@@ -122,11 +146,11 @@ const SpellPickStep = memo(function SpellPickStep({
         )}
       </p>
       <div className="border rounded-md max-h-64 overflow-y-auto divide-y divide-border/50">
-        {filtered.length === 0 ? (
+        {options.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground italic">No matching spells found.</p>
         ) : (
-          filtered.map((spell) => {
-            const id = `${spell.name}|${spell.source ?? ''}`
+          options.map(({ spell, id, saved }) => {
+            const reference = parseSpellReference(id)
             const checkboxId = `spell-cb-${id.replace(/[^a-zA-Z0-9]/g, '-')}`
             const isSelected = selected.includes(id)
             const atLimit = selected.length >= step.count && !isSelected
@@ -151,11 +175,18 @@ const SpellPickStep = memo(function SpellPickStep({
                   className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
                 />
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium">{spell.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`} ·{' '}
-                    {getSchoolName(spell.school)}
+                  <span className="text-sm font-medium">
+                    {spell
+                      ? spell.name
+                      : `Spell data unavailable: ${reference.name}${reference.source ? ` (${reference.source})` : ''}`}
                   </span>
+                  {spell && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`} ·{' '}
+                      {getSchoolName(spell.school)}
+                    </span>
+                  )}
+                  {saved && <Badge variant="outline">Saved choice</Badge>}
                 </div>
               </label>
             )
@@ -473,6 +504,7 @@ export interface FeatOptionsModalProps {
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
   fixedSpellcastingClass?: string
+  fixedGrant?: boolean
   onFinish: (selections: FeatOptionSelections) => void
   onDismiss?: () => void
 }
@@ -484,10 +516,24 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   proficientSkillNames = [],
   initialSelections,
   fixedSpellcastingClass,
+  fixedGrant = false,
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
   const { spells, optionalfeatures, languages } = useFilteredGameData()
+  const rawSpellLookup = useSpellLookup()
+  const savedSpells = useMemo(
+    () =>
+      Object.fromEntries(
+        (fixedGrant ? (initialSelections?.spells ?? []) : []).map((reference) => [
+          reference,
+          parseSpellReference(reference).source
+            ? resolveSpellReference(reference, rawSpellLookup)
+            : undefined,
+        ]),
+      ),
+    [fixedGrant, initialSelections?.spells, rawSpellLookup],
+  )
   const skillNames = useSkillList()
   const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
     feat,
@@ -583,15 +629,29 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   }, [allSteps, stepSels, validatedFixedSpellcastingClass])
 
   const isLast = stepIndex === allSteps.length - 1
-  const canAdvance = currentStep ? isStepComplete(currentStep, stepSels, stepIndex) : false
+  const stepValue = getStepValue(stepSels, stepIndex)
+  const spellReferencesToCheck = isLast
+    ? (buildSelections().spells ?? [])
+    : currentStep?.kind === 'spells' && Array.isArray(stepValue)
+      ? stepValue
+      : []
+  const hasMissingSpell =
+    fixedGrant &&
+    spellReferencesToCheck.some(
+      (reference) =>
+        !parseSpellReference(reference).source || !resolveSpellReference(reference, rawSpellLookup),
+    )
+  const canAdvance =
+    !!currentStep && isStepComplete(currentStep, stepSels, stepIndex) && !hasMissingSpell
 
   const handleNext = useCallback(() => {
+    if (!canAdvance) return
     if (!isLast) {
       setStepIndex((i) => i + 1)
     } else {
       onFinish(buildSelections())
     }
-  }, [isLast, buildSelections, onFinish])
+  }, [canAdvance, isLast, buildSelections, onFinish])
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -651,6 +711,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               selected={Array.isArray(currentValue) ? currentValue : []}
               onToggle={(id) => toggleMulti(stepIndex, id, currentStep.count)}
               spells={spells as Spell5e[]}
+              savedSpells={savedSpells}
             />
           )}
           {currentStep.kind === 'proficiency' && (

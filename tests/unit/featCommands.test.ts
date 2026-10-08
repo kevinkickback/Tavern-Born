@@ -29,6 +29,150 @@ function applyResult(
 }
 
 describe('feat commands', () => {
+  test('a fixed feat refresh retracts normalized identity without removing other printings or variants', () => {
+    const initial = makeCharacterFixture()
+    const oldOptions = {
+      skills: ['Arcana'],
+      spells: ['Secret Spark|OTHER'],
+      abilityScore: 'Strength',
+    }
+    const original = { name: 'Training', source: 'OTHER', fixedGrant: true, grantVariant: 'Sage' }
+    const spells = [{ name: 'Secret Spark', source: 'OTHER', level: 0 } as Spell5e]
+    let before = applyResult(
+      initial,
+      commitFeatOptionsCommand(initial, emptyProvenance(), original, oldOptions, spells),
+    )
+    for (const independent of [
+      { ...original, source: 'TEST' },
+      { ...original, grantVariant: 'Other' },
+    ]) {
+      before = applyResult(
+        before,
+        commitFeatOptionsCommand(before, before.provenance, independent, oldOptions, spells),
+      )
+    }
+    const edited = applyResult(
+      before,
+      editFeatOptionsCommand(
+        before,
+        before.provenance,
+        { ...original, name: 'training', source: ' other ' },
+        oldOptions,
+        { skills: ['History'] },
+        spells,
+      ),
+    )
+    expect(edited.provenance.spells['secret spark']).toEqual([
+      expect.objectContaining({
+        sourceName: 'Training; Sage',
+        sourceRef: 'TEST',
+        grantVariant: 'fixed:Sage',
+      }),
+      expect.objectContaining({
+        sourceName: 'Training; Other',
+        sourceRef: 'OTHER',
+        grantVariant: 'fixed:Other',
+      }),
+    ])
+    expect(edited.provenance.proficiencies.skills.arcana).toHaveLength(2)
+    expect(edited.provenance.abilityBonuses).toHaveLength(2)
+    expect(edited.provenance.proficiencies.skills.history).toHaveLength(1)
+    expect(edited.proficiencies.skills).toContain('arcana')
+    expect(edited.fixedFeatOptions?.['training|other|sage']).toEqual({ skills: ['History'] })
+  })
+
+  test.each([0, 1])('classifies a tagged saved spell by the exact printing, level=%s', (level) => {
+    const character = makeCharacterFixture()
+    const selections = { spells: ['{@spell Secret Spark|OTHER|Saved display}'] }
+    const result = commitFeatOptionsCommand(
+      character,
+      emptyProvenance(),
+      { name: 'Training', source: 'OTHER', fixedGrant: true },
+      selections,
+      [
+        { name: 'Secret Spark', source: 'TEST', level: level === 0 ? 1 : 0 } as Spell5e,
+        { name: 'Secret Spark', source: 'OTHER', level } as Spell5e,
+      ],
+    )
+    const special = result.characterPatch.spells?.spellProfiles.find(
+      (profile) => profile.type === 'special',
+    )
+    expect(special?.cantrips).toEqual(level === 0 ? ['Secret Spark'] : [])
+    expect(special?.spellsKnown).toEqual(level === 1 ? ['Secret Spark'] : [])
+    expect(result.characterPatch.fixedFeatOptions).toEqual({ 'training|other|': selections })
+  })
+
+  test.each([
+    0, 1,
+  ])('materializes a trimmed spell name while preserving its saved reference, level=%s', (level) => {
+    const character = makeCharacterFixture()
+    const selections = { spells: [' Secret Spark | OTHER '] }
+    const feat = { name: 'Training', source: 'OTHER', fixedGrant: true }
+    const result = commitFeatOptionsCommand(character, emptyProvenance(), feat, selections, [
+      { name: 'Secret Spark', source: 'OTHER', level } as Spell5e,
+    ])
+    const configured = applyResult(character, result)
+    const special = configured.spells.spellProfiles.find((profile) => profile.type === 'special')
+    expect(special?.cantrips).toEqual(level === 0 ? ['Secret Spark'] : [])
+    expect(special?.spellsKnown).toEqual(level === 1 ? ['Secret Spark'] : [])
+    expect(special?.fixedSpells).toEqual(['Secret Spark'])
+    expect(configured.fixedFeatOptions).toEqual({ 'training|other|': selections })
+    expect(Object.keys(configured.provenance.spells)).toEqual(['secret spark'])
+    const removed = retractFeatOptionsCommand(configured, configured.provenance, feat, selections)
+    const removedSpecial = removed.characterPatch.spells?.spellProfiles.find(
+      (profile) => profile.type === 'special',
+    )
+    expect(removedSpecial?.cantrips).toEqual([])
+    expect(removedSpecial?.spellsKnown).toEqual([])
+    expect(removedSpecial?.fixedSpells).toEqual([])
+    expect(removed.provenanceUpdate.spells).toEqual({})
+  })
+
+  test.each([
+    0, 1,
+  ])('a normalized reference does not duplicate an existing spell from another owner, level=%s', (level) => {
+    const character = makeCharacterFixture()
+    const special = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+    if (level === 0) special.cantrips = ['Secret Spark']
+    else special.spellsKnown = ['Secret Spark']
+    special.fixedSpells = ['Secret Spark']
+    const otherOwner = makeSourceTag('race', 'Other Owner', 'fixed', 'TEST')
+    const ledger = { ...emptyProvenance(), spells: { 'secret spark': [otherOwner] } }
+    const selections = { spells: [' secret spark | OTHER '] }
+    const feat = { name: 'Training', source: 'OTHER', fixedGrant: true }
+    const configured = applyResult(
+      character,
+      commitFeatOptionsCommand(character, ledger, feat, selections, [
+        { name: 'Secret Spark', source: 'OTHER', level } as Spell5e,
+      ]),
+    )
+    expect(configured.spells).toEqual(character.spells)
+    expect(configured.provenance.spells['secret spark']).toHaveLength(2)
+    const removed = retractFeatOptionsCommand(configured, configured.provenance, feat, selections)
+    expect(removed.characterPatch.spells).toEqual(character.spells)
+    expect(removed.provenanceUpdate.spells['secret spark']).toEqual([otherOwner])
+  })
+
+  test.each([
+    true,
+    false,
+  ])('spell option classification uses the exact printing, competitor first=%s', (competitorFirst) => {
+    const requested = { name: 'Shared Spell', source: 'OTHER', level: 0 } as Spell5e
+    const competitor = { ...requested, source: 'TEST', level: 1 }
+    const committed = commitFeatOptionsCommand(
+      makeCharacterFixture(),
+      emptyProvenance(),
+      { name: 'Training', source: 'OTHER', fixedGrant: true },
+      { spells: ['Shared Spell|OTHER'] },
+      competitorFirst ? [competitor, requested] : [requested, competitor],
+    )
+    const special = committed.characterPatch.spells?.spellProfiles.find(
+      (profile) => profile.type === 'special',
+    )
+    expect(special?.cantrips).toEqual(['Shared Spell'])
+    expect(special?.spellsKnown).toEqual([])
+  })
+
   test('option grants apply and retract symmetrically', () => {
     const character = makeCharacterFixture({
       specialFeats: [{ id: 'bonus-skilled', name: 'Skilled', source: 'PHB', description: '' }],

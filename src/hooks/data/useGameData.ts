@@ -12,6 +12,7 @@ import type {
   Background5e,
   ClassFeature,
   Condition5e,
+  Feat5e,
   Item5e,
   Organization5e,
   Race5e,
@@ -22,6 +23,7 @@ export { useRetainedCharacterDetails } from './useRetainedCharacterDetails'
 
 const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
 const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
+const EMPTY_FEAT_LOOKUP: Readonly<Record<string, Feat5e>> = {}
 const EMPTY_CLASS_FEATURE_LOOKUP: Readonly<Record<string, ClassFeature>> = {}
 const EMPTY_OPTIONAL_FEATURE_LOOKUP: Readonly<Record<string, unknown>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
@@ -73,6 +75,11 @@ export function useBackgroundLookup() {
     useGameDataStore((state) => state.gameData?.lookups?.backgroundsByKey) ??
     EMPTY_BACKGROUND_LOOKUP
   )
+}
+
+/** Exact raw records for retained feat grants; selection lists remain filtered. */
+export function useFeatLookup() {
+  return useGameDataStore((state) => state.gameData?.lookups?.featsByKey) ?? EMPTY_FEAT_LOOKUP
 }
 
 /** Raw catalogs retain exact saved feature references independently of source filters. */

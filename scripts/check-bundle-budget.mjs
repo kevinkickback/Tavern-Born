@@ -18,10 +18,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   // Structural copy-value comparison adds 0.3 KiB; measured total is 5460.0 KiB.
   // Complete class-feature lookups and compatible Actions/PDF projection add 0.8 KiB;
   // measured renderer total is 5461.6 KiB. No dependency added; this requires budget review.
-  rendererCode: 5462 * KIB,
+  // Exact fixed feat resolution, missing-data UI/readiness and retained spell choices add
+  // 2249 bytes; measured total is 5,594,981 bytes (5463.8 KiB). Requires explicit budget review.
+  rendererCode: 5464 * KIB,
   // The same adapters bring the measured initial script from 432.0 to 435.2 KiB.
-  // No dependency added; all other budgets remain unchanged.
-  initialRendererScript: 436 * KIB,
+  // Fixed feat identity and exact spell metadata add 713 bytes: 446,822 bytes, requiring
+  // a reviewed 436 -> 437 KiB allowance. No dependency added; other budgets remain unchanged.
+  initialRendererScript: 437 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

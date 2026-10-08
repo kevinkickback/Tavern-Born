@@ -682,6 +682,7 @@ export function FeatsPage() {
             if (!isOpen) setFeatOptionsTarget(null)
           }}
           feat={featOptionsTarget}
+          fixedGrant={featOptionsTarget.fixedGrant}
           fixedSpellcastingClass={featOptionsTarget.fixedSpellcastingClass}
           proficientSkillNames={proficientSkillNames}
           onFinish={handleFeatOptionsFinish}
@@ -719,6 +720,7 @@ export function FeatsPage() {
             if (!isOpen) setFeatEditTarget(null)
           }}
           feat={featEditTarget.feat5e}
+          fixedGrant={featEditTarget.feat5e.fixedGrant}
           fixedSpellcastingClass={featEditTarget.feat5e.fixedSpellcastingClass}
           proficientSkillNames={proficientSkillNames}
           initialSelections={featEditTarget.priorOptions}

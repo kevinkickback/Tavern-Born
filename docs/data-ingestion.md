@@ -284,6 +284,35 @@ Lookup keys are case-normalized `name|source`. Exact resolution checks the filte
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Persisted references without a source are rejected rather than matched to the first printing.
 
+Fixed feat grants retain their explicit name/source and optional variant when the requested record
+is missing. Their resolver checks the filtered catalog, then the exact raw catalog; it never
+substitutes a same-name printing. Background and Feats projections show unavailable data and do
+not offer setup from another printing; readiness reports unresolved fixed grants even when prior
+options exist. Cards and details evaluate prerequisites only when the requested feat data is
+available; missing rules cannot establish that prerequisites are met or unmet.
+The selected card and inspector compare the complete normalized name/source identity, so a
+selection made during absence follows its exact printing when rules return without rewriting
+the saved grant or its options.
+A separately named legacy compatibility path permits a source-less fixed grant
+only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
+merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
+grants remain viewable/configurable after source filtering without entering the selection list.
+Fixed feat editing resolves saved spell choices against exact raw rule records and retains them
+in the dialog, while new spell, optional-feature, and language choices remain character-filtered.
+An eligible row retains the original saved reference after complete name/source normalization,
+so source changes and catalog casing changes preserve selection and removal without rewriting it.
+Finishing resolves spell metadata by complete name/source; a competing printing cannot determine
+cantrip classification. Materialized spell names use the shared reference parser and normalized
+deduplication; the original full reference remains in saved options, and retraction uses the same
+parsed name. An unavailable saved spell must be replaced or its rules restored before
+completion; merely opening the dialog leaves saved options and provenance intact.
+Retained saved spells remain visible and removable while selected in the current step even when
+refreshed metadata no longer matches its filter. Clearing such a choice removes the out-of-filter
+row; it cannot be newly selected in an unrelated step. The filter still governs new choices.
+Plain and tagged spell references
+use the same shared parser for exact source resolution. Fixed option teardown compares normalized
+feat name/source while preserving the distinct granting owner and variant.
+
 Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.
 Its pure resolver indexes class/subclass features with the saved class and subclass owner context,
 including raw nested subclass features when their source is filtered out. Choice details distinguish
