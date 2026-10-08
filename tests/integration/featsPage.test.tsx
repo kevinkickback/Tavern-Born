@@ -45,6 +45,7 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
 vi.mock('@/hooks/data/useGameData', () => ({
   useClassLookup: () => new Map(),
   useFeatLookup: () => rawFeatLookup,
+  useSpellLookup: () => ({}),
 }))
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({

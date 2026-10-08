@@ -5,7 +5,7 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useClassLookup, useFeatLookup } from '@/hooks/data/useGameData'
+import { useClassLookup, useFeatLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
@@ -66,6 +66,8 @@ export function useFeatsPageController() {
   const { feats, spells } = useFilteredGameData()
   const rawFeatLookup = useFeatLookup()
   const rawFeats = useMemo(() => Object.values(rawFeatLookup), [rawFeatLookup])
+  const rawSpellLookup = useSpellLookup()
+  const rawSpells = useMemo(() => Object.values(rawSpellLookup), [rawSpellLookup])
   const {
     replaceFeatSelections,
     replaceBonusFeatSelections,
@@ -283,10 +285,14 @@ export function useFeatsPageController() {
   const handleFeatOptionsFinish = useCallback(
     (selections: FeatOptionSelections) => {
       if (!featOptionsTarget) return
-      commitFeatWithOptions(featOptionsTarget, selections, spells as Spell5e[])
+      commitFeatWithOptions(
+        featOptionsTarget,
+        selections,
+        featOptionsTarget.fixedGrant ? rawSpells : (spells as Spell5e[]),
+      )
       setFeatOptionsTarget(null)
     },
-    [featOptionsTarget, commitFeatWithOptions, spells],
+    [featOptionsTarget, commitFeatWithOptions, rawSpells, spells],
   )
   const handleEditSetup = useCallback(
     (
@@ -374,11 +380,11 @@ export function useFeatsPageController() {
         featEditTarget.feat5e,
         featEditTarget.priorOptions,
         selections,
-        spells as Spell5e[],
+        featEditTarget.feat5e.fixedGrant ? rawSpells : (spells as Spell5e[]),
       )
       setFeatEditTarget(null)
     },
-    [featEditTarget, editFeatWithOptions, spells],
+    [featEditTarget, editFeatWithOptions, rawSpells, spells],
   )
 
   const pendingOptionFeatIds = useMemo(

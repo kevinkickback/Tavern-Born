@@ -297,6 +297,11 @@ A separately named legacy compatibility path permits a source-less fixed grant
 only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
 merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
 grants remain viewable/configurable after source filtering without entering the selection list.
+Fixed feat editing resolves saved spell choices against exact raw rule records and retains them
+in the dialog, while new spell, optional-feature, and language choices remain character-filtered.
+Finishing resolves spell metadata by complete name/source; a competing printing cannot determine
+cantrip classification. An unavailable saved spell must be replaced or its rules restored before
+completion; merely opening the dialog leaves saved options and provenance intact.
 
 Overview reads retained features and class-choice details through `useRetainedCharacterDetails`.
 Its pure resolver indexes class/subclass features with the saved class and subclass owner context,

@@ -29,6 +29,26 @@ function applyResult(
 }
 
 describe('feat commands', () => {
+  test.each([
+    true,
+    false,
+  ])('spell option classification uses the exact printing, competitor first=%s', (competitorFirst) => {
+    const requested = { name: 'Shared Spell', source: 'OTHER', level: 0 } as Spell5e
+    const competitor = { ...requested, source: 'TEST', level: 1 }
+    const committed = commitFeatOptionsCommand(
+      makeCharacterFixture(),
+      emptyProvenance(),
+      { name: 'Training', source: 'OTHER', fixedGrant: true },
+      { spells: ['Shared Spell|OTHER'] },
+      competitorFirst ? [competitor, requested] : [requested, competitor],
+    )
+    const special = committed.characterPatch.spells?.spellProfiles.find(
+      (profile) => profile.type === 'special',
+    )
+    expect(special?.cantrips).toEqual(['Shared Spell'])
+    expect(special?.spellsKnown).toEqual([])
+  })
+
   test('option grants apply and retract symmetrically', () => {
     const character = makeCharacterFixture({
       specialFeats: [{ id: 'bonus-skilled', name: 'Skilled', source: 'PHB', description: '' }],
