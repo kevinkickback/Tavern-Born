@@ -358,6 +358,7 @@ export function applyRaceAsiDistributionCommand(
   mode: 0 | 1,
 ): CharacterCommandResult {
   if (
+    character.originSystem === '2024' ||
     normalizeOwnerIdentity(character.race) !== normalizeOwnerIdentity(race.name) ||
     normalizeOwnerIdentity(character.raceSource) !== normalizeOwnerIdentity(race.source) ||
     normalizeOwnerIdentity(character.subrace) !== normalizeOwnerIdentity(subrace?.name) ||

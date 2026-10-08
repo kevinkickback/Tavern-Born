@@ -104,6 +104,32 @@ beforeEach(() => {
 afterEach(cleanup)
 
 test.each([
+  false,
+  true,
+])('2024 racial distribution edits leave the current draft unchanged (dirty: %s)', (dirty) => {
+  const character = characterPersistenceSchema.parse(
+    buildInitialCharacter(
+      {
+        initial: { name: 'Revised distribution', originSystem: '2024' },
+        race: dhampir,
+      },
+      new Map(),
+      () => [],
+    ),
+  )
+  setActiveCharacter(character)
+  useCharacterStore.setState({ isActiveCharacterDirty: dirty })
+  const { result } = renderHook(useRaceProvenanceMutations)
+  act(() => result.current.applyRaceAsiDistribution(dhampir, undefined, 1))
+  expect.soft(useCharacterStore.getState().activeCharacter).toBe(character)
+  expect.soft(useCharacterStore.getState().hasUnsavedChanges()).toBe(dirty)
+  expect(
+    createCharacterCalculationContext(character, install(races).lookups!).abilityScores
+      .racialBonuses,
+  ).toEqual({})
+})
+
+test.each([
   0, 1,
 ] as const)('Dhampir mode %s has the same choice shape through selection, calculation and current-format reopen', (mode) => {
   const choices =
