@@ -4,9 +4,11 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import { hasRaceAbilityOriginGrants } from '@/lib/calculations/originSystem'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
-import { getUnselectedRaceOwnerPaths } from '@/lib/provenance/raceOwnership'
+import {
+  getUnselectedRaceOwnerPaths,
+  hasRaceAbilityOriginGrants,
+} from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'

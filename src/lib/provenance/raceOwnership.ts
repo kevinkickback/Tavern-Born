@@ -5,6 +5,23 @@ import type { ProvenanceLedger, SourceTag } from './types'
 
 type RaceSelection = Pick<Character, 'race' | 'raceSource' | 'subrace' | 'subraceSource'>
 
+export function hasRaceAbilityOriginGrants(ledger: {
+  abilityBonuses: Array<{ sourceTag: { sourceType?: string } }>
+  choices: Array<{ domain: string; sourceTag: { sourceType?: string } }>
+}): boolean {
+  return (
+    ledger.abilityBonuses.some(
+      (record) =>
+        record.sourceTag.sourceType === 'race' || record.sourceTag.sourceType === 'subrace',
+    ) ||
+    ledger.choices.some(
+      (choice) =>
+        choice.domain === 'abilityBonuses' &&
+        (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace'),
+    )
+  )
+}
+
 export function isSelectedRaceOwner(tag: SourceTag, selection: RaceSelection): boolean {
   if (!normalizeOwnerIdentity(selection.race)) return false
   const name = tag.sourceType === 'race' ? selection.race : selection.subrace

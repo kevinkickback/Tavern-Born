@@ -1,4 +1,5 @@
 import { normalizeBackgroundOriginRules } from '@/lib/5etools/backgroundRuleNormalization'
+import { hasRaceAbilityOriginGrants } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Race5e } from '@/types/5etools'
 import type { OriginSystem } from '@/types/character'
 import {
@@ -161,22 +162,6 @@ type OriginInvariantLedger = {
     chooseCount: number
     sourceTag: { sourceType?: string; sourceName?: string }
   }>
-}
-
-export function hasRaceAbilityOriginGrants(
-  ledger: Pick<OriginInvariantLedger, 'abilityBonuses' | 'choices'>,
-): boolean {
-  return (
-    ledger.abilityBonuses.some(
-      (record) =>
-        record.sourceTag.sourceType === 'race' || record.sourceTag.sourceType === 'subrace',
-    ) ||
-    ledger.choices.some(
-      (choice) =>
-        choice.domain === 'abilityBonuses' &&
-        (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace'),
-    )
-  )
 }
 
 export function ensureRaceOriginInvariants(

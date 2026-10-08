@@ -1,4 +1,3 @@
-import { emptyProvenance } from '@/lib/character/createCharacter'
 import { normalizeKey, normalizeOwnerIdentity } from './normalization'
 import type {
   AbilityBonusProvenanceRecord,
@@ -9,6 +8,27 @@ import type {
   SourceTag,
   SpellSourceTag,
 } from './types'
+
+/** Return a fresh empty ledger without importing character presentation defaults. */
+export function emptyProvenance(): ProvenanceLedger {
+  const emptyMap = () => ({}) as Record<string, SourceTag[]>
+  return {
+    proficiencies: {
+      armor: emptyMap(),
+      weapons: emptyMap(),
+      tools: emptyMap(),
+      languages: emptyMap(),
+      skills: emptyMap(),
+      savingThrows: emptyMap(),
+    },
+    abilityBonuses: [],
+    features: emptyMap(),
+    feats: emptyMap(),
+    spells: emptyMap(),
+    equipment: emptyMap(),
+    choices: [],
+  }
+}
 
 type ProficiencyDomain = keyof ProficiencyProvenance
 type MapDomain = ProficiencyDomain | 'features' | 'feats' | 'spells' | 'equipment'
@@ -379,6 +399,3 @@ export function removeSpellGrantsAtLevel(
   }
   return { ...ledger, spells }
 }
-
-/** Return an empty fresh ledger. Re-exported convenience alias. */
-export { emptyProvenance }
