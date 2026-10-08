@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
 import { useClassesById } from '@/hooks/character/useClassesById'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
@@ -53,25 +52,13 @@ export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classesById = useClassesById()
   const calculationContext = useCharacterCalculationContext(character)
-  const {
-    mergedAdditionalSpells: raceAdditionalSpells,
-    displayName: raceDisplayName,
-    displaySource: raceDisplaySource,
-  } = useCharacterRaceData(character)
-
-  const selectedRaceData = useMemo(() => {
-    if (raceAdditionalSpells.length === 0) return undefined
-    return {
-      name: raceDisplayName ?? '',
-      source: raceDisplaySource,
-      additionalSpells: raceAdditionalSpells,
-    }
-  }, [raceAdditionalSpells, raceDisplayName, raceDisplaySource])
-
   const spellProfiles = useMemo(() => {
     if (!character) return []
-    return ensureSpellProfiles(character, classesById, selectedRaceData)
-  }, [character, classesById, selectedRaceData])
+    return ensureSpellProfiles(character, classesById, undefined, {
+      raceResolution: calculationContext?.raceResolution,
+      preserveUnavailableClassProfiles: true,
+    })
+  }, [character, classesById, calculationContext])
 
   const slotsBreakdown = useMemo(() => {
     if (!character) {

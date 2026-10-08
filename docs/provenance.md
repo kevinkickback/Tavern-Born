@@ -103,7 +103,7 @@ owners are removed, then apply the new grants. A value shared only by the old ra
 leaves with their final owner. Values still owned by a manual or unrelated source, and untracked
 manual values, remain. Skill expertise is pruned with any proficiency that becomes unavailable.
 
-Spell-profile adapters use the same complete-version boundary: `useCharacterRaceData` omits parent
+Spell-profile adapters use the same complete-version boundary: the shared selection adapter omits parent
 spell blocks for a materialized version, including inherited blocks already present on that version
 and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named
 parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
@@ -117,18 +117,25 @@ fixed ability or choice options; removing that rule clears a historical ability.
 and special profiles and spell-slot usage remain intact. A shared pure selection adapter keeps
 command and spell-hook labels and blocks consistent; legacy profile labels and choice identifiers
 remain stable.
-Actions and PDF action projection consume the same resolved parent/subrace context and selection
-adapter as the spell hook. They preserve those profile identities when projecting saved choices,
+Spells, Actions and PDF action projection consume the same resolved parent/subrace context through
+the shared spell-profile builder. They preserve those profile identities when projecting saved choices,
 filter named parent blocks to the selected child, and respect complete-version spell removal.
-An unavailable selected child projects its existing saved racial profiles, even when the available
-parent has spell grants. Available class and subclass data still derive current grants at the
+An unavailable exact selected parent or child projects cloned existing saved racial profiles,
+including choices, casting ability and source identity, even when an available parent has spell
+grants. Unrelated spell edits commit those retained profiles with provenance together. Exact
+raw-catalog fallback counts as available; restored exact metadata resumes normal derivation.
+Metadata-free consumers cannot establish a racial removal and retain selected saved racial profiles.
+Only a fully resolved selection can establish empty racial grants. Without a selected race,
+the projection omits racial profiles. Intentional race/subrace commands still remove obsolete setup atomically.
+Available class and subclass data still derive current grants at the
 character's level. Each unavailable exact class or selected subclass retains its own saved profile
-even when another class resolves. When all class data is unavailable, the full saved-profile fallback remains.
+even when another class resolves. This unavailable-class policy also applies to the Spells projection.
 This fallback derives available subclass grants with their explicit spell source qualifiers, including
 new level grants, so a competing printing cannot replace the requested spell. The shared spell-token
 adapter accepts source-preserving decoding; existing callers retain their legacy decoding contract.
-The same fallback uses spell-reference identity for class grant merging, preparation, and action
-aggregation. A newly granted printing cannot prepare or hide an independently saved printing.
+The same fallback uses spell-reference identity for class grant merging and preparation. Action
+aggregation always uses resolved spell-reference identity, including after exact race data returns.
+A newly granted printing cannot prepare or hide an independently saved printing.
 Source-less legacy fixed metadata still retracts its prior name-based grants; action aggregation
 resolves legacy references before deduplication so equivalent references do not duplicate actions.
 Only a resolved race selection can establish which racial spell blocks apply or were removed.
