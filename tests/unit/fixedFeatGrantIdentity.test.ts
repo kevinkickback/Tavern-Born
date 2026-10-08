@@ -2,7 +2,11 @@ import { describe, expect, test } from 'vitest'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
-import { commitFeatOptionsCommand } from '@/lib/character/commands/featCommands'
+import {
+  commitFeatOptionsCommand,
+  editFeatOptionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
@@ -203,5 +207,61 @@ describe('fixed feat granting owner and target identity', () => {
           expect.objectContaining({ path: ['provenance', 'feats', 'alert', 0, 'grantSource'] }),
         ]),
       )
+  })
+
+  test('same-printing fixed setup and edits preserve a repeatable chosen copy through final owner removal', () => {
+    const [race, plain] = parseRaces({
+      race: [
+        { name: 'Gifted', source: 'HB', feats: [{ 'Training|PHB': true }] },
+        { name: 'Plain', source: 'HB' },
+      ],
+    }) as Race5e[]
+    const training = { name: 'Training', source: 'PHB', repeatable: true } as Feat5e
+    let character = makeCharacterFixture({ race: '', background: '' })
+    character = applyCharacterCommandResult(
+      character,
+      applyRaceSelectionCommand(character, character.provenance, race, undefined, 0, noChoices),
+    )
+    character = applyCharacterCommandResult(
+      character,
+      replaceFeatSelectionsCommand(character, character.provenance, [training]),
+    )
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        commitFeatOptionsCommand(character, character.provenance, training, { skills: ['Arcana'] }),
+      ),
+    )
+    const fixed = { ...training, fixedGrant: true }
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        commitFeatOptionsCommand(character, character.provenance, fixed, { skills: ['History'] }),
+      ),
+    )
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        editFeatOptionsCommand(
+          character,
+          character.provenance,
+          fixed,
+          { skills: ['History'] },
+          { skills: ['Nature'] },
+        ),
+      ),
+    )
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(character.proficiencies.skills).toEqual(['arcana', 'nature'])
+    character = reopen(
+      applyCharacterCommandResult(
+        character,
+        applyRaceSelectionCommand(character, character.provenance, plain, undefined, 0, noChoices),
+      ),
+    )
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(character.fixedFeatOptions).toEqual({})
+    expect(character.proficiencies.skills).toEqual(['arcana'])
   })
 })

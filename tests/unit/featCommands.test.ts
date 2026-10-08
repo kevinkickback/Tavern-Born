@@ -30,6 +30,69 @@ function applyResult(
 
 describe('feat commands', () => {
   test.each([
+    'fixed',
+    'class',
+    'choice',
+  ] as const)('%s setup updates only its own saved option record at the same printing', (owner) => {
+    const record = { id: 'selected', name: 'Training', source: 'PHB', description: '' }
+    const choiceId = 'racial-feat-choice'
+    const classId = 'class-feat-choice'
+    const character = makeCharacterFixture({
+      feats: [{ ...record, options: { skills: ['Arcana'] } }],
+      specialFeats: [{ ...record, id: 'bonus', options: { skills: ['Arcana'] } }],
+      fixedFeatOptions: { 'training|phb|': { skills: ['Stealth'] } },
+      classFeatChoices: [
+        {
+          id: classId,
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Training',
+          categories: [],
+          feats: [{ ...record, options: { skills: ['History'] } }],
+        },
+      ],
+      provenance: {
+        ...emptyProvenance(),
+        choices: [
+          {
+            id: choiceId,
+            domain: 'feats',
+            sourceTag: makeSourceTag('race', 'Gifted', 'placeholder', 'HB'),
+            chooseCount: 1,
+            optionPool: [],
+            selected: ['Training'],
+            status: 'resolved',
+            selectedRefs: [{ name: 'Training', source: 'PHB', options: { skills: ['Nature'] } }],
+          },
+        ],
+      },
+    })
+    const target = {
+      name: 'Training',
+      source: 'PHB',
+      ...(owner === 'fixed' ? { fixedGrant: true } : {}),
+      ...(owner === 'class' ? { classFeatChoiceId: classId } : {}),
+      ...(owner === 'choice' ? { provenanceChoiceId: choiceId } : {}),
+    }
+    const selections = { skills: ['Survival'] }
+    const result = applyResult(
+      character,
+      commitFeatOptionsCommand(character, character.provenance, target, selections),
+    )
+    expect(result.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(result.specialFeats?.[0].options).toEqual({ skills: ['Arcana'] })
+    expect(result.classFeatChoices?.[0].feats[0].options).toEqual(
+      owner === 'class' ? selections : { skills: ['History'] },
+    )
+    expect(result.provenance.choices[0].selectedRefs?.[0].options).toEqual(
+      owner === 'choice' ? selections : { skills: ['Nature'] },
+    )
+    expect(result.fixedFeatOptions?.['training|phb|']).toEqual(
+      owner === 'fixed' ? selections : { skills: ['Stealth'] },
+    )
+  })
+
+  test.each([
     'provenanceChoiceId',
     'classFeatChoiceId',
   ] as const)('fixed metadata cannot relax the exact %s owner key', (ownerField) => {
@@ -45,6 +108,7 @@ describe('feat commands', () => {
       initial,
       commitFeatOptionsCommand(initial, emptyProvenance(), feat, { skills: ['Arcana'] }),
     )
+    expect(configured.fixedFeatOptions).toBeUndefined()
     const result = retractFeatOptionsCommand(
       configured,
       configured.provenance,
@@ -374,6 +438,26 @@ describe('feat commands', () => {
     )
 
     expect(result.provenanceUpdate.choices).toEqual([xphbChoice])
+  })
+
+  test('fixed setup removes only its own option placeholder at the same printing', () => {
+    const placeholders = [undefined, 'fixed:', 'class:independent'].map((grantVariant, index) => ({
+      id: `setup-${index}`,
+      domain: 'featOptions' as const,
+      sourceTag: { ...makeSourceTag('feat', 'Training', 'choice', 'PHB'), grantVariant },
+      chooseCount: 1,
+      optionPool: ['Arcana'],
+      selected: [],
+      status: 'pending' as const,
+    }))
+    const ledger = { ...emptyProvenance(), choices: placeholders }
+    const result = commitFeatOptionsCommand(
+      makeCharacterFixture(),
+      ledger,
+      { name: 'Training', source: 'PHB', fixedGrant: true },
+      { skills: ['History'] },
+    )
+    expect(result.provenanceUpdate.choices).toEqual([placeholders[0], placeholders[2]])
   })
 
   test('replaces same-name feats by source without retaining stale options', () => {

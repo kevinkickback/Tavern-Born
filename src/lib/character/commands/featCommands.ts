@@ -454,7 +454,6 @@ export function commitFeatOptionsCommand(
   selections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
-  const sourceName = getFeatOptionSourceName(feat)
   const sourceTag = getFeatOptionSourceTag(feat)
   let provenanceUpdate = ledger
   const existingSpecial = character.spells.spellProfiles.find(
@@ -574,12 +573,7 @@ export function commitFeatOptionsCommand(
     choices: provenanceUpdate.choices
       .filter(
         (choice) =>
-          !(
-            choice.domain === 'featOptions' &&
-            choice.sourceTag.sourceType === 'feat' &&
-            choice.sourceTag.sourceName === sourceName &&
-            (choice.sourceTag.sourceRef ?? '') === (feat.source ?? '')
-          ),
+          !(choice.domain === 'featOptions' && isSameGrantSource(choice.sourceTag, sourceTag)),
       )
       .map((choice) => {
         if (choice.id !== feat.provenanceChoiceId) return choice
@@ -593,16 +587,23 @@ export function commitFeatOptionsCommand(
       }),
   }
 
-  const feats = character.feats.map((entry) =>
-    entry.name === feat.name && entry.source === (feat.source ?? '')
-      ? { ...entry, options: selections }
-      : entry,
-  )
-  const specialFeats = character.specialFeats?.map((entry) =>
-    entry.name === feat.name && entry.source === (feat.source ?? '')
-      ? { ...entry, options: selections }
-      : entry,
-  )
+  const optionOwnerKey = getFeatOptionOwnerKey(feat)
+  const feats =
+    optionOwnerKey === undefined
+      ? character.feats.map((entry) =>
+          entry.name === feat.name && entry.source === (feat.source ?? '')
+            ? { ...entry, options: selections }
+            : entry,
+        )
+      : character.feats
+  const specialFeats =
+    optionOwnerKey === undefined
+      ? character.specialFeats?.map((entry) =>
+          entry.name === feat.name && entry.source === (feat.source ?? '')
+            ? { ...entry, options: selections }
+            : entry,
+        )
+      : character.specialFeats
   const classFeatChoices = character.classFeatChoices?.map((choice) =>
     choice.id === feat.classFeatChoiceId
       ? {
@@ -616,7 +617,7 @@ export function commitFeatOptionsCommand(
       : choice,
   )
   const fixedFeatOptions =
-    feat.fixedGrant || feat.grantVariant !== undefined
+    optionOwnerKey?.startsWith('fixed:') === true
       ? {
           ...(character.fixedFeatOptions ?? {}),
           [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,

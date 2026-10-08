@@ -68,6 +68,10 @@ configured feat choices and other printings/variants retain their own ownership.
 requires separate target metadata on fixed feat tags. Pre-release grants with overloaded identity
 are rejected with their character format rather than guessed or converted.
 
+Option commits and edit dialogs use the requested feat owner. Fixed, class and racial/background
+choice setups update their own records, including when a separately selected copy has the same
+name and printing. They do not overwrite or borrow that independent copy's saved selections.
+
 New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
 ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
 Untracked expertise is retained while its proficiency remains, and a pre-existing untracked selection
