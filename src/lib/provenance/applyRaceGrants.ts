@@ -159,7 +159,11 @@ export function applyRaceGrants(
   resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
   totalCharacterLevel = 1,
-  options?: { suppressLanguageGrants?: boolean; suppressSpellGrants?: boolean },
+  options?: {
+    suppressLanguageGrants?: boolean
+    suppressSpellGrants?: boolean
+    suppressAbilityGrants?: boolean
+  },
 ): ProvenanceLedger {
   race = getRaceSelectionParent(race, subrace)
   let result = ledger
@@ -230,30 +234,6 @@ export function applyRaceGrants(
       result = applyRaceSpellGrants(subrace, totalCharacterLevel, result, subraceTag)
     }
 
-    const replace = subrace.overwrite?.ability === true
-
-    if (replace) {
-      // Remove parent race ability bonuses and apply subrace's
-      result = {
-        ...result,
-        abilityBonuses: result.abilityBonuses.filter(
-          (r) =>
-            r.sourceTag.sourceType !== 'race' ||
-            r.sourceTag.sourceName !== race.name ||
-            (r.sourceTag.sourceRef ?? '') !== (race.source ?? ''),
-        ),
-        choices: result.choices.filter(
-          (c) =>
-            !(
-              c.domain === 'abilityBonuses' &&
-              c.sourceTag.sourceType === 'race' &&
-              c.sourceTag.sourceName === race.name &&
-              (c.sourceTag.sourceRef ?? '') === (race.source ?? '')
-            ),
-        ),
-      }
-    }
-
     result = applyProficiencyBlocks(
       result,
       'skills',
@@ -298,9 +278,38 @@ export function applyRaceGrants(
     )
   }
 
+  return options?.suppressAbilityGrants
+    ? result
+    : applyRaceAbilityGrants(race, subrace, result, lineageAsiBlockIndex)
+}
+
+/** Apply only the shared ability projection, allowing child commands to rebuild parent ASIs. */
+export function applyRaceAbilityGrants(
+  race: NonNullable<Parameters<typeof getRaceAbilityData>[0]> & { name: string; source?: string },
+  subrace:
+    | (NonNullable<Parameters<typeof getRaceAbilityData>[1]> & { name: string; source?: string })
+    | undefined,
+  ledger: ProvenanceLedger,
+  lineageAsiBlockIndex: 0 | 1 = 0,
+): ProvenanceLedger {
+  race = getRaceSelectionParent(race, subrace)
+  let result = ledger
+  if (subrace?.overwrite?.ability === true) {
+    const isParentOwner = (tag: import('./types').SourceTag) =>
+      tag.sourceType === 'race' &&
+      tag.sourceName === race.name &&
+      (tag.sourceRef ?? '') === (race.source ?? '')
+    result = {
+      ...result,
+      abilityBonuses: result.abilityBonuses.filter((record) => !isParentOwner(record.sourceTag)),
+      choices: result.choices.filter(
+        (choice) => choice.domain !== 'abilityBonuses' || !isParentOwner(choice.sourceTag),
+      ),
+    }
+  }
   const abilityData = getRaceAbilityData(race, subrace, lineageAsiBlockIndex)
   const abilityTags = {
-    race: raceTag,
+    race: makeSourceTag('race', race.name, 'fixed', race.source),
     subrace: makeSourceTag('subrace', subrace?.name ?? '', 'fixed', subrace?.source),
   }
   for (const bonus of abilityData.fixed) {

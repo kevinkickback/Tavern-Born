@@ -17,13 +17,14 @@ import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixed
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
+  applyRaceAbilityGrants,
   applyRaceGrants,
   reconcileRaceChange,
   reconcileSubraceChange,
   resolveRaceAsiChoicesInLedger,
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -270,9 +271,34 @@ export function applySubraceSelectionCommand(
       resolveRaceChoiceOptions,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
       getTotalCharacterLevel(character),
-      { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
+      {
+        suppressLanguageGrants: character.originSystem === '2024',
+        suppressSpellGrants: true,
+        suppressAbilityGrants: true,
+      },
     )
   }
+  const isSelectedAbilityOwner = (tag: SourceTag) =>
+    (tag.sourceType === 'race' &&
+      tag.sourceName === race.name &&
+      (tag.sourceRef ?? '') === (race.source ?? '')) ||
+    (tag.sourceType === 'subrace' &&
+      tag.sourceName === subrace?.name &&
+      (tag.sourceRef ?? '') === (subrace?.source ?? ''))
+  provenanceUpdate = applyRaceAbilityGrants(
+    normalized.race,
+    normalized.subrace,
+    {
+      ...provenanceUpdate,
+      abilityBonuses: provenanceUpdate.abilityBonuses.filter(
+        (record) => !isSelectedAbilityOwner(record.sourceTag),
+      ),
+      choices: provenanceUpdate.choices.filter(
+        (choice) => choice.domain !== 'abilityBonuses' || !isSelectedAbilityOwner(choice.sourceTag),
+      ),
+    },
+    (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+  )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)

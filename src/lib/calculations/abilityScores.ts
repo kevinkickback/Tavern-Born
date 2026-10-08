@@ -357,12 +357,17 @@ export function getRaceAbilityData(
     _tavernBornFlexibleAsi?: boolean
     _tavernBornSuppressFlexibleAsi?: boolean
   } | null,
-  subrace?: { ability?: unknown[]; _isVersion?: unknown; overwrite?: { ability?: boolean } } | null,
+  subrace?:
+    | (FlexibleRaceAbilitySource & { _isVersion?: unknown; overwrite?: { ability?: boolean } })
+    | null,
   lineageAsiBlockIndex: RaceLineageAsiBlockIndex = 0,
 ): RaceAbilityData {
   const fixed: FixedAbilityBonus[] = []
   const choices: ChoosableAbilityBonus[] = []
-  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
+  const flexibleSource = subrace?._isVersion === true ? 'subrace' : 'race'
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(
+    flexibleSource === 'subrace' ? subrace : race,
+  )
 
   function processEntries(entries: unknown[] | undefined, source: 'race' | 'subrace') {
     if (!entries) return
@@ -423,20 +428,20 @@ export function getRaceAbilityData(
         count: 3,
         amount: 1,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
     } else {
       choices.push({
         count: 1,
         amount: 2,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
       choices.push({
         count: 1,
         amount: 1,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
     }
   }

@@ -151,6 +151,10 @@ choices. The three-ability distribution is one choice with a count of three. Par
 ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
 Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
 Commands retain the player's slot layout while committing validated selections to provenance.
+Ordinary child changes rebuild the selected parent's ability ownership with the cleared slots,
+including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
+origin bonuses under the child identity. Wizard Review shares the bounded calculator, and the
+Builder distribution control commits the new shape and ownership in one command update.
 When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
 available to calculation; revised origin rules suppress those racial bonuses.
 

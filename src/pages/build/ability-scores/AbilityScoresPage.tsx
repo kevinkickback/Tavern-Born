@@ -411,10 +411,6 @@ export function BuildAbilityScoresPage() {
                                     key={value}
                                     type="button"
                                     onClick={() => {
-                                      updateCharacter(character.id, {
-                                        raceAsiBlockIndex: value,
-                                        raceAsiChoices: [],
-                                      })
                                       if (selectedRace) {
                                         applyRaceSelection(selectedRace, subraceData, value)
                                       }

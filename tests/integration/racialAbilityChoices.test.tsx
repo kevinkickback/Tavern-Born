@@ -2,15 +2,19 @@ import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test } from 'vitest'
+import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
+import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildRacialBonuses, getRaceAbilityData } from '@/lib/calculations/abilityScores'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { getAsiDisplay } from '@/lib/calculations/raceUtils'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
   applyRaceAsiChoicesCommand,
   applyRaceSelectionCommand,
+  applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
 import {
   applyRaceGrants,
@@ -23,6 +27,7 @@ import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScor
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
@@ -394,4 +399,240 @@ test('the ability page offers only explicit Custom Lineage slots and commits a v
     setActiveCharacter(characterPersistenceSchema.parse(JSON.parse(JSON.stringify(edited)))),
   )
   expect(within(section).getAllByRole('combobox')).toHaveLength(1)
+})
+
+test('ordinary child changes clear saved parent choices and their ownership together', () => {
+  const child = { name: 'Child', source: 'HB', ability: [{ con: 1 }] } as Race5e
+  const parent = { ...halfElf, subraces: [child] }
+  const initial = buildInitialCharacter(
+    {
+      initial: { name: 'ASI Review', originSystem: '2014' },
+      race: parent,
+      raceAsiChoices: [['strength', 'dexterity']],
+    },
+    new Map(),
+    () => [],
+  )
+  const before = structuredClone(initial)
+  const result = applySubraceSelectionCommand(initial, initial.provenance!, parent, child, () => [])
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({ ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }),
+    ),
+  )
+  expect(reopened.raceAsiChoices).toEqual([])
+  expect(
+    reopened
+      .provenance!.choices.filter((choice) => choice.domain === 'abilityBonuses')
+      .map(({ selected, status }) => ({ selected, status })),
+  ).toEqual([{ selected: [], status: 'pending' }])
+  for (const data of [[parent], []]) {
+    expect(
+      createCharacterCalculationContext(reopened, install(data).lookups!).abilityScores
+        .racialBonuses,
+    ).toEqual({ charisma: 2, constitution: 1 })
+  }
+  expect(initial).toEqual(before)
+})
+
+test.each([
+  false,
+  true,
+])('leaving ordinary ability overwrite restores exact parent ownership; next additive child %s', (addChild) => {
+  const oldChild = {
+    name: 'Overwrite',
+    source: 'HB',
+    ability: [{ int: 1 }],
+    overwrite: { ability: true },
+  } as Race5e
+  const nextChild = { name: 'Additive', source: 'HB', ability: [{ con: 1 }] } as Race5e
+  const parent = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ dex: 2 }],
+    subraces: [oldChild, nextChild],
+  } as Race5e
+  const initial = buildInitialCharacter(
+    { initial: { name: 'ASI Review', originSystem: '2014' }, race: parent, subrace: oldChild },
+    new Map(),
+    () => [],
+  )
+  initial.provenance!.abilityBonuses.push(
+    { ability: 'wisdom', value: 1, sourceTag: makeSourceTag('race', 'Parent', 'fixed', 'OTHER') },
+    { ability: 'charisma', value: 1, sourceTag: makeSourceTag('manual', 'Manual', 'fixed') },
+  )
+  const before = structuredClone(initial)
+  const result = applySubraceSelectionCommand(
+    initial,
+    initial.provenance!,
+    parent,
+    addChild ? nextChild : undefined,
+    () => [],
+  )
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({ ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }),
+    ),
+  )
+  const expected = addChild ? { dexterity: 2, constitution: 1 } : { dexterity: 2 }
+  for (const data of [[parent], []])
+    expect(
+      createCharacterCalculationContext(reopened, install(data).lookups!).abilityScores
+        .racialBonuses,
+    ).toEqual(expected)
+  expect(reopened.provenance!.abilityBonuses).toEqual([
+    before.provenance!.abilityBonuses[1],
+    before.provenance!.abilityBonuses[2],
+    expect.objectContaining({
+      ability: 'dexterity',
+      value: 2,
+      sourceTag: expect.objectContaining({
+        sourceType: 'race',
+        sourceName: 'Parent',
+        sourceRef: 'PHB',
+      }),
+    }),
+    ...(addChild
+      ? [
+          expect.objectContaining({
+            ability: 'constitution',
+            value: 1,
+            sourceTag: expect.objectContaining({ sourceType: 'subrace', sourceName: 'Additive' }),
+          }),
+        ]
+      : []),
+  ])
+  expect(initial).toEqual(before)
+})
+
+test.each([
+  0, 1,
+] as const)('a complete flexible version owns valid synthesized bonuses in mode %s', (mode) => {
+  const [parent] = parseRaces({
+    race: [
+      {
+        name: 'Dhampir',
+        source: 'VRGR',
+        lineage: 'VRGR',
+        _versions: [{ name: 'Dhampir; Version', source: 'VRGR' }],
+      },
+    ],
+  }) as Race5e[]
+  const child = parent.subraces![0]
+  const selections =
+    mode === 0 ? [['strength'], ['dexterity']] : [['strength', 'dexterity', 'constitution']]
+  const character = buildInitialCharacter(
+    {
+      initial: { name: 'ASI Review', originSystem: '2014' },
+      race: parent,
+      subrace: child,
+      raceAsiBlockIndex: mode,
+      raceAsiChoices: selections,
+    },
+    new Map(),
+    () => [],
+  )
+  const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+  const expected =
+    mode === 0 ? { strength: 2, dexterity: 1 } : { strength: 1, dexterity: 1, constitution: 1 }
+  for (const data of [[parent], []])
+    expect(
+      createCharacterCalculationContext(reopened, install(data).lookups!).abilityScores
+        .racialBonuses,
+    ).toEqual(expected)
+  expect(
+    reopened
+      .provenance!.choices.filter((choice) => choice.domain === 'abilityBonuses')
+      .map((choice) => choice.sourceTag),
+  ).toEqual(
+    selections.map(() =>
+      expect.objectContaining({
+        sourceType: 'subrace',
+        sourceName: child.name,
+        sourceRef: child.source,
+      }),
+    ),
+  )
+})
+
+test('wizard Review displays the same bounded mixed bonuses as Finish', () => {
+  const selections = [['charisma', 'strength', 'strength', 'dexterity', 'constitution']]
+  const finished = buildInitialCharacter(
+    {
+      initial: { name: 'ASI Review', originSystem: '2014' },
+      race: halfElf,
+      raceAsiChoices: selections,
+    },
+    new Map(),
+    () => [],
+  )
+  expect(
+    createCharacterCalculationContext(finished, install(races).lookups!).abilityScores
+      .racialBonuses,
+  ).toEqual({ charisma: 2, strength: 1, dexterity: 1 })
+  render(
+    <ReviewStep
+      data={{
+        ...INITIAL_CHARACTER_DATA,
+        name: 'ASI Review',
+        originSystem: '2014',
+        race: halfElf.name,
+        raceSource: halfElf.source,
+        raceAsiChoices: selections,
+      }}
+      raceResolution={{
+        parentRace: halfElf,
+        subraceData: undefined,
+        mergedRace: halfElf,
+        subraceIsNested: false,
+      }}
+      sources={[]}
+    />,
+  )
+  for (const [label, total, assignment] of [
+    ['STR', '9', '8+1'],
+    ['DEX', '9', '8+1'],
+    ['CON', '8', null],
+    ['INT', '8', null],
+    ['WIS', '8', null],
+    ['CHA', '10', '8+2'],
+  ] as const) {
+    const card = screen.getByText(label).parentElement!
+    expect(within(card).getByText(total)).toBeTruthy()
+    if (assignment) expect(within(card).getByText(assignment)).toBeTruthy()
+    else expect(card.textContent).not.toContain('8+')
+  }
+})
+
+test('Builder distribution changes publish only coherent choices and provenance', async () => {
+  const character = selectRace(dhampir, 0, [['strength'], ['dexterity']])
+  setActiveCharacter(character)
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  const snapshots: Character[] = []
+  const unsubscribe = useCharacterStore.subscribe((state, previous) => {
+    if (state.activeCharacter && state.activeCharacter !== previous.activeCharacter)
+      snapshots.push(structuredClone(state.activeCharacter))
+  })
+  try {
+    await userEvent.setup().click(screen.getByRole('button', { name: '+1 / +1 / +1' }))
+  } finally {
+    unsubscribe()
+  }
+  expect(snapshots).toHaveLength(1)
+  for (const snapshot of snapshots) {
+    expect(snapshot.raceAsiBlockIndex).toBe(1)
+    expect(snapshot.raceAsiChoices).toEqual([])
+    expect(
+      snapshot
+        .provenance!.choices.filter((choice) => choice.domain === 'abilityBonuses')
+        .map(({ chooseCount, selected, status }) => ({ chooseCount, selected, status })),
+    ).toEqual([{ chooseCount: 3, selected: [], status: 'pending' }])
+    expect(
+      createCharacterCalculationContext(snapshot, install([]).lookups!).abilityScores.racialBonuses,
+    ).toEqual({})
+  }
 })
