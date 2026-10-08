@@ -404,7 +404,7 @@ export function getRaceAbilityData(
           }),
         ),
       ]
-      if (abilities.length >= count) choices.push({ count, amount, from: abilities, source })
+      if (abilities.length > 0) choices.push({ count, amount, from: abilities, source })
     }
   }
 

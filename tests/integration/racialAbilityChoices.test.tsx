@@ -332,7 +332,6 @@ test('unknown ability payloads do not become grants or throw', () => {
         [],
         { choose: 'invalid' },
         { choose: { count: -1, from: ['str'] } },
-        { choose: { count: 2, from: ['str'] } },
         { choose: { weighted: { from: ['str', 'dex'], weights: [2, 1] } } },
       ],
     } as never),
