@@ -180,8 +180,12 @@ Explicit ability rules take precedence over flexible lineage defaults; fixed bon
 choices. The three-ability distribution is one choice with a count of three. Parent choices precede
 ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
 Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
-Choice IDs include the granting printing; updates target selected ability records rather than every
-record sharing an opaque ID. Unrelated owners and nonability choices cannot consume ability slots.
+Choice IDs encode the complete normalized granting name and printing plus a numeric block ordinal.
+Current saves require unique dense ordinals within each represented owner, explicit integer amounts
+and bounded selections/status consistent with the player's slots. Parent blocks precede child blocks;
+each owner's blocks follow numeric ordinals regardless of ledger array order. Updates retain the
+ledger's array order and target the selected record objects. Unrelated domains and manual/class choices
+may share IDs without consuming racial ability slots; opaque racial ability IDs are rejected.
 Commands retain the player's slot layout while committing validated selections to provenance.
 Ordinary child changes rebuild the selected parent's ability ownership with the cleared slots,
 including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
@@ -197,6 +201,8 @@ Missing exact parent or child metadata hides racial choice editing until that se
 an available parent alone cannot establish the missing child's layout. Rejected ability commands
 leave the draft, modification timestamp and unsaved-change state untouched.
 Selecting the already active distribution is also a no-op and retains assigned bonuses.
+Direct ability-choice calls without a matching current racial block leave the complete draft and
+save state untouched. Known matching records remain usable by pure commands without catalog inputs.
 Opening the race page or refreshing its catalog does not clear or substitute a saved child.
 Saved selection details resolve the exact current reference even when catalog filters hide it;
 new race and child options remain restricted to the filtered catalog. Child option values retain

@@ -1,5 +1,6 @@
 import type { Character } from '@/types/character'
 import { normalizeOwnerIdentity } from './normalization'
+import { getRaceAbilityChoiceOrdinal, isRaceAbilityChoiceRecord } from './raceAbilityChoiceIdentity'
 import type { ProvenanceLedger, SourceTag } from './types'
 
 type RaceSelection = Pick<Character, 'race' | 'raceSource' | 'subrace' | 'subraceSource'>
@@ -17,16 +18,25 @@ export function isSelectedRaceOwner(tag: SourceTag, selection: RaceSelection): b
   )
 }
 
-/** Character slots follow parent blocks, then child blocks; unrelated owners never consume slots. */
+/** Character slots follow numeric native blocks within parent, then child; array order is immaterial. */
 export function getSelectedRaceAbilityChoices(ledger: ProvenanceLedger, selection: RaceSelection) {
-  const selected = ledger.choices.filter(
-    (record) =>
-      record.domain === 'abilityBonuses' && isSelectedRaceOwner(record.sourceTag, selection),
-  )
-  return [
-    ...selected.filter((record) => record.sourceTag.sourceType === 'race'),
-    ...selected.filter((record) => record.sourceTag.sourceType === 'subrace'),
-  ]
+  return ledger.choices
+    .flatMap((record) => {
+      const ordinal = getRaceAbilityChoiceOrdinal(record)
+      return ordinal !== null &&
+        isRaceAbilityChoiceRecord(record) &&
+        isSelectedRaceOwner(record.sourceTag, selection)
+        ? [{ record, ordinal }]
+        : []
+    })
+    .sort((a, b) =>
+      a.record.sourceTag.sourceType === b.record.sourceTag.sourceType
+        ? a.ordinal - b.ordinal
+        : a.record.sourceTag.sourceType === 'race'
+          ? -1
+          : 1,
+    )
+    .map(({ record }) => record)
 }
 
 /** Completed character validation; unavailable catalogs do not change saved owner identity. */

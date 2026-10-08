@@ -6,7 +6,7 @@ import {
 import type { AbilityName, Character } from '@/types/character'
 import { resolveChoiceRecord } from './ledger'
 import { getSelectedRaceAbilityChoices } from './raceOwnership'
-import type { ProvenanceLedger } from './types'
+import type { ChoiceRecord, ProvenanceLedger } from './types'
 
 /**
  * Syncs `raceAsiChoices` (stored on the character) into each race/subrace ability-bonus
@@ -39,7 +39,7 @@ export function resolveRaceAsiChoicesInLedger(
     },
     raceAsiChoices,
   )
-  const resolved = new Map(
+  const resolved = new Map<ChoiceRecord, ChoiceRecord>(
     raceAsiRecords.map((record, index) => [
       record,
       resolveChoiceRecord(record, selectedByBlock[index]),

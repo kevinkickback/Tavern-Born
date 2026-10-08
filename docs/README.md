@@ -4,7 +4,7 @@ These documents record stable architecture and maintenance contracts. Source cod
 the authority for implementation details; avoid turning this folder into a file-by-file inventory.
 
 While preparing for 1.0, breaking character-format changes require pre-release characters to be
-recreated. The current format is schema 4; saved schema 2 and 3 originals remain exportable before removal.
+recreated. The current format is schema 5; saved schema 2–4 originals remain exportable before removal.
 See [character compatibility](state-management.md#schema-compatibility) for the cutoff and recovery policy.
 
 ## Reading order

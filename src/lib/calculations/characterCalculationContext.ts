@@ -140,7 +140,7 @@ function getProvenanceRacialBonuses(
     {
       fixed,
       choices: records.map((record) => ({
-        amount: record.amount ?? 1,
+        amount: record.amount,
         count: record.chooseCount,
         from:
           record.optionPool.length === 0

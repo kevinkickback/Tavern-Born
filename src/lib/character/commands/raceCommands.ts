@@ -24,7 +24,7 @@ import {
   resolveRaceAsiChoicesInLedger,
 } from '@/lib/provenance'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
-import { isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
+import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -379,7 +379,11 @@ export function applyRaceAsiChoicesCommand(
   ledger: ProvenanceLedger,
   choices: string[][],
 ): CharacterCommandResult {
-  if (!character.race || character.originSystem === '2024')
+  if (
+    !character.race ||
+    character.originSystem === '2024' ||
+    getSelectedRaceAbilityChoices(ledger, character).length === 0
+  )
     return { characterPatch: {}, provenanceUpdate: ledger }
   return {
     characterPatch: { raceAsiChoices: choices },

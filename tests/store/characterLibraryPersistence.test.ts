@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
+import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -36,6 +39,62 @@ describe('acknowledged character library in IndexedDB', () => {
       characters: [saved],
       unsupportedCharacters: [],
     })
+  })
+
+  test('rejected old, newer and malformed current originals survive reload and later durable writes unchanged', async () => {
+    const valid = makeCharacterFixture({ id: 'supported', name: 'Supported', allowedSources: [] })
+    const malformed = buildInitialCharacter(
+      {
+        initial: { name: 'Ambiguous blocks', originSystem: '2014' },
+        race: {
+          name: 'Native',
+          source: 'TEST',
+          ability: [{ choose: { from: ['str', 'dex'], amount: 2 } }],
+        } as Race5e,
+        raceAsiChoices: [['strength']],
+      },
+      new Map(),
+      () => [],
+    )
+    malformed.provenance!.choices.push(structuredClone(malformed.provenance!.choices[0]))
+    const originals = [
+      { ...makeCharacterFixture({ id: 'old', name: 'Old' }), schemaVersion: 4 },
+      { ...makeCharacterFixture({ id: 'newer', name: 'Newer' }), schemaVersion: 6 },
+      malformed,
+    ]
+    const before = structuredClone(originals)
+    const rawStorage = createIdbStorage<{
+      characters: unknown[]
+      unsupportedCharacters: unknown[]
+    }>()
+    await rawStorage.setItem('character-storage', {
+      state: { characters: [valid, ...originals], unsupportedCharacters: [] },
+      version: 0,
+    })
+    await useCharacterStore.persist.rehydrate()
+    expect(useCharacterStore.getState().characters).toEqual([valid])
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual(before)
+    const created = await useCharacterStore
+      .getState()
+      .createNewCharacter({ name: 'Later valid write' })
+    await useCharacterStore.persist.rehydrate()
+    expect((await reader.getItem('character-storage'))?.state).toEqual({
+      characters: [valid, created],
+      unsupportedCharacters: before,
+    })
+    expect(
+      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
+        (download) => JSON.parse(download.text),
+      ),
+    ).toEqual(before)
+    expect(originals).toEqual(before)
+    const library = useCharacterStore.getState().characters
+    await expect(
+      useCharacterStore.getState().importCharacters([valid, malformed]),
+    ).rejects.toThrow()
+    expect(useCharacterStore.getState().characters).toBe(library)
+    expect((await reader.getItem('character-storage'))?.state.characters).toEqual(library)
+    expect(originals).toEqual(before)
   })
 
   test('overlapping duplicates receive independent identities and collision-free names', async () => {

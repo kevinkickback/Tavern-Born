@@ -30,7 +30,7 @@ function delayHydration() {
 }
 
 test.each([
-  2, 3,
+  2, 3, 4, 6,
 ])('quarantines schema%s originals without inferring grant ownership and exports them unchanged', async (schemaVersion) => {
   const supported = makeCharacterFixture({ id: 'current', name: 'Current', allowedSources: [] })
   const original = {

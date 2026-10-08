@@ -11,6 +11,7 @@ import { buildRacialBonuses, getRaceAbilityData } from '@/lib/calculations/abili
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { getAsiDisplay } from '@/lib/calculations/raceUtils'
+import { prepareCharacterDownload } from '@/lib/character/characterTransfer'
 import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
@@ -25,6 +26,7 @@ import {
   getAbilityBonusRows,
   makeSourceTag,
 } from '@/lib/provenance'
+import { getSelectedRaceAbilityChoices } from '@/lib/provenance/raceOwnership'
 import { setCollapseState } from '@/lib/storage/collapseState'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -102,6 +104,157 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = () => undefined
 })
 afterEach(cleanup)
+
+test.each([
+  false,
+  true,
+])('current export/import/edit/Save keeps native choice blocks associated (permuted: %s)', async (permuted) => {
+  const finished = characterPersistenceSchema.parse(
+    buildInitialCharacter(
+      {
+        initial: { name: 'Native choice import', originSystem: '2014', allowedSources: ['VRGR'] },
+        race: dhampir,
+        raceAsiBlockIndex: 0,
+        raceAsiChoices: [['strength'], ['dexterity']],
+      },
+      new Map(),
+      () => [],
+    ),
+  )
+  const exported = JSON.parse(prepareCharacterDownload(finished).text) as Character
+  if (permuted) exported.provenance!.choices.reverse()
+  const before = structuredClone(exported)
+  const [imported] = await useCharacterStore.getState().importCharacters([exported])
+  expect(exported).toEqual(before)
+  useCharacterStore.getState().setActiveCharacter(imported.id)
+  const data = install(races)
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  const user = userEvent.setup()
+  await user.click(within(screen.getByTestId('race-ability-choices')).getAllByRole('combobox')[0])
+  await user.click(screen.getByRole('option', { name: 'WIS' }))
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(
+      prepareCharacterDownload(
+        useCharacterStore.getState().characters.find((character) => character.id === imported.id)!,
+      ).text,
+    ),
+  )
+  expect(reopened.raceAsiChoices).toEqual([['wisdom'], ['dexterity']])
+  expect(
+    getSelectedRaceAbilityChoices(reopened.provenance, reopened).map((record) => ({
+      id: record.id,
+      amount: record.amount,
+      selected: record.selected,
+    })),
+  ).toEqual([
+    { id: 'race:dhampir|vrgr:abilityBonuses:choose:0', amount: 2, selected: ['wisdom'] },
+    { id: 'race:dhampir|vrgr:abilityBonuses:choose:1', amount: 1, selected: ['dexterity'] },
+  ])
+  expect(
+    getAbilityBonusRows(reopened.provenance)
+      .map((row) => row.itemName)
+      .sort(),
+  ).toEqual(['DEX +1', 'WIS +2'])
+  for (const lookups of [data.lookups!, install([]).lookups!, data.lookups!])
+    expect(
+      createCharacterCalculationContext(reopened, lookups).abilityScores.racialBonuses,
+    ).toEqual({ wisdom: 2, dexterity: 1 })
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+})
+
+test('numeric block order survives an eleven-block native projection and a permuted parent/child ledger', () => {
+  const parent = {
+    name: ' Parent|:% ',
+    source: ' P|:% ',
+    ability: Array.from({ length: 11 }, (_, index) => ({
+      choose: { from: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: index + 1 },
+    })),
+  } as Race5e
+  const child = {
+    name: ' Child|:% ',
+    source: ' C|:% ',
+    ability: [{ choose: { from: ['con'], amount: 2 } }, { choose: { from: ['cha'], amount: 1 } }],
+  } as Race5e
+  const slots = Array.from({ length: 11 }, (_, index) =>
+    index === 2 ? ['dex'] : index === 10 ? ['wis'] : [],
+  )
+  slots.push(['con'], ['cha'])
+  const character = selectRace(parent, 0, slots, child)
+  character.provenance!.choices.reverse()
+  const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+  const ordered = getSelectedRaceAbilityChoices(reopened.provenance, reopened)
+  expect(ordered.map((record) => record.id)).toEqual([
+    ...Array.from(
+      { length: 11 },
+      (_, index) => `race:parent%7C%3A%25|p%7C%3A%25:abilityBonuses:choose:${index}`,
+    ),
+    'subrace:child%7C%3A%25|c%7C%3A%25:abilityBonuses:choose:0',
+    'subrace:child%7C%3A%25|c%7C%3A%25:abilityBonuses:choose:1',
+  ])
+  expect(ordered[2].selected).toEqual(['dexterity'])
+  expect(ordered[10].selected).toEqual(['wisdom'])
+  expect(
+    createCharacterCalculationContext(reopened, install([]).lookups!).abilityScores.racialBonuses,
+  ).toEqual({ dexterity: 3, wisdom: 11, constitution: 2, charisma: 1 })
+  const edited = applyRaceAsiChoicesCommand(reopened, reopened.provenance, [
+    ...slots.slice(0, 10),
+    ['int'],
+    ['con'],
+    ['cha'],
+  ])
+  const saved = characterPersistenceSchema.parse({
+    ...reopened,
+    ...edited.characterPatch,
+    provenance: edited.provenanceUpdate,
+  })
+  expect(saved.provenance.choices.map((record) => record.id)).toEqual(
+    reopened.provenance.choices.map((record) => record.id),
+  )
+  expect(
+    createCharacterCalculationContext(saved, install([]).lookups!).abilityScores.racialBonuses,
+  ).toEqual({ dexterity: 3, intelligence: 11, constitution: 2, charisma: 1 })
+})
+
+test.each([
+  false,
+  true,
+])('fixed-only choice calls preserve the complete draft and save state (dirty: %s)', (dirty) => {
+  const fixed = { name: 'Dwarf', source: 'PHB', ability: [{ con: 2 }] } as Race5e
+  const character = characterPersistenceSchema.parse(
+    buildInitialCharacter(
+      {
+        initial: { name: 'Fixed choices', originSystem: '2014' },
+        race: fixed,
+      },
+      new Map(),
+      () => [],
+    ),
+  )
+  setActiveCharacter(character)
+  useCharacterStore.setState({ isActiveCharacterDirty: dirty })
+  const { result } = renderHook(useRaceProvenanceMutations)
+  const before = useCharacterStore.getState()
+  let notifications = 0
+  const unsubscribe = useCharacterStore.subscribe(() => {
+    notifications += 1
+  })
+  const command = applyRaceAsiChoicesCommand(character, character.provenance, [['wisdom']])
+  expect(command.characterPatch).toEqual({})
+  expect(command.provenanceUpdate).toBe(character.provenance)
+  act(() => result.current.applyRaceAsiChoices([['wisdom']]))
+  unsubscribe()
+  expect(useCharacterStore.getState()).toBe(before)
+  expect(notifications).toBe(0)
+  expect(useCharacterStore.getState().activeCharacter).toBe(character)
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(dirty)
+})
 
 test.each([
   false,
@@ -1249,7 +1402,7 @@ test('missing and restored metadata give the parent duplicate precedence even wh
     ability: [{ choose: { from: ['str'], amount: 1 } }],
   } as Race5e
   const character = selectRace(parent, 0, [['strength'], ['strength']], child)
-  const reopened = characterPersistenceSchema.parse({
+  const incoherent = {
     ...character,
     provenance: {
       ...character.provenance!,
@@ -1259,6 +1412,11 @@ test('missing and restored metadata give the parent duplicate precedence even wh
         status: 'resolved',
       })),
     },
+  }
+  expect(characterPersistenceSchema.safeParse(incoherent).success).toBe(false)
+  const reopened = characterPersistenceSchema.parse({
+    ...character,
+    provenance: { ...character.provenance!, choices: [...character.provenance!.choices].reverse() },
   })
   expect
     .soft(

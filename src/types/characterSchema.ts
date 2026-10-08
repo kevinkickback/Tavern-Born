@@ -4,7 +4,9 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import { getUnselectedRaceOwnerPaths } from '@/lib/provenance/raceOwnership'
+import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
@@ -839,6 +841,37 @@ export const characterSchema = z
       })
     }
     if (char.provenance) {
+      const invalidAbilityPaths = getInvalidRaceAbilityChoicePaths(char.provenance)
+      for (const path of invalidAbilityPaths) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'Racial ability choices require explicit rules and unique canonical owner blocks',
+          path: ['provenance', ...path],
+        })
+      }
+      if (invalidAbilityPaths.length === 0) {
+        const resolved = resolveRaceAsiChoicesInLedger(
+          char,
+          char.provenance,
+          char.raceAsiChoices ?? [],
+        )
+        char.provenance.choices.forEach((record, index) => {
+          const expected = resolved.choices[index]
+          if (
+            expected !== record &&
+            (record.status !== expected.status ||
+              record.selected.length !== expected.selected.length ||
+              record.selected.some((ability, slot) => ability !== expected.selected[slot]))
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Racial ability records must agree with the bounded saved player choices',
+              path: ['provenance', 'choices', index, 'selected'],
+            })
+          }
+        })
+      }
       for (const path of getUnselectedRaceOwnerPaths(char.provenance, char)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
