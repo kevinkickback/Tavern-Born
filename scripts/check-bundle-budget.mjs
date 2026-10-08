@@ -18,9 +18,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   // 5,597,948 renderer bytes (5466.7 KiB). Final-owner/expertise cleanup adds 2967 bytes;
   // no dependency added. This measured allowance requires explicit budget review.
   rendererCode: 5467 * KIB,
-  // The measured initial script is 448,805 bytes (438.3 KiB), +1983 for fixed setup cleanup.
-  // Other budgets remain unchanged; this allowance also requires explicit budget review.
-  initialRendererScript: 439 * KIB,
+  // Shared racial ability validation and saved-bonus fallback measure 449,609 bytes (439.1 KiB).
+  // Other budgets remain unchanged; this measured allowance requires explicit budget review.
+  initialRendererScript: 440 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
