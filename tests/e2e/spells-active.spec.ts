@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
 import {
   ensureStartupPromptResolved,
   seedAppState,
@@ -10,7 +11,7 @@ test('@focused active-character spell workflow: profile switch, add/remove, prep
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    schemaVersion: 2,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',

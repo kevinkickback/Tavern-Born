@@ -40,8 +40,10 @@ export type ChoiceDomain =
 export interface SourceTag {
   sourceType: SourceType
   sourceName: string
-  /** Optional source code (e.g. 'PHB', 'XPHB') for cross-referencing. */
+  /** Printing of the granting owner (e.g. 'PHB', 'XPHB'). */
   sourceRef?: string
+  /** Printing of a fixed granted feat; distinct from its granting owner's printing. */
+  grantSource?: string
   /** Optional parameter encoded in a fixed 5etools grant reference (e.g. 'cleric'). */
   grantVariant?: string
   grantType: GrantType

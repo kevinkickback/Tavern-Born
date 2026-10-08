@@ -43,12 +43,15 @@ function seed(
       sourceType: 'background',
       sourceName: 'Scholar',
       sourceRef: 'OTHER',
+      grantSource: 'OTHER',
       grantType: 'fixed',
       label: 'Scholar',
     },
   ]
   let character = makeCharacterFixture({
     originSystem: '2024',
+    background: 'Scholar',
+    backgroundSource: 'OTHER',
     allowedSources: ['OTHER'],
     provenance,
   })

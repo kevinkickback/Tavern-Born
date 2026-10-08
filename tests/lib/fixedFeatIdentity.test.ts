@@ -15,6 +15,7 @@ const tag: SourceTag = {
   sourceType: 'background',
   sourceName: 'Acolyte',
   sourceRef: 'XPHB',
+  grantSource: 'XPHB',
   grantType: 'fixed',
   grantVariant: 'cleric',
   label: 'Acolyte',
@@ -40,7 +41,7 @@ describe('fixed feat printing identity', () => {
     expect(
       resolveFixedFeatGrant([older, revised], 'MAGIC INITIATE', {
         ...tag,
-        sourceRef: 'xphb',
+        grantSource: 'xphb',
       }).feat,
     ).toBe(revised)
   })
@@ -49,7 +50,7 @@ describe('fixed feat printing identity', () => {
     expect(
       resolveFixedFeatGrant([older, revised], ' Magic Initiate ', {
         ...tag,
-        sourceRef: ' XPHB ',
+        grantSource: ' XPHB ',
       }).feat,
     ).toBe(revised)
   })
@@ -58,24 +59,24 @@ describe('fixed feat printing identity', () => {
     undefined,
     '',
     '  ',
-  ])('keeps ambiguous source-less legacy grants unresolved: %j', (sourceRef) => {
+  ])('keeps ambiguous unqualified grants unresolved: %j', (grantSource) => {
     const resolved = resolveFixedFeatGrant([older, revised], 'Magic Initiate', {
       ...tag,
-      sourceRef,
+      grantSource,
     })
     expect(resolved.feat).toBeUndefined()
-    expect(resolved.source).toBe(sourceRef?.trim() ?? '')
+    expect(resolved.source).toBe(grantSource?.trim() ?? '')
     expect(resolved.fixedSpellcastingClass).toBeUndefined()
   })
 
-  test('retains a unique source-less legacy grant', () => {
+  test('does not guess an unqualified grant from a unique printing', () => {
     const resolved = resolveFixedFeatGrant([revised], 'magic initiate', {
       ...tag,
-      sourceRef: undefined,
+      grantSource: undefined,
     })
-    expect(resolved.feat).toBe(revised)
-    expect(resolved.source).toBe('XPHB')
-    expect(resolved.fixedSpellcastingClass).toBe('Cleric Spells')
+    expect(resolved.feat).toBeUndefined()
+    expect(resolved.source).toBe('')
+    expect(resolved.fixedSpellcastingClass).toBeUndefined()
   })
 
   test('uses the exact raw target when only a different printing is visible', () => {
@@ -95,28 +96,28 @@ describe('fixed feat printing identity', () => {
     expect(resolveFixedFeatGrant([], 'Magic Initiate', tag, [older]).feat).toBeUndefined()
   })
 
-  test('counts duplicate primary/raw records as one legacy printing', () => {
+  test('does not infer an unqualified target from duplicate primary/raw records', () => {
     expect(
       resolveFixedFeatGrant(
         [revised],
         'Magic Initiate',
         {
           ...tag,
-          sourceRef: undefined,
+          grantSource: undefined,
         },
         [{ ...revised }],
       ).feat,
-    ).toBe(revised)
+    ).toBeUndefined()
   })
 
-  test('does not treat a hidden second printing as a unique legacy match', () => {
+  test('does not infer an unqualified target when another printing is hidden', () => {
     expect(
       resolveFixedFeatGrant(
         [revised],
         'Magic Initiate',
         {
           ...tag,
-          sourceRef: undefined,
+          grantSource: undefined,
         },
         [older],
       ).feat,
@@ -147,14 +148,14 @@ describe('fixed feat printing identity', () => {
     expect(character).toEqual(before)
   })
 
-  test('reports ambiguous legacy fixed identity instead of setup for an arbitrary printing', () => {
+  test('reports unqualified fixed identity instead of guessing a printing', () => {
     const character = makeCharacterFixture({
       feats: [],
       specialFeats: [],
       classFeatChoices: [],
       provenance: {
         ...makeCharacterFixture().provenance!,
-        feats: { 'magic initiate': [{ ...tag, sourceRef: undefined }] },
+        feats: { 'magic initiate': [{ ...tag, grantSource: undefined }] },
         choices: [],
       },
     })
@@ -166,7 +167,7 @@ describe('fixed feat printing identity', () => {
     ).toEqual([
       expect.objectContaining({
         title: 'Resolve magic initiate',
-        explanation: expect.stringContaining('ambiguous'),
+        explanation: expect.stringContaining('does not identify its source'),
       }),
     ])
   })

@@ -11,7 +11,7 @@ function fixedIdentities(ledger: ProvenanceLedger): Set<string> {
     Object.entries(ledger.feats).flatMap(([name, tags]) =>
       tags
         .filter((tag) => tag.grantType === 'fixed')
-        .map((tag) => getFixedFeatOptionKey(name, tag.sourceRef ?? '', tag.grantVariant)),
+        .map((tag) => getFixedFeatOptionKey(name, tag.grantSource ?? '', tag.grantVariant)),
     ),
   )
 }

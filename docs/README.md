@@ -3,6 +3,10 @@
 These documents record stable architecture and maintenance contracts. Source code and tests remain
 the authority for implementation details; avoid turning this folder into a file-by-file inventory.
 
+While preparing for 1.0, breaking character-format changes require pre-release characters to be
+recreated. The current format is schema 3; saved schema 2 originals remain exportable before removal.
+See [character compatibility](state-management.md#schema-compatibility) for the cutoff and recovery policy.
+
 ## Reading order
 
 1. [Architecture Map](architecture-map.md)

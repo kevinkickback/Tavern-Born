@@ -30,13 +30,14 @@ function catalog(feats: Feat5e[]) {
   return { ...data, lookups: buildGameDataLookups(data) }
 }
 
-function seed(feats: Feat5e[], sourceRef = 'OTHER') {
+function seed(feats: Feat5e[], grantSource = 'OTHER') {
   const provenance = emptyProvenance()
   provenance.feats.training = [
     {
       sourceType: 'background',
       sourceName: 'Scholar',
-      sourceRef,
+      sourceRef: 'OTHER',
+      grantSource,
       grantType: 'fixed',
       grantVariant: 'sage',
       label: 'Scholar',
@@ -44,6 +45,8 @@ function seed(feats: Feat5e[], sourceRef = 'OTHER') {
   ]
   const character = makeCharacterFixture({
     originSystem: '2024',
+    background: 'Scholar',
+    backgroundSource: 'OTHER',
     allowedSources: ['TEST'],
     provenance,
     fixedFeatOptions: { 'training|other|sage': { skills: ['History'] } },
@@ -86,8 +89,8 @@ test.each([
   'OTHER',
   'other',
   ' OTHER ',
-])('a selection made with missing rules follows its restored exact printing: %j', (sourceRef) => {
-  const character = seed([competitor], sourceRef)
+])('a selection made with missing rules follows its restored exact printing: %j', (grantSource) => {
+  const character = seed([competitor], grantSource)
   fireEvent.click(screen.getByRole('button', { name: 'Select training' }))
   expect(screen.getAllByText('Feat data unavailable')).toHaveLength(2)
   expect(screen.queryByText('Prerequisites met')).toBeNull()

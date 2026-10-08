@@ -313,9 +313,10 @@ export function useFeatsPageController() {
               { featsByKey: rawFeatLookup },
             )
           : undefined)
-      const fixedOptions = fixedGrant
-        ? character?.fixedFeatOptions?.[getFixedFeatOptionKey(featName, featSource, grantVariant)]
-        : undefined
+      const fixedOptions =
+        fixedGrant || grantVariant !== undefined
+          ? character?.fixedFeatOptions?.[getFixedFeatOptionKey(featName, featSource, grantVariant)]
+          : undefined
       const existing = (character?.feats ?? []).find(
         (feat) => feat.name === featName && feat.source === featSource,
       )
@@ -331,7 +332,13 @@ export function useFeatsPageController() {
             ?.find((choice) => choice.id === classFeatChoiceId)
             ?.feats.find((feat) => feat.name === featName && feat.source === featSource)?.options
         : undefined
-      const priorOptions = fixedOptions ?? existing?.options ?? choiceOptions ?? classOptions
+      const priorOptions = provenanceChoiceId
+        ? choiceOptions
+        : classFeatChoiceId
+          ? classOptions
+          : fixedGrant || grantVariant !== undefined
+            ? fixedOptions
+            : existing?.options
       if (!feat5e || !priorOptions) return
       setFeatEditCandidate({
         feat5e: {

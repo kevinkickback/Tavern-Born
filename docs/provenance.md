@@ -9,6 +9,12 @@ feat, spell choice, or equipment option can retract only what that source suppli
 spells, equipment, and structured choices. A tag identifies the source type/name/reference, grant
 type, label, and domain-specific metadata such as class level or choice ID.
 
+`sourceRef` identifies the granting owner's printing. Fixed feat tags separately store the granted
+feat's printing in `grantSource` and its parameter in `grantVariant`; neither replaces owner identity.
+Resolution and fixed setup keys use that target printing/variant. Ledger deduplication includes both
+owner and target, so one owner can grant two printings without collapsing them. An unqualified fixed
+target remains unresolved, even if only one printing is loaded; the owner's printing is not a default.
+
 Normalization is case-insensitive for identity but preserves readable/source-qualified data for
 display and resolution. Multiple tags may own the same grant; removing one owner must retain the
 grant while another owner remains.
@@ -55,18 +61,26 @@ Fixed feat option edits opt into normalized name/reference and fixed-variant mat
 with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
 variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
 
+Feat setup retraction also matches an absent option owner key exactly. Editing or removing an
+ordinary selected copy does not treat that absent key as a wildcard for fixed/class/choice setup.
+Whole-source callers keep their existing all-variant removal behavior.
+
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
 ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the
 final matching grant's removal retracts saved fixed options and their benefits; independently
-configured feat choices and other printings/variants retain their own ownership. Source-less
-legacy grants cannot establish which qualified saved setup to retract and are not guessed.
+configured feat choices and other printings/variants retain their own ownership. Strict persistence
+requires separate target metadata on fixed feat tags. Pre-release grants with overloaded identity
+are rejected with their character format rather than guessed or converted.
+
+Option commits and edit dialogs use the requested feat owner. Fixed, class and racial/background
+choice setups update their own records, including when a separately selected copy has the same
+name and printing. They do not overwrite or borrow that independent copy's saved selections.
 
 New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
 ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
-Older saves without expertise ownership remain valid: unknown expertise is retained while its
-proficiency remains, and a pre-existing untracked selection is preserved as manual when a new
-feat grants the same expertise. Removing proficiency still prunes expertise. This compatibility
-rule does not reconstruct the origin of historical untracked expertise. Complete proficiency
+Untracked expertise is retained while its proficiency remains, and a pre-existing untracked selection
+is preserved as manual when a new feat grants the same expertise. Removing proficiency still prunes expertise. This ownership
+rule does not reconstruct the origin of untracked expertise. Complete proficiency
 removal commands also expire expertise ownership when its materialized selection is pruned, so
 later proficiency grants cannot revive a historical expertise owner.
 

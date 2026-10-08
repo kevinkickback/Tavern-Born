@@ -60,7 +60,7 @@ and cross-surface contracts.
 
 Maintain coverage for:
 
-- character schema validation, supported migrations, quarantine/export recovery;
+- exact current character schema validation, unsupported-version rejection, quarantine/export recovery;
 - class progression through level 20, level-down, multiclassing, HP refill, and subclass casting;
 - subclass-owned choices, variant replacement, creature-filter resolution, and cleanup when a
   subclass changes;

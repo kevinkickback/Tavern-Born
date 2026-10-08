@@ -316,9 +316,9 @@ export function BuildBackgroundPage() {
                     </Badge>
                     {!grant.feat && (
                       <p className="text-xs text-warning-foreground">
-                        {grant.resolution === 'ambiguous'
-                          ? 'Feat source is ambiguous.'
-                          : `Feat data unavailable${grant.source ? ` (${grant.source})` : ''}.`}
+                        {grant.source
+                          ? `Feat data unavailable (${grant.source}).`
+                          : 'The granted feat does not identify its source. Reload its granting content before configuring it.'}
                       </p>
                     )}
                     {grant.feat && hasFeatOptions(grant.feat) && (

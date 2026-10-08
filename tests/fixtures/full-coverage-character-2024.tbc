@@ -2830,6 +2830,7 @@
           "sourceType": "background",
           "sourceName": "Criminal",
           "sourceRef": "XPHB",
+          "grantSource": "XPHB",
           "grantType": "fixed",
           "label": "Criminal"
         }
@@ -4137,7 +4138,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "hitPoints": {
     "current": 121,
     "temporary": 17

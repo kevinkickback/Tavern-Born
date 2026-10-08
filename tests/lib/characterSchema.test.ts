@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, expectTypeOf, test } from 'vitest'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import {
   type CharacterSchemaOutputContract,
   characterPersistenceSchema,
@@ -19,13 +20,13 @@ describe('characterPersistenceSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  test('accepts the character fixture published with v0.4.0', () => {
+  test('accepts the current exported character fixture', () => {
     const fixture = JSON.parse(
       fs.readFileSync(path.resolve('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
     ) as { schemaVersion?: unknown }
     const result = characterPersistenceSchema.safeParse(fixture)
 
-    expect(fixture.schemaVersion).toBe(2)
+    expect(fixture.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
     expect(result.success ? [] : result.error.issues).toEqual([])
   })
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -27,6 +28,46 @@ function delayHydration() {
   )
   return (characters: Character[]) => finish(characters)
 }
+
+test('quarantines schema2 originals without inferring grant ownership and exports them unchanged', async () => {
+  const supported = makeCharacterFixture({ id: 'current', name: 'Current', allowedSources: [] })
+  const original = {
+    ...makeCharacterFixture({ id: 'old', name: 'Old', race: 'Gifted', raceSource: 'HB' }),
+    schemaVersion: 2,
+    provenance: {
+      ...makeCharacterFixture().provenance,
+      feats: {
+        alert: [
+          {
+            sourceType: 'race',
+            sourceName: 'Gifted',
+            sourceRef: 'PHB',
+            grantType: 'fixed',
+            label: 'Gifted',
+          },
+        ],
+      },
+    },
+  }
+  const before = structuredClone(original)
+  storage.getItem.mockResolvedValueOnce({
+    state: { characters: [original, supported], unsupportedCharacters: [] },
+    version: 0,
+  })
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  await vi.waitFor(() => expect(store.persist.hasHydrated()).toBe(true))
+  expect(store.getState().characters).toEqual([supported])
+  expect(store.getState().unsupportedCharacters).toEqual([original])
+  await vi.waitFor(() =>
+    expect(storage.setItem).toHaveBeenCalledWith('character-storage', {
+      state: { characters: [supported], unsupportedCharacters: [original] },
+      version: 0,
+    }),
+  )
+  const [download] = prepareUnsupportedCharacterDownloads(store.getState().unsupportedCharacters)
+  expect(JSON.parse(download.text)).toEqual(before)
+  expect(original).toEqual(before)
+})
 
 test('creation and import wait for initial hydration and retain existing records and identities', async () => {
   const finish = delayHydration()
