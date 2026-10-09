@@ -483,7 +483,15 @@ test.each([
   ]
   if (owner === 'legacy fixed') savedProfile.fixedSpells = ['Burning Hands']
   savedProfile.choices = undefined
-  if (owner === 'racial') delete character.provenance.spells['shocking grasp']
+  if (owner === 'racial') {
+    delete character.provenance.spells['shocking grasp']
+    savedProfile.fixedSpells = ['Burning Hands|PHB']
+    character.provenance = addSpellGrant(
+      character.provenance,
+      'Burning Hands|PHB',
+      makeSourceTag('subrace', child.name, 'fixed', child.source),
+    )
+  }
   expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   const before = structuredClone(character)
   const context = createCharacterCalculationContext(character, catalog.lookups)

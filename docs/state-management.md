@@ -217,6 +217,10 @@ removed choice tags atomically with the refreshed profiles, including when anoth
 Unavailable racial metadata retains the saved choices and their tags. Fixed-grant rebuilding and
 native racial suite ownership remain separate rules-resolution work. Schema 5 did not require this
 target identity.
+Every materialized racial cantrip or known spell must be an exact target in the profile's fixed
+grants or a selected choice of that spell kind. An extra unselected spell or another printing is
+rejected rather than projected as a benefit. This accounting does not infer the native fixed
+grant's owner or its kind from an unavailable catalog.
 Schema 2–5 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 

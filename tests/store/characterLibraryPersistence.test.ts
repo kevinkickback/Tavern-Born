@@ -186,7 +186,10 @@ describe('acknowledged character library in IndexedDB', () => {
     expect(originals).toEqual(before)
   })
 
-  test('mismatched racial choice ownership stays quarantined and exportable after durable writes', async () => {
+  test.each([
+    'mismatched target',
+    'unaccounted materialization',
+  ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
     const initial = buildInitialCharacter(
       {
         initial: { name: 'Canonical racial choice', originSystem: '2014' },
@@ -210,8 +213,13 @@ describe('acknowledged character library in IndexedDB', () => {
       allowedSources: [],
     }
     const malformed = structuredClone(valid)
-    malformed.id = 'mismatched-target'
-    malformed.provenance.spells.light[0].grantSource = 'XPHB'
+    malformed.id = corruption
+    if (corruption === 'mismatched target')
+      malformed.provenance.spells.light[0].grantSource = 'XPHB'
+    else
+      malformed.spells.spellProfiles
+        .find((profile) => profile.type === 'racial')!
+        .cantrips.push('Mage Hand|PHB')
     const original = structuredClone(malformed)
     const neighbor = makeCharacterFixture({
       id: 'valid-neighbor',

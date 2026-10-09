@@ -736,6 +736,30 @@ const spellProfileSchema = z
         requireTarget(reference, ['choices', index, 'pool', poolIndex])
       })
     })
+    const fixedTargets = (profile.fixedSpells ?? []).map((reference) =>
+      getSpellReferenceKey(reference),
+    )
+    for (const [field, isCantrip] of [
+      ['cantrips', true],
+      ['spellsKnown', false],
+    ] as const) {
+      const accountedTargets = new Set([
+        ...fixedTargets,
+        ...(profile.choices ?? [])
+          .filter((choice) => choice.isCantrip === isCantrip)
+          .flatMap((choice) => choice.selected.map((reference) => getSpellReferenceKey(reference))),
+      ])
+      profile[field].forEach((reference, index) => {
+        if (!accountedTargets.has(getSpellReferenceKey(reference))) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field, index],
+            message:
+              'Materialized racial spells must belong to a fixed grant or a selected choice of the same spell kind.',
+          })
+        }
+      })
+    }
   })
 
 const spellSelectionSchema = z

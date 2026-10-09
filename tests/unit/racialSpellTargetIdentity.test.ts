@@ -417,3 +417,29 @@ test.each([
   expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
   expect(character).toEqual(original)
 })
+
+test.each([
+  'unselected spell',
+  'unaccounted printing',
+  'wrong choice kind',
+])('strict current reopen rejects an %s in racial materialization', (corruption) => {
+  let character = finish({
+    name: 'Accounted Caster',
+    source: 'OWNER',
+    additionalSpells: [{ known: { _: ['light|XPHB#c', { choose: 'level=0|class=Wizard' }] } }],
+  } as Race5e)
+  const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+  character = reopen(
+    commit(
+      character,
+      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+    ),
+  )
+  const profile = character.spells.spellProfiles.find((profile) => profile.id === id)!
+  expect(profile.cantrips).toEqual(['light|XPHB', 'Light|PHB'])
+  if (corruption === 'wrong choice kind') profile.spellsKnown.push('Light|PHB')
+  else profile.cantrips.push(corruption === 'unselected spell' ? 'Mage Hand|PHB' : 'Light|TCE')
+  const original = structuredClone(character)
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+  expect(character).toEqual(original)
+})
