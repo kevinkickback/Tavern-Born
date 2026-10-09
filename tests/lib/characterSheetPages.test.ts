@@ -1,6 +1,8 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test, vi } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'
+import { parseRaces } from '@/lib/5etools/parsers/races'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
   createPdfAssetLoader,
@@ -11,6 +13,8 @@ import { getOptionalCharacterSheetPages } from '@/lib/pdf/characterSheetPages'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterSheetPageOptions, CharacterSheetTemplateId } from '@/lib/pdf/types'
+import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
@@ -144,29 +148,40 @@ describe('optional PDF pages', () => {
     expect(getOptionalCharacterSheetPages(vm, '2014-official', { spells: true })[0].included).toBe(
       true,
     )
-    vm.character.spells.spellProfiles.push({
-      id: 'racial:test|TEST',
-      type: 'racial',
-      label: 'Racial magic',
-      cantrips: ['Light|PHB'],
+    const caster = buildInitialCharacter(
+      {
+        initial: vm.character,
+        race: parseRaces({
+          race: [
+            {
+              name: 'Caster',
+              source: 'TEST',
+              additionalSpells: [{ known: { _: ['light|PHB#c'] } }],
+            },
+          ],
+        })[0] as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    characterPersistenceSchema.parse(caster)
+    const racial = createCharacterSheetViewModel(caster, {})
+    expect(getOptionalCharacterSheetPages(racial, '2014-official')[0].included).toBe(true)
+    const unresolved = createEmptyCharacter({ name: 'Unresolved caster' })
+    unresolved.spells.spellProfiles.push({
+      id: 'class:Wizard|PHB',
+      type: 'class',
+      label: 'Wizard',
+      className: 'Wizard',
+      classSource: 'PHB',
+      cantrips: [],
       spellsKnown: [],
       preparedSpells: [],
     })
-    const racial = createCharacterSheetViewModel(vm.character, {})
-    expect(getOptionalCharacterSheetPages(racial, '2014-official')[0].included).toBe(true)
-    racial.character.spells.spellProfiles = [
-      {
-        id: 'class:Wizard|PHB',
-        type: 'class',
-        label: 'Wizard',
-        cantrips: [],
-        spellsKnown: [],
-        preparedSpells: [],
-      },
-    ]
+    characterPersistenceSchema.parse(unresolved)
     expect(
       getOptionalCharacterSheetPages(
-        createCharacterSheetViewModel(racial.character, {}),
+        createCharacterSheetViewModel(unresolved, {}),
         '2014-official',
       )[0].included,
     ).toBe(true)

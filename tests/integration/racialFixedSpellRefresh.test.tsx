@@ -351,6 +351,47 @@ test.each([
   expect(character.spells.spellProfiles).toEqual(native(childGrants).character.spells.spellProfiles)
 })
 
+test('PDF racial refresh preserves independent saved class and special preparation state', () => {
+  const { character, child } = native()
+  character.spells.spellProfiles.push({
+    id: 'class:Unresolved|OTHER',
+    type: 'class',
+    label: 'Unresolved',
+    className: 'Unresolved',
+    classSource: 'OTHER',
+    castingAbility: 'wis',
+    cantrips: ['Mage Hand|PHB'],
+    spellsKnown: ['Bonus|PHB'],
+    preparedSpells: ['Bonus|PHB'],
+    alwaysPreparedSpells: ['Bonus|PHB'],
+  })
+  const special = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+  Object.assign(special, {
+    castingAbility: 'cha',
+    fixedSpells: ['Light|TCE'],
+    cantrips: ['Light|TCE'],
+    preparedSpells: ['Light|TCE'],
+  })
+  character.spells.spellSlots[1] = { max: 3, used: 2 }
+  character.spells.pactSpellSlots = { 1: { max: 2, used: 1 } }
+  characterPersistenceSchema.parse(character)
+  const original = structuredClone(character)
+  const refreshed = owner('Fixed Parent', 'PARENT', [
+    { ability: 'int', known: { _: ['light|TCE#c'] } },
+  ])
+  refreshed.subraces = [child]
+  const data = install([refreshed])
+  const view = createCharacterSheetViewModel(character, data.lookups!)
+  expect(racial(view.character.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
+  expect(
+    view.character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
+  ).toEqual(original.spells.spellProfiles.filter((profile) => profile.type !== 'racial'))
+  expect(view.spellRows.find((row) => row.id === 'bonus|phb')?.prepared).toBe(true)
+  expect(view.character.spells.spellSlots).toEqual(original.spells.spellSlots)
+  expect(view.character.spells.pactSpellSlots).toEqual(original.spells.pactSpellSlots)
+  expect(character).toEqual(original)
+})
+
 test.each([
   'add',
   'remove',

@@ -12,6 +12,8 @@ import {
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseClasses, parseSpells } from '@/lib/5etools/parsers'
+import { parseRaces } from '@/lib/5etools/parsers/races'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
   getOfficial2014SpellPages,
@@ -23,7 +25,8 @@ import {
 } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
-import type { Class5e, Spell5e } from '@/types/5etools'
+import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'))
@@ -96,7 +99,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   })
 
   test('official 2014 saves independent editable pages for each caster, with separate preparation and slot pools', async () => {
-    const character = createEmptyCharacter({
+    let character = createEmptyCharacter({
       name: 'Multiclass PDF Test',
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
@@ -112,24 +115,32 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         charisma: 14,
       },
     })
-    character.spells.spellProfiles = ['Wizard', 'Cleric', 'Warlock'].map((name) => ({
-      id: `class:${name}|PHB`,
-      type: 'class',
-      label: name,
-      className: name,
-      classSource: 'PHB',
-      cantrips: [],
-      spellsKnown: ['Detect Magic|PHB'],
-      preparedSpells: name === 'Wizard' ? ['Detect Magic|PHB'] : [],
-    }))
-    character.spells.spellProfiles.push({
-      id: 'racial:Elf|PHB',
-      type: 'racial',
-      label: 'Elf',
-      cantrips: ['Light|PHB'],
-      spellsKnown: [],
-      preparedSpells: [],
-    })
+    character.spells.spellProfiles = [
+      ...character.spells.spellProfiles.filter((profile) => profile.type === 'special'),
+      ...['Wizard', 'Cleric', 'Warlock'].map((name) => ({
+        id: `class:${name}|PHB`,
+        type: 'class' as const,
+        label: name,
+        className: name,
+        classSource: 'PHB',
+        cantrips: [],
+        spellsKnown: ['Detect Magic|PHB'],
+        preparedSpells: name === 'Wizard' ? ['Detect Magic|PHB'] : [],
+      })),
+    ]
+    character = buildInitialCharacter(
+      {
+        initial: character,
+        race: parseRaces({
+          race: [
+            { name: 'Elf', source: 'PHB', additionalSpells: [{ known: { _: ['light|PHB#c'] } }] },
+          ],
+        })[0] as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    characterPersistenceSchema.parse(character)
     character.spells.spellSlots = { 1: { max: 99, used: 1 } }
     character.spells.pactSpellSlots = { 2: { max: 99, used: 1 } }
     const before = structuredClone(character)

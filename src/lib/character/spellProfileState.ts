@@ -10,11 +10,23 @@ export function deriveSpellProfileState(
   classesById: Map<string, Class5e>,
   raceData?: Pick<Race5e, 'name' | 'source' | 'additionalSpells'>,
   raceResolution?: ResolvedRaceReference,
+  options?: { preserveNonracialProfiles?: boolean },
 ): Character {
-  const profiles = ensureSpellProfiles(character, classesById, raceData, {
-    raceResolution,
-    preserveUnavailableClassProfiles: true,
-  })
+  const derivedProfiles = ensureSpellProfiles(
+    character,
+    options?.preserveNonracialProfiles ? undefined : classesById,
+    raceData,
+    {
+      raceResolution,
+      preserveUnavailableClassProfiles: true,
+    },
+  )
+  const profiles = options?.preserveNonracialProfiles
+    ? [
+        ...character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
+        ...derivedProfiles.filter((profile) => profile.type === 'racial'),
+      ]
+    : derivedProfiles
   const result = syncSpellProfiles(character, character.provenance, profiles, raceResolution)
   return { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
 }

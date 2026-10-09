@@ -19,6 +19,8 @@ or preferences invalidate the preview and its report. Export never changes persi
 The view model uses the shared spell-state projection for profiles, fixed racial ownership, rows
 and actions. Exact restored rules data refreshes this export snapshot together; unavailable exact
 race or child data retains saved spell state. The saved character is not mutated by export.
+Independent class and special profiles retain their saved selections and preparation metadata;
+the racial rules refresh does not replace them during export.
 
 The export page supplies the raw class-feature and optional-feature lookup catalogs through named
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and
