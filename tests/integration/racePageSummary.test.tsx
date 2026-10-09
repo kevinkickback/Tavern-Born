@@ -412,7 +412,8 @@ describe('Race page summary', () => {
   test.each([
     'absent',
     'other-printing',
-  ] as const)('opening the race summary with %s child metadata preserves the selection and shows saved bonuses', (missing) => {
+    'sibling',
+  ] as const)('opening the race summary with %s child metadata preserves the selection and shows saved bonuses', async (missing) => {
     const child = {
       ...makeRaceFixture({ name: 'Child', source: 'TEST', ability: [{ con: 1 }] }),
       _isVersion: true,
@@ -446,7 +447,15 @@ describe('Race page summary', () => {
     useGameDataStore.setState({
       gameData: makeGameDataFixture({
         races: [
-          { ...parent, subraces: missing === 'absent' ? [] : [{ ...child, source: 'OTHER' }] },
+          {
+            ...parent,
+            subraces:
+              missing === 'absent'
+                ? []
+                : missing === 'other-printing'
+                  ? [{ ...child, source: 'OTHER' }]
+                  : [{ ...child, name: 'Sibling' }],
+          },
         ],
       }),
     })
@@ -461,10 +470,29 @@ describe('Race page summary', () => {
     expect.soft(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
     expect.soft(screen.queryByRole('link', { name: 'Choose bonuses' })).toBeNull()
     expect(screen.getByText('CON +1')).toBeTruthy()
+    if (missing === 'absent') {
+      expect(screen.queryByRole('combobox', { name: 'Subrace' })).toBeNull()
+    } else {
+      const user = userEvent.setup()
+      const selector = screen.getByRole('combobox', { name: 'Subrace' })
+      expect(selector.textContent).toBe('Child')
+      await user.click(selector)
+      expect(screen.getAllByRole('option')).toHaveLength(1)
+      expect(
+        screen.getByRole('option', { name: missing === 'sibling' ? 'Sibling' : 'Child' }),
+      ).toBeTruthy()
+      await user.keyboard('{Escape}')
+      expect(useCharacterStore.getState().activeCharacter).toBe(character)
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+      const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+      expect([reopened.subrace, reopened.subraceSource]).toEqual(['Child', 'TEST'])
+    }
     act(() => {
       useGameDataStore.setState({ gameData: makeGameDataFixture({ races: [parent] }) })
     })
-    expect(useCharacterStore.getState().activeCharacter).toEqual(character)
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    expect(screen.getByRole('combobox', { name: 'Subrace' }).textContent).toBe('Child')
     expect(screen.getByText('CON +1')).toBeTruthy()
   })
 

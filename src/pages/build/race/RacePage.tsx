@@ -384,7 +384,7 @@ export function BuildRacePage() {
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
                               <SelectValue placeholder="Choose a subrace">
-                                {selectedSubrace?.name}
+                                {selectedSubrace?.name ?? character.subrace}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
