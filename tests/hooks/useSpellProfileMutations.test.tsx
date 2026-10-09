@@ -282,6 +282,56 @@ describe('useSpellProfileMutations', () => {
     unmount()
   })
 
+  test.each([
+    'clear',
+    'replace',
+  ])('accepted normalized racial choice ownership supports actual %s and reopen', (operation) => {
+    const initial = buildInitialCharacter(
+      {
+        initial: { name: 'Normalized caster', originSystem: '2014' },
+        race: {
+          name: 'Normalized Caster',
+          source: 'OWNER',
+          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+        } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+    const result = setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', [
+      'Light|PHB',
+    ])
+    const character = { ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }
+    character.provenance.spells.light[0].sourceName = ' nORMALIZED cASTER '
+    character.provenance.spells.light[0].sourceRef = ' owner '
+    character.provenance = addSpellGrant(
+      character.provenance,
+      'Light|XPHB',
+      makeSourceTag('manual', 'Independent', 'choice'),
+    )
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    const original = structuredClone(character)
+    setActiveCharacter(character)
+    const { result: mutations, unmount } = renderHook(() => {
+      const active = useCharacterStore((state) => state.activeCharacter)!
+      return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+    })
+    const selected = operation === 'clear' ? [] : ['Mage Hand|XPHB']
+    act(() => mutations.current.setRacialSpellChoice(id, 'direct-_-choose-0', selected))
+    const reopened = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+    )
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.id === id)?.choices?.[0].selected,
+    ).toEqual(selected)
+    expect(reopened.provenance!.spells.light).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    expect(character).toEqual(original)
+    unmount()
+  })
+
   test('does not prepare a spell already prepared by another profile', () => {
     const profiles: SpellProfile[] = [
       ...makeProfiles(),

@@ -401,10 +401,16 @@ test.each([
       profile.cantrips = ['Light|XPHB']
       break
     case 'duplicate logical selection':
-      choice.selected.push('LIGHT|XPHB')
+      choice.count = 2
+      choice.selected.push('LIGHT|PHB')
       break
     case 'over quota':
-      choice.count = 0
+      choice.selected.push('Mage Hand|XPHB')
+      profile.cantrips.push('Mage Hand|XPHB')
+      character.provenance = addSpellGrant(character.provenance, 'Mage Hand|XPHB', {
+        ...makeSourceTag('race', character.race, 'choice', character.raceSource),
+        grantVariant: choice.id,
+      })
       break
   }
   const original = structuredClone(character)

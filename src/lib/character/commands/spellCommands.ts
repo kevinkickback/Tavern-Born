@@ -28,7 +28,13 @@ import {
   buildClassProfileLabel,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
-import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
+import {
+  addSpellGrant,
+  applyClassSpellGrant,
+  makeSourceTag,
+  normalizeKey,
+  normalizeOwnerIdentity,
+} from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -802,8 +808,8 @@ export function setRacialSpellChoice(
       (tag) =>
         !(
           tag.sourceType === sourceType &&
-          tag.sourceName === sourceName &&
-          (tag.sourceRef ?? '') === (sourceRef ?? '') &&
+          normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(sourceName) &&
+          normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(sourceRef) &&
           tag.grantType === 'choice' &&
           tag.grantVariant === choiceId &&
           tag.grantSource !== undefined &&
