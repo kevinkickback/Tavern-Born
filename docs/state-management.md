@@ -218,9 +218,10 @@ normalization preserves exact printing identity, and an empty pool permits no se
 An absent pool remains a filter-based or unrestricted choice; validation invents no catalog eligibility.
 A resolved descriptor/selection refresh retracts
 removed choice tags atomically with the refreshed profiles, including when another spell is edited.
-Unavailable racial metadata retains the saved choices and their tags. Fixed-grant rebuilding and
-native racial suite ownership remain separate rules-resolution work. Schema 5 did not require this
-target identity.
+Unavailable racial metadata retains the saved choices and their tags. Exact resolved parent/child
+data rebuilds supported fixed grants and ownership together for read projections and spell edits;
+native suite activation and descriptor lineage remain separate rules-resolution work. Schema 5 did
+not require this target identity.
 The current aggregate choice writer uses the selected child owner when present, otherwise the
 parent. Strict choice correspondence, Sync and removal match that same complete normalized owner;
 another active racial owner cannot satisfy it. This does not establish a native descriptor's lineage.

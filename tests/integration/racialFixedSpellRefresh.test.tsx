@@ -1,5 +1,7 @@
-import { act, cleanup, renderHook } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test } from 'vitest'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
@@ -7,9 +9,11 @@ import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { getSpellRows } from '@/lib/provenance/summaries'
+import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
@@ -26,7 +30,7 @@ function owner(name: string, source: string, blocks?: unknown[]): Race5e {
   })[0] as Race5e
 }
 
-function native(childGrants = false) {
+function native(childGrants = false, originSystem: '2014' | '2024' = '2014') {
   const child = owner('Fixed Child', 'CHILD', childGrants ? [lightBlock] : undefined)
   const parent = owner('Fixed Parent', 'PARENT', childGrants ? undefined : [lightBlock])
   parent.subraces = [child]
@@ -34,7 +38,7 @@ function native(childGrants = false) {
     {
       initial: {
         name: 'Fixed spell caster',
-        originSystem: '2014',
+        originSystem,
         allowedSources: ['PARENT', 'CHILD', 'PHB', 'TCE'],
       },
       race: parent,
@@ -96,6 +100,72 @@ afterEach(() => {
   cleanup()
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
+  localStorage.clear()
+})
+
+test.each(
+  (['2014', '2024'] as const).flatMap((edition) =>
+    (['printing', 'add', 'remove'] as const).map((transition) => ({ edition, transition })),
+  ),
+)('actual Sources follows restored $transition rules before writes ($edition)', ({
+  edition,
+  transition,
+}) => {
+  const { character: initial, child } = native(false, edition)
+  const added = addSpellToCharacter(
+    initial,
+    initial.provenance,
+    'Light|TCE',
+    'cantrip',
+    'special:unrestricted',
+    { sourceType: 'manual', sourceName: 'User Choice' },
+  )
+  const character = characterPersistenceSchema.parse({
+    ...initial,
+    ...added.characterPatch,
+    provenance: added.provenanceUpdate,
+  })
+  setActiveCharacter(character)
+  const original = structuredClone(character)
+  install([])
+  render(
+    <TooltipProvider>
+      <MemoryRouter>
+        <SpellsPage />
+      </MemoryRouter>
+    </TooltipProvider>,
+  )
+  const refreshed = owner(
+    'Fixed Parent',
+    'PARENT',
+    transition === 'remove'
+      ? undefined
+      : [
+          {
+            ability: 'int',
+            known: {
+              _: transition === 'printing' ? ['light|TCE#c'] : ['light|PHB#c', 'mage hand|PHB#c'],
+            },
+          },
+        ],
+  )
+  refreshed.subraces = [child]
+  act(() => {
+    install([refreshed])
+  })
+  const trigger = screen.getByRole('button', { name: /Sources/ })
+  fireEvent.click(trigger)
+  const panel = document.getElementById(trigger.getAttribute('aria-controls')!)!
+  expect(panel.textContent).toContain('Light (TCE)')
+  expect(panel.textContent).toContain('manual')
+  if (transition === 'add') {
+    expect(panel.textContent).toContain('Light (PHB)')
+    expect(panel.textContent).toContain('Mage Hand (PHB)')
+  } else {
+    expect(panel.textContent).not.toContain('Light (PHB)')
+    expect(panel.textContent).not.toContain('Mage Hand (PHB)')
+  }
+  expect(useCharacterStore.getState().activeCharacter).toEqual(original)
 })
 
 test.each([

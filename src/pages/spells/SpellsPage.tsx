@@ -13,7 +13,6 @@ import {
   WorkspacePaneHeader,
 } from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -42,6 +41,7 @@ import {
   getReadinessFocus,
   isSpellProfileReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
+import { getSpellRows } from '@/lib/provenance/summaries'
 import type { SourceRow } from '@/lib/provenance/types'
 import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -67,7 +67,6 @@ export function SpellsPage() {
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
-  const { getSourcesRowsBySection } = useProvenanceLedger()
   const {
     spells,
     items,
@@ -418,7 +417,7 @@ export function SpellsPage() {
   }, [spellProfiles, ledger, subclassSpellSources])
 
   const spellSourceRows = useMemo(() => {
-    const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
+    const rows = [...getSpellRows(ledger), ...subclassSpellSources.rows]
     const seen = new Set<string>()
     return rows.flatMap((row) => {
       const key = `${getSpellReferenceKey(row.itemName, row.itemSource)}|${row.attribution}|${row.category}`
@@ -430,7 +429,7 @@ export function SpellsPage() {
       )
       return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
-  }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
+  }, [ledger, spellByName, subclassSpellSources])
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
