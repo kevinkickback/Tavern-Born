@@ -16,6 +16,7 @@ import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutat
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
   addSpellToCharacter,
   setClassSpellSelectionsAtLevel,
@@ -27,7 +28,11 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
-import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import {
+  makeClassFixture,
+  makeGameDataFixture,
+  makeSpellFixture,
+} from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 beforeEach(() => {
@@ -358,17 +363,45 @@ test('removing an independently selected bonus copy commits without removing nat
   ])
 })
 
-test('the actual bonus picker permits an independently granted native exact target', () => {
+test.each([
+  false,
+  true,
+])('the actual bonus picker permits a native target with existing class ownership %s', (classOwned) => {
   const race: Race5e = {
     name: 'Caster',
     source: 'PHB',
     additionalSpells: [{ known: { 1: ['light#c'] } }],
   }
   install([race])
-  setActiveCharacter(makeNativeRacialCharacter(race))
+  let initial = classOwned
+    ? buildInitialCharacter(
+        {
+          initial: { name: 'Native Wizard', originSystem: '2014' },
+          race,
+          classEntity: makeClassFixture({ spellcastingAbility: 'int' }),
+          background: { name: 'Acolyte', source: 'PHB' },
+        },
+        new Map(),
+        () => [],
+      )
+    : makeNativeRacialCharacter(race)
+  if (classOwned) {
+    const selected = setClassSpellSelectionsAtLevel(initial, initial.provenance, {
+      className: 'Wizard',
+      classSource: 'PHB',
+      classLevel: 1,
+      selections: [{ name: 'Light|PHB', spellLevel: 0 }],
+    })
+    initial = { ...initial, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+  }
+  expect(characterPersistenceSchema.safeParse(initial).success).toBe(true)
+  setActiveCharacter(initial)
   page()
   fireEvent.click(screen.getByRole('button', { name: 'Add Spell' }))
   const dialog = within(screen.getByRole('dialog'))
+  fireEvent.change(dialog.getByRole('textbox', { name: 'Search add bonus spells' }), {
+    target: { value: 'Light' },
+  })
   fireEvent.click(dialog.getByText('Light'))
   fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
   const character = reopened()
@@ -381,4 +414,12 @@ test('the actual bonus picker permits an independently granted native exact targ
   expect(character.provenance.spells.light).toContainEqual(
     expect.objectContaining({ sourceType: 'race', grantSource: 'PHB' }),
   )
+  if (classOwned) {
+    expect(character.provenance.spells.light).toContainEqual(
+      expect.objectContaining({ sourceType: 'class', sourceName: 'Wizard', grantSource: 'PHB' }),
+    )
+    expect(
+      character.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')!.cantrips,
+    ).toEqual(['Light|PHB'])
+  }
 })
