@@ -55,7 +55,8 @@ modules only and serializes once. Omitted modules contribute no artwork, fields,
 - Spells default on for casting or spell selections, including racial/bonus spells and unresolved
   class profiles.
 - Companions default on for active creature choices.
-- MPMB notes default on. Other layouts add notes as needed by **Continue in notes**, unless disabled.
+- MPMB notes default on. Other layouts add notes for unknown spell levels, secondary casting
+  summaries, or **Continue in notes**, unless explicitly disabled.
 - Users may include blank pages or omit populated supplements.
 
 **Customize PDF** uses a single-open accordion and bounded lists. Automatic selection prefers
@@ -73,8 +74,9 @@ Description and overflow controls are independent:
   disabling notes reports those details as omitted. Unknown weapon-property labels display their
   abbreviation without the saved source suffix. Known weapon properties use full catalog names;
   Versatile appears once with its two-handed damage die.
-- **Shorten with ellipsis** is the default overflow mode. Aside from MPMB action details, explicit
-  notes pages remain blank.
+- **Shorten with ellipsis** is the default overflow mode. Notes preserve unknown spell levels,
+  secondary casting summaries, and MPMB action details. Otherwise, explicitly included notes pages
+  remain blank.
 - **Continue in notes** preserves full reference text and keeps a useful fitted beginning in each
   main-sheet box, plus a reference to the actual continuation page.
 
