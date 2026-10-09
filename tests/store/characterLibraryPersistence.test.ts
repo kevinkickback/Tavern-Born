@@ -41,6 +41,65 @@ describe('acknowledged character library in IndexedDB', () => {
     })
   })
 
+  test('unsupported variant settings remain unchanged and exportable through reload and later writes', async () => {
+    const valid = makeCharacterFixture({
+      id: 'canonical',
+      name: 'Canonical settings',
+      allowedSources: [],
+    })
+    const neighbor = makeCharacterFixture({
+      id: 'neighbor',
+      name: 'Valid neighbor',
+      allowedSources: [],
+    })
+    const originals = [
+      { bladesingerAnyRace: true },
+      { bladesingerAnyRace: false },
+      { battleragerAnyRace: true },
+      { battleragerAnyRace: false },
+      { anyRaceSubclasses: false, bladesingerAnyRace: true },
+      { anyRaceSubclasses: true, unknownRule: false },
+    ].map((variantRules, index) => ({
+      ...makeCharacterFixture({
+        id: `unsupported-settings-${index}`,
+        name: `Unsupported ${index}`,
+      }),
+      variantRules,
+    }))
+    const before = structuredClone(originals)
+    const rawStorage = createIdbStorage<{
+      characters: unknown[]
+      unsupportedCharacters: unknown[]
+    }>()
+    await rawStorage.setItem('character-storage', {
+      state: { characters: [valid, ...originals, neighbor], unsupportedCharacters: [] },
+      version: 0,
+    })
+    await useCharacterStore.persist.rehydrate()
+    expect(useCharacterStore.getState().characters).toEqual([valid, neighbor])
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual(before)
+
+    const created = await useCharacterStore
+      .getState()
+      .createNewCharacter({ name: 'Later canonical write' })
+    await useCharacterStore.persist.rehydrate()
+    const persisted = (await reader.getItem('character-storage'))?.state
+    expect(persisted).toEqual({
+      characters: [valid, neighbor, created],
+      unsupportedCharacters: before,
+    })
+    expect(
+      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
+        (download) => JSON.parse(download.text),
+      ),
+    ).toEqual(before)
+    await expect(
+      useCharacterStore.getState().importCharacters([valid, originals[0] as unknown as Character]),
+    ).rejects.toThrow()
+    expect((await reader.getItem('character-storage'))?.state).toEqual(persisted)
+    expect(originals).toEqual(before)
+  })
+
   test('rejected old, newer and malformed current originals survive reload and later durable writes unchanged', async () => {
     const valid = makeCharacterFixture({ id: 'supported', name: 'Supported', allowedSources: [] })
     const malformed = buildInitialCharacter(

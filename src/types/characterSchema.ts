@@ -34,30 +34,16 @@ const abilityScoresSchema = z.object({
   charisma: abilityScoreSchema,
 })
 
-const variantRulesSchema = z.preprocess(
-  (value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return value
-    const rules = value as Record<string, unknown>
-    if (typeof rules.anyRaceSubclasses === 'boolean') return rules
-
-    const hasLegacySubclassRule =
-      typeof rules.bladesingerAnyRace === 'boolean' || typeof rules.battleragerAnyRace === 'boolean'
-    if (!hasLegacySubclassRule) return rules
-
-    return {
-      ...rules,
-      anyRaceSubclasses: rules.bladesingerAnyRace === true || rules.battleragerAnyRace === true,
-    }
-  },
-  z.object({
+const variantRulesSchema = z
+  .object({
     optionalClassFeatures: z.boolean().default(false),
     averageHitPoints: z.boolean().default(true),
     abilityScoreMethod: z.enum(['point-buy', 'standard-array', 'custom']).optional(),
     anyRaceSubclasses: z.boolean().default(false),
     preferNewerPrintings: z.boolean().optional(),
     ignoreEquipRestrictions: z.boolean().default(false),
-  }),
-)
+  })
+  .strict()
 
 const characterClassEntrySchema = z.object({
   name: z.string().min(1),
