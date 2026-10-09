@@ -66,6 +66,9 @@ Maintain coverage for:
   subclass changes;
 - origin-system feat/ability ownership and readiness navigation;
 - spell profile/provenance atomicity, prepared-caster models, replacements, and slot pools;
+- complete native racial suite/descriptor controls, actual parent/child ownership, structural
+  reorder/casing, missing/restored contexts at changed levels, source removal/re-enable, strict
+  current reopen, independent casting effects and all PDF source/unknown-level boundaries;
 - overlapping provenance owners and source changes;
 - source filtering, exact fallback resolution, and ingestion atomicity;
 - recursive rules previews, pin/transient behavior, anchoring, scrolling, and modal interaction;

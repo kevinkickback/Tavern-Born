@@ -1,307 +1,247 @@
 import { describe, expect, test } from 'vitest'
-import { buildRacialSpellProfile, toRacialProfileId } from '@/lib/calculations/spellProfiles'
+import {
+  deriveNativeRacialSpellProfiles,
+  getNativeRacialSpellOwners,
+  refreshNativeRacialSpellState,
+} from '@/lib/calculations/nativeRacialSpells'
+import {
+  setRacialCastingAbility,
+  setRacialSpellChoice,
+  setRacialSpellSuite,
+} from '@/lib/character/commands/spellCommands'
+import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import {
+  makeNativeRacialCharacter,
+  nativeRaceResolution,
+} from '../../fixtures/nativeRacialCharacter'
 
-describe('toRacialProfileId', () => {
-  test('creates id from name and source', () => {
-    expect(toRacialProfileId('High Elf', 'PHB')).toBe('racial:High Elf|PHB')
-  })
+const race = {
+  name: 'Caster',
+  source: 'PHB',
+  additionalSpells: [
+    {
+      ability: { choose: ['int', 'wis'] },
+      known: {
+        _: [{ choose: 'level=0|class=Wizard', count: 2 }],
+        5: [{ choose: 'level=1|class=Cleric' }],
+      },
+      innate: {
+        1: ['light#c'],
+        3: { daily: { 1: ['hellish rebuke'] } },
+        5: { daily: { 1: ['darkness'] } },
+      },
+    },
+  ],
+} as Race5e
+const resolution = nativeRaceResolution(race)
+const apply = (
+  character: ReturnType<typeof makeNativeRacialCharacter>,
+  result: ReturnType<typeof setRacialSpellChoice>,
+) => ({ ...character, ...result.characterPatch, provenance: result.provenanceUpdate })
 
-  test('handles missing source', () => {
-    expect(toRacialProfileId('Tiefling')).toBe('racial:Tiefling|')
-  })
-})
-
-describe('buildRacialSpellProfile', () => {
-  test('newly supported direct choices cannot inherit a saved nested choice selection', () => {
-    const existing = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells: [{ known: { 2: { _: [{ choose: 'level=1|class=Wizard' }] } } }],
-      totalLevel: 2,
-    })
-    const saved = {
-      ...existing,
-      choices: existing.choices?.map((choice) => ({ ...choice, selected: ['Find Familiar|PHB'] })),
-      spellsKnown: ['Find Familiar|PHB'],
-    }
-    const updated = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells: [
-        {
-          known: {
-            1: [{ choose: 'level=0|class=Sorcerer' }],
-            2: { _: [{ choose: 'level=1|class=Wizard' }] },
-          },
-        },
+describe('current native racial profiles', () => {
+  test('mandatory suite retains level gates, exact kinds, daily metadata and block-local descriptors', () => {
+    const character = makeNativeRacialCharacter(race, undefined, 3)
+    const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+    expect(profile.racial).toMatchObject({
+      ownerType: 'race',
+      mode: 'mandatory',
+      context: { parent: { name: 'Caster', source: 'PHB' } },
+      fixed: [
+        { reference: 'light|PHB', isCantrip: true },
+        { reference: 'hellish rebuke|PHB', isCantrip: false, dailyUses: 1 },
       ],
-      totalLevel: 2,
-      existingProfile: saved,
     })
-    expect(
-      updated.choices?.find((choice) => choice.filter?.classes.includes('Sorcerer'))?.selected,
-    ).toEqual([])
-    expect(
-      updated.choices?.find((choice) => choice.filter?.classes.includes('Wizard')),
-    ).toMatchObject({
-      id: 'choose-0',
-      selected: ['Find Familiar|PHB'],
-    })
-    expect(updated.cantrips).toEqual([])
-    expect(updated.spellsKnown).toEqual(['Find Familiar|PHB'])
-  })
-
-  test('level-gates direct known choices while retaining ungated choices', () => {
-    const additionalSpells = [
-      {
-        known: {
-          _: [{ choose: 'level=0|class=Sorcerer' }],
-          5: [{ choose: 'level=1|class=Wizard', count: 2 }],
-        },
-      },
-    ]
-    const level1 = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells,
-      totalLevel: 1,
-    })
-    expect(level1.choices).toEqual([
-      {
-        id: 'direct-_-choose-0',
-        count: 1,
-        isCantrip: true,
-        selected: [],
-        filter: { level: 0, classes: ['Sorcerer'] },
-      },
-    ])
-    const level5 = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells,
-      totalLevel: 5,
-    })
-    expect(level5.choices).toEqual([
-      {
-        id: 'direct-5-choose-0',
+    expect(profile.cantrips).toEqual(['light|PHB'])
+    expect(profile.spellsKnown).toEqual(['hellish rebuke|PHB'])
+    expect(profile.choices).toEqual([
+      expect.objectContaining({
+        level: 0,
         count: 2,
-        isCantrip: false,
         selected: [],
-        filter: { level: 1, classes: ['Wizard'] },
-      },
-      {
-        id: 'direct-_-choose-0',
-        count: 1,
-        isCantrip: true,
-        selected: [],
-        filter: { level: 0, classes: ['Sorcerer'] },
-      },
+        filter: { level: 0, classes: ['Wizard'] },
+      }),
     ])
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    expect(
+      setRacialSpellSuite(character, character.provenance, profile.id, undefined, resolution)
+        .characterPatch,
+    ).toEqual({})
   })
-
-  test('creates profile with fixed spells from single block', () => {
-    const profile = buildRacialSpellProfile({
-      raceName: 'Tiefling',
-      raceSource: 'PHB',
+  test('whole alternative blocks remain unselected, select all members and clear without resurrection', () => {
+    const alternatives = {
+      ...race,
       additionalSpells: [
         {
-          known: { '1': ['thaumaturgy#c'] },
-          innate: {
-            '3': { daily: { '1': ['hellish rebuke'] } },
-          },
-          ability: 'cha',
-        },
-      ],
-      totalLevel: 3,
-    })
-
-    expect(profile.id).toBe('racial:Tiefling|PHB')
-    expect(profile.type).toBe('racial')
-    expect(profile.label).toBe('Racial Spells')
-    expect(profile.raceName).toBe('Tiefling')
-    expect(profile.castingAbility).toBe('cha')
-    expect(profile.cantrips).toContain('thaumaturgy|PHB')
-    expect(profile.spellsKnown).toContain('hellish rebuke|PHB')
-    expect(profile.fixedSpells).toEqual(
-      expect.arrayContaining(['thaumaturgy|PHB', 'hellish rebuke|PHB']),
-    )
-  })
-
-  test('respects totalLevel for level-gated spells', () => {
-    const profile = buildRacialSpellProfile({
-      raceName: 'Tiefling',
-      raceSource: 'PHB',
-      additionalSpells: [
-        {
-          known: { '1': ['thaumaturgy#c'] },
-          innate: {
-            '3': { daily: { '1': ['hellish rebuke'] } },
-            '5': { daily: { '1': ['darkness'] } },
-          },
-          ability: 'cha',
-        },
-      ],
-      totalLevel: 3,
-    })
-
-    expect(profile.cantrips).toContain('thaumaturgy|PHB')
-    expect(profile.spellsKnown).toContain('hellish rebuke|PHB')
-    expect(profile.spellsKnown).not.toContain('darkness|PHB')
-  })
-
-  test('creates profile with choose filter choices', () => {
-    const profile = buildRacialSpellProfile({
-      raceName: 'High Elf',
-      raceSource: 'PHB',
-      additionalSpells: [
-        {
-          known: {
-            '1': {
-              _: [{ choose: 'level=0|class=Wizard' }],
-            },
-          } as Record<string, string[] | { _: Array<string | { choose: string }> }>,
+          name: 'First',
           ability: 'int',
+          known: { 1: ['light#c', 'mage hand#c'] },
+          innate: { 3: { daily: { 1: ['shield'] } }, 5: { daily: { 1: ['darkness'] } } },
         },
+        { name: 'Second', ability: 'wis', known: { 1: ['sacred flame#c'] } },
       ],
-      totalLevel: 1,
-    })
-
-    expect(profile.choices).toHaveLength(1)
-    expect(profile.choices?.[0].filter).toEqual({ level: 0, classes: ['Wizard'] })
-    expect(profile.choices?.[0].isCantrip).toBe(true)
-    expect(profile.choices?.[0].count).toBe(1)
-    expect(profile.fixedSpells).toBeUndefined()
-  })
-
-  test('creates pool choice from mutually exclusive blocks', () => {
-    const profile = buildRacialSpellProfile({
-      raceName: 'Astral Elf',
-      raceSource: 'AAG',
-      additionalSpells: [
-        { known: { '1': ['dancing lights#c'] }, ability: 'int' },
-        { known: { '1': ['light#c'] }, ability: 'int' },
-        { known: { '1': ['sacred flame#c'] }, ability: 'int' },
-      ],
-      totalLevel: 1,
-    })
-
-    expect(profile.choices).toHaveLength(1)
-    expect(profile.choices?.[0].id).toBe('block-choice')
-    expect(profile.choices?.[0].pool).toEqual(
-      expect.arrayContaining(['dancing lights|PHB', 'light|PHB', 'sacred flame|PHB']),
+    } as Race5e
+    const live = nativeRaceResolution(alternatives)
+    let character = makeNativeRacialCharacter(alternatives, undefined, 5)
+    const owner = getNativeRacialSpellOwners(character, live)![0]
+    expect(character.spells.spellProfiles.find((entry) => entry.id === owner.id)?.cantrips).toEqual(
+      [],
     )
-    expect(profile.choices?.[0].count).toBe(1)
-    expect(profile.choices?.[0].isCantrip).toBe(true)
-    expect(profile.fixedSpells).toBeUndefined()
-  })
-
-  test('preserves existing selections from previous profile', () => {
-    const existing = buildRacialSpellProfile({
-      raceName: 'Astral Elf',
-      raceSource: 'AAG',
-      additionalSpells: [
-        { known: { '1': ['dancing lights#c'] }, ability: 'int' },
-        { known: { '1': ['light#c'] }, ability: 'int' },
-        { known: { '1': ['sacred flame#c'] }, ability: 'int' },
-      ],
-      totalLevel: 1,
+    character = apply(
+      character,
+      setRacialSpellSuite(character, character.provenance, owner.id, owner.suites[0].id, live),
+    )
+    expect(character.spells.spellProfiles.find((entry) => entry.id === owner.id)).toMatchObject({
+      cantrips: ['light|PHB', 'mage hand|PHB'],
+      spellsKnown: ['shield|PHB', 'darkness|PHB'],
+      castingAbility: 'int',
     })
-
-    // Simulate user having selected 'light'
-    const withSelection = {
-      ...existing,
-      choices: existing.choices?.map((c) => ({ ...c, selected: ['light|PHB'] })),
-      cantrips: ['light|PHB'],
-    }
-
-    const rebuilt = buildRacialSpellProfile({
-      raceName: 'Astral Elf',
-      raceSource: 'AAG',
-      additionalSpells: [
-        { known: { '1': ['dancing lights#c'] }, ability: 'int' },
-        { known: { '1': ['light#c'] }, ability: 'int' },
-        { known: { '1': ['sacred flame#c'] }, ability: 'int' },
-      ],
-      totalLevel: 1,
-      existingProfile: withSelection,
-    })
-
-    expect(rebuilt.choices?.[0].selected).toEqual(['light|PHB'])
-    expect(rebuilt.cantrips).toContain('light|PHB')
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    character = apply(
+      character,
+      setRacialSpellSuite(character, character.provenance, owner.id, owner.suites[1].id, live),
+    )
+    expect(Object.keys(character.provenance.spells)).toEqual(['sacred flame'])
+    character = apply(
+      character,
+      setRacialSpellSuite(character, character.provenance, owner.id, undefined),
+    )
+    expect(refreshNativeRacialSpellState(character, live).provenance.spells).toEqual({})
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   })
-
-  test('preserves qualified selections from native UIDs with default printing', () => {
-    const rebuilt = buildRacialSpellProfile({
-      raceName: 'Astral Elf',
-      raceSource: 'AAG',
+  test('independent descriptors can share targets and Clear retains fixed membership', () => {
+    const shared = {
+      ...race,
       additionalSpells: [
-        { known: { '1': ['dancing lights#c'] }, ability: 'int' },
-        { known: { '1': ['light#c'] }, ability: 'int' },
-      ],
-      totalLevel: 1,
-      existingProfile: {
-        id: toRacialProfileId('Astral Elf', 'AAG'),
-        type: 'racial',
-        label: 'Racial Spellcasting',
-        raceName: 'Astral Elf',
-        raceSource: 'AAG',
-        cantrips: ['Light|PHB'],
-        spellsKnown: [],
-        preparedSpells: [],
-        choices: [
-          {
-            id: 'block-choice',
-            count: 1,
-            isCantrip: true,
-            pool: ['dancing lights|PHB', 'light|PHB'],
-            selected: ['Light|PHB'],
+        {
+          ability: 'int',
+          known: {
+            1: [
+              'light#c',
+              { choose: 'level=0|class=Wizard', count: 2 },
+              { choose: 'level=0|class=Cleric' },
+            ],
           },
-        ],
-      },
-    })
-
-    expect(rebuilt.choices?.[0].selected).toEqual(['Light|PHB'])
-    expect(rebuilt.cantrips).toContain('Light|PHB')
+        },
+      ],
+    } as Race5e
+    const live = nativeRaceResolution(shared)
+    let character = makeNativeRacialCharacter(shared)
+    const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+    character = apply(
+      character,
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        profile.id,
+        profile.choices![0].id,
+        ['Light|PHB', 'Mage Hand|PHB'],
+        live,
+      ),
+    )
+    character = apply(
+      character,
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        profile.id,
+        profile.choices![1].id,
+        ['Light|PHB'],
+        live,
+      ),
+    )
+    expect(character.provenance.spells.light).toHaveLength(3)
+    character = apply(
+      character,
+      setRacialSpellChoice(character, character.provenance, profile.id, profile.choices![0].id, []),
+    )
+    expect(
+      character.spells.spellProfiles.find((entry) => entry.id === profile.id)?.cantrips,
+    ).toEqual(['Light|PHB'])
+    expect(character.provenance.spells.light).toHaveLength(2)
+    expect(character.provenance.spells['mage hand']).toBeUndefined()
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   })
-
-  test('sets abilityOptions for choose ability blocks', () => {
-    const profile = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells: [
-        {
-          known: { '1': ['thaumaturgy#c'] },
-          ability: { choose: ['int', 'wis', 'cha'] },
-        },
-      ],
-      totalLevel: 1,
-    })
-
-    expect(profile.castingAbilityOptions).toEqual(['int', 'wis', 'cha'])
-    expect(profile.castingAbility).toBeUndefined()
+  test('over-quota, duplicate logical printings and unqualified targets reject without partial writes', () => {
+    const character = makeNativeRacialCharacter(race)
+    const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+    for (const selected of [
+      ['Light|PHB', 'Light|XPHB'],
+      ['Light'],
+      ['Light|PHB', 'Mage Hand|PHB', 'Fire Bolt|PHB'],
+    ])
+      expect(
+        setRacialSpellChoice(
+          character,
+          character.provenance,
+          profile.id,
+          profile.choices![0].id,
+          selected,
+          resolution,
+        ).characterPatch,
+      ).toEqual({})
   })
-
-  test('inherits casting ability from existing profile', () => {
-    const existing = buildRacialSpellProfile({
-      raceName: 'Test Race',
+  test('casing and semantic reorder retain scoped choices and ability; changed block semantics reset them', () => {
+    let character = makeNativeRacialCharacter(race)
+    const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+    character = apply(
+      character,
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        profile.id,
+        profile.choices![0].id,
+        ['Mage Hand|PHB'],
+        resolution,
+      ),
+    )
+    character = apply(
+      character,
+      setRacialCastingAbility(character, character.provenance, profile.id, 'wis'),
+    )
+    const reordered = {
+      ...race,
+      name: 'CASTER',
+      source: 'phb',
       additionalSpells: [
         {
-          known: { '1': ['thaumaturgy#c'] },
-          ability: { choose: ['int', 'wis', 'cha'] },
+          innate: {
+            5: { daily: { 1: ['DARKNESS'] } },
+            3: { daily: { 1: ['HELLISH REBUKE'] } },
+            1: ['LIGHT#c'],
+          },
+          known: {
+            5: [{ choose: 'class=cleric|level=1' }],
+            _: [{ choose: 'class=wizard|level=0', count: 2 }],
+          },
+          ability: { choose: ['WIS', 'INT'] },
         },
       ],
-      totalLevel: 1,
+    } as Race5e
+    const refreshed = deriveNativeRacialSpellProfiles(character, nativeRaceResolution(reordered))[0]
+    expect(refreshed.id).toBe(profile.id)
+    expect(refreshed.choices?.[0].selected).toEqual(['Mage Hand|PHB'])
+    expect(refreshed.castingAbility).toBe('wis')
+    const changed = {
+      ...race,
+      additionalSpells: [{ ability: 'cha', known: { _: [{ choose: 'level=0|class=Sorcerer' }] } }],
+    } as Race5e
+    expect(
+      deriveNativeRacialSpellProfiles(character, nativeRaceResolution(changed))[0],
+    ).toMatchObject({
+      castingAbility: 'cha',
+      cantrips: [],
+      choices: [expect.objectContaining({ selected: [] })],
     })
-
-    const withAbility = { ...existing, castingAbility: 'wis' }
-
-    const rebuilt = buildRacialSpellProfile({
-      raceName: 'Test Race',
-      additionalSpells: [
-        {
-          known: { '1': ['thaumaturgy#c'] },
-          ability: { choose: ['int', 'wis', 'cha'] },
-        },
-      ],
-      totalLevel: 1,
-      existingProfile: withAbility,
-    })
-
-    expect(rebuilt.castingAbility).toBe('wis')
+  })
+  test('ambiguous duplicate suites and descriptors reject instead of sharing player setup', () => {
+    for (const additionalSpells of [
+      [{ known: { 1: ['light#c'] } }, { known: { 1: ['LIGHT#c'] } }],
+      [{ known: { 1: [{ choose: 'level=0|class=Wizard' }, { choose: 'class=wizard|level=0' }] } }],
+    ])
+      expect(() =>
+        makeNativeRacialCharacter({ name: 'Duplicate', source: 'PHB', additionalSpells } as Race5e),
+      ).toThrow(/Ambiguous duplicate/)
   })
 })

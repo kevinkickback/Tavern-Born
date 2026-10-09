@@ -19,6 +19,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 function finish(race: Race5e) {
   return buildInitialCharacter(
@@ -26,6 +27,11 @@ function finish(race: Race5e) {
     new Map(),
     () => [],
   )
+}
+
+function choiceId(character: Character, profileId: string, index = 0): string {
+  return character.spells.spellProfiles.find((profile) => profile.id === profileId)!.choices![index]
+    .id
 }
 
 function reopen(character: Character): Character {
@@ -55,7 +61,14 @@ test('a canonical child choice rejects the active parent as its owner and clears
   character = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        id,
+        choiceId(character, id),
+        ['Light|PHB'],
+        nativeRaceResolution(parent, child),
+      ),
     ),
   )
   character = reopen(
@@ -82,7 +95,14 @@ test('a canonical child choice rejects the active parent as its owner and clears
   const synced = syncSpellProfiles(malformed, malformed.provenance, malformed.spells.spellProfiles)
   expect(synced.provenanceUpdate.spells.light).toEqual([
     expect.objectContaining({ sourceType: 'manual' }),
+    expect.objectContaining({
+      sourceType: 'subrace',
+      sourceName: 'Child',
+      sourceRef: 'CHILD',
+      grantType: 'choice',
+    }),
   ])
+  expect(characterPersistenceSchema.safeParse(commit(malformed, synced)).success).toBe(true)
   expect(malformed).toEqual(original)
 
   Object.assign(character.provenance.spells.light[0], {
@@ -92,7 +112,7 @@ test('a canonical child choice rejects the active parent as its owner and clears
   const cleared = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', []),
+      setRacialSpellChoice(character, character.provenance, id, choiceId(character, id), []),
     ),
   )
   expect(cleared.spells.spellProfiles.find((profile) => profile.id === id)!.cantrips).toEqual([])
@@ -183,9 +203,14 @@ test('same-name printing replacement and clear preserve independent target owner
     character = reopen(
       commit(
         character,
-        setRacialSpellChoice(character, character.provenance, profileId, 'direct-_-choose-0', [
-          `Light|${printing}`,
-        ]),
+        setRacialSpellChoice(
+          character,
+          character.provenance,
+          profileId,
+          choiceId(character, profileId),
+          [`Light|${printing}`],
+          nativeRaceResolution(race),
+        ),
       ),
     )
     const racial = character.spells.spellProfiles.find((profile) => profile.id === profileId)!
@@ -201,7 +226,13 @@ test('same-name printing replacement and clear preserve independent target owner
   character = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, profileId, 'direct-_-choose-0', []),
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        profileId,
+        choiceId(character, profileId),
+        [],
+      ),
     ),
   )
   expect(character.provenance.spells.light).toEqual([
@@ -309,7 +340,7 @@ test('clearing one descriptor preserves fixed and other-choice printings of the 
           _: [
             'light|PHB#c',
             { choose: 'level=0|class=Wizard' },
-            { choose: 'level=0|class=Wizard' },
+            { choose: 'level=0|class=Cleric' },
           ],
         },
       },
@@ -317,11 +348,18 @@ test('clearing one descriptor preserves fixed and other-choice printings of the 
   } as Race5e
   let character = reopen(finish(race))
   const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
-  for (const choice of ['direct-_-choose-0', 'direct-_-choose-1']) {
+  for (const choice of [choiceId(character, id, 0), choiceId(character, id, 1)]) {
     character = reopen(
       commit(
         character,
-        setRacialSpellChoice(character, character.provenance, id, choice, ['Light|XPHB']),
+        setRacialSpellChoice(
+          character,
+          character.provenance,
+          id,
+          choice,
+          ['Light|XPHB'],
+          nativeRaceResolution(race),
+        ),
       ),
     )
   }
@@ -329,7 +367,13 @@ test('clearing one descriptor preserves fixed and other-choice printings of the 
   character = reopen(
     commit(
       character,
-      removeRacialSpell(character, character.provenance, id, 'direct-_-choose-0', ' light | xphb '),
+      removeRacialSpell(
+        character,
+        character.provenance,
+        id,
+        choiceId(character, id),
+        ' light | xphb ',
+      ),
     ),
   )
   expect(character.spells.spellProfiles.find((profile) => profile.id === id)?.cantrips).toEqual([
@@ -341,7 +385,7 @@ test('clearing one descriptor preserves fixed and other-choice printings of the 
     expect.objectContaining({
       grantType: 'choice',
       grantSource: 'XPHB',
-      grantVariant: 'direct-_-choose-1',
+      grantVariant: choiceId(character, id, 1),
     }),
   ])
   expect(
@@ -355,27 +399,37 @@ test.each([
   'Light|',
   '|XPHB',
 ])('a rejected target %s leaves the whole choice and ownership unchanged', (target) => {
-  const character = reopen(
-    finish({
-      name: 'Pool Caster',
-      source: 'OWNER',
-      additionalSpells: [
-        { known: { _: ['light|XPHB#c'] } },
-        { known: { _: ['mage hand|XPHB#c'] } },
-      ],
-    } as Race5e),
-  )
+  const race = {
+    name: 'Pool Caster',
+    source: 'OWNER',
+    additionalSpells: [
+      { known: { _: [{ choose: { from: ['light|XPHB#c', 'mage hand|XPHB#c'] } }] } },
+    ],
+  } as Race5e
+  const character = reopen(finish(race))
   const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
   const configured = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, id, 'block-choice', ['Light|XPHB']),
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        id,
+        choiceId(character, id),
+        ['Light|XPHB'],
+        nativeRaceResolution(race),
+      ),
     ),
   )
   const before = structuredClone(configured)
-  const result = setRacialSpellChoice(configured, configured.provenance, id, 'block-choice', [
-    target,
-  ])
+  const result = setRacialSpellChoice(
+    configured,
+    configured.provenance,
+    id,
+    choiceId(configured, id),
+    [target],
+    nativeRaceResolution(race),
+  )
   expect(result).toEqual({ characterPatch: {}, provenanceUpdate: before.provenance })
   expect(configured).toEqual(before)
 })
@@ -385,18 +439,26 @@ test.each([
   'other printing',
   'empty pool',
 ])('strict reopen rejects a choice outside its declared pool (%s)', (corruption) => {
-  const initial = finish({
+  const race = {
     name: 'Pool Caster',
     source: 'OWNER',
-    additionalSpells: [{ known: { _: ['light|PHB#c'] } }, { known: { _: ['mage hand|PHB#c'] } }],
-  } as Race5e)
+    additionalSpells: [
+      { known: { _: [{ choose: { from: ['light|PHB#c', 'mage hand|PHB#c'] } }] } },
+    ],
+  } as Race5e
+  const initial = finish(race)
   const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
   const character = reopen(
     commit(
       initial,
-      setRacialSpellChoice(initial, initial.provenance, id, 'block-choice', [
-        corruption === 'removed target' ? 'Mage Hand|PHB' : 'Light|PHB',
-      ]),
+      setRacialSpellChoice(
+        initial,
+        initial.provenance,
+        id,
+        choiceId(initial, id),
+        [corruption === 'removed target' ? 'Mage Hand|PHB' : 'Light|PHB'],
+        nativeRaceResolution(race),
+      ),
     ),
   )
   character.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool =
@@ -407,15 +469,25 @@ test.each([
 })
 
 test('declared pools compare normalized exact targets and permit an empty unselected choice', () => {
-  const initial = finish({
+  const race = {
     name: 'Pool Caster',
     source: 'OWNER',
-    additionalSpells: [{ known: { _: ['light|PHB#c'] } }, { known: { _: ['mage hand|PHB#c'] } }],
-  } as Race5e)
+    additionalSpells: [
+      { known: { _: [{ choose: { from: ['light|PHB#c', 'mage hand|PHB#c'] } }] } },
+    ],
+  } as Race5e
+  const initial = finish(race)
   const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
   const character = commit(
     initial,
-    setRacialSpellChoice(initial, initial.provenance, id, 'block-choice', ['Light|PHB']),
+    setRacialSpellChoice(
+      initial,
+      initial.provenance,
+      id,
+      choiceId(initial, id),
+      ['Light|PHB'],
+      nativeRaceResolution(race),
+    ),
   )
   character.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool = [
     ' light | phb ',
@@ -426,9 +498,8 @@ test('declared pools compare normalized exact targets and permit an empty unsele
   ).toEqual(['Light|PHB'])
   const cleared = commit(
     character,
-    setRacialSpellChoice(character, character.provenance, id, 'block-choice', []),
+    setRacialSpellChoice(character, character.provenance, id, choiceId(character, id), []),
   )
-  cleared.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool = []
   expect(characterPersistenceSchema.safeParse(cleared).success).toBe(true)
 })
 
@@ -450,11 +521,12 @@ test.each([
   'selected',
   'pool',
 ] as const)('current racial %s cannot contain an unqualified target', (field) => {
-  const character = finish({
+  const race = {
     name: 'Strict Caster',
     source: 'OWNER',
     additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
-  } as Race5e)
+  } as Race5e
+  const character = finish(race)
   const profile = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!
   if (field === 'selected' || field === 'pool') profile.choices![0][field] = ['Light']
   else profile[field] = ['Light']
@@ -484,16 +556,24 @@ test.each([
   'duplicate logical selection',
   'over quota',
 ])('strict current reopen rejects %s without changing the original', (corruption) => {
-  let character = finish({
+  const race = {
     name: 'Strict Choice Caster',
     source: 'OWNER',
     additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
-  } as Race5e)
+  } as Race5e
+  let character = finish(race)
   const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
   character = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        id,
+        choiceId(character, id),
+        ['Light|PHB'],
+        nativeRaceResolution(race),
+      ),
     ),
   )
   const profile = character.spells.spellProfiles.find((profile) => profile.id === id)!
@@ -541,16 +621,24 @@ test.each([
   'unaccounted printing',
   'wrong choice kind',
 ])('strict current reopen rejects an %s in racial materialization', (corruption) => {
-  let character = finish({
+  const race = {
     name: 'Accounted Caster',
     source: 'OWNER',
     additionalSpells: [{ known: { _: ['light|XPHB#c', { choose: 'level=0|class=Wizard' }] } }],
-  } as Race5e)
+  } as Race5e
+  let character = finish(race)
   const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
   character = reopen(
     commit(
       character,
-      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        id,
+        choiceId(character, id),
+        ['Light|PHB'],
+        nativeRaceResolution(race),
+      ),
     ),
   )
   const profile = character.spells.spellProfiles.find((profile) => profile.id === id)!

@@ -424,36 +424,6 @@
         "alwaysPrepared": false
       },
       {
-        "id": "racial:Elf|PHB",
-        "type": "racial",
-        "label": "Elf Racial Magic",
-        "raceName": "Elf",
-        "raceSource": "PHB",
-        "castingAbility": "intelligence",
-        "choices": [
-          {
-            "id": "high-elf-cantrip",
-            "count": 1,
-            "isCantrip": true,
-            "filter": {
-              "level": 0,
-              "classes": [
-                "Wizard"
-              ]
-            },
-            "selected": [
-              "Friends|PHB"
-            ]
-          }
-        ],
-        "cantrips": [
-          "Friends|PHB"
-        ],
-        "spellsKnown": [],
-        "preparedSpells": [],
-        "alwaysPrepared": true
-      },
-      {
         "id": "special:unrestricted",
         "type": "special",
         "label": "Special (Unrestricted)",
@@ -471,6 +441,56 @@
         ],
         "preparedSpells": [],
         "alwaysPrepared": true
+      },
+      {
+        "id": "racial:%5B%22elf%22%2C%22phb%22%2C%22high%22%2C%22phb%22%2C%22subrace%22%2C%22high%22%2C%22phb%22%5D",
+        "type": "racial",
+        "label": "High",
+        "raceName": "High",
+        "raceSource": "PHB",
+        "racial": {
+          "context": {
+            "parent": {
+              "name": "Elf",
+              "source": "PHB"
+            },
+            "child": {
+              "name": "High",
+              "source": "PHB"
+            }
+          },
+          "ownerType": "subrace",
+          "mode": "mandatory",
+          "suite": {
+            "id": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522phb%2522%252C%2522high%2522%252C%2522phb%2522%252C%2522subrace%2522%252C%2522high%2522%252C%2522phb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22int%5C%22%2C%5B%5D%2C%5B%5D%2C%5B%5C%22%5B1%2C1%2Ctrue%2C%5B0%2C%5B%5C%5C%5C%22wizard%5C%5C%5C%22%5D%5D%2Cnull%5D%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B1%2C1%2Ctrue%2C%5B0%2C%5B%5C%5C%5C%5C%5C%5C%5C%22wizard%5C%5C%5C%5C%5C%5C%5C%22%5D%5D%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D"
+          },
+          "fixed": []
+        },
+        "castingAbility": "int",
+        "choices": [
+          {
+            "level": 1,
+            "count": 1,
+            "isCantrip": true,
+            "filter": {
+              "level": 0,
+              "classes": [
+                "Wizard"
+              ]
+            },
+            "id": "racial-choice:%5B%22racial%3A%255B%2522elf%2522%252C%2522phb%2522%252C%2522high%2522%252C%2522phb%2522%252C%2522subrace%2522%252C%2522high%2522%252C%2522phb%2522%255D%22%2C%22racial-suite%3A%255B%2522racial%253A%25255B%252522elf%252522%25252C%252522phb%252522%25252C%252522high%252522%25252C%252522phb%252522%25252C%252522subrace%252522%25252C%252522high%252522%25252C%252522phb%252522%25255D%2522%252C%2522%255B%255C%2522%255C%2522%252C%255C%2522int%255C%2522%252C%255B%255D%252C%255B%255D%252C%255B%255C%2522%255B1%252C1%252Ctrue%252C%255B0%252C%255B%255C%255C%255C%2522wizard%255C%255C%255C%2522%255D%255D%252Cnull%255D%255C%2522%255D%252C%255B%255C%2522%255B%255C%255C%255C%2522known%255C%255C%255C%2522%252C1%252C%255C%255C%255C%2522direct%255C%255C%255C%2522%252C%255B%255C%255C%255C%2522%255B1%252C1%252Ctrue%252C%255B0%252C%255B%255C%255C%255C%255C%255C%255C%255C%2522wizard%255C%255C%255C%255C%255C%255C%255C%2522%255D%255D%252Cnull%255D%255C%255C%255C%2522%255D%255D%255C%2522%255D%252C%255B%255D%255D%2522%255D%22%2C%22%5B1%2C1%2Ctrue%2C%5B0%2C%5B%5C%22wizard%5C%22%5D%5D%2Cnull%5D%22%5D",
+            "selected": [
+              "Friends|PHB"
+            ]
+          }
+        ],
+        "cantrips": [
+          "Friends|PHB"
+        ],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": true,
+        "fixedSpells": []
       }
     ],
     "spellSlots": {
@@ -3325,17 +3345,6 @@
           "grantSource": "PHB"
         }
       ],
-      "friends": [
-        {
-          "sourceType": "subrace",
-          "sourceName": "High",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "High",
-          "grantSource": "PHB",
-          "grantVariant": "high-elf-cantrip"
-        }
-      ],
       "mage hand": [
         {
           "sourceType": "feat",
@@ -3343,6 +3352,17 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantSource": "PHB"
+        }
+      ],
+      "friends": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "High",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "High",
+          "grantVariant": "racial-choice:%5B%22racial%3A%255B%2522elf%2522%252C%2522phb%2522%252C%2522high%2522%252C%2522phb%2522%252C%2522subrace%2522%252C%2522high%2522%252C%2522phb%2522%255D%22%2C%22racial-suite%3A%255B%2522racial%253A%25255B%252522elf%252522%25252C%252522phb%252522%25252C%252522high%252522%25252C%252522phb%252522%25252C%252522subrace%252522%25252C%252522high%252522%25252C%252522phb%252522%25255D%2522%252C%2522%255B%255C%2522%255C%2522%252C%255C%2522int%255C%2522%252C%255B%255D%252C%255B%255D%252C%255B%255C%2522%255B1%252C1%252Ctrue%252C%255B0%252C%255B%255C%255C%255C%2522wizard%255C%255C%255C%2522%255D%255D%252Cnull%255D%255C%2522%255D%252C%255B%255C%2522%255B%255C%255C%255C%2522known%255C%255C%255C%2522%252C1%252C%255C%255C%255C%2522direct%255C%255C%255C%2522%252C%255B%255C%255C%255C%2522%255B1%252C1%252Ctrue%252C%255B0%252C%255B%255C%255C%255C%255C%255C%255C%255C%2522wizard%255C%255C%255C%255C%255C%255C%255C%2522%255D%255D%252Cnull%255D%255C%255C%255C%2522%255D%255D%255C%2522%255D%252C%255B%255D%255D%2522%255D%22%2C%22%5B1%2C1%2Ctrue%2C%5B0%2C%5B%5C%22wizard%5C%22%5D%5D%2Cnull%5D%22%5D",
           "grantSource": "PHB"
         }
       ]
@@ -4089,7 +4109,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "hitPoints": {
     "current": 121,
     "temporary": 17

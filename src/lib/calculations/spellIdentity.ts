@@ -68,13 +68,3 @@ export function dedupeSpellNames(values: Iterable<string>): string[] {
   }
   return [...byKey.values()]
 }
-
-export function dedupeSpellReferences(values: Iterable<string>): string[] {
-  const byKey = new Map<string, string>()
-  for (const value of values) {
-    if (!parseSpellReference(value).name) continue
-    const key = getSpellReferenceKey(value)
-    if (!byKey.has(key)) byKey.set(key, value)
-  }
-  return [...byKey.values()]
-}

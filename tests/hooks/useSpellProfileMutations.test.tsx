@@ -1,20 +1,30 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import type { SpellProfile } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
 const WIZARD_PROFILE_ID = 'class:Wizard|PHB'
+
+function installRace(race: Race5e) {
+  const gameData = makeGameDataFixture({ races: [race] })
+  gameData.lookups = buildGameDataLookups(gameData)
+  useGameDataStore.setState({ gameData })
+}
 
 function makeProfiles(): SpellProfile[] {
   return [
@@ -82,7 +92,11 @@ function getProfile(profileId = WIZARD_PROFILE_ID) {
 }
 
 describe('useSpellProfileMutations', () => {
-  beforeEach(resetCharacterStore)
+  beforeEach(() => {
+    resetCharacterStore()
+    useGameDataStore.setState({ gameData: null })
+  })
+  afterEach(() => useGameDataStore.setState({ gameData: null }))
 
   test('commits profile and provenance updates atomically', () => {
     const { result } = renderMutations()
@@ -100,15 +114,14 @@ describe('useSpellProfileMutations', () => {
   })
 
   test('actual racial Replace and Clear retain independent printing and slot usage through strict reopen', () => {
+    const race = {
+      name: 'Hook Caster',
+      source: 'OWNER',
+      additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+    } as Race5e
+    installRace(race)
     const character = buildInitialCharacter(
-      {
-        initial: { name: 'Hook Caster', originSystem: '2024' },
-        race: {
-          name: 'Hook Caster',
-          source: 'OWNER',
-          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
-        } as Race5e,
-      },
+      { initial: { name: race.name, originSystem: '2024' }, race },
       new Map(),
       () => [],
     )
@@ -132,7 +145,16 @@ describe('useSpellProfileMutations', () => {
       return useSpellProfileMutations(active.spells.spellProfiles, new Map())
     })
     for (const source of ['PHB', 'XPHB']) {
-      act(() => result.current.setRacialSpellChoice(id, 'direct-_-choose-0', [`Light|${source}`]))
+      act(() =>
+        result.current.setRacialSpellChoice(
+          id,
+          useCharacterStore
+            .getState()
+            .activeCharacter!.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0]
+            .id,
+          [`Light|${source}`],
+        ),
+      )
       const active = characterPersistenceSchema.parse(
         JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
       )
@@ -143,7 +165,16 @@ describe('useSpellProfileMutations', () => {
         expect.objectContaining({ grantSource: source }),
       ])
     }
-    act(() => result.current.setRacialSpellChoice(id, 'direct-_-choose-0', []))
+    act(() =>
+      result.current.setRacialSpellChoice(
+        id,
+        useCharacterStore
+          .getState()
+          .activeCharacter!.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0]
+          .id,
+        [],
+      ),
+    )
     const active = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
     )
@@ -215,34 +246,40 @@ describe('useSpellProfileMutations', () => {
   test.each([
     'sync',
     'bonus edit',
-  ])('a resolved descriptor removal retracts only its selected-target ownership during %s', (operation) => {
+  ])('a changed native block resets its setup while preserving independent owners during %s', (operation) => {
+    const race = {
+      name: 'Refresh caster',
+      source: 'OWNER',
+      additionalSpells: [
+        {
+          known: {
+            _: [
+              'light|PHB#c',
+              { choose: 'level=0|class=Wizard' },
+              { choose: 'level=0|class=Cleric' },
+            ],
+          },
+        },
+      ],
+    } as Race5e
+    installRace(race)
     let character = buildInitialCharacter(
-      {
-        initial: { name: 'Refresh caster', originSystem: '2014' },
-        race: {
-          name: 'Refresh caster',
-          source: 'OWNER',
-          additionalSpells: [
-            {
-              known: {
-                _: [
-                  'light|PHB#c',
-                  { choose: 'level=0|class=Wizard' },
-                  { choose: 'level=0|class=Wizard' },
-                ],
-              },
-            },
-          ],
-        } as Race5e,
-      },
+      { initial: { name: race.name, originSystem: '2014' }, race },
       new Map(),
       () => [],
     )
     const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
-    for (const choice of ['direct-_-choose-0', 'direct-_-choose-1']) {
-      const result = setRacialSpellChoice(character, character.provenance, id, choice, [
-        'Light|XPHB',
-      ])
+    for (const choice of character.spells.spellProfiles
+      .find((profile) => profile.id === id)!
+      .choices!.map((choice) => choice.id)) {
+      const result = setRacialSpellChoice(
+        character,
+        character.provenance,
+        id,
+        choice,
+        ['Light|XPHB'],
+        nativeRaceResolution(race),
+      )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
     for (const sourceType of ['manual', 'class', 'feat'] as const) {
@@ -254,14 +291,12 @@ describe('useSpellProfileMutations', () => {
     }
     character.spells.spellSlots[1] = { max: 2, used: 1 }
     const original = structuredClone(character)
-    const profiles = character.spells.spellProfiles.map((profile) =>
-      profile.type === 'racial'
-        ? {
-            ...profile,
-            choices: profile.choices!.filter((choice) => choice.id !== 'direct-_-choose-0'),
-          }
-        : profile,
-    )
+    const changedRace = {
+      ...race,
+      additionalSpells: [{ known: { _: ['light|PHB#c', { choose: 'level=0|class=Cleric' }] } }],
+    } as Race5e
+    installRace(changedRace)
+    const profiles = character.spells.spellProfiles
     setActiveCharacter(character)
     const { result, unmount } = renderHook(() => useSpellProfileMutations(profiles, new Map()))
     act(() => {
@@ -272,12 +307,17 @@ describe('useSpellProfileMutations', () => {
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
     )
     expect(reopened.provenance!.spells.light).toEqual(
-      original.provenance.spells.light.filter((tag) => tag.grantVariant !== 'direct-_-choose-0'),
+      expect.arrayContaining(
+        original.provenance.spells.light.filter((tag) => tag.sourceType !== 'race'),
+      ),
     )
     expect(reopened.spells.spellSlots[1]?.used).toBe(1)
     expect(
       reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')?.choices,
-    ).toEqual(profiles.find((profile) => profile.type === 'racial')?.choices)
+    ).toEqual([expect.objectContaining({ selected: [] })])
+    expect(reopened.provenance.spells.light.filter((tag) => tag.sourceType === 'race')).toEqual([
+      expect.objectContaining({ grantType: 'fixed', grantSource: 'PHB' }),
+    ])
     expect(character).toEqual(original)
     unmount()
   })
@@ -286,22 +326,26 @@ describe('useSpellProfileMutations', () => {
     'clear',
     'replace',
   ])('accepted normalized racial choice ownership supports actual %s and reopen', (operation) => {
+    const race = {
+      name: 'Normalized Caster',
+      source: 'OWNER',
+      additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+    } as Race5e
+    installRace(race)
     const initial = buildInitialCharacter(
-      {
-        initial: { name: 'Normalized caster', originSystem: '2014' },
-        race: {
-          name: 'Normalized Caster',
-          source: 'OWNER',
-          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
-        } as Race5e,
-      },
+      { initial: { name: race.name, originSystem: '2014' }, race },
       new Map(),
       () => [],
     )
     const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
-    const result = setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', [
-      'Light|PHB',
-    ])
+    const result = setRacialSpellChoice(
+      initial,
+      initial.provenance,
+      id,
+      initial.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].id,
+      ['Light|PHB'],
+      nativeRaceResolution(race),
+    )
     const character = { ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }
     character.provenance.spells.light[0].sourceName = ' nORMALIZED cASTER '
     character.provenance.spells.light[0].sourceRef = ' owner '
@@ -318,7 +362,16 @@ describe('useSpellProfileMutations', () => {
       return useSpellProfileMutations(active.spells.spellProfiles, new Map())
     })
     const selected = operation === 'clear' ? [] : ['Mage Hand|XPHB']
-    act(() => mutations.current.setRacialSpellChoice(id, 'direct-_-choose-0', selected))
+    act(() =>
+      mutations.current.setRacialSpellChoice(
+        id,
+        useCharacterStore
+          .getState()
+          .activeCharacter!.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0]
+          .id,
+        selected,
+      ),
+    )
     const reopened = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
     )

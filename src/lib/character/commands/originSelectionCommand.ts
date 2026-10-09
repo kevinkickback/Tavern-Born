@@ -1,5 +1,6 @@
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -111,8 +112,10 @@ export function buildInitialCharacter(
     })
   }
 
-  return {
-    ...character,
-    provenance: ledger,
-  }
+  return refreshNativeRacialSpellState(
+    { ...character, provenance: ledger },
+    selections.race
+      ? { parentRace: selections.race, subraceData: selections.subrace, subraceIsNested: false }
+      : undefined,
+  )
 }

@@ -115,8 +115,8 @@ Ordinary child replacement or clearing preserves the unchanged parent's nonabili
 the previous child resolves exactly as ordinary. If its metadata is unavailable or its kind cannot
 be established, rebuild the whole selection: the old child may have been a complete version.
 Do not guess its kind or treat another printing as the previous child. Parent replacement always
-rebuilds the racial set, even when the child reference stays the same; compatible spell setup retains
-the separate same-profile rule described below.
+rebuilds the racial set, even when the child reference stays the same. Native spell identities include
+both context printings, so changing either resets intentional spell setup.
 
 Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
 recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
@@ -139,37 +139,34 @@ and blocks explicitly removed by it. Traditional subrace spell blocks remain add
 parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
 from the unfiltered catalog.
 
-Race selection commands rebuild the persisted racial spell profile at the actual total character
-level. They remove obsolete racial profiles and choice ownership, then restore saved choices only
-for the same source-qualified profile and compatible choice rules. Existing choice commands enforce
-current pool and count limits. Profile spell arrays and pools use complete `name|source` references;
-spell tags
-store target `grantSource` separately from owner `sourceRef`. Choice replacement and removal match
-both the descriptor and target printing, preserving fixed grants and other choices/owners. A choice
-quota counts distinct logical spell names, while materialization retains distinct target printings.
-Sources rows also retain the target printing, so another printing cannot supply its metadata.
-Casting ability selections survive only while allowed by the current
-fixed ability or choice options; removing that rule clears a historical ability. Independent class
-and special profiles and spell-slot usage remain intact. A shared pure selection adapter keeps
-command and spell-hook labels and blocks consistent; legacy profile labels and choice identifiers
-remain stable.
-Spells, Actions and PDF action projection consume the same resolved parent/subrace context through
-the shared spell-profile builder. They preserve those profile identities when projecting saved choices,
-filter named parent blocks to the selected child, and respect complete-version spell removal.
-An unavailable exact selected parent or child projects cloned existing saved racial profiles,
-including choices, casting ability and source identity, even when an available parent has spell
-grants. Unrelated spell edits commit those retained profiles with provenance together. Exact
-raw-catalog fallback counts as available; restored exact metadata resumes normal derivation.
-The shared spell-state projection refreshes fixed racial spell ownership from the exact resolved
-parent and child at the character's level, alongside the derived profiles. Changed target printings,
-new fixed grants and resolved removals therefore appear consistently in Spells, Sources, Actions
-and PDF. Spell edits commit that same profile and ledger state atomically, retaining independent
-ownership and slot usage. Missing exact parent or child data retains the coherent saved snapshot;
-it cannot establish removal or supply a guessed owner. This uses the existing supported native
-fixed-grant grammar; complete suite selection and descriptor lineage remain separate contracts.
-Metadata-free consumers cannot establish a racial removal and retain selected saved racial profiles.
-Only a fully resolved selection can establish empty racial grants. Without a selected race,
-the projection omits racial profiles. Intentional race/subrace commands still remove obsolete setup atomically.
+Native racial spells use one profile per actual granting parent or child, scoped to the complete
+selected context. One native block is mandatory and automatically active; multiple blocks are
+alternatives and start unselected. Alternative Select/Replace activates all currently eligible
+members of one whole suite. Clear leaves the owner unselected, including after source re-enable.
+Internal descriptors retain independent quotas and exact target selections; descriptor Clear retains
+fixed suite members. Structural identities include the complete context and block semantics, with
+no historical ordinal aliases or owner inference.
+
+`nativeRacialSpells.ts` evaluates live eligibility at total class level, materializes the typed applied
+fixed/choice snapshot, and reconciles its exact inverse in spell provenance. Fixed tags identify the
+selected suite; choice tags identify the full descriptor. Owner `sourceRef` and target `grantSource`
+remain separate. Removing one descriptor/owner preserves other descriptors, fixed grants and
+class/feat/manual ownership of the same exact target. Logical duplicates consume only one descriptor
+quota, while different applied printings retain separate identities.
+
+Race/child replacement, final Wizard Finish, class/progression changes and every Spells edit commit
+profiles and provenance together. Source-setting pruning removes disallowed intentional exact targets
+and their descriptor ownership; fixed members and independent allowed owners remain. Source re-enable
+cannot recreate an erased choice. Expanded native targets extend live class-list eligibility without
+automatically learning a spell or adding racial slot pools.
+
+Spells, Sources, Actions, readiness and immutable PDF use the same projected relation. Either missing
+exact context member freezes the whole established snapshot; an available parent cannot partially
+refresh a missing child. Saved alternative/descriptor Clear remains possible, while new suite/target
+selection requires complete rules. Level changes during absence retain the applied snapshot.
+Restoration evaluates rules at the current level; compatible setup survives, ineligible descriptors
+leave, and incompatible structural identities reset atomically. No dormant choices are resurrected.
+Independent class/special preparation and shared/Pact usage remain unchanged by racial transitions.
 Available class and subclass data still derive current grants at the
 character's level. Each unavailable exact class or selected subclass retains its own saved profile
 even when another class resolves. This unavailable-class policy also applies to the Spells projection.

@@ -1,4 +1,6 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import {
   type ClassSpellSelectionInput,
   setClassSpellSelectionsAtLevel as setClassSpellSelectionsAtLevelCommand,
@@ -10,6 +12,7 @@ import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 export function useSpellProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -30,12 +33,17 @@ export function useSpellProvenanceMutations() {
         classLevel,
         selections,
       })
+      const native = refreshNativeRacialSpellState(
+        { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
+        calculationContext?.raceResolution,
+      )
       updateCharacter(character.id, {
         ...result.characterPatch,
-        provenance: result.provenanceUpdate,
+        spells: native.spells,
+        provenance: native.provenance,
       })
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, calculationContext],
   )
 
   const swapClassSpellAtLevel = useCallback(
@@ -56,12 +64,17 @@ export function useSpellProvenanceMutations() {
         addedName,
         addedSpellSchool,
       })
+      const native = refreshNativeRacialSpellState(
+        { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
+        calculationContext?.raceResolution,
+      )
       updateCharacter(character.id, {
         ...result.characterPatch,
-        provenance: result.provenanceUpdate,
+        spells: native.spells,
+        provenance: native.provenance,
       })
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, calculationContext],
   )
 
   return {

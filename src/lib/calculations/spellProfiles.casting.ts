@@ -10,7 +10,7 @@ import {
   getSpellSlotsFromClassData,
   getStandardSpellSlotsFromClassData,
 } from '@/lib/calculations/spellSlots'
-import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -228,6 +228,80 @@ function getClassMaxSpellLevel(
     .reduce((max, k) => Math.max(max, k), 0)
 }
 
+export interface SpellcastingNumbers {
+  profileId: string
+  spellcastingAbility?: AbilityName
+  spellSaveDC: number | null
+  spellAttackBonus: number | null
+}
+
+export interface RacialSpellcastingDetail extends SpellcastingNumbers {
+  sourceName: string
+  source: string
+}
+
+/** Shared effect-aware source arithmetic; an unknown ability has no casting numbers. */
+function calculateSpellcastingNumbers(
+  profileId: string,
+  castingAbility: string | undefined,
+  effectiveAbilityScores: AbilityScores,
+  totalLevel: number,
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
+): SpellcastingNumbers {
+  const ability = castingAbility ? normalizeAbilityName(castingAbility) : null
+  const mod = ability ? getAbilityModifier(effectiveAbilityScores[ability]) : null
+  const proficiency = getProficiencyBonus(totalLevel)
+  return {
+    profileId,
+    spellcastingAbility: ability ?? undefined,
+    spellSaveDC:
+      mod === null
+        ? null
+        : Math.trunc(
+            resolveNumericEffect(
+              8 + proficiency + mod,
+              { kind: 'spell-save-dc', profileId },
+              effects,
+              effectContext,
+            ).value,
+          ),
+    spellAttackBonus:
+      mod === null
+        ? null
+        : Math.trunc(
+            resolveNumericEffect(
+              proficiency + mod,
+              { kind: 'spell-attack', profileId },
+              effects,
+              effectContext,
+            ).value,
+          ),
+  }
+}
+
+export function buildRacialSpellcastingDetails(
+  character: Character,
+  effectiveAbilityScores: AbilityScores,
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
+): RacialSpellcastingDetail[] {
+  return character.spells.spellProfiles
+    .filter((profile) => profile.type === 'racial')
+    .map((profile) => ({
+      ...calculateSpellcastingNumbers(
+        profile.id,
+        profile.castingAbility,
+        effectiveAbilityScores,
+        getTotalCharacterLevel(character),
+        effects,
+        effectContext,
+      ),
+      sourceName: profile.raceName ?? profile.label,
+      source: profile.raceSource ?? '',
+    }))
+}
+
 export function buildSpellcastingClassDetails(
   character: Character,
   classesById: Map<string, Class5e>,
@@ -236,8 +310,7 @@ export function buildSpellcastingClassDetails(
   effectContext: EffectResolutionContext = {},
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
-  const totalLevel = getTotalClassLevels(entries)
-  const proficiency = getProficiencyBonus(totalLevel)
+  const totalLevel = getTotalCharacterLevel(character)
 
   return entries
     .map((entry) => {
@@ -251,28 +324,14 @@ export function buildSpellcastingClassDetails(
       const mod = ability
         ? getAbilityModifier((effectiveAbilityScores as AbilityScores)[ability] ?? 10)
         : null
-      const saveDc =
-        mod !== null
-          ? Math.trunc(
-              resolveNumericEffect(
-                8 + proficiency + mod,
-                { kind: 'spell-save-dc', profileId },
-                effects,
-                effectContext,
-              ).value,
-            )
-          : null
-      const attack =
-        mod !== null
-          ? Math.trunc(
-              resolveNumericEffect(
-                proficiency + mod,
-                { kind: 'spell-attack', profileId },
-                effects,
-                effectContext,
-              ).value,
-            )
-          : null
+      const numbers = calculateSpellcastingNumbers(
+        profileId,
+        effectiveAbility ?? undefined,
+        effectiveAbilityScores,
+        totalLevel,
+        effects,
+        effectContext,
+      )
       const preparedCaster = isPreparedCaster(effectiveSpellcastingData)
       const truePreparedCaster = isTruePreparedCaster(effectiveSpellcastingData)
       const levelOnlyPrepared = isLevelOnlyPreparedCaster(effectiveSpellcastingData)
@@ -296,8 +355,8 @@ export function buildSpellcastingClassDetails(
         classLevel: entry.levels,
         casterProgression: normalizeProgression(effectiveProgression),
         spellcastingAbility: ability ?? undefined,
-        spellSaveDC: saveDc,
-        spellAttackBonus: attack,
+        spellSaveDC: numbers.spellSaveDC,
+        spellAttackBonus: numbers.spellAttackBonus,
         maxSpellLevel: getClassMaxSpellLevel(
           effectiveSpellcastingData,
           entry.levels,

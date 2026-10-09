@@ -105,22 +105,28 @@ completed exports replace estimated warnings with measured results and readable 
 
 ## Spells and companions
 
-Both 2014 layouts use the shared spell asset per resolved casting class, including subclass casters.
+Both 2014 layouts use the shared spell asset per casting source, including subclasses and each
+actual native racial owner.
 Regular casters repeat the shared multiclass pool; Pact Magic retains its separate pool. Maxima
 derive from parsed progressions and usage is clamped without changing the character. Each page
 deduplicates and determines preparation independently, including always-prepared and ready
-known-caster spells. Racial, bonus, and unresolved-profile spells stay on the first page.
+known-caster spells. Racial owners retain their own rows and casting numbers; bonus and unresolved nonracial profiles
+stay on the first source page. Racial pages print no shared or Pact class slots.
 Per-level overflow continues onto extra spell-page copies independently of the long-text setting.
 
-PDF action projection uses the resolved race selection and the same spell-block/profile-label policy
-as the Spells and Actions pages. Source-qualified saved racial choices retain their existing profile
-identity; complete versions use their own grants, including explicit removal, and named traditional
-parent blocks are filtered to the selected child. An unavailable selected child preserves saved
-profiles rather than substituting the available parent's grants. Projection does not change saved
-choices or state.
-Racial spell targets retain their saved printing independently of the racial owner's source.
-An unavailable qualified target remains unresolved; a same-name spell in another printing cannot
-replace it in spell rows or actions. Independently owned printings remain distinct through projection.
+UI and PDF reuse the same effect-aware casting-number calculation with effective scores,
+total-level proficiency and global/profile-specific effect declarations. Parent and ordinary child
+abilities remain independent. Unknown or unselected ability produces unknown numbers, rather than
+using another owner's ability or assigning a fictitious class level.
+
+PDF Actions and spell rows use the complete exact race context and native selected relation.
+Versions suppress parent mechanics; ordinary owners remain separate. Missing either context member
+retains the applied snapshot. Exact target lookup cannot borrow another printing's level or rules.
+With spell metadata absent, a saved cantrip remains a cantrip; a known leveled target has explicit
+`?` numeric level. Official 2014 pagination never places that target in a cantrip field. Its name
+and unknown-level explanation continue in notes by default when notes are enabled; disabled notes
+report the omission. Manual spell selections and disabled spell pages still control that content.
+Export remains immutable and preserves independent preparation and usage.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries

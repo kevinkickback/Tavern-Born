@@ -3,9 +3,11 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useClassesById } from '@/hooks/character/useClassesById'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
+  buildRacialSpellcastingDetails,
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
   collectKnownSpells,
+  type RacialSpellcastingDetail,
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
@@ -32,6 +34,7 @@ export interface SpellSlotsState {
   preparedSpells: string[]
   spellProfiles: SpellProfile[]
   spellProvenance: ProvenanceLedger
+  racialSpellcastingDetails: RacialSpellcastingDetail[]
   spellcastingDetails: SpellcastingClassDetail[]
   spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>
 }
@@ -106,6 +109,20 @@ export function useSpellSlots(): SpellSlotsState {
     )
   }, [character, classesById, calculationContext])
 
+  const racialSpellcastingDetails = useMemo(
+    () =>
+      spellState
+        ? buildRacialSpellcastingDetails(
+            spellState,
+            calculationContext?.abilityScores.total ??
+              deriveEffectiveAbilityScores(spellState).total,
+            calculationContext?.effects.declarations,
+            calculationContext?.effects.resolutionContext,
+          )
+        : [],
+    [spellState, calculationContext],
+  )
+
   const spellcastingDetailByProfileId = useMemo(
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),
     [spellcastingDetails],
@@ -122,6 +139,7 @@ export function useSpellSlots(): SpellSlotsState {
     spellProfiles,
     spellProvenance: spellState?.provenance ?? emptyProvenance(),
     spellcastingDetails,
+    racialSpellcastingDetails,
     spellcastingDetailByProfileId,
   }
 }

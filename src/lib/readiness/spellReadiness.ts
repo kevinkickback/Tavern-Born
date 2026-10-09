@@ -1,11 +1,13 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import {
+  buildSpellNameKeySet,
+  getSpellNameKey,
+  getSpellReferenceKey,
+} from '@/lib/calculations/spellIdentity'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
-import {
-  ensureSpellProfiles,
-  getSpellProfileSelectionCounts,
-} from '@/lib/calculations/spellProfiles.profiles'
+import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
+import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
@@ -103,11 +105,12 @@ export function validateSpells(
     calculation.effects.declarations,
     calculation.effects.resolutionContext,
   )
-  const spellProfiles = [...character.spells.spellProfiles]
-  const storedProfileIds = new Set(spellProfiles.map((profile) => profile.id))
-  for (const derivedProfile of ensureSpellProfiles(character, classMap)) {
-    if (!storedProfileIds.has(derivedProfile.id)) spellProfiles.push(derivedProfile)
-  }
+  const spellProfiles = deriveSpellProfileState(
+    character,
+    classMap,
+    undefined,
+    calculation.raceResolution,
+  ).spells.spellProfiles
   const profileById = new Map(spellProfiles.map((profile) => [profile.id, profile]))
   const issues = details.flatMap((detail) => {
     const profile = profileById.get(detail.profileId)
@@ -124,6 +127,28 @@ export function validateSpells(
   })
 
   for (const profile of spellProfiles) {
+    if (profile.type === 'racial' && profile.racial) {
+      if (profile.racial.mode === 'alternative' && !profile.racial.suite)
+        issues.push(
+          readinessIssue(
+            spellProfileReadinessId('profile', profile.id),
+            'blocking',
+            'spells',
+            'Choose ' + profile.label + ' spell suite',
+            'Choose one of the racial spell suites.',
+          ),
+        )
+      if (profile.racial.suite && profile.castingAbilityOptions?.length && !profile.castingAbility)
+        issues.push(
+          readinessIssue(
+            spellProfileReadinessId('profile', profile.id),
+            'blocking',
+            'spells',
+            'Choose ' + profile.label + ' casting ability',
+            'Choose the ability used for these spells.',
+          ),
+        )
+    }
     for (const choice of profile.choices ?? []) {
       if (choice.selected.length !== choice.count) {
         issues.push(
@@ -141,20 +166,31 @@ export function validateSpells(
 
   if (spellsByKey) {
     const knownNames = buildSpellNameKeySet(Object.values(spellsByKey).map((spell) => spell.name))
-    const selectedNames = spellProfiles.flatMap((profile) => [
-      ...profile.cantrips,
-      ...profile.spellsKnown,
-      ...profile.preparedSpells,
-      ...(profile.fixedSpells ?? []),
-      ...(profile.alwaysPreparedSpells ?? []),
-    ])
-    const selectedByIdentity = new Map<string, string>()
-    for (const name of selectedNames) {
-      const key = getSpellNameKey(name)
-      if (key && !selectedByIdentity.has(key)) selectedByIdentity.set(key, name)
-    }
-    for (const [identity, name] of selectedByIdentity) {
-      if (knownNames.has(identity)) continue
+    const knownReferences = new Set(
+      Object.values(spellsByKey).map((spell) => getSpellReferenceKey(spell.name, spell.source)),
+    )
+    const selected = spellProfiles.flatMap((profile) =>
+      [
+        ...profile.cantrips,
+        ...profile.spellsKnown,
+        ...profile.preparedSpells,
+        ...(profile.fixedSpells ?? []),
+        ...(profile.alwaysPreparedSpells ?? []),
+      ].map((name) => ({ name, racial: profile.type === 'racial' })),
+    )
+    const selectedByIdentity = new Map(
+      selected.map((target) => [
+        target.racial ? getSpellReferenceKey(target.name) : getSpellNameKey(target.name),
+        target,
+      ]),
+    )
+    for (const { name, racial } of selectedByIdentity.values()) {
+      if (
+        racial
+          ? knownReferences.has(getSpellReferenceKey(name))
+          : knownNames.has(getSpellNameKey(name))
+      )
+        continue
       issues.push(
         readinessIssue(
           `source:spell:${name}`,

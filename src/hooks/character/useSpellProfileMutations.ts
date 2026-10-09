@@ -1,3 +1,4 @@
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 /**
  * Spell profile mutation hook.
  *
@@ -21,6 +22,7 @@ import {
   setProfileSpells as setProfileSpellsCommand,
   setRacialCastingAbility as setRacialCastingAbilityCommand,
   setRacialSpellChoice as setRacialSpellChoiceCommand,
+  setRacialSpellSuite as setRacialSpellSuiteCommand,
   syncSpellProfiles,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
@@ -126,7 +128,13 @@ export function useSpellProfileMutations(
       if (!character || !commandCharacter) return
       const profile = spellProfiles.find((entry) => entry.id === profileId)
       const spellKey = normalizeKey(name)
-      if (profile?.fixedSpells?.some((fixedName) => normalizeKey(fixedName) === spellKey)) return
+      if (profile?.type === 'racial') return
+      if (
+        profile?.fixedSpells?.some(
+          (fixedName) => getSpellReferenceKey(fixedName) === getSpellReferenceKey(name),
+        )
+      )
+        return
       if (
         profile?.type === 'special' &&
         (currentLedger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')
@@ -219,10 +227,11 @@ export function useSpellProfileMutations(
         profileId,
         choiceId,
         spellName,
+        calculationContext?.raceResolution,
       )
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [character, commandCharacter, currentLedger, applySpellCommand, calculationContext],
   )
 
   const removeRacialSpell = useCallback(
@@ -250,10 +259,27 @@ export function useSpellProfileMutations(
           profileId,
           choiceId,
           selectedSpells,
+          calculationContext?.raceResolution,
         ),
       )
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [character, commandCharacter, currentLedger, applySpellCommand, calculationContext],
+  )
+
+  const setRacialSpellSuite = useCallback(
+    (profileId: string, suiteId: string | undefined) => {
+      if (!commandCharacter) return
+      applySpellCommand(
+        setRacialSpellSuiteCommand(
+          commandCharacter,
+          currentLedger,
+          profileId,
+          suiteId,
+          calculationContext?.raceResolution,
+        ),
+      )
+    },
+    [commandCharacter, currentLedger, applySpellCommand, calculationContext],
   )
 
   const setRacialCastingAbility = useCallback(
@@ -275,6 +301,7 @@ export function useSpellProfileMutations(
     selectRacialSpell,
     removeRacialSpell,
     setRacialSpellChoice,
+    setRacialSpellSuite,
     setRacialCastingAbility,
   }
 }

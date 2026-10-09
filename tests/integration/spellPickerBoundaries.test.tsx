@@ -32,6 +32,7 @@ import {
   makeGameDataFixture,
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
+import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 function commit(character: Character, result: ReturnType<typeof setRacialSpellChoice>): Character {
   return characterPersistenceSchema.parse({
@@ -115,15 +116,12 @@ test('the racial page selects another enabled printing while retaining independe
       </MemoryRouter>
     </TooltipProvider>,
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Choose Spell' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Caster spell choice 1' }))
   const dialog = within(screen.getByRole('dialog'))
-  await waitFor(() => expect(dialog.getAllByText('Light')).toHaveLength(1))
-  expect(dialog.getByText('Light').closest('button')!.disabled).toBe(false)
-  expect(dialog.getByText('TCE')).toBeTruthy()
-  fireEvent.click(dialog.getByRole('switch', { name: 'Hide already-known spells' }))
   await waitFor(() => expect(dialog.getAllByText('Light')).toHaveLength(2))
   const lights = dialog.getAllByText('Light')
-  expect(lights[0].closest('button')!.disabled).toBe(true)
+  expect(lights[0].closest('button')!.disabled).toBe(false)
+  expect(lights[1].closest('button')!.disabled).toBe(false)
   fireEvent.click(lights[1])
   expect(lights[0].closest('button')!.disabled).toBe(true)
   fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
@@ -292,9 +290,14 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
   const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
   character = commit(
     character,
-    setRacialSpellChoice(character, character.provenance, profile.id, 'direct-_-choose-0', [
-      'Light|TCE',
-    ]),
+    setRacialSpellChoice(
+      character,
+      character.provenance,
+      profile.id,
+      profile.choices![0].id,
+      ['Light|TCE'],
+      nativeRaceResolution(parent, child),
+    ),
   )
   character = commit(
     character,
@@ -318,7 +321,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
     const active = useCharacterStore((state) => state.activeCharacter)!
     return useSpellProfileMutations(active.spells.spellProfiles, new Map())
   })
-  act(() => result.current.setRacialSpellChoice(profile.id, 'direct-_-choose-0', []))
+  act(() => result.current.setRacialSpellChoice(profile.id, profile.choices![0].id, []))
   const saved = characterPersistenceSchema.parse(
     useCharacterStore.getState().activeCharacter,
   ) as Character
@@ -330,4 +333,53 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
   ])
   expect(character).toEqual(original)
+})
+
+test('the actual class picker offers a native expanded target without automatically learning it or locking an independently granted racial spell', async () => {
+  const race = {
+    name: 'Expanded caster',
+    source: 'PHB',
+    additionalSpells: [{ expanded: { s1: ['healing word|PHB'] }, known: { 1: ['light#c'] } }],
+  } as Race5e
+  const character = buildInitialCharacter(
+    {
+      initial: { name: 'Expanded list', originSystem: '2014', allowedSources: ['PHB'] },
+      race,
+      classEntity: makeClassFixture({
+        cantripProgression: [1],
+        spellsKnownProgression: [1],
+        spellcastingAbility: 'int',
+      }),
+    },
+    new Map(),
+    () => [],
+  )
+  const available = [
+    spell('Light', 'PHB'),
+    {
+      ...spell('Healing Word', 'PHB', 1),
+      classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+    },
+    spell('Shield', 'PHB', 1),
+  ]
+  const gameData = makeGameDataFixture({ races: [race], spells: available })
+  gameData.lookups = buildGameDataLookups(gameData)
+  useGameDataStore.setState({ gameData })
+  const props = classProps(character, available)
+  expect(character.provenance.spells['healing word']).toBeUndefined()
+  render(<BuildClassModals {...props} />)
+  await waitFor(() => expect(screen.getByText('Healing Word')).toBeTruthy())
+  expect(screen.getByText('Light').closest('button')!.disabled).toBe(false)
+  fireEvent.click(screen.getByText('Light'))
+  fireEvent.click(screen.getByText('Healing Word'))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  expect(props.onSetClassSpellSelectionsAtLevel).toHaveBeenCalledWith(
+    'Wizard',
+    'PHB',
+    1,
+    expect.arrayContaining([
+      { name: 'Healing Word|PHB', spellLevel: 1, school: 'A' },
+      { name: 'Light|PHB', spellLevel: 0, school: 'A' },
+    ]),
+  )
 })

@@ -16,6 +16,7 @@ export interface SpellListItem {
   kind: 'cantrip' | 'spell'
   prepared: boolean
   isFixed?: boolean
+  removable?: boolean
 }
 
 export interface PreparedCasterSpellItem {

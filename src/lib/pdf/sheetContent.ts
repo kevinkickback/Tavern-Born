@@ -208,16 +208,31 @@ export function planSheetContent(
       }),
     )
   }
+  for (const page of vm.spellcastingPages) {
+    const unknown = page.spellRows.filter(
+      (row) =>
+        row.level !== 'C' &&
+        !/^[1-9]$/.test(row.level) &&
+        selectedSpells.some((selected) => (selected.id ?? selected.name) === (row.id ?? row.name)),
+    )
+    if (unknown.length)
+      overflow.push({
+        id: 'unknown-spell-levels:' + page.detail.profileId,
+        groupId: 'spells',
+        title: page.detail.sourceName + ': spells with unknown levels',
+        text: unknown.map((row) => row.name + ' — spell level unknown').join('\n'),
+      })
+  }
   const castingLimit = template.edition === '2024' ? 1 : mpmb ? 2 : Infinity
-  if (vm.spellcastingDetails.length > castingLimit)
+  if (vm.spellcastingSources.length > castingLimit)
     overflow.push({
       id: 'capacity:spellcasting-profiles',
       title: 'Additional spellcasting abilities',
-      text: vm.spellcastingDetails
+      text: vm.spellcastingSources
         .slice(castingLimit)
         .map(
           (detail) =>
-            `${detail.className}: ${detail.spellcastingAbility}; save DC ${detail.spellSaveDC}; attack ${detail.spellAttackBonus}`,
+            `${detail.sourceName}: ${detail.spellcastingAbility ?? 'unselected ability'}; save DC ${detail.spellSaveDC ?? 'unknown'}; attack ${detail.spellAttackBonus ?? 'unknown'}`,
         )
         .join('\n'),
     })

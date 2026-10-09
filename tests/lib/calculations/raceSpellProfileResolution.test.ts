@@ -52,7 +52,7 @@ describe('resolved racial spell profiles', () => {
     })
     const racial = profiles(race, race.subraces![0]).find((profile) => profile.type === 'racial')
     expect(racial?.fixedSpells).toEqual(['light|PHB'])
-    expect(racial?.choices).toBeUndefined()
+    expect(racial?.choices).toEqual([])
   })
 
   test('an inherited version choice retains its filter and count', () => {

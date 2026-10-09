@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import {
@@ -13,6 +14,7 @@ export function useClassProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useItemLookup()
+  const calculationContext = useCharacterCalculationContext(character)
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -40,13 +42,15 @@ export function useClassProvenanceMutations() {
       subclass?: { name: string; source?: string },
     ) => {
       if (!character) return
-      const result = applyClassSelectionCommand(character, ledger, cls, subclass, itemLookup)
+      const result = applyClassSelectionCommand(character, ledger, cls, subclass, itemLookup, {
+        raceResolution: calculationContext?.raceResolution,
+      })
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter, itemLookup],
+    [character, ledger, updateCharacter, itemLookup, calculationContext],
   )
 
   const applyClassEquipmentChoice = useCallback(

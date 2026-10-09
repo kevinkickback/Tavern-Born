@@ -86,9 +86,12 @@ function getCapacityIssues(
         issues.push(
           capacityIssue(
             `spells-level-${level}${spellPages.length > 1 ? `-page-${index + 1}` : ''}`,
-            spellPages.length > 1 ? `${page.detail?.className}: ${label}` : label,
-            page.spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
-              .length,
+            spellPages.length > 1 ? `${page.detail?.sourceName}: ${label}` : label,
+            page.spellRows.filter(
+              (row) =>
+                (row.level === 'C' ? 0 : /^[1-9]$/.test(row.level) ? Number(row.level) : null) ===
+                level,
+            ).length,
             fields.length,
           ),
         )
@@ -129,7 +132,7 @@ function getCapacityIssues(
       capacityIssue(
         'spellcasting-profiles',
         'Spellcasting summaries',
-        viewModel.spellcastingDetails.length,
+        viewModel.spellcastingSources.length,
         capacity.spellcastingProfiles,
       ),
       capacityIssue(
@@ -198,7 +201,7 @@ function getCapacityIssues(
       capacityIssue(
         'spellcasting-profiles',
         'Spellcasting summaries',
-        viewModel.spellcastingDetails.length,
+        viewModel.spellcastingSources.length,
         capacity.spellcastingProfiles,
       ),
       capacityIssue(
@@ -341,7 +344,9 @@ export function getPdfExportPreflight(
   )
   const hasPactPage =
     getCharacterSheetTemplate(templateId).edition === '2014' &&
-    getOfficial2014SpellPages(viewModel).some((page) => page.detail?.casterProgression === 'pact')
+    getOfficial2014SpellPages(viewModel).some(
+      (page) => page.detail?.classDetail?.casterProgression === 'pact',
+    )
   if (
     pactSlots.length &&
     !hasPactPage &&

@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatModifier, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import type { RacialSpellcastingDetail } from '@/lib/calculations/spellProfiles.casting'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { cn } from '@/lib/utils'
 
@@ -40,8 +41,7 @@ interface SpellcastingDetailsCardProps {
   isSpellcaster: boolean
   spellcastingDetails: SpellcastingDetailLike[]
   racialProfiles?: RacialProfileLike[]
-  proficiencyBonus?: number
-  abilityModifiers?: Record<string, number>
+  racialSpellcastingDetails?: RacialSpellcastingDetail[]
   onSetRacialCastingAbility?: (profileId: string, ability: string) => void
   hasMultipleSpellcastingClasses: boolean
   sharedSlots: SharedSlotLike[]
@@ -71,8 +71,7 @@ export function SpellcastingDetailsCard({
   isSpellcaster,
   spellcastingDetails,
   racialProfiles = [],
-  proficiencyBonus = 0,
-  abilityModifiers = {},
+  racialSpellcastingDetails = [],
   onSetRacialCastingAbility,
   hasMultipleSpellcastingClasses,
   sharedSlots,
@@ -147,14 +146,14 @@ export function SpellcastingDetailsCard({
             })}
 
             {racialProfiles.map((profile) => {
-              const hasMultipleAbilityOptions = (profile.castingAbilityOptions?.length ?? 0) > 1
+              const hasMultipleAbilityOptions = (profile.castingAbilityOptions?.length ?? 0) > 0
               const ability = profile.castingAbility
               const normalizedAbility = ability ? normalizeAbilityName(ability) : null
-              const abilityMod = normalizedAbility
-                ? (abilityModifiers[normalizedAbility] ?? 0)
-                : null
-              const spellSaveDC = abilityMod !== null ? 8 + proficiencyBonus + abilityMod : null
-              const spellAttackBonus = abilityMod !== null ? proficiencyBonus + abilityMod : null
+              const detail = racialSpellcastingDetails.find(
+                (candidate) => candidate.profileId === profile.id,
+              )
+              const spellSaveDC = detail?.spellSaveDC ?? null
+              const spellAttackBonus = detail?.spellAttackBonus ?? null
 
               return (
                 <div
@@ -178,7 +177,10 @@ export function SpellcastingDetailsCard({
                         value={profile.castingAbility ?? ''}
                         onValueChange={(value) => onSetRacialCastingAbility?.(profile.id, value)}
                       >
-                        <SelectTrigger className="h-8 w-auto min-w-24 max-w-36 cursor-pointer text-xs">
+                        <SelectTrigger
+                          aria-label={`${profile.raceName ?? profile.label} casting ability`}
+                          className="h-8 w-auto min-w-24 max-w-36 cursor-pointer text-xs"
+                        >
                           <SelectValue placeholder="Choose..." />
                         </SelectTrigger>
                         <SelectContent>

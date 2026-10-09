@@ -269,10 +269,15 @@ export async function generateFilledCharacterSheetPdf(
     options.pages?.notes !== false &&
     (plan.some((part) => part.id === 'notes') ||
       actionDetails.length > 0 ||
+      uniqueOverflow.some((section) => section.id.startsWith('unknown-spell-levels:')) ||
       (continueInNotes && uniqueOverflow.length > 0))
   const notesContent = continueInNotes
     ? uniqueOverflow
-    : uniqueOverflow.filter((section) => actionDetails.some((detail) => detail.id === section.id))
+    : uniqueOverflow.filter(
+        (section) =>
+          section.id.startsWith('unknown-spell-levels:') ||
+          actionDetails.some((detail) => detail.id === section.id),
+      )
   let notesPageCount = 0
   if (includeNotes) {
     const source = options.supplements?.notes ?? (await options.loadNotes?.())

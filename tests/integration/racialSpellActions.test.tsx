@@ -4,16 +4,24 @@ import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup, buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { deriveSpellActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { deriveRaceSpellSelection } from '@/lib/calculations/raceSpellSelection'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { applyLevelUp } from '@/lib/character/commands/classCommands'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import {
+  setRacialCastingAbility,
+  setRacialSpellChoice,
+} from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 const catalog = vi.hoisted(() => ({
   filtered: [] as Race5e[],
@@ -71,39 +79,37 @@ function install(races: Race5e[], filtered = races) {
   catalog.lookups = { ...catalog.lookups, racesByKey: buildRaceLookup(races) }
 }
 
-function savedChoice(parent: Race5e, child: Race5e, profileName: string): Character {
-  const character = makeCharacterFixture({
-    race: parent.name,
-    raceSource: parent.source,
-    subrace: child.name,
-    subraceSource: child.source,
-  })
-  character.spells.spellProfiles.push({
-    id: `racial:${profileName}|${child.source}`,
-    type: 'racial',
-    label: 'Racial Spells',
-    raceName: profileName,
-    raceSource: child.source,
-    castingAbility: 'wis',
-    choices: [
-      {
-        id: 'direct-_-choose-0',
-        count: 1,
-        isCantrip: true,
-        filter: { level: 0, classes: ['Sorcerer'] },
-        selected: ['Shocking Grasp|PHB'],
-      },
-    ],
-    cantrips: ['Shocking Grasp|PHB'],
-    spellsKnown: [],
-    preparedSpells: [],
-    alwaysPrepared: true,
-  })
-  character.provenance = addSpellGrant(character.provenance, 'Shocking Grasp|PHB', {
-    ...makeSourceTag('subrace', child.name, 'choice', child.source),
-    grantVariant: 'direct-_-choose-0',
-  })
-  return character
+// Establish valid previous rules before the test installs missing or replacement metadata.
+function savedChoice(parent: Race5e, child: Race5e): Character {
+  const selection = deriveRaceSpellSelection(parent, child)
+  const parentHasChoice = parseRaceSpellBlocks(selection.parentAdditionalSpells).some(
+    (block) => block.choices.length,
+  )
+  const childHasChoice = parseRaceSpellBlocks(selection.subraceAdditionalSpells).some(
+    (block) => block.choices.length,
+  )
+  const previousParent = parentHasChoice ? parent : { ...parent, additionalSpells: undefined }
+  const previousChild =
+    childHasChoice || parentHasChoice ? child : { ...child, additionalSpells: [choiceBlock] }
+  let character = buildInitialCharacter(
+    { initial: makeCharacterFixture(), race: previousParent, subrace: previousChild },
+    new Map(),
+    () => [],
+  )
+  const profile = character.spells.spellProfiles.find(
+    (entry) => entry.type === 'racial' && entry.choices?.length,
+  )!
+  const selected = setRacialSpellChoice(
+    character,
+    character.provenance,
+    profile.id,
+    profile.choices![0].id,
+    ['Shocking Grasp|PHB'],
+    nativeRaceResolution(previousParent, previousChild),
+  )
+  character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+  const ability = setRacialCastingAbility(character, character.provenance, profile.id, 'wis')
+  return { ...character, ...ability.characterPatch, provenance: ability.provenanceUpdate }
 }
 
 test.each([
@@ -158,7 +164,7 @@ test.each([
     { ...shockingGrasp, name: 'Burning Hands', level: 1 },
     { ...shockingGrasp, name: 'Flaming Sphere', level: 2 },
   ])
-  const previous = savedChoice(parent, child, 'Child Parent')
+  const previous = savedChoice(parent, child)
   previous.classProgression = [
     { name: 'Cleric', source: 'PHB', levels: 2, subclass: 'Light Domain', subclassSource: 'PHB' },
   ]
@@ -249,7 +255,7 @@ test.each([
     { ...shockingGrasp, name: 'Burning Hands', level: 1 },
     { ...shockingGrasp, name: 'Parent Spell' },
   ])
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   character.classProgression = [
     { name: 'Cleric', source: 'PHB', levels: 2, subclass: 'Light Domain', subclassSource: 'PHB' },
     { name: 'Fighter', source: 'PHB', levels: 1 },
@@ -324,7 +330,7 @@ test.each([
     { ...shockingGrasp, name: 'Burning Hands', level: 2, entries: ['Original rules.'] },
     { ...otherPrinting, name: 'Burning Hands', level: 2, entries: ['Revised rules.'] },
   ])
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   character.classProgression = [
     { name: 'Cleric', source: 'PHB', levels: 3, subclass: 'Light Domain', subclassSource: 'PHB' },
   ]
@@ -462,7 +468,7 @@ test.each([
     { ...shockingGrasp, name: 'Burning Hands', level: 1 },
     { ...otherPrinting, name: 'Burning Hands', level: 1 },
   ])
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   character.classProgression = [
     { name: 'Cleric', source: 'PHB', levels: 3, subclass: 'Light Domain', subclassSource: 'PHB' },
   ]
@@ -485,12 +491,12 @@ test.each([
   savedProfile.choices = undefined
   if (owner === 'racial') {
     delete character.provenance.spells['shocking grasp']
+    savedProfile.racial!.fixed = [{ reference: 'Burning Hands|PHB', isCantrip: false }]
     savedProfile.fixedSpells = ['Burning Hands|PHB']
-    character.provenance = addSpellGrant(
-      character.provenance,
-      'Burning Hands|PHB',
-      makeSourceTag('subrace', child.name, 'fixed', child.source),
-    )
+    character.provenance = addSpellGrant(character.provenance, 'Burning Hands|PHB', {
+      ...makeSourceTag('subrace', child.name, 'fixed', child.source),
+      grantVariant: savedProfile.racial!.suite!.id,
+    })
   }
   expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   const before = structuredClone(character)
@@ -594,17 +600,14 @@ test.each([
   const child = parent.subraces?.[0]
   expect(child?.name).toBe('Draconic Sorcery')
   if (!child) throw new Error('Expected the parsed version')
-  assertSavedChoiceAcrossConsumers(
-    savedChoice(parent, child, 'Draconic Sorcery Kobold'),
-    'Draconic Sorcery Kobold',
-  )
+  assertSavedChoiceAcrossConsumers(savedChoice(parent, child), 'Draconic Sorcery')
 })
 
 test('a top-level child keeps its existing child-only source-qualified profile identity', () => {
   const parent = { name: 'Parent', source: 'PHB' } as Race5e
   const child = { name: 'Child', source: 'HB', additionalSpells: [choiceBlock] } as Race5e
   install([parent, child])
-  assertSavedChoiceAcrossConsumers(savedChoice(parent, child, 'Child'), 'Child')
+  assertSavedChoiceAcrossConsumers(savedChoice(parent, child), 'Child')
 })
 
 test('named traditional parent spell blocks use only the selected child in every projection', () => {
@@ -619,7 +622,7 @@ test('named traditional parent spell blocks use only the selected child in every
     ],
   } as Race5e
   install([parent])
-  assertSavedChoiceAcrossConsumers(savedChoice(parent, child, 'Selected Parent'), 'Selected Parent')
+  assertSavedChoiceAcrossConsumers(savedChoice(parent, child), 'Parent')
 })
 
 test.each([
@@ -641,7 +644,7 @@ test.each([
   install([parent])
   const child = parent.subraces?.[0]
   if (!child) throw new Error('Expected the parsed version')
-  const character = savedChoice(parent, child, 'Removed Parent')
+  const character = savedChoice(parent, child)
   const before = structuredClone(character)
   const { result: actionsResult } = renderHook(() => useCharacterActions(character))
   const context = createCharacterCalculationContext(character, catalog.lookups)
@@ -696,7 +699,7 @@ test('different same-name race printings cannot borrow a stored racial choice', 
     subraces: [child],
     additionalSpells: [choiceBlock],
   } as Race5e
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   const currentChild = { ...child, source: 'HB' } as Race5e
   const currentParent = { ...parent, source: 'HB', subraces: [currentChild] } as Race5e
   install([parent, currentParent])
@@ -730,7 +733,6 @@ test('unavailable race data preserves the existing saved-profile projection fall
   const character = savedChoice(
     { name: 'Parent', source: 'PHB' } as Race5e,
     { name: 'Child', source: 'PHB' } as Race5e,
-    'Child Parent',
   )
   const before = structuredClone(character)
   const expected = expect.objectContaining({
@@ -750,7 +752,7 @@ test.each([
 ] as const)('%s preserves the existing fallback when the saved child cannot resolve', (availability) => {
   const parent = { name: 'Parent', source: 'PHB' } as Race5e
   const child = { name: 'Child', source: 'HB' } as Race5e
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   install([
     availability === 'missing child'
       ? parent
@@ -778,7 +780,7 @@ test.each([
     additionalSpells: [{ known: { 1: ['parent spell#c'] } }],
   } as Race5e
   const child = { name: 'Child', source: 'HB' } as Race5e
-  const character = savedChoice(parent, child, 'Child Parent')
+  const character = savedChoice(parent, child)
   const parentSpell = { ...shockingGrasp, name: 'Parent Spell' }
   catalog.lookups.spellsByKey = buildSpellLookup([shockingGrasp, parentSpell])
   install([

@@ -20,7 +20,10 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
-import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import {
+  getNativeExpandedSpellReferences,
+  getNativeRacialSpellOwners,
+} from '@/lib/calculations/nativeRacialSpells'
 import {
   dedupeSpellNames,
   formatSpellReference,
@@ -36,7 +39,7 @@ import {
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
-import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   findFocusedProvenanceChoice,
   getReadinessFocus,
@@ -56,6 +59,7 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
+import { NativeRacialSpellControls } from './components/NativeRacialSpellControls'
 
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
 const SPELLS_HINT_WIDTH = 300
@@ -91,6 +95,7 @@ export function SpellsPage() {
     spellProfiles,
     spellProvenance: ledger,
     spellcastingDetails,
+    racialSpellcastingDetails,
     sharedSlots,
     pactSlots,
     isSpellcaster,
@@ -101,8 +106,8 @@ export function SpellsPage() {
     removeSpellFromProfile,
     setProfileSpells,
     togglePrepared,
-    removeRacialSpell,
     setRacialSpellChoice,
+    setRacialSpellSuite,
     setRacialCastingAbility,
   } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
 
@@ -227,6 +232,18 @@ export function SpellsPage() {
     return { sourceMap, rows }
   }, [character, calculationContext?.classes, spellByName])
 
+  const expandedSpellKeys = useMemo(
+    () =>
+      new Set(
+        character
+          ? [
+              ...getNativeExpandedSpellReferences(character, calculationContext?.raceResolution),
+            ].map((reference) => getSpellReferenceKey(reference))
+          : [],
+      ),
+    [character, calculationContext],
+  )
+
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
     for (const detail of spellcastingDetails) {
@@ -243,7 +260,8 @@ export function SpellsPage() {
           spell.level > 0 &&
           spell.level <= detail.maxSpellLevel &&
           (isSpellOnClassList(spell, profile.className, profile.classSource) ||
-            fixedSet.has(getSpellNameKey(spell.name))),
+            fixedSet.has(getSpellNameKey(spell.name)) ||
+            expandedSpellKeys.has(getSpellReferenceKey(spell.name, spell.source))),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
       map.set(
@@ -271,7 +289,7 @@ export function SpellsPage() {
       )
     }
     return map
-  }, [allSpells, spellcastingDetails, spellProfiles])
+  }, [allSpells, spellcastingDetails, spellProfiles, expandedSpellKeys])
 
   const spellListItems = useMemo(() => {
     const items: SpellListItem[] = []
@@ -288,6 +306,7 @@ export function SpellsPage() {
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
+          removable: profile.type !== 'racial',
           className: profile.className,
           classSource: profile.classSource,
           alwaysPrepared,
@@ -313,6 +332,7 @@ export function SpellsPage() {
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
+          removable: profile.type !== 'racial',
           className: profile.className,
           classSource: profile.classSource,
           alwaysPrepared,
@@ -453,18 +473,11 @@ export function SpellsPage() {
     [spellProfiles],
   )
 
-  const proficiencyBonus = useMemo(
-    () => getProficiencyBonus(getTotalCharacterLevel(character)),
-    [character],
+  const racialOwners = useMemo(
+    () =>
+      character ? getNativeRacialSpellOwners(character, calculationContext?.raceResolution) : [],
+    [character, calculationContext],
   )
-
-  const abilityModifiers = useMemo(() => {
-    const scores = calculationContext?.abilityScores.total
-    if (!scores) return {} as Record<string, number>
-    return Object.fromEntries(
-      Object.entries(scores).map(([key, val]) => [key, getAbilityModifier(val as number)]),
-    ) as Record<string, number>
-  }, [calculationContext])
 
   const characterSpellNames = useMemo(() => {
     const names = new Set<string>()
@@ -477,84 +490,39 @@ export function SpellsPage() {
 
   const racialChoiceModalConfig = useMemo(() => {
     if (!activeRacialChoice) return null
-
-    const initialSelectedNames = activeRacialChoice.selected ?? []
+    const filter = activeRacialChoice.filter
     const allowedSpellReferences = activeRacialChoice.pool
       ? new Set(activeRacialChoice.pool)
-      : undefined
-
-    const otherProfileSpells = new Set<string>()
-    for (const profile of spellProfiles) {
-      if (profile.id === activeRacialChoice.profileId) continue
-      for (const name of profile.cantrips) otherProfileSpells.add(name)
-      for (const name of profile.spellsKnown) otherProfileSpells.add(name)
-    }
-    const lockedNames = otherProfileSpells.size > 0 ? otherProfileSpells : undefined
-
-    if (activeRacialChoice.pool) {
-      const poolAllowedLevels = activeRacialChoice.isCantrip ? new Set(['0']) : undefined
-      return {
-        title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
-        allowedSpellReferences,
-        initialSelectedNames,
-        allowedLevels: poolAllowedLevels,
-        lockedNames,
-        className: undefined as string | undefined,
-        classSource: undefined as string | undefined,
-        classListOverrides: new Set(activeRacialChoice.pool),
-        initialFilters: poolAllowedLevels
-          ? { level: poolAllowedLevels, school: new Set<string>(), type: new Set<string>() }
-          : undefined,
-        categories: [
-          {
-            key: 'selection',
-            label: activeRacialChoice.isCantrip ? 'cantrips' : 'spells',
-            max: activeRacialChoice.count,
-            test: () => true,
-          },
-        ],
-      }
-    }
-
-    if (activeRacialChoice.filter) {
-      const { level, classes } = activeRacialChoice.filter
-      const filterAllowedLevels = new Set([String(level)])
-      return {
-        title: `Choose ${activeRacialChoice.count} ${level === 0 ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''} from ${classes.join(', ')} list`,
-        allowedSpellReferences,
-        initialSelectedNames,
-        allowedLevels: filterAllowedLevels,
-        lockedNames,
-        className: classes[0],
-        classSource: undefined as string | undefined,
-        classListOverrides: undefined as Set<string> | undefined,
-        initialFilters: {
-          level: filterAllowedLevels,
-          school: new Set<string>(),
-          type: new Set<string>(),
-        },
-        categories: [
-          {
-            key: 'selection',
-            label: level === 0 ? 'cantrips' : 'spells',
-            max: activeRacialChoice.count,
-            test: () => true,
-          },
-        ],
-      }
-    }
-
+      : new Set(
+          allSpells
+            .filter(
+              (spell) =>
+                !filter ||
+                (spell.level === filter.level &&
+                  (!filter.classes.length ||
+                    filter.classes.some((name) => isSpellOnClassList(spell, name)))),
+            )
+            .map((spell) => formatSpellReference(spell.name, spell.source)),
+        )
+    const allowedLevels = filter
+      ? new Set([String(filter.level)])
+      : activeRacialChoice.isCantrip
+        ? new Set(['0'])
+        : undefined
     return {
-      title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
+      title:
+        'Choose ' +
+        activeRacialChoice.count +
+        (activeRacialChoice.isCantrip ? ' cantrips' : ' spells'),
       allowedSpellReferences,
-      initialSelectedNames,
-      allowedLevels: activeRacialChoice.isCantrip ? new Set(['0']) : undefined,
-      lockedNames,
-      className: undefined as string | undefined,
-      classSource: undefined as string | undefined,
-      classListOverrides: undefined as Set<string> | undefined,
-      initialFilters: activeRacialChoice.isCantrip
-        ? { level: new Set(['0']), school: new Set<string>(), type: new Set<string>() }
+      initialSelectedNames: activeRacialChoice.selected,
+      allowedLevels,
+      lockedNames: undefined,
+      className: undefined,
+      classSource: undefined,
+      classListOverrides: allowedSpellReferences,
+      initialFilters: allowedLevels
+        ? { level: allowedLevels, school: new Set<string>(), type: new Set<string>() }
         : undefined,
       categories: [
         {
@@ -565,7 +533,7 @@ export function SpellsPage() {
         },
       ],
     }
-  }, [activeRacialChoice, spellProfiles])
+  }, [activeRacialChoice, allSpells])
 
   const handleConfirmRacialChoice = useCallback(
     (names: string[]) => {
@@ -585,19 +553,13 @@ export function SpellsPage() {
 
   const handleRemoveSpell = (item: SpellListItem) => {
     const profile = spellProfiles.find((p) => p.id === item.profileId)
-    if (profile?.type === 'racial' && profile.choices) {
-      const choice = profile.choices.find((c) => c.selected.includes(item.name))
-      if (choice) {
-        removeRacialSpell(item.profileId, choice.id, item.name)
-        return
-      }
-    }
+    if (profile?.type === 'racial') return
     removeSpellFromProfile(item.profileId, item.name, item.kind)
   }
 
   const handleOpenRacialChoiceModal = (profileId: string, choiceId: string) => {
     const profile = spellProfiles.find((p) => p.id === profileId)
-    if (!profile?.choices) return
+    if (!profile?.choices || !racialOwners?.some((owner) => owner.id === profileId)) return
     const choice = profile.choices.find((c) => c.id === choiceId)
     if (!choice) return
 
@@ -708,6 +670,15 @@ export function SpellsPage() {
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="mx-auto w-full max-w-6xl p-4">
+                  {(spellView === 'all' || spellView === 'racial') && racialProfiles.length > 0 ? (
+                    <NativeRacialSpellControls
+                      profiles={racialProfiles}
+                      owners={racialOwners}
+                      onSetSuite={setRacialSpellSuite}
+                      onEditChoice={handleOpenRacialChoiceModal}
+                      onClearChoice={setRacialSpellChoice}
+                    />
+                  ) : null}
                   <SpellProfileManager
                     spellProfiles={visibleSpellProfiles}
                     focusProfileId={focusedProfile?.id}
@@ -724,7 +695,6 @@ export function SpellsPage() {
                       if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
                       setBonusSpellModalOpen(true)
                     }}
-                    onOpenRacialChoice={handleOpenRacialChoiceModal}
                     renderSpellName={({ item, spell, sourceContext }) => (
                       <SpellNameTooltip
                         name={item.name}
@@ -750,8 +720,7 @@ export function SpellsPage() {
                     isSpellcaster={isSpellcaster}
                     spellcastingDetails={spellcastingDetails}
                     racialProfiles={racialProfiles}
-                    proficiencyBonus={proficiencyBonus}
-                    abilityModifiers={abilityModifiers}
+                    racialSpellcastingDetails={racialSpellcastingDetails}
                     onSetRacialCastingAbility={setRacialCastingAbility}
                     hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
                     sharedSlots={sharedSlots}
@@ -774,7 +743,6 @@ export function SpellsPage() {
         title={racialChoiceModalConfig?.title}
         spells={allSpells}
         lockedNames={racialChoiceModalConfig?.lockedNames}
-        characterSpellNames={characterSpellNames}
         categories={racialChoiceModalConfig?.categories}
         initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
         initialFilters={racialChoiceModalConfig?.initialFilters}

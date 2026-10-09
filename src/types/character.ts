@@ -344,6 +344,8 @@ type SpellProfileType = 'class' | 'special' | 'racial'
 
 export interface RaceSpellChoice {
   id: string
+  /** Eligibility of this currently applied native descriptor, never a future schedule. */
+  level?: number
   count: number
   isCantrip: boolean
   filter?: { level: number; classes: string[] }
@@ -351,8 +353,22 @@ export interface RaceSpellChoice {
   selected: string[]
 }
 
+export interface RacialSpellContext {
+  parent: { name: string; source: string }
+  child?: { name: string; source: string }
+}
+
+/** Only the currently applied suite is saved; alternative catalogs and future schedules stay live. */
+interface RacialSpellState {
+  context: RacialSpellContext
+  ownerType: 'race' | 'subrace'
+  mode: 'mandatory' | 'alternative'
+  suite?: { id: string; name?: string }
+  fixed: Array<{ reference: string; isCantrip: boolean; dailyUses?: number }>
+}
+
 export interface SpellProfile {
-  /** Stable profile key: class profiles use `class:<name>|<source>`, special uses `special:unrestricted`, racial uses `racial:<name>|<source>`. */
+  /** Stable profile key: class profiles use `class:<name>|<source>`, special uses `special:unrestricted`, racial uses a structural identity encoding the complete selected context and actual owner. */
   id: string
   type: SpellProfileType
   label: string
@@ -360,6 +376,7 @@ export interface SpellProfile {
   classSource?: string
   raceName?: string
   raceSource?: string
+  racial?: RacialSpellState
   castingAbility?: string
   castingAbilityOptions?: string[]
   choices?: RaceSpellChoice[]

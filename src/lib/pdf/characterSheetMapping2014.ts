@@ -200,8 +200,8 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     (item) => item.equipped && (item.armorType === 'shield' || item.type === 'S'),
   )
   const armorAdjustments = character.armorClassAdjustments ?? []
-  const spellcastingOne = viewModel.spellcastingDetails[0]
-  const spellcastingTwo = viewModel.spellcastingDetails[1]
+  const spellcastingOne = viewModel.spellcastingSources[0]
+  const spellcastingTwo = viewModel.spellcastingSources[1]
   const strengthScore = viewModel.effectiveAbilityScores.strength
   const ammoRows = getAmmunitionRows(viewModel)
   const companion = viewModel.companions[0]

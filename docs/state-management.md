@@ -199,7 +199,7 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-Schema 6 requires one active source-qualified racial owner set: the selected parent and optional
+Schema 7 requires one active source-qualified racial owner set: the selected parent and optional
 child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals
 within each represented owner. Array order does not change block identity; integer amounts are
@@ -207,38 +207,30 @@ explicit, and selections/status agree with the bounded saved player slots. Ambig
 records are rejected rather than repaired. Schema 4 did not validate those block associations.
 Revised (2024) origin saves contain no racial ability grants or choice blocks; independent
 background, class and manual ability ownership remains supported.
-Racial spell profiles store complete `name|source` targets in their fixed grants, materialized
-spells, selected choices and explicit pools. Racial spell provenance stores the target printing in
-`grantSource`, separately from its racial owner's `sourceRef`; choice tags also require their
-descriptor `grantVariant`. An unavailable target remains explicit and cannot borrow another
-printing. Selected targets, materialized spells and choice ownership must agree, with unique
-logical selections within the descriptor quota.
-Each selected target must also belong to the saved descriptor's explicit pool when one is present;
-normalization preserves exact printing identity, and an empty pool permits no selected targets.
-An absent pool remains a filter-based or unrestricted choice; validation invents no catalog eligibility.
-A resolved descriptor/selection refresh retracts
-removed choice tags atomically with the refreshed profiles, including when another spell is edited.
-Unavailable racial metadata retains the saved choices and their tags. Exact resolved parent/child
-data rebuilds supported fixed grants and ownership together for read projections and spell edits;
-native suite activation and descriptor lineage remain separate rules-resolution work. Schema 5 did
-not require this target identity.
-The current aggregate choice writer uses the selected child owner when present, otherwise the
-parent. Strict choice correspondence, Sync and removal match that same complete normalized owner;
-another active racial owner cannot satisfy it. This does not establish a native descriptor's lineage.
-Racial selection dialogs preserve unavailable exact targets within their single quota. Catalog/class
-dialogs require missing selections to be restored or explicitly removed before confirmation, so
-missing level/school metadata cannot silently change the saved spell kind or consume another quota.
-Confirmation rechecks every real category maximum after metadata restoration, so restored items
-cannot increase a selection beyond its quota; the player explicitly resolves any excess first.
-Every materialized racial cantrip or known spell must be an exact target in the profile's fixed
-grants or a selected choice of that spell kind. An extra unselected spell or another printing is
-rejected rather than projected as a benefit. Each fixed declaration also requires a fixed spell tag
-for that exact target printing from the complete normalized selected parent or child identity.
-Independent manual, class or feat ownership cannot authorize a racial fixed declaration. This
-validates saved attribution; it does not infer native descriptor lineage or spell kind from an
-unavailable catalog.
-Schema 2–5 characters must be recreated; relabeling their version cannot establish valid ownership.
-Incompatible originals from the saved library remain exportable for use in a compatible older app.
+Racial spell profiles persist player suite/ability/target setup and a typed current applied snapshot.
+The snapshot records exact parent/child context, actual granting owner, mandatory/alternative mode,
+selected suite, currently eligible descriptors and fixed target printing/kind. The live alternative
+catalog and future grant schedule are derived from parsed rules and are not stored as a second
+rules engine. Class/special profiles cannot carry racial choices, context or ability-option metadata.
+
+Catalog-independent admission checks the complete relation in both directions: every applied target
+has matching materialization and exact selected suite/descriptor ownership, and every racial spell
+tag belongs to that relation. Foreign contexts/owners, duplicate structural IDs, unselected suite
+grants, wrong kind/printing, missing or extra materialization, out-of-pool targets and logical
+quota violations reject. Independent fixed, descriptor, class/feat/manual overlaps remain valid.
+Structural IDs validate scope; they never supply missing game rules.
+
+Available-rule refresh and intentional edits commit materialization and provenance atomically.
+Missing either exact context reference retains the whole snapshot, including through level changes;
+restoration evaluates the current live rules and resets incompatible structural setup. Alternative
+suite and descriptor Clear work from saved membership without missing-data inference. Shared/Pact
+usage and independent preparation remain mutable and retain their existing shapes.
+
+Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
+supported. Schema 2–6 characters must be recreated; merely relabeling a version cannot establish
+native ownership. Incompatible originals remain untouched in durable quarantine and exportable
+through hydration, rejected imports in either order, retry and later successful library writes.
+There are no prerelease converters, flattened-profile adapters or age-based rejection.
 
 For a breaking change, update together:
 

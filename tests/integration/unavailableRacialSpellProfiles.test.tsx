@@ -7,8 +7,12 @@ import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import {
+  setRacialCastingAbility,
+  setRacialSpellChoice,
+} from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { makeSourceTag } from '@/lib/provenance'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e } from '@/types/5etools'
@@ -21,6 +25,7 @@ import {
   makeGameDataFixture,
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
+import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
@@ -69,7 +74,7 @@ function install(races: Race5e[], classes: Class5e[] = [cleric]) {
   return data
 }
 
-function savedCharacter(withChild = true): Character {
+function savedCharacter(withChild = true, previousChild = child): Character {
   const character = makeCharacterFixture({
     race: 'Parent',
     raceSource: withChild ? 'PHB' : 'HB',
@@ -79,28 +84,6 @@ function savedCharacter(withChild = true): Character {
       { name: 'Cleric', source: 'PHB', levels: 2, subclass: 'Light Domain', subclassSource: 'PHB' },
     ],
   })
-  const racial: SpellProfile = {
-    id: `racial:${withChild ? 'Child Parent' : 'Parent'}|HB`,
-    type: 'racial',
-    label: 'Racial Spells',
-    raceName: withChild ? 'Child Parent' : 'Parent',
-    raceSource: 'HB',
-    castingAbility: 'wis',
-    castingAbilityOptions: ['int', 'wis', 'cha'],
-    cantrips: ['Shocking Grasp|PHB'],
-    spellsKnown: [],
-    preparedSpells: [],
-    choices: [
-      {
-        id: 'direct-_-choose-0',
-        count: 1,
-        isCantrip: true,
-        filter: { level: 0, classes: ['Sorcerer'] },
-        selected: ['Shocking Grasp|PHB'],
-      },
-    ],
-    alwaysPrepared: true,
-  }
   character.spells.spellProfiles = [
     {
       id: 'class:Cleric|PHB',
@@ -114,21 +97,28 @@ function savedCharacter(withChild = true): Character {
       alwaysPrepared: false,
     },
     ...character.spells.spellProfiles.filter((profile) => profile.type === 'special'),
-    racial,
   ]
-  character.provenance!.spells['shocking grasp'] = [
-    {
-      ...makeSourceTag(
-        withChild ? 'subrace' : 'race',
-        withChild ? 'Child' : 'Parent',
-        'choice',
-        'HB',
-      ),
-      grantSource: 'PHB',
-      grantVariant: 'direct-_-choose-0',
-    },
-  ]
-  return character
+  const actualParent = withChild
+    ? parent
+    : { ...parent, source: 'HB', additionalSpells: [choiceBlock], subraces: undefined }
+  const actualChild = withChild ? previousChild : undefined
+  let native = buildInitialCharacter(
+    { initial: character, race: actualParent, subrace: actualChild },
+    new Map(),
+    () => [],
+  )
+  const profile = native.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+  const selected = setRacialSpellChoice(
+    native,
+    native.provenance,
+    profile.id,
+    profile.choices![0].id,
+    ['Shocking Grasp|PHB'],
+    nativeRaceResolution(actualParent, actualChild),
+  )
+  native = { ...native, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+  const ability = setRacialCastingAbility(native, native.provenance, profile.id, 'wis')
+  return { ...native, ...ability.characterPatch, provenance: ability.provenanceUpdate }
 }
 
 function renderSpellEditing() {
@@ -228,7 +218,8 @@ test('raw fallback retains compatible racial choices while class level grants co
   const { result } = renderSpellEditing()
   expect(racialProfiles(result.current.slots.spellProfiles)).toContainEqual(
     expect.objectContaining({
-      id: 'racial:Child Parent|HB',
+      raceName: 'Child',
+      raceSource: 'HB',
       castingAbility: 'wis',
       choices: [expect.objectContaining({ selected: ['Shocking Grasp|PHB'] })],
     }),
@@ -286,12 +277,14 @@ test.each([
   expect(reopened.provenance!.spells['shocking grasp']).toBeUndefined()
 })
 
-test('restored exact metadata replaces obsolete fixed spells and retains compatible choices', () => {
+test('restored changed native rules retract obsolete fixed spells and reset incompatible setup', () => {
   install([])
-  const character = savedCharacter()
+  const character = savedCharacter(true, {
+    ...child,
+    additionalSpells: [{ ...choiceBlock, innate: { 1: ['old spell|HB'] } }],
+  })
   const saved = racialProfiles(character.spells.spellProfiles)[0]
-  saved.fixedSpells = ['Old Spell|HB']
-  saved.spellsKnown = ['Old Spell|HB']
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   setActiveCharacter(character)
   const { result } = renderSpellEditing()
   expect.soft(racialProfiles(result.current.slots.spellProfiles)[0]).toEqual(saved)
@@ -300,13 +293,14 @@ test('restored exact metadata replaces obsolete fixed spells and retains compati
   })
   const restored = racialProfiles(result.current.slots.spellProfiles)[0]
   expect(restored).toMatchObject({
-    id: 'racial:Child Parent|HB',
-    castingAbility: 'wis',
-    cantrips: ['Shocking Grasp|PHB'],
+    raceName: 'Child',
+    raceSource: 'HB',
+    cantrips: [],
     spellsKnown: [],
-    choices: [expect.objectContaining({ selected: ['Shocking Grasp|PHB'] })],
+    choices: [expect.objectContaining({ selected: [] })],
   })
-  expect(restored.fixedSpells).toBeUndefined()
+  expect(restored.fixedSpells).toEqual([])
+  expect(restored.castingAbility).toBeUndefined()
 })
 
 test('clearing an unavailable selected child retracts racial ownership without reviving saved choices on return', () => {
@@ -359,12 +353,12 @@ test('metadata-free prerequisite projection retains selected racial spells witho
 })
 
 test('an unavailable catalog preserves the complete saved racial profile and slot usage through bonus editing', () => {
-  const character = savedCharacter()
+  const character = savedCharacter(true, {
+    ...child,
+    additionalSpells: [{ ...choiceBlock, innate: { 1: ['fixed spell|HB'] } }],
+  })
   const racial = racialProfiles(character.spells.spellProfiles)[0]
-  racial.fixedSpells = ['Fixed Spell|HB']
-  racial.spellsKnown = ['Fixed Spell|HB']
-  racial.preparedSpells = ['Fixed Spell|HB']
-  racial.alwaysPreparedSpells = ['Fixed Spell|HB']
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   character.spells.spellSlots[1] = { max: 2, used: 1 }
   const before = structuredClone(character)
   setActiveCharacter(character)
@@ -373,6 +367,10 @@ test('an unavailable catalog preserves the complete saved racial profile and slo
   act(() => result.current.mutations.setProfileSpells('special:unrestricted', ['Bonus|PHB'], []))
   const saved = useCharacterStore.getState().activeCharacter!
   expect(racialProfiles(saved.spells.spellProfiles)).toEqual([racial])
+  expect(
+    saved.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+  ).toEqual(['Bonus|PHB'])
+  expect(characterPersistenceSchema.safeParse(saved).success).toBe(true)
   expect(saved.spells.spellSlots).toEqual(before.spells.spellSlots)
   expect(saved.provenance!.spells['shocking grasp']).toEqual(
     before.provenance!.spells['shocking grasp'],

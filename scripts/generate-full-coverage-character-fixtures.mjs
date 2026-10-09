@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { createServer } from 'vite'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../src/lib/schema/characterSchemaVersion.ts'
 
 const root = resolve(process.cwd())
@@ -122,7 +123,7 @@ function spellName(reference) {
   return reference.split('|')[0].trim()
 }
 
-function buildSpellProfiles(race, progression, edition) {
+function buildSpellProfiles(progression, edition) {
   const wizard = progression.find((entry) => entry.name === 'Wizard')
   const cleric = progression.find((entry) => entry.name === 'Cleric')
   if (!wizard || !cleric) throw new Error(`${edition} fixture requires Wizard and Cleric levels.`)
@@ -247,47 +248,6 @@ function buildSpellProfiles(race, progression, edition) {
     })),
   ]
 
-  const racialProfile =
-    edition === '2024'
-      ? {
-          id: `racial:${race.name}|${race.source}`,
-          type: 'racial',
-          label: `${race.name} Racial Magic`,
-          raceName: race.name,
-          raceSource: race.source,
-          castingAbility: 'intelligence',
-          castingAbilityOptions: ['intelligence', 'wisdom', 'charisma'],
-          fixedSpells: requireSpellReferences(
-            ['Dancing Lights', 'Faerie Fire', 'Darkness'],
-            edition,
-          ),
-          cantrips: requireSpellReferences(['Dancing Lights'], edition),
-          spellsKnown: requireSpellReferences(['Faerie Fire', 'Darkness'], edition),
-          preparedSpells: [],
-          alwaysPrepared: true,
-        }
-      : {
-          id: `racial:${race.name}|${race.source}`,
-          type: 'racial',
-          label: `${race.name} Racial Magic`,
-          raceName: race.name,
-          raceSource: race.source,
-          castingAbility: 'intelligence',
-          choices: [
-            {
-              id: 'high-elf-cantrip',
-              count: 1,
-              isCantrip: true,
-              filter: { level: 0, classes: ['Wizard'] },
-              selected: [wizardCantripCandidates[5]],
-            },
-          ],
-          cantrips: [wizardCantripCandidates[5]],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: true,
-        }
-
   const profiles = [
     {
       id: `class:Wizard|${wizard.source}`,
@@ -313,7 +273,6 @@ function buildSpellProfiles(race, progression, edition) {
       preparedSpells: clericPrepared,
       alwaysPrepared: false,
     },
-    racialProfile,
     {
       id: 'special:unrestricted',
       type: 'special',
@@ -326,16 +285,7 @@ function buildSpellProfiles(race, progression, edition) {
     },
   ]
 
-  const racialReferences = [...racialProfile.cantrips, ...racialProfile.spellsKnown]
   spellAttributions.push(
-    ...racialReferences.map((reference) => ({
-      reference,
-      sourceType: 'subrace',
-      sourceName: edition === '2024' ? 'Drow Lineage' : 'High',
-      sourceRef: race.source,
-      grantType: edition === '2024' ? 'fixed' : 'choice',
-      ...(edition === '2014' ? { grantVariant: 'high-elf-cantrip' } : {}),
-    })),
     ...[...bonusCantrips, ...bonusSpell].map((reference) => ({
       reference,
       sourceType: 'feat',
@@ -345,7 +295,7 @@ function buildSpellProfiles(race, progression, edition) {
     })),
   )
 
-  return { profiles, spellAttributions }
+  return { profiles, spellAttributions, racialChoiceReference: wizardCantripCandidates[5] }
 }
 
 function resolveArmorType(type) {
@@ -995,11 +945,11 @@ function buildFixture(seed, edition) {
   const walkSpeed = typeof movementSpeed === 'number' ? movementSpeed : movementSpeed?.walk
   if (typeof walkSpeed !== 'number')
     throw new Error(`Missing walking speed for fixture race: ${key(movementOwner)}`)
-  const { profiles: mappedProfiles, spellAttributions } = buildSpellProfiles(
-    race,
-    progression,
-    edition,
-  )
+  const {
+    profiles: mappedProfiles,
+    spellAttributions,
+    racialChoiceReference,
+  } = buildSpellProfiles(progression, edition)
   const mappedFeats = buildFeatSelections(seed, edition)
   const mappedSpecialFeats = buildSpecialFeats(seed, edition, mappedProfiles)
   const equipment = buildEquipment(seed, edition)
@@ -1037,7 +987,7 @@ function buildFixture(seed, edition) {
     backgroundChoices,
   })
 
-  const fixture = {
+  let fixture = {
     ...seed,
     id: `full-coverage-character-${edition}`,
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
@@ -1123,6 +1073,41 @@ function buildFixture(seed, edition) {
     manualActions: seed.manualActions ?? [],
   }
 
+  const nativeParent = nativeRaces.find(
+    (candidate) => candidate.name === fixture.race && candidate.source === fixture.raceSource,
+  )
+  const nativeChild = nativeParent?.subraces?.find(
+    (candidate) => candidate.name === fixture.subrace && candidate.source === fixture.subraceSource,
+  )
+  if (!nativeParent || (fixture.subrace && !nativeChild))
+    throw new Error('Missing exact native fixture context.')
+  const raceResolution = {
+    parentRace: nativeParent,
+    subraceData: nativeChild,
+    mergedRace: nativeParent,
+    subraceIsNested: !!nativeChild,
+  }
+  fixture.spells.spellProfiles.push(...deriveNativeRacialSpellProfiles(fixture, raceResolution))
+  fixture.provenance = reconcileNativeRacialSpellLedger(
+    fixture.provenance,
+    fixture.spells.spellProfiles,
+  )
+  const profile = fixture.spells.spellProfiles.find((candidate) => candidate.type === 'racial')
+  if (!profile) throw new Error('Missing native racial fixture profile.')
+  if (edition === '2014') {
+    const result = setRacialSpellChoice(
+      fixture,
+      fixture.provenance,
+      profile.id,
+      profile.choices[0].id,
+      [racialChoiceReference],
+      raceResolution,
+    )
+    fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
+  } else {
+    const result = setRacialCastingAbility(fixture, fixture.provenance, profile.id, 'int')
+    fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
   return JSON.parse(JSON.stringify(fixture))
 }
 
@@ -1428,17 +1413,47 @@ function buildCompanionFixture(baseFixture, edition) {
   )
 }
 
+// Load the same pure TypeScript producers through the existing Vite alias boundary.
+// No second native rule implementation or persistence conversion belongs in this authoring script.
+const runtime = await createServer({
+  configFile: false,
+  root,
+  resolve: { alias: { '@': join(root, 'src') } },
+  server: { middlewareMode: true },
+  appType: 'custom',
+})
+let parseRaces,
+  deriveNativeRacialSpellProfiles,
+  reconcileNativeRacialSpellLedger,
+  setRacialSpellChoice,
+  setRacialCastingAbility,
+  characterPersistenceSchema
+try {
+  ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
+  ;({ deriveNativeRacialSpellProfiles, reconcileNativeRacialSpellLedger } =
+    await runtime.ssrLoadModule('/src/lib/calculations/nativeRacialSpells.ts'))
+  ;({ setRacialSpellChoice, setRacialCastingAbility } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/spellCommands.ts',
+  ))
+  ;({ characterPersistenceSchema } = await runtime.ssrLoadModule('/src/types/characterSchema.ts'))
+} finally {
+  await runtime.close()
+}
+const nativeRaces = parseRaces(racePayload)
+
 const seed = readJson(fixture2014Path)
 const character2014 = buildFixture(seed, '2014')
 const character2024 = buildFixture(seed, '2024')
 const companion2014 = buildCompanionFixture(character2014, '2014')
 const companion2024 = buildCompanionFixture(character2024, '2024')
 
-for (const [path, fixture] of [
+const outputs = [
   [fixture2014Path, character2014],
   [fixture2024Path, character2024],
   [companion2014Path, companion2014],
   [companion2024Path, companion2024],
-]) {
+]
+for (const [, fixture] of outputs) characterPersistenceSchema.parse(fixture)
+for (const [path, fixture] of outputs) {
   writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`)
 }

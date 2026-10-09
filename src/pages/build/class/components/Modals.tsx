@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import {
   getClassChoiceSpellTag,
@@ -21,10 +22,13 @@ import {
   isSpellInRestrictedSchools,
   UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
 } from '@/lib/calculations/classSpellChoiceRules'
+import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   buildSpellNameKeySet,
+  formatSpellReference,
   getSpellNameKey,
+  getSpellReferenceKey,
   parseSpellReference,
   resolveSpellReferenceFromMap,
   resolveSpellSelectionMetadata,
@@ -33,6 +37,8 @@ import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
   getKnownSpellNames,
+  isSpellOnClassList,
+  isSpellOnSubclassList,
 } from '@/lib/calculations/spellProfiles'
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -146,6 +152,25 @@ export function BuildClassModals({
   featPickerInitialSelectedIds,
   onFeatConfirm,
 }: BuildClassModalsProps) {
+  const calculationContext = useCharacterCalculationContext(character)
+  const expanded = getNativeExpandedSpellReferences(character, calculationContext?.raceResolution)
+  const expandedKeys = new Set([...expanded].map((reference) => getSpellReferenceKey(reference)))
+  const allowedClassReferences = new Set(
+    classSpells
+      .filter(
+        (spell) =>
+          isSpellOnClassList(spell, viewingClass, viewingClassSource) ||
+          isSpellOnSubclassList(
+            spell,
+            viewingClass,
+            viewingClassSource,
+            viewingSubclass,
+            viewingSubclassSource,
+          ) ||
+          expandedKeys.has(getSpellReferenceKey(spell.name, spell.source)),
+      )
+      .map((spell) => formatSpellReference(spell.name, spell.source)),
+  )
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
   const viewingClassEntry = getCharacterClassEntries(character).find(
     (entry) => entry.name === viewingClass && (entry.source ?? '') === (viewingClassSource ?? ''),
@@ -187,13 +212,13 @@ export function BuildClassModals({
           })
           const initialSelectedNames = selectionsByLevel.get(spellPickerLevel) ?? []
           const lockedNames = new Set(
-            [...getKnownSpellNames(profiles)].filter(
+            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
               (name) => !classProfileNames.has(getSpellNameKey(name)),
             ),
           )
           const initialSelectedSet = buildSpellNameKeySet(initialSelectedNames)
           const characterSpellNames = new Set(
-            [...getKnownSpellNames(profiles)].filter(
+            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
               (name) => !initialSelectedSet.has(getSpellNameKey(name)),
             ),
           )
@@ -278,6 +303,8 @@ export function BuildClassModals({
               title={title}
               spells={selectableSpells}
               className={viewingClass}
+              classListOverrides={expanded}
+              allowedSpellReferences={allowedClassReferences}
               classSource={viewingClassSource}
               subclassName={viewingSubclass}
               subclassSource={viewingSubclassSource}
@@ -413,7 +440,7 @@ export function BuildClassModals({
 
           // Step 2: Pick the replacement spell
           const lockedNames = new Set(
-            [...getKnownSpellNames(profiles)].filter(
+            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
               (name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop),
             ),
           )
@@ -459,6 +486,8 @@ export function BuildClassModals({
               title={`Replace: ${parseSpellReference(spellSwapDrop).name}`}
               spells={replacementSpells}
               className={viewingClass}
+              classListOverrides={expanded}
+              allowedSpellReferences={allowedClassReferences}
               classSource={viewingClassSource}
               subclassName={viewingSubclass}
               subclassSource={viewingSubclassSource}
