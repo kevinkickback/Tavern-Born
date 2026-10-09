@@ -123,7 +123,11 @@ test.each(
   const character = characterPersistenceSchema.parse({
     ...initial,
     ...added.characterPatch,
-    provenance: added.provenanceUpdate,
+    provenance: addSpellGrant(
+      added.provenanceUpdate,
+      'Light|TCE',
+      makeSourceTag('feat', 'Independent Feat', 'fixed', 'OTHER'),
+    ),
   })
   setActiveCharacter(character)
   const original = structuredClone(character)
@@ -157,7 +161,8 @@ test.each(
   fireEvent.click(trigger)
   const panel = document.getElementById(trigger.getAttribute('aria-controls')!)!
   expect(panel.textContent).toContain('Light (TCE)')
-  expect(panel.textContent).toContain('manual')
+  expect(panel.textContent).toContain('feat')
+  expect(panel.textContent).not.toContain('manual')
   if (transition === 'add') {
     expect(panel.textContent).toContain('Light (PHB)')
     expect(panel.textContent).toContain('Mage Hand (PHB)')

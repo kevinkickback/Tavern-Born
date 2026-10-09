@@ -13,6 +13,7 @@ import {
   WorkspacePaneHeader,
 } from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -41,7 +42,6 @@ import {
   getReadinessFocus,
   isSpellProfileReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
-import { getSpellRows } from '@/lib/provenance/summaries'
 import type { SourceRow } from '@/lib/provenance/types'
 import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -96,6 +96,7 @@ export function SpellsPage() {
     isSpellcaster,
     spellcastingDetailByProfileId,
   } = useSpellSlots()
+  const { getSourcesRowsBySection } = useProvenanceRows({ ledger })
   const {
     removeSpellFromProfile,
     setProfileSpells,
@@ -417,7 +418,7 @@ export function SpellsPage() {
   }, [spellProfiles, ledger, subclassSpellSources])
 
   const spellSourceRows = useMemo(() => {
-    const rows = [...getSpellRows(ledger), ...subclassSpellSources.rows]
+    const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
     const seen = new Set<string>()
     return rows.flatMap((row) => {
       const key = `${getSpellReferenceKey(row.itemName, row.itemSource)}|${row.attribution}|${row.category}`
@@ -429,7 +430,7 @@ export function SpellsPage() {
       )
       return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
-  }, [ledger, spellByName, subclassSpellSources])
+  }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
