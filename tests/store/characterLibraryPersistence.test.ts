@@ -190,6 +190,7 @@ describe('acknowledged character library in IndexedDB', () => {
     'mismatched target',
     'unaccounted materialization',
     'active other owner',
+    'outside declared pool',
   ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
     const initial = buildInitialCharacter(
       {
@@ -235,6 +236,9 @@ describe('acknowledged character library in IndexedDB', () => {
         sourceName: 'Parent',
         sourceRef: 'OWNER',
       })
+    else if (corruption === 'outside declared pool')
+      malformed.spells.spellProfiles.find((profile) => profile.type === 'racial')!
+        .choices![0].pool = ['Mage Hand|PHB']
     else
       malformed.spells.spellProfiles
         .find((profile) => profile.type === 'racial')!

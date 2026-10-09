@@ -212,7 +212,11 @@ spells, selected choices and explicit pools. Racial spell provenance stores the 
 `grantSource`, separately from its racial owner's `sourceRef`; choice tags also require their
 descriptor `grantVariant`. An unavailable target remains explicit and cannot borrow another
 printing. Selected targets, materialized spells and choice ownership must agree, with unique
-logical selections within the descriptor quota. A resolved descriptor/selection refresh retracts
+logical selections within the descriptor quota.
+Each selected target must also belong to the saved descriptor's explicit pool when one is present;
+normalization preserves exact printing identity, and an empty pool permits no selected targets.
+An absent pool remains a filter-based or unrestricted choice; validation invents no catalog eligibility.
+A resolved descriptor/selection refresh retracts
 removed choice tags atomically with the refreshed profiles, including when another spell is edited.
 Unavailable racial metadata retains the saved choices and their tags. Fixed-grant rebuilding and
 native racial suite ownership remain separate rules-resolution work. Schema 5 did not require this

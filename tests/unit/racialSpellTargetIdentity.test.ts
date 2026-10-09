@@ -380,6 +380,58 @@ test.each([
   expect(configured).toEqual(before)
 })
 
+test.each([
+  'removed target',
+  'other printing',
+  'empty pool',
+])('strict reopen rejects a choice outside its declared pool (%s)', (corruption) => {
+  const initial = finish({
+    name: 'Pool Caster',
+    source: 'OWNER',
+    additionalSpells: [{ known: { _: ['light|PHB#c'] } }, { known: { _: ['mage hand|PHB#c'] } }],
+  } as Race5e)
+  const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+  const character = reopen(
+    commit(
+      initial,
+      setRacialSpellChoice(initial, initial.provenance, id, 'block-choice', [
+        corruption === 'removed target' ? 'Mage Hand|PHB' : 'Light|PHB',
+      ]),
+    ),
+  )
+  character.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool =
+    corruption === 'empty pool' ? [] : [corruption === 'other printing' ? 'Light|TCE' : 'Light|PHB']
+  const original = structuredClone(character)
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+  expect(character).toEqual(original)
+})
+
+test('declared pools compare normalized exact targets and permit an empty unselected choice', () => {
+  const initial = finish({
+    name: 'Pool Caster',
+    source: 'OWNER',
+    additionalSpells: [{ known: { _: ['light|PHB#c'] } }, { known: { _: ['mage hand|PHB#c'] } }],
+  } as Race5e)
+  const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+  const character = commit(
+    initial,
+    setRacialSpellChoice(initial, initial.provenance, id, 'block-choice', ['Light|PHB']),
+  )
+  character.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool = [
+    ' light | phb ',
+    'Mage Hand|PHB',
+  ]
+  expect(
+    reopen(character).spells.spellProfiles.find((profile) => profile.id === id)!.cantrips,
+  ).toEqual(['Light|PHB'])
+  const cleared = commit(
+    character,
+    setRacialSpellChoice(character, character.provenance, id, 'block-choice', []),
+  )
+  cleared.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool = []
+  expect(characterPersistenceSchema.safeParse(cleared).success).toBe(true)
+})
+
 test('spell target deduplication normalizes printing while retaining a competing printing', () => {
   const character = makeCharacterFixture()
   const tag = makeSourceTag('race', character.race, 'fixed', character.raceSource)

@@ -914,6 +914,9 @@ export const characterSchema = z
       char.spells.spellProfiles.forEach((profile, profileIndex) => {
         if (profile.type !== 'racial') return
         profile.choices?.forEach((choice, choiceIndex) => {
+          const poolTargets = choice.pool
+            ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
+            : undefined
           const targets = selectedRacialTargets.get(choice.id) ?? new Set<string>()
           const materialized = new Set(
             (choice.isCantrip ? profile.cantrips : profile.spellsKnown).map((reference) =>
@@ -938,11 +941,11 @@ export const characterSchema = z
                 tag.grantVariant === choice.id &&
                 getSpellReferenceKey(reference, tag.grantSource) === target,
             )
-            if (!materialized.has(target) || !owned) {
+            if (!materialized.has(target) || !owned || (poolTargets && !poolTargets.has(target))) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message:
-                  'Racial selected spell targets must agree with materialized spells and descriptor ownership',
+                  'Racial selected spell targets must agree with materialized spells, descriptor ownership and declared pools',
                 path: [
                   'spells',
                   'spellProfiles',
