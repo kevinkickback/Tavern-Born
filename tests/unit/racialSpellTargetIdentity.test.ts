@@ -355,3 +355,59 @@ test('a current racial choice tag cannot omit its descriptor identity', () => {
   ]
   expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
 })
+
+test.each([
+  'wrong target printing',
+  'wrong descriptor',
+  'noncanonical name bucket',
+  'missing ownership',
+  'missing materialization',
+  'wrong materialized printing',
+  'duplicate logical selection',
+  'over quota',
+])('strict current reopen rejects %s without changing the original', (corruption) => {
+  let character = finish({
+    name: 'Strict Choice Caster',
+    source: 'OWNER',
+    additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+  } as Race5e)
+  const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+  character = reopen(
+    commit(
+      character,
+      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+    ),
+  )
+  const profile = character.spells.spellProfiles.find((profile) => profile.id === id)!
+  const choice = profile.choices![0]
+  switch (corruption) {
+    case 'wrong target printing':
+      character.provenance.spells.light[0].grantSource = 'XPHB'
+      break
+    case 'wrong descriptor':
+      character.provenance.spells.light[0].grantVariant = 'direct-_-choose-1'
+      break
+    case 'noncanonical name bucket':
+      character.provenance.spells.Light = character.provenance.spells.light
+      delete character.provenance.spells.light
+      break
+    case 'missing ownership':
+      delete character.provenance.spells.light
+      break
+    case 'missing materialization':
+      profile.cantrips = []
+      break
+    case 'wrong materialized printing':
+      profile.cantrips = ['Light|XPHB']
+      break
+    case 'duplicate logical selection':
+      choice.selected.push('LIGHT|XPHB')
+      break
+    case 'over quota':
+      choice.count = 0
+      break
+  }
+  const original = structuredClone(character)
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+  expect(character).toEqual(original)
+})

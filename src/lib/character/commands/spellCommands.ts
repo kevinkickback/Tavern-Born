@@ -830,9 +830,34 @@ export function syncSpellProfiles(
   ledger: ProvenanceLedger,
   spellProfiles: SpellProfile[],
 ): SpellCommandResult {
+  const selectedTargets = new Map<string, Set<string>>()
+  for (const profile of spellProfiles) {
+    if (profile.type !== 'racial') continue
+    for (const choice of profile.choices ?? []) {
+      const targets = selectedTargets.get(choice.id) ?? new Set<string>()
+      for (const reference of choice.selected) targets.add(getSpellReferenceKey(reference))
+      selectedTargets.set(choice.id, targets)
+    }
+  }
+  // A resolved rules refresh may remove a descriptor or selected target. Retract its
+  // choice tags in the same transition; unavailable profiles retain their selections.
+  const spells = Object.fromEntries(
+    Object.entries(ledger.spells).flatMap(([name, tags]) => {
+      const retained = tags.filter(
+        (tag) =>
+          (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') ||
+          tag.grantType !== 'choice' ||
+          !!(
+            tag.grantVariant &&
+            selectedTargets.get(tag.grantVariant)?.has(getSpellReferenceKey(name, tag.grantSource))
+          ),
+      )
+      return retained.length ? [[name, retained]] : []
+    }),
+  )
   return {
     characterPatch: createSpellProfilePatch(character, spellProfiles),
-    provenanceUpdate: ledger,
+    provenanceUpdate: { ...ledger, spells },
   }
 }
 

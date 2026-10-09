@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { SpellProfile } from '@/types/character'
@@ -208,6 +210,76 @@ describe('useSpellProfileMutations', () => {
     expect(
       useCharacterStore.getState().activeCharacter?.spells.spellProfiles.map(({ id }) => id),
     ).toEqual(expect.arrayContaining(['class:Cleric|PHB', 'special:unrestricted']))
+  })
+
+  test.each([
+    'sync',
+    'bonus edit',
+  ])('a resolved descriptor removal retracts only its selected-target ownership during %s', (operation) => {
+    let character = buildInitialCharacter(
+      {
+        initial: { name: 'Refresh caster', originSystem: '2014' },
+        race: {
+          name: 'Refresh caster',
+          source: 'OWNER',
+          additionalSpells: [
+            {
+              known: {
+                _: [
+                  'light|PHB#c',
+                  { choose: 'level=0|class=Wizard' },
+                  { choose: 'level=0|class=Wizard' },
+                ],
+              },
+            },
+          ],
+        } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+    for (const choice of ['direct-_-choose-0', 'direct-_-choose-1']) {
+      const result = setRacialSpellChoice(character, character.provenance, id, choice, [
+        'Light|XPHB',
+      ])
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+    for (const sourceType of ['manual', 'class', 'feat'] as const) {
+      character.provenance = addSpellGrant(
+        character.provenance,
+        'Light|XPHB',
+        makeSourceTag(sourceType, 'Independent', 'choice', 'OTHER'),
+      )
+    }
+    character.spells.spellSlots[1] = { max: 2, used: 1 }
+    const original = structuredClone(character)
+    const profiles = character.spells.spellProfiles.map((profile) =>
+      profile.type === 'racial'
+        ? {
+            ...profile,
+            choices: profile.choices!.filter((choice) => choice.id !== 'direct-_-choose-0'),
+          }
+        : profile,
+    )
+    setActiveCharacter(character)
+    const { result, unmount } = renderHook(() => useSpellProfileMutations(profiles, new Map()))
+    act(() => {
+      if (operation === 'sync') result.current.syncProfiles()
+      else result.current.addSpellToProfile('special:unrestricted', 'Bonus|PHB', 'cantrip')
+    })
+    const reopened = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+    )
+    expect(reopened.provenance!.spells.light).toEqual(
+      original.provenance.spells.light.filter((tag) => tag.grantVariant !== 'direct-_-choose-0'),
+    )
+    expect(reopened.spells.spellSlots[1]?.used).toBe(1)
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')?.choices,
+    ).toEqual(profiles.find((profile) => profile.type === 'racial')?.choices)
+    expect(character).toEqual(original)
+    unmount()
   })
 
   test('does not prepare a spell already prepared by another profile', () => {

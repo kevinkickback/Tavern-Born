@@ -333,6 +333,21 @@ export function SpellSelectionModal({
     () => resolveInitialSpellSelectionIds(spells, initialSelectedNames),
     [initialSelectedNames, spells],
   )
+  const unavailableSelectionLabels = useMemo(
+    () =>
+      new Map(
+        initialSelectedIds.map((id, index) => {
+          const reference = parseSpellReference(initialSelectedNames[index])
+          return [
+            id,
+            reference.source
+              ? `${reference.name} (${reference.source.toUpperCase()})`
+              : reference.name,
+          ]
+        }),
+      ),
+    [initialSelectedIds, initialSelectedNames],
+  )
 
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
   const hasClassName = !!className
@@ -357,12 +372,7 @@ export function SpellSelectionModal({
     const spellNameKey = getSpellNameKey(spell.name)
     if (characterSpellKeys.has(spellNameKey)) return false
     if (lockedSpellKeys.has(spellNameKey)) return false
-    if (
-      allItems.some(
-        (item) =>
-          selectedIds.has(getSpellSelectionId(item)) && getSpellNameKey(item.name) === spellNameKey,
-      )
-    ) {
+    if ([...selectedIds].some((selectedId) => getSpellNameKey(selectedId) === spellNameKey)) {
       return false
     }
 
@@ -371,9 +381,12 @@ export function SpellSelectionModal({
         continue
       }
 
-      const count = allItems.filter(
-        (item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)),
-      ).length
+      const availableIds = new Set(allItems.map(getSpellSelectionId))
+      const unavailableCount = [...selectedIds].filter((id) => !availableIds.has(id)).length
+      const count =
+        unavailableCount +
+        allItems.filter((item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)))
+          .length
       if (count >= category.max) {
         return false
       }
@@ -417,6 +430,7 @@ export function SpellSelectionModal({
       categories={categories}
       selectionHint={selectionHint}
       initialSelectedIds={initialSelectedIds}
+      unavailableSelectionLabels={unavailableSelectionLabels}
       initialFilters={effectiveInitialFilters}
       onConfirm={(ids, selectedItems) => {
         const availableIds = new Set(spells.map(getSpellSelectionId))

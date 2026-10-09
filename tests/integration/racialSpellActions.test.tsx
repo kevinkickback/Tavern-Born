@@ -9,6 +9,7 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { applyLevelUp } from '@/lib/character/commands/classCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -97,6 +98,10 @@ function savedChoice(parent: Race5e, child: Race5e, profileName: string): Charac
     spellsKnown: [],
     preparedSpells: [],
     alwaysPrepared: true,
+  })
+  character.provenance = addSpellGrant(character.provenance, 'Shocking Grasp|PHB', {
+    ...makeSourceTag('subrace', child.name, 'choice', child.source),
+    grantVariant: 'direct-_-choose-0',
   })
   return character
 }
@@ -326,6 +331,7 @@ test.each([
   character.spells.spellProfiles = character.spells.spellProfiles.filter(
     (profile) => profile.type !== 'racial',
   )
+  delete character.provenance.spells['shocking grasp']
   character.spells.spellProfiles[0] = {
     id: 'class:Cleric|PHB',
     type: 'class',
@@ -477,6 +483,7 @@ test.each([
   ]
   if (owner === 'legacy fixed') savedProfile.fixedSpells = ['Burning Hands']
   savedProfile.choices = undefined
+  if (owner === 'racial') delete character.provenance.spells['shocking grasp']
   expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   const before = structuredClone(character)
   const context = createCharacterCalculationContext(character, catalog.lookups)

@@ -65,6 +65,8 @@ export interface SelectionModalProps<T> {
   canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
   swapOnLimit?: boolean
   initialSelectedIds?: string[]
+  /** Labels for saved selections whose catalog items are currently unavailable. */
+  unavailableSelectionLabels?: ReadonlyMap<string, string>
   initialFilters?: ActiveFilters
   onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
@@ -100,6 +102,7 @@ function SelectionModalInner<T>({
   canSelect,
   swapOnLimit = false,
   initialSelectedIds = [],
+  unavailableSelectionLabels,
   initialFilters,
   onConfirm,
   onClose,
@@ -144,15 +147,25 @@ function SelectionModalInner<T>({
     [items, selectedIds, getItemId],
   )
 
+  const unavailableSelections = useMemo(() => {
+    const availableIds = new Set(items.map(getItemId))
+    return [...selectedIds].flatMap((id) => {
+      const label = unavailableSelectionLabels?.get(id)
+      return !availableIds.has(id) && label ? [{ id, label }] : []
+    })
+  }, [items, getItemId, selectedIds, unavailableSelectionLabels])
+
   const categoryCounts = useMemo(
     () =>
       categories
         .filter((cat) => cat.showCount !== false)
         .map((cat) => ({
           ...cat,
-          selected: selectedItems.filter((i) => cat.test(i)).length,
+          selected:
+            selectedItems.filter((i) => cat.test(i)).length +
+            (categories.length === 1 ? unavailableSelections.length : 0),
         })),
-    [categories, selectedItems],
+    [categories, selectedItems, unavailableSelections],
   )
 
   const checkCanSelect = useCallback(
@@ -465,6 +478,28 @@ function SelectionModalInner<T>({
             {selectionHint && <div className="text-xs text-muted-foreground">{selectionHint}</div>}
           </div>
           <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>
+          {unavailableSelections.length > 0 && (
+            <fieldset className="mt-2 flex flex-wrap gap-1" aria-label="Unavailable selected items">
+              {unavailableSelections.map(({ id, label }) => (
+                <Button
+                  key={id}
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Remove ${label}`}
+                  onClick={() =>
+                    setSelectedIds((previous) => {
+                      const next = new Set(previous)
+                      next.delete(id)
+                      return next
+                    })
+                  }
+                >
+                  {label} (unavailable)
+                  <X aria-hidden="true" />
+                </Button>
+              ))}
+            </fieldset>
+          )}
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>

@@ -283,6 +283,7 @@ test.each([
     install([])
   })
   expect(racialProfiles(result.current.slots.spellProfiles)).toEqual([])
+  expect(reopened.provenance!.spells['shocking grasp']).toBeUndefined()
 })
 
 test('restored exact metadata replaces obsolete fixed spells and retains compatible choices', () => {

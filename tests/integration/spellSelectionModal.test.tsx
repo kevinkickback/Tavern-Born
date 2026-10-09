@@ -113,7 +113,7 @@ describe('SpellSelectionModal identity', () => {
     expect(screen.queryByText('Light')).toBeNull()
   })
 
-  test('an explicitly selected printing replaces an unavailable initial printing of the same spell', async () => {
+  test('replacing an unavailable printing requires explicitly removing its saved selection', async () => {
     const onConfirm = vi.fn()
     render(
       <SpellSelectionModal
@@ -125,9 +125,40 @@ describe('SpellSelectionModal identity', () => {
       />,
     )
     await waitFor(() => expect(screen.getByText('Mage Hand')).toBeTruthy())
+    expect(screen.getByText('Mage Hand').closest('button')?.disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Mage Hand (XPHB)' }))
+    expect(screen.getByText('Mage Hand').closest('button')?.disabled).toBe(false)
     fireEvent.click(screen.getByText('Mage Hand'))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|PHB'])
+  })
+
+  test.each([
+    false,
+    true,
+  ])('a missing target consumes its slot until explicit removal (remove=%s)', async (remove) => {
+    const onConfirm = vi.fn()
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[makeSpell('Light', 'PHB'), makeSpell('Dancing Lights', 'PHB')]}
+        initialSelectedNames={['Mage Hand|XPHB', 'Light|PHB']}
+        categories={[{ key: 'selection', label: 'cantrips', max: 2, test: () => true }]}
+        onConfirm={onConfirm}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Dancing Lights')).toBeTruthy())
+    expect(screen.getByText('Dancing Lights').closest('button')?.disabled).toBe(true)
+    if (remove) {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove Mage Hand (XPHB)' }))
+      expect(screen.getByText('Dancing Lights').closest('button')?.disabled).toBe(false)
+      fireEvent.click(screen.getByText('Dancing Lights'))
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(onConfirm.mock.calls[0][0].sort()).toEqual(
+      (remove ? ['Light|PHB', 'Dancing Lights|PHB'] : ['Light|PHB', 'Mage Hand|XPHB']).sort(),
+    )
   })
 
   test('persists the selected source-qualified printing', async () => {

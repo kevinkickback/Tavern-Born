@@ -211,7 +211,12 @@ Racial spell profiles store complete `name|source` targets in their fixed grants
 spells, selected choices and explicit pools. Racial spell provenance stores the target printing in
 `grantSource`, separately from its racial owner's `sourceRef`; choice tags also require their
 descriptor `grantVariant`. An unavailable target remains explicit and cannot borrow another
-printing. Schema 5 did not require this target identity.
+printing. Selected targets, materialized spells and choice ownership must agree, with unique
+logical selections within the descriptor quota. A resolved descriptor/selection refresh retracts
+removed choice tags atomically with the refreshed profiles, including when another spell is edited.
+Unavailable racial metadata retains the saved choices and their tags. Fixed-grant rebuilding and
+native racial suite ownership remain separate rules-resolution work. Schema 5 did not require this
+target identity.
 Schema 2–5 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 

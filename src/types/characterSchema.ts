@@ -4,7 +4,11 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import {
+  getSpellNameKey,
+  getSpellReferenceKey,
+  parseSpellReference,
+} from '@/lib/calculations/spellIdentity'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import {
   getUnselectedRaceOwnerPaths,
@@ -881,6 +885,77 @@ export const characterSchema = z
       })
     }
     if (char.provenance) {
+      const selectedRacialTargets = new Map<string, Set<string>>()
+      char.spells.spellProfiles.forEach((profile, profileIndex) => {
+        if (profile.type !== 'racial') return
+        profile.choices?.forEach((choice, choiceIndex) => {
+          const targets = selectedRacialTargets.get(choice.id) ?? new Set<string>()
+          const materialized = new Set(
+            (choice.isCantrip ? profile.cantrips : profile.spellsKnown).map((reference) =>
+              getSpellReferenceKey(reference),
+            ),
+          )
+          const names = new Set(choice.selected.map(getSpellNameKey))
+          if (names.size !== choice.selected.length || names.size > choice.count) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Racial spell choices require unique logical spells within their quota',
+              path: ['spells', 'spellProfiles', profileIndex, 'choices', choiceIndex, 'selected'],
+            })
+          }
+          choice.selected.forEach((reference, selectionIndex) => {
+            const target = getSpellReferenceKey(reference)
+            targets.add(target)
+            const owned = (char.provenance.spells[getSpellNameKey(reference)] ?? []).some(
+              (tag) =>
+                (tag.sourceType === 'race' || tag.sourceType === 'subrace') &&
+                tag.grantType === 'choice' &&
+                tag.grantVariant === choice.id &&
+                getSpellReferenceKey(reference, tag.grantSource) === target,
+            )
+            if (!materialized.has(target) || !owned) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                  'Racial selected spell targets must agree with materialized spells and descriptor ownership',
+                path: [
+                  'spells',
+                  'spellProfiles',
+                  profileIndex,
+                  'choices',
+                  choiceIndex,
+                  'selected',
+                  selectionIndex,
+                ],
+              })
+            }
+          })
+          selectedRacialTargets.set(choice.id, targets)
+        })
+      })
+      Object.entries(char.provenance.spells).forEach(([name, tags]) => {
+        tags.forEach((tag, index) => {
+          if (
+            (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') ||
+            tag.grantType !== 'choice'
+          )
+            return
+          if (
+            name !== getSpellNameKey(name) ||
+            !tag.grantVariant ||
+            !selectedRacialTargets
+              .get(tag.grantVariant)
+              ?.has(getSpellReferenceKey(name, tag.grantSource))
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message:
+                'Racial choice ownership must match its selected descriptor and exact spell target',
+              path: ['provenance', 'spells', name, index],
+            })
+          }
+        })
+      })
       if (char.originSystem === '2024' && hasRaceAbilityOriginGrants(char.provenance)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

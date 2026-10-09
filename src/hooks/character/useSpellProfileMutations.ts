@@ -49,18 +49,19 @@ export function useSpellProfileMutations(
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-  const currentLedger = character?.provenance ?? emptyProvenance()
-
-  const commandCharacter = useMemo(() => {
+  const synchronized = useMemo(() => {
     if (!character) return null
+    return syncSpellProfiles(character, character.provenance ?? emptyProvenance(), spellProfiles)
+  }, [character, spellProfiles])
+  const currentLedger = synchronized?.provenanceUpdate ?? emptyProvenance()
+  const commandCharacter = useMemo(() => {
+    if (!character || !synchronized) return null
     return {
       ...character,
-      spells: {
-        ...character.spells,
-        spellProfiles,
-      },
+      ...synchronized.characterPatch,
+      provenance: synchronized.provenanceUpdate,
     }
-  }, [character, spellProfiles])
+  }, [character, synchronized])
 
   const applySpellCommand = useCallback(
     (result: SpellCommandResult) => {
@@ -74,9 +75,9 @@ export function useSpellProfileMutations(
   )
 
   const syncProfiles = useCallback(() => {
-    if (!character || !commandCharacter) return
-    applySpellCommand(syncSpellProfiles(commandCharacter, currentLedger, spellProfiles))
-  }, [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand])
+    if (!synchronized) return
+    applySpellCommand(synchronized)
+  }, [synchronized, applySpellCommand])
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
