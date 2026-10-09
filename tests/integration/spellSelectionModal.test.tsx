@@ -38,6 +38,54 @@ function makeSpell(name: string, source: string, overrides: Partial<Spell5e> = {
 }
 
 describe('SpellSelectionModal identity', () => {
+  test('racial choices allow one printing per logical spell within the same choice', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        selectionMode="racial-choice"
+        spells={[
+          makeSpell('Light', 'PHB'),
+          makeSpell('Light', 'TCE'),
+          makeSpell('Mage Hand', 'PHB'),
+        ]}
+        categories={[{ key: 'selection', label: 'cantrips', max: 2, test: () => true }]}
+        onConfirm={onConfirm}
+      />,
+    )
+    await waitFor(() => expect(screen.getAllByText('Light')).toHaveLength(2))
+    const lights = screen.getAllByText('Light')
+    fireEvent.click(lights[1])
+    expect(lights[0].closest('button')!.disabled).toBe(true)
+    expect(screen.getByText('Mage Hand').closest('button')!.disabled).toBe(false)
+    fireEvent.click(screen.getByText('Mage Hand'))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(onConfirm).toHaveBeenCalledWith(['Light|TCE', 'Mage Hand|PHB'])
+  })
+
+  test('catalog choices continue to hide known logical spells across printings', async () => {
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[
+          makeSpell('Light', 'PHB'),
+          makeSpell('Light', 'TCE'),
+          makeSpell('Mage Hand', 'PHB'),
+        ]}
+        characterSpellNames={new Set(['Light|PHB'])}
+        onConfirm={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Mage Hand')).toBeTruthy())
+    expect(screen.queryByText('Light')).toBeNull()
+    fireEvent.click(screen.getByRole('switch', { name: 'Hide already-known spells' }))
+    await waitFor(() => expect(screen.getAllByText('Light')).toHaveLength(2))
+    for (const label of screen.getAllByText('Light'))
+      expect(label.closest('button')!.disabled).toBe(true)
+  })
+
   test('hides a canonical catalog spell when the stored known name is lowercase', async () => {
     render(
       <SpellSelectionModal
@@ -74,6 +122,7 @@ describe('SpellSelectionModal identity', () => {
         onOpenChange={vi.fn()}
         spells={[makeSpell('Mage Hand', 'PHB')]}
         initialSelectedNames={['Mage Hand|XPHB']}
+        selectionMode="racial-choice"
         onConfirm={onConfirm}
       />,
     )
@@ -121,6 +170,7 @@ describe('SpellSelectionModal identity', () => {
         onOpenChange={vi.fn()}
         spells={[makeSpell('Mage Hand', 'PHB')]}
         initialSelectedNames={['Mage Hand|XPHB']}
+        selectionMode="racial-choice"
         onConfirm={onConfirm}
       />,
     )
@@ -144,6 +194,7 @@ describe('SpellSelectionModal identity', () => {
         onOpenChange={vi.fn()}
         spells={[makeSpell('Light', 'PHB'), makeSpell('Dancing Lights', 'PHB')]}
         initialSelectedNames={['Mage Hand|XPHB', 'Light|PHB']}
+        selectionMode="racial-choice"
         categories={[{ key: 'selection', label: 'cantrips', max: 2, test: () => true }]}
         onConfirm={onConfirm}
       />,

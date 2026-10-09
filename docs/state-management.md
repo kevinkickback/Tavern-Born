@@ -217,6 +217,12 @@ removed choice tags atomically with the refreshed profiles, including when anoth
 Unavailable racial metadata retains the saved choices and their tags. Fixed-grant rebuilding and
 native racial suite ownership remain separate rules-resolution work. Schema 5 did not require this
 target identity.
+The current aggregate choice writer uses the selected child owner when present, otherwise the
+parent. Strict choice correspondence, Sync and removal match that same complete normalized owner;
+another active racial owner cannot satisfy it. This does not establish a native descriptor's lineage.
+Racial selection dialogs preserve unavailable exact targets within their single quota. Catalog/class
+dialogs require missing selections to be restored or explicitly removed before confirmation, so
+missing level/school metadata cannot silently change the saved spell kind or consume another quota.
 Every materialized racial cantrip or known spell must be an exact target in the profile's fixed
 grants or a selected choice of that spell kind. An extra unselected spell or another printing is
 rejected rather than projected as a benefit. This accounting does not infer the native fixed

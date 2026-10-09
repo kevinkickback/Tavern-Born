@@ -10,6 +10,7 @@ import {
   addSpellToCharacter,
   removeRacialSpell,
   setRacialSpellChoice,
+  syncSpellProfiles,
 } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addSpellGrant, getSpellRows, makeSourceTag } from '@/lib/provenance'
@@ -37,6 +38,71 @@ function commit(
 ): Character {
   return { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
 }
+
+test('a canonical child choice rejects the active parent as its owner and clears its own normalized tag', () => {
+  const parent = { name: 'Parent', source: 'PARENT' } as Race5e
+  const child = {
+    name: 'Child',
+    source: 'CHILD',
+    additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+  } as Race5e
+  let character = buildInitialCharacter(
+    { initial: { name: 'Child ownership', originSystem: '2014' }, race: parent, subrace: child },
+    new Map(),
+    () => [],
+  )
+  const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+  character = reopen(
+    commit(
+      character,
+      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', ['Light|PHB']),
+    ),
+  )
+  character = reopen(
+    commit(
+      character,
+      addSpellToCharacter(
+        character,
+        character.provenance,
+        'Light|PHB',
+        'cantrip',
+        'special:unrestricted',
+        { sourceType: 'manual', sourceName: 'User Choice' },
+      ),
+    ),
+  )
+  const malformed = structuredClone(character)
+  Object.assign(malformed.provenance.spells.light[0], {
+    sourceType: 'race',
+    sourceName: parent.name,
+    sourceRef: parent.source,
+  })
+  const original = structuredClone(malformed)
+  expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+  const synced = syncSpellProfiles(malformed, malformed.provenance, malformed.spells.spellProfiles)
+  expect(synced.provenanceUpdate.spells.light).toEqual([
+    expect.objectContaining({ sourceType: 'manual' }),
+  ])
+  expect(malformed).toEqual(original)
+
+  Object.assign(character.provenance.spells.light[0], {
+    sourceName: ' child ',
+    sourceRef: ' child ',
+  })
+  const cleared = reopen(
+    commit(
+      character,
+      setRacialSpellChoice(character, character.provenance, id, 'direct-_-choose-0', []),
+    ),
+  )
+  expect(cleared.spells.spellProfiles.find((profile) => profile.id === id)!.cantrips).toEqual([])
+  expect(
+    cleared.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+  ).toEqual(['Light|PHB'])
+  expect(cleared.provenance.spells.light).toEqual([
+    expect.objectContaining({ sourceType: 'manual' }),
+  ])
+})
 
 test('native spell targets retain explicit printing and suffix without borrowing the racial printing', () => {
   const rules = [

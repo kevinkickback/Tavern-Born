@@ -189,15 +189,28 @@ describe('acknowledged character library in IndexedDB', () => {
   test.each([
     'mismatched target',
     'unaccounted materialization',
+    'active other owner',
   ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
     const initial = buildInitialCharacter(
       {
         initial: { name: 'Canonical racial choice', originSystem: '2014' },
         race: {
-          name: 'Choosing Caster',
+          name: corruption === 'active other owner' ? 'Parent' : 'Choosing Caster',
           source: 'OWNER',
-          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+          additionalSpells:
+            corruption === 'active other owner'
+              ? undefined
+              : [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
         } as Race5e,
+        ...(corruption === 'active other owner'
+          ? {
+              subrace: {
+                name: 'Child',
+                source: 'CHILD',
+                additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+              } as Race5e,
+            }
+          : {}),
       },
       new Map(),
       () => [],
@@ -216,6 +229,12 @@ describe('acknowledged character library in IndexedDB', () => {
     malformed.id = corruption
     if (corruption === 'mismatched target')
       malformed.provenance.spells.light[0].grantSource = 'XPHB'
+    else if (corruption === 'active other owner')
+      Object.assign(malformed.provenance.spells.light[0], {
+        sourceType: 'race',
+        sourceName: 'Parent',
+        sourceRef: 'OWNER',
+      })
     else
       malformed.spells.spellProfiles
         .find((profile) => profile.type === 'racial')!

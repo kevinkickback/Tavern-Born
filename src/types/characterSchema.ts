@@ -13,6 +13,7 @@ import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityCh
 import {
   getUnselectedRaceOwnerPaths,
   hasRaceAbilityOriginGrants,
+  isRacialSpellChoiceOwner,
 } from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -932,7 +933,7 @@ export const characterSchema = z
             targets.add(target)
             const owned = (char.provenance.spells[getSpellNameKey(reference)] ?? []).some(
               (tag) =>
-                (tag.sourceType === 'race' || tag.sourceType === 'subrace') &&
+                isRacialSpellChoiceOwner(tag, char) &&
                 tag.grantType === 'choice' &&
                 tag.grantVariant === choice.id &&
                 getSpellReferenceKey(reference, tag.grantSource) === target,
@@ -966,6 +967,7 @@ export const characterSchema = z
             return
           if (
             name !== getSpellNameKey(name) ||
+            !isRacialSpellChoiceOwner(tag, char) ||
             !tag.grantVariant ||
             !selectedRacialTargets
               .get(tag.grantVariant)

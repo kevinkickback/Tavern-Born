@@ -67,6 +67,9 @@ export interface SelectionModalProps<T> {
   initialSelectedIds?: string[]
   /** Labels for saved selections whose catalog items are currently unavailable. */
   unavailableSelectionLabels?: ReadonlyMap<string, string>
+  countUnavailableSelections?: boolean
+  canConfirm?: (selectedIds: ReadonlySet<string>) => boolean
+  confirmationHint?: ReactNode
   initialFilters?: ActiveFilters
   onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
@@ -103,6 +106,9 @@ function SelectionModalInner<T>({
   swapOnLimit = false,
   initialSelectedIds = [],
   unavailableSelectionLabels,
+  countUnavailableSelections = false,
+  canConfirm,
+  confirmationHint,
   initialFilters,
   onConfirm,
   onClose,
@@ -163,9 +169,11 @@ function SelectionModalInner<T>({
           ...cat,
           selected:
             selectedItems.filter((i) => cat.test(i)).length +
-            (categories.length === 1 ? unavailableSelections.length : 0),
+            (countUnavailableSelections && categories.length === 1
+              ? unavailableSelections.length
+              : 0),
         })),
-    [categories, selectedItems, unavailableSelections],
+    [categories, selectedItems, unavailableSelections, countUnavailableSelections],
   )
 
   const checkCanSelect = useCallback(
@@ -237,7 +245,9 @@ function SelectionModalInner<T>({
     resetScroll()
   }
 
+  const confirmationAllowed = canConfirm?.(selectedIds) ?? true
   const handleConfirm = () => {
+    if (!confirmationAllowed) return
     onConfirm([...selectedIds], selectedItems)
     onClose()
   }
@@ -500,12 +510,17 @@ function SelectionModalInner<T>({
               ))}
             </fieldset>
           )}
+          {!confirmationAllowed && confirmationHint && (
+            <p className="mt-2 text-xs text-muted-foreground">{confirmationHint}</p>
+          )}
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>Confirm</Button>
+          <Button onClick={handleConfirm} disabled={!confirmationAllowed}>
+            Confirm
+          </Button>
         </div>
       </div>
     </>

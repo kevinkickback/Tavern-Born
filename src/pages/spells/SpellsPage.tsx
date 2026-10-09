@@ -766,6 +766,7 @@ export function SpellsPage() {
 
       <SpellSelectionModal
         open={racialChoiceModalOpen && !!racialChoiceModalConfig}
+        selectionMode="racial-choice"
         onOpenChange={(open) => {
           setRacialChoiceModalOpen(open)
           if (!open) setActiveRacialChoice(null)
