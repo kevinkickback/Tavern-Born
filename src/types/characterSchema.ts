@@ -14,6 +14,7 @@ import {
   getUnselectedRaceOwnerPaths,
   hasRaceAbilityOriginGrants,
   isRacialSpellChoiceOwner,
+  isSelectedRaceOwner,
 } from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -913,6 +914,21 @@ export const characterSchema = z
       const selectedRacialTargets = new Map<string, Set<string>>()
       char.spells.spellProfiles.forEach((profile, profileIndex) => {
         if (profile.type !== 'racial') return
+        profile.fixedSpells?.forEach((reference, index) => {
+          const target = getSpellReferenceKey(reference)
+          const owned = (char.provenance.spells[getSpellNameKey(reference)] ?? []).some(
+            (tag) =>
+              tag.grantType === 'fixed' &&
+              isSelectedRaceOwner(tag, char) &&
+              getSpellReferenceKey(reference, tag.grantSource) === target,
+          )
+          if (!owned)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Racial fixed spell declarations require matching exact active-owner grants',
+              path: ['spells', 'spellProfiles', profileIndex, 'fixedSpells', index],
+            })
+        })
         profile.choices?.forEach((choice, choiceIndex) => {
           const poolTargets = choice.pool
             ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))

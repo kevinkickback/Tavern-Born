@@ -53,7 +53,7 @@ import {
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
@@ -88,9 +88,9 @@ export function SpellsPage() {
     trapHazards,
     rewards,
   } = useFilteredGameData()
-  const ledger = character?.provenance ?? emptyProvenance()
   const {
     spellProfiles,
+    spellProvenance: ledger,
     spellcastingDetails,
     sharedSlots,
     pactSlots,

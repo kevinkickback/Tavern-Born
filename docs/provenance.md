@@ -160,6 +160,13 @@ An unavailable exact selected parent or child projects cloned existing saved rac
 including choices, casting ability and source identity, even when an available parent has spell
 grants. Unrelated spell edits commit those retained profiles with provenance together. Exact
 raw-catalog fallback counts as available; restored exact metadata resumes normal derivation.
+The shared spell-state projection refreshes fixed racial spell ownership from the exact resolved
+parent and child at the character's level, alongside the derived profiles. Changed target printings,
+new fixed grants and resolved removals therefore appear consistently in Spells, Sources, Actions
+and PDF. Spell edits commit that same profile and ledger state atomically, retaining independent
+ownership and slot usage. Missing exact parent or child data retains the coherent saved snapshot;
+it cannot establish removal or supply a guessed owner. This uses the existing supported native
+fixed-grant grammar; complete suite selection and descriptor lineage remain separate contracts.
 Metadata-free consumers cannot establish a racial removal and retain selected saved racial profiles.
 Only a fully resolved selection can establish empty racial grants. Without a selected race,
 the projection omits racial profiles. Intentional race/subrace commands still remove obsolete setup atomically.

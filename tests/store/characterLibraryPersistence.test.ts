@@ -191,7 +191,11 @@ describe('acknowledged character library in IndexedDB', () => {
     'unaccounted materialization',
     'active other owner',
     'outside declared pool',
+    'missing fixed ownership',
+    'manual fixed ownership',
+    'other fixed printing',
   ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
+    const fixed = corruption.includes('fixed')
     const initial = buildInitialCharacter(
       {
         initial: { name: 'Canonical racial choice', originSystem: '2014' },
@@ -201,7 +205,7 @@ describe('acknowledged character library in IndexedDB', () => {
           additionalSpells:
             corruption === 'active other owner'
               ? undefined
-              : [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+              : [{ known: { _: fixed ? ['light|PHB#c'] : [{ choose: 'level=0|class=Wizard' }] } }],
         } as Race5e,
         ...(corruption === 'active other owner'
           ? {
@@ -217,9 +221,9 @@ describe('acknowledged character library in IndexedDB', () => {
       () => [],
     )
     const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
-    const result = setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', [
-      'Light|PHB',
-    ])
+    const result = fixed
+      ? { characterPatch: {}, provenanceUpdate: initial.provenance }
+      : setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', ['Light|PHB'])
     const valid = {
       ...initial,
       ...result.characterPatch,
@@ -228,7 +232,16 @@ describe('acknowledged character library in IndexedDB', () => {
     }
     const malformed = structuredClone(valid)
     malformed.id = corruption
-    if (corruption === 'mismatched target')
+    if (corruption === 'missing fixed ownership') delete malformed.provenance.spells.light
+    else if (corruption === 'manual fixed ownership')
+      Object.assign(malformed.provenance.spells.light[0], {
+        sourceType: 'manual',
+        sourceName: 'User Choice',
+        sourceRef: undefined,
+      })
+    else if (corruption === 'other fixed printing')
+      malformed.provenance.spells.light[0].grantSource = 'TCE'
+    else if (corruption === 'mismatched target')
       malformed.provenance.spells.light[0].grantSource = 'XPHB'
     else if (corruption === 'active other owner')
       Object.assign(malformed.provenance.spells.light[0], {

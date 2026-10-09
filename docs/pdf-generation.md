@@ -16,6 +16,9 @@ the [retained PDF sources](../scripts/pdf-sources/README.md).
 
 Preview and download use the same completed export. Changes to character data, game data, template,
 or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
+The view model uses the shared spell-state projection for profiles, fixed racial ownership, rows
+and actions. Exact restored rules data refreshes this export snapshot together; unavailable exact
+race or child data retains saved spell state. The saved character is not mutated by export.
 
 The export page supplies the raw class-feature and optional-feature lookup catalogs through named
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and

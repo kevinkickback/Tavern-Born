@@ -5,6 +5,7 @@
  * return a single result object for callers to apply.
  */
 
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   getClassChoiceSpellTag,
   getClassSpellRuleContext,
@@ -30,6 +31,7 @@ import {
 } from '@/lib/calculations/spellProfiles.constants'
 import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import { isRacialSpellChoiceOwner } from '@/lib/provenance/raceOwnership'
+import { reconcileResolvedRacialFixedSpells } from '@/lib/provenance/racialFixedSpells'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -828,7 +830,9 @@ export function syncSpellProfiles(
   character: Character,
   ledger: ProvenanceLedger,
   spellProfiles: SpellProfile[],
+  raceResolution?: ResolvedRaceReference,
 ): SpellCommandResult {
+  const fixedLedger = reconcileResolvedRacialFixedSpells(character, ledger, raceResolution)
   const selectedTargets = new Map<string, Set<string>>()
   for (const profile of spellProfiles) {
     if (profile.type !== 'racial') continue
@@ -841,7 +845,7 @@ export function syncSpellProfiles(
   // A resolved rules refresh may remove a descriptor or selected target. Retract its
   // choice tags in the same transition; unavailable profiles retain their selections.
   const spells = Object.fromEntries(
-    Object.entries(ledger.spells).flatMap(([name, tags]) => {
+    Object.entries(fixedLedger.spells).flatMap(([name, tags]) => {
       const retained = tags.filter(
         (tag) =>
           (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') ||
@@ -857,7 +861,7 @@ export function syncSpellProfiles(
   )
   return {
     characterPatch: createSpellProfilePatch(character, spellProfiles),
-    provenanceUpdate: { ...ledger, spells },
+    provenanceUpdate: { ...fixedLedger, spells },
   }
 }
 

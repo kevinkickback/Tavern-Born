@@ -231,8 +231,11 @@ Confirmation rechecks every real category maximum after metadata restoration, so
 cannot increase a selection beyond its quota; the player explicitly resolves any excess first.
 Every materialized racial cantrip or known spell must be an exact target in the profile's fixed
 grants or a selected choice of that spell kind. An extra unselected spell or another printing is
-rejected rather than projected as a benefit. This accounting does not infer the native fixed
-grant's owner or its kind from an unavailable catalog.
+rejected rather than projected as a benefit. Each fixed declaration also requires a fixed spell tag
+for that exact target printing from the complete normalized selected parent or child identity.
+Independent manual, class or feat ownership cannot authorize a racial fixed declaration. This
+validates saved attribution; it does not infer native descriptor lineage or spell kind from an
+unavailable catalog.
 Schema 2–5 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 

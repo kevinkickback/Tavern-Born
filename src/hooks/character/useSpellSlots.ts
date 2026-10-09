@@ -6,9 +6,11 @@ import {
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
   collectKnownSpells,
-  ensureSpellProfiles,
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles'
+import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
+import { emptyProvenance } from '@/lib/provenance/ledger'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { useCharacterStore } from '@/store/characterStore'
 import type { SpellProfile } from '@/types/character'
 
@@ -29,6 +31,7 @@ export interface SpellSlotsState {
   spellsKnown: string[]
   preparedSpells: string[]
   spellProfiles: SpellProfile[]
+  spellProvenance: ProvenanceLedger
   spellcastingDetails: SpellcastingClassDetail[]
   spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>
 }
@@ -52,13 +55,16 @@ export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classesById = useClassesById()
   const calculationContext = useCharacterCalculationContext(character)
-  const spellProfiles = useMemo(() => {
-    if (!character) return []
-    return ensureSpellProfiles(character, classesById, undefined, {
-      raceResolution: calculationContext?.raceResolution,
-      preserveUnavailableClassProfiles: true,
-    })
+  const spellState = useMemo(() => {
+    if (!character) return null
+    return deriveSpellProfileState(
+      character,
+      classesById,
+      undefined,
+      calculationContext?.raceResolution,
+    )
   }, [character, classesById, calculationContext])
+  const spellProfiles = spellState?.spells.spellProfiles ?? []
 
   const slotsBreakdown = useMemo(() => {
     if (!character) {
@@ -114,6 +120,7 @@ export function useSpellSlots(): SpellSlotsState {
     spellsKnown: known.spellsKnown,
     preparedSpells: known.preparedSpells,
     spellProfiles,
+    spellProvenance: spellState?.provenance ?? emptyProvenance(),
     spellcastingDetails,
     spellcastingDetailByProfileId,
   }

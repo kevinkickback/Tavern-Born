@@ -10,6 +10,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
@@ -48,11 +49,17 @@ export function useSpellProfileMutations(
 ) {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
 
   const synchronized = useMemo(() => {
     if (!character) return null
-    return syncSpellProfiles(character, character.provenance ?? emptyProvenance(), spellProfiles)
-  }, [character, spellProfiles])
+    return syncSpellProfiles(
+      character,
+      character.provenance ?? emptyProvenance(),
+      spellProfiles,
+      calculationContext?.raceResolution,
+    )
+  }, [character, spellProfiles, calculationContext])
   const currentLedger = synchronized?.provenanceUpdate ?? emptyProvenance()
   const commandCharacter = useMemo(() => {
     if (!character || !synchronized) return null

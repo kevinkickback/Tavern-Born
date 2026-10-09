@@ -41,6 +41,7 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
+import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -643,10 +644,22 @@ function isMagicItem(item: Equipment): boolean {
 }
 
 export function createCharacterSheetViewModel(
-  character: Character,
+  savedCharacter: Character,
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
-  const calculationContext = createCharacterCalculationContext(character, rawLookups)
+  const calculationContext = createCharacterCalculationContext(savedCharacter, rawLookups)
+  const classesById = new Map(
+    Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
+      toClassProfileId(classData.name, classData.source),
+      classData,
+    ]),
+  )
+  const character = deriveSpellProfileState(
+    savedCharacter,
+    classesById,
+    undefined,
+    calculationContext.raceResolution,
+  )
   const feats = getSelectedFeats(character).map((feat) => ({
     ...feat,
     description:
@@ -709,12 +722,6 @@ export function createCharacterSheetViewModel(
   const resolvedClasses = calculationContext.classes
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
-  const classesById = new Map(
-    Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
-      toClassProfileId(classData.name, classData.source),
-      classData,
-    ]),
-  )
   const spellcastingDetails = buildSpellcastingClassDetails(
     character,
     classesById,
