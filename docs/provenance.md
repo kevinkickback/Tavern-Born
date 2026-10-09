@@ -18,6 +18,15 @@ target remains unresolved, even if only one printing is loaded; the owner's prin
 Normalization is case-insensitive for identity but preserves readable/source-qualified data for
 display and resolution. Multiple tags may own the same grant; removing one owner must retain the
 grant while another owner remains.
+Separate owner name/source fields normalize only whitespace and case, preserving their complete
+literal values. Proficiency/item key normalization must not truncate or reinterpret those fields.
+
+Completed current-format characters have one active racial owner set: the selected source-qualified
+parent and optional child. Every racial tag and choice in every ledger domain must match that set;
+a selected child requires a parent. Persistence validates the complete character and rejects foreign
+or orphan ownership, without requiring loaded metadata or inferring missing references. Empty
+drafts without racial ownership remain valid. Creation and mutation commands commit identity,
+materialized fields and provenance atomically; intermediate Finish patches are not saved characters.
 
 ## Layers
 
@@ -102,6 +111,13 @@ Switching to or from a version rebuilds both race and subrace ownership in one c
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
 changes retain the existing additive ownership behavior.
 
+Ordinary child replacement or clearing preserves the unchanged parent's nonability selections when
+the previous child resolves exactly as ordinary. If its metadata is unavailable or its kind cannot
+be established, rebuild the whole selection: the old child may have been a complete version.
+Do not guess its kind or treat another printing as the previous child. Parent replacement always
+rebuilds the racial set, even when the child reference stays the same; compatible spell setup retains
+the separate same-profile rule described below.
+
 Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
 recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
 feats when saved selections are resolved from the raw catalog.
@@ -158,6 +174,42 @@ Commands can therefore rebuild full race ownership when leaving a version hidden
 If the previous saved child is unavailable even in that catalog, its mechanics cannot establish an
 additive transition. The command rebuilds the complete race selection and resets racial choices
 against the newly selected data, preserving manual and unrelated ownership.
+
+Racial ability grants and calculations use the same parsed fixed bonuses and choice blocks.
+Explicit ability rules take precedence over flexible lineage defaults; fixed bonuses coexist with
+choices. The three-ability distribution is one choice with a count of three. Parent choices precede
+ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
+Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
+Choice IDs encode the complete normalized granting name and printing plus a numeric block ordinal.
+Current saves require unique dense ordinals within each represented owner, explicit integer amounts
+and bounded selections/status consistent with the player's slots. Parent blocks precede child blocks;
+each owner's blocks follow numeric ordinals regardless of ledger array order. Updates retain the
+ledger's array order and target the selected record objects. Unrelated domains and manual/class choices
+may share IDs without consuming racial ability slots; opaque racial ability IDs are rejected.
+Commands retain the player's slot layout while committing validated selections to provenance.
+Ordinary child changes rebuild the selected parent's ability ownership with the cleared slots,
+including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
+origin bonuses under the child identity. Wizard Review shares the bounded calculator, and the
+Builder distribution control commits the new shape and ownership in one command update.
+Changing only the distribution replaces ability records and retains every non-ability racial choice
+and benefit. Ability values and choice amounts must be integers to match persistence validation.
+When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
+available to calculation; revised origin rules suppress those racial bonuses.
+Race summaries use the same bounded choices and selected distribution as calculation, preserving
+the separate parent and child rules rather than deriving ability rules from a merged display record.
+Missing exact parent or child metadata hides racial choice editing until that selection resolves;
+an available parent alone cannot establish the missing child's layout. Rejected ability commands
+leave the draft, modification timestamp and unsaved-change state untouched.
+Selecting the already active distribution is also a no-op and retains assigned bonuses.
+Direct ability-choice calls without a matching current racial block leave the complete draft and
+save state untouched. Known matching records remain usable by pure commands without catalog inputs.
+Opening the race page or refreshing its catalog does not clear or substitute a saved child.
+Saved selection details resolve the exact current reference even when catalog filters hide it;
+new race and child options remain restricted to the filtered catalog. Child option values retain
+the separate complete name and source, without interpreting a joined label as an identity.
+Nested child resolution compares both complete fields with case and surrounding whitespace
+normalized; a different printing, truncated name or absent source cannot supply that child.
+Explicit race selection chooses its initial child; explicit child selection owns later changes.
 
 ## Class ownership
 

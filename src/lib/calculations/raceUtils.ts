@@ -2,8 +2,8 @@ import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
+  getRaceAbilityChoiceSelections,
   getRaceAbilityData,
-  hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import type { Race5e } from '@/types/5etools'
@@ -143,30 +143,26 @@ export function getSkillProfDisplay(race: Race5e | undefined): string[] {
 /**
  * Format ability score increases as display strings.
  * When `raceAsiChoices` is provided, shows selected choices and remaining count.
- * Handles lineage races with flexible ASI options.
+ * Uses the selected parent/child rules and the chosen flexible distribution.
  */
 export function getAsiDisplay(
   race: Race5e | undefined,
   raceAsiBlockIndex: 0 | 1 = 0,
   raceAsiChoices?: string[][],
+  subrace?: Race5e,
 ): string[] {
   if (!race) return []
-  if (hasFlexibleRaceOriginAsi(race)) {
-    return ['Choose: +1/+2 (any 2 abilities)', 'Choose: +1 (any 3 abilities)']
-  }
-  const { fixed, choices } = getRaceAbilityData(race, undefined, raceAsiBlockIndex)
+  const { fixed, choices } = getRaceAbilityData(race, subrace, raceAsiBlockIndex)
+  const selectedByBlock = getRaceAbilityChoiceSelections({ choices }, raceAsiChoices ?? [])
   const lines: string[] = []
   for (const fb of fixed) {
     lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`)
   }
   for (const [blockIdx, block] of choices.entries()) {
-    const selections = raceAsiChoices ? (raceAsiChoices[blockIdx] ?? []).filter(Boolean) : []
+    const selections = selectedByBlock[blockIdx]
     if (selections.length > 0) {
       for (const ab of selections) {
-        const abbr =
-          ABILITY_ABBREVIATIONS[ab as keyof typeof ABILITY_ABBREVIATIONS] ??
-          ab.toUpperCase().slice(0, 3)
-        lines.push(`${abbr} +${block.amount}`)
+        lines.push(`${ABILITY_ABBREVIATIONS[ab]} +${block.amount}`)
       }
       const remaining = block.count - selections.length
       if (remaining > 0) lines.push(`Choose ${remaining} more +${block.amount}`)

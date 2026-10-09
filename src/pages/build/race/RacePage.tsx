@@ -41,7 +41,7 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
-  getRaceAbilityData,
+  ABILITY_ABBREVIATIONS,
   hasUnresolvedRaceAbilityChoices,
 } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
@@ -64,8 +64,13 @@ import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
+import type { AbilityName } from '@/types/character'
 
 type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
+
+function getSubraceSelectionValue(name: string, source?: string) {
+  return JSON.stringify([name, source ?? ''])
+}
 
 const RACE_BONUSES_LINK = {
   pathname: '/build/ability-scores',
@@ -103,14 +108,12 @@ export function BuildRacePage() {
     selectedRaceRef.current?.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' })
   }, [raceSearch])
 
-  const selectedRace = races.find((r) =>
+  const catalogRace = races.find((r) =>
     matchesGameDataEntry(character?.race, character?.raceSource, r),
   ) as Race5e | undefined
-  const subraces = getAvailableSubraces(selectedRace)
-  const selectedSubrace = subraces.find(
-    (sr) =>
-      sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
-  )
+  const selectedRace = calculationContext?.raceResolution.parentRace
+  const subraces = getAvailableSubraces(catalogRace)
+  const selectedSubrace = calculationContext?.raceResolution.subraceData
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     selectedRace,
     selectedSubrace,
@@ -122,50 +125,25 @@ export function BuildRacePage() {
       : (normalizedSelection.subrace ?? normalizedSelection.race)
   const hasUnresolvedRaceBonuses =
     character?.originSystem === '2014' &&
+    calculationContext &&
     hasUnresolvedRaceAbilityChoices(
-      getRaceAbilityData(
-        normalizedSelection.race,
-        normalizedSelection.subrace,
-        (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-      ),
+      calculationContext.abilityScores.raceAsiData,
       character.raceAsiChoices ?? [],
     )
-  const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
-
-  // Refs let the effect read the latest values without making them dependencies,
-  // so the effect only fires when the selected race changes — not on every character update.
-  const characterRef = useRef(character)
-  characterRef.current = character
-  const currentRaceDataRef = useRef(selectedRace)
-  currentRaceDataRef.current = selectedRace
-  const currentSubracesRef = useRef(subraces)
-  currentSubracesRef.current = subraces
-  const hasSelectedSubraceRef = useRef(!!selectedSubrace)
-  hasSelectedSubraceRef.current = !!selectedSubrace
-
-  // When the selected race changes, auto-select the first subrace if none is set,
-  // or clear a stale subrace if the new race has none.
-  useEffect(() => {
-    const char = characterRef.current
-    const race = currentRaceDataRef.current
-    const currentSubraces = currentSubracesRef.current
-    // selectedRaceKey being null means no race is selected — nothing to do.
-    if (!char || !race || !selectedRaceKey) return
-
-    if (currentSubraces.length === 0) {
-      if (char.subrace || char.subraceSource) {
-        applySubraceChange(race, undefined)
-      }
-      return
-    }
-
-    if (hasSelectedSubraceRef.current) return
-
-    const firstSubrace = currentSubraces[0]
-    if (!firstSubrace) return
-
-    applySubraceChange(race, firstSubrace)
-  }, [selectedRaceKey, applySubraceChange])
+  const selectedRaceKey = catalogRace ? `${catalogRace.name}|${catalogRace.source ?? ''}` : null
+  const hasResolvedRaceSelection =
+    Boolean(calculationContext?.raceResolution.parentRace) &&
+    (!character?.subrace || Boolean(calculationContext?.raceResolution.subraceData))
+  const asi = hasResolvedRaceSelection
+    ? getAsiDisplay(
+        calculationContext?.abilityScores.normalizedRaceSelection.race,
+        (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
+        character?.raceAsiChoices,
+        calculationContext?.abilityScores.normalizedRaceSelection.subrace,
+      )
+    : Object.entries(calculationContext?.abilityScores.racialBonuses ?? {}).map(
+        ([ability, value]) => `${ABILITY_ABBREVIATIONS[ability as AbilityName]} +${value}`,
+      )
 
   // Racial feat choices from provenance
   const racialFeatChoices = useMemo(
@@ -379,19 +357,25 @@ export function BuildRacePage() {
                           </span>
                           <Select
                             value={
-                              character.subrace
-                                ? `${character.subrace}|${character.subraceSource ?? ''}`
-                                : ''
+                              selectedSubrace
+                                ? getSubraceSelectionValue(
+                                    selectedSubrace.name,
+                                    selectedSubrace.source,
+                                  )
+                                : character.subrace
+                                  ? getSubraceSelectionValue(
+                                      character.subrace,
+                                      character.subraceSource,
+                                    )
+                                  : ''
                             }
                             onValueChange={(value) => {
-                              const [subraceName, ...sourceParts] = value.split('|')
-                              const subraceSource =
-                                sourceParts.length > 0 ? sourceParts.join('|') : undefined
                               const nextSubrace = subraces.find(
                                 (candidate) =>
-                                  candidate.name === subraceName &&
-                                  (candidate.source ?? '') === (subraceSource ?? ''),
+                                  getSubraceSelectionValue(candidate.name, candidate.source) ===
+                                  value,
                               )
+                              if (!nextSubrace) return
                               applySubraceChange(selectedRace, nextSubrace)
                             }}
                           >
@@ -399,13 +383,15 @@ export function BuildRacePage() {
                               aria-label="Subrace"
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
-                              <SelectValue placeholder="Choose a subrace" />
+                              <SelectValue placeholder="Choose a subrace">
+                                {selectedSubrace?.name ?? character.subrace}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {subraces.map((subrace) => (
                                 <SelectItem
-                                  key={`${subrace.name}|${subrace.source ?? ''}`}
-                                  value={`${subrace.name}|${subrace.source ?? ''}`}
+                                  key={getSubraceSelectionValue(subrace.name, subrace.source)}
+                                  value={getSubraceSelectionValue(subrace.name, subrace.source)}
                                   className="text-xs"
                                 >
                                   {subrace.name}
@@ -482,11 +468,6 @@ export function BuildRacePage() {
                             icon: <Sparkle className="size-4 text-primary" weight="fill" />,
                             label: 'Ability Bonuses',
                             value: (() => {
-                              const asi = getAsiDisplay(
-                                displayRace,
-                                (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-                                character.raceAsiChoices,
-                              )
                               if (asi.length > 0) return asi.join(' · ')
                               return character.originSystem === '2024'
                                 ? 'Provided by background'

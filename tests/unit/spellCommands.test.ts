@@ -56,7 +56,10 @@ describe('Spell Commands', () => {
     expect(selected.provenanceUpdate.spells['mage hand']).toEqual([
       expect.objectContaining({ sourceType: 'race', sourceName: 'High Elf', sourceRef: 'PHB' }),
     ])
-    expect(reconcileRaceChange(selected.provenanceUpdate, 'High Elf', undefined).spells).toEqual({})
+    expect(
+      reconcileRaceChange(selected.provenanceUpdate, { name: 'High Elf', source: 'PHB' }, undefined)
+        .spells,
+    ).toEqual({})
 
     const configured = {
       ...character,

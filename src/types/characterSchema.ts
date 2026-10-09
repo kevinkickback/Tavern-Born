@@ -4,6 +4,12 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
+import {
+  getUnselectedRaceOwnerPaths,
+  hasRaceAbilityOriginGrants,
+} from '@/lib/provenance/raceOwnership'
+import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
@@ -822,11 +828,65 @@ export const characterSchema = z
       ['subrace', 'subraceSource'],
       ['background', 'backgroundSource'],
     ] as const) {
-      if (char[nameKey] && !char[sourceKey]) {
+      if (char[nameKey]?.trim() && !char[sourceKey]?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `${sourceKey} is required when ${nameKey} is selected`,
           path: [sourceKey],
+        })
+      }
+    }
+    if (char.subrace?.trim() && !char.race.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A selected subrace requires a selected race',
+        path: ['race'],
+      })
+    }
+    if (char.provenance) {
+      if (char.originSystem === '2024' && hasRaceAbilityOriginGrants(char.provenance)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Revised origin cannot retain racial ability grants or choice blocks',
+          path: ['provenance'],
+        })
+      }
+      const invalidAbilityPaths = getInvalidRaceAbilityChoicePaths(char.provenance)
+      for (const path of invalidAbilityPaths) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'Racial ability choices require explicit rules and unique canonical owner blocks',
+          path: ['provenance', ...path],
+        })
+      }
+      if (invalidAbilityPaths.length === 0) {
+        const resolved = resolveRaceAsiChoicesInLedger(
+          char,
+          char.provenance,
+          char.raceAsiChoices ?? [],
+        )
+        char.provenance.choices.forEach((record, index) => {
+          const expected = resolved.choices[index]
+          if (
+            expected !== record &&
+            (record.status !== expected.status ||
+              record.selected.length !== expected.selected.length ||
+              record.selected.some((ability, slot) => ability !== expected.selected[slot]))
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Racial ability records must agree with the bounded saved player choices',
+              path: ['provenance', 'choices', index, 'selected'],
+            })
+          }
+        })
+      }
+      for (const path of getUnselectedRaceOwnerPaths(char.provenance, char)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Racial grants must belong to the selected race or subrace printing',
+          path: ['provenance', ...path],
         })
       }
     }

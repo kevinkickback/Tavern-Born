@@ -178,9 +178,7 @@ describe('provenance/applyRaceGrants', () => {
     )
 
     const abilityChoices = ledger.choices.filter((choice) => choice.domain === 'abilityBonuses')
-    expect(abilityChoices).toHaveLength(3)
-    for (const choice of abilityChoices) {
-      expect(choice).toMatchObject({ chooseCount: 1, amount: 1 })
-    }
+    expect(abilityChoices).toHaveLength(1)
+    expect(abilityChoices[0]).toMatchObject({ chooseCount: 3, amount: 1 })
   })
 })

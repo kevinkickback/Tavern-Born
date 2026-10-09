@@ -3,6 +3,7 @@ import { useRaceLookup } from '@/hooks/data/useGameData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   applyRaceAsiChoicesCommand,
+  applyRaceAsiDistributionCommand,
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
@@ -105,7 +106,9 @@ export function useRaceProvenanceMutations() {
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {
       if (!character) return
-      const result = applyRaceAsiChoicesCommand(ledger, choices)
+      const result = applyRaceAsiChoicesCommand(character, ledger, choices)
+      if (result.provenanceUpdate === ledger && Object.keys(result.characterPatch).length === 0)
+        return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
@@ -113,5 +116,18 @@ export function useRaceProvenanceMutations() {
     },
     [character, ledger, updateCharacter],
   )
-  return { applyRaceSelection, applySubraceChange, applyRaceAsiChoices }
+  const applyRaceAsiDistribution = useCallback(
+    (race: Race5e, subrace: Race5e | undefined, mode: 0 | 1) => {
+      if (!character) return
+      const result = applyRaceAsiDistributionCommand(character, ledger, race, subrace, mode)
+      if (result.provenanceUpdate === ledger && Object.keys(result.characterPatch).length === 0)
+        return
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+  return { applyRaceSelection, applySubraceChange, applyRaceAsiChoices, applyRaceAsiDistribution }
 }

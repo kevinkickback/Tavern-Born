@@ -14,13 +14,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Source-qualified race/class/feat resolution and fixed setup reconciliation measure
-  // 5,597,948 renderer bytes (5466.7 KiB). Final-owner/expertise cleanup adds 2967 bytes;
-  // no dependency added. This measured allowance requires explicit budget review.
-  rendererCode: 5467 * KIB,
-  // The measured initial script is 448,805 bytes (438.3 KiB), +1983 for fixed setup cleanup.
-  // Other budgets remain unchanged; this allowance also requires explicit budget review.
-  initialRendererScript: 439 * KIB,
+  // Strict racial block identity and shared ability projection measure 5,601,183
+  // renderer bytes (5469.9 KiB), without new dependencies. Use the smallest whole-KiB
+  // allowance; this measured increase requires explicit budget review.
+  rendererCode: 5470 * KIB,
+  // The same measured artifact has a 453,265-byte initial script (442.6 KiB).
+  // Other budgets and their enforcement remain unchanged; explicit budget review required.
+  initialRendererScript: 443 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

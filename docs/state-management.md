@@ -193,8 +193,15 @@ are not carried forward through breaking changes while preparing for 1.0. Older 
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
 
-Schema 3 separates a fixed feat's granting owner printing from the granted feat printing. Schema 2
-characters must be recreated; relabeling their version cannot restore missing ownership information.
+Schema 5 requires one active source-qualified racial owner set: the selected parent and optional
+child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
+Racial ability choices use canonical encoded full owner references and dense numeric block ordinals
+within each represented owner. Array order does not change block identity; integer amounts are
+explicit, and selections/status agree with the bounded saved player slots. Ambiguous or incoherent
+records are rejected rather than repaired. Schema 4 did not validate those block associations.
+Revised (2024) origin saves contain no racial ability grants or choice blocks; independent
+background, class and manual ability ownership remains supported.
+Schema 2–4 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 
 For a breaking change, update together:

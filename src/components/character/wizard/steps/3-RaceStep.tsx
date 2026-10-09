@@ -92,16 +92,15 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     })
   }, [data.subrace, data.subraceSource, onChange, selectedRace, selectedSubrace, subraces])
 
-  const displayRace = (() => {
-    const normalizedSelection = normalizeRaceSelectionForOriginSystem(
-      selectedRace,
-      selectedSubrace,
-      (data.originSystem || '2014') as '2014' | '2024',
-    )
-    return normalizedSelection.race && normalizedSelection.subrace
+  const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+    selectedRace,
+    selectedSubrace,
+    (data.originSystem || '2014') as '2014' | '2024',
+  )
+  const displayRace =
+    normalizedSelection.race && normalizedSelection.subrace
       ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
       : normalizedSelection.subrace || normalizedSelection.race
-  })()
 
   const handleSelectRace = (race: Race5e) => {
     const firstSubrace = getAvailableSubraces(race)[0]
@@ -123,7 +122,12 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     })
   }
 
-  const asi = getAsiDisplay(displayRace, data.raceAsiBlockIndex ?? 0)
+  const asi = getAsiDisplay(
+    normalizedSelection.race,
+    data.raceAsiBlockIndex ?? 0,
+    data.raceAsiChoices,
+    normalizedSelection.subrace,
+  )
   const size = displayRace?.size ?? []
   const speed = getSpeedDisplay(displayRace)
   const languages = getLanguageDisplay(displayRace)

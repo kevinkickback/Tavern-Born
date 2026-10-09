@@ -29,11 +29,13 @@ function delayHydration() {
   return (characters: Character[]) => finish(characters)
 }
 
-test('quarantines schema2 originals without inferring grant ownership and exports them unchanged', async () => {
+test.each([
+  2, 3, 4, 6,
+])('quarantines schema%s originals without inferring grant ownership and exports them unchanged', async (schemaVersion) => {
   const supported = makeCharacterFixture({ id: 'current', name: 'Current', allowedSources: [] })
   const original = {
     ...makeCharacterFixture({ id: 'old', name: 'Old', race: 'Gifted', raceSource: 'HB' }),
-    schemaVersion: 2,
+    schemaVersion,
     provenance: {
       ...makeCharacterFixture().provenance,
       feats: {
@@ -61,6 +63,41 @@ test('quarantines schema2 originals without inferring grant ownership and export
   await vi.waitFor(() =>
     expect(storage.setItem).toHaveBeenCalledWith('character-storage', {
       state: { characters: [supported], unsupportedCharacters: [original] },
+      version: 0,
+    }),
+  )
+  const [download] = prepareUnsupportedCharacterDownloads(store.getState().unsupportedCharacters)
+  expect(JSON.parse(download.text)).toEqual(before)
+  expect(original).toEqual(before)
+})
+
+test('invalid current racial ownership is durably quarantined and exports the untouched original', async () => {
+  const original = makeCharacterFixture({
+    id: 'invalid-owner',
+    name: 'Invalid owner',
+    allowedSources: [],
+  })
+  original.provenance.proficiencies.skills.arcana = [
+    {
+      sourceType: 'race',
+      sourceName: 'Human',
+      sourceRef: 'OTHER',
+      grantType: 'fixed',
+      label: 'Human',
+    },
+  ]
+  const before = structuredClone(original)
+  storage.getItem.mockResolvedValueOnce({
+    state: { characters: [original], unsupportedCharacters: [] },
+    version: 0,
+  })
+  const { useCharacterStore: store } = await import('@/store/characterStore')
+  await vi.waitFor(() => expect(store.persist.hasHydrated()).toBe(true))
+  expect(store.getState().characters).toEqual([])
+  expect(store.getState().unsupportedCharacters).toEqual([before])
+  await vi.waitFor(() =>
+    expect(storage.setItem).toHaveBeenCalledWith('character-storage', {
+      state: { characters: [], unsupportedCharacters: [before] },
       version: 0,
     }),
   )

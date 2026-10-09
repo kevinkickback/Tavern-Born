@@ -17,13 +17,15 @@ import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixed
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
+  applyRaceAbilityGrants,
   applyRaceGrants,
   reconcileRaceChange,
   reconcileSubraceChange,
   resolveRaceAsiChoicesInLedger,
 } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -37,6 +39,35 @@ export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subra
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
   return deduped.length > 0 ? deduped : undefined
+}
+
+function rebuildRaceAbilityGrants(
+  ledger: ProvenanceLedger,
+  race: Race5e,
+  subrace: Race5e | undefined,
+  mode: 0 | 1,
+): ProvenanceLedger {
+  const selection = {
+    race: race.name,
+    raceSource: race.source,
+    subrace: subrace?.name,
+    subraceSource: subrace?.source,
+  }
+  const isSelectedAbilityOwner = (tag: SourceTag) => isSelectedRaceOwner(tag, selection)
+  return applyRaceAbilityGrants(
+    race,
+    subrace,
+    {
+      ...ledger,
+      abilityBonuses: ledger.abilityBonuses.filter(
+        (record) => !isSelectedAbilityOwner(record.sourceTag),
+      ),
+      choices: ledger.choices.filter(
+        (choice) => choice.domain !== 'abilityBonuses' || !isSelectedAbilityOwner(choice.sourceTag),
+      ),
+    },
+    mode,
+  )
 }
 
 function removeSourceProficiencies(
@@ -157,14 +188,14 @@ export function applyRaceSelectionCommand(
   const oldRaceName = character.race || undefined
   const oldSubraceName = character.subrace || undefined
   const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
-    { sourceType: 'race', sourceName: oldRaceName },
-    { sourceType: 'subrace', sourceName: oldSubraceName },
+    { sourceType: 'race', sourceName: oldRaceName, sourceRef: character.raceSource ?? '' },
+    { sourceType: 'subrace', sourceName: oldSubraceName, sourceRef: character.subraceSource ?? '' },
   ])
   const workingCharacter = { ...character, ...retracted.characterPatch }
   const retainedProvenance = reconcileRaceChange(
     retracted.provenanceUpdate,
-    oldRaceName,
-    oldSubraceName,
+    { name: oldRaceName, source: character.raceSource },
+    { name: oldSubraceName, source: character.subraceSource },
   )
   let provenanceUpdate = applyRaceGrants(
     normalized.race,
@@ -224,8 +255,8 @@ export function applySubraceSelectionCommand(
   ]
   const previous = previousCandidates.find(
     (candidate) =>
-      candidate.name === character.subrace &&
-      (!character.subraceSource || candidate.source === character.subraceSource),
+      normalizeOwnerIdentity(candidate.name) === normalizeOwnerIdentity(character.subrace) &&
+      normalizeOwnerIdentity(candidate.source) === normalizeOwnerIdentity(character.subraceSource),
   )
   // An unavailable previous child may have replaced all parent mechanics. Rebuild the
   // complete selection rather than assume that parent ownership can be retained.
@@ -248,10 +279,13 @@ export function applySubraceSelectionCommand(
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
   const oldSubraceName = character.subrace || undefined
   const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
-    { sourceType: 'subrace', sourceName: oldSubraceName },
+    { sourceType: 'subrace', sourceName: oldSubraceName, sourceRef: character.subraceSource ?? '' },
   ])
   const workingCharacter = { ...character, ...retracted.characterPatch }
-  const retainedProvenance = reconcileSubraceChange(retracted.provenanceUpdate, oldSubraceName)
+  const retainedProvenance = reconcileSubraceChange(retracted.provenanceUpdate, {
+    name: oldSubraceName,
+    source: character.subraceSource,
+  })
   let provenanceUpdate = retainedProvenance
   if (normalized.subrace) {
     provenanceUpdate = applyRaceGrants(
@@ -270,9 +304,19 @@ export function applySubraceSelectionCommand(
       resolveRaceChoiceOptions,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
       getTotalCharacterLevel(character),
-      { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
+      {
+        suppressLanguageGrants: character.originSystem === '2024',
+        suppressSpellGrants: true,
+        suppressAbilityGrants: true,
+      },
     )
   }
+  provenanceUpdate = rebuildRaceAbilityGrants(
+    provenanceUpdate,
+    normalized.race,
+    normalized.subrace,
+    (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+  )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
@@ -305,12 +349,44 @@ export function applySubraceSelectionCommand(
   })
 }
 
+/** Change only ability distribution; retain all other race benefits and player choices. */
+export function applyRaceAsiDistributionCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  race: Race5e,
+  subrace: Race5e | undefined,
+  mode: 0 | 1,
+): CharacterCommandResult {
+  if (
+    character.originSystem === '2024' ||
+    (character.raceAsiBlockIndex ?? 0) === mode ||
+    normalizeOwnerIdentity(character.race) !== normalizeOwnerIdentity(race.name) ||
+    normalizeOwnerIdentity(character.raceSource) !== normalizeOwnerIdentity(race.source) ||
+    normalizeOwnerIdentity(character.subrace) !== normalizeOwnerIdentity(subrace?.name) ||
+    normalizeOwnerIdentity(character.subraceSource) !== normalizeOwnerIdentity(subrace?.source)
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
+  if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
+  return {
+    characterPatch: { raceAsiBlockIndex: mode, raceAsiChoices: [] },
+    provenanceUpdate: rebuildRaceAbilityGrants(ledger, normalized.race, normalized.subrace, mode),
+  }
+}
+
 export function applyRaceAsiChoicesCommand(
+  character: Character,
   ledger: ProvenanceLedger,
   choices: string[][],
 ): CharacterCommandResult {
+  if (
+    !character.race ||
+    character.originSystem === '2024' ||
+    getSelectedRaceAbilityChoices(ledger, character).length === 0
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
   return {
     characterPatch: { raceAsiChoices: choices },
-    provenanceUpdate: resolveRaceAsiChoicesInLedger(ledger, choices),
+    provenanceUpdate: resolveRaceAsiChoicesInLedger(character, ledger, choices),
   }
 }

@@ -67,6 +67,7 @@ export function buildInitialCharacter(
     ledger = result.provenanceUpdate
 
     const raceAsiResult = applyRaceAsiChoicesCommand(
+      character,
       ledger,
       selections.raceAsiChoices ?? selections.initial.raceAsiChoices ?? [],
     )

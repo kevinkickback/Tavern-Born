@@ -201,13 +201,16 @@ describe('abilityScores', () => {
       ability: [{ choose: { amount: 2, count: 1, from: ['str'] } }],
     }
 
-    const customLineage2Plus1 = getRaceAbilityData(
+    const customLineageExplicit = getRaceAbilityData(
       customLineageRace as unknown as Parameters<typeof getRaceAbilityData>[0],
       undefined,
       0,
     )
-    expect(customLineage2Plus1.choices).toHaveLength(2)
-    expect(customLineage2Plus1.choices[0]).toMatchObject({ amount: 2 })
-    expect(customLineage2Plus1.choices[1]).toMatchObject({ amount: 1 })
+    expect(customLineageExplicit.choices).toHaveLength(1)
+    expect(customLineageExplicit.choices[0]).toMatchObject({
+      count: 1,
+      amount: 2,
+      from: ['strength'],
+    })
   })
 })

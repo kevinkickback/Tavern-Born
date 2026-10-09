@@ -8,6 +8,37 @@ import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 
 describe('entity resolvers', () => {
+  test('resolves normalized complete nested child fields from raw data without borrowing another printing', () => {
+    const child = { name: ' Child|Exact ', source: ' CASE ' } as Race5e
+    const primaryParent = {
+      name: 'Parent',
+      source: 'TEST',
+      subraces: [{ name: 'Child|Exact', source: 'OTHER' }],
+    } as Race5e
+    const rawParent = {
+      ...primaryParent,
+      subraces: [{ name: 'Child', source: 'CASE' }, child],
+    } as Race5e
+    const primary = { racesByKey: buildRaceLookup([primaryParent]) }
+    const raw = { racesByKey: buildRaceLookup([rawParent]) }
+    const reference = {
+      name: 'Parent',
+      source: 'TEST',
+      subraceName: 'child|exact',
+      subraceSource: 'case',
+    }
+    const result = resolveRaceReference(reference, primary, raw)
+    expect.soft(result.parentRace).toBe(primaryParent)
+    expect.soft(result.subraceData).toBe(child)
+    expect.soft(result.subraceIsNested).toBe(true)
+    expect(
+      resolveRaceReference({ ...reference, subraceSource: undefined }, primary, raw).subraceData,
+    ).toBeUndefined()
+    expect(
+      resolveRaceReference({ ...reference, subraceSource: 'MISSING' }, primary, raw).subraceData,
+    ).toBeUndefined()
+  })
+
   test('prefers an exact primary class and falls back to the exact raw class', () => {
     const filteredWizard = { name: 'Wizard', source: 'PHB' } as Class5e
     const rawWizard = { name: 'Wizard', source: 'PHB', page: 1 } as Class5e

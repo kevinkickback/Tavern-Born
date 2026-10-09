@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, expectTypeOf, test } from 'vitest'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
+import type { Race5e } from '@/types/5etools'
 import {
   type CharacterSchemaOutputContract,
   characterPersistenceSchema,
@@ -164,10 +166,10 @@ describe('characterPersistenceSchema', () => {
   })
 
   test('round-trips provenance ability-choice amounts', () => {
-    const character = makeCharacterFixture()
+    const character = makeCharacterFixture({ race: 'Test Race', raceSource: 'TEST' })
     character.provenance.choices = [
       {
-        id: 'race:test:abilityBonuses:choose:0',
+        id: 'race:test%20race|test:abilityBonuses:choose:0',
         domain: 'abilityBonuses',
         sourceTag: {
           sourceType: 'race',
@@ -183,12 +185,178 @@ describe('characterPersistenceSchema', () => {
         status: 'resolved',
       },
     ]
+    character.raceAsiChoices = [['strength']]
 
     const result = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(character)) as unknown,
     )
 
     expect(result.provenance.choices[0]?.amount).toBe(2)
+  })
+
+  function abilityCharacter() {
+    return buildInitialCharacter(
+      {
+        initial: { name: 'Native block references', originSystem: '2014' },
+        race: {
+          name: ' Parent|With:% escapes ',
+          source: ' TEST|:% ',
+          ability: [
+            { choose: { from: ['str', 'dex', 'wis'], amount: 2 } },
+            { choose: { from: ['str', 'dex', 'wis'], amount: 1 } },
+          ],
+        } as Race5e,
+        raceAsiChoices: [
+          ['str', 'invalid', 'wis'],
+          ['dex', 'str'],
+        ],
+      },
+      new Map(),
+      () => [],
+    )
+  }
+
+  test('canonical full owner references preserve bounded raw slots across array permutations and case refresh', () => {
+    const character = abilityCharacter()
+    character.race = 'pARENT|wITH:% ESCAPES'
+    character.raceSource = 'test|:%'
+    character.provenance!.choices.reverse()
+    const before = structuredClone(character)
+    const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+    expect(saved.raceAsiChoices).toEqual([
+      ['str', 'invalid', 'wis'],
+      ['dex', 'str'],
+    ])
+    expect(
+      saved.provenance.choices.map((c) => ({ id: c.id, selected: c.selected, status: c.status })),
+    ).toEqual([
+      {
+        id: 'race:parent%7Cwith%3A%25%20escapes|test%7C%3A%25:abilityBonuses:choose:1',
+        selected: ['dexterity'],
+        status: 'resolved',
+      },
+      {
+        id: 'race:parent%7Cwith%3A%25%20escapes|test%7C%3A%25:abilityBonuses:choose:0',
+        selected: ['strength'],
+        status: 'resolved',
+      },
+    ])
+    expect(character).toEqual(before)
+  })
+
+  test.each([
+    'opaque',
+    'wrong-type',
+    'wrong-name',
+    'wrong-source',
+    'wrong-domain',
+    'negative',
+    'fractional',
+    'leading-zero',
+    'unsafe',
+    'duplicate',
+    'gap',
+    'missing-amount',
+    'wrong-selected',
+    'wrong-status',
+    'malformed-unicode',
+  ])('rejects ambiguous or incoherent current racial ability blocks: %s', (defect) => {
+    const character = abilityCharacter()
+    const record = character.provenance!.choices[0]
+    if (defect === 'opaque') record.id = 'old-opaque-id'
+    if (defect === 'wrong-type') record.id = record.id.replace(/^race:/, 'subrace:')
+    if (defect === 'wrong-name') record.id = record.id.replace('parent%7Cwith', 'different')
+    if (defect === 'wrong-source') record.id = record.id.replace('|test', '|other')
+    if (defect === 'wrong-domain') record.id = record.id.replace(':abilityBonuses:', ':skills:')
+    if (defect === 'negative') record.id = record.id.replace(/:0$/, ':-1')
+    if (defect === 'fractional') record.id = record.id.replace(/:0$/, ':0.5')
+    if (defect === 'leading-zero') record.id = record.id.replace(/:0$/, ':00')
+    if (defect === 'unsafe') record.id = record.id.replace(/:0$/, ':9007199254740992')
+    if (defect === 'duplicate') character.provenance!.choices.push(structuredClone(record))
+    if (defect === 'gap') record.id = record.id.replace(/:0$/, ':2')
+    if (defect === 'missing-amount') delete record.amount
+    if (defect === 'wrong-selected') record.selected = ['wisdom']
+    if (defect === 'wrong-status') record.status = 'pending'
+    if (defect === 'malformed-unicode') {
+      record.sourceTag.sourceName = '\uD800'
+      character.race = '\uD800'
+    }
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test('unrelated domains and manual/class choices may share a racial block ID without consuming its slots', () => {
+    const character = abilityCharacter()
+    const record = character.provenance!.choices[0]
+    const unrelated = [
+      { ...record, domain: 'skills' as const },
+      { ...record, sourceTag: { ...record.sourceTag, sourceType: 'manual' as const } },
+      { ...record, sourceTag: { ...record.sourceTag, sourceType: 'class' as const } },
+    ]
+    character.provenance!.choices.unshift(...unrelated)
+    const saved = characterPersistenceSchema.parse(character)
+    expect(saved.provenance.choices.slice(0, 3)).toEqual(unrelated)
+  })
+
+  test.each([
+    false,
+    true,
+  ])('2024 rejects retained racial blocks, whether their slots are coherent: %s', (coherent) => {
+    const character = abilityCharacter()
+    character.originSystem = '2024'
+    if (!coherent) {
+      character.provenance!.choices[0].selected = ['wisdom']
+      character.provenance!.choices[0].status = 'pending'
+    }
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test.each([
+    'race',
+    'subrace',
+  ] as const)('2024 rejects fixed racial ability grants from %s while retaining independent ability owners', (sourceType) => {
+    const current = buildInitialCharacter(
+      {
+        initial: { name: 'Revised origin', originSystem: '2024' },
+        race: { name: 'Parent', source: 'TEST', ability: [{ con: 2 }] } as Race5e,
+        subrace: { name: 'Child', source: 'TEST', ability: [{ dex: 1 }] } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    const independent = ['manual', 'class', 'background'].map((owner) => ({
+      ability: 'wisdom',
+      value: 1,
+      sourceTag: {
+        sourceType: owner as 'manual' | 'class' | 'background',
+        sourceName: 'Independent',
+        sourceRef: 'TEST',
+        grantType: 'fixed' as const,
+        label: 'Independent',
+      },
+    }))
+    current.provenance!.abilityBonuses.push(...independent)
+    expect(
+      characterPersistenceSchema.parse(JSON.parse(JSON.stringify(current))).provenance
+        .abilityBonuses,
+    ).toEqual(independent)
+    const malformed = structuredClone(current)
+    malformed.provenance!.abilityBonuses.push({
+      ability: 'constitution',
+      value: 2,
+      sourceTag: {
+        sourceType,
+        sourceName: sourceType === 'race' ? 'Parent' : 'Child',
+        sourceRef: 'TEST',
+        grantType: 'fixed',
+        label: 'Retained racial grant',
+      },
+    })
+    expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+    expect(characterPersistenceSchema.safeParse(current).success).toBe(true)
   })
 
   test('round-trips typed manual effects and their activation state', () => {

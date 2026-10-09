@@ -144,11 +144,11 @@ describe('getAsiDisplay', () => {
     expect(getAsiDisplay(undefined)).toEqual([])
   })
 
-  test('returns lineage options for lineage races', () => {
+  test('describes the selected lineage distribution', () => {
     const race = makeRace({ lineage: true } as Partial<Race5e>)
     const result = getAsiDisplay(race)
-    expect(result).toHaveLength(2)
-    expect(result[0]).toContain('+1/+2')
+    expect(result).toEqual(['Choose 1: +2 (any ability)', 'Choose 1: +1 (any ability)'])
+    expect(getAsiDisplay(race, 1)).toEqual(['Choose 3: +1 (any ability)'])
   })
 
   test('formats fixed ability increases', () => {
@@ -157,6 +157,25 @@ describe('getAsiDisplay', () => {
     })
     const result = getAsiDisplay(race)
     expect(result.some((l) => l.includes('DEX') && l.includes('+2'))).toBe(true)
+  })
+
+  test('summary bounds and normalizes selections across blocks exactly like bonuses', () => {
+    const race = makeRace({
+      ability: [
+        { choose: { from: ['str', 'dex'], count: 1, amount: 2 } },
+        { choose: { from: ['str', 'dex', 'con'], count: 2, amount: 1 } },
+      ],
+    })
+    expect(
+      getAsiDisplay(race, 0, [
+        [' STR ', 'dexterity'],
+        ['strength', 'wisdom', 'dex', 'CON', 'int'],
+      ]),
+    ).toEqual(['STR +2', 'DEX +1', 'CON +1'])
+    expect(getAsiDisplay(race, 0, [['strength'], ['strength', 'wisdom']])).toEqual([
+      'STR +2',
+      'Choose 2 × +1 from STR/DEX/CON',
+    ])
   })
 })
 

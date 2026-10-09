@@ -204,6 +204,13 @@ export function getRaceAbilityChoiceCompletion(
   return evaluateRaceAbilityChoices(data, selections).completion
 }
 
+export function getRaceAbilityChoiceSelections(
+  data: { choices: Array<{ count: number; from: AbilityName[] }> },
+  selections: string[][],
+): AbilityName[][] {
+  return evaluateRaceAbilityChoices(data, selections).selectedByBlock
+}
+
 export function hasUnresolvedRaceAbilityChoices(
   data: RaceAbilityData,
   selections: string[][],
@@ -236,13 +243,14 @@ export function buildRacialBonuses(
 }
 
 type FlexibleRaceAbilitySource = {
+  ability?: unknown[]
   lineage?: string | boolean
   _tavernBornFlexibleAsi?: boolean
   _tavernBornSuppressFlexibleAsi?: boolean
 }
 
 export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null): boolean {
-  if (race?._tavernBornSuppressFlexibleAsi === true) {
+  if (race?._tavernBornSuppressFlexibleAsi === true || (race?.ability?.length ?? 0) > 0) {
     return false
   }
   return (
@@ -253,15 +261,6 @@ export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null
 }
 
 export type RaceLineageAsiBlockIndex = 0 | 1
-
-type RaceAbilityEntry = {
-  choose?: {
-    count?: number
-    amount?: number
-    from?: string[]
-  }
-  [ability: string]: number | { count?: number; amount?: number; from?: string[] } | undefined
-}
 
 export function normalizeAbilityName(input: string): AbilityName | null {
   return toAbilityName(input) as AbilityName | null
@@ -353,75 +352,101 @@ export function buildBackgroundBonuses(
  */
 export function getRaceAbilityData(
   race?: {
-    ability?: RaceAbilityEntry[]
+    ability?: unknown[]
     lineage?: string | boolean
     _tavernBornFlexibleAsi?: boolean
     _tavernBornSuppressFlexibleAsi?: boolean
   } | null,
-  subrace?: { ability?: RaceAbilityEntry[]; _isVersion?: unknown } | null,
+  subrace?:
+    | (FlexibleRaceAbilitySource & { _isVersion?: unknown; overwrite?: { ability?: boolean } })
+    | null,
   lineageAsiBlockIndex: RaceLineageAsiBlockIndex = 0,
 ): RaceAbilityData {
   const fixed: FixedAbilityBonus[] = []
   const choices: ChoosableAbilityBonus[] = []
-  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
+  const flexibleSource = subrace?._isVersion === true ? 'subrace' : 'race'
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(
+    flexibleSource === 'subrace' ? subrace : race,
+  )
 
-  function processEntries(entries: RaceAbilityEntry[] | undefined, source: 'race' | 'subrace') {
+  function processEntries(entries: unknown[] | undefined, source: 'race' | 'subrace') {
     if (!entries) return
     for (const entry of entries) {
-      if (entry.choose) {
-        choices.push({
-          count: entry.choose.count ?? 1,
-          amount: entry.choose.amount ?? 1,
-          from: (entry.choose.from ?? Object.keys(ABILITY_ABBREVIATIONS))
-            .map((a) => normalizeAbilityName(a))
-            .filter((a): a is AbilityName => a !== null),
-          source,
-        })
-      } else {
-        for (const [key, val] of Object.entries(entry)) {
-          const ability = normalizeAbilityName(key)
-          if (ability && typeof val === 'number') {
-            fixed.push({ ability, value: val, source })
-          }
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+      for (const [key, val] of Object.entries(entry)) {
+        const ability = normalizeAbilityName(key)
+        if (ability && typeof val === 'number' && Number.isInteger(val)) {
+          fixed.push({ ability, value: val, source })
         }
       }
+      const choose = (entry as { choose?: unknown }).choose
+      if (!choose || typeof choose !== 'object' || Array.isArray(choose)) continue
+      if (Object.keys(choose).some((key) => !['count', 'amount', 'from'].includes(key))) continue
+      const {
+        count = 1,
+        amount = 1,
+        from = ABILITY_NAMES,
+      } = choose as {
+        count?: unknown
+        amount?: unknown
+        from?: unknown
+      }
+      if (
+        typeof count !== 'number' ||
+        !Number.isInteger(count) ||
+        count <= 0 ||
+        typeof amount !== 'number' ||
+        !Number.isInteger(amount) ||
+        !Array.isArray(from)
+      ) {
+        continue
+      }
+      const abilities = [
+        ...new Set(
+          from.flatMap((value) => {
+            const ability = typeof value === 'string' ? normalizeAbilityName(value) : null
+            return ability ? [ability] : []
+          }),
+        ),
+      ]
+      if (abilities.length > 0) choices.push({ count, amount, from: abilities, source })
     }
   }
 
-  // For lineage races (including Tasha's Custom Lineage), we synthesize the
-  // ASI blocks from the selected lineage mode instead of consuming race.ability.
-  if (!usesTashasLineageAsi && subrace?._isVersion !== true) {
+  const replacesParentAbility = subrace?._isVersion !== true && subrace?.overwrite?.ability === true
+  if (!replacesParentAbility && subrace?._isVersion !== true) {
     processEntries(race?.ability, 'race')
   }
-  processEntries(subrace?.ability, 'subrace')
 
   // Lineage races follow Tasha's ASI choice at character creation:
   // - block 0: +2 to one ability and +1 to a different ability
   // - block 1: +1 to three different abilities
-  if (usesTashasLineageAsi) {
+  if (usesTashasLineageAsi && !replacesParentAbility) {
     const allAbilities = [...ABILITY_NAMES] as AbilityName[]
     if (lineageAsiBlockIndex === 1) {
       choices.push({
         count: 3,
         amount: 1,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
     } else {
       choices.push({
         count: 1,
         amount: 2,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
       choices.push({
         count: 1,
         amount: 1,
         from: allAbilities,
-        source: 'race',
+        source: flexibleSource,
       })
     }
   }
+
+  processEntries(subrace?.ability, 'subrace')
 
   return { fixed, choices }
 }

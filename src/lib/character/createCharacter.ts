@@ -1,28 +1,10 @@
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
-import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
+import { emptyProvenance } from '@/lib/provenance/ledger'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 
-export function emptyProvenance(): ProvenanceLedger {
-  const emptyMap = () => ({}) as Record<string, SourceTag[]>
-  return {
-    proficiencies: {
-      armor: emptyMap(),
-      weapons: emptyMap(),
-      tools: emptyMap(),
-      languages: emptyMap(),
-      skills: emptyMap(),
-      savingThrows: emptyMap(),
-    },
-    abilityBonuses: [],
-    features: emptyMap(),
-    feats: emptyMap(),
-    spells: emptyMap(),
-    equipment: emptyMap(),
-    choices: [],
-  }
-}
+export { emptyProvenance } from '@/lib/provenance/ledger'
 
 export function createEmptyCharacter(initial: Partial<Character> = {}): Character {
   const now = new Date().toISOString()

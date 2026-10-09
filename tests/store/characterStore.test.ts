@@ -417,6 +417,8 @@ describe('characterStore', () => {
     0,
     1,
     2,
+    3,
+    4,
     CURRENT_CHARACTER_SCHEMA_VERSION + 1,
     String(CURRENT_CHARACTER_SCHEMA_VERSION),
     'invalid',
@@ -428,6 +430,36 @@ describe('characterStore', () => {
 
   test('uses the exact current character schema version', () => {
     expect(makeCharacterFixture().schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
+  })
+
+  test('rejects a partial racial identity update atomically and permits its complete replacement', async () => {
+    const saved = makeCharacterFixture({ id: 'racial-owner' })
+    saved.provenance.proficiencies.skills.arcana = [
+      {
+        sourceType: 'race',
+        sourceName: 'Human',
+        sourceRef: 'PHB',
+        grantType: 'fixed',
+        label: 'Human',
+      },
+    ]
+    await useCharacterStore.getState().addCharacter(saved)
+    useCharacterStore.getState().setActiveCharacter(saved.id)
+    const before = structuredClone(useCharacterStore.getState().activeCharacter)
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    useCharacterStore.getState().updateActiveCharacter({ raceSource: 'OTHER' })
+    expect(useCharacterStore.getState().activeCharacter).toEqual(before)
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+    const provenance = structuredClone(saved.provenance)
+    provenance.proficiencies.skills.arcana[0].sourceRef = 'OTHER'
+    useCharacterStore.getState().updateActiveCharacter({ raceSource: 'OTHER', provenance })
+    expect(useCharacterStore.getState().activeCharacter?.raceSource).toBe('OTHER')
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance.proficiencies.skills.arcana[0]
+        .sourceRef,
+    ).toBe('OTHER')
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+    error.mockRestore()
   })
 
   test('rejects removed top-level class and level mirrors', () => {

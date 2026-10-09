@@ -1,4 +1,5 @@
 import { normalizeBackgroundOriginRules } from '@/lib/5etools/backgroundRuleNormalization'
+import { hasRaceAbilityOriginGrants } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Race5e } from '@/types/5etools'
 import type { OriginSystem } from '@/types/character'
 import {
@@ -168,15 +169,6 @@ export function ensureRaceOriginInvariants(
   originSystem: OriginSystem,
 ): void {
   if (originSystem !== '2024') return
-
-  const hasRaceAbilityBonuses = ledger.abilityBonuses.some(
-    (record) => record.sourceTag.sourceType === 'race' || record.sourceTag.sourceType === 'subrace',
-  )
-  const hasRaceAbilityChoices = ledger.choices.some(
-    (choice) =>
-      choice.domain === 'abilityBonuses' &&
-      (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace'),
-  )
   const hasRaceFeatBenefits =
     Object.values(ledger.feats).some((tags) =>
       tags.some((tag) => tag.sourceType === 'race' || tag.sourceType === 'subrace'),
@@ -190,7 +182,7 @@ export function ensureRaceOriginInvariants(
     .flat()
     .some((tag) => tag.sourceType === 'race' || tag.sourceType === 'subrace')
 
-  if (hasRaceAbilityBonuses || hasRaceAbilityChoices) {
+  if (hasRaceAbilityOriginGrants(ledger)) {
     throw new Error('2024 origin system cannot retain race or subrace ability-score origin grants.')
   }
   if (hasRaceFeatBenefits) {

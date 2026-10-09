@@ -6,10 +6,9 @@ import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
-  type AbilityName,
+  buildRacialBonuses,
   formatModifier,
   getRaceAbilityData,
-  normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import {
@@ -77,23 +76,16 @@ export function ReviewStep({
       ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
       : normalizedSelection.race
 
-  const racialBonuses: Partial<Record<AbilityName, number>> = {}
-  if (showRaceOriginBonuses) {
-    const raceAsiData = getRaceAbilityData(
-      normalizedSelection.race,
-      normalizedSelection.subrace,
-      data.raceAsiBlockIndex ?? 0,
-    )
-    for (const fb of raceAsiData.fixed) {
-      racialBonuses[fb.ability] = (racialBonuses[fb.ability] ?? 0) + fb.value
-    }
-    for (const [blockIdx, block] of raceAsiData.choices.entries()) {
-      for (const raw of data.raceAsiChoices?.[blockIdx] ?? []) {
-        const ab = normalizeAbilityName(raw)
-        if (ab) racialBonuses[ab] = (racialBonuses[ab] ?? 0) + block.amount
-      }
-    }
-  }
+  const racialBonuses = showRaceOriginBonuses
+    ? buildRacialBonuses(
+        getRaceAbilityData(
+          normalizedSelection.race,
+          normalizedSelection.subrace,
+          data.raceAsiBlockIndex ?? 0,
+        ),
+        data.raceAsiChoices ?? [],
+      )
+    : {}
 
   const sourceLabelByAbbreviation = new Map(
     sources.map((source) => [source.abbreviation, source.name]),
