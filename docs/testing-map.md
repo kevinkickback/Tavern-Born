@@ -87,6 +87,9 @@ The fixture generator uses the production native spell evaluator. Companion char
 their chosen racial setup and refresh its applied snapshot at their own level. All four generated
 characters pass strict admission before any fixture is written; corpus checks also require complete
 readiness and exact target resolution with source casing normalized.
+Its one-time SSR runtime disables file watching and dependency discovery, then closes after loading
+the pure producers. The child-process corpus check keeps a bounded execution time and captures
+only fixture writes, comparing all four outputs with the committed records.
 
 ## E2E conventions
 

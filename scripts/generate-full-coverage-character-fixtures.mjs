@@ -1426,7 +1426,7 @@ const runtime = await createServer({
   root,
   resolve: { alias: { '@': join(root, 'src') } },
   optimizeDeps: { noDiscovery: true },
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, watch: null },
   appType: 'custom',
 })
 let parseRaces,
