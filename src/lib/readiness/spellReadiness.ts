@@ -105,12 +105,23 @@ export function validateSpells(
     calculation.effects.declarations,
     calculation.effects.resolutionContext,
   )
-  const spellProfiles = deriveSpellProfileState(
+  const storedProfiles = character.spells.spellProfiles.filter(
+    (profile) => profile.type !== 'racial',
+  )
+  const storedProfileIds = new Set(storedProfiles.map((profile) => profile.id))
+  const derivedProfiles = deriveSpellProfileState(
     character,
     classMap,
     undefined,
     calculation.raceResolution,
   ).spells.spellProfiles
+  // Refresh the native relation while retaining existing class and special command state.
+  const spellProfiles = [
+    ...storedProfiles,
+    ...derivedProfiles.filter(
+      (profile) => profile.type === 'racial' || !storedProfileIds.has(profile.id),
+    ),
+  ]
   const profileById = new Map(spellProfiles.map((profile) => [profile.id, profile]))
   const issues = details.flatMap((detail) => {
     const profile = profileById.get(detail.profileId)

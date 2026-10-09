@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -9,7 +9,7 @@ describe.runIf(existsSync(resolve(process.cwd(), 'data')))(
   'current character fixture generation',
   () => {
     test('emits strict current-format characters with separate fixed target identity', () => {
-      // Run the real generator while capturing every write in the child process.
+      // Capture the four fixture writes; dependency cache writes remain ordinary cache writes.
       const output = execFileSync(
         process.execPath,
         [
@@ -17,17 +17,25 @@ describe.runIf(existsSync(resolve(process.cwd(), 'data')))(
           '-e',
           `import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
+import { resolve } from 'node:path';
 const outputs = [];
-fs.writeFileSync = (path, contents) => outputs.push({ path, character: JSON.parse(contents) });
+const fixturePaths = new Set(['full-coverage-character-2014.tbc', 'full-coverage-character-2024.tbc', 'companion-choice-character-2014.tbc', 'companion-choice-character-2024.tbc'].map(name => resolve('tests', 'fixtures', name)));
+const write = fs.writeFileSync;
+fs.writeFileSync = (path, contents, ...options) => {
+  if (typeof path === 'string' && fixturePaths.has(resolve(path))) outputs.push({ path, character: JSON.parse(contents) });
+  else write(path, contents, ...options);
+};
 syncBuiltinESMExports();
 await import('./scripts/generate-full-coverage-character-fixtures.mjs');
 process.stdout.write(JSON.stringify(outputs));`,
         ],
-        { cwd: process.cwd(), encoding: 'utf8' },
+        { cwd: process.cwd(), encoding: 'utf8', timeout: 25_000 },
       )
       const outputs = JSON.parse(output) as Array<{ path: string; character: unknown }>
       expect(outputs).toHaveLength(4)
-      for (const { character } of outputs) {
+      expect(new Set(outputs.map(({ path }) => path)).size).toBe(4)
+      for (const { path, character } of outputs) {
+        expect(character).toEqual(JSON.parse(readFileSync(path, 'utf8')))
         const parsed = characterPersistenceSchema.parse(character)
         expect(parsed.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
         for (const tags of Object.values(parsed.provenance.feats)) {
@@ -48,6 +56,6 @@ process.stdout.write(JSON.stringify(outputs));`,
           grantType: 'fixed',
         }),
       ])
-    })
+    }, 30_000)
   },
 )

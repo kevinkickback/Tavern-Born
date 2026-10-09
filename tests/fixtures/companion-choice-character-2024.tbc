@@ -102,6 +102,60 @@
         "spellsKnown": [],
         "preparedSpells": [],
         "alwaysPrepared": true
+      },
+      {
+        "id": "racial:%5B%22elf%22%2C%22xphb%22%2C%22drow%20lineage%22%2C%22xphb%22%2C%22subrace%22%2C%22drow%20lineage%22%2C%22xphb%22%5D",
+        "type": "racial",
+        "label": "Drow Lineage",
+        "raceName": "Drow Lineage",
+        "raceSource": "XPHB",
+        "racial": {
+          "context": {
+            "parent": {
+              "name": "Elf",
+              "source": "XPHB"
+            },
+            "child": {
+              "name": "Drow Lineage",
+              "source": "XPHB"
+            }
+          },
+          "ownerType": "subrace",
+          "mode": "mandatory",
+          "suite": {
+            "id": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522xphb%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%252C%2522subrace%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22%5C%22%2C%5B%5C%22cha%5C%22%2C%5C%22int%5C%22%2C%5C%22wis%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%22%2C1%2Ctrue%2Cnull%2C%5C%5C%5C%22known%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%22%2C5%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%22%2C3%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%5D%2C%5B%5D%2C%5B%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C3%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C5%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2C%5C%5C%5C%5C%5C%5C%5C%22c%5C%5C%5C%5C%5C%5C%5C%22%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D"
+          },
+          "fixed": [
+            {
+              "reference": "dancing lights|xphb",
+              "isCantrip": true
+            },
+            {
+              "reference": "faerie fire|xphb",
+              "isCantrip": false,
+              "dailyUses": 1
+            }
+          ]
+        },
+        "castingAbility": "int",
+        "castingAbilityOptions": [
+          "int",
+          "wis",
+          "cha"
+        ],
+        "choices": [],
+        "cantrips": [
+          "dancing lights|xphb"
+        ],
+        "spellsKnown": [
+          "faerie fire|xphb"
+        ],
+        "preparedSpells": [],
+        "alwaysPrepared": true,
+        "fixedSpells": [
+          "dancing lights|xphb",
+          "faerie fire|xphb"
+        ]
       }
     ],
     "spellSlots": {
@@ -488,6 +542,28 @@
           "label": "Ranger",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
+        }
+      ],
+      "dancing lights": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage",
+          "grantVariant": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522xphb%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%252C%2522subrace%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22%5C%22%2C%5B%5C%22cha%5C%22%2C%5C%22int%5C%22%2C%5C%22wis%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%22%2C1%2Ctrue%2Cnull%2C%5C%5C%5C%22known%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%22%2C5%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%22%2C3%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%5D%2C%5B%5D%2C%5B%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C3%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C5%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2C%5C%5C%5C%5C%5C%5C%5C%22c%5C%5C%5C%5C%5C%5C%5C%22%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D",
+          "grantSource": "xphb"
+        }
+      ],
+      "faerie fire": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage",
+          "grantVariant": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522xphb%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%252C%2522subrace%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22%5C%22%2C%5B%5C%22cha%5C%22%2C%5C%22int%5C%22%2C%5C%22wis%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%22%2C1%2Ctrue%2Cnull%2C%5C%5C%5C%22known%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%22%2C5%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%22%2C3%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%5D%2C%5B%5D%2C%5B%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C3%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C5%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2C%5C%5C%5C%5C%5C%5C%5C%22c%5C%5C%5C%5C%5C%5C%5C%22%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D",
+          "grantSource": "xphb"
         }
       ]
     },

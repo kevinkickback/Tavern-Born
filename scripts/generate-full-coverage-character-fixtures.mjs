@@ -1073,20 +1073,7 @@ function buildFixture(seed, edition) {
     manualActions: seed.manualActions ?? [],
   }
 
-  const nativeParent = nativeRaces.find(
-    (candidate) => candidate.name === fixture.race && candidate.source === fixture.raceSource,
-  )
-  const nativeChild = nativeParent?.subraces?.find(
-    (candidate) => candidate.name === fixture.subrace && candidate.source === fixture.subraceSource,
-  )
-  if (!nativeParent || (fixture.subrace && !nativeChild))
-    throw new Error('Missing exact native fixture context.')
-  const raceResolution = {
-    parentRace: nativeParent,
-    subraceData: nativeChild,
-    mergedRace: nativeParent,
-    subraceIsNested: !!nativeChild,
-  }
+  const raceResolution = getNativeFixtureResolution(fixture)
   fixture.spells.spellProfiles.push(...deriveNativeRacialSpellProfiles(fixture, raceResolution))
   fixture.provenance = reconcileNativeRacialSpellLedger(
     fixture.provenance,
@@ -1109,6 +1096,23 @@ function buildFixture(seed, edition) {
     fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
   }
   return JSON.parse(JSON.stringify(fixture))
+}
+
+function getNativeFixtureResolution(fixture) {
+  const nativeParent = nativeRaces.find(
+    (candidate) => candidate.name === fixture.race && candidate.source === fixture.raceSource,
+  )
+  const nativeChild = nativeParent?.subraces?.find(
+    (candidate) => candidate.name === fixture.subrace && candidate.source === fixture.subraceSource,
+  )
+  if (!nativeParent || (fixture.subrace && !nativeChild))
+    throw new Error('Missing exact native fixture context.')
+  return {
+    parentRace: nativeParent,
+    subraceData: nativeChild,
+    mergedRace: nativeParent,
+    subraceIsNested: !!nativeChild,
+  }
 }
 
 function buildCompanionFixture(baseFixture, edition) {
@@ -1301,7 +1305,7 @@ function buildCompanionFixture(baseFixture, edition) {
   for (const item of companionEquipment) {
     addLedgerGrant(provenance.equipment, item.name, rangerTag)
   }
-  return JSON.parse(
+  const fixture = JSON.parse(
     JSON.stringify({
       ...baseFixture,
       id: `companion-choice-character-${edition}`,
@@ -1392,6 +1396,7 @@ function buildCompanionFixture(baseFixture, edition) {
             preparedSpells: [],
             alwaysPrepared: true,
           },
+          ...baseFixture.spells.spellProfiles.filter((profile) => profile.type === 'racial'),
         ],
         spellSlots: { 1: { max: 3, used: 1 } },
         pactSpellSlots: {},
@@ -1411,6 +1416,7 @@ function buildCompanionFixture(baseFixture, edition) {
       manualActions: [],
     }),
   )
+  return refreshNativeRacialSpellState(fixture, getNativeFixtureResolution(fixture))
 }
 
 // Load the same pure TypeScript producers through the existing Vite alias boundary.
@@ -1419,19 +1425,24 @@ const runtime = await createServer({
   configFile: false,
   root,
   resolve: { alias: { '@': join(root, 'src') } },
+  optimizeDeps: { noDiscovery: true },
   server: { middlewareMode: true },
   appType: 'custom',
 })
 let parseRaces,
   deriveNativeRacialSpellProfiles,
   reconcileNativeRacialSpellLedger,
+  refreshNativeRacialSpellState,
   setRacialSpellChoice,
   setRacialCastingAbility,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
-  ;({ deriveNativeRacialSpellProfiles, reconcileNativeRacialSpellLedger } =
-    await runtime.ssrLoadModule('/src/lib/calculations/nativeRacialSpells.ts'))
+  ;({
+    deriveNativeRacialSpellProfiles,
+    reconcileNativeRacialSpellLedger,
+    refreshNativeRacialSpellState,
+  } = await runtime.ssrLoadModule('/src/lib/calculations/nativeRacialSpells.ts'))
   ;({ setRacialSpellChoice, setRacialCastingAbility } = await runtime.ssrLoadModule(
     '/src/lib/character/commands/spellCommands.ts',
   ))

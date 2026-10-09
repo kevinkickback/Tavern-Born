@@ -83,6 +83,11 @@ core class and level. Guarded corpus tests verify that the external catalog stil
 fixtures' assumptions and that normalized class/subclass choice tracks have resolvable
 source-qualified dependencies without diagnostics.
 
+The fixture generator uses the production native spell evaluator. Companion characters retain
+their chosen racial setup and refresh its applied snapshot at their own level. All four generated
+characters pass strict admission before any fixture is written; corpus checks also require complete
+readiness and exact target resolution with source casing normalized.
+
 ## E2E conventions
 
 - `@focused`: narrow mechanics useful for quick diagnosis.
