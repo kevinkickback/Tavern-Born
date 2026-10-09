@@ -194,6 +194,7 @@ function classProps(
 test.each([
   'restore',
   'remove',
+  'restore over quota',
 ] as const)('class Confirm requires explicit %s of unavailable metadata without charging the leveled quota', async (action) => {
   let character = buildInitialCharacter(
     {
@@ -232,6 +233,7 @@ test.each([
   expect(props.onSetClassSpellSelectionsAtLevel).not.toHaveBeenCalled()
   expect(character).toEqual(original)
   fireEvent.click(screen.getByText('Shield'))
+  if (action === 'restore over quota') fireEvent.click(screen.getByText('Light'))
   if (action === 'remove')
     fireEvent.click(screen.getByRole('button', { name: 'Remove Mage Hand (TCE)' }))
   else {
@@ -241,6 +243,16 @@ test.each([
       onSetClassSpellSelectionsAtLevel: props.onSetClassSpellSelectionsAtLevel,
     }
     view.rerender(<BuildClassModals {...props} />)
+  }
+  if (action === 'restore over quota') {
+    expect((confirm as HTMLButtonElement).disabled).toBe(true)
+    expect(
+      screen.getByText('Remove extra selections to fit the limits before confirming.'),
+    ).toBeTruthy()
+    fireEvent.click(confirm)
+    expect(props.onSetClassSpellSelectionsAtLevel).not.toHaveBeenCalled()
+    expect(character).toEqual(original)
+    fireEvent.click(screen.getByText('Light'))
   }
   expect((confirm as HTMLButtonElement).disabled).toBe(false)
   fireEvent.click(confirm)
@@ -261,7 +273,7 @@ test.each([
     }),
   )
   const profile = saved.spells.spellProfiles.find((entry) => entry.id === 'class:Wizard|PHB')!
-  expect(profile.cantrips).toEqual(action === 'restore' ? ['Mage Hand|TCE'] : [])
+  expect(profile.cantrips).toEqual(action === 'remove' ? [] : ['Mage Hand|TCE'])
   expect(profile.spellsKnown).toEqual(['Shield|PHB'])
 })
 

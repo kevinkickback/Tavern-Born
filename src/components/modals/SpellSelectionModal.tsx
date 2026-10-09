@@ -386,7 +386,14 @@ export function SpellSelectionModal({
     ? { ...initialFilters, visibility: new Set(['hide-known']) }
     : initialFilters
 
-  const canSelect = (spell: Spell5e, selectedIds: Set<string>, allItems: Spell5e[]) => {
+  const getCategoryCount = (category: CategoryLimit<Spell5e>, selectedIds: ReadonlySet<string>) =>
+    spells.filter((item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)))
+      .length +
+    (retainUnavailable && categories?.length === 1
+      ? [...selectedIds].filter((id) => !availableIds.has(id)).length
+      : 0)
+
+  const canSelect = (spell: Spell5e, selectedIds: Set<string>) => {
     const id = getSpellSelectionId(spell)
     if (selectedIds.has(id)) return true
     const spellNameKey = getSpellNameKey(spell.name)
@@ -401,15 +408,7 @@ export function SpellSelectionModal({
         continue
       }
 
-      const unavailableCount =
-        retainUnavailable && categories?.length === 1
-          ? [...selectedIds].filter((id) => !availableIds.has(id)).length
-          : 0
-      const count =
-        unavailableCount +
-        allItems.filter((item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)))
-          .length
-      if (count >= category.max) {
+      if (getCategoryCount(category, selectedIds) >= category.max) {
         return false
       }
     }
@@ -454,8 +453,14 @@ export function SpellSelectionModal({
       initialSelectedIds={initialSelectedIds}
       unavailableSelectionLabels={unavailableSelectionLabels}
       countUnavailableSelections={retainUnavailable}
-      canConfirm={(ids) => retainUnavailable || [...ids].every((id) => availableIds.has(id))}
-      confirmationHint="Restore the unavailable spells in Game Data or remove their selections before confirming."
+      getConfirmationError={(ids) => {
+        if (!retainUnavailable && [...ids].some((id) => !availableIds.has(id))) {
+          return 'Restore the unavailable spells in Game Data or remove their selections before confirming.'
+        }
+        if (categories?.some((category) => getCategoryCount(category, ids) > category.max)) {
+          return 'Remove extra selections to fit the limits before confirming.'
+        }
+      }}
       initialFilters={effectiveInitialFilters}
       onConfirm={(ids, selectedItems) => {
         const initialReferences = new Map(

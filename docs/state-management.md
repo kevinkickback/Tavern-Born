@@ -223,6 +223,8 @@ another active racial owner cannot satisfy it. This does not establish a native 
 Racial selection dialogs preserve unavailable exact targets within their single quota. Catalog/class
 dialogs require missing selections to be restored or explicitly removed before confirmation, so
 missing level/school metadata cannot silently change the saved spell kind or consume another quota.
+Confirmation rechecks every real category maximum after metadata restoration, so restored items
+cannot increase a selection beyond its quota; the player explicitly resolves any excess first.
 Every materialized racial cantrip or known spell must be an exact target in the profile's fixed
 grants or a selected choice of that spell kind. An extra unselected spell or another printing is
 rejected rather than projected as a benefit. This accounting does not infer the native fixed

@@ -68,8 +68,7 @@ export interface SelectionModalProps<T> {
   /** Labels for saved selections whose catalog items are currently unavailable. */
   unavailableSelectionLabels?: ReadonlyMap<string, string>
   countUnavailableSelections?: boolean
-  canConfirm?: (selectedIds: ReadonlySet<string>) => boolean
-  confirmationHint?: ReactNode
+  getConfirmationError?: (selectedIds: ReadonlySet<string>) => string | undefined
   initialFilters?: ActiveFilters
   onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
@@ -107,8 +106,7 @@ function SelectionModalInner<T>({
   initialSelectedIds = [],
   unavailableSelectionLabels,
   countUnavailableSelections = false,
-  canConfirm,
-  confirmationHint,
+  getConfirmationError,
   initialFilters,
   onConfirm,
   onClose,
@@ -245,9 +243,9 @@ function SelectionModalInner<T>({
     resetScroll()
   }
 
-  const confirmationAllowed = canConfirm?.(selectedIds) ?? true
+  const confirmationError = getConfirmationError?.(selectedIds)
   const handleConfirm = () => {
-    if (!confirmationAllowed) return
+    if (confirmationError) return
     onConfirm([...selectedIds], selectedItems)
     onClose()
   }
@@ -510,15 +508,15 @@ function SelectionModalInner<T>({
               ))}
             </fieldset>
           )}
-          {!confirmationAllowed && confirmationHint && (
-            <p className="mt-2 text-xs text-muted-foreground">{confirmationHint}</p>
+          {confirmationError && (
+            <p className="mt-2 text-xs text-muted-foreground">{confirmationError}</p>
           )}
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!confirmationAllowed}>
+          <Button onClick={handleConfirm} disabled={!!confirmationError}>
             Confirm
           </Button>
         </div>
