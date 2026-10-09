@@ -93,7 +93,9 @@ describe('parseRaceSpellBlocks', () => {
     ])
     expect(block.choices).toEqual([
       {
-        id: '[0,2,true,[0,["sorcerer"]],null]',
+        id: '[0,2,true,"known","direct",null,[0,["sorcerer"]],null]',
+        source: 'known',
+        usage: 'direct',
         level: 0,
         count: 2,
         isCantrip: true,
@@ -172,7 +174,9 @@ describe('parseRaceSpellBlocks', () => {
     expect(blocks[0].grants).toEqual([])
     expect(blocks[0].choices).toHaveLength(1)
     expect(blocks[0].choices[0]).toEqual({
-      id: '[1,1,true,[0,["wizard"]],null]',
+      id: '[1,1,true,"known","direct",null,[0,["wizard"]],null]',
+      source: 'known',
+      usage: 'direct',
       level: 1,
       count: 1,
       isCantrip: true,
@@ -268,4 +272,50 @@ test.each([
   expect(() => parseRaceSpellBlocks([{ known: { _: [{ choose: filter }] } }])).toThrow(
     /native spell filter/,
   )
+})
+
+test('descriptors preserve independent native source and usage scopes and daily metadata', () => {
+  const [block] = parseRaceSpellBlocks([
+    {
+      known: { 1: [{ choose: 'level=0|class=Wizard' }] },
+      innate: {
+        1: {
+          daily: {
+            1: [{ choose: 'level=0|class=Wizard' }],
+            2: [{ choose: 'level=0|class=Wizard' }],
+          },
+          rest: { 1: [{ choose: 'level=0|class=Wizard' }] },
+        },
+      },
+    },
+  ])
+  expect(
+    block.choices.map((choice) => ({
+      source: choice.source,
+      usage: choice.usage,
+      dailyUses: choice.dailyUses,
+    })),
+  ).toEqual([
+    { source: 'known', usage: 'direct', dailyUses: undefined },
+    { source: 'innate', usage: 'rest:1', dailyUses: undefined },
+    { source: 'innate', usage: 'daily:1', dailyUses: 1 },
+    { source: 'innate', usage: 'daily:2', dailyUses: 2 },
+  ])
+  expect(new Set(block.choices.map((choice) => choice.id)).size).toBe(4)
+})
+
+test('native proficiency-based daily grants retain the supplied expression', () => {
+  const [block] = parseRaceSpellBlocks([
+    { innate: { 3: { daily: { pb: ['speak with animals|xphb'] } } } },
+  ])
+  expect(block.grants).toEqual([
+    {
+      spellName: 'speak with animals|xphb',
+      level: 3,
+      isCantrip: false,
+      castingAbility: undefined,
+      source: 'innate',
+      dailyUses: 'pb',
+    },
+  ])
 })

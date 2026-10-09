@@ -489,40 +489,47 @@ export function removeSpellFromCharacter(
       'racial'
   )
     return { characterPatch: {}, provenanceUpdate: ledger }
-  const normKey = normalizeKey(spellName)
-  const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
-    if (profile.type === 'racial' || (options?.profileId && profile.id !== options.profileId)) {
-      return profile
+  const target = parseSpellReference(spellName)
+  const normKey = getSpellNameKey(spellName)
+  const matchesReference = (reference: string) =>
+    target.source
+      ? getSpellReferenceKey(reference) === getSpellReferenceKey(spellName)
+      : getSpellNameKey(reference) === normKey
+  const affectedProfiles = character.spells.spellProfiles.filter(
+    (profile) =>
+      profile.type !== 'racial' && (!options?.profileId || profile.id === options.profileId),
+  )
+  const updatedProfiles = character.spells.spellProfiles.map((profile) => {
+    if (!affectedProfiles.includes(profile)) return profile
+    return {
+      ...profile,
+      ...(!options?.spellKind || options.spellKind === 'cantrip'
+        ? { cantrips: profile.cantrips.filter((reference) => !matchesReference(reference)) }
+        : {}),
+      ...(!options?.spellKind || options.spellKind === 'spell'
+        ? { spellsKnown: profile.spellsKnown.filter((reference) => !matchesReference(reference)) }
+        : {}),
+      preparedSpells: profile.preparedSpells.filter((reference) => !matchesReference(reference)),
     }
-
-    let updated = profile
-
-    if (!options?.spellKind || options.spellKind === 'cantrip') {
-      updated = {
-        ...updated,
-        cantrips: updated.cantrips.filter((spell) => normalizeKey(spell) !== normKey),
-        preparedSpells: updated.preparedSpells.filter((spell) => normalizeKey(spell) !== normKey),
-      }
-    }
-
-    if (!options?.spellKind || options.spellKind === 'spell') {
-      updated = {
-        ...updated,
-        spellsKnown: updated.spellsKnown.filter((spell) => normalizeKey(spell) !== normKey),
-        preparedSpells: updated.preparedSpells.filter((spell) => normalizeKey(spell) !== normKey),
-      }
-    }
-
-    return updated
   })
-
-  const newSpells = { ...ledger.spells }
-  delete newSpells[normKey]
-  const updatedLedger = { ...ledger, spells: newSpells }
-
+  const retainedTags = (ledger.spells[normKey] ?? []).filter((tag) => {
+    if (
+      target.source &&
+      getSpellReferenceKey(normKey, tag.grantSource) !== getSpellReferenceKey(spellName)
+    )
+      return true
+    return !affectedProfiles.some((profile) =>
+      profile.type === 'class'
+        ? isClassChoiceSpellTag(tag, profile.className ?? profile.label, profile.classSource)
+        : tag.sourceType === 'manual',
+    )
+  })
+  const spells = { ...ledger.spells }
+  if (retainedTags.length) spells[normKey] = retainedTags
+  else delete spells[normKey]
   return {
     characterPatch: createSpellProfilePatch(character, updatedProfiles),
-    provenanceUpdate: reconcileNativeRacialSpellLedger(updatedLedger, updatedProfiles),
+    provenanceUpdate: reconcileNativeRacialSpellLedger({ ...ledger, spells }, updatedProfiles),
   }
 }
 
@@ -611,9 +618,43 @@ export function setProfileSpells(
     }
   })
 
+  let provenanceUpdate = ledger
+  const previous = character.spells.spellProfiles.find((profile) => profile.id === profileId)
+  if (previous?.type === 'special') {
+    const previousTargets = new Set(
+      [...previous.cantrips, ...previous.spellsKnown].map((reference) =>
+        getSpellReferenceKey(reference),
+      ),
+    )
+    const selectedTargets = [...dedupedCantrips, ...dedupedSpellsKnown]
+    const selectedKeys = new Set(
+      selectedTargets.map((reference) => getSpellReferenceKey(reference)),
+    )
+    const removedTargets = new Set([...previousTargets].filter((key) => !selectedKeys.has(key)))
+    provenanceUpdate = {
+      ...ledger,
+      spells: Object.fromEntries(
+        Object.entries(ledger.spells).flatMap(([name, tags]) => {
+          const retained = tags.filter(
+            (tag) =>
+              tag.sourceType !== 'manual' ||
+              !removedTargets.has(getSpellReferenceKey(name, tag.grantSource)),
+          )
+          return retained.length ? [[name, retained]] : []
+        }),
+      ),
+    }
+    for (const reference of selectedTargets)
+      if (!previousTargets.has(getSpellReferenceKey(reference)))
+        provenanceUpdate = addSpellGrant(
+          provenanceUpdate,
+          reference,
+          makeSourceTag('manual', 'User Choice', 'choice'),
+        )
+  }
   return {
     characterPatch: createSpellProfilePatch(character, updatedProfiles),
-    provenanceUpdate: ledger,
+    provenanceUpdate,
   }
 }
 

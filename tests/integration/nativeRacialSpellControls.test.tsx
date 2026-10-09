@@ -16,7 +16,11 @@ import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutat
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
+import {
+  addSpellToCharacter,
+  setClassSpellSelectionsAtLevel,
+  toggleSpellPrepared,
+} from '@/lib/character/commands/spellCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -55,18 +59,23 @@ function install(races: Race5e[]) {
       'ray of enfeeblement',
       'light',
       'mage hand',
-    ].map((name) =>
-      makeSpellFixture({
-        name,
-        source: 'XPHB',
-        level: ['ray of sickness', 'false life'].includes(name)
-          ? 1
-          : ['hold person', 'ray of enfeeblement'].includes(name)
-            ? 2
-            : 0,
-        classes: { fromClassList: [{ name: 'Wizard', source: 'XPHB' }] },
-      }),
-    ),
+    ]
+      .map((name) =>
+        makeSpellFixture({
+          name,
+          source: 'XPHB',
+          level: ['ray of sickness', 'false life'].includes(name)
+            ? 1
+            : ['hold person', 'ray of enfeeblement'].includes(name)
+              ? 2
+              : 0,
+          classes: { fromClassList: [{ name: 'Wizard', source: 'XPHB' }] },
+        }),
+      )
+      .concat([
+        makeSpellFixture({ name: 'Light', source: 'PHB', level: 0 }),
+        makeSpellFixture({ name: 'Mage Hand', source: 'PHB', level: 0 }),
+      ]),
     sources: ['PHB', 'XPHB'].map((abbreviation) => ({
       abbreviation,
       name: abbreviation,
@@ -283,6 +292,28 @@ test('removing an independently selected bonus copy commits without removing nat
     additionalSpells: [{ known: { 1: ['light#c'] } }],
   } as Race5e
   let character = makeNativeRacialCharacter(race)
+  character.classProgression.push({ name: 'Wizard', source: 'PHB', levels: 1 })
+  const classSpells = setClassSpellSelectionsAtLevel(character, character.provenance, {
+    className: 'Wizard',
+    classSource: 'PHB',
+    classLevel: 1,
+    selections: [
+      { name: 'Light|PHB', spellLevel: 0 },
+      { name: 'Shield|PHB', spellLevel: 1 },
+    ],
+  })
+  character = {
+    ...character,
+    ...classSpells.characterPatch,
+    provenance: classSpells.provenanceUpdate,
+  }
+  const prepared = toggleSpellPrepared(
+    character,
+    character.provenance,
+    'class:Wizard|PHB',
+    'Shield|PHB',
+  )
+  character = { ...character, ...prepared.characterPatch, provenance: prepared.provenanceUpdate }
   const bonus = addSpellToCharacter(
     character,
     character.provenance,
@@ -304,6 +335,13 @@ test('removing an independently selected bonus copy commits without removing nat
   expect(saved.spells.spellProfiles.find((profile) => profile.type === 'racial')!.cantrips).toEqual(
     ['light|PHB'],
   )
+  expect(
+    saved.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB'),
+  ).toMatchObject({
+    cantrips: ['Light|PHB'],
+    spellsKnown: ['Shield|PHB'],
+    preparedSpells: ['Shield|PHB'],
+  })
   expect(saved.provenance.spells.light).toEqual([
     expect.objectContaining({
       sourceType: 'race',
@@ -311,5 +349,36 @@ test('removing an independently selected bonus copy commits without removing nat
       grantType: 'fixed',
       grantSource: 'PHB',
     }),
+    expect.objectContaining({
+      sourceType: 'class',
+      sourceName: 'Wizard',
+      sourceRef: 'PHB',
+      grantSource: 'PHB',
+    }),
   ])
+})
+
+test('the actual bonus picker permits an independently granted native exact target', () => {
+  const race: Race5e = {
+    name: 'Caster',
+    source: 'PHB',
+    additionalSpells: [{ known: { 1: ['light#c'] } }],
+  }
+  install([race])
+  setActiveCharacter(makeNativeRacialCharacter(race))
+  page()
+  fireEvent.click(screen.getByRole('button', { name: 'Add Spell' }))
+  const dialog = within(screen.getByRole('dialog'))
+  fireEvent.click(dialog.getByText('Light'))
+  fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
+  const character = reopened()
+  expect(
+    character.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+  ).toEqual(['Light|PHB'])
+  expect(character.provenance.spells.light).toContainEqual(
+    expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
+  )
+  expect(character.provenance.spells.light).toContainEqual(
+    expect.objectContaining({ sourceType: 'race', grantSource: 'PHB' }),
+  )
 })

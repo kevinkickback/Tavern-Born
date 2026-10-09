@@ -230,6 +230,11 @@ Class-page spell choices and replacements use pure spell commands. `useSpellProv
 exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes
 use `useSpellProfileMutations`, which already commits profile and provenance changes together.
 
+Bonus spell selection records manual ownership with the selected spell printing. Replacing the
+bonus list retracts only its removed manual targets. Removing a bonus copy preserves racial,
+class and feat ownership of the same target, including independently prepared class spells.
+Qualified removals never assign an unknown-source grant to the requested printing.
+
 ## Equipment ownership
 
 Starting packages and manual inventory/proficiency changes use equipment commands. Package option

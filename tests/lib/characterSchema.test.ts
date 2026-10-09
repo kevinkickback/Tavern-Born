@@ -489,6 +489,8 @@ test.each([
       {
         id: 'injected',
         level: 0,
+        source: 'known',
+        usage: 'direct',
         count: 1,
         isCantrip: true,
         selected: [],

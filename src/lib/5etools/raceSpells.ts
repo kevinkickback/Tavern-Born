@@ -8,7 +8,7 @@ export interface RaceSpellGrant {
   level: number
   isCantrip: boolean
   castingAbility?: string
-  dailyUses?: number
+  dailyUses?: number | 'pb'
   source: 'innate' | 'known' | 'prepared'
 }
 
@@ -17,6 +17,9 @@ interface RaceSpellChoiceDescriptor {
   level: number
   count: number
   isCantrip: boolean
+  source: RaceSpellGrant['source']
+  usage: string
+  dailyUses?: number | 'pb'
   filter?: { level: number; classes: string[] }
   pool?: string[]
 }
@@ -71,55 +74,21 @@ function parseSchedule(
     const level = levelText === '_' ? 0 : /^\d+$/.test(levelText) ? Number(levelText) : NaN
     if (!Number.isInteger(level) || level < 0 || level > 20)
       throw new Error('Invalid native spell eligibility level.')
-    const visit = (items: RaceSpellItem[] | undefined, dailyUses?: number, usage = 'direct') => {
-      if (items?.length)
-        scheduleIdentity.push(
-          JSON.stringify([
-            source,
-            level,
-            usage,
-            items
-              .map((item) => {
-                if (typeof item === 'string') {
-                  const parsed = parseSpellToken(item, {
-                    preserveSource: true,
-                    defaultSource: 'PHB',
-                  })
-                  const modifier =
-                    item
-                      .match(/#([^|]+)/)?.[1]
-                      ?.trim()
-                      .toLowerCase() ?? null
-                  return JSON.stringify([getSpellReferenceKey(parsed.name), modifier])
-                }
-                const count =
-                  item.count ??
-                  (typeof item.choose === 'object' ? item.choose.count : undefined) ??
-                  1
-                return typeof item.choose === 'string'
-                  ? getRaceSpellChoiceKey({
-                      level,
-                      count,
-                      isCantrip: parseChooseFilter(item.choose).level === 0,
-                      filter: parseChooseFilter(item.choose),
-                    })
-                  : getRaceSpellChoiceKey({
-                      level,
-                      count,
-                      isCantrip: parseSpellToken(item.choose.from[0] ?? '').isCantrip,
-                      pool: item.choose.from.map(
-                        (token) =>
-                          parseSpellToken(token, { preserveSource: true, defaultSource: 'PHB' })
-                            .name,
-                      ),
-                    })
-              })
-              .sort(),
-          ]),
-        )
+    const visit = (
+      items: RaceSpellItem[] | undefined,
+      dailyUses?: number | 'pb',
+      usage = 'direct',
+    ) => {
+      const identities: string[] = []
       for (const item of items ?? []) {
         if (typeof item === 'string') {
           const parsed = parseSpellToken(item, { preserveSource: true, defaultSource: 'PHB' })
+          const modifier =
+            item
+              .match(/#([^|]+)/)?.[1]
+              ?.trim()
+              .toLowerCase() ?? null
+          identities.push(JSON.stringify([getSpellReferenceKey(parsed.name), modifier]))
           grants.push({
             spellName: parsed.name,
             level,
@@ -128,31 +97,46 @@ function parseSchedule(
             source,
             ...(dailyUses !== undefined ? { dailyUses } : {}),
           })
-        } else if (item && typeof item === 'object') {
-          const count =
-            item.count ?? (typeof item.choose === 'object' ? item.choose.count : undefined) ?? 1
-          if (!Number.isInteger(count) || count <= 0)
-            throw new Error('Invalid native spell choice count.')
-          if (typeof item.choose === 'string') {
-            const filter = parseChooseFilter(item.choose)
-            const descriptor = { level, count, isCantrip: filter.level === 0, filter }
-            choices.push({ ...descriptor, id: getRaceSpellChoiceKey(descriptor) })
-          } else if (item.choose && Array.isArray(item.choose.from)) {
-            const parsed = item.choose.from.map((token) =>
-              parseSpellToken(token, { preserveSource: true, defaultSource: 'PHB' }),
-            )
-            if (!parsed.length || parsed.some((target) => target.isCantrip !== parsed[0].isCantrip))
-              throw new Error('A native spell pool must declare a consistent spell kind.')
-            const descriptor = {
-              level,
-              count,
-              isCantrip: parsed[0].isCantrip,
-              pool: parsed.map((target) => target.name),
-            }
-            choices.push({ ...descriptor, id: getRaceSpellChoiceKey(descriptor) })
-          }
+          continue
         }
+        if (!item || typeof item !== 'object') throw new Error('Invalid native spell descriptor.')
+        const count =
+          item.count ?? (typeof item.choose === 'object' ? item.choose.count : undefined) ?? 1
+        if (!Number.isInteger(count) || count <= 0)
+          throw new Error('Invalid native spell choice count.')
+        let target: Pick<RaceSpellChoiceDescriptor, 'isCantrip' | 'filter' | 'pool'>
+        if (typeof item.choose === 'string') {
+          const filter = parseChooseFilter(item.choose)
+          target = { isCantrip: filter.level === 0, filter }
+        } else if (item.choose && Array.isArray(item.choose.from)) {
+          const parsed = item.choose.from.map((token) =>
+            parseSpellToken(token, { preserveSource: true, defaultSource: 'PHB' }),
+          )
+          if (!parsed.length || parsed.some((entry) => entry.isCantrip !== parsed[0].isCantrip))
+            throw new Error('A native spell pool must declare a consistent spell kind.')
+          target = {
+            isCantrip: parsed[0].isCantrip,
+            pool: [
+              ...new Map(
+                parsed.map((entry) => [getSpellReferenceKey(entry.name), entry.name]),
+              ).values(),
+            ],
+          }
+        } else throw new Error('Unsupported native spell descriptor.')
+        const descriptor = {
+          level,
+          count,
+          source,
+          usage,
+          ...target,
+          ...(dailyUses !== undefined ? { dailyUses } : {}),
+        }
+        const id = getRaceSpellChoiceKey(descriptor)
+        choices.push({ ...descriptor, id })
+        identities.push(id)
       }
+      if (identities.length)
+        scheduleIdentity.push(JSON.stringify([source, level, usage, identities.sort()]))
     }
     if (Array.isArray(schedule)) visit(schedule)
     else if (schedule && typeof schedule === 'object') {
@@ -162,8 +146,10 @@ function parseSchedule(
       for (const [uses, items] of Object.entries(schedule.rest ?? {}))
         visit(items, undefined, 'rest:' + uses)
       for (const [uses, items] of Object.entries(schedule.daily ?? {})) {
-        const dailyUses = /^\d+e?$/.test(uses) ? Number.parseInt(uses, 10) : NaN
-        if (Number.isInteger(dailyUses) && dailyUses > 0) visit(items, dailyUses, 'daily:' + uses)
+        const dailyUses =
+          uses === 'pb' ? 'pb' : /^\d+e?$/.test(uses) ? Number.parseInt(uses, 10) : NaN
+        if (dailyUses === 'pb' || (Number.isInteger(dailyUses) && Number(dailyUses) > 0))
+          visit(items, dailyUses, 'daily:' + uses)
         else throw new Error('Invalid native spell daily limit.')
       }
     }

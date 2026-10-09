@@ -346,6 +346,9 @@ export interface RaceSpellChoice {
   id: string
   /** Eligibility of this currently applied native descriptor, never a future schedule. */
   level?: number
+  source?: 'known' | 'innate' | 'prepared'
+  usage?: string
+  dailyUses?: number | 'pb'
   count: number
   isCantrip: boolean
   filter?: { level: number; classes: string[] }
@@ -364,7 +367,7 @@ interface RacialSpellState {
   ownerType: 'race' | 'subrace'
   mode: 'mandatory' | 'alternative'
   suite?: { id: string; name?: string }
-  fixed: Array<{ reference: string; isCantrip: boolean; dailyUses?: number }>
+  fixed: Array<{ reference: string; isCantrip: boolean; dailyUses?: number | 'pb' }>
 }
 
 export interface SpellProfile {

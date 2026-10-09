@@ -657,6 +657,9 @@ const raceSpellChoiceSchema = z
   .object({
     id: z.string().min(1),
     level: z.number().int().min(0).max(MAX_CHARACTER_LEVEL),
+    source: z.enum(['known', 'innate', 'prepared']),
+    usage: z.string().regex(/^(direct|will|ritual|daily:(pb|[1-9]\d*e?)|rest:[1-9]\d*e?)$/),
+    dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
     count: z.number().int().positive(),
     isCantrip: z.boolean(),
     filter: z
@@ -685,7 +688,7 @@ const racialSpellStateSchema = z
         .object({
           reference: z.string().min(1),
           isCantrip: z.boolean(),
-          dailyUses: z.number().int().positive().optional(),
+          dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
         })
         .strict(),
     ),

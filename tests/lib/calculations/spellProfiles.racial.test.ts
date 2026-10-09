@@ -245,3 +245,75 @@ describe('current native racial profiles', () => {
       ).toThrow(/Ambiguous duplicate/)
   })
 })
+
+test('same-pool descriptors with distinct daily limits configure and clear independently through strict reopen', () => {
+  const scheduled: Race5e = {
+    name: 'Schedule caster',
+    source: 'PHB',
+    additionalSpells: [
+      {
+        innate: {
+          1: {
+            daily: {
+              1: [{ choose: { from: ['light#c', 'mage hand#c'] } }],
+              2: [{ choose: { from: ['light#c', 'mage hand#c'] } }],
+            },
+          },
+        },
+      },
+    ],
+  }
+  const live = nativeRaceResolution(scheduled)
+  let character = makeNativeRacialCharacter(scheduled)
+  const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+  expect(profile.choices).toHaveLength(2)
+  expect(profile.choices?.map((choice) => choice.dailyUses)).toEqual([1, 2])
+  for (const choice of profile.choices!)
+    character = apply(
+      character,
+      setRacialSpellChoice(
+        character,
+        character.provenance,
+        profile.id,
+        choice.id,
+        ['Light|PHB'],
+        live,
+      ),
+    )
+  character = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+  expect(character.provenance.spells.light).toHaveLength(2)
+  character = apply(
+    character,
+    setRacialSpellChoice(character, character.provenance, profile.id, profile.choices![0].id, []),
+  )
+  expect(character.spells.spellProfiles.find((entry) => entry.id === profile.id)!.cantrips).toEqual(
+    ['Light|PHB'],
+  )
+  expect(character.provenance.spells.light).toEqual([
+    expect.objectContaining({ grantVariant: profile.choices![1].id }),
+  ])
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+})
+
+test('Forest Gnome proficiency-based daily spell applies at level three and remains a typed saved expression', () => {
+  const race: Race5e = { name: 'Gnome', source: 'XPHB' }
+  const child: Race5e = {
+    name: 'Forest Gnome Lineage',
+    source: 'XPHB',
+    _isVersion: true,
+    additionalSpells: [
+      {
+        ability: { choose: ['int', 'wis', 'cha'] },
+        known: { 1: ['minor illusion|xphb#c'] },
+        innate: { 3: { daily: { pb: ['speak with animals|xphb'] } } },
+      },
+    ],
+  }
+  const character = makeNativeRacialCharacter(race, child, 3, '2024')
+  const profile = character.spells.spellProfiles.find((entry) => entry.type === 'racial')!
+  expect(profile.racial?.fixed).toEqual([
+    { reference: 'minor illusion|xphb', isCantrip: true },
+    { reference: 'speak with animals|xphb', isCantrip: false, dailyUses: 'pb' },
+  ])
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+})

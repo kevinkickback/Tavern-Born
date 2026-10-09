@@ -18,7 +18,7 @@ import {
   swapClassSpellAtLevel,
   swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
-import { reconcileRaceChange } from '@/lib/provenance'
+import { makeSourceTag, reconcileRaceChange } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -886,6 +886,28 @@ describe('Spell Commands', () => {
   })
 
   describe('removeSpellFromCharacter', () => {
+    test('qualified bonus removal retains another printing and an unattributed-source grant', () => {
+      const character = makeCharacterFixture()
+      const bonus = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+      bonus.cantrips = ['Light|PHB']
+      const selected = makeSourceTag('manual', 'User Choice', 'choice')
+      const anotherPrinting = { ...selected, grantSource: 'XPHB' }
+      character.provenance.spells.light = [
+        { ...selected, grantSource: 'PHB' },
+        anotherPrinting,
+        selected,
+      ]
+      const result = removeSpellFromCharacter(character, character.provenance, 'Light|PHB', {
+        profileId: bonus.id,
+        spellKind: 'cantrip',
+      })
+      expect(
+        result.characterPatch.spells!.spellProfiles.find((profile) => profile.id === bonus.id)!
+          .cantrips,
+      ).toEqual([])
+      expect(result.provenanceUpdate.spells.light).toEqual([anotherPrinting, selected])
+    })
+
     test('removes spell from profile and cleans up provenance', () => {
       const character = makeCharacterFixture({
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],

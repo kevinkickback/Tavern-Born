@@ -482,6 +482,7 @@ export function SpellsPage() {
   const characterSpellNames = useMemo(() => {
     const names = new Set<string>()
     for (const profile of spellProfiles) {
+      if (profile.type === 'racial') continue
       for (const name of profile.cantrips) names.add(name)
       for (const name of profile.spellsKnown) names.add(name)
     }

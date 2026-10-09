@@ -211,7 +211,8 @@ order does not create a second trait, while array order and distinct values rema
 
 Racial spell parsing preserves complete native additional-spell blocks: their names, fixed or chosen
 casting ability, character-level schedules, direct/nested lists, positive choice counts, filters,
-explicit target pools and supplied daily limits. Known, innate and prepared grants support direct,
+explicit target pools and supplied daily limits, including proficiency-based `pb` expressions.
+Known, innate and prepared grants support direct,
 `_`, will, ritual, daily and rest buckets. Expanded `sN` entries extend class-list eligibility; they
 never become automatic known racial spells. This boundary does not implement expendable daily/rest
 resources. Unsupported filter fields and invalid schedule levels/counts are diagnostic errors.
@@ -224,7 +225,9 @@ owner. Named traditional parent blocks filter to the selected child.
 
 `raceSpellIdentity.ts` encodes canonical structural owner/context/suite/descriptor identities.
 Object/list order, casing and surrounding UID whitespace do not change equivalent setup. Duplicate
-suite or descriptor identities reject rather than assigning an ordinal. IDs are opaque to eligibility
+suite or descriptor identities reject rather than assigning an ordinal. Descriptor scope includes
+its native grant kind and usage bucket, so identical pools at different
+daily/rest limits remain independent. IDs are opaque to eligibility
 consumers: missing rules cannot be reconstructed from an encoded identifier. The pure native evaluator
 activates one complete block, retaining an applied snapshot rather than persisting an alternative
 catalog or future schedule. See [spell ownership](provenance.md#reconciliation-rules).

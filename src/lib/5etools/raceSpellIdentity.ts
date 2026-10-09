@@ -26,6 +26,9 @@ export function getRaceSpellChoiceKey(choice: {
   level: number
   count: number
   isCantrip: boolean
+  source?: 'known' | 'innate' | 'prepared'
+  usage?: string
+  dailyUses?: number | 'pb'
   filter?: { level: number; classes: string[] }
   pool?: string[]
 }): string {
@@ -33,6 +36,9 @@ export function getRaceSpellChoiceKey(choice: {
     choice.level,
     choice.count,
     choice.isCantrip,
+    choice.source ?? null,
+    choice.usage ?? null,
+    choice.dailyUses ?? null,
     choice.filter
       ? [
           choice.filter.level,

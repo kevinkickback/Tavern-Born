@@ -151,6 +151,14 @@ export function getInvalidNativeRacialSpellPaths(character: Character): Path[] {
         (choice.filter && choice.isCantrip !== (choice.filter.level === 0))
       )
         invalid.push(member)
+      const expectedDaily = choice.usage?.startsWith('daily:') ? choice.usage.slice(6) : undefined
+      const dailyUses =
+        expectedDaily === 'pb'
+          ? 'pb'
+          : expectedDaily
+            ? Number.parseInt(expectedDaily, 10)
+            : undefined
+      if (choice.dailyUses !== dailyUses) invalid.push([...member, 'dailyUses'])
       const pool = choice.pool
         ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
         : undefined
