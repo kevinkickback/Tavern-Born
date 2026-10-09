@@ -1,10 +1,12 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { isSubclassEligible } from '@/lib/calculations/subclassEligibility'
 import { RulesPage } from '@/pages/rules/RulesPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -150,6 +152,63 @@ describe('RulesPage', () => {
         abilityScoreMethod: 'custom',
       }),
     )
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('current %s any-race edits save and reopen with matching subclass eligibility', async (originSystem) => {
+    const coreSource = originSystem === '2024' ? 'XPHB' : 'PHB'
+    const availableClasses = contentAwareClasses.map((classEntity) => ({
+      ...classEntity,
+      source: coreSource,
+      subclasses: classEntity.subclasses!.map((subclass) => ({
+        ...subclass,
+        classSource: coreSource,
+      })),
+    }))
+    const original = {
+      ...useCharacterStore.getState().activeCharacter!,
+      originSystem,
+      allowedSources: [coreSource, 'SCAG'],
+    }
+    useCharacterStore.setState({
+      characters: [original],
+      activeCharacter: original,
+      isActiveCharacterDirty: false,
+    })
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ classes: availableClasses }) })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
+
+    for (const anyRaceSubclasses of [true, false]) {
+      expect((screen.getByLabelText('Any-Race Subclasses') as HTMLButtonElement).disabled).toBe(
+        false,
+      )
+      await user.click(screen.getByLabelText('Any-Race Subclasses'))
+      await act(async () => {
+        await useCharacterStore.getState().saveActiveCharacter()
+        useCharacterStore.getState().setActiveCharacter(null)
+        useCharacterStore.getState().setActiveCharacter(original.id)
+      })
+      const reopened = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+      )
+      expect(reopened.variantRules).toEqual({ ...original.variantRules, anyRaceSubclasses })
+      expect(reopened.classProgression).toEqual(original.classProgression)
+      expect(reopened.provenance).toEqual(original.provenance)
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+      for (const classEntity of availableClasses) {
+        expect(
+          isSubclassEligible({
+            subclass: classEntity.subclasses![0],
+            className: classEntity.name,
+            character: reopened,
+          }),
+        ).toBe(anyRaceSubclasses)
+      }
+    }
   })
 
   test('enforcing equipment restrictions in Character Rules unequips invalid armor and slot conflicts', async () => {

@@ -193,6 +193,12 @@ are not carried forward through breaking changes while preparing for 1.0. Older 
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
 
+Variant rules accept only the current settings: optional class features, average hit points,
+ability-score method, any-race subclasses, newer-printing preference, and equipment restrictions.
+Discontinued subclass-specific flags and unknown settings are rejected, including objects mixed
+with current settings; they are not converted or silently discarded. Current optional defaults
+are unchanged, and unsupported library records retain their original exportable contents.
+
 Schema 5 requires one active source-qualified racial owner set: the selected parent and optional
 child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals

@@ -33,18 +33,62 @@ describe('characterPersistenceSchema', () => {
   })
 
   test.each([
-    [{ bladesingerAnyRace: true, battleragerAnyRace: false }, true],
-    [{ bladesingerAnyRace: false, battleragerAnyRace: true }, true],
-    [{ bladesingerAnyRace: false, battleragerAnyRace: false }, false],
-  ])('migrates legacy subclass race settings into the combined rule', (legacyRules, expected) => {
-    const character = makeCharacterFixture() as unknown as Record<string, unknown>
-    character.variantRules = legacyRules
+    { bladesingerAnyRace: true },
+    { bladesingerAnyRace: false },
+    { battleragerAnyRace: true },
+    { battleragerAnyRace: false },
+    { bladesingerAnyRace: false, battleragerAnyRace: true },
+    { bladesingerAnyRace: false, battleragerAnyRace: false },
+    { anyRaceSubclasses: false, bladesingerAnyRace: true },
+    { anyRaceSubclasses: true, battleragerAnyRace: false },
+    { unknownRule: true },
+    { anyRaceSubclasses: true, unknownRule: false },
+  ])('rejects discontinued or unknown variant rules without conversion: %j', (variantRules) => {
+    const character = { ...makeCharacterFixture(), variantRules }
+    const before = structuredClone(character)
 
-    const result = characterPersistenceSchema.parse(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
 
-    expect(result.variantRules?.anyRaceSubclasses).toBe(expected)
-    expect(result.variantRules).not.toHaveProperty('bladesingerAnyRace')
-    expect(result.variantRules).not.toHaveProperty('battleragerAnyRace')
+  test.each([
+    ['2014', false],
+    ['2014', true],
+    ['2024', false],
+    ['2024', true],
+  ] as const)('Finish and strict reopen retain canonical settings for %s with any-race %s', (originSystem, anyRaceSubclasses) => {
+    const variantRules = {
+      optionalClassFeatures: true,
+      averageHitPoints: false,
+      abilityScoreMethod: 'custom' as const,
+      anyRaceSubclasses,
+      preferNewerPrintings: false,
+      ignoreEquipRestrictions: true,
+    }
+    const character = buildInitialCharacter(
+      { initial: { name: 'Canonical settings', originSystem, variantRules } },
+      new Map(),
+      () => [],
+    )
+    const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+
+    expect(reopened.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
+    expect(reopened.variantRules).toEqual(variantRules)
+  })
+
+  test('preserves optional current variant-rule defaults without introducing discontinued settings', () => {
+    expect(
+      characterPersistenceSchema.parse(makeCharacterFixture({ variantRules: undefined }))
+        .variantRules,
+    ).toBeUndefined()
+    expect(
+      characterPersistenceSchema.parse(makeCharacterFixture({ variantRules: {} })).variantRules,
+    ).toEqual({
+      optionalClassFeatures: false,
+      averageHitPoints: true,
+      anyRaceSubclasses: false,
+      ignoreEquipRestrictions: false,
+    })
   })
 
   test('requires an exact source for every selected subclass', () => {
