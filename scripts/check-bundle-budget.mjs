@@ -14,13 +14,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Strict racial block identity and shared ability projection measure 5,601,183
-  // renderer bytes (5469.9 KiB), without new dependencies. Use the smallest whole-KiB
-  // allowance; this measured increase requires explicit budget review.
-  rendererCode: 5470 * KIB,
-  // The same measured artifact has a 453,265-byte initial script (442.6 KiB).
+  // Racial spell target identity and atomic fixed refresh measure 5,607,709 renderer bytes;
+  // use the smallest whole-KiB allowance after explicit budget review.
+  rendererCode: 5477 * KIB,
+  // The shared spell-state projection moves existing rules into the initial script:
+  // 463,554 bytes (452.7 KiB). Use the smallest whole-KiB allowance after explicit review.
   // Other budgets and their enforcement remain unchanged; explicit budget review required.
-  initialRendererScript: 443 * KIB,
+  initialRendererScript: 453 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

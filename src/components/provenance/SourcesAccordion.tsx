@@ -114,7 +114,11 @@ export function SourcesAccordion({
           isPending: row.isPending,
         })
       }
-      attrMap.get(row.attribution)?.names.push(row.itemName)
+      attrMap
+        .get(row.attribution)
+        ?.names.push(
+          row.itemSource ? `${row.itemName} (${row.itemSource.toUpperCase()})` : row.itemName,
+        )
     }
 
     return categoryOrder.flatMap((category): CategoryGroup[] => {

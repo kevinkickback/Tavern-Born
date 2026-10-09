@@ -213,7 +213,12 @@ Racial spell parsing accepts direct `known` arrays containing fixed spell tokens
 objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys
 retain their character-level requirement. Parsed filtered choices retain a positive integer `count`
 (default one when omitted). Innate direct arrays and daily-use groups retain spell identity, level,
-and daily limits where supplied. Complete-version spell consumers use the version's blocks without
+and daily limits where supplied. Spell UIDs retain the explicit target printing and `#c` marker,
+including a marker after the printing (`light|XPHB#c`). An omitted native target printing defaults
+to PHB, independently of the racial owner's source or character edition, following the pinned
+upstream `DataUtil.generic.unpackUid` / `Parser.getTagSource` spell default. Modernization is a
+separate upstream operation and is not inferred by this decoder. Complete-version spell consumers
+use the version's blocks without
 reapplying parent blocks; traditional subraces retain their existing composition behavior. Other
 racial spell schedules and choice shapes need their own supported adapter before automation.
 Previously supported nested choices keep their saved `choose-N` identifiers. Newly supported direct

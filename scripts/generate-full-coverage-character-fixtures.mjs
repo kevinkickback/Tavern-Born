@@ -334,6 +334,7 @@ function buildSpellProfiles(race, progression, edition) {
       sourceName: edition === '2024' ? 'Drow Lineage' : 'High',
       sourceRef: race.source,
       grantType: edition === '2024' ? 'fixed' : 'choice',
+      ...(edition === '2014' ? { grantVariant: 'high-elf-cantrip' } : {}),
     })),
     ...[...bonusCantrips, ...bonusSpell].map((reference) => ({
       reference,
@@ -681,6 +682,8 @@ function buildFixtureProvenance({
         attribution.grantType,
         attribution.sourceRef,
         {
+          grantSource: attribution.reference.split('|')[1],
+          ...(attribution.grantVariant ? { grantVariant: attribution.grantVariant } : {}),
           ...(attribution.spellGrantedAtLevel
             ? { spellGrantedAtLevel: attribution.spellGrantedAtLevel }
             : {}),

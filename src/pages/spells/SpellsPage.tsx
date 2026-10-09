@@ -13,7 +13,7 @@ import {
   WorkspacePaneHeader,
 } from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -25,6 +25,8 @@ import {
   dedupeSpellNames,
   formatSpellReference,
   getSpellNameKey,
+  getSpellReferenceKey,
+  parseSpellReference,
   resolveSpellReferenceFromMap,
 } from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
@@ -40,7 +42,6 @@ import {
   getReadinessFocus,
   isSpellProfileReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
 import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -52,7 +53,7 @@ import {
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
@@ -66,7 +67,6 @@ export function SpellsPage() {
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
-  const { getSourcesRowsBySection } = useProvenanceLedger()
   const {
     spells,
     items,
@@ -87,15 +87,16 @@ export function SpellsPage() {
     trapHazards,
     rewards,
   } = useFilteredGameData()
-  const ledger = character?.provenance ?? emptyProvenance()
   const {
     spellProfiles,
+    spellProvenance: ledger,
     spellcastingDetails,
     sharedSlots,
     pactSlots,
     isSpellcaster,
     spellcastingDetailByProfileId,
   } = useSpellSlots()
+  const { getSourcesRowsBySection } = useProvenanceRows({ ledger })
   const {
     removeSpellFromProfile,
     setProfileSpells,
@@ -214,6 +215,7 @@ export function SpellsPage() {
         const spell = resolveSpellReferenceFromMap(grant.spellName, spellByName)
         rows.push({
           itemName: formatSpellDisplayName(grant.spellName, spell?.name),
+          itemSource: parseSpellReference(grant.spellName).source,
           category: 'Spells',
           attribution,
           sourceTypes: ['subclass'],
@@ -419,10 +421,13 @@ export function SpellsPage() {
     const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
     const seen = new Set<string>()
     return rows.flatMap((row) => {
-      const key = `${normalizeKey(row.itemName)}|${row.attribution}|${row.category}`
+      const key = `${getSpellReferenceKey(row.itemName, row.itemSource)}|${row.attribution}|${row.category}`
       if (seen.has(key)) return []
       seen.add(key)
-      const spell = resolveSpellReferenceFromMap(row.itemName, spellByName)
+      const spell = resolveSpellReferenceFromMap(
+        formatSpellReference(row.itemName, row.itemSource),
+        spellByName,
+      )
       return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
   }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
@@ -474,6 +479,9 @@ export function SpellsPage() {
     if (!activeRacialChoice) return null
 
     const initialSelectedNames = activeRacialChoice.selected ?? []
+    const allowedSpellReferences = activeRacialChoice.pool
+      ? new Set(activeRacialChoice.pool)
+      : undefined
 
     const otherProfileSpells = new Set<string>()
     for (const profile of spellProfiles) {
@@ -487,6 +495,7 @@ export function SpellsPage() {
       const poolAllowedLevels = activeRacialChoice.isCantrip ? new Set(['0']) : undefined
       return {
         title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
+        allowedSpellReferences,
         initialSelectedNames,
         allowedLevels: poolAllowedLevels,
         lockedNames,
@@ -512,6 +521,7 @@ export function SpellsPage() {
       const filterAllowedLevels = new Set([String(level)])
       return {
         title: `Choose ${activeRacialChoice.count} ${level === 0 ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''} from ${classes.join(', ')} list`,
+        allowedSpellReferences,
         initialSelectedNames,
         allowedLevels: filterAllowedLevels,
         lockedNames,
@@ -536,6 +546,7 @@ export function SpellsPage() {
 
     return {
       title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
+      allowedSpellReferences,
       initialSelectedNames,
       allowedLevels: activeRacialChoice.isCantrip ? new Set(['0']) : undefined,
       lockedNames,
@@ -755,6 +766,7 @@ export function SpellsPage() {
 
       <SpellSelectionModal
         open={racialChoiceModalOpen && !!racialChoiceModalConfig}
+        selectionMode="racial-choice"
         onOpenChange={(open) => {
           setRacialChoiceModalOpen(open)
           if (!open) setActiveRacialChoice(null)
@@ -770,6 +782,7 @@ export function SpellsPage() {
         className={racialChoiceModalConfig?.className}
         classSource={racialChoiceModalConfig?.classSource}
         classListOverrides={racialChoiceModalConfig?.classListOverrides}
+        allowedSpellReferences={racialChoiceModalConfig?.allowedSpellReferences}
         onConfirm={handleConfirmRacialChoice}
       />
 

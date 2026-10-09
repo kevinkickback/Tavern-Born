@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
@@ -120,11 +122,28 @@ describe('acknowledged character library in IndexedDB', () => {
     malformedRevised.provenance!.choices[0].selected = ['dexterity']
     malformedRevised.provenance!.choices[0].status = 'pending'
     malformed.provenance!.choices.push(structuredClone(malformed.provenance!.choices[0]))
+    const missingTarget = makeCharacterFixture({ id: 'missing-spell-target' })
+    missingTarget.provenance.spells.light = [
+      {
+        sourceType: 'race',
+        sourceName: missingTarget.race,
+        sourceRef: missingTarget.raceSource,
+        grantType: 'fixed',
+        label: missingTarget.race,
+      },
+    ]
     const originals = [
-      { ...makeCharacterFixture({ id: 'old', name: 'Old' }), schemaVersion: 4 },
-      { ...makeCharacterFixture({ id: 'newer', name: 'Newer' }), schemaVersion: 6 },
+      {
+        ...makeCharacterFixture({ id: 'old', name: 'Old' }),
+        schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION - 1,
+      },
+      {
+        ...makeCharacterFixture({ id: 'newer', name: 'Newer' }),
+        schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION + 1,
+      },
       malformed,
       malformedRevised,
+      missingTarget,
     ]
     const before = structuredClone(originals)
     const rawStorage = createIdbStorage<{
@@ -165,6 +184,115 @@ describe('acknowledged character library in IndexedDB', () => {
     expect(useCharacterStore.getState().characters).toBe(library)
     expect((await reader.getItem('character-storage'))?.state.characters).toEqual(library)
     expect(originals).toEqual(before)
+  })
+
+  test.each([
+    'mismatched target',
+    'unaccounted materialization',
+    'active other owner',
+    'outside declared pool',
+    'missing fixed ownership',
+    'manual fixed ownership',
+    'other fixed printing',
+  ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
+    const fixed = corruption.includes('fixed')
+    const initial = buildInitialCharacter(
+      {
+        initial: { name: 'Canonical racial choice', originSystem: '2014' },
+        race: {
+          name: corruption === 'active other owner' ? 'Parent' : 'Choosing Caster',
+          source: 'OWNER',
+          additionalSpells:
+            corruption === 'active other owner'
+              ? undefined
+              : [{ known: { _: fixed ? ['light|PHB#c'] : [{ choose: 'level=0|class=Wizard' }] } }],
+        } as Race5e,
+        ...(corruption === 'active other owner'
+          ? {
+              subrace: {
+                name: 'Child',
+                source: 'CHILD',
+                additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+              } as Race5e,
+            }
+          : {}),
+      },
+      new Map(),
+      () => [],
+    )
+    const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+    const result = fixed
+      ? { characterPatch: {}, provenanceUpdate: initial.provenance }
+      : setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', ['Light|PHB'])
+    const valid = {
+      ...initial,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+      allowedSources: [],
+    }
+    const malformed = structuredClone(valid)
+    malformed.id = corruption
+    if (corruption === 'missing fixed ownership') delete malformed.provenance.spells.light
+    else if (corruption === 'manual fixed ownership')
+      Object.assign(malformed.provenance.spells.light[0], {
+        sourceType: 'manual',
+        sourceName: 'User Choice',
+        sourceRef: undefined,
+      })
+    else if (corruption === 'other fixed printing')
+      malformed.provenance.spells.light[0].grantSource = 'TCE'
+    else if (corruption === 'mismatched target')
+      malformed.provenance.spells.light[0].grantSource = 'XPHB'
+    else if (corruption === 'active other owner')
+      Object.assign(malformed.provenance.spells.light[0], {
+        sourceType: 'race',
+        sourceName: 'Parent',
+        sourceRef: 'OWNER',
+      })
+    else if (corruption === 'outside declared pool')
+      malformed.spells.spellProfiles.find((profile) => profile.type === 'racial')!
+        .choices![0].pool = ['Mage Hand|PHB']
+    else
+      malformed.spells.spellProfiles
+        .find((profile) => profile.type === 'racial')!
+        .cantrips.push('Mage Hand|PHB')
+    const original = structuredClone(malformed)
+    const neighbor = makeCharacterFixture({
+      id: 'valid-neighbor',
+      name: 'Valid neighbor',
+      allowedSources: [],
+    })
+    const rawStorage = createIdbStorage<{
+      characters: unknown[]
+      unsupportedCharacters: unknown[]
+    }>()
+    await rawStorage.setItem('character-storage', {
+      state: { characters: [valid, malformed, neighbor], unsupportedCharacters: [] },
+      version: 0,
+    })
+    await useCharacterStore.persist.rehydrate()
+    expect(useCharacterStore.getState().characters).toEqual([valid, neighbor])
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([original])
+    const created = await useCharacterStore.getState().createNewCharacter({ name: 'Later write' })
+    await useCharacterStore.persist.rehydrate()
+    const persisted = (await reader.getItem('character-storage'))?.state
+    expect(persisted).toEqual({
+      characters: [valid, neighbor, created],
+      unsupportedCharacters: [original],
+    })
+    expect(
+      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
+        (download) => JSON.parse(download.text),
+      ),
+    ).toEqual([original])
+    for (const batch of [
+      [valid, malformed],
+      [malformed, valid],
+    ]) {
+      await expect(useCharacterStore.getState().importCharacters(batch)).rejects.toThrow()
+      expect((await reader.getItem('character-storage'))?.state).toEqual(persisted)
+    }
+    expect(malformed).toEqual(original)
   })
 
   test('overlapping duplicates receive independent identities and collision-free names', async () => {

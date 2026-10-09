@@ -13,6 +13,7 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList, isSpellOnSubclassList } from '@/lib/calculations/spellProfiles'
 import {
@@ -45,6 +46,10 @@ export interface SpellSelectionModalProps {
   subclassName?: string
   subclassSource?: string
   classListOverrides?: Set<string>
+  /** Complete allowed targets, independently of class-list visibility controls. */
+  allowedSpellReferences?: ReadonlySet<string>
+  /** Racial choices have exact targets and one homogeneous selection quota. */
+  selectionMode?: 'catalog' | 'racial-choice'
   onConfirm: (names: string[]) => void
 }
 
@@ -52,6 +57,18 @@ const EMPTY_SPELL_NAMES = new Set<string>()
 
 function getSpellSelectionId(spell: Pick<Spell5e, 'name' | 'source'>): string {
   return getSpellReferenceKey(spell.name, spell.source)
+}
+
+function buildKnownSpellIds(
+  spells: readonly Spell5e[],
+  references: Iterable<string>,
+  exactTargets: boolean,
+): Set<string> {
+  if (exactTargets) return new Set(Array.from(references, (ref) => getSpellReferenceKey(ref)))
+  const names = buildSpellNameKeySet(references)
+  return new Set(
+    spells.filter((spell) => names.has(getSpellNameKey(spell.name))).map(getSpellSelectionId),
+  )
 }
 
 export function resolveInitialSpellSelectionIds(
@@ -69,12 +86,11 @@ export function resolveInitialSpellSelectionIds(
     const nameKey = getSpellNameKey(spell.name)
     if (!idsByName.has(nameKey)) idsByName.set(nameKey, getSpellSelectionId(spell))
   }
-  return references.map(
-    (reference) =>
-      idsByReference.get(getSpellReferenceKey(reference)) ??
-      idsByName.get(getSpellNameKey(reference)) ??
-      reference,
-  )
+  return references.map((reference) => {
+    const key = getSpellReferenceKey(reference)
+    if (parseSpellReference(reference).source) return idsByReference.get(key) ?? key
+    return idsByName.get(getSpellNameKey(reference)) ?? reference
+  })
 }
 
 function buildSpellLevelOptions(
@@ -166,7 +182,7 @@ function matchSpell(
   characterSpellKeys?: ReadonlySet<string>,
 ): boolean {
   if (
-    characterSpellKeys?.has(getSpellNameKey(spell.name)) &&
+    characterSpellKeys?.has(getSpellSelectionId(spell)) &&
     activeFilters.visibility?.has('hide-known')
   ) {
     return false
@@ -295,7 +311,7 @@ export function SpellSelectionModal({
   open,
   onOpenChange,
   title = 'Add Spells',
-  spells,
+  spells: allSpells,
   lockedNames = EMPTY_SPELL_NAMES,
   characterSpellNames,
   categories,
@@ -308,12 +324,26 @@ export function SpellSelectionModal({
   subclassName,
   subclassSource,
   classListOverrides,
+  allowedSpellReferences,
+  selectionMode = 'catalog',
   onConfirm,
 }: SpellSelectionModalProps) {
-  const lockedSpellKeys = useMemo(() => buildSpellNameKeySet(lockedNames), [lockedNames])
+  const spells = useMemo(() => {
+    if (!allowedSpellReferences) return allSpells
+    const keys = new Set(
+      Array.from(allowedSpellReferences, (reference) => getSpellReferenceKey(reference)),
+    )
+    return allSpells.filter((spell) => keys.has(getSpellSelectionId(spell)))
+  }, [allSpells, allowedSpellReferences])
+  const retainUnavailable = selectionMode === 'racial-choice'
+  const availableIds = useMemo(() => new Set(spells.map(getSpellSelectionId)), [spells])
+  const lockedSpellKeys = useMemo(
+    () => buildKnownSpellIds(spells, lockedNames, retainUnavailable),
+    [spells, lockedNames, retainUnavailable],
+  )
   const characterSpellKeys = useMemo(
-    () => buildSpellNameKeySet(characterSpellNames ?? EMPTY_SPELL_NAMES),
-    [characterSpellNames],
+    () => buildKnownSpellIds(spells, characterSpellNames ?? EMPTY_SPELL_NAMES, retainUnavailable),
+    [spells, characterSpellNames, retainUnavailable],
   )
   const classListOverrideKeys = useMemo(
     () => (classListOverrides ? buildSpellNameKeySet(classListOverrides) : undefined),
@@ -322,6 +352,21 @@ export function SpellSelectionModal({
   const initialSelectedIds = useMemo(
     () => resolveInitialSpellSelectionIds(spells, initialSelectedNames),
     [initialSelectedNames, spells],
+  )
+  const unavailableSelectionLabels = useMemo(
+    () =>
+      new Map(
+        initialSelectedIds.map((id, index) => {
+          const reference = parseSpellReference(initialSelectedNames[index])
+          return [
+            id,
+            reference.source
+              ? `${reference.name} (${reference.source.toUpperCase()})`
+              : reference.name,
+          ]
+        }),
+      ),
+    [initialSelectedIds, initialSelectedNames],
   )
 
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
@@ -341,18 +386,20 @@ export function SpellSelectionModal({
     ? { ...initialFilters, visibility: new Set(['hide-known']) }
     : initialFilters
 
-  const canSelect = (spell: Spell5e, selectedIds: Set<string>, allItems: Spell5e[]) => {
+  const getCategoryCount = (category: CategoryLimit<Spell5e>, selectedIds: ReadonlySet<string>) =>
+    spells.filter((item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)))
+      .length +
+    (retainUnavailable && categories?.length === 1
+      ? [...selectedIds].filter((id) => !availableIds.has(id)).length
+      : 0)
+
+  const canSelect = (spell: Spell5e, selectedIds: Set<string>) => {
     const id = getSpellSelectionId(spell)
     if (selectedIds.has(id)) return true
     const spellNameKey = getSpellNameKey(spell.name)
-    if (characterSpellKeys.has(spellNameKey)) return false
-    if (lockedSpellKeys.has(spellNameKey)) return false
-    if (
-      allItems.some(
-        (item) =>
-          selectedIds.has(getSpellSelectionId(item)) && getSpellNameKey(item.name) === spellNameKey,
-      )
-    ) {
+    if (characterSpellKeys.has(id)) return false
+    if (lockedSpellKeys.has(id)) return false
+    if ([...selectedIds].some((selectedId) => getSpellNameKey(selectedId) === spellNameKey)) {
       return false
     }
 
@@ -361,10 +408,7 @@ export function SpellSelectionModal({
         continue
       }
 
-      const count = allItems.filter(
-        (item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)),
-      ).length
-      if (count >= category.max) {
+      if (getCategoryCount(category, selectedIds) >= category.max) {
         return false
       }
     }
@@ -383,8 +427,8 @@ export function SpellSelectionModal({
         <SpellCard
           spell={spell}
           isSelected={isSelected}
-          isLocked={!isSelected && lockedSpellKeys.has(getSpellNameKey(spell.name))}
-          isCharacterKnown={!isSelected && characterSpellKeys.has(getSpellNameKey(spell.name))}
+          isLocked={!isSelected && lockedSpellKeys.has(getSpellSelectionId(spell))}
+          isCharacterKnown={!isSelected && characterSpellKeys.has(getSpellSelectionId(spell))}
         />
       )}
       canSelect={canSelect}
@@ -407,14 +451,34 @@ export function SpellSelectionModal({
       categories={categories}
       selectionHint={selectionHint}
       initialSelectedIds={initialSelectedIds}
+      unavailableSelectionLabels={unavailableSelectionLabels}
+      countUnavailableSelections={retainUnavailable}
+      getConfirmationError={(ids) => {
+        if (!retainUnavailable && [...ids].some((id) => !availableIds.has(id))) {
+          return 'Restore the unavailable spells in Game Data or remove their selections before confirming.'
+        }
+        if (categories?.some((category) => getCategoryCount(category, ids) > category.max)) {
+          return 'Remove extra selections to fit the limits before confirming.'
+        }
+      }}
       initialFilters={effectiveInitialFilters}
-      onConfirm={(_ids, selectedItems) =>
-        onConfirm(
-          dedupeSpellNames(
-            selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
-          ),
+      onConfirm={(ids, selectedItems) => {
+        const initialReferences = new Map(
+          initialSelectedIds.map((id, index) => [id, initialSelectedNames[index]]),
         )
-      }
+        const retained = (retainUnavailable ? ids : [])
+          .filter((id) => !availableIds.has(id))
+          .flatMap((id) => {
+            const reference = initialReferences.get(id)
+            return reference ? [reference] : []
+          })
+        onConfirm(
+          dedupeSpellNames([
+            ...selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
+            ...retained,
+          ]),
+        )
+      }}
     />
   )
 }

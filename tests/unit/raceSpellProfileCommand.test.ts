@@ -56,7 +56,7 @@ test('removing version spells retracts the persisted racial profile and keeps in
   const before = structuredClone(initial)
   expect(
     initial.spells.spellProfiles.find((entry) => entry.type === 'racial')?.fixedSpells,
-  ).toEqual(['light'])
+  ).toEqual(['light|PHB'])
   const result = applySubraceSelectionCommand(initial, ledger, race, race.subraces?.[0], () => [])
   expect(result.provenanceUpdate.spells.light).toEqual([
     expect.objectContaining({ sourceType: 'class' }),
@@ -283,7 +283,7 @@ test.each([
     )
     expect(profile?.castingAbilityOptions).toBeUndefined()
     expect(profile?.castingAbility).toBeUndefined()
-    expect(profile?.cantrips).toEqual(['shocking grasp'])
+    expect(profile?.cantrips).toEqual(['shocking grasp|PHB'])
     expect(result.provenanceUpdate.spells['shocking grasp']).toEqual([
       expect.objectContaining({ sourceType: 'race', sourceName: 'Caster', sourceRef: 'PHB' }),
     ])
@@ -329,7 +329,11 @@ test('traditional child replacement keeps fixed parent ownership and replaces ch
   expect(result.provenanceUpdate.spells.thaumaturgy).toBeUndefined()
   expect(
     result.characterPatch.spells?.spellProfiles.find((entry) => entry.type === 'racial'),
-  ).toMatchObject({ id: 'racial:New Caster|PHB', cantrips: ['light'], fixedSpells: ['light'] })
+  ).toMatchObject({
+    id: 'racial:New Caster|PHB',
+    cantrips: ['light|PHB'],
+    fixedSpells: ['light|PHB'],
+  })
 })
 
 test('inherited version spell blocks materialize once and returning to the base rebuilds its profile', () => {
@@ -358,8 +362,8 @@ test('inherited version spell blocks materialize once and returning to the base 
     initial.characterPatch.spells?.spellProfiles.find((entry) => entry.type === 'racial'),
   ).toMatchObject({
     id: 'racial:Version Caster|PHB',
-    fixedSpells: ['light'],
-    cantrips: ['light'],
+    fixedSpells: ['light|PHB'],
+    cantrips: ['light|PHB'],
     choices: undefined,
   })
   expect(initial.provenanceUpdate.spells.light).toEqual([
@@ -377,8 +381,8 @@ test('inherited version spell blocks materialize once and returning to the base 
   ).toEqual([
     expect.objectContaining({
       id: 'racial:Caster|PHB',
-      fixedSpells: ['light'],
-      cantrips: ['light'],
+      fixedSpells: ['light|PHB'],
+      cantrips: ['light|PHB'],
     }),
   ])
   expect(restored.provenanceUpdate.spells.light).toEqual([
@@ -403,7 +407,7 @@ test('actual multiclass levels gate profile and ledger grants together', () => {
   const result = applyRaceSelectionCommand(initial, emptyProvenance(), race, undefined, 0, () => [])
   expect(
     result.characterPatch.spells?.spellProfiles.find((entry) => entry.type === 'racial'),
-  ).toMatchObject({ cantrips: ['light'], spellsKnown: ['darkness'] })
+  ).toMatchObject({ cantrips: ['light|PHB'], spellsKnown: ['darkness|PHB'] })
   expect(result.provenanceUpdate.spells.darkness).toHaveLength(1)
   expect(result.provenanceUpdate.spells.invisibility).toBeUndefined()
 })
@@ -426,7 +430,7 @@ test('selecting a spell-granting race at level five returns its actual level gra
   expect(result.provenanceUpdate.spells.invisibility).toHaveLength(1)
   expect(
     result.characterPatch.spells?.spellProfiles.find((profile) => profile.type === 'racial'),
-  ).toMatchObject({ cantrips: ['light'], spellsKnown: ['darkness', 'invisibility'] })
+  ).toMatchObject({ cantrips: ['light|PHB'], spellsKnown: ['darkness|PHB', 'invisibility|PHB'] })
 })
 
 test('child changes retract stale parent spell ownership after a catalog update while retaining independent grants', () => {
@@ -569,7 +573,7 @@ test('a changed block-choice pool removes an unavailable saved selection', () =>
       expect.objectContaining({
         id: 'block-choice',
         selected: [],
-        pool: ['druidcraft', 'mage hand'],
+        pool: ['druidcraft|PHB', 'mage hand|PHB'],
       }),
     ],
   })

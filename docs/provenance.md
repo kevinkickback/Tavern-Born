@@ -142,7 +142,13 @@ from the unfiltered catalog.
 Race selection commands rebuild the persisted racial spell profile at the actual total character
 level. They remove obsolete racial profiles and choice ownership, then restore saved choices only
 for the same source-qualified profile and compatible choice rules. Existing choice commands enforce
-current pool and count limits. Casting ability selections survive only while allowed by the current
+current pool and count limits. Profile spell arrays and pools use complete `name|source` references;
+spell tags
+store target `grantSource` separately from owner `sourceRef`. Choice replacement and removal match
+both the descriptor and target printing, preserving fixed grants and other choices/owners. A choice
+quota counts distinct logical spell names, while materialization retains distinct target printings.
+Sources rows also retain the target printing, so another printing cannot supply its metadata.
+Casting ability selections survive only while allowed by the current
 fixed ability or choice options; removing that rule clears a historical ability. Independent class
 and special profiles and spell-slot usage remain intact. A shared pure selection adapter keeps
 command and spell-hook labels and blocks consistent; legacy profile labels and choice identifiers
@@ -154,6 +160,13 @@ An unavailable exact selected parent or child projects cloned existing saved rac
 including choices, casting ability and source identity, even when an available parent has spell
 grants. Unrelated spell edits commit those retained profiles with provenance together. Exact
 raw-catalog fallback counts as available; restored exact metadata resumes normal derivation.
+The shared spell-state projection refreshes fixed racial spell ownership from the exact resolved
+parent and child at the character's level, alongside the derived profiles. Changed target printings,
+new fixed grants and resolved removals therefore appear consistently in Spells, Sources, Actions
+and PDF. Spell edits commit that same profile and ledger state atomically, retaining independent
+ownership and slot usage. Missing exact parent or child data retains the coherent saved snapshot;
+it cannot establish removal or supply a guessed owner. This uses the existing supported native
+fixed-grant grammar; complete suite selection and descriptor lineage remain separate contracts.
 Metadata-free consumers cannot establish a racial removal and retain selected saved racial profiles.
 Only a fully resolved selection can establish empty racial grants. Without a selected race,
 the projection omits racial profiles. Intentional race/subrace commands still remove obsolete setup atomically.

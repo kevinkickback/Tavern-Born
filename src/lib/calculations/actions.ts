@@ -12,6 +12,7 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
+import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -30,7 +31,6 @@ import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
-import { ensureSpellProfiles } from './spellProfiles.profiles'
 
 function isWeapon(item: Equipment): boolean {
   return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
@@ -135,10 +135,12 @@ export function deriveSpellActions(
     const sourceLessId = toClassProfileId(classData.name)
     if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
-  const profiles = ensureSpellProfiles(character, classesById, options.race, {
-    raceResolution: options.raceResolution,
-    preserveUnavailableClassProfiles: true,
-  })
+  const profiles = deriveSpellProfileState(
+    character,
+    classesById,
+    options.race,
+    options.raceResolution,
+  ).spells.spellProfiles
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {

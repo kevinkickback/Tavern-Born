@@ -9,6 +9,7 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { applyLevelUp } from '@/lib/character/commands/classCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -97,6 +98,10 @@ function savedChoice(parent: Race5e, child: Race5e, profileName: string): Charac
     spellsKnown: [],
     preparedSpells: [],
     alwaysPrepared: true,
+  })
+  character.provenance = addSpellGrant(character.provenance, 'Shocking Grasp|PHB', {
+    ...makeSourceTag('subrace', child.name, 'choice', child.source),
+    grantVariant: 'direct-_-choose-0',
   })
   return character
 }
@@ -326,6 +331,7 @@ test.each([
   character.spells.spellProfiles = character.spells.spellProfiles.filter(
     (profile) => profile.type !== 'racial',
   )
+  delete character.provenance.spells['shocking grasp']
   character.spells.spellProfiles[0] = {
     id: 'class:Cleric|PHB',
     type: 'class',
@@ -417,7 +423,7 @@ test.each([
   'class',
   'racial',
   'special',
-  'legacy alias',
+  'unqualified special alias',
   'legacy fixed',
 ] as const)('a derived subclass printing respects %s identity and preparation', (owner) => {
   const parent = { name: 'Parent', source: 'PHB' } as Race5e
@@ -440,7 +446,11 @@ test.each([
           additionalSpells: [
             {
               prepared: {
-                3: [owner === 'legacy alias' ? 'burning hands|PHB' : 'burning hands|XPHB'],
+                3: [
+                  owner === 'unqualified special alias'
+                    ? 'burning hands|PHB'
+                    : 'burning hands|XPHB',
+                ],
               },
             },
           ],
@@ -463,13 +473,25 @@ test.each([
     classSource: 'PHB',
     spellsKnown: owner === 'class' ? ['Burning Hands|PHB'] : [],
   })
-  const savedType = owner === 'legacy alias' ? 'racial' : owner === 'legacy fixed' ? 'class' : owner
+  const savedType =
+    owner === 'unqualified special alias' ? 'special' : owner === 'legacy fixed' ? 'class' : owner
   const savedProfile = character.spells.spellProfiles.find((profile) => profile.type === savedType)
   if (!savedProfile) throw new Error('Missing fixture profile')
   savedProfile.cantrips = []
-  savedProfile.spellsKnown = [owner === 'legacy alias' ? 'Burning Hands' : 'Burning Hands|PHB']
+  savedProfile.spellsKnown = [
+    owner === 'unqualified special alias' ? 'Burning Hands' : 'Burning Hands|PHB',
+  ]
   if (owner === 'legacy fixed') savedProfile.fixedSpells = ['Burning Hands']
   savedProfile.choices = undefined
+  if (owner === 'racial') {
+    delete character.provenance.spells['shocking grasp']
+    savedProfile.fixedSpells = ['Burning Hands|PHB']
+    character.provenance = addSpellGrant(
+      character.provenance,
+      'Burning Hands|PHB',
+      makeSourceTag('subrace', child.name, 'fixed', child.source),
+    )
+  }
   expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   const before = structuredClone(character)
   const context = createCharacterCalculationContext(character, catalog.lookups)
@@ -481,7 +503,7 @@ test.each([
   const pdf = createCharacterSheetViewModel(character, catalog.lookups)
   for (const actions of [direct, result.current, pdf.actions]) {
     const expected =
-      owner === 'legacy alias'
+      owner === 'unqualified special alias'
         ? [{ source: 'PHB', active: true }]
         : owner === 'legacy fixed'
           ? [{ source: 'XPHB', active: true }]

@@ -5,8 +5,9 @@ import {
 import { toRacialProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { buildRacialSpellProfile } from '@/lib/calculations/spellProfiles.profiles'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
-import { applyRaceSpellGrants, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
+import { isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
+import { reconcileResolvedRacialFixedSpells } from '@/lib/provenance/racialFixedSpells'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -59,12 +60,6 @@ export function reconcileRaceSpellProfileCommand(
       ],
     },
   }
-  const owners = [
-    { sourceType: 'race', sourceName: character.race, sourceRef: character.raceSource },
-    { sourceType: 'race', sourceName: race.name, sourceRef: race.source },
-    { sourceType: 'subrace', sourceName: character.subrace, sourceRef: character.subraceSource },
-    { sourceType: 'subrace', sourceName: subrace?.name, sourceRef: subrace?.source },
-  ]
   let provenanceUpdate: ProvenanceLedger = {
     ...ledger,
     spells: Object.fromEntries(
@@ -75,33 +70,18 @@ export function reconcileRaceSpellProfileCommand(
               key,
               tags.filter(
                 (tag) =>
-                  !owners.some(
-                    (owner) =>
-                      owner.sourceName &&
-                      owner.sourceType === tag.sourceType &&
-                      owner.sourceName === tag.sourceName &&
-                      (!tag.sourceRef || tag.sourceRef === owner.sourceRef),
-                  ),
+                  !isSelectedRaceOwner(tag, character) && !isSelectedRaceOwner(tag, nextCharacter),
               ),
             ] as const,
         )
         .filter(([, tags]) => tags.length > 0),
     ),
   }
-  provenanceUpdate = applyRaceSpellGrants(
-    { additionalSpells: selection.parentAdditionalSpells },
-    totalLevel,
-    provenanceUpdate,
-    makeSourceTag('race', race.name, 'fixed', race.source),
-  )
-  if (subrace) {
-    provenanceUpdate = applyRaceSpellGrants(
-      { additionalSpells: selection.subraceAdditionalSpells },
-      totalLevel,
-      provenanceUpdate,
-      makeSourceTag('subrace', subrace.name, 'fixed', subrace.source),
-    )
-  }
+  provenanceUpdate = reconcileResolvedRacialFixedSpells(nextCharacter, provenanceUpdate, {
+    parentRace: race,
+    subraceData: subrace,
+    subraceIsNested: options?.subraceIsNested ?? false,
+  })
   if (profile) {
     for (const choice of profile.choices ?? []) {
       const previousChoice = previousProfile?.choices?.find((entry) => entry.id === choice.id)

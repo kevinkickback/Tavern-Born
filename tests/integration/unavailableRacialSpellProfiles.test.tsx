@@ -117,7 +117,16 @@ function savedCharacter(withChild = true): Character {
     racial,
   ]
   character.provenance!.spells['shocking grasp'] = [
-    makeSourceTag(withChild ? 'subrace' : 'race', withChild ? 'Child' : 'Parent', 'choice', 'HB'),
+    {
+      ...makeSourceTag(
+        withChild ? 'subrace' : 'race',
+        withChild ? 'Child' : 'Parent',
+        'choice',
+        'HB',
+      ),
+      grantSource: 'PHB',
+      grantVariant: 'direct-_-choose-0',
+    },
   ]
   return character
 }
@@ -274,6 +283,7 @@ test.each([
     install([])
   })
   expect(racialProfiles(result.current.slots.spellProfiles)).toEqual([])
+  expect(reopened.provenance!.spells['shocking grasp']).toBeUndefined()
 })
 
 test('restored exact metadata replaces obsolete fixed spells and retains compatible choices', () => {

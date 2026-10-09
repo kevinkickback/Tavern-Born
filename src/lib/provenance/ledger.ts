@@ -1,3 +1,4 @@
+import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeKey, normalizeOwnerIdentity } from './normalization'
 import type {
   AbilityBonusProvenanceRecord,
@@ -104,14 +105,16 @@ function setNonProficiencyMap(
   }
 }
 
-function tagPresent(list: readonly SourceTag[], tag: SourceTag): boolean {
+function tagPresent(list: readonly SourceTag[], tag: SourceTag, normalizeTarget = false): boolean {
   return list.some(
     (t) =>
       t.sourceType === tag.sourceType &&
       t.sourceName === tag.sourceName &&
       t.grantType === tag.grantType &&
       t.sourceRef === tag.sourceRef &&
-      t.grantSource === tag.grantSource &&
+      (normalizeTarget
+        ? normalizeOwnerIdentity(t.grantSource) === normalizeOwnerIdentity(tag.grantSource)
+        : t.grantSource === tag.grantSource) &&
       t.grantVariant === tag.grantVariant,
   )
 }
@@ -281,8 +284,10 @@ export function addSpellGrant(
 ): ProvenanceLedger {
   const normKey = normalizeKey(key)
   const existing = ledger.spells[normKey] ?? []
-  if (tagPresent(existing, tag)) return ledger
-  return { ...ledger, spells: { ...ledger.spells, [normKey]: [...existing, tag] } }
+  const targetSource = parseSpellReference(key).source
+  const spellTag = targetSource ? { ...tag, grantSource: targetSource } : tag
+  if (tagPresent(existing, spellTag, true)) return ledger
+  return { ...ledger, spells: { ...ledger.spells, [normKey]: [...existing, spellTag] } }
 }
 
 /** Add a choice placeholder record. Idempotent by id. */

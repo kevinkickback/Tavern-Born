@@ -10,6 +10,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
@@ -48,19 +49,26 @@ export function useSpellProfileMutations(
 ) {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
 
-  const currentLedger = character?.provenance ?? emptyProvenance()
-
-  const commandCharacter = useMemo(() => {
+  const synchronized = useMemo(() => {
     if (!character) return null
+    return syncSpellProfiles(
+      character,
+      character.provenance ?? emptyProvenance(),
+      spellProfiles,
+      calculationContext?.raceResolution,
+    )
+  }, [character, spellProfiles, calculationContext])
+  const currentLedger = synchronized?.provenanceUpdate ?? emptyProvenance()
+  const commandCharacter = useMemo(() => {
+    if (!character || !synchronized) return null
     return {
       ...character,
-      spells: {
-        ...character.spells,
-        spellProfiles,
-      },
+      ...synchronized.characterPatch,
+      provenance: synchronized.provenanceUpdate,
     }
-  }, [character, spellProfiles])
+  }, [character, synchronized])
 
   const applySpellCommand = useCallback(
     (result: SpellCommandResult) => {
@@ -74,9 +82,9 @@ export function useSpellProfileMutations(
   )
 
   const syncProfiles = useCallback(() => {
-    if (!character || !commandCharacter) return
-    applySpellCommand(syncSpellProfiles(commandCharacter, currentLedger, spellProfiles))
-  }, [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand])
+    if (!synchronized) return
+    applySpellCommand(synchronized)
+  }, [synchronized, applySpellCommand])
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {

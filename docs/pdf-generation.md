@@ -16,6 +16,11 @@ the [retained PDF sources](../scripts/pdf-sources/README.md).
 
 Preview and download use the same completed export. Changes to character data, game data, template,
 or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
+The view model uses the shared spell-state projection for profiles, fixed racial ownership, rows
+and actions. Exact restored rules data refreshes this export snapshot together; unavailable exact
+race or child data retains saved spell state. The saved character is not mutated by export.
+Independent class and special profiles retain their saved selections and preparation metadata;
+the racial rules refresh does not replace them during export.
 
 The export page supplies the raw class-feature and optional-feature lookup catalogs through named
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and
@@ -113,6 +118,9 @@ identity; complete versions use their own grants, including explicit removal, an
 parent blocks are filtered to the selected child. An unavailable selected child preserves saved
 profiles rather than substituting the available parent's grants. Projection does not change saved
 choices or state.
+Racial spell targets retain their saved printing independently of the racial owner's source.
+An unavailable qualified target remains unresolved; a same-name spell in another printing cannot
+replace it in spell rows or actions. Independently owned printings remain distinct through projection.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries

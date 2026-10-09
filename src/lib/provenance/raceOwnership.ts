@@ -35,6 +35,14 @@ export function isSelectedRaceOwner(tag: SourceTag, selection: RaceSelection): b
   )
 }
 
+/** Match the complete owner used by the current aggregate racial spell-choice writer. */
+export function isRacialSpellChoiceOwner(tag: SourceTag, selection: RaceSelection): boolean {
+  return (
+    tag.sourceType === (selection.subrace ? 'subrace' : 'race') &&
+    isSelectedRaceOwner(tag, selection)
+  )
+}
+
 /** Character slots follow numeric native blocks within parent, then child; array order is immaterial. */
 export function getSelectedRaceAbilityChoices(ledger: ProvenanceLedger, selection: RaceSelection) {
   return ledger.choices
