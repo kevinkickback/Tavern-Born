@@ -131,6 +131,9 @@ Export remains immutable and preserves independent preparation and usage.
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries
 continue in notes when enabled, rather than duplicating mixed-content core pages.
+Secondary casting summaries are preserved in notes with the default ellipsis setting as well.
+Explicitly disabling notes records their omission. Optional spell-page omissions retain their
+existing overflow suppression.
 
 `buildCompanionSheetData` resolves active source-qualified creature choices; external field
 names/geometry belong in `companionSheetMapping.ts`. Each active creature gets an independent

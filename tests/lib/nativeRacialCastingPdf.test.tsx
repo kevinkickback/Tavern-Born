@@ -1,6 +1,7 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test } from 'vitest'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { buildRacialSpellcastingDetails } from '@/lib/calculations/spellProfiles.casting'
 import {
   mapOfficial2014SpellPage,
@@ -16,6 +17,7 @@ import type { SheetExportReport } from '@/lib/pdf/types'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
@@ -214,6 +216,51 @@ test.each([
       }),
     )
   }
+  expect(character).toEqual(before)
+}, 30_000)
+
+test.each([
+  '2024-official',
+  '2024-custom',
+] as const)('default %s exports retain secondary casting details without unknown spell levels', async (id) => {
+  const character = caster()
+  const before = structuredClone(character)
+  const vm = createCharacterSheetViewModel(character, {
+    spellsByKey: buildSpellLookup([
+      makeSpellFixture({ name: 'parent light', source: 'PHB', level: 0 }),
+      makeSpellFixture({ name: 'child light', source: 'XPHB', level: 0 }),
+      makeSpellFixture({ name: 'missing ward', source: 'PHB', level: 1 }),
+    ]),
+  })
+  expect(
+    planSheetContent(vm, id).overflow.some((entry) => entry.id.startsWith('unknown-spell-levels:')),
+  ).toBe(false)
+  const expected = {
+    id: 'capacity:spellcasting-profiles',
+    title: 'Additional spellcasting abilities',
+    text: 'Child: wisdom; save DC 18; attack 10',
+  }
+  let report: SheetExportReport | undefined
+  const bytes = await generateTestCharacterSheet(vm, id, {
+    onReport: (value) => {
+      report = value
+    },
+  })
+  expect(report?.notesPageCount).toBe(1)
+  expect(report?.preserved).toContainEqual(expected)
+  const saved = await PDFDocument.load(bytes)
+  expect(saved.getForm().getTextField('P5.ASnotes.Notes.Left').getText()).toContain(expected.text)
+
+  const disabled = await generateTestCharacterSheet(vm, id, {
+    pages: { notes: false },
+    onReport: (value) => {
+      report = value
+    },
+  })
+  expect(report?.notesPageCount).toBe(0)
+  expect(report?.preserved).not.toContainEqual(expected)
+  expect(report?.omitted).toContainEqual(expected)
+  expect((await PDFDocument.load(disabled)).getPageCount()).toBe(2)
   expect(character).toEqual(before)
 }, 30_000)
 

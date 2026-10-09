@@ -265,19 +265,19 @@ export async function generateFilledCharacterSheetPdf(
       overflow.filter((section) => section.text.trim()).map((section) => [section.id, section]),
     ).values(),
   ]
+  const requiredNotes = uniqueOverflow.filter(
+    (section) =>
+      section.id.startsWith('unknown-spell-levels:') ||
+      section.id === 'capacity:spellcasting-profiles' ||
+      actionDetails.some((detail) => detail.id === section.id),
+  )
   const includeNotes =
     options.pages?.notes !== false &&
     (plan.some((part) => part.id === 'notes') ||
       actionDetails.length > 0 ||
-      uniqueOverflow.some((section) => section.id.startsWith('unknown-spell-levels:')) ||
+      requiredNotes.length > 0 ||
       (continueInNotes && uniqueOverflow.length > 0))
-  const notesContent = continueInNotes
-    ? uniqueOverflow
-    : uniqueOverflow.filter(
-        (section) =>
-          section.id.startsWith('unknown-spell-levels:') ||
-          actionDetails.some((detail) => detail.id === section.id),
-      )
+  const notesContent = continueInNotes ? uniqueOverflow : requiredNotes
   let notesPageCount = 0
   if (includeNotes) {
     const source = options.supplements?.notes ?? (await options.loadNotes?.())
