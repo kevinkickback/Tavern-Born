@@ -208,12 +208,16 @@ export function planSheetContent(
       }),
     )
   }
+  const automaticSpells = groups.find((group) => group.id === 'spells')?.automatic
   for (const page of vm.spellcastingPages) {
     const unknown = page.spellRows.filter(
       (row) =>
         row.level !== 'C' &&
         !/^[1-9]$/.test(row.level) &&
-        selectedSpells.some((selected) => (selected.id ?? selected.name) === (row.id ?? row.name)),
+        (automaticSpells ||
+          selectedSpells.some(
+            (selected) => (selected.id ?? selected.name) === (row.id ?? row.name),
+          )),
     )
     if (unknown.length)
       overflow.push({

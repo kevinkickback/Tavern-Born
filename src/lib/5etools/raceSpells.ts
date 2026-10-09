@@ -143,11 +143,13 @@ function parseSchedule(
       visit(schedule._)
       visit(schedule.will, undefined, 'will')
       visit(schedule.ritual, undefined, 'ritual')
-      for (const [uses, items] of Object.entries(schedule.rest ?? {}))
+      for (const [uses, items] of Object.entries(schedule.rest ?? {})) {
+        if (!/^[1-9]\d*e?$/.test(uses)) throw new Error('Invalid native spell rest limit.')
         visit(items, undefined, 'rest:' + uses)
+      }
       for (const [uses, items] of Object.entries(schedule.daily ?? {})) {
         const dailyUses =
-          uses === 'pb' ? 'pb' : /^\d+e?$/.test(uses) ? Number.parseInt(uses, 10) : NaN
+          uses === 'pb' ? 'pb' : /^[1-9]\d*e?$/.test(uses) ? Number.parseInt(uses, 10) : NaN
         if (dailyUses === 'pb' || (Number.isInteger(dailyUses) && Number(dailyUses) > 0))
           visit(items, dailyUses, 'daily:' + uses)
         else throw new Error('Invalid native spell daily limit.')

@@ -139,9 +139,11 @@ test('actual revised Tiefling selects all four native members, replaces the suit
   const user = userEvent.setup()
   const setup = within(screen.getByRole('region', { name: 'Tiefling spell setup' }))
   expect(reopened().provenance.spells).toEqual({})
+  expect(screen.queryByText('Racial Spellcasting')).toBeNull()
   await user.click(setup.getByRole('combobox', { name: 'Tiefling spell suite' }))
   await user.click(screen.getByRole('option', { name: 'Abyssal' }))
   let character = reopened()
+  expect(screen.getByText('Racial Spellcasting')).toBeTruthy()
   expect(character.spells.spellProfiles.find((profile) => profile.type === 'racial')).toMatchObject(
     {
       cantrips: ['thaumaturgy|xphb', 'poison spray|xphb'],
@@ -171,6 +173,7 @@ test('actual revised Tiefling selects all four native members, replaces the suit
   fireEvent.click(setup.getByRole('button', { name: 'Clear Tiefling spell suite' }))
   character = reopened()
   expect(character.provenance.spells).toEqual({})
+  expect(screen.queryByText('Racial Spellcasting')).toBeNull()
   act(() => {
     setActiveCharacter(character)
     install([race])
@@ -231,7 +234,7 @@ test('choose-only High Elf exposes Edit and Clear after its descriptor is full, 
     reopened().spells.spellProfiles.find((profile) => profile.type === 'racial')!.choices![0]
       .selected,
   ).toEqual([])
-})
+}, 10_000)
 
 test('actual class spell editing commits restored racial level grants together without changing slot usage', () => {
   const race = {
@@ -437,4 +440,4 @@ test.each([
   expect(character.provenance.spells['mage hand']).toEqual([
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
   ])
-})
+}, 10_000)

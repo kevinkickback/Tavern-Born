@@ -14,14 +14,18 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import {
+  nativeChoiceSpellLookup,
+  nativeChoiceSpells,
+  nativeRaceResolution,
+} from '../fixtures/nativeRacialCharacter'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
 const WIZARD_PROFILE_ID = 'class:Wizard|PHB'
 
 function installRace(race: Race5e) {
-  const gameData = makeGameDataFixture({ races: [race] })
+  const gameData = makeGameDataFixture({ races: [race], spells: nativeChoiceSpells })
   gameData.lookups = buildGameDataLookups(gameData)
   useGameDataStore.setState({ gameData })
 }
@@ -279,6 +283,7 @@ describe('useSpellProfileMutations', () => {
         choice,
         ['Light|XPHB'],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
@@ -345,6 +350,7 @@ describe('useSpellProfileMutations', () => {
       initial.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].id,
       ['Light|PHB'],
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     const character = { ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }
     character.provenance.spells.light[0].sourceName = ' nORMALIZED cASTER '

@@ -19,7 +19,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 function finish(race: Race5e) {
   return buildInitialCharacter(
@@ -68,6 +68,7 @@ test('a canonical child choice rejects the active parent as its owner and clears
         choiceId(character, id),
         ['Light|PHB'],
         nativeRaceResolution(parent, child),
+        nativeChoiceSpellLookup,
       ),
     ),
   )
@@ -210,6 +211,7 @@ test('same-name printing replacement and clear preserve independent target owner
           choiceId(character, profileId),
           [`Light|${printing}`],
           nativeRaceResolution(race),
+          nativeChoiceSpellLookup,
         ),
       ),
     )
@@ -359,6 +361,7 @@ test('clearing one descriptor preserves fixed and other-choice printings of the 
           choice,
           ['Light|XPHB'],
           nativeRaceResolution(race),
+          nativeChoiceSpellLookup,
         ),
       ),
     )
@@ -418,6 +421,7 @@ test.each([
         choiceId(character, id),
         ['Light|XPHB'],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       ),
     ),
   )
@@ -429,6 +433,7 @@ test.each([
     choiceId(configured, id),
     [target],
     nativeRaceResolution(race),
+    nativeChoiceSpellLookup,
   )
   expect(result).toEqual({ characterPatch: {}, provenanceUpdate: before.provenance })
   expect(configured).toEqual(before)
@@ -458,6 +463,7 @@ test.each([
         choiceId(initial, id),
         [corruption === 'removed target' ? 'Mage Hand|PHB' : 'Light|PHB'],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       ),
     ),
   )
@@ -487,6 +493,7 @@ test('declared pools compare normalized exact targets and permit an empty unsele
       choiceId(initial, id),
       ['Light|PHB'],
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     ),
   )
   character.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].pool = [
@@ -573,6 +580,7 @@ test.each([
         choiceId(character, id),
         ['Light|PHB'],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       ),
     ),
   )
@@ -638,6 +646,7 @@ test.each([
         choiceId(character, id),
         ['Light|PHB'],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       ),
     ),
   )

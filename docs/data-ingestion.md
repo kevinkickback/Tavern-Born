@@ -216,6 +216,8 @@ Known, innate and prepared grants support direct,
 `_`, will, ritual, daily and rest buckets. Expanded `sN` entries extend class-list eligibility; they
 never become automatic known racial spells. This boundary does not implement expendable daily/rest
 resources. Unsupported filter fields and invalid schedule levels/counts are diagnostic errors.
+Daily/rest usage keys must be canonical positive integers, optionally ending in `e`; only daily
+also accepts `pb`. Zero, leading zeros and unsupported rest expressions reject before materialization.
 
 Spell UIDs retain exact target printing and `#c`, including a marker after the printing. An omitted
 target source defaults to PHB independently of the owner source or origin edition, following the

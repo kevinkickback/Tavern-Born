@@ -21,7 +21,7 @@ import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 const catalog = vi.hoisted(() => ({
   filtered: [] as Race5e[],
@@ -106,6 +106,7 @@ function savedChoice(parent: Race5e, child: Race5e): Character {
     profile.choices![0].id,
     ['Shocking Grasp|PHB'],
     nativeRaceResolution(previousParent, previousChild),
+    nativeChoiceSpellLookup,
   )
   character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
   const ability = setRacialCastingAbility(character, character.provenance, profile.id, 'wis')

@@ -9,7 +9,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
@@ -309,6 +309,7 @@ describe('acknowledged character library in IndexedDB', () => {
           initial.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].id,
           ['Light|PHB'],
           nativeRaceResolution(race, child),
+          nativeChoiceSpellLookup,
         )
     const valid = {
       ...initial,

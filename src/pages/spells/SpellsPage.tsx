@@ -719,7 +719,7 @@ export function SpellsPage() {
                   <SpellcastingDetailsCard
                     isSpellcaster={isSpellcaster}
                     spellcastingDetails={spellcastingDetails}
-                    racialProfiles={racialProfiles}
+                    racialProfiles={racialProfiles.filter((profile) => profile.racial?.suite)}
                     racialSpellcastingDetails={racialSpellcastingDetails}
                     onSetRacialCastingAbility={setRacialCastingAbility}
                     hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}

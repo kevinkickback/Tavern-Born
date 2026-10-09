@@ -3,7 +3,7 @@ import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { nativeRaceResolution } from './nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from './nativeRacialCharacter'
 
 /** Level-one native High Elf Lineage grammar, independent of the optional local data tree. */
 export function makeRacialSourceCharacter(): Character {
@@ -43,6 +43,7 @@ export function makeRacialSourceCharacter(): Character {
     profile.choices![0].id,
     ['Toll the Dead|XGE'],
     nativeRaceResolution(parent, child),
+    nativeChoiceSpellLookup,
   )
   const character = {
     ...initial,

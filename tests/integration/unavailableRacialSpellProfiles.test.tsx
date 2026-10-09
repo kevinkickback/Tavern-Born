@@ -25,7 +25,7 @@ import {
   makeGameDataFixture,
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
@@ -115,6 +115,7 @@ function savedCharacter(withChild = true, previousChild = child): Character {
     profile.choices![0].id,
     ['Shocking Grasp|PHB'],
     nativeRaceResolution(actualParent, actualChild),
+    nativeChoiceSpellLookup,
   )
   native = { ...native, ...selected.characterPatch, provenance: selected.provenanceUpdate }
   const ability = setRacialCastingAbility(native, native.provenance, profile.id, 'wis')

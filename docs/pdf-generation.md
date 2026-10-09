@@ -127,7 +127,9 @@ retains the applied snapshot. Exact target lookup cannot borrow another printing
 With spell metadata absent, a saved cantrip remains a cantrip; a known leveled target has explicit
 `?` numeric level. Official 2014 pagination never places that target in a cantrip field. Its name
 and unknown-level explanation continue in notes by default when notes are enabled; disabled notes
-report the omission. Manual spell selections and disabled spell pages still control that content.
+report the omission. Automatic selection preserves these explanations even for unprepared spells
+or rows beyond printed capacity. Explicit manual selection limits explanations to its selected
+rows; omitted optional 2014 spell pages suppress them.
 Export remains immutable and preserves independent preparation and usage.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.

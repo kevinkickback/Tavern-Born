@@ -12,6 +12,8 @@ import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
@@ -52,6 +54,8 @@ export function useSpellProfileMutations(
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
+  const filtered = useFilteredGameData()
+  const spellsByKey = useMemo(() => buildSpellLookup(filtered.spells), [filtered.spells])
 
   const synchronized = useMemo(() => {
     if (!character) return null
@@ -228,10 +232,18 @@ export function useSpellProfileMutations(
         choiceId,
         spellName,
         calculationContext?.raceResolution,
+        spellsByKey,
       )
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, applySpellCommand, calculationContext],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      applySpellCommand,
+      calculationContext,
+      spellsByKey,
+    ],
   )
 
   const removeRacialSpell = useCallback(
@@ -260,10 +272,18 @@ export function useSpellProfileMutations(
           choiceId,
           selectedSpells,
           calculationContext?.raceResolution,
+          spellsByKey,
         ),
       )
     },
-    [character, commandCharacter, currentLedger, applySpellCommand, calculationContext],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      applySpellCommand,
+      calculationContext,
+      spellsByKey,
+    ],
   )
 
   const setRacialSpellSuite = useCallback(

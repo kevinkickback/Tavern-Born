@@ -14,7 +14,11 @@ import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { makeNativeRacialCharacter, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import {
+  makeNativeRacialCharacter,
+  nativeChoiceSpellLookup,
+  nativeRaceResolution,
+} from '../fixtures/nativeRacialCharacter'
 
 const racial = (character: Character) =>
   character.spells.spellProfiles.filter((profile) => profile.type === 'racial')
@@ -44,6 +48,7 @@ function select(character: Character, race: Race5e, child?: Race5e) {
       profile.choices![0].id,
       ['Light|PHB'],
       nativeRaceResolution(race, child),
+      nativeChoiceSpellLookup,
     ),
   )
 }

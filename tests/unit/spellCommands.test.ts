@@ -22,7 +22,7 @@ import { makeSourceTag, reconcileRaceChange } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 describe('Spell Commands', () => {
   test('attributes a native racial choice to its actual owner and clears it atomically', () => {
@@ -44,6 +44,7 @@ describe('Spell Commands', () => {
       profile.choices![0].id,
       'Mage Hand|PHB',
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     expect(selected.provenanceUpdate.spells['mage hand']).toEqual([
       expect.objectContaining({
@@ -101,6 +102,7 @@ describe('Spell Commands', () => {
       profile.choices![0].id,
       'Light|PHB',
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     character = { ...character, ...initial.characterPatch, provenance: initial.provenanceUpdate }
     const result = setRacialSpellChoice(
@@ -110,6 +112,7 @@ describe('Spell Commands', () => {
       profile.choices![0].id,
       ['Sacred Flame|PHB', 'Dancing Lights|PHB'],
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     expect(
       result.characterPatch.spells!.spellProfiles.find((candidate) => candidate.id === profile.id)!
@@ -144,6 +147,7 @@ describe('Spell Commands', () => {
         choice.id,
         'Light|PHB',
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
@@ -155,15 +159,16 @@ describe('Spell Commands', () => {
       character.provenance,
       profile.id,
       profile.choices![0].id,
-      ['Sacred Flame|PHB'],
+      ['Mage Hand|PHB'],
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     expect(
       result.characterPatch.spells!.spellProfiles.find((candidate) => candidate.id === profile.id)!
         .cantrips,
-    ).toEqual(['Sacred Flame|PHB', 'Light|PHB'])
+    ).toEqual(['Mage Hand|PHB', 'Light|PHB'])
     expect(result.provenanceUpdate.spells.light).toEqual([retainedTag])
-    expect(result.provenanceUpdate.spells['sacred flame']).toEqual([
+    expect(result.provenanceUpdate.spells['mage hand']).toEqual([
       expect.objectContaining({ grantVariant: profile.choices![0].id }),
     ])
   })

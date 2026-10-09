@@ -7,7 +7,7 @@ import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 const mocks = vi.hoisted(() => ({
   characterState: {} as Record<string, unknown>,
@@ -109,6 +109,7 @@ test.each([
     character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.choices![0].id,
     ['Light|PHB'],
     nativeRaceResolution(parent, child),
+    nativeChoiceSpellLookup,
   )
   const saved = { ...character, ...choice.characterPatch, provenance: choice.provenanceUpdate }
   mocks.characterState = { activeCharacter: saved, updateCharacter: mocks.updateCharacter }

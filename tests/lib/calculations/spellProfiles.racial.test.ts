@@ -13,6 +13,7 @@ import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import {
   makeNativeRacialCharacter,
+  nativeChoiceSpellLookup,
   nativeRaceResolution,
 } from '../../fixtures/nativeRacialCharacter'
 
@@ -138,6 +139,7 @@ describe('current native racial profiles', () => {
         profile.choices![0].id,
         ['Light|PHB', 'Mage Hand|PHB'],
         live,
+        nativeChoiceSpellLookup,
       ),
     )
     character = apply(
@@ -149,6 +151,7 @@ describe('current native racial profiles', () => {
         profile.choices![1].id,
         ['Light|PHB'],
         live,
+        nativeChoiceSpellLookup,
       ),
     )
     expect(character.provenance.spells.light).toHaveLength(3)
@@ -179,6 +182,7 @@ describe('current native racial profiles', () => {
           profile.choices![0].id,
           selected,
           resolution,
+          nativeChoiceSpellLookup,
         ).characterPatch,
       ).toEqual({})
   })
@@ -194,6 +198,7 @@ describe('current native racial profiles', () => {
         profile.choices![0].id,
         ['Mage Hand|PHB'],
         resolution,
+        nativeChoiceSpellLookup,
       ),
     )
     character = apply(
@@ -278,6 +283,7 @@ test('same-pool descriptors with distinct daily limits configure and clear indep
         choice.id,
         ['Light|PHB'],
         live,
+        nativeChoiceSpellLookup,
       ),
     )
   character = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))

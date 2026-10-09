@@ -9,7 +9,7 @@ import {
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -266,6 +266,7 @@ describe('pruneSpellsForDisabledSources', () => {
         id,
         [selected],
         nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
       )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
@@ -473,6 +474,7 @@ describe('pruneSpellsForDisabledSources', () => {
       initial.spells.spellProfiles.find((profile) => profile.id === profileId)!.choices![0].id,
       ['Frostbite|XGE', 'Mage Hand|PHB'],
       nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     const character = {
       ...initial,

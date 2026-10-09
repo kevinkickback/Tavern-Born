@@ -297,6 +297,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
       profile.choices![0].id,
       ['Light|TCE'],
       nativeRaceResolution(parent, child),
+      { 'light|tce': spell('Light', 'TCE') },
     ),
   )
   character = commit(

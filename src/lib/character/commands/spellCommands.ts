@@ -6,6 +6,7 @@
  */
 
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import {
   getClassChoiceSpellTag,
   getClassSpellRuleContext,
@@ -30,12 +31,14 @@ import {
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
+import { isSpellOnClassList } from '@/lib/calculations/spellProfiles.attribution'
 import {
   buildClassProfileLabel,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
 import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
+import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
@@ -731,6 +734,7 @@ export function selectRacialSpell(
   choiceId: string,
   spellName: string,
   raceResolution?: ResolvedRaceReference,
+  spellsByKey?: Readonly<Record<string, Spell5e>>,
 ): SpellCommandResult {
   const choice = character.spells.spellProfiles
     .find((profile) => profile.id === profileId)
@@ -748,6 +752,7 @@ export function selectRacialSpell(
     choiceId,
     [...choice.selected, spellName],
     raceResolution,
+    spellsByKey,
   )
 }
 
@@ -789,6 +794,7 @@ export function setRacialSpellChoice(
   choiceId: string,
   selectedSpells: readonly string[],
   raceResolution?: ResolvedRaceReference,
+  spellsByKey?: Readonly<Record<string, Spell5e>>,
 ): SpellCommandResult {
   const profile = character.spells.spellProfiles.find((entry) => entry.id === profileId)
   const choice = profile?.choices?.find((entry) => entry.id === choiceId)
@@ -811,9 +817,26 @@ export function setRacialSpellChoice(
   // Deletion can use the saved snapshot. New targets require complete live owner rules.
   if (selectedSpells.some((reference) => !previous.has(getSpellReferenceKey(reference)))) {
     const live = deriveNativeRacialSpellProfiles(character, raceResolution)
+    const descriptor = live
+      .find((entry) => entry.id === profileId)
+      ?.choices?.find((entry) => entry.id === choiceId)
+    if (getNativeRacialSpellOwners(character, raceResolution) === null || !descriptor)
+      return unchanged
+    const filter = descriptor.filter
     if (
-      getNativeRacialSpellOwners(character, raceResolution) === null ||
-      !live.find((entry) => entry.id === profileId)?.choices?.some((entry) => entry.id === choiceId)
+      filter &&
+      selectedSpells.some((reference) => {
+        if (previous.has(getSpellReferenceKey(reference))) return false
+        const spell = spellsByKey && resolveSpellReference(reference, spellsByKey)
+        return (
+          !spell ||
+          getSpellReferenceKey(`${spell.name}|${spell.source}`) !==
+            getSpellReferenceKey(reference) ||
+          spell.level !== filter.level ||
+          (filter.classes.length > 0 &&
+            !filter.classes.some((className) => isSpellOnClassList(spell, className)))
+        )
+      })
     )
       return unchanged
   }

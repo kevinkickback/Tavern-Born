@@ -287,7 +287,7 @@ export function buildRacialSpellcastingDetails(
   effectContext: EffectResolutionContext = {},
 ): RacialSpellcastingDetail[] {
   return character.spells.spellProfiles
-    .filter((profile) => profile.type === 'racial')
+    .filter((profile) => profile.type === 'racial' && profile.racial?.suite)
     .map((profile) => ({
       ...calculateSpellcastingNumbers(
         profile.id,

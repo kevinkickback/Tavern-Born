@@ -164,6 +164,10 @@ Spells, Sources, Actions, readiness and immutable PDF use the same projected rel
 exact context member freezes the whole established snapshot; an available parent cannot partially
 refresh a missing child. Saved alternative/descriptor Clear remains possible, while new suite/target
 selection requires complete rules. Level changes during absence retain the applied snapshot.
+New filter-backed targets additionally require available exact-printing metadata matching the live
+descriptor's level and class list. Retaining or removing an established target can use its saved
+snapshot without that metadata. Unselected alternatives retain setup controls but contribute no
+active casting summary or racial PDF page.
 Restoration evaluates rules at the current level; compatible setup survives, ineligible descriptors
 leave, and incompatible structural identities reset atomically. No dormant choices are resurrected.
 Independent class/special preparation and shared/Pact usage remain unchanged by racial transitions.

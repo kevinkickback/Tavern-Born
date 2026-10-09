@@ -1089,6 +1089,7 @@ function buildFixture(seed, edition) {
       profile.choices[0].id,
       [racialChoiceReference],
       raceResolution,
+      nativeSpellLookup,
     )
     fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
   } else {
@@ -1430,6 +1431,8 @@ const runtime = await createServer({
   appType: 'custom',
 })
 let parseRaces,
+  parseSpells,
+  buildSpellLookup,
   deriveNativeRacialSpellProfiles,
   reconcileNativeRacialSpellLedger,
   refreshNativeRacialSpellState,
@@ -1438,6 +1441,8 @@ let parseRaces,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
+  ;({ parseSpells } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/spells.ts'))
+  ;({ buildSpellLookup } = await runtime.ssrLoadModule('/src/lib/5etools/lookups.ts'))
   ;({
     deriveNativeRacialSpellProfiles,
     reconcileNativeRacialSpellLedger,
@@ -1451,6 +1456,7 @@ try {
   await runtime.close()
 }
 const nativeRaces = parseRaces(racePayload)
+const nativeSpellLookup = buildSpellLookup(parseSpells(spells, { sourceLookup: spellSourceLookup }))
 
 const seed = readJson(fixture2014Path)
 const character2014 = buildFixture(seed, '2014')

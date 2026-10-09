@@ -3,6 +3,8 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { buildRacialSpellcastingDetails } from '@/lib/calculations/spellProfiles.casting'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { setClassSpellSelectionsAtLevel } from '@/lib/character/commands/spellCommands'
 import {
   mapOfficial2014SpellPage,
   OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
@@ -17,7 +19,7 @@ import type { SheetExportReport } from '@/lib/pdf/types'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeClassFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
@@ -310,4 +312,112 @@ test('a competing cantrip printing cannot fill missing leveled spell metadata or
       text: 'missing ward — spell level unknown',
     }),
   )
+})
+
+test.each([
+  '2024-official',
+  '2024-custom',
+] as const)('default %s retains unknown-level explanations beyond printed spell capacity', async (id) => {
+  const character = makeNativeRacialCharacter({
+    name: 'Overflow caster',
+    source: 'PHB',
+    additionalSpells: [
+      {
+        ability: 'wis',
+        known: {
+          1: Array.from(
+            { length: 31 },
+            (_, index) => `Missing Ward ${String(index + 1).padStart(2, '0')}|PHB`,
+          ),
+        },
+      },
+    ],
+  })
+  const before = structuredClone(character)
+  const vm = createCharacterSheetViewModel(character, {})
+  const vmBefore = structuredClone(vm)
+  const plan = planSheetContent(vm, id)
+  expect(plan.groups.find((group) => group.id === 'spells')!.selected).toHaveLength(30)
+  expect(plan.viewModel.spellRows.map((row) => row.name)).not.toContain('Missing Ward 31')
+  expect(
+    plan.overflow.find((entry) => entry.id.startsWith('unknown-spell-levels:'))!.text,
+  ).toContain('Missing Ward 31 — spell level unknown')
+  expect(
+    planSheetContent(vm, id, { spells: ['removed spell|phb'] }).overflow.find((entry) =>
+      entry.id.startsWith('unknown-spell-levels:'),
+    )!.text,
+  ).toContain('Missing Ward 31 — spell level unknown')
+  let report: SheetExportReport | undefined
+  const bytes = await generateTestCharacterSheet(vm, id, {
+    onReport: (value) => {
+      report = value
+    },
+  })
+  expect(
+    report!.preserved.find((entry) => entry.id.startsWith('unknown-spell-levels:'))!.text,
+  ).toContain('Missing Ward 31 — spell level unknown')
+  const form = (await PDFDocument.load(bytes)).getForm()
+  expect(form.getTextField('P5.ASnotes.Notes.Left').getText()).toContain(
+    'Missing Ward 31 — spell level unknown',
+  )
+  await generateTestCharacterSheet(vm, id, {
+    pages: { notes: false },
+    onReport: (value) => {
+      report = value
+    },
+  })
+  expect(
+    report!.omitted.find((entry) => entry.id.startsWith('unknown-spell-levels:'))!.text,
+  ).toContain('Missing Ward 31 — spell level unknown')
+  expect(
+    planSheetContent(vm, id, { spells: [] }).overflow.some((entry) =>
+      entry.id.startsWith('unknown-spell-levels:'),
+    ),
+  ).toBe(false)
+  const manual = planSheetContent(vm, id, { spells: ['missing ward 01|phb'] })
+  expect(manual.overflow.find((entry) => entry.id.startsWith('unknown-spell-levels:'))!.text).toBe(
+    'Missing Ward 01 — spell level unknown',
+  )
+  expect(character).toEqual(before)
+  expect(vm).toEqual(vmBefore)
+}, 30_000)
+
+test('automatic 2024 notes preserve an unprepared Wizard spell with unavailable exact metadata', () => {
+  const wizard = makeClassFixture({ spellcastingAbility: 'int' })
+  const initial = buildInitialCharacter(
+    {
+      initial: { name: 'Unprepared caster', originSystem: '2024' },
+      race: { name: 'Human', source: 'XPHB' },
+      classEntity: wizard,
+      background: { name: 'Acolyte', source: 'XPHB' },
+    },
+    new Map(),
+    () => [],
+  )
+  const result = setClassSpellSelectionsAtLevel(initial, initial.provenance, {
+    className: 'Wizard',
+    classSource: 'PHB',
+    classLevel: 1,
+    selections: [{ name: 'Missing Ward|PHB', spellLevel: 1 }],
+  })
+  const character = characterPersistenceSchema.parse({
+    ...initial,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  const vm = createCharacterSheetViewModel(character, { classesByKey: { 'wizard|phb': wizard } })
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({ name: 'Missing Ward', level: '?', prepared: false }),
+  )
+  expect(planSheetContent(vm, '2024-official').overflow).toContainEqual(
+    expect.objectContaining({
+      title: 'Wizard: spells with unknown levels',
+      text: 'Missing Ward — spell level unknown',
+    }),
+  )
+  expect(
+    planSheetContent(vm, '2024-official', { spells: [] }).overflow.some((entry) =>
+      entry.id.startsWith('unknown-spell-levels:'),
+    ),
+  ).toBe(false)
 })
