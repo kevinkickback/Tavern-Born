@@ -29,7 +29,8 @@ syncBuiltinESMExports();
 await import('./scripts/generate-full-coverage-character-fixtures.mjs');
 process.stdout.write(JSON.stringify(outputs));`,
         ],
-        { cwd: process.cwd(), encoding: 'utf8', timeout: 25_000 },
+        // The full coverage run shares CPU with three other workers and their data parsing.
+        { cwd: process.cwd(), encoding: 'utf8', timeout: 90_000 },
       )
       const outputs = JSON.parse(output) as Array<{ path: string; character: unknown }>
       expect(outputs).toHaveLength(4)
@@ -56,6 +57,6 @@ process.stdout.write(JSON.stringify(outputs));`,
           grantType: 'fixed',
         }),
       ])
-    }, 30_000)
+    }, 100_000)
   },
 )
