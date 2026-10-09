@@ -1,11 +1,15 @@
 import { describe, expect, test } from 'vitest'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import {
   countRemovedSpells,
   detectSourceConflicts,
   pruneSpellsForDisabledSources,
 } from '@/lib/sourceConflicts'
-import type { Spell5e } from '@/types/5etools'
+import type { Race5e, Spell5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -187,6 +191,105 @@ describe('detectSourceConflicts', () => {
 // ── pruneSpellsForDisabledSources ────────────────────────────────────────────
 
 describe('pruneSpellsForDisabledSources', () => {
+  test('retracts only the removed racial descriptor printing while independent ownership remains', () => {
+    const character = makeRacialSourceCharacter()
+    character.classProgression.push({ name: 'Wizard', source: 'XPHB', levels: 1 })
+    character.spells.spellProfiles.push({
+      id: 'class:Wizard|XPHB',
+      type: 'class',
+      label: 'Wizard',
+      className: 'Wizard',
+      classSource: 'XPHB',
+      cantrips: [],
+      spellsKnown: ['Shield|XPHB'],
+      preparedSpells: ['Shield|XPHB'],
+      alwaysPrepared: false,
+    })
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+
+    // Qualified references remain removable even when the rules catalog is absent.
+    const result = pruneSpellsForDisabledSources(character, ['xphb'], [])!
+    const racial = result.spells.spellProfiles.find((profile) => profile.type === 'racial')!
+
+    expect(racial.choices![0].selected).toEqual([])
+    expect(racial.cantrips).toEqual([])
+    expect(result.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    expect(result.spells.spellProfiles.filter((profile) => profile.type !== 'racial')).toEqual(
+      before.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
+    )
+    expect(characterPersistenceSchema.safeParse({ ...character, ...result }).success).toBe(true)
+    expect(character).toEqual(before)
+    expect(pruneSpellsForDisabledSources(character, ['XPHB', 'XGE'], [])).toBeNull()
+  })
+
+  test.each([
+    'XGE',
+    'XPHB',
+  ])('preserves mandatory %s grants and an independent descriptor of the same spell', (fixedSource) => {
+    let character = buildInitialCharacter(
+      {
+        initial: { name: 'Independent grants', originSystem: '2014' },
+        race: {
+          name: 'Choosing Caster',
+          source: 'OWNER',
+          additionalSpells: [
+            {
+              known: {
+                _: [
+                  `toll the dead|${fixedSource}#c`,
+                  { choose: 'level=0|class=Wizard' },
+                  { choose: 'level=0|class=Cleric' },
+                ],
+              },
+            },
+          ],
+        } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    const profileId = character.spells.spellProfiles.find(
+      (profile) => profile.type === 'racial',
+    )!.id
+    for (const [id, selected] of [
+      ['direct-_-choose-0', 'Toll the Dead|XGE'],
+      ['direct-_-choose-1', 'Toll the Dead|XPHB'],
+    ]) {
+      const result = setRacialSpellChoice(character, character.provenance, profileId, id, [
+        selected,
+      ])
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+    character.spells.spellSlots[1] = { max: 3, used: 2 }
+    character.spells.pactSpellSlots = { ...character.spells.pactSpellSlots, 1: { max: 2, used: 1 } }
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+
+    const result = pruneSpellsForDisabledSources(character, ['XPHB'], [])!
+    const racial = result.spells.spellProfiles.find((profile) => profile.id === profileId)!
+    expect(racial.choices!.map((choice) => choice.selected)).toEqual([[], ['Toll the Dead|XPHB']])
+    expect(racial.cantrips.map((reference) => reference.toLowerCase()).sort()).toEqual(
+      fixedSource === 'XGE' ? ['toll the dead|xge', 'toll the dead|xphb'] : ['toll the dead|xphb'],
+    )
+    expect(racial.fixedSpells).toEqual([`toll the dead|${fixedSource}`])
+    expect(result.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'race', grantType: 'fixed', grantSource: fixedSource }),
+      expect.objectContaining({
+        sourceType: 'race',
+        grantType: 'choice',
+        grantVariant: 'direct-_-choose-1',
+        grantSource: 'XPHB',
+      }),
+    ])
+    expect(result.spells.spellSlots).toEqual(before.spells.spellSlots)
+    expect(result.spells.pactSpellSlots).toEqual(before.spells.pactSpellSlots)
+    expect(characterPersistenceSchema.safeParse({ ...character, ...result }).success).toBe(true)
+    expect(character).toEqual(before)
+  })
+
   const allSpells = [
     makeSpell('Fireball', 'PHB'),
     makeSpell('Fireball', 'XPHB'), // same name, different source (reprint)
@@ -345,35 +448,43 @@ describe('pruneSpellsForDisabledSources', () => {
     expect(result!.spells.spellProfiles[0].preparedSpells).toEqual([])
   })
 
-  test('removes from racial spell choices', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'racial:Elf|PHB',
-            type: 'racial',
-            label: 'Elf',
-            raceName: 'Elf',
-            raceSource: 'PHB',
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            choices: [
-              {
-                id: 'elf-cantrip',
-                count: 1,
-                isCantrip: true,
-                selected: ['Frostbite'],
-              },
-            ],
-          },
-        ],
+  test('prunes only disabled members of a supported count-two racial descriptor', () => {
+    const initial = buildInitialCharacter(
+      {
+        initial: { name: 'Partial quota', originSystem: '2014' },
+        race: {
+          name: 'Choosing Caster',
+          source: 'OWNER',
+          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard', count: 2 }] } }],
+        } as Race5e,
       },
-    })
-    const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
-    expect(result).not.toBeNull()
-    expect(result!.spells.spellProfiles[0].choices![0].selected).toEqual([])
+      new Map(),
+      () => [],
+    )
+    const profileId = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+    const selection = setRacialSpellChoice(
+      initial,
+      initial.provenance,
+      profileId,
+      'direct-_-choose-0',
+      ['Frostbite|XGE', 'Mage Hand|PHB'],
+    )
+    const character = {
+      ...initial,
+      ...selection.characterPatch,
+      provenance: selection.provenanceUpdate,
+    }
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+
+    const result = pruneSpellsForDisabledSources(character, ['PHB'], allSpells)!
+    const profile = result.spells.spellProfiles.find((entry) => entry.id === profileId)!
+    expect(profile.choices![0].selected).toEqual(['Mage Hand|PHB'])
+    expect(profile.cantrips).toEqual(['Mage Hand|PHB'])
+    expect(result.provenance.spells).not.toHaveProperty('frostbite')
+    expect(result.provenance.spells['mage hand']).toEqual([
+      expect.objectContaining({ grantVariant: 'direct-_-choose-0', grantSource: 'PHB' }),
+    ])
+    expect(characterPersistenceSchema.safeParse({ ...character, ...result }).success).toBe(true)
   })
 
   test('preserves fixedSpells even if source is disabled', () => {

@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { SourcesPage } from '@/pages/rules/SourcesPage'
 import { SourcesPanel } from '@/pages/rules/SourcesPanel'
 import { useCharacterStore } from '@/store/characterStore'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: () => null,
@@ -72,6 +74,55 @@ describe('Rules Additional Content panel layout', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test.each([
+    'toggle',
+    'None',
+  ])('%s commits racial source pruning with the source setting', async (action) => {
+    const character = makeRacialSourceCharacter()
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+      isActiveCharacterDirty: false,
+    })
+    render(<SourcesPanel />)
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', {
+        name: action === 'toggle' ? /Xanathar's Guide to Everything XGE/ : action,
+      }),
+    )
+
+    const saved = useCharacterStore.getState().activeCharacter!
+    expect(saved.allowedSources).not.toContain('XGE')
+    expect(
+      saved.spells.spellProfiles.find((profile) => profile.type === 'racial')?.choices?.[0]
+        ?.selected,
+    ).toEqual([])
+    expect(saved.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    expect(characterPersistenceSchema.safeParse(saved).success).toBe(true)
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+  })
+
+  test('a preset retaining XGE keeps its racial choice and independent printing intact', async () => {
+    const character = makeRacialSourceCharacter()
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    render(<SourcesPanel />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Recommended' }))
+
+    const saved = useCharacterStore.getState().activeCharacter!
+    expect(saved.allowedSources).toContain('XGE')
+    expect(saved.spells).toEqual(character.spells)
+    expect(saved.provenance).toEqual(character.provenance)
   })
 
   test('keeps the warning constrained above the source groups', () => {

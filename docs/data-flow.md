@@ -122,8 +122,11 @@ newer-printing preference. Its stable route remains `/sources`.
 - The character's PHB/XPHB rules source is implicit.
 - Filtering affects selection catalogs; exact raw fallback keeps existing saved references
   explainable.
-- Removing sources prunes affected spells through the owning command and reports other conflicts for
-  review rather than silently rewriting choices.
+- Removing sources commits the source setting, affected spell selections, materialization and
+  ownership together. Racial pruning uses the saved descriptor's exact target/printing removal
+  command, including when its rules are unavailable; another owner or printing does not retain the
+  removed descriptor's tag. Mandatory fixed grants and independent selections remain intact.
+  Other source conflicts are reported for review rather than silently rewritten.
 - Core player potions and scrolls may be admitted from ruleset DMG records without enabling that
   entire book.
 - Bundled SRD provenance sources such as DMG, MM, XDMG, and XMM are not selectable books. Public
