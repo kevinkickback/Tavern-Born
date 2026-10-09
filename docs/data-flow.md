@@ -125,7 +125,12 @@ newer-printing preference. Its stable route remains `/sources`.
 - Removing sources commits the source setting, affected spell selections, materialization and
   ownership together. Racial pruning uses the saved descriptor's exact target/printing removal
   command, including when its rules are unavailable; another owner or printing does not retain the
-  removed descriptor's tag. Mandatory fixed grants and independent selections remain intact.
+  removed descriptor's tag. Nonracial pruning removes the exact target's choice tags for the
+  affected class/subclass or special-profile owners in the same command. A fixed declaration
+  protects only its exact saved reference; another printing cannot shield a disabled choice.
+  Mandatory fixed grants and independent selections remain intact, as do unaffected preparation
+  and slot usage. Current name-only references retain their catalog-based source policy without
+  inferring a target printing or converting old characters.
   Other source conflicts are reported for review rather than silently rewritten.
 - Core player potions and scrolls may be admitted from ruleset DMG records without enabling that
   entire book.
