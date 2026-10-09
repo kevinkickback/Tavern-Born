@@ -199,7 +199,7 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-Schema 5 requires one active source-qualified racial owner set: the selected parent and optional
+Schema 6 requires one active source-qualified racial owner set: the selected parent and optional
 child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals
 within each represented owner. Array order does not change block identity; integer amounts are
@@ -207,7 +207,12 @@ explicit, and selections/status agree with the bounded saved player slots. Ambig
 records are rejected rather than repaired. Schema 4 did not validate those block associations.
 Revised (2024) origin saves contain no racial ability grants or choice blocks; independent
 background, class and manual ability ownership remains supported.
-Schema 2–4 characters must be recreated; relabeling their version cannot establish valid ownership.
+Racial spell profiles store complete `name|source` targets in their fixed grants, materialized
+spells, selected choices and explicit pools. Racial spell provenance stores the target printing in
+`grantSource`, separately from its racial owner's `sourceRef`; choice tags also require their
+descriptor `grantVariant`. An unavailable target remains explicit and cannot borrow another
+printing. Schema 5 did not require this target identity.
+Schema 2–5 characters must be recreated; relabeling their version cannot establish valid ownership.
 Incompatible originals from the saved library remain exportable for use in a compatible older app.
 
 For a breaking change, update together:

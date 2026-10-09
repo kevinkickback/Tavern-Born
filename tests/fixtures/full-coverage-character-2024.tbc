@@ -2830,9 +2830,9 @@
           "sourceType": "background",
           "sourceName": "Criminal",
           "sourceRef": "XPHB",
-          "grantSource": "XPHB",
           "grantType": "fixed",
-          "label": "Criminal"
+          "label": "Criminal",
+          "grantSource": "XPHB"
         }
       ]
     },
@@ -2844,6 +2844,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2855,6 +2856,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2866,6 +2868,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2877,6 +2880,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2888,6 +2892,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2899,6 +2904,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2910,6 +2916,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2921,6 +2928,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2932,6 +2940,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -2943,6 +2952,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
         },
@@ -2952,6 +2962,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
         },
@@ -2960,7 +2971,8 @@
           "sourceName": "Magic Initiate",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Magic Initiate"
+          "label": "Magic Initiate",
+          "grantSource": "XPHB"
         }
       ],
       "disguise self": [
@@ -2970,6 +2982,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
         }
@@ -2981,6 +2994,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
         }
@@ -2992,6 +3006,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
         }
@@ -3003,6 +3018,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
         },
@@ -3011,7 +3027,8 @@
           "sourceName": "Drow Lineage",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Drow Lineage"
+          "label": "Drow Lineage",
+          "grantSource": "XPHB"
         }
       ],
       "arcane vigor": [
@@ -3021,6 +3038,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
         }
@@ -3032,6 +3050,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
         },
@@ -3041,6 +3060,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
         }
@@ -3052,6 +3072,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
         },
@@ -3061,6 +3082,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
         }
@@ -3072,6 +3094,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
         }
@@ -3083,6 +3106,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 6,
           "spellAttributionMode": "exact"
         }
@@ -3094,6 +3118,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 6,
           "spellAttributionMode": "exact"
         }
@@ -3105,6 +3130,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 7,
           "spellAttributionMode": "exact"
         }
@@ -3116,6 +3142,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 7,
           "spellAttributionMode": "exact"
         }
@@ -3127,6 +3154,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 8,
           "spellAttributionMode": "exact"
         }
@@ -3138,6 +3166,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 8,
           "spellAttributionMode": "exact"
         }
@@ -3149,6 +3178,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 9,
           "spellAttributionMode": "exact"
         }
@@ -3160,6 +3190,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 9,
           "spellAttributionMode": "exact"
         }
@@ -3171,6 +3202,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
         }
@@ -3182,6 +3214,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
         }
@@ -3193,6 +3226,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
         }
@@ -3204,6 +3238,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3215,6 +3250,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         },
@@ -3223,7 +3259,8 @@
           "sourceName": "Magic Initiate",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Magic Initiate"
+          "label": "Magic Initiate",
+          "grantSource": "XPHB"
         }
       ],
       "mending": [
@@ -3233,6 +3270,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3244,6 +3282,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
         }
@@ -3255,6 +3294,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3266,6 +3306,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3277,6 +3318,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3288,6 +3330,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
         }
@@ -3299,6 +3342,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
         }
@@ -3310,6 +3354,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
         }
@@ -3320,7 +3365,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "cure wounds": [
@@ -3329,7 +3375,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "lesser restoration": [
@@ -3338,7 +3385,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "spiritual weapon": [
@@ -3347,7 +3395,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "beacon of hope": [
@@ -3356,7 +3405,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "revivify": [
@@ -3365,7 +3415,8 @@
           "sourceName": "Life Domain",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Life Domain"
+          "label": "Life Domain",
+          "grantSource": "XPHB"
         }
       ],
       "faerie fire": [
@@ -3374,7 +3425,8 @@
           "sourceName": "Drow Lineage",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Drow Lineage"
+          "label": "Drow Lineage",
+          "grantSource": "XPHB"
         }
       ],
       "darkness": [
@@ -3383,7 +3435,8 @@
           "sourceName": "Drow Lineage",
           "sourceRef": "XPHB",
           "grantType": "fixed",
-          "label": "Drow Lineage"
+          "label": "Drow Lineage",
+          "grantSource": "XPHB"
         }
       ],
       "friends": [
@@ -3392,7 +3445,8 @@
           "sourceName": "Magic Initiate",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Magic Initiate"
+          "label": "Magic Initiate",
+          "grantSource": "XPHB"
         }
       ]
     },
@@ -4138,7 +4192,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "hitPoints": {
     "current": 121,
     "temporary": 17

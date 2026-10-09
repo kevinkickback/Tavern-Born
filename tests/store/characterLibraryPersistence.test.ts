@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
@@ -120,11 +121,28 @@ describe('acknowledged character library in IndexedDB', () => {
     malformedRevised.provenance!.choices[0].selected = ['dexterity']
     malformedRevised.provenance!.choices[0].status = 'pending'
     malformed.provenance!.choices.push(structuredClone(malformed.provenance!.choices[0]))
+    const missingTarget = makeCharacterFixture({ id: 'missing-spell-target' })
+    missingTarget.provenance.spells.light = [
+      {
+        sourceType: 'race',
+        sourceName: missingTarget.race,
+        sourceRef: missingTarget.raceSource,
+        grantType: 'fixed',
+        label: missingTarget.race,
+      },
+    ]
     const originals = [
-      { ...makeCharacterFixture({ id: 'old', name: 'Old' }), schemaVersion: 4 },
-      { ...makeCharacterFixture({ id: 'newer', name: 'Newer' }), schemaVersion: 6 },
+      {
+        ...makeCharacterFixture({ id: 'old', name: 'Old' }),
+        schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION - 1,
+      },
+      {
+        ...makeCharacterFixture({ id: 'newer', name: 'Newer' }),
+        schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION + 1,
+      },
       malformed,
       malformedRevised,
+      missingTarget,
     ]
     const before = structuredClone(originals)
     const rawStorage = createIdbStorage<{

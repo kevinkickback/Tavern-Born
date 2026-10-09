@@ -18,7 +18,11 @@ import {
 import {
   buildSpellNameKeySet,
   dedupeSpellNames,
+  dedupeSpellReferences,
+  formatSpellReference,
   getSpellNameKey,
+  getSpellReferenceKey,
+  parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import {
   buildClassProfileLabel,
@@ -697,7 +701,7 @@ export function removeRacialSpell(
   choiceId: string,
   spellName: string,
 ): SpellCommandResult {
-  const spellKey = getSpellNameKey(spellName)
+  const spellKey = getSpellReferenceKey(spellName)
   const choice = character.spells.spellProfiles
     .find((profile) => profile.id === profileId)
     ?.choices?.find((entry) => entry.id === choiceId)
@@ -706,7 +710,7 @@ export function removeRacialSpell(
     ledger,
     profileId,
     choiceId,
-    choice?.selected.filter((name) => getSpellNameKey(name) !== spellKey) ?? [],
+    choice?.selected.filter((name) => getSpellReferenceKey(name) !== spellKey) ?? [],
   )
 }
 
@@ -727,25 +731,43 @@ export function setRacialSpellChoice(
     }
   }
 
-  const poolKeys = choice.pool ? buildSpellNameKeySet(choice.pool) : null
-  const nextSelected = dedupeSpellNames(selectedSpells)
-    .filter((name) => !poolKeys || poolKeys.has(getSpellNameKey(name)))
+  if (
+    selectedSpells.some((reference) => {
+      const parsed = parseSpellReference(reference)
+      return !parsed.name || !parsed.source
+    })
+  ) {
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
+  const poolKeys = choice.pool
+    ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
+    : null
+  if (
+    poolKeys &&
+    selectedSpells.some((reference) => !poolKeys.has(getSpellReferenceKey(reference)))
+  ) {
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
+  const nextSelected = dedupeSpellNames(
+    selectedSpells.map((reference) => formatSpellReference(reference)),
+  )
+    .filter((name) => !poolKeys || poolKeys.has(getSpellReferenceKey(name)))
     .slice(0, choice.count)
-  const previousKeys = buildSpellNameKeySet(choice.selected)
-  const nextKeys = buildSpellNameKeySet(nextSelected)
-  const otherChoiceKeys = buildSpellNameKeySet(
+  const previousKeys = new Set(choice.selected.map((reference) => getSpellReferenceKey(reference)))
+  const nextKeys = new Set(nextSelected.map((reference) => getSpellReferenceKey(reference)))
+  const otherChoiceKeys = new Set(
     (racialProfile.choices ?? [])
       .filter((entry) => entry.id !== choiceId)
-      .flatMap((entry) => entry.selected),
+      .flatMap((entry) => entry.selected.map((reference) => getSpellReferenceKey(reference))),
   )
   const retainedByProfile = new Set([
-    ...buildSpellNameKeySet(racialProfile.fixedSpells ?? []),
+    ...(racialProfile.fixedSpells ?? []).map((reference) => getSpellReferenceKey(reference)),
     ...otherChoiceKeys,
   ])
   const removableKeys = new Set(
     [...previousKeys].filter((key) => !nextKeys.has(key) && !retainedByProfile.has(key)),
   )
-  const retainSpell = (name: string) => !removableKeys.has(getSpellNameKey(name))
+  const retainSpell = (name: string) => !removableKeys.has(getSpellReferenceKey(name))
 
   const updatedProfiles = character.spells.spellProfiles.map((profile) => {
     if (profile.id !== profileId) return profile
@@ -756,10 +778,10 @@ export function setRacialSpellChoice(
       choices: profile.choices?.map((entry) =>
         entry.id === choiceId ? { ...entry, selected: nextSelected } : entry,
       ),
-      cantrips: choice.isCantrip ? dedupeSpellNames([...cantrips, ...nextSelected]) : cantrips,
+      cantrips: choice.isCantrip ? dedupeSpellReferences([...cantrips, ...nextSelected]) : cantrips,
       spellsKnown: choice.isCantrip
         ? spellsKnown
-        : dedupeSpellNames([...spellsKnown, ...nextSelected]),
+        : dedupeSpellReferences([...spellsKnown, ...nextSelected]),
       preparedSpells: profile.preparedSpells.filter(retainSpell),
     }
   })
@@ -783,8 +805,9 @@ export function setRacialSpellChoice(
           tag.sourceName === sourceName &&
           (tag.sourceRef ?? '') === (sourceRef ?? '') &&
           tag.grantType === 'choice' &&
-          (tag.grantVariant === choiceId ||
-            (tag.grantVariant === undefined && !otherChoiceKeys.has(key)))
+          tag.grantVariant === choiceId &&
+          tag.grantSource !== undefined &&
+          getSpellReferenceKey(previous, tag.grantSource) === getSpellReferenceKey(previous)
         ),
     )
     const spells = { ...provenanceUpdate.spells }

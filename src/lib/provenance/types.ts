@@ -42,7 +42,7 @@ export interface SourceTag {
   sourceName: string
   /** Printing of the granting owner (e.g. 'PHB', 'XPHB'). */
   sourceRef?: string
-  /** Printing of a fixed granted feat; distinct from its granting owner's printing. */
+  /** Printing of a granted feat or spell; distinct from its granting owner's printing. */
   grantSource?: string
   /** Optional parameter encoded in a fixed 5etools grant reference (e.g. 'cleric'). */
   grantVariant?: string
@@ -108,6 +108,8 @@ export interface ProvenanceLedger {
 export interface SourceRow {
   /** Display name of the item (e.g. 'Insight', 'Draconic Bloodline'). */
   itemName: string
+  /** Target printing when the row represents a source-qualified spell. */
+  itemSource?: string
   /** Domain/category label (e.g. 'Weapons', 'Skills', 'Spells'). */
   category: string
   /** Full formatted attribution string shown to the user. */

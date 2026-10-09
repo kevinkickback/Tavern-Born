@@ -69,7 +69,7 @@ function parseKnownBlock(
     let directChoiceIndex = 0
     for (const item of items) {
       if (typeof item === 'string') {
-        const parsed = parseSpellToken(item)
+        const parsed = parseSpellToken(item, { preserveSource: true, defaultSource: 'PHB' })
         grants.push({
           spellName: parsed.name,
           level,
@@ -112,7 +112,7 @@ function parseInnateBlock(
     if (Array.isArray(usageMap)) {
       for (const rawSpell of usageMap) {
         if (typeof rawSpell !== 'string') continue
-        const parsed = parseSpellToken(rawSpell)
+        const parsed = parseSpellToken(rawSpell, { preserveSource: true, defaultSource: 'PHB' })
         grants.push({
           spellName: parsed.name,
           level,
@@ -133,7 +133,7 @@ function parseInnateBlock(
 
       for (const rawSpell of spells) {
         if (typeof rawSpell !== 'string') continue
-        const parsed = parseSpellToken(rawSpell)
+        const parsed = parseSpellToken(rawSpell, { preserveSource: true, defaultSource: 'PHB' })
         grants.push({
           spellName: parsed.name,
           level,

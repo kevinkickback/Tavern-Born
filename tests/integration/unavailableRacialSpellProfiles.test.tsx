@@ -117,7 +117,16 @@ function savedCharacter(withChild = true): Character {
     racial,
   ]
   character.provenance!.spells['shocking grasp'] = [
-    makeSourceTag(withChild ? 'subrace' : 'race', withChild ? 'Child' : 'Parent', 'choice', 'HB'),
+    {
+      ...makeSourceTag(
+        withChild ? 'subrace' : 'race',
+        withChild ? 'Child' : 'Parent',
+        'choice',
+        'HB',
+      ),
+      grantSource: 'PHB',
+      grantVariant: 'direct-_-choose-0',
+    },
   ]
   return character
 }

@@ -50,7 +50,7 @@ describe('Spell Commands', () => {
       emptyProvenance(),
       'racial:High Elf|PHB',
       'choose-0',
-      'Mage Hand',
+      'Mage Hand|PHB',
     )
 
     expect(selected.provenanceUpdate.spells['mage hand']).toEqual([
@@ -71,7 +71,7 @@ describe('Spell Commands', () => {
       selected.provenanceUpdate,
       'racial:High Elf|PHB',
       'choose-0',
-      'Mage Hand',
+      'Mage Hand|PHB',
     )
     expect(removed.provenanceUpdate.spells).toEqual({})
   })
@@ -94,7 +94,7 @@ describe('Spell Commands', () => {
                 id: 'block-choice',
                 count: 2,
                 isCantrip: true,
-                pool: ['light', 'sacred flame', 'dancing lights'],
+                pool: ['light|PHB', 'sacred flame|PHB', 'dancing lights|PHB'],
                 selected: ['Light|PHB'],
               },
             ],
@@ -148,7 +148,7 @@ describe('Spell Commands', () => {
     ])
   })
 
-  test('retains a legacy racial spell grant still owned by another choice', () => {
+  test('retains a racial spell grant still owned by another choice', () => {
     const character = makeCharacterFixture({
       race: 'High Elf',
       raceSource: 'PHB',
@@ -173,16 +173,18 @@ describe('Spell Commands', () => {
         ],
       },
     })
-    const legacyTag = {
+    const retainedTag = {
       sourceType: 'race' as const,
       sourceName: 'High Elf',
       sourceRef: 'PHB',
       grantType: 'choice' as const,
+      grantSource: 'PHB',
+      grantVariant: 'second-choice',
       label: 'High Elf',
     }
     const ledger = {
       ...emptyProvenance(),
-      spells: { light: [legacyTag] },
+      spells: { light: [retainedTag] },
     }
 
     const result = setRacialSpellChoice(character, ledger, 'racial:High Elf|PHB', 'first-choice', [
@@ -193,7 +195,7 @@ describe('Spell Commands', () => {
       'Light|PHB',
       'Sacred Flame|PHB',
     ])
-    expect(result.provenanceUpdate.spells.light).toEqual([legacyTag])
+    expect(result.provenanceUpdate.spells.light).toEqual([retainedTag])
     expect(result.provenanceUpdate.spells['sacred flame']).toEqual([
       expect.objectContaining({ grantVariant: 'first-choice' }),
     ])

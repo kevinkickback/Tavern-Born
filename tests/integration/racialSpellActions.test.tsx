@@ -417,7 +417,7 @@ test.each([
   'class',
   'racial',
   'special',
-  'legacy alias',
+  'unqualified special alias',
   'legacy fixed',
 ] as const)('a derived subclass printing respects %s identity and preparation', (owner) => {
   const parent = { name: 'Parent', source: 'PHB' } as Race5e
@@ -440,7 +440,11 @@ test.each([
           additionalSpells: [
             {
               prepared: {
-                3: [owner === 'legacy alias' ? 'burning hands|PHB' : 'burning hands|XPHB'],
+                3: [
+                  owner === 'unqualified special alias'
+                    ? 'burning hands|PHB'
+                    : 'burning hands|XPHB',
+                ],
               },
             },
           ],
@@ -463,11 +467,14 @@ test.each([
     classSource: 'PHB',
     spellsKnown: owner === 'class' ? ['Burning Hands|PHB'] : [],
   })
-  const savedType = owner === 'legacy alias' ? 'racial' : owner === 'legacy fixed' ? 'class' : owner
+  const savedType =
+    owner === 'unqualified special alias' ? 'special' : owner === 'legacy fixed' ? 'class' : owner
   const savedProfile = character.spells.spellProfiles.find((profile) => profile.type === savedType)
   if (!savedProfile) throw new Error('Missing fixture profile')
   savedProfile.cantrips = []
-  savedProfile.spellsKnown = [owner === 'legacy alias' ? 'Burning Hands' : 'Burning Hands|PHB']
+  savedProfile.spellsKnown = [
+    owner === 'unqualified special alias' ? 'Burning Hands' : 'Burning Hands|PHB',
+  ]
   if (owner === 'legacy fixed') savedProfile.fixedSpells = ['Burning Hands']
   savedProfile.choices = undefined
   expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
@@ -481,7 +488,7 @@ test.each([
   const pdf = createCharacterSheetViewModel(character, catalog.lookups)
   for (const actions of [direct, result.current, pdf.actions]) {
     const expected =
-      owner === 'legacy alias'
+      owner === 'unqualified special alias'
         ? [{ source: 'PHB', active: true }]
         : owner === 'legacy fixed'
           ? [{ source: 'XPHB', active: true }]

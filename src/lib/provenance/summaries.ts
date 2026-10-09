@@ -3,7 +3,7 @@ import {
   formatBackgroundAbilityPatterns,
   isBackgroundAbilitySelectionComplete,
 } from '@/lib/calculations/abilityScores'
-import { stripItemTag, toDisplayName } from './normalization'
+import { normalizeOwnerIdentity, stripItemTag, toDisplayName } from './normalization'
 import type {
   ProficiencyProvenance,
   ProvenanceLedger,
@@ -209,7 +209,19 @@ export function getFeatureRows(ledger: ProvenanceLedger): SourceRow[] {
 
 /** Derive spell source rows. */
 export function getSpellRows(ledger: ProvenanceLedger): SourceRow[] {
-  const rows = rowsFromMap(ledger.spells, 'Spells')
+  const rows = Object.entries(ledger.spells).flatMap(([key, tags]) => {
+    const bySource = new Map<string, { source?: string; tags: SourceTag[] }>()
+    for (const tag of tags) {
+      const sourceKey = normalizeOwnerIdentity(tag.grantSource)
+      const group = bySource.get(sourceKey) ?? { source: tag.grantSource, tags: [] }
+      group.tags.push(tag)
+      bySource.set(sourceKey, group)
+    }
+    return [...bySource.values()].map((group) => ({
+      ...rowsFromMap({ [key]: group.tags }, 'Spells')[0],
+      ...(group.source ? { itemSource: group.source } : {}),
+    }))
+  })
   const pending = ledger.choices
     .filter(
       (c) => c.domain === 'spells' && (c.status === 'pending' || c.status === 'partially-resolved'),

@@ -13,6 +13,7 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList, isSpellOnSubclassList } from '@/lib/calculations/spellProfiles'
 import {
@@ -45,6 +46,8 @@ export interface SpellSelectionModalProps {
   subclassName?: string
   subclassSource?: string
   classListOverrides?: Set<string>
+  /** Complete allowed targets, independently of class-list visibility controls. */
+  allowedSpellReferences?: ReadonlySet<string>
   onConfirm: (names: string[]) => void
 }
 
@@ -69,12 +72,11 @@ export function resolveInitialSpellSelectionIds(
     const nameKey = getSpellNameKey(spell.name)
     if (!idsByName.has(nameKey)) idsByName.set(nameKey, getSpellSelectionId(spell))
   }
-  return references.map(
-    (reference) =>
-      idsByReference.get(getSpellReferenceKey(reference)) ??
-      idsByName.get(getSpellNameKey(reference)) ??
-      reference,
-  )
+  return references.map((reference) => {
+    const key = getSpellReferenceKey(reference)
+    if (parseSpellReference(reference).source) return idsByReference.get(key) ?? key
+    return idsByName.get(getSpellNameKey(reference)) ?? reference
+  })
 }
 
 function buildSpellLevelOptions(
@@ -295,7 +297,7 @@ export function SpellSelectionModal({
   open,
   onOpenChange,
   title = 'Add Spells',
-  spells,
+  spells: allSpells,
   lockedNames = EMPTY_SPELL_NAMES,
   characterSpellNames,
   categories,
@@ -308,8 +310,16 @@ export function SpellSelectionModal({
   subclassName,
   subclassSource,
   classListOverrides,
+  allowedSpellReferences,
   onConfirm,
 }: SpellSelectionModalProps) {
+  const spells = useMemo(() => {
+    if (!allowedSpellReferences) return allSpells
+    const keys = new Set(
+      Array.from(allowedSpellReferences, (reference) => getSpellReferenceKey(reference)),
+    )
+    return allSpells.filter((spell) => keys.has(getSpellSelectionId(spell)))
+  }, [allSpells, allowedSpellReferences])
   const lockedSpellKeys = useMemo(() => buildSpellNameKeySet(lockedNames), [lockedNames])
   const characterSpellKeys = useMemo(
     () => buildSpellNameKeySet(characterSpellNames ?? EMPTY_SPELL_NAMES),
@@ -408,13 +418,24 @@ export function SpellSelectionModal({
       selectionHint={selectionHint}
       initialSelectedIds={initialSelectedIds}
       initialFilters={effectiveInitialFilters}
-      onConfirm={(_ids, selectedItems) =>
-        onConfirm(
-          dedupeSpellNames(
-            selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
-          ),
+      onConfirm={(ids, selectedItems) => {
+        const availableIds = new Set(spells.map(getSpellSelectionId))
+        const initialReferences = new Map(
+          initialSelectedIds.map((id, index) => [id, initialSelectedNames[index]]),
         )
-      }
+        const retained = ids
+          .filter((id) => !availableIds.has(id))
+          .flatMap((id) => {
+            const reference = initialReferences.get(id)
+            return reference ? [reference] : []
+          })
+        onConfirm(
+          dedupeSpellNames([
+            ...selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
+            ...retained,
+          ]),
+        )
+      }}
     />
   )
 }

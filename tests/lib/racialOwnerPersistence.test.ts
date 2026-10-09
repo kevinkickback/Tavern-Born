@@ -46,7 +46,7 @@ function putOwner(ledger: ProvenanceLedger, location: (typeof locations)[number]
     location === 'equipment'
   ) {
     ledger[location]['owner-proof'] = [
-      { ...tag, ...(location === 'feats' ? { grantSource: 'PHB' } : {}) },
+      { ...tag, ...(location === 'feats' || location === 'spells' ? { grantSource: 'PHB' } : {}) },
     ]
   } else {
     ledger.proficiencies[location] = { 'owner-proof': [tag] }

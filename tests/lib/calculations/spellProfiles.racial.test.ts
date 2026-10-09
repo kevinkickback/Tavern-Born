@@ -116,9 +116,11 @@ describe('buildRacialSpellProfile', () => {
     expect(profile.label).toBe('Racial Spells')
     expect(profile.raceName).toBe('Tiefling')
     expect(profile.castingAbility).toBe('cha')
-    expect(profile.cantrips).toContain('thaumaturgy')
-    expect(profile.spellsKnown).toContain('hellish rebuke')
-    expect(profile.fixedSpells).toEqual(expect.arrayContaining(['thaumaturgy', 'hellish rebuke']))
+    expect(profile.cantrips).toContain('thaumaturgy|PHB')
+    expect(profile.spellsKnown).toContain('hellish rebuke|PHB')
+    expect(profile.fixedSpells).toEqual(
+      expect.arrayContaining(['thaumaturgy|PHB', 'hellish rebuke|PHB']),
+    )
   })
 
   test('respects totalLevel for level-gated spells', () => {
@@ -138,9 +140,9 @@ describe('buildRacialSpellProfile', () => {
       totalLevel: 3,
     })
 
-    expect(profile.cantrips).toContain('thaumaturgy')
-    expect(profile.spellsKnown).toContain('hellish rebuke')
-    expect(profile.spellsKnown).not.toContain('darkness')
+    expect(profile.cantrips).toContain('thaumaturgy|PHB')
+    expect(profile.spellsKnown).toContain('hellish rebuke|PHB')
+    expect(profile.spellsKnown).not.toContain('darkness|PHB')
   })
 
   test('creates profile with choose filter choices', () => {
@@ -182,7 +184,7 @@ describe('buildRacialSpellProfile', () => {
     expect(profile.choices).toHaveLength(1)
     expect(profile.choices?.[0].id).toBe('block-choice')
     expect(profile.choices?.[0].pool).toEqual(
-      expect.arrayContaining(['dancing lights', 'light', 'sacred flame']),
+      expect.arrayContaining(['dancing lights|PHB', 'light|PHB', 'sacred flame|PHB']),
     )
     expect(profile.choices?.[0].count).toBe(1)
     expect(profile.choices?.[0].isCantrip).toBe(true)
@@ -204,8 +206,8 @@ describe('buildRacialSpellProfile', () => {
     // Simulate user having selected 'light'
     const withSelection = {
       ...existing,
-      choices: existing.choices?.map((c) => ({ ...c, selected: ['light'] })),
-      cantrips: ['light'],
+      choices: existing.choices?.map((c) => ({ ...c, selected: ['light|PHB'] })),
+      cantrips: ['light|PHB'],
     }
 
     const rebuilt = buildRacialSpellProfile({
@@ -220,11 +222,11 @@ describe('buildRacialSpellProfile', () => {
       existingProfile: withSelection,
     })
 
-    expect(rebuilt.choices?.[0].selected).toEqual(['light'])
-    expect(rebuilt.cantrips).toContain('light')
+    expect(rebuilt.choices?.[0].selected).toEqual(['light|PHB'])
+    expect(rebuilt.cantrips).toContain('light|PHB')
   })
 
-  test('preserves source-qualified selections from a plain-name pool', () => {
+  test('preserves qualified selections from native UIDs with default printing', () => {
     const rebuilt = buildRacialSpellProfile({
       raceName: 'Astral Elf',
       raceSource: 'AAG',
@@ -247,7 +249,7 @@ describe('buildRacialSpellProfile', () => {
             id: 'block-choice',
             count: 1,
             isCantrip: true,
-            pool: ['dancing lights', 'light'],
+            pool: ['dancing lights|PHB', 'light|PHB'],
             selected: ['Light|PHB'],
           },
         ],

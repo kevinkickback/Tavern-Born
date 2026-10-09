@@ -113,6 +113,9 @@ identity; complete versions use their own grants, including explicit removal, an
 parent blocks are filtered to the selected child. An unavailable selected child preserves saved
 profiles rather than substituting the available parent's grants. Projection does not change saved
 choices or state.
+Racial spell targets retain their saved printing independently of the racial owner's source.
+An unavailable qualified target remains unresolved; a same-name spell in another printing cannot
+replace it in spell rows or actions. Independently owned printings remain distinct through projection.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries

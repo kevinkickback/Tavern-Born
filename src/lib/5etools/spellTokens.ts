@@ -5,7 +5,7 @@ export interface ParsedSpellToken {
 
 export function parseSpellToken(
   raw: string,
-  options?: { preserveSource?: boolean },
+  options?: { preserveSource?: boolean; defaultSource?: string },
 ): ParsedSpellToken {
   const token = raw.trim()
   // Decode the name and optional printing before removing casting modifiers.
@@ -15,7 +15,7 @@ export function parseSpellToken(
   const baseName =
     hashIdx >= 0 ? (nameWithSuffix ?? '').slice(0, hashIdx).trim() : (nameWithSuffix ?? '').trim()
   const sourceHashIdx = sourceWithSuffix?.indexOf('#') ?? -1
-  const source = (sourceWithSuffix ?? '').split('#')[0].trim()
+  const source = (sourceWithSuffix ?? '').split('#')[0].trim() || options?.defaultSource?.trim()
   const suffix =
     hashIdx >= 0
       ? (nameWithSuffix ?? '').slice(hashIdx + 1).toLowerCase()

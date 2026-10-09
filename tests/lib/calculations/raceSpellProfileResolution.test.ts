@@ -51,7 +51,7 @@ describe('resolved racial spell profiles', () => {
       _versions: [{ name: 'Test Race; Complete', source: 'TEST' }],
     })
     const racial = profiles(race, race.subraces![0]).find((profile) => profile.type === 'racial')
-    expect(racial?.fixedSpells).toEqual(['light'])
+    expect(racial?.fixedSpells).toEqual(['light|PHB'])
     expect(racial?.choices).toBeUndefined()
   })
 

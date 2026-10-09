@@ -27,14 +27,14 @@ describe('parseRaceSpells', () => {
     expect(grants).toEqual(
       expect.arrayContaining([
         {
-          spellName: 'thaumaturgy',
+          spellName: 'thaumaturgy|PHB',
           level: 1,
           isCantrip: true,
           castingAbility: 'cha',
           source: 'known',
         },
         {
-          spellName: 'hellish rebuke',
+          spellName: 'hellish rebuke|PHB',
           level: 3,
           isCantrip: false,
           castingAbility: 'cha',
@@ -42,7 +42,7 @@ describe('parseRaceSpells', () => {
           source: 'innate',
         },
         {
-          spellName: 'darkness',
+          spellName: 'darkness|PHB',
           level: 5,
           isCantrip: false,
           castingAbility: 'cha',
@@ -83,7 +83,12 @@ describe('parseRaceSpellBlocks', () => {
       { known: { _: ['light#c', { choose: 'level=0|class=Sorcerer', count: 2 }] } },
     ])
     expect(block.grants).toEqual([
-      expect.objectContaining({ spellName: 'light', level: 0, isCantrip: true, source: 'known' }),
+      expect.objectContaining({
+        spellName: 'light|PHB',
+        level: 0,
+        isCantrip: true,
+        source: 'known',
+      }),
     ])
     expect(block.choices).toEqual([
       {
@@ -102,13 +107,19 @@ describe('parseRaceSpellBlocks', () => {
     ])
     expect(grants).toEqual([
       {
-        spellName: 'misty step',
+        spellName: 'misty step|PHB',
         level: 3,
         isCantrip: false,
         castingAbility: 'cha',
         source: 'innate',
       },
-      { spellName: 'light', level: 0, isCantrip: true, castingAbility: 'cha', source: 'innate' },
+      {
+        spellName: 'light|PHB',
+        level: 0,
+        isCantrip: true,
+        castingAbility: 'cha',
+        source: 'innate',
+      },
     ])
   })
 
@@ -134,7 +145,7 @@ describe('parseRaceSpellBlocks', () => {
     expect(blocks).toHaveLength(1)
     expect(blocks[0].grants).toEqual([
       {
-        spellName: 'light',
+        spellName: 'light|PHB',
         level: 1,
         isCantrip: true,
         castingAbility: 'cha',
@@ -183,7 +194,7 @@ describe('parseRaceSpellBlocks', () => {
 
     expect(blocks).toHaveLength(1)
     expect(blocks[0].grants).toHaveLength(1)
-    expect(blocks[0].grants[0].spellName).toBe('dancing lights')
+    expect(blocks[0].grants[0].spellName).toBe('dancing lights|PHB')
     expect(blocks[0].choices).toHaveLength(1)
   })
 
@@ -204,9 +215,9 @@ describe('parseRaceSpellBlocks', () => {
     ])
 
     expect(blocks).toHaveLength(3)
-    expect(blocks[0].grants[0].spellName).toBe('dancing lights')
-    expect(blocks[1].grants[0].spellName).toBe('light')
-    expect(blocks[2].grants[0].spellName).toBe('sacred flame')
+    expect(blocks[0].grants[0].spellName).toBe('dancing lights|PHB')
+    expect(blocks[1].grants[0].spellName).toBe('light|PHB')
+    expect(blocks[2].grants[0].spellName).toBe('sacred flame|PHB')
   })
 
   test('parses ability choice option', () => {

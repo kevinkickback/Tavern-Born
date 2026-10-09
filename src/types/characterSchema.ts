@@ -4,6 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import {
   getUnselectedRaceOwnerPaths,
@@ -523,10 +524,28 @@ const featSourceTagSchema = sourceTagSchema.superRefine((tag, context) => {
   }
 })
 
-const spellSourceTagSchema = sourceTagSchema.extend({
-  spellGrantedAtLevel: z.number().int().min(1).optional(),
-  spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
-})
+const spellSourceTagSchema = sourceTagSchema
+  .extend({
+    spellGrantedAtLevel: z.number().int().min(1).optional(),
+    spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
+  })
+  .superRefine((tag, context) => {
+    if (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') return
+    if (!tag.grantSource?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['grantSource'],
+        message: 'Racial spell grants require a separate target source.',
+      })
+    }
+    if (tag.grantType === 'choice' && !tag.grantVariant?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['grantVariant'],
+        message: 'Racial spell choices require their descriptor identity.',
+      })
+    }
+  })
 
 const abilityBonusProvenanceRecordSchema = z.object({
   ability: z.string(),
@@ -682,6 +701,38 @@ const spellProfileSchema = z
       path: ['className'],
     },
   )
+  .superRefine((profile, context) => {
+    if (profile.type !== 'racial') return
+    const requireTarget = (reference: string, path: (string | number)[]) => {
+      const parsed = parseSpellReference(reference)
+      if (!parsed.name || !parsed.source) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path,
+          message: 'Racial spells require a complete target name and source.',
+        })
+      }
+    }
+    for (const field of [
+      'cantrips',
+      'spellsKnown',
+      'preparedSpells',
+      'fixedSpells',
+      'alwaysPreparedSpells',
+    ] as const) {
+      profile[field]?.forEach((reference, index) => {
+        requireTarget(reference, [field, index])
+      })
+    }
+    profile.choices?.forEach((choice, index) => {
+      choice.selected.forEach((reference, selectedIndex) => {
+        requireTarget(reference, ['choices', index, 'selected', selectedIndex])
+      })
+      choice.pool?.forEach((reference, poolIndex) => {
+        requireTarget(reference, ['choices', index, 'pool', poolIndex])
+      })
+    })
+  })
 
 const spellSelectionSchema = z
   .object({

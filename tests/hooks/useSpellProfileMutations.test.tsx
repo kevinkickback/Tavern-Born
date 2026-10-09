@@ -2,8 +2,11 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { useCharacterStore } from '@/store/characterStore'
+import type { Race5e } from '@/types/5etools'
 import type { SpellProfile } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 
@@ -92,6 +95,62 @@ describe('useSpellProfileMutations', () => {
       sourceName: 'Wizard',
       sourceRef: 'PHB',
     })
+  })
+
+  test('actual racial Replace and Clear retain independent printing and slot usage through strict reopen', () => {
+    const character = buildInitialCharacter(
+      {
+        initial: { name: 'Hook Caster', originSystem: '2024' },
+        race: {
+          name: 'Hook Caster',
+          source: 'OWNER',
+          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+        } as Race5e,
+      },
+      new Map(),
+      () => [],
+    )
+    character.spells.spellSlots[1] = { max: 2, used: 1 }
+    character.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips = [
+      'Light|PHB',
+    ]
+    character.provenance.spells.light = [
+      {
+        sourceType: 'manual',
+        sourceName: 'User Choice',
+        grantType: 'choice',
+        label: 'User Choice',
+        grantSource: 'PHB',
+      },
+    ]
+    setActiveCharacter(character)
+    const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
+    const { result, unmount } = renderHook(() => {
+      const active = useCharacterStore((state) => state.activeCharacter)!
+      return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+    })
+    for (const source of ['PHB', 'XPHB']) {
+      act(() => result.current.setRacialSpellChoice(id, 'direct-_-choose-0', [`Light|${source}`]))
+      const active = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+      )
+      expect(active.spells.spellProfiles.find((profile) => profile.id === id)?.cantrips).toEqual([
+        `Light|${source}`,
+      ])
+      expect(active.provenance.spells.light.filter((tag) => tag.sourceType === 'race')).toEqual([
+        expect.objectContaining({ grantSource: source }),
+      ])
+    }
+    act(() => result.current.setRacialSpellChoice(id, 'direct-_-choose-0', []))
+    const active = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+    )
+    expect(active.provenance.spells.light).toEqual(character.provenance.spells.light)
+    expect(
+      active.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+    ).toEqual(['Light|PHB'])
+    expect(active.spells.spellSlots[1]).toEqual({ max: 2, used: 1 })
+    unmount()
   })
 
   test('removes known, prepared, and provenance state together', () => {
