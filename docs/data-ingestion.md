@@ -298,9 +298,8 @@ available; missing rules cannot establish that prerequisites are met or unmet.
 The selected card and inspector compare the complete normalized name/source identity, so a
 selection made during absence follows its exact printing when rules return without rewriting
 the saved grant or its options.
-A separately named legacy compatibility path permits a source-less fixed grant
-only when one distinct printing matches across both catalogs. Ambiguity remains diagnostic, and
-merely projecting the grant does not rewrite provenance or saved option keys. Exact raw fixed
+A source-less fixed grant remains unresolved even when only one printing is loaded; resolution
+does not infer a target source or rewrite provenance or saved option keys. Exact raw fixed
 grants remain viewable/configurable after source filtering without entering the selection list.
 Fixed feat editing resolves saved spell choices against exact raw rule records and retains them
 in the dialog, while new spell, optional-feature, and language choices remain character-filtered.

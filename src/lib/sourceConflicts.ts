@@ -4,6 +4,7 @@ import {
   XPHB_LEGACY_SUBCLASS_KEYS,
 } from '@/lib/5etools/rulesetMetadata'
 import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -152,7 +153,32 @@ export function pruneSpellsForDisabledSources(
   }
 
   let changed = false
-  const newProfiles = character.spells.spellProfiles.map((profile) => {
+  let workingCharacter = character
+  // Racial choices own exact descriptor/printing tags as well as materialized
+  // targets. Accumulate complete removals before the single source-settings write.
+  for (const profile of character.spells.spellProfiles) {
+    if (profile.type !== 'racial') continue
+    for (const choice of profile.choices ?? []) {
+      const selected = choice.selected.filter(isSpellAllowed)
+      if (selected.length === choice.selected.length) continue
+      const result = setRacialSpellChoice(
+        workingCharacter,
+        workingCharacter.provenance,
+        profile.id,
+        choice.id,
+        selected,
+      )
+      workingCharacter = {
+        ...workingCharacter,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      }
+      changed = true
+    }
+  }
+
+  const newProfiles = workingCharacter.spells.spellProfiles.map((profile) => {
+    if (profile.type === 'racial') return profile
     const fixedKeys = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
     const keepMaterializedSpell = (reference: string) =>
       fixedKeys.has(getSpellNameKey(reference)) || isSpellAllowed(reference)
@@ -204,19 +230,19 @@ export function pruneSpellsForDisabledSources(
     }
   }
 
-  let newProvenance = character.provenance
-  if (character.provenance) {
+  let newProvenance = workingCharacter.provenance
+  if (workingCharacter.provenance) {
     const filteredSpells: Record<string, SpellSourceTag[]> = {}
-    for (const [key, tags] of Object.entries(character.provenance.spells)) {
+    for (const [key, tags] of Object.entries(workingCharacter.provenance.spells)) {
       if (remainingKeys.has(key)) {
         filteredSpells[key] = tags
       }
     }
-    newProvenance = { ...character.provenance, spells: filteredSpells }
+    newProvenance = { ...workingCharacter.provenance, spells: filteredSpells }
   }
 
   return {
-    spells: { ...character.spells, spellProfiles: newProfiles },
+    spells: { ...workingCharacter.spells, spellProfiles: newProfiles },
     provenance: newProvenance,
   }
 }

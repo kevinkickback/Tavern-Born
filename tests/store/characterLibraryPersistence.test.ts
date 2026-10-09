@@ -3,11 +3,13 @@ import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterT
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
+import { pruneSpellsForDisabledSources } from '@/lib/sourceConflicts'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 vi.unmock('@/lib/storage/idb-storage')
 
@@ -30,6 +32,38 @@ describe('acknowledged character library in IndexedDB', () => {
   test('a new character is available to a fresh storage read when creation completes', async () => {
     const created = await useCharacterStore.getState().createNewCharacter({ name: 'Durable Hero' })
     expect(await readCharacters()).toEqual([created])
+  })
+
+  test('racial source removal survives an acknowledged save and fresh library reopen', async () => {
+    const original = makeRacialSourceCharacter()
+    const neighbor = makeCharacterFixture({ id: 'neighbor', allowedSources: [] })
+    await useCharacterStore.getState().importCharacters([original, neighbor])
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const prune = pruneSpellsForDisabledSources(original, ['XPHB'], [])!
+    useCharacterStore.getState().updateCharacter(original.id, { ...prune, allowedSources: [] })
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+    await useCharacterStore.getState().saveActiveCharacter()
+
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const reopened = useCharacterStore.getState().activeCharacter!
+    expect(reopened.allowedSources).toEqual([])
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')?.choices?.[0]
+        ?.selected,
+    ).toEqual([])
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+    ).toEqual(['Toll the Dead|XPHB'])
+    expect(reopened.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    expect(
+      useCharacterStore.getState().characters.find((character) => character.id === neighbor.id),
+    ).toEqual(neighbor)
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
   })
 
   test('quarantine acknowledgment is durable and retains the supported library', async () => {
