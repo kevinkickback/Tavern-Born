@@ -479,9 +479,13 @@ export function SpellsPage() {
     [character, calculationContext],
   )
 
-  const bonusSpellNames = useMemo(() => {
-    const profile = spellProfiles.find((entry) => entry.id === SPECIAL_SPELL_PROFILE_ID)
-    return new Set([...(profile?.cantrips ?? []), ...(profile?.spellsKnown ?? [])])
+  const characterSpellNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const profile of spellProfiles) {
+      for (const name of profile.cantrips) names.add(name)
+      for (const name of profile.spellsKnown) names.add(name)
+    }
+    return names
   }, [spellProfiles])
 
   const racialChoiceModalConfig = useMemo(() => {
@@ -755,7 +759,7 @@ export function SpellsPage() {
         onOpenChange={setBonusSpellModalOpen}
         title="Add Bonus Spells"
         spells={allSpells}
-        characterSpellNames={bonusSpellNames}
+        characterSpellNames={characterSpellNames}
         onConfirm={handleConfirmBonusSpells}
       />
     </WorkspacePage>

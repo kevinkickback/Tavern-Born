@@ -230,6 +230,8 @@ Class-page spell choices and replacements use pure spell commands. `useSpellProv
 exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes
 use `useSpellProfileMutations`, which already commits profile and provenance changes together.
 
+The bonus picker blocks spell targets already known through any profile. Existing overlapping
+owners remain independent when later class or origin changes grant an already selected bonus spell.
 Bonus spell selection records manual ownership with the selected spell printing. Replacing the
 bonus list retracts only its removed manual targets. Removing a bonus copy preserves racial,
 class and feat ownership of the same target, including independently prepared class spells.

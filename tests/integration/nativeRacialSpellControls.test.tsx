@@ -366,7 +366,7 @@ test('removing an independently selected bonus copy commits without removing nat
 test.each([
   false,
   true,
-])('the actual bonus picker permits a native target with existing class ownership %s', (classOwned) => {
+])('the actual bonus picker rejects a known native target and attributes a new target with existing class ownership %s', (classOwned) => {
   const race: Race5e = {
     name: 'Caster',
     source: 'PHB',
@@ -398,18 +398,19 @@ test.each([
   setActiveCharacter(initial)
   page()
   fireEvent.click(screen.getByRole('button', { name: 'Add Spell' }))
-  const dialog = within(screen.getByRole('dialog'))
+  let dialog = within(screen.getByRole('dialog'))
+  fireEvent.click(dialog.getByRole('switch', { name: 'Hide already-known spells' }))
   fireEvent.change(dialog.getByRole('textbox', { name: 'Search add bonus spells' }), {
     target: { value: 'Light' },
   })
   fireEvent.click(dialog.getByText('Light'))
   fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
-  const character = reopened()
+  let character = reopened()
   expect(
     character.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
-  ).toEqual(['Light|PHB'])
-  expect(character.provenance.spells.light).toContainEqual(
-    expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
+  ).toEqual([])
+  expect(character.provenance.spells.light).not.toContainEqual(
+    expect.objectContaining({ sourceType: 'manual' }),
   )
   expect(character.provenance.spells.light).toContainEqual(
     expect.objectContaining({ sourceType: 'race', grantSource: 'PHB' }),
@@ -422,4 +423,18 @@ test.each([
       character.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')!.cantrips,
     ).toEqual(['Light|PHB'])
   }
+  fireEvent.click(screen.getByRole('button', { name: 'Add Spell' }))
+  dialog = within(screen.getByRole('dialog'))
+  fireEvent.change(dialog.getByRole('textbox', { name: 'Search add bonus spells' }), {
+    target: { value: 'Mage Hand' },
+  })
+  fireEvent.click(dialog.getByText('Mage Hand'))
+  fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
+  character = reopened()
+  expect(
+    character.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+  ).toEqual(['Mage Hand|PHB'])
+  expect(character.provenance.spells['mage hand']).toEqual([
+    expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
+  ])
 })
