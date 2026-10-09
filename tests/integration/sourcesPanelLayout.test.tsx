@@ -7,6 +7,7 @@ import { SourcesPanel } from '@/pages/rules/SourcesPanel'
 import { useCharacterStore } from '@/store/characterStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
@@ -34,6 +35,8 @@ vi.mock('@/store/gameDataStore', () => ({
             hasCharacterOptions: false,
           },
           { name: "Xanathar's Guide to Everything", abbreviation: 'XGE', group: 'supplement' },
+          { name: "Tasha's Cauldron of Everything", abbreviation: 'TCE', group: 'supplement' },
+          { name: "Sword Coast Adventurer's Guide", abbreviation: 'SCAG', group: 'setting' },
           {
             name: 'Eberron: Forge of the Artificer',
             abbreviation: 'EFA',
@@ -123,6 +126,70 @@ describe('Rules Additional Content panel layout', () => {
     expect(saved.allowedSources).toContain('XGE')
     expect(saved.spells).toEqual(character.spells)
     expect(saved.provenance).toEqual(character.provenance)
+  })
+
+  test.each([
+    'toggle',
+    'None',
+  ])('%s commits class-source removal and keeps an independent printing', async (action) => {
+    const character = makeNonracialSourceCharacter()
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+      isActiveCharacterDirty: false,
+    })
+    render(<SourcesPanel />)
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', {
+        name: action === 'toggle' ? /Xanathar's Guide to Everything XGE/ : action,
+      }),
+    )
+    const pruned = useCharacterStore.getState().activeCharacter!
+    expect(pruned.allowedSources).not.toContain('XGE')
+    expect(
+      pruned.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
+    ).toEqual([])
+    expect(
+      pruned.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+    ).toEqual(['Toll the Dead|XPHB'])
+    expect(pruned.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    expect(characterPersistenceSchema.safeParse(pruned).success).toBe(true)
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+    await user.click(screen.getByRole('button', { name: /Xanathar's Guide to Everything XGE/ }))
+    await user.click(screen.getByRole('button', { name: 'Recommended' }))
+    const restored = useCharacterStore.getState().activeCharacter!
+    expect(restored.allowedSources).toContain('XGE')
+    expect(restored.spells).toEqual(pruned.spells)
+    expect(restored.provenance).toEqual(pruned.provenance)
+  })
+
+  test('Recommended removes a nonrecommended printing and its class tag', async () => {
+    const character = makeNonracialSourceCharacter('2014')
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    render(<SourcesPanel />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Recommended' }))
+    const pruned = useCharacterStore.getState().activeCharacter!
+    expect(pruned.allowedSources).not.toContain('SCAG')
+    expect(pruned.allowedSources).toContain('TCE')
+    expect(
+      pruned.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
+    ).toEqual([])
+    expect(
+      pruned.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+    ).toEqual(['Booming Blade|TCE'])
+    expect(pruned.provenance.spells['booming blade']).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'TCE' }),
+    ])
+    expect(characterPersistenceSchema.safeParse(pruned).success).toBe(true)
   })
 
   test('keeps the warning constrained above the source groups', () => {

@@ -4,6 +4,7 @@ import {
   XPHB_LEGACY_SUBCLASS_KEYS,
 } from '@/lib/5etools/rulesetMetadata'
 import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { pruneNonracialSpellSelections } from '@/lib/character/commands/sourceSpellPruningCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
@@ -177,38 +178,20 @@ export function pruneSpellsForDisabledSources(
     }
   }
 
-  const newProfiles = workingCharacter.spells.spellProfiles.map((profile) => {
-    if (profile.type === 'racial') return profile
-    const fixedKeys = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
-    const keepMaterializedSpell = (reference: string) =>
-      fixedKeys.has(getSpellNameKey(reference)) || isSpellAllowed(reference)
-    const newCantrips = profile.cantrips.filter(keepMaterializedSpell)
-    const newSpellsKnown = profile.spellsKnown.filter(keepMaterializedSpell)
-    const newPreparedSpells = profile.preparedSpells.filter(keepMaterializedSpell)
-    const newChoices = profile.choices?.map((choice) => ({
-      ...choice,
-      selected: choice.selected.filter(isSpellAllowed),
-    }))
-
-    const profileChanged =
-      newCantrips.length !== profile.cantrips.length ||
-      newSpellsKnown.length !== profile.spellsKnown.length ||
-      newPreparedSpells.length !== profile.preparedSpells.length ||
-      (newChoices?.some(
-        (c, i) => c.selected.length !== (profile.choices?.[i]?.selected?.length ?? 0),
-      ) ??
-        false)
-
-    if (!profileChanged) return profile
-    changed = true
-    return {
-      ...profile,
-      cantrips: newCantrips,
-      spellsKnown: newSpellsKnown,
-      preparedSpells: newPreparedSpells,
-      ...(newChoices !== undefined ? { choices: newChoices } : {}),
+  const nonracial = pruneNonracialSpellSelections(
+    workingCharacter,
+    workingCharacter.provenance,
+    isSpellAllowed,
+  )
+  if (nonracial.characterPatch.spells) {
+    workingCharacter = {
+      ...workingCharacter,
+      ...nonracial.characterPatch,
+      provenance: nonracial.provenanceUpdate,
     }
-  })
+    changed = true
+  }
+  const newProfiles = workingCharacter.spells.spellProfiles
 
   if (!changed) return null
 

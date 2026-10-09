@@ -9,6 +9,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 vi.unmock('@/lib/storage/idb-storage')
@@ -59,6 +60,52 @@ describe('acknowledged character library in IndexedDB', () => {
     expect(reopened.provenance.spells['toll the dead']).toEqual([
       expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
     ])
+    expect(
+      useCharacterStore.getState().characters.find((character) => character.id === neighbor.id),
+    ).toEqual(neighbor)
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('%s class source removal survives Save, reopen and source re-enable', async (originSystem) => {
+    const original = makeNonracialSourceCharacter(originSystem)
+    const neighbor = makeCharacterFixture({ id: 'source-neighbor', allowedSources: [] })
+    const source = originSystem === '2024' ? 'XPHB' : 'TCE'
+    const ledgerName = originSystem === '2024' ? 'toll the dead' : 'booming blade'
+    const retainedSpell = originSystem === '2024' ? 'Toll the Dead|XPHB' : 'Booming Blade|TCE'
+    const allowedSources = originSystem === '2024' ? [] : ['TCE']
+    await useCharacterStore.getState().importCharacters([original, neighbor])
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const prune = pruneSpellsForDisabledSources(original, ['PHB', source], [])!
+    useCharacterStore.getState().updateCharacter(original.id, { ...prune, allowedSources })
+    await useCharacterStore.getState().saveActiveCharacter()
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const reopened = useCharacterStore.getState().activeCharacter!
+    expect(reopened.allowedSources).toEqual(allowedSources)
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
+    ).toEqual([])
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+    ).toEqual([retainedSpell])
+    expect(reopened.provenance.spells[ledgerName]).toEqual([
+      expect.objectContaining({ sourceType: 'manual', grantSource: source }),
+    ])
+    useCharacterStore
+      .getState()
+      .updateCharacter(original.id, { allowedSources: original.allowedSources })
+    await useCharacterStore.getState().saveActiveCharacter()
+    await useCharacterStore.persist.rehydrate()
+    const restored = useCharacterStore
+      .getState()
+      .characters.find((character) => character.id === original.id)!
+    expect(restored.spells).toEqual(reopened.spells)
+    expect(restored.provenance).toEqual(reopened.provenance)
     expect(
       useCharacterStore.getState().characters.find((character) => character.id === neighbor.id),
     ).toEqual(neighbor)
