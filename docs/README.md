@@ -7,11 +7,11 @@ While preparing for 1.0, breaking character-format changes require pre-release c
 recreated. The current format is schema 7; saved schema 2–6 originals remain exportable before removal.
 See [character compatibility](state-management.md#schema-compatibility) for the cutoff and recovery policy.
 
-## Reading order
+## Start with the task
 
-1. [Architecture Map](architecture-map.md)
-2. The topic document for the area being changed
-3. [Testing Map](testing-map.md)
+For a new code area, read the [Architecture Map](architecture-map.md), then the owning topic
+below. Use the [Testing Map](testing-map.md) for validation and the [CI/CD Workflow](cicd-workflow.md)
+for delivery. There is no need to read every guide for each change.
 
 ## Topic guides
 
@@ -33,5 +33,7 @@ validation follows [Testing Map](testing-map.md#commands).
 
 Keep each contract in its owning guide and link to it elsewhere. Update that guide when behavior
 changes; prefer entry points and invariants over exhaustive file lists or implementation history.
+Track outstanding work in issues and completed changes in the changelog. Keep delivery journals,
+command output and repeated status snapshots out of these topic guides.
 Asset preparation instructions belong with their source assets, and audit records with the resource
 they document. Local review notes and findings under `docs/review/` are deliberately untracked.
