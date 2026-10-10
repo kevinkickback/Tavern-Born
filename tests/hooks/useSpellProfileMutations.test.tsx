@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
+import {
+  commitFeatOptionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
@@ -287,13 +291,28 @@ describe('useSpellProfileMutations', () => {
       )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
-    for (const sourceType of ['manual', 'class', 'feat'] as const) {
+    for (const sourceType of ['manual', 'class'] as const) {
       character.provenance = addSpellGrant(
         character.provenance,
         'Light|XPHB',
         makeSourceTag(sourceType, 'Independent', 'choice', 'OTHER'),
       )
     }
+    const feat = { name: 'Independent', source: 'OTHER' }
+    const selected = replaceFeatSelectionsCommand(character, character.provenance, [feat])
+    character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+    const configured = commitFeatOptionsCommand(
+      character,
+      character.provenance,
+      { ...feat, selectionKind: 'ordinary' },
+      { spells: ['Light|XPHB'] },
+      nativeChoiceSpells,
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...configured.characterPatch,
+      provenance: configured.provenanceUpdate,
+    })
     character.spells.spellSlots[1] = { max: 2, used: 1 }
     const original = structuredClone(character)
     const changedRace = {

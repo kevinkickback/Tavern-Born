@@ -29,7 +29,7 @@ const reopen = (character: Character) =>
 const noChoices = () => []
 
 describe('fixed feat granting owner and target identity', () => {
-  test('fixed self-grants record their target while manual selections keep their existing owner', () => {
+  test('fixed self-grants record their target while selections identify their printing and copy', () => {
     expect(applyFeatGrant(emptyProvenance(), 'Alert', 'PHB', false).feats.alert).toEqual([
       expect.objectContaining({
         sourceType: 'feat',
@@ -41,9 +41,10 @@ describe('fixed feat granting owner and target identity', () => {
     expect(applyFeatGrant(emptyProvenance(), 'Alert', 'PHB', true).feats.alert).toEqual([
       {
         sourceType: 'manual',
-        sourceName: 'User Choice',
+        sourceName: 'Alert',
         sourceRef: 'PHB',
         grantType: 'choice',
+        grantVariant: 'selection:ordinary',
         label: 'User Choice',
       },
     ])
@@ -229,7 +230,12 @@ describe('fixed feat granting owner and target identity', () => {
     character = reopen(
       applyCharacterCommandResult(
         character,
-        commitFeatOptionsCommand(character, character.provenance, training, { skills: ['Arcana'] }),
+        commitFeatOptionsCommand(
+          character,
+          character.provenance,
+          { ...training, selectionKind: 'ordinary' },
+          { skills: ['Arcana'] },
+        ),
       ),
     )
     const fixed = { ...training, fixedGrant: true }
@@ -284,7 +290,12 @@ describe('fixed feat granting owner and target identity', () => {
     character = reopen(
       applyCharacterCommandResult(
         character,
-        commitFeatOptionsCommand(character, character.provenance, training, initialChosen),
+        commitFeatOptionsCommand(
+          character,
+          character.provenance,
+          { ...training, selectionKind: 'ordinary' },
+          initialChosen,
+        ),
       ),
     )
     character = reopen(
@@ -305,7 +316,7 @@ describe('fixed feat granting owner and target identity', () => {
         editFeatOptionsCommand(
           character,
           character.provenance,
-          training,
+          { ...training, selectionKind: 'ordinary' },
           initialChosen,
           chosenOptions,
         ),
@@ -324,7 +335,7 @@ describe('fixed feat granting owner and target identity', () => {
         sourceTag: expect.objectContaining({ sourceType: 'feat', sourceRef: 'PHB' }),
       }),
     ])
-    expect(character.provenance.abilityBonuses[1].sourceTag.grantVariant).toBeUndefined()
+    expect(character.provenance.abilityBonuses[1].sourceTag.grantVariant).toBe('selection:ordinary')
     character = reopen(
       applyCharacterCommandResult(
         character,
