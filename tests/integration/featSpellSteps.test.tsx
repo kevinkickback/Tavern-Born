@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
@@ -61,17 +61,21 @@ function modal(initialSelections: FeatOptionSelections = saved, record = feat) {
   )
   return onFinish
 }
+function controls() {
+  const dialog = screen.queryByRole('dialog')
+  return dialog ? within(dialog) : screen
+}
 function click(name: RegExp) {
-  fireEvent.click(screen.getByRole('button', { name }))
+  fireEvent.click(controls().getByRole('button', { name }))
 }
 function box(name: RegExp) {
-  return screen.getByRole('checkbox', { name })
+  return controls().getByRole('checkbox', { name })
 }
 function checked(name: RegExp, value = true) {
   expect(box(name).getAttribute('aria-checked')).toBe(String(value))
 }
 function enabled(name: RegExp, value = true) {
-  expect(screen.getByRole('button', { name }).hasAttribute('disabled')).toBe(!value)
+  expect(controls().getByRole('button', { name }).hasAttribute('disabled')).toBe(!value)
 }
 function openEdit() {
   click(/^Edit Setup$/)
