@@ -4,6 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getInvalidFeatSelectionPaths } from '@/lib/provenance/featSelectionValidation'
 import { getInvalidNativeRacialSpellPaths } from '@/lib/provenance/nativeRacialSpellValidation'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import {
@@ -858,6 +859,13 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const path of getInvalidFeatSelectionPaths(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Selected feat setup requires one explicit copy owner and matching benefits.',
+      })
+    }
     for (const [nameKey, sourceKey] of [
       ['race', 'raceSource'],
       ['subrace', 'subraceSource'],

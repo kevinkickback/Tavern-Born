@@ -5,6 +5,7 @@ import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import type { FeatOptionTarget } from '@/lib/character/commands/featCommands'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   applyClassAsiChoice,
@@ -41,9 +42,9 @@ export function useClassAsiFeatController({
   const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
   const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null)
   const [asiModeByLevel, setAsiModeByLevel] = useState<Record<string, 'asi' | 'feat'>>({})
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<
-    (Feat5e & { classFeatChoiceId?: string }) | null
-  >(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<(Feat5e & FeatOptionTarget) | null>(
+    null,
+  )
   const classProgression = getCharacterClassEntries(character)
   const effectiveFeats = character?.feats ?? []
 
@@ -134,7 +135,7 @@ export function useClassAsiFeatController({
       (feat) =>
         !previousKeys.has(getEntityLookupKey(feat.name, feat.source)) && hasFeatOptions(feat),
     )
-    if (newlyAdded) setOptionsPendingFeat(newlyAdded)
+    if (newlyAdded) setOptionsPendingFeat({ ...newlyAdded, selectionKind: 'ordinary' })
     setFeatPickerOpen(false)
     setFeatPickerLevel(null)
   }
@@ -207,7 +208,7 @@ export function useClassAsiFeatController({
     setAsiMode,
     clearAsiMode,
     commitFeatWithOptions: (
-      feat: Feat5e & { classFeatChoiceId?: string },
+      feat: Feat5e & FeatOptionTarget,
       selections: Parameters<typeof commitFeatWithOptions>[1],
       allSpells: Spell5e[],
     ) => commitFeatWithOptions(feat, selections, allSpells),

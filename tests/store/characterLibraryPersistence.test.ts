@@ -49,7 +49,7 @@ describe('acknowledged character library in IndexedDB', () => {
     const feat =
       origin === '2024'
         ? { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVariant: 'cleric' }
-        : { name: 'Magic Initiate', source: 'PHB' }
+        : { name: 'Magic Initiate', source: 'PHB', selectionKind: 'bonus' as const }
     if (origin === '2014') {
       const selected = replaceBonusFeatSelectionsCommand(original, original.provenance, [feat])
       original = { ...original, ...selected.characterPatch, provenance: selected.provenanceUpdate }
@@ -276,6 +276,37 @@ describe('acknowledged character library in IndexedDB', () => {
         label: missingTarget.race,
       },
     ]
+    const sharedSetup = makeCharacterFixture({
+      id: 'shared-selected-setup',
+      feats: [
+        {
+          id: 'ordinary',
+          name: 'Skilled',
+          source: 'XPHB',
+          description: '',
+          options: { skills: ['Arcana'] },
+        },
+      ],
+      specialFeats: [
+        {
+          id: 'bonus',
+          name: 'Skilled',
+          source: 'XPHB',
+          description: '',
+          options: { skills: ['Arcana'] },
+        },
+      ],
+    })
+    sharedSetup.proficiencies.skills = ['arcana']
+    sharedSetup.provenance.proficiencies.skills.arcana = [
+      {
+        sourceType: 'feat',
+        sourceName: 'Skilled',
+        sourceRef: 'XPHB',
+        grantType: 'choice',
+        label: 'Skilled',
+      },
+    ]
     const originals = [
       {
         ...makeCharacterFixture({ id: 'old', name: 'Old' }),
@@ -288,6 +319,8 @@ describe('acknowledged character library in IndexedDB', () => {
       malformed,
       malformedRevised,
       missingTarget,
+      { ...sharedSetup, schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION - 1 },
+      { ...sharedSetup, id: 'relabeled-shared-setup' },
     ]
     const before = structuredClone(originals)
     const rawStorage = createIdbStorage<{

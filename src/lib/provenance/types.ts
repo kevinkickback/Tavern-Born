@@ -44,7 +44,7 @@ export interface SourceTag {
   sourceRef?: string
   /** Printing of a granted feat or spell; distinct from its granting owner's printing. */
   grantSource?: string
-  /** Optional parameter encoded in a fixed 5etools grant reference (e.g. 'cleric'). */
+  /** Fixed grant parameter or domain owner key (e.g. 'selection:bonus', 'class:<choice ID>'). */
   grantVariant?: string
   grantType: GrantType
   /**

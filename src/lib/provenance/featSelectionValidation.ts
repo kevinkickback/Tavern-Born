@@ -1,0 +1,149 @@
+import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import type { Character } from '@/types/character'
+import { getFeatSelectionKey, getSelectedFeatOwnerKey } from './featSelectionIdentity'
+import { normalizeKey } from './normalization'
+import type { SourceTag } from './types'
+
+type Path = Array<string | number>
+type Owner = { expected: Set<string>; seen: Set<string>; path: Path }
+
+/** Catalog-independent admission of selected-copy setup and its reversible benefits. */
+export function getInvalidFeatSelectionPaths(character: Character): Path[] {
+  const invalid: Path[] = []
+  const owners = new Map<string, Owner>()
+  const ownerKey = (kind: string, feat: { name: string; source?: string }) =>
+    JSON.stringify([kind, getFeatSelectionKey(feat)])
+  const benefitKey = (domain: string, key: string) => JSON.stringify([domain, key])
+  const profile = character.spells.spellProfiles.find(
+    (entry) => entry.id === SPECIAL_SPELL_PROFILE_ID,
+  )
+  const hasProficiency = (domain: 'skills' | 'languages' | 'tools' | 'expertise', key: string) =>
+    character.proficiencies[domain].some((entry) => normalizeKey(entry) === key)
+
+  for (const [field, kind] of [
+    ['feats', 'ordinary'],
+    ['specialFeats', 'bonus'],
+  ] as const) {
+    const ids = new Set<string>()
+    for (const [index, feat] of (character[field] ?? []).entries()) {
+      const key = ownerKey(getSelectedFeatOwnerKey(kind), feat)
+      const path: Path = [field, index]
+      if (owners.has(key) || ids.has(feat.id) || !feat.name.trim() || !feat.source.trim())
+        invalid.push(path)
+      ids.add(feat.id)
+      const owner: Owner = { expected: new Set(), seen: new Set(), path }
+      owners.set(key, owner)
+      const add = (domain: string, value: string) => owner.expected.add(benefitKey(domain, value))
+      for (const domain of ['skills', 'languages', 'tools'] as const) {
+        for (const name of feat.options?.[domain] ?? []) {
+          const normalized = normalizeKey(name)
+          add(domain, normalized)
+          if (!hasProficiency(domain, normalized)) invalid.push([...path, 'options', domain])
+        }
+      }
+      if (feat.options?.expertiseSkill) {
+        const skill = normalizeKey(feat.options.expertiseSkill)
+        for (const domain of ['skills', 'expertise'] as const) {
+          add(domain, skill)
+          if (!hasProficiency(domain, skill)) invalid.push([...path, 'options', 'expertiseSkill'])
+        }
+      }
+      if (feat.options?.abilityScore) {
+        const ability = normalizeAbilityName(feat.options.abilityScore)
+        if (!ability) invalid.push([...path, 'options', 'abilityScore'])
+        else add('abilityBonuses', `${ability}:1`)
+      }
+      if (feat.options?.optionalFeature) add('features', normalizeKey(feat.options.optionalFeature))
+      for (const reference of feat.options?.spells ?? []) {
+        const parsed = parseSpellReference(reference)
+        const target = getSpellReferenceKey(reference)
+        if (!parsed.name || !parsed.source) invalid.push([...path, 'options', 'spells'])
+        add('spells', target)
+        const has = (values: string[] | undefined) =>
+          values?.some((value) => getSpellReferenceKey(value) === target) ?? false
+        if (has(profile?.cantrips) === has(profile?.spellsKnown) || !has(profile?.fixedSpells)) {
+          invalid.push([...path, 'options', 'spells'])
+        }
+      }
+    }
+  }
+
+  const inspect = (tag: SourceTag, domain: string, key: string, path: Path) => {
+    const kind = tag.grantVariant
+    const selected = kind?.startsWith('selection:')
+    if (selected && (tag.sourceType !== 'feat' || tag.grantType !== 'choice')) {
+      const owner = owners.get(
+        ownerKey(kind ?? '', { name: tag.sourceName, source: tag.sourceRef }),
+      )
+      if (
+        domain !== 'feats' ||
+        tag.sourceType !== 'manual' ||
+        tag.grantType !== 'choice' ||
+        !owner ||
+        key !== normalizeKey(tag.sourceName)
+      )
+        invalid.push(path)
+      return
+    }
+    if (tag.sourceType !== 'feat' || tag.grantType !== 'choice') return
+    // Old unqualified setup tags have no reversible selected-copy owner.
+    if (!kind) {
+      invalid.push(path)
+      return
+    }
+    if (!selected) return
+    const owner = owners.get(ownerKey(kind, { name: tag.sourceName, source: tag.sourceRef }))
+    const benefit = benefitKey(domain, key)
+    if (!owner?.expected.has(benefit) || owner.seen.has(benefit)) {
+      invalid.push(path)
+      return
+    }
+    owner.seen.add(benefit)
+  }
+  const ledger = character.provenance
+  for (const domain of [
+    'armor',
+    'weapons',
+    'tools',
+    'languages',
+    'skills',
+    'expertise',
+    'savingThrows',
+  ] as const) {
+    for (const [key, tags] of Object.entries(ledger.proficiencies[domain] ?? {})) {
+      tags.forEach((tag, index) => {
+        inspect(tag, domain, normalizeKey(key), ['provenance', 'proficiencies', domain, key, index])
+      })
+    }
+  }
+  for (const domain of ['features', 'feats', 'spells', 'equipment'] as const) {
+    for (const [key, tags] of Object.entries(ledger[domain])) {
+      tags.forEach((tag, index) => {
+        inspect(
+          tag,
+          domain,
+          domain === 'spells'
+            ? getSpellReferenceKey(key, tag.grantSource ?? '')
+            : normalizeKey(key),
+          ['provenance', domain, key, index],
+        )
+      })
+    }
+  }
+  ledger.abilityBonuses.forEach((record, index) => {
+    inspect(record.sourceTag, 'abilityBonuses', `${record.ability}:${record.value}`, [
+      'provenance',
+      'abilityBonuses',
+      index,
+    ])
+  })
+  ledger.choices.forEach((record, index) => {
+    inspect(record.sourceTag, 'choices', record.id, ['provenance', 'choices', index])
+  })
+  for (const owner of owners.values()) {
+    if (owner.expected.size !== owner.seen.size) invalid.push([...owner.path, 'options'])
+  }
+  return invalid
+}

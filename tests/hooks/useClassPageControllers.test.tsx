@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import {
+  commitFeatOptionsCommand,
+  replaceBonusFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
@@ -8,6 +12,7 @@ import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSub
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Feat5e, Subclass5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -213,6 +218,61 @@ describe('class page controllers', () => {
       expect.objectContaining({ name: 'Alert', source: 'PHB', classLevel: 4 }),
       expect.objectContaining({ name: 'Lucky', source: 'PHB', classLevel: 8 }),
     ])
+  })
+
+  test('ASI selection and Finish retain an independently configured bonus copy of the same printing', () => {
+    const metadata = {
+      name: 'Skilled',
+      source: 'PHB',
+      entries: [],
+      skillProficiencies: [{ choose: { count: 1, from: ['Arcana', 'History'] } }],
+    } satisfies Feat5e
+    let character = makeCharacterFixture({
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
+    })
+    const selected = replaceBonusFeatSelectionsCommand(character, character.provenance, [metadata])
+    character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+    const bonus = commitFeatOptionsCommand(
+      character,
+      character.provenance,
+      { ...metadata, selectionKind: 'bonus' },
+      { skills: ['History'] },
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...bonus.characterPatch,
+      provenance: bonus.provenanceUpdate,
+    })
+    useCharacterStore.setState({ activeCharacter: character })
+    const { result } = renderHook(() =>
+      useClassAsiFeatController({
+        character: useCharacterStore((state) => state.activeCharacter),
+        viewingClass: 'Wizard',
+        viewingClassSource: 'PHB',
+        classLookup: useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {},
+        feats: [metadata],
+      }),
+    )
+    act(() => result.current.setFeatPickerLevel(4))
+    act(() => result.current.confirmFeat([metadata]))
+    expect(result.current.optionsPendingFeat?.selectionKind).toBe('ordinary')
+    act(() =>
+      result.current.commitFeatWithOptions(
+        result.current.optionsPendingFeat!,
+        { skills: ['Arcana'] },
+        [],
+      ),
+    )
+    const configured = characterPersistenceSchema.parse(
+      useCharacterStore.getState().activeCharacter,
+    )
+    expect(configured.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(configured.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+    act(() => result.current.clearFeatSelection(4))
+    const removed = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(removed.feats).toEqual([])
+    expect(removed.proficiencies.skills).toEqual(['history'])
+    expect(removed.specialFeats?.[0].options).toEqual({ skills: ['History'] })
   })
 
   test('recognizes a same-name feat from another source as a new configurable selection', () => {

@@ -70,9 +70,24 @@ Fixed feat option edits opt into normalized name/reference and fixed-variant mat
 with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
 variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
 
-Feat setup retraction also matches an absent option owner key exactly. Editing or removing an
-ordinary selected copy does not treat that absent key as a wildcard for fixed/class/choice setup.
-Whole-source callers keep their existing all-variant removal behavior.
+## Feat setup ownership
+
+Ordinary and bonus setup commands require an explicit `selectionKind` and exactly one active record
+with the complete normalized name/source pair in that collection. Their benefit tags retain that
+printing and distinct `selection:ordinary` / `selection:bonus` owner keys. Each collection permits
+one copy of a printing; the same repeatable printing may belong to both. Fixed, class-choice and
+racial/background-choice keys remain independent.
+
+Commit/Finish replaces that copy's saved setup atomically. Edit, Clear and removal read that copy's
+saved choices for retraction, so stale dialog options cannot remove another copy's materialization.
+Missing, conflicting or inactive selected owners reject without changing the draft. Clear leaves an
+empty configured record and works without game data; removal deletes only the requested selection.
+Shared benefits remain until their final owner is removed. Separate complete owner fields normalize
+case and surrounding whitespace; literal pipes cannot collapse different name/source pairs.
+
+Strict admission validates selected setup ownership and benefits in both directions, without loaded
+rules. The [schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
+formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
 
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
 ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the

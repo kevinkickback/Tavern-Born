@@ -30,7 +30,7 @@ describe('useFeatProvenanceMutations bonus feats', () => {
 
     act(() => {
       result.current.commitFeatWithOptions(
-        { name: 'Skilled', source: 'PHB' },
+        { name: 'Skilled', source: 'PHB', selectionKind: 'bonus' },
         { skills: ['Arcana'], abilityScore: 'int' },
       )
     })

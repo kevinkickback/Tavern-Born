@@ -292,6 +292,7 @@ function buildSpellProfiles(progression, edition) {
       sourceName: 'Magic Initiate',
       sourceRef: edition === '2024' ? 'XPHB' : 'PHB',
       grantType: 'choice',
+      grantVariant: 'selection:bonus',
     })),
   )
 
@@ -1074,6 +1075,22 @@ function buildFixture(seed, edition) {
   }
 
   const raceResolution = getNativeFixtureResolution(fixture)
+  for (const [field, selectionKind] of [
+    ['feats', 'ordinary'],
+    ['specialFeats', 'bonus'],
+  ]) {
+    for (const feat of fixture[field]) {
+      if (!feat.options) continue
+      const result = commitFeatOptionsCommand(
+        fixture,
+        fixture.provenance,
+        { ...feat, selectionKind },
+        feat.options,
+        parsedFixtureSpells,
+      )
+      fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+  }
   fixture.spells.spellProfiles.push(...deriveNativeRacialSpellProfiles(fixture, raceResolution))
   fixture.provenance = reconcileNativeRacialSpellLedger(
     fixture.provenance,
@@ -1222,7 +1239,9 @@ function buildCompanionFixture(baseFixture, edition) {
   })
   const spellLevels = edition === '2024' ? [1, 1, 2, 3] : [2, 2, 3]
   const provenance = emptyProvenance()
-  provenance.abilityBonuses = baseFixture.provenance.abilityBonuses
+  provenance.abilityBonuses = baseFixture.provenance.abilityBonuses.filter(
+    (record) => record.sourceTag.sourceType !== 'feat',
+  )
   const rangerTag = makeTag('class', ranger.name, 'fixed', ranger.source)
   const backgroundTag = makeTag(
     'background',
@@ -1438,6 +1457,7 @@ let parseRaces,
   refreshNativeRacialSpellState,
   setRacialSpellChoice,
   setRacialCastingAbility,
+  commitFeatOptionsCommand,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
@@ -1452,11 +1472,15 @@ try {
     '/src/lib/character/commands/spellCommands.ts',
   ))
   ;({ characterPersistenceSchema } = await runtime.ssrLoadModule('/src/types/characterSchema.ts'))
+  ;({ commitFeatOptionsCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/featCommands.ts',
+  ))
 } finally {
   await runtime.close()
 }
 const nativeRaces = parseRaces(racePayload)
-const nativeSpellLookup = buildSpellLookup(parseSpells(spells, { sourceLookup: spellSourceLookup }))
+const parsedFixtureSpells = parseSpells(spells, { sourceLookup: spellSourceLookup })
+const nativeSpellLookup = buildSpellLookup(parsedFixtureSpells)
 
 const seed = readJson(fixture2014Path)
 const character2014 = buildFixture(seed, '2014')

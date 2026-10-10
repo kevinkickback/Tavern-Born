@@ -2233,6 +2233,14 @@
             "sourceRef": "PHB",
             "grantType": "choice",
             "label": "Cleric"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skilled",
+            "sourceRef": "PHB",
+            "grantType": "choice",
+            "label": "Skilled",
+            "grantVariant": "selection:ordinary"
           }
         ],
         "thieves' tools": [
@@ -2433,6 +2441,14 @@
             "sourceName": "Full-coverage test fixture",
             "grantType": "choice",
             "label": "User Choice"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skilled",
+            "sourceRef": "PHB",
+            "grantType": "choice",
+            "label": "Skilled",
+            "grantVariant": "selection:ordinary"
           }
         ],
         "persuasion": [
@@ -2474,6 +2490,14 @@
             "sourceName": "Full-coverage test fixture",
             "grantType": "choice",
             "label": "User Choice"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skilled",
+            "sourceRef": "PHB",
+            "grantType": "choice",
+            "label": "Skilled",
+            "grantVariant": "selection:ordinary"
           }
         ]
       },
@@ -2551,6 +2575,18 @@
           "sourceRef": "PHB",
           "grantType": "fixed",
           "label": "High"
+        }
+      },
+      {
+        "ability": "constitution",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Resilient",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Resilient",
+          "grantVariant": "selection:ordinary"
         }
       }
     ],
@@ -2926,6 +2962,7 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "PHB"
         }
       ],
@@ -3210,6 +3247,7 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "PHB"
         }
       ],
@@ -3354,6 +3392,7 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "PHB"
         }
       ],
@@ -4111,7 +4150,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "hitPoints": {
     "current": 121,
     "temporary": 17

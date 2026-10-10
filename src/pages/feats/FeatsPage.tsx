@@ -27,6 +27,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -56,7 +57,6 @@ export function FeatsPage() {
     compactPane,
     detailCollapsed,
     featEditCandidate,
-    featEditClearBlocked,
     featEditTarget,
     featOptionsTarget,
     feats,
@@ -64,6 +64,7 @@ export function FeatsPage() {
     getSourcesRowsBySection,
     handleBonusModalConfirm,
     handleCompleteSetup,
+    handleCompleteBonusSetup,
     handleDismissEditHint,
     handleEditBonusSetup,
     handleEditConfirm,
@@ -293,12 +294,9 @@ export function FeatsPage() {
                             {(character.feats ?? []).map((feat) => {
                               const featData = (feats as Feat5e[]).find(
                                 (candidate) =>
-                                  candidate.name === feat.name &&
-                                  (candidate.source ?? '') === feat.source,
+                                  getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
                               )
-                              const isPending = pendingOptionFeatIds.has(
-                                `${feat.name}|${feat.source}`,
-                              )
+                              const isPending = pendingOptionFeatIds.has(getFeatSelectionKey(feat))
                               const isConfigured = !isPending && !!feat.options
                               return (
                                 <FeatDetailCard
@@ -593,11 +591,10 @@ export function FeatsPage() {
                         <div className="mt-3 space-y-3">
                           {bonusFeats.map((feat) => {
                             const featData = (feats as Feat5e[]).find(
-                              (entry) =>
-                                entry.name === feat.name && (entry.source ?? '') === feat.source,
+                              (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
                             )
                             const isPending = pendingOptionBonusFeatIds.has(
-                              `${feat.name}|${feat.source}`,
+                              getFeatSelectionKey(feat),
                             )
                             const isConfigured = !isPending && !!feat.options
                             return (
@@ -610,7 +607,7 @@ export function FeatsPage() {
                                 selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                 onSelect={handleSelectFeat}
                                 onRemove={handleRemoveBonusFeat}
-                                onCompleteSetup={isPending ? handleCompleteSetup : undefined}
+                                onCompleteSetup={isPending ? handleCompleteBonusSetup : undefined}
                                 onEditSetup={isConfigured ? handleEditBonusSetup : undefined}
                                 optionsPending={isPending}
                                 optionsConfigured={isConfigured}
@@ -725,11 +722,6 @@ export function FeatsPage() {
           proficientSkillNames={proficientSkillNames}
           initialSelections={featEditTarget.priorOptions}
           onClear={handleEditClear}
-          clearDisabledReason={
-            featEditClearBlocked
-              ? 'This feat is selected in both Character and Bonus Feats. Clearing one setup could change the other. Cancel to keep both setups.'
-              : undefined
-          }
           onFinish={handleEditFinish}
           onDismiss={() => setFeatEditTarget(null)}
         />

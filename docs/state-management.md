@@ -199,7 +199,14 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-Schema 7 requires one active source-qualified racial owner set: the selected parent and optional
+Schema 8 requires independent ordinary/bonus feat setup ownership and a complete relation between
+saved options, owned benefits and materialized proficiencies/spells. One printing may appear once in
+each collection; duplicate printings in one collection, unqualified setup tags, orphan ownership and
+missing/contradictory benefits reject without loaded rules. Schema 7's shared selected-copy owner
+cannot establish this relation by relabeling its version; recreate those prerelease characters.
+See [feat ownership](provenance.md#feat-setup-ownership) for the command contract.
+
+The active source-qualified racial owner set remains required: the selected parent and optional
 child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals
 within each represented owner. Array order does not change block identity; integer amounts are
@@ -231,7 +238,7 @@ suite and descriptor Clear work from saved membership without missing-data infer
 usage and independent preparation remain mutable and retain their existing shapes.
 
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
-supported. Schema 2–6 characters must be recreated; merely relabeling a version cannot establish
+supported. Schema 2–7 characters must be recreated; merely relabeling a version cannot establish
 native ownership. Incompatible originals remain untouched in durable quarantine and exportable
 through hydration, rejected imports in either order, retry and later successful library writes.
 There are no prerelease converters, flattened-profile adapters or age-based rejection.
