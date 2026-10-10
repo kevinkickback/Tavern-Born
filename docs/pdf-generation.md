@@ -124,8 +124,13 @@ using another owner's ability or assigning a fictitious class level.
 PDF Actions and spell rows use the complete exact race context and native selected relation.
 Versions suppress parent mechanics; ordinary owners remain separate. Missing either context member
 retains the applied snapshot. Exact target lookup cannot borrow another printing's level or rules.
-With spell metadata absent, a saved cantrip remains a cantrip; a known leveled target has explicit
-`?` numeric level. Official 2014 pagination never places that target in a cantrip field. Its name
+Resolve each owner's saved kind before deduplicating exact rows. When admitted saved owners
+disagree and exact metadata is absent, retain an explicit unknown level and its Notes explanation;
+one owner's cantrip cannot erase another owner's leveled contribution. Same-kind overlaps retain
+one row. Fixed/readiness fields mirroring an owner's cantrip do not create a kind conflict.
+Restored exact spell metadata remains authoritative for numeric level.
+With spell metadata absent, an exclusively saved cantrip remains a cantrip; a known leveled target
+has explicit `?` numeric level. Official 2014 pagination never places that target in a cantrip field. Its name
 and unknown-level explanation continue in notes by default when notes are enabled; disabled notes
 report the omission. Automatic selection preserves these explanations even for unprepared spells
 or rows beyond printed capacity. Explicit manual selection limits explanations to its selected

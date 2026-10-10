@@ -190,6 +190,89 @@ function classProps(
 }
 
 test.each([
+  'selection',
+  'replacement',
+] as const)('the actual class %s Ignore switch exposes off-list spells while retaining level and known locks', async (mode) => {
+  let character = buildInitialCharacter(
+    {
+      initial: { name: 'Class visibility', originSystem: '2014' },
+      classEntity: makeClassFixture({ spellcastingAbility: 'int' }),
+    },
+    new Map(),
+    () => [],
+  )
+  character = commit(
+    character,
+    addSpellToCharacter(
+      character,
+      character.provenance,
+      'Bane|TCE',
+      'spell',
+      'special:unrestricted',
+    ),
+  )
+  if (mode === 'replacement')
+    character = commit(
+      character,
+      setClassSpellSelectionsAtLevel(character, character.provenance, {
+        className: 'Wizard',
+        classSource: 'PHB',
+        classLevel: 1,
+        selections: [{ name: 'Shield|PHB', spellLevel: 1 }],
+      }),
+    )
+  const offList = (name: string, level = 1) => ({
+    ...spell(name, 'PHB', level),
+    classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+  })
+  const props = classProps(character, [
+    spell('Shield', 'PHB', 1),
+    offList('Bless'),
+    offList('Bane'),
+    offList('Aid', 2),
+  ])
+  props.spellChoicesByLevel = new Map([
+    [1, { cantrips: 0, spells: 1, maxSpellLevel: 1, canSwap: true }],
+  ])
+  if (mode === 'replacement') {
+    props.spellPickerLevel = null
+    props.spellSwapLevel = 1
+    props.spellSwapDrop = 'Shield|PHB'
+  }
+  const original = structuredClone(character)
+  render(<BuildClassModals {...props} />)
+  await waitFor(() => expect(screen.getByText('Shield')).toBeTruthy())
+  expect(screen.queryByText('Bless')).toBeNull()
+  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+  await waitFor(() => expect(screen.getByText('Bless')).toBeTruthy())
+  expect(screen.queryByText('Aid')).toBeNull()
+  expect(screen.queryByText('Bane')).toBeNull()
+  fireEvent.click(screen.getByRole('switch', { name: 'Hide already-known spells' }))
+  expect(screen.getByText('Bane').closest('button')!.disabled).toBe(true)
+  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+  expect(screen.queryByText('Bless')).toBeNull()
+  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+  fireEvent.click(screen.getByText('Bless'))
+  expect(screen.getByText('Shield').closest('button')!.disabled).toBe(true)
+  expect(character).toEqual(original)
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  if (mode === 'selection')
+    expect(props.onSetClassSpellSelectionsAtLevel).toHaveBeenCalledWith('Wizard', 'PHB', 1, [
+      { name: 'Bless|PHB', spellLevel: 1, school: 'A' },
+    ])
+  else
+    expect(props.onSwapClassSpellAtLevel).toHaveBeenCalledWith(
+      'Wizard',
+      'PHB',
+      1,
+      'Shield|PHB',
+      'Bless|PHB',
+      'A',
+    )
+  expect(character).toEqual(original)
+})
+
+test.each([
   'restore',
   'remove',
   'restore over quota',
@@ -361,6 +444,10 @@ test('the actual class picker offers a native expanded target without automatica
       ...spell('Healing Word', 'PHB', 1),
       classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
     },
+    {
+      ...spell('Healing Word', 'TCE', 1),
+      classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+    },
     spell('Shield', 'PHB', 1),
   ]
   const gameData = makeGameDataFixture({ races: [race], spells: available })
@@ -369,7 +456,7 @@ test('the actual class picker offers a native expanded target without automatica
   const props = classProps(character, available)
   expect(character.provenance.spells['healing word']).toBeUndefined()
   render(<BuildClassModals {...props} />)
-  await waitFor(() => expect(screen.getByText('Healing Word')).toBeTruthy())
+  await waitFor(() => expect(screen.getAllByText('Healing Word')).toHaveLength(1))
   expect(screen.getByText('Light').closest('button')!.disabled).toBe(false)
   fireEvent.click(screen.getByText('Light'))
   fireEvent.click(screen.getByText('Healing Word'))

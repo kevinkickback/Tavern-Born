@@ -501,7 +501,24 @@ function buildSpellRows(
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
+  const cantrips = new Set<string>()
+  const leveled = new Set<string>()
   for (const profile of profiles) {
+    const ownerCantrips = new Set(
+      profile.cantrips.map((reference) => getSpellReferenceKey(reference)),
+    )
+    for (const key of ownerCantrips) cantrips.add(key)
+    for (const reference of profile.spellsKnown) leveled.add(getSpellReferenceKey(reference))
+    // Readiness and fixed fields may mirror that owner's cantrip; another owner's
+    // cantrip must never erase a separately saved leveled contribution.
+    for (const reference of [
+      ...profile.preparedSpells,
+      ...(profile.fixedSpells ?? []),
+      ...(profile.alwaysPreparedSpells ?? []),
+    ]) {
+      const key = getSpellReferenceKey(reference)
+      if (!ownerCantrips.has(key)) leveled.add(key)
+    }
     const detail = castingDetails.find((entry) => entry.profileId === profile.id)
     const alwaysReady =
       profile.alwaysPrepared ||
@@ -539,11 +556,8 @@ function buildSpellRows(
           ? spell.level === 0
             ? 'C'
             : String(spell.level)
-          : profiles.some((profile) =>
-                profile.cantrips.some(
-                  (target) => getSpellReferenceKey(target) === getSpellReferenceKey(reference),
-                ),
-              )
+          : cantrips.has(getSpellReferenceKey(reference)) &&
+              !leveled.has(getSpellReferenceKey(reference))
             ? 'C'
             : '?',
         castingTimeAndDuration: spell

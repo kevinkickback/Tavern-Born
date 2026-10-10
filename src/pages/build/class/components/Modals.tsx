@@ -26,9 +26,7 @@ import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacia
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   buildSpellNameKeySet,
-  formatSpellReference,
   getSpellNameKey,
-  getSpellReferenceKey,
   parseSpellReference,
   resolveSpellReferenceFromMap,
   resolveSpellSelectionMetadata,
@@ -37,8 +35,6 @@ import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
   getKnownSpellNames,
-  isSpellOnClassList,
-  isSpellOnSubclassList,
 } from '@/lib/calculations/spellProfiles'
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -154,23 +150,6 @@ export function BuildClassModals({
 }: BuildClassModalsProps) {
   const calculationContext = useCharacterCalculationContext(character)
   const expanded = getNativeExpandedSpellReferences(character, calculationContext?.raceResolution)
-  const expandedKeys = new Set([...expanded].map((reference) => getSpellReferenceKey(reference)))
-  const allowedClassReferences = new Set(
-    classSpells
-      .filter(
-        (spell) =>
-          isSpellOnClassList(spell, viewingClass, viewingClassSource) ||
-          isSpellOnSubclassList(
-            spell,
-            viewingClass,
-            viewingClassSource,
-            viewingSubclass,
-            viewingSubclassSource,
-          ) ||
-          expandedKeys.has(getSpellReferenceKey(spell.name, spell.source)),
-      )
-      .map((spell) => formatSpellReference(spell.name, spell.source)),
-  )
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
   const viewingClassEntry = getCharacterClassEntries(character).find(
     (entry) => entry.name === viewingClass && (entry.source ?? '') === (viewingClassSource ?? ''),
@@ -304,7 +283,6 @@ export function BuildClassModals({
               spells={selectableSpells}
               className={viewingClass}
               classListOverrides={expanded}
-              allowedSpellReferences={allowedClassReferences}
               classSource={viewingClassSource}
               subclassName={viewingSubclass}
               subclassSource={viewingSubclassSource}
@@ -487,7 +465,6 @@ export function BuildClassModals({
               spells={replacementSpells}
               className={viewingClass}
               classListOverrides={expanded}
-              allowedSpellReferences={allowedClassReferences}
               classSource={viewingClassSource}
               subclassName={viewingSubclass}
               subclassSource={viewingSubclassSource}

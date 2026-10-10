@@ -56,7 +56,7 @@ function noCaster(kind: 'bonus' | 'unavailable-class') {
   })
 }
 
-test.each([
+const exportCases = [
   ['2014-official', 'bonus', 'Bless'],
   ['2014-custom', 'bonus', 'Bless'],
   ['2024-official', 'bonus', 'Bless'],
@@ -65,7 +65,9 @@ test.each([
   ['2014-custom', 'unavailable-class', 'Shield'],
   ['2024-official', 'unavailable-class', 'Shield'],
   ['2024-custom', 'unavailable-class', 'Shield'],
-] as const)(
+] as const
+
+test.each(exportCases)(
   'actual %s retains unknown %s spell Notes without inventing a casting owner',
   async (id, kind, name) => {
     const character = noCaster(kind)
@@ -112,6 +114,26 @@ test.each([
       const plan = planSheetContent(vm, id)
       expect(plan.viewModel.spellRows.length).toBe(kind === 'bonus' ? 1 : 0)
     }
+    expect(character).toEqual(before)
+    expect(vm).toEqual(vmBefore)
+  },
+  30_000,
+)
+
+test.each(exportCases)(
+  'actual %s reports unknown %s spell omission when Notes are disabled',
+  async (id, kind, name) => {
+    const character = noCaster(kind)
+    const before = structuredClone(character)
+    const vm = createCharacterSheetViewModel(character, {
+      spellsByKey: buildSpellLookup([makeSpellFixture({ name, source: 'XPHB', level: 0 })]),
+    })
+    const vmBefore = structuredClone(vm)
+    const unknown = expect.objectContaining({
+      title: 'Spells with unknown levels',
+      text: `${name} — spell level unknown`,
+    })
+    let report: SheetExportReport | undefined
     await generateTestCharacterSheet(vm, id, {
       pages: { notes: false },
       onReport: (value) => {
@@ -119,6 +141,7 @@ test.each([
       },
     })
     expect(report!.omitted).toContainEqual(unknown)
+    expect(report!.preserved).not.toContainEqual(unknown)
     expect(character).toEqual(before)
     expect(vm).toEqual(vmBefore)
   },
