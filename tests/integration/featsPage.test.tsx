@@ -381,7 +381,7 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByText('MISSING')).toBeTruthy()
     expect(screen.getByText('Cleric')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Complete Setup' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Edit Setup' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Edit Setup' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Select magic initiate' }))
     expect(screen.queryByText('Prerequisites met')).toBeNull()
     expect(screen.queryByText('Prerequisites unmet')).toBeNull()
