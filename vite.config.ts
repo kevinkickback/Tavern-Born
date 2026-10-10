@@ -23,6 +23,12 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    watch: {
+      // Temporary build and validation copies must not delay development startup.
+      ignored: ['**/.tmp/**'],
+    },
+  },
   build: {
     // Electron/Chromium supports module preloading natively; disable the inline
     // polyfill so it doesn't trigger the script-src CSP in production.

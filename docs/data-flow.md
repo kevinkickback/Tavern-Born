@@ -50,7 +50,9 @@ Bundled transport and version-aware cache identity use the approved committed pa
 environment. A fresh packaged or development startup therefore has the same Included SRD base.
 In development only, Electron disables its persistent HTTP disk cache before Chromium starts so
 Vite cannot reuse an optimized dependency response after the corresponding shared chunks have been
-regenerated. Packaged applications retain normal HTTP caching.
+regenerated. Packaged applications retain normal HTTP caching. Vite's development server excludes
+`.tmp` artifacts from its file watcher so accumulated temporary copies do not delay startup;
+renderer source, assets, and Electron entry-point watching remain active.
 
 `lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
 composed content fingerprint changes. Layered cache identity includes both the bundled pack and the
