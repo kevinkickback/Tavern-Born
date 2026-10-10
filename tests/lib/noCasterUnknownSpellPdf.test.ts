@@ -47,7 +47,7 @@ function noCaster(kind: 'bonus' | 'unavailable-class') {
     className: 'Wizard',
     classSource: 'PHB',
     classLevel: 1,
-    selections: [{ name: 'Bless|PHB', spellLevel: 1 }],
+    selections: [{ name: 'Shield|PHB', spellLevel: 1 }],
   })
   return characterPersistenceSchema.parse({
     ...initial,
@@ -57,34 +57,32 @@ function noCaster(kind: 'bonus' | 'unavailable-class') {
 }
 
 test.each([
-  ['2014-official', 'bonus'],
-  ['2014-custom', 'bonus'],
-  ['2024-official', 'bonus'],
-  ['2024-custom', 'bonus'],
-  ['2014-official', 'unavailable-class'],
-  ['2014-custom', 'unavailable-class'],
-  ['2024-official', 'unavailable-class'],
-  ['2024-custom', 'unavailable-class'],
+  ['2014-official', 'bonus', 'Bless'],
+  ['2014-custom', 'bonus', 'Bless'],
+  ['2024-official', 'bonus', 'Bless'],
+  ['2024-custom', 'bonus', 'Bless'],
+  ['2014-official', 'unavailable-class', 'Shield'],
+  ['2014-custom', 'unavailable-class', 'Shield'],
+  ['2024-official', 'unavailable-class', 'Shield'],
+  ['2024-custom', 'unavailable-class', 'Shield'],
 ] as const)(
   'actual %s retains unknown %s spell Notes without inventing a casting owner',
-  async (id, kind) => {
+  async (id, kind, name) => {
     const character = noCaster(kind)
     const before = structuredClone(character)
     const vm = createCharacterSheetViewModel(character, {
       // Another printing cannot supply PHB's level or change its saved leveled kind.
-      spellsByKey: buildSpellLookup([
-        makeSpellFixture({ name: 'Bless', source: 'XPHB', level: 0 }),
-      ]),
+      spellsByKey: buildSpellLookup([makeSpellFixture({ name, source: 'XPHB', level: 0 })]),
     })
     const vmBefore = structuredClone(vm)
     expect(vm.spellcastingSources).toEqual([])
     expect(vm.spellcastingPages).toEqual([])
     expect(vm.spellRows).toContainEqual(
-      expect.objectContaining({ name: 'Bless', level: '?', prepared: kind === 'bonus' }),
+      expect.objectContaining({ name, level: '?', prepared: kind === 'bonus' }),
     )
     const unknown = expect.objectContaining({
       title: 'Spells with unknown levels',
-      text: 'Bless — spell level unknown',
+      text: `${name} — spell level unknown`,
     })
     expect(planSheetContent(vm, id).overflow).toContainEqual(unknown)
     expect(
@@ -92,7 +90,9 @@ test.each([
         entry.id.startsWith('unknown-spell-levels:'),
       ),
     ).toBe(false)
-    expect(planSheetContent(vm, id, { spells: ['bless|phb'] }).overflow).toContainEqual(unknown)
+    expect(
+      planSheetContent(vm, id, { spells: [`${name.toLowerCase()}|phb`] }).overflow,
+    ).toContainEqual(unknown)
     expect(planSheetContent(vm, id, { spells: ['stale|phb'] }).overflow).toContainEqual(unknown)
     if (id.startsWith('2014'))
       expect(planSheetContent(vm, id, undefined, { spells: false }).overflow).toEqual([])
@@ -106,7 +106,7 @@ test.each([
     expect(report!.preserved).toContainEqual(unknown)
     const form = (await PDFDocument.load(bytes)).getForm()
     expect(form.getTextField('P5.ASnotes.Notes.Left').getText()).toContain(
-      'Bless — spell level unknown',
+      `${name} — spell level unknown`,
     )
     if (id.startsWith('2024')) {
       const plan = planSheetContent(vm, id)
