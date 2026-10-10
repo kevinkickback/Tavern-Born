@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Exact feat target ownership and bonus-edit retention measure 5,623,122 renderer
-  // bytes (+1,111); use the smallest whole-KiB allowance after explicit budget review.
+  // Feat spell-step allocation and recovery measure 5,626,295 renderer
+  // bytes (+3,173); use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
-  rendererCode: 5492 * KIB,
+  rendererCode: 5495 * KIB,
   // Shared spell ownership and command handling measure 473,130 initial bytes (+1,398).
   // Use the smallest whole-KiB allowance after explicit budget review.
   initialRendererScript: 463 * KIB,
