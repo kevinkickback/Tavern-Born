@@ -60,12 +60,23 @@ export function getFeatOptionSourceTag(feat: FeatOptionTarget): SourceTag {
 
 export { getFeatSelectionKey }
 
-/** Selection owners must address exactly one active record. Never infer a collection. */
+/** Selected and class owners must address exactly one active complete reference. */
 export function isFeatOptionTargetActive(
-  character: Pick<Character, 'feats' | 'specialFeats'>,
+  character: Pick<Character, 'feats' | 'specialFeats' | 'classFeatChoices'>,
   feat: FeatOptionTarget,
 ): boolean {
-  if (getFeatOptionOwnerKey(feat) === undefined) return false
+  const ownerKey = getFeatOptionOwnerKey(feat)
+  if (ownerKey === undefined) return false
+  if (ownerKey.startsWith('class:')) {
+    if (!feat.source?.trim()) return false
+    const choices =
+      character.classFeatChoices?.filter((entry) => entry.id === feat.classFeatChoiceId) ?? []
+    return (
+      choices.length === 1 &&
+      choices[0].feats.filter((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))
+        .length === 1
+    )
+  }
   if (!feat.selectionKind) return true
   const records =
     feat.selectionKind === 'ordinary' ? character.feats : (character.specialFeats ?? [])

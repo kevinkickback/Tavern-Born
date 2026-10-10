@@ -288,6 +288,17 @@ describe('feat commands', () => {
         status: 'resolved',
         selectedRefs: [{ name: 'Training', source: 'PHB' }],
       })
+    } else {
+      initial.classFeatChoices = [
+        {
+          id: 'Owner',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Training',
+          categories: [],
+          feats: [{ id: 'training', name: 'Training', source: 'PHB', description: '' }],
+        },
+      ]
     }
     const feat = {
       name: 'Training',
@@ -309,7 +320,8 @@ describe('feat commands', () => {
       { skills: ['Arcana'] },
     )
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toHaveLength(1)
-    expect(result.characterPatch.proficiencies?.skills).toEqual(['arcana'])
+    expect(result).toEqual({ characterPatch: {}, provenanceUpdate: configured.provenance })
+    expect(applyResult(configured, result).proficiencies.skills).toEqual(['arcana'])
   })
   test('a fixed feat refresh retracts normalized identity without removing other printings or variants', () => {
     const initial = makeCharacterFixture()

@@ -78,8 +78,10 @@ printing and distinct `selection:ordinary` / `selection:bonus` owner keys. Each 
 one copy of a printing; the same repeatable printing may belong to both. Fixed, class-choice and
 racial/background-choice keys remain independent.
 
-Commit/Finish replaces that copy's saved setup atomically. Edit, Clear and removal read that copy's
-saved choices for retraction, so stale dialog options cannot remove another copy's materialization.
+Commit/Finish replaces the addressed owner's saved setup atomically. Edit, Clear and removal read
+its active saved choices for retraction across selected, fixed, class and provenance-choice owners;
+stale dialog options cannot leave old materialized benefits behind. Class setup requires exactly
+one class choice and one complete qualified feat reference before any setup command changes state.
 Missing, conflicting or inactive selected owners reject without changing the draft. Clear leaves an
 empty configured record and works without game data; removal deletes only the requested selection.
 Configured records retain Edit recovery when the whole feat catalog is missing. Unchanged picker
@@ -90,8 +92,9 @@ case and surrounding whitespace; literal pipes cannot collapse different name/so
 Racial/background choice removal requires exactly one matching saved reference. An omitted source
 can remove a unique complete name; absent or ambiguous targets leave the draft intact. Removing a
 choice or class progression record retains its owner's aggregate feat marker while another selected
-printing or literal name shares that ledger bucket. Class level-down compares complete feat
-references rather than opaque issued IDs; new class feat IDs encode their fields without delimiter
+printing or literal name shares that ledger bucket. Racial/background reconciliation considers all
+remaining feat choices with the same source owner, including distinct choice IDs. Class level-down
+compares complete feat references rather than opaque issued IDs; new class feat IDs encode their fields without delimiter
 collisions. Cards and Edit use the same normalized complete reference after catalog casing refresh.
 
 Name-only unconfigured choice records remain visible and removable without catalog inference. They

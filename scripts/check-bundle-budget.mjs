@@ -14,11 +14,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Complete feat ownership measures 5,633,492 renderer bytes (+4,851).
+  // Complete feat ownership measures 5,633,864 renderer bytes (+5,223).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5502 * KIB,
-  // Catalog-independent feat admission measures 478,850 initial bytes (+5,455).
+  // Catalog-independent feat admission measures 479,224 initial bytes (+5,829).
   // Use the smallest whole-KiB allowance after explicit budget review.
   initialRendererScript: 468 * KIB,
   initialStylesheet: 185 * KIB,

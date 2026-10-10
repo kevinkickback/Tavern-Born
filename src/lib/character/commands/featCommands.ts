@@ -129,19 +129,6 @@ export function resolveFeatChoiceCommand(
         workingCharacter = applyResult(workingCharacter, retracted)
         provenanceUpdate = retracted.provenanceUpdate
       }
-      const normalized = normalizeKey(previous.name)
-      const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
-        (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
-      )
-      provenanceUpdate = {
-        ...provenanceUpdate,
-        feats:
-          retained.length > 0
-            ? { ...provenanceUpdate.feats, [normalized]: retained }
-            : Object.fromEntries(
-                Object.entries(provenanceUpdate.feats).filter(([key]) => key !== normalized),
-              ),
-      }
     }
   } else if (choice.selected.length >= choice.chooseCount) {
     return { characterPatch: {}, provenanceUpdate: ledger }
@@ -161,6 +148,10 @@ export function resolveFeatChoiceCommand(
           }
         : entry,
     ),
+  }
+
+  for (const previous of previousRefs) {
+    provenanceUpdate = reconcileFeatChoiceMarker(provenanceUpdate, choice.sourceTag, previous.name)
   }
 
   const tag: SourceTag = {
@@ -224,22 +215,7 @@ export function removeFeatChoiceCommand(
         : entry,
     ),
   }
-  const normalized = normalizeKey(removed.name)
-  const bucketStillSelected = remainingRefs.some((entry) => normalizeKey(entry.name) === normalized)
-  const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
-    (tag) =>
-      bucketStillSelected ||
-      !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
-  )
-  provenanceUpdate = {
-    ...provenanceUpdate,
-    feats:
-      retained.length > 0
-        ? { ...provenanceUpdate.feats, [normalized]: retained }
-        : Object.fromEntries(
-            Object.entries(provenanceUpdate.feats).filter(([key]) => key !== normalized),
-          ),
-  }
+  provenanceUpdate = reconcileFeatChoiceMarker(provenanceUpdate, choice.sourceTag, removed.name)
   return {
     characterPatch: {
       spells: workingCharacter.spells,
@@ -247,6 +223,31 @@ export function removeFeatChoiceCommand(
     },
     provenanceUpdate,
   }
+}
+
+/** An aggregate source marker survives every choice still selecting its ledger bucket. */
+function reconcileFeatChoiceMarker(
+  ledger: ProvenanceLedger,
+  sourceTag: SourceTag,
+  featName: string,
+): ProvenanceLedger {
+  const key = normalizeKey(featName)
+  if (
+    ledger.choices.some(
+      (choice) =>
+        choice.domain === 'feats' &&
+        isSameGrantSource(choice.sourceTag, sourceTag) &&
+        getFeatChoiceSelectedRefs(choice).some((entry) => normalizeKey(entry.name) === key),
+    )
+  )
+    return ledger
+  const retained = (ledger.feats[key] ?? []).filter(
+    (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, sourceTag)),
+  )
+  const feats = { ...ledger.feats }
+  if (retained.length) feats[key] = retained
+  else delete feats[key]
+  return { ...ledger, feats }
 }
 
 export function resolveProficiencyChoiceCommand(
@@ -357,17 +358,12 @@ export function retractFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
   feat: FeatOptionTarget,
-  selections: FeatOptionSelections,
+  _selections: FeatOptionSelections,
 ): CharacterCommandResult {
   const ownerKey = getFeatOptionOwnerKey(feat)
-  if (!isFeatOptionTargetActive(character, feat))
+  if (!isFeatOptionTargetActive(character, feat) || !hasActiveFeatChoiceSetupTarget(ledger, feat))
     return { characterPatch: {}, provenanceUpdate: ledger }
-  if (feat.selectionKind) {
-    const records = feat.selectionKind === 'ordinary' ? character.feats : character.specialFeats
-    selections =
-      records?.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))?.options ??
-      {}
-  }
+  const selections = getSavedFeatOptions(character, ledger, feat) ?? {}
   const isFixedOwner = ownerKey?.startsWith('fixed:') === true
   const provenanceUpdate = removeGrantsBySourceRef(
     ledger,
@@ -485,6 +481,38 @@ function hasActiveFeatChoiceSetupTarget(ledger: ProvenanceLedger, feat: FeatOpti
   )
 }
 
+/** Dialog snapshots are not authoritative for retracting the active owner's setup. */
+function getSavedFeatOptions(
+  character: Character,
+  ledger: ProvenanceLedger,
+  feat: FeatOptionTarget,
+): FeatOptionSelections | undefined {
+  if (feat.selectionKind) {
+    const records = feat.selectionKind === 'ordinary' ? character.feats : character.specialFeats
+    return records?.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))
+      ?.options
+  }
+  if (feat.provenanceChoiceId) {
+    const choice = ledger.choices.find(
+      (entry) => entry.domain === 'feats' && entry.id === feat.provenanceChoiceId,
+    )
+    return (
+      choice &&
+      getFeatChoiceSelectedRefs(choice).find(
+        (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
+      )?.options
+    )
+  }
+  if (feat.classFeatChoiceId) {
+    return character.classFeatChoices
+      ?.find((entry) => entry.id === feat.classFeatChoiceId)
+      ?.feats.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))?.options
+  }
+  return character.fixedFeatOptions?.[
+    getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)
+  ]
+}
+
 export function commitFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
@@ -500,10 +528,7 @@ export function commitFeatOptionsCommand(
     return { characterPatch: {}, provenanceUpdate: ledger }
   const resolved = resolveFeatOptionSpells(character, ledger, feat, selections, allSpells)
   if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
-  const records = feat.selectionKind === 'ordinary' ? character.feats : character.specialFeats
-  const previous = feat.selectionKind
-    ? records?.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))?.options
-    : undefined
+  const previous = getSavedFeatOptions(character, ledger, feat)
   if (previous) {
     const retracted = retractFeatOptionsCommand(character, ledger, feat, previous)
     return commitResolvedFeatOptions(
