@@ -733,7 +733,72 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     [onOpenChange, onDismiss],
   )
 
-  if (!currentStep) return null
+  if (!currentStep) {
+    const savedChoices = [
+      ['Spellcasting class', initialSelections?.spellcastingClass],
+      [
+        'Spells',
+        initialSelections?.spells
+          ?.map((reference) => {
+            const { name, source } = parseSpellReference(reference)
+            return `${name}${source ? ` (${source})` : ''}`
+          })
+          .join(', '),
+      ],
+      ['Skills', initialSelections?.skills?.join(', ')],
+      ['Languages', initialSelections?.languages?.join(', ')],
+      ['Tools', initialSelections?.tools?.join(', ')],
+      [
+        'Ability score',
+        initialSelections?.abilityScore
+          ? (ABILITY_ABBREV_TO_TITLE[initialSelections.abilityScore] ??
+            initialSelections.abilityScore)
+          : undefined,
+      ],
+      ['Optional feature', initialSelections?.optionalFeature],
+      ['Expertise', initialSelections?.expertiseSkill],
+    ].filter(([, value]) => value)
+
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Configure: {feat.name}</DialogTitle>
+            <DialogDescription>
+              Current rules for {feat.name} ({feat.source}) have no setup choices.
+            </DialogDescription>
+          </DialogHeader>
+          {savedChoices.length > 0 && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Your saved setup and its benefits are unchanged. Cancel to keep them, then reopen
+                setup after restoring the rules to edit your choices. Clearing removes all choices
+                below and only the benefits owned by this setup; the feat remains on your character.
+              </p>
+              <dl className="max-h-64 space-y-2 overflow-y-auto text-sm">
+                {savedChoices.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="font-medium">{label}</dt>
+                    <dd className="text-muted-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            {savedChoices.length > 0 && (
+              <Button variant="destructive" onClick={() => onFinish({})}>
+                Clear saved setup
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   const currentValue = getStepValue(stepSels, stepIndex)
 
