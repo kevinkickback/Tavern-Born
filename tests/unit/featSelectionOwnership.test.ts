@@ -347,6 +347,35 @@ describe('independent selected feat copies', () => {
   })
 
   test.each([
+    ['spells', 'spark', 'spark|TEST|FOREIGN'],
+    ['spells', 'spark', ' SPARK '],
+    ['spells', 'spark', '{@spell Spark|TEST}'],
+    ['skills', 'arcana', ' Arcana '],
+    ['skills', 'arcana', 'Arcana|TEST'],
+    ['features', 'defense', ' Defense '],
+    ['feats', 'skilled', ' Skilled '],
+  ] as const)('selected ledger keys must be canonical for reversible removal: %s / %s / %s', (domain, key, malformedKey) => {
+    let character = selectCopies()
+    character = reopen(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        ordinary,
+        { skills: ['Arcana'], optionalFeature: 'Defense', spells: ['Spark|TEST'] },
+        [{ name: 'Spark', source: 'TEST', level: 0 }] as Spell5e[],
+      ),
+    )
+    const map =
+      domain === 'skills' ? character.provenance.proficiencies.skills : character.provenance[domain]
+    map[malformedKey] = map[key]
+    delete map[key]
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test.each([
     'missing-owner',
     'wrong-kind',
     'duplicate-tag',

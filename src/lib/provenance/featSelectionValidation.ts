@@ -1,5 +1,6 @@
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import {
+  getSpellNameKey,
   getSpellReferenceKey,
   isSourceQualifiedSpellReference,
 } from '@/lib/calculations/spellIdentity'
@@ -117,6 +118,20 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
     }
     owner.seen.add(benefit)
   }
+  const inspectMapEntry = (tag: SourceTag, domain: string, key: string, path: Path) => {
+    const normalized = domain === 'spells' ? getSpellNameKey(key) : normalizeKey(key)
+    // Commands remove benefits by canonical map key; admission must not hide an alias there.
+    if (tag.grantVariant?.startsWith('selection:') && (!normalized || key !== normalized)) {
+      invalid.push(path)
+      return
+    }
+    inspect(
+      tag,
+      domain,
+      domain === 'spells' ? getSpellReferenceKey(key, tag.grantSource ?? '') : normalized,
+      path,
+    )
+  }
   const ledger = character.provenance
   for (const domain of [
     'armor',
@@ -129,21 +144,14 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
   ] as const) {
     for (const [key, tags] of Object.entries(ledger.proficiencies[domain] ?? {})) {
       tags.forEach((tag, index) => {
-        inspect(tag, domain, normalizeKey(key), ['provenance', 'proficiencies', domain, key, index])
+        inspectMapEntry(tag, domain, key, ['provenance', 'proficiencies', domain, key, index])
       })
     }
   }
   for (const domain of ['features', 'feats', 'spells', 'equipment'] as const) {
     for (const [key, tags] of Object.entries(ledger[domain])) {
       tags.forEach((tag, index) => {
-        inspect(
-          tag,
-          domain,
-          domain === 'spells'
-            ? getSpellReferenceKey(key, tag.grantSource ?? '')
-            : normalizeKey(key),
-          ['provenance', domain, key, index],
-        )
+        inspectMapEntry(tag, domain, key, ['provenance', domain, key, index])
       })
     }
   }

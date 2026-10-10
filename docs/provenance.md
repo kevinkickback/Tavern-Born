@@ -89,8 +89,11 @@ case and surrounding whitespace; literal pipes cannot collapse different name/so
 
 Strict admission validates selected setup ownership and benefits in both directions, without loaded
 rules. Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
-5etools spell tag; trailing plain fields reject before parsing or mutation. The
-[schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
+5etools spell tag; trailing plain fields reject before parsing or mutation. Selected ownership uses
+canonical ledger map keys, including name-only spell keys with their printing in `grantSource`.
+Admission rejects aliases in those keys rather than normalizing them into a benefit that removal
+cannot find. Readable saved references and separate owner fields still support case and whitespace.
+The [schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
 formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
 
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
