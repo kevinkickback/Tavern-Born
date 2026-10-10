@@ -6,6 +6,7 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
@@ -509,6 +510,7 @@ function resolveFeatOptionSpells(
       : isSameGrantSource(tag, owner)
   const resolved: FeatSpellSelection[] = []
   for (const selected of selections.spells ?? []) {
+    if (!isSourceQualifiedSpellReference(selected)) return undefined
     const parsed = parseSpellReference(selected)
     if (!parsed.name || !parsed.source) return undefined
     const reference = formatSpellReference(selected)

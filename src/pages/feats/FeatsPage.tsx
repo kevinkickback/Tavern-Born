@@ -49,6 +49,7 @@ export function FeatsPage() {
     activeFeatName,
     bonusFeats,
     bonusInitialSelectedIds,
+    bonusModalFeats,
     bonusModalOpen,
     character,
     characterFeatCount,
@@ -666,7 +667,7 @@ export function FeatsPage() {
       <FeatSelectionModal
         open={bonusModalOpen}
         onOpenChange={setBonusModalOpen}
-        feats={feats as Feat5e[]}
+        feats={bonusModalFeats}
         maxSelections={Number.POSITIVE_INFINITY}
         initialSelectedIds={bonusInitialSelectedIds}
         characterSnapshot={characterSnapshot}

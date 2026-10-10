@@ -1,4 +1,22 @@
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import type { Feat5e } from '@/types/5etools'
+
+/** Keep saved exact selections available for confirmation when their catalog is missing. */
+export function buildFeatModalFeats<T extends { name: string; source?: string }>({
+  availableFeats,
+  selectedFeats,
+  createFallback,
+}: {
+  availableFeats: T[]
+  selectedFeats: Array<{ name: string; source?: string }>
+  createFallback: (selected: { name: string; source?: string }) => T
+}): T[] {
+  const availableIds = new Set(availableFeats.map(getFeatSelectionKey))
+  const selectedNotInList = selectedFeats
+    .filter((feat) => !availableIds.has(getFeatSelectionKey(feat)))
+    .map(createFallback)
+  return [...availableFeats, ...selectedNotInList]
+}
 
 export interface FeatChoicePoolResolution {
   eligibleFeats: Feat5e[]

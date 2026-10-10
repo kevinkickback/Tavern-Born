@@ -82,11 +82,15 @@ Commit/Finish replaces that copy's saved setup atomically. Edit, Clear and remov
 saved choices for retraction, so stale dialog options cannot remove another copy's materialization.
 Missing, conflicting or inactive selected owners reject without changing the draft. Clear leaves an
 empty configured record and works without game data; removal deletes only the requested selection.
+Configured records retain Edit recovery when the whole feat catalog is missing. Unchanged picker
+confirmation retains unavailable saved selections; deselecting a saved entry explicitly removes it.
 Shared benefits remain until their final owner is removed. Separate complete owner fields normalize
 case and surrounding whitespace; literal pipes cannot collapse different name/source pairs.
 
 Strict admission validates selected setup ownership and benefits in both directions, without loaded
-rules. The [schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
+rules. Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
+5etools spell tag; trailing plain fields reject before parsing or mutation. The
+[schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
 formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
 
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement

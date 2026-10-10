@@ -5,6 +5,13 @@ export interface SpellReferenceParts {
   source?: string
 }
 
+/** Admit complete source-qualified values without truncating malformed plain references. */
+export function isSourceQualifiedSpellReference(value: string): boolean {
+  const tagged = value.trim().match(/^\{@spell\s+([^}|]+)\|([^}|]+)(?:\|[^}]*)?\}$/i)
+  const parts = tagged ? [tagged[1], tagged[2]] : value.trim().split('|')
+  return parts.length === 2 && parts.every((part) => !!part.trim() && !/[#{}]/.test(part))
+}
+
 export function parseSpellReference(value: string): SpellReferenceParts {
   const tagged = value.trim().match(/^\{@spell\s+([^}|]+)(?:\|([^}|]+))?[^}]*\}$/i)
   const raw = tagged ? [tagged[1], tagged[2]] : value.trim().split('|')

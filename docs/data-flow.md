@@ -158,8 +158,7 @@ must not render raw 5etools syntax or build independent tooltip systems.
 Import and hydration require the exact current character version and validate before exposing a
 record. Current schema 8 also requires explicit ordinary/bonus feat setup ownership; complete racial
 spell targets and separate owner/target printings remain required. Schema 2–7 and other unsupported
-versions are rejected without conversion. Saved-library
-rejected originals
+versions are rejected without conversion. Saved-library rejected originals
 remain in durable, exportable quarantine until acknowledged. The version and cutoff policy lives
 in [State Management](state-management.md#schema-compatibility).
 

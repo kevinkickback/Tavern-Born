@@ -274,6 +274,79 @@ describe('independent selected feat copies', () => {
   })
 
   test.each([
+    'Spark|TEST|FOREIGN',
+    '{@spell Spark|TEST',
+    'Spark|TEST#extra',
+  ])('malformed selected spell references reject before mutation and strict reopen: %s', (reference) => {
+    const metadata = [{ name: 'Spark', source: 'TEST', level: 0 }] as Spell5e[]
+    let character = selectCopies()
+    character = reopen(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        ordinary,
+        { spells: ['Spark|TEST'] },
+        metadata,
+      ),
+    )
+    for (const result of [
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        ordinary,
+        { spells: [reference] },
+        metadata,
+      ),
+      editFeatOptionsCommand(
+        character,
+        character.provenance,
+        ordinary,
+        { spells: ['Spark|TEST'] },
+        { spells: [reference] },
+        metadata,
+      ),
+    ]) {
+      expect(result.characterPatch).toEqual({})
+      expect(result.provenanceUpdate).toBe(character.provenance)
+    }
+    const malformed = structuredClone(character)
+    malformed.feats[0].options = { spells: [reference] }
+    const before = structuredClone(malformed)
+    expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+    expect(malformed).toEqual(before)
+  })
+
+  test.each([
+    'malformed-cantrip',
+    'malformed-fixed',
+    'duplicate-cantrip',
+    'missing-fixed',
+    'wrong-kind',
+  ] as const)('selected spell materialization must remain complete and unique: %s', (failure) => {
+    let character = selectCopies()
+    character = reopen(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        ordinary,
+        { spells: ['Spark|TEST'] },
+        [{ name: 'Spark', source: 'TEST', level: 0 }] as Spell5e[],
+      ),
+    )
+    const profile = character.spells.spellProfiles.find((entry) => entry.type === 'special')!
+    if (failure === 'malformed-cantrip') profile.cantrips = ['Spark|TEST|FOREIGN']
+    if (failure === 'malformed-fixed') profile.fixedSpells = ['Spark|TEST|FOREIGN']
+    if (failure === 'duplicate-cantrip') profile.cantrips.push(' spark | test ')
+    if (failure === 'missing-fixed') profile.fixedSpells = []
+    if (failure === 'wrong-kind') profile.spellsKnown = ['Spark|TEST']
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test.each([
     'missing-owner',
     'wrong-kind',
     'duplicate-tag',

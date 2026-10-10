@@ -447,6 +447,41 @@ test.each([
   expect(characterPersistenceSchema.safeParse(cleared).success).toBe(true)
 })
 
+test('confirming the bonus picker without its catalog preserves the configured saved selection', () => {
+  let character = makeCharacterFixture({ allowedSources: ['TEST'] })
+  const selected = replaceBonusFeatSelectionsCommand(character, character.provenance, [feat])
+  character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+  const configured = commitFeatOptionsCommand(
+    character,
+    character.provenance,
+    { ...feat, selectionKind: 'bonus' },
+    saved,
+    [spark, ray],
+  )
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...configured.characterPatch,
+    provenance: configured.provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: character })
+  const data = makeGameDataFixture({ feats: [], spells: [] })
+  useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Bonus/ }))
+  fireEvent.click(screen.getByRole('button', { name: /^Add Feat$/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  const retained = useCharacterStore.getState().activeCharacter!
+  expect(retained.specialFeats).toEqual(character.specialFeats)
+  expect(retained.provenance).toEqual(character.provenance)
+  expect(retained.spells).toEqual(character.spells)
+  expect(characterPersistenceSchema.safeParse(retained).success).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Training' }))
+  const removed = useCharacterStore.getState().activeCharacter!
+  expect(removed.specialFeats).toEqual([])
+  expect(removed.provenance.spells.spark).toBeUndefined()
+  expect(characterPersistenceSchema.safeParse(removed).success).toBe(true)
+})
+
 test.each([
   false,
   true,

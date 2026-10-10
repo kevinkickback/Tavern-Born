@@ -1,5 +1,8 @@
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
+import {
+  getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
+} from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import type { Character } from '@/types/character'
 import { getFeatSelectionKey, getSelectedFeatOwnerKey } from './featSelectionIdentity'
@@ -16,9 +19,10 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
   const ownerKey = (kind: string, feat: { name: string; source?: string }) =>
     JSON.stringify([kind, getFeatSelectionKey(feat)])
   const benefitKey = (domain: string, key: string) => JSON.stringify([domain, key])
-  const profile = character.spells.spellProfiles.find(
+  const profileIndex = character.spells.spellProfiles.findIndex(
     (entry) => entry.id === SPECIAL_SPELL_PROFILE_ID,
   )
+  const profile = character.spells.spellProfiles[profileIndex]
   const hasProficiency = (domain: 'skills' | 'languages' | 'tools' | 'expertise', key: string) =>
     character.proficiencies[domain].some((entry) => normalizeKey(entry) === key)
 
@@ -57,13 +61,24 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
       }
       if (feat.options?.optionalFeature) add('features', normalizeKey(feat.options.optionalFeature))
       for (const reference of feat.options?.spells ?? []) {
-        const parsed = parseSpellReference(reference)
         const target = getSpellReferenceKey(reference)
-        if (!parsed.name || !parsed.source) invalid.push([...path, 'options', 'spells'])
+        if (!isSourceQualifiedSpellReference(reference))
+          invalid.push([...path, 'options', 'spells'])
         add('spells', target)
-        const has = (values: string[] | undefined) =>
-          values?.some((value) => getSpellReferenceKey(value) === target) ?? false
-        if (has(profile?.cantrips) === has(profile?.spellsKnown) || !has(profile?.fixedSpells)) {
+        const count = (field: 'cantrips' | 'spellsKnown' | 'fixedSpells') => {
+          const matches = (profile?.[field] ?? []).filter(
+            (value) => getSpellReferenceKey(value) === target,
+          )
+          if (matches.some((value) => !isSourceQualifiedSpellReference(value)))
+            invalid.push(['spells', 'spellProfiles', profileIndex, field])
+          return matches.length
+        }
+        const cantrips = count('cantrips')
+        const known = count('spellsKnown')
+        if (
+          !((cantrips === 1 && known === 0) || (cantrips === 0 && known === 1)) ||
+          count('fixedSpells') !== 1
+        ) {
           invalid.push([...path, 'options', 'spells'])
         }
       }

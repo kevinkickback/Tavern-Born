@@ -9,6 +9,7 @@ import { useClassLookup, useFeatLookup, useSpellLookup } from '@/hooks/data/useG
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import {
   buildPrerequisiteSnapshot,
   type PrereqCharacterSnapshot,
@@ -205,8 +206,17 @@ export function useFeatsPageController() {
     resolvedOriginChoices.reduce((sum, choice) => sum + choice.selected.length, 0)
   const bonusFeats = character?.specialFeats ?? []
   const bonusInitialSelectedIds = useMemo(
-    () => (character?.specialFeats ?? []).map((feat) => `${feat.name}|${feat.source ?? ''}`),
+    () => (character?.specialFeats ?? []).map(getFeatSelectionKey),
     [character?.specialFeats],
+  )
+  const bonusModalFeats = useMemo(
+    () =>
+      buildFeatModalFeats({
+        availableFeats: feats as Feat5e[],
+        selectedFeats: character?.specialFeats ?? [],
+        createFallback: (selected) => ({ ...selected, source: selected.source ?? '', entries: [] }),
+      }),
+    [feats, character?.specialFeats],
   )
 
   const handleRemoveFeat = useCallback(
@@ -525,6 +535,7 @@ export function useFeatsPageController() {
     activeFeatName,
     bonusFeats,
     bonusInitialSelectedIds,
+    bonusModalFeats,
     bonusModalOpen,
     character,
     characterFeatCount,

@@ -275,7 +275,16 @@ describe('class page controllers', () => {
     expect(removed.specialFeats?.[0].options).toEqual({ skills: ['History'] })
   })
 
-  test('recognizes a same-name feat from another source as a new configurable selection', () => {
+  test.each([
+    [
+      { name: 'Skilled', source: 'PHB' },
+      { name: 'Skilled', source: 'XPHB' },
+    ],
+    [
+      { name: 'Training|HB', source: 'One' },
+      { name: 'Training', source: 'HB|One' },
+    ],
+  ])('recognizes another complete feat printing as a new configurable ASI selection: %j', (first, second) => {
     const classEntity = useGameDataStore.getState().gameData?.classes[0]
     const classLookup = useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {}
     if (!classEntity) throw new Error('Expected Wizard fixture')
@@ -284,8 +293,7 @@ describe('class page controllers', () => {
       feats: [
         {
           id: 'skilled-phb',
-          name: 'Skilled',
-          source: 'PHB',
+          ...first,
           description: '',
           className: 'Wizard',
           classSource: 'PHB',
@@ -299,8 +307,7 @@ describe('class page controllers', () => {
       activeCharacter: character,
     })
     const configurableFeat = {
-      name: 'Skilled',
-      source: 'XPHB',
+      ...second,
       entries: [],
       skillProficiencies: [{ choose: { count: 1, from: ['Arcana'] } }],
     } satisfies Feat5e
@@ -315,13 +322,14 @@ describe('class page controllers', () => {
     )
 
     act(() => result.current.setFeatPickerLevel(8))
+    expect(result.current.featModalFeats).toContainEqual(configurableFeat)
     act(() => result.current.confirmFeat([configurableFeat]))
 
     expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
-      expect.objectContaining({ name: 'Skilled', source: 'PHB', classLevel: 4 }),
-      expect.objectContaining({ name: 'Skilled', source: 'XPHB', classLevel: 8 }),
+      expect.objectContaining({ ...first, classLevel: 4 }),
+      expect.objectContaining({ ...second, classLevel: 8 }),
     ])
-    expect(result.current.optionsPendingFeat).toMatchObject({ name: 'Skilled', source: 'XPHB' })
+    expect(result.current.optionsPendingFeat).toMatchObject(second)
   })
 
   test('adds a later-level spell choice without replacing earlier class-profile spells', () => {

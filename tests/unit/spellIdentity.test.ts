@@ -4,12 +4,25 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
   parseSpellReference,
   resolveSpellReferenceFromMap,
   resolveSpellSelectionMetadata,
 } from '@/lib/calculations/spellIdentity'
 
 describe('spell identity', () => {
+  test.each([
+    [' Spark | TEST ', true],
+    ['{@spell Spark|TEST|Display}', true],
+    ['{@spell Spark|TEST|Display|2}', true],
+    ['Spark|TEST|FOREIGN', false],
+    ['Spark|TEST#extra', false],
+    ['{@spell Spark|TEST', false],
+    ['{@spell Spark||Display}', false],
+    ['Spark| ', false],
+  ])('source qualification distinguishes supported tags from malformed plain values: %s', (reference, expected) => {
+    expect(isSourceQualifiedSpellReference(reference)).toBe(expected)
+  })
   test('normalizes display, tagged, and source-qualified references to the same name', () => {
     expect(getSpellNameKey('Mage Hand')).toBe('mage hand')
     expect(getSpellNameKey('mage hand|XPHB')).toBe('mage hand')
