@@ -272,7 +272,7 @@ const KnownSpellLevelGroup = memo(function KnownSpellLevelGroup({
                   }
                 : undefined
             }
-            removable
+            removable={item.removable !== false}
             getSpellByName={getSpellByName}
             onRemoveSpell={onRemoveSpell}
             renderSpellName={renderSpellName}
@@ -520,7 +520,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         <p className="mt-1 text-xs text-muted-foreground max-w-sm">
                           Choose racial spells to populate this list.
                         </p>
-                        {firstUnfulfilledChoice ? (
+                        {firstUnfulfilledChoice && onOpenRacialChoice ? (
                           <Button
                             size="sm"
                             variant="outline"

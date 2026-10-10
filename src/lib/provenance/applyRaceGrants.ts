@@ -1,4 +1,3 @@
-import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { getRaceAbilityData } from '@/lib/calculations/abilityScores'
 import { ARMOR_CATEGORY_LABEL_TO_CODE } from '@/lib/calculations/armorClass'
 import {
@@ -13,7 +12,7 @@ import {
   type ProficiencyBlock,
   toProficiencyBlocks,
 } from './applyProficiencyBlocks'
-import { addAbilityBonus, addSpellGrant } from './ledger'
+import { addAbilityBonus } from './ledger'
 import { normalizeKey } from './normalization'
 import { makeRaceAbilityChoiceId } from './raceAbilityChoiceIdentity'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from './raceOwnership'
@@ -103,23 +102,6 @@ export function resolveRaceGrantFilterOptions(
   return results.sort((left, right) => left.localeCompare(right))
 }
 
-export function applyRaceSpellGrants(
-  race: {
-    additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
-  },
-  totalCharacterLevel: number,
-  ledger: ProvenanceLedger,
-  tag: import('./types').SpellSourceTag,
-): ProvenanceLedger {
-  let result = ledger
-  const grants = parseRaceSpells(race.additionalSpells)
-  for (const grant of grants) {
-    if (grant.level > totalCharacterLevel) continue
-    result = addSpellGrant(result, grant.spellName, tag)
-  }
-  return result
-}
-
 /**
  * Apply grants from a race (and optionally a subrace) to the provenance ledger.
  * Handles fixed proficiency grants, choice placeholders, and ability score bonuses.
@@ -160,10 +142,8 @@ export function applyRaceGrants(
   ledger: ProvenanceLedger,
   resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
-  totalCharacterLevel = 1,
   options?: {
     suppressLanguageGrants?: boolean
-    suppressSpellGrants?: boolean
     suppressAbilityGrants?: boolean
   },
 ): ProvenanceLedger {
@@ -220,21 +200,11 @@ export function applyRaceGrants(
   // Apply race feat grants (e.g. Variant Human bonus feat, XPHB Human origin feat).
   result = applyFeatGrantBlocks(result, race.feats, 'race', race.name, race.source)
 
-  // Apply race additional spells independently of ability score parsing.
-  if (!options?.suppressSpellGrants) {
-    result = applyRaceSpellGrants(race, totalCharacterLevel, result, raceTag)
-  }
-
   if (subrace) {
     const subraceTag = makeSourceTag('subrace', subrace.name, 'fixed', subrace.source)
 
     // Apply subrace feat grants.
     result = applyFeatGrantBlocks(result, subrace.feats, 'subrace', subrace.name, subrace.source)
-
-    // Apply subrace additional spells independently of ability score parsing.
-    if (!options?.suppressSpellGrants) {
-      result = applyRaceSpellGrants(subrace, totalCharacterLevel, result, subraceTag)
-    }
 
     result = applyProficiencyBlocks(
       result,

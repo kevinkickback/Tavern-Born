@@ -158,14 +158,26 @@ export interface Subclass5e {
   [key: string]: unknown
 }
 
+export type RaceSpellItem =
+  | string
+  | { choose: string | { from: string[]; count?: number }; count?: number }
+export type RaceSpellSchedule = Record<
+  string,
+  | RaceSpellItem[]
+  | {
+      _?: RaceSpellItem[]
+      will?: RaceSpellItem[]
+      ritual?: RaceSpellItem[]
+      daily?: Record<string, RaceSpellItem[]>
+      rest?: Record<string, RaceSpellItem[]>
+    }
+>
 export interface RaceAdditionalSpells {
   name?: string
-  innate?: Record<string, string[] | Record<string, Record<string, string[]>>>
-  known?: Record<
-    string,
-    | Array<string | { choose: string; count?: number }>
-    | { _: Array<string | { choose: string; count?: number }> }
-  >
+  innate?: RaceSpellSchedule
+  known?: RaceSpellSchedule
+  prepared?: RaceSpellSchedule
+  expanded?: Record<string, string[]>
   ability?: string | { choose: string[] }
 }
 

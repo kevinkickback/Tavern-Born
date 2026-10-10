@@ -204,7 +204,7 @@ function titleCaseAbility(ability: string | undefined): string {
 
 export function getOfficial2014SpellPages(viewModel: CharacterSheetViewModel) {
   if (viewModel.spellcastingPages.length <= 1) {
-    return [{ detail: viewModel.spellcastingDetails[0], spellRows: viewModel.spellRows }]
+    return [{ detail: viewModel.spellcastingSources[0], spellRows: viewModel.spellRows }]
   }
   return viewModel.spellcastingPages
 }
@@ -214,7 +214,11 @@ export function paginateOfficial2014SpellPages(viewModel: CharacterSheetViewMode
   return getOfficial2014SpellPages(viewModel).flatMap((page) => {
     const levels = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.map((_, level) =>
       page.spellRows
-        .filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
+        .filter(
+          (row) =>
+            (row.level === 'C' ? 0 : /^[1-9]$/.test(row.level) ? Number(row.level) : null) ===
+            level,
+        )
         .sort((a, b) => Number(b.prepared) - Number(a.prepared)),
     )
     const count = Math.max(
@@ -225,10 +229,15 @@ export function paginateOfficial2014SpellPages(viewModel: CharacterSheetViewMode
     )
     return Array.from({ length: count }, (_, index) => ({
       detail: page.detail,
-      spellRows: levels.flatMap((rows, level) => {
-        const size = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[level].length
-        return rows.slice(index * size, (index + 1) * size)
-      }),
+      spellRows: [
+        ...(index === 0
+          ? page.spellRows.filter((row) => row.level !== 'C' && !/^[1-9]$/.test(row.level))
+          : []),
+        ...levels.flatMap((rows, level) => {
+          const size = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[level].length
+          return rows.slice(index * size, (index + 1) * size)
+        }),
+      ],
     }))
   })
 }
@@ -238,8 +247,8 @@ export function mapOfficial2014SpellPage(
   page = getOfficial2014SpellPages(viewModel)[0],
 ): CharacterSheetFieldMap {
   const { detail, spellRows } = page
-  const pact = detail?.casterProgression === 'pact'
-  const label = detail ? `${detail.className}${pact ? ' (Pact Magic)' : ''}` : ''
+  const pact = detail?.classDetail?.casterProgression === 'pact'
+  const label = detail ? `${detail.sourceName}${pact ? ' (Pact Magic)' : ''}` : ''
   const textFields: Record<string, string> = {
     'Spellcasting Class 2': label,
     'SpellcastingAbility 2': titleCaseAbility(detail?.spellcastingAbility),
@@ -261,7 +270,7 @@ export function mapOfficial2014SpellPage(
       const slots = pact
         ? viewModel.spellSlots.mergedPactWithUsage
         : viewModel.spellSlots.mergedSharedWithUsage
-      const slot = slots[level]
+      const slot = detail?.sourceType === 'class' ? slots[level] : undefined
       textFields[`SlotsTotal ${level + 18}`] = slot?.max ? String(slot.max) : ''
       textFields[`SlotsRemaining ${level + 18}`] = slot?.max ? String(slot.used) : ''
     }

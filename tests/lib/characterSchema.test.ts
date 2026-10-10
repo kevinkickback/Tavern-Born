@@ -474,3 +474,41 @@ describe('characterPersistenceSchema', () => {
     ).toBe(false)
   })
 })
+
+test.each([
+  'choices',
+  'racial',
+  'raceName',
+  'raceSource',
+  'castingAbilityOptions',
+])('current nonracial profiles reject native racial field %s', (field) => {
+  const character = makeCharacterFixture()
+  const profile = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+  const values = {
+    choices: [
+      {
+        id: 'injected',
+        level: 0,
+        source: 'known',
+        usage: 'direct',
+        count: 1,
+        isCantrip: true,
+        selected: [],
+        filter: { level: 0, classes: ['Wizard'] },
+      },
+    ],
+    racial: {
+      context: { parent: { name: character.race, source: character.raceSource } },
+      ownerType: 'race',
+      mode: 'alternative',
+      fixed: [],
+    },
+    raceName: character.race,
+    raceSource: character.raceSource,
+    castingAbilityOptions: ['int'],
+  }
+  Object.assign(profile, { [field]: values[field as keyof typeof values] })
+  const before = structuredClone(character)
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+  expect(character).toEqual(before)
+})

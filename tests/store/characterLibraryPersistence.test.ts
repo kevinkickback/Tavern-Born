@@ -9,6 +9,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
@@ -275,36 +276,44 @@ describe('acknowledged character library in IndexedDB', () => {
     'missing fixed ownership',
     'manual fixed ownership',
     'other fixed printing',
+    'duplicate fixed ownership',
+    'duplicate choice ownership',
+    'malformed saved reference',
   ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
     const fixed = corruption.includes('fixed')
+    const race = {
+      name: corruption === 'active other owner' ? 'Parent' : 'Choosing Caster',
+      source: 'OWNER',
+      additionalSpells:
+        corruption === 'active other owner'
+          ? undefined
+          : [{ known: { _: fixed ? ['light|PHB#c'] : [{ choose: 'level=0|class=Wizard' }] } }],
+    } as Race5e
+    const child =
+      corruption === 'active other owner'
+        ? ({
+            name: 'Child',
+            source: 'CHILD',
+            additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
+          } as Race5e)
+        : undefined
     const initial = buildInitialCharacter(
-      {
-        initial: { name: 'Canonical racial choice', originSystem: '2014' },
-        race: {
-          name: corruption === 'active other owner' ? 'Parent' : 'Choosing Caster',
-          source: 'OWNER',
-          additionalSpells:
-            corruption === 'active other owner'
-              ? undefined
-              : [{ known: { _: fixed ? ['light|PHB#c'] : [{ choose: 'level=0|class=Wizard' }] } }],
-        } as Race5e,
-        ...(corruption === 'active other owner'
-          ? {
-              subrace: {
-                name: 'Child',
-                source: 'CHILD',
-                additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard' }] } }],
-              } as Race5e,
-            }
-          : {}),
-      },
+      { initial: { name: 'Canonical racial choice', originSystem: '2014' }, race, subrace: child },
       new Map(),
       () => [],
     )
     const id = initial.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
     const result = fixed
       ? { characterPatch: {}, provenanceUpdate: initial.provenance }
-      : setRacialSpellChoice(initial, initial.provenance, id, 'direct-_-choose-0', ['Light|PHB'])
+      : setRacialSpellChoice(
+          initial,
+          initial.provenance,
+          id,
+          initial.spells.spellProfiles.find((profile) => profile.id === id)!.choices![0].id,
+          ['Light|PHB'],
+          nativeRaceResolution(race, child),
+          nativeChoiceSpellLookup,
+        )
     const valid = {
       ...initial,
       ...result.characterPatch,
@@ -322,6 +331,17 @@ describe('acknowledged character library in IndexedDB', () => {
       })
     else if (corruption === 'other fixed printing')
       malformed.provenance.spells.light[0].grantSource = 'TCE'
+    else if (corruption.startsWith('duplicate'))
+      malformed.provenance.spells.light.push({
+        ...malformed.provenance.spells.light[0],
+        sourceName: ' CHOOSING CASTER ',
+        sourceRef: ' owner ',
+        grantSource: ' phb ',
+        label: 'Duplicate with another label',
+      })
+    else if (corruption === 'malformed saved reference')
+      malformed.spells.spellProfiles.find((profile) => profile.type === 'racial')!.cantrips[0] =
+        'Light|PHB|ignored'
     else if (corruption === 'mismatched target')
       malformed.provenance.spells.light[0].grantSource = 'XPHB'
     else if (corruption === 'active other owner')

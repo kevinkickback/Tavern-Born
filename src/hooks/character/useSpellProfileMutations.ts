@@ -1,3 +1,4 @@
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 /**
  * Spell profile mutation hook.
  *
@@ -11,6 +12,8 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
@@ -21,6 +24,7 @@ import {
   setProfileSpells as setProfileSpellsCommand,
   setRacialCastingAbility as setRacialCastingAbilityCommand,
   setRacialSpellChoice as setRacialSpellChoiceCommand,
+  setRacialSpellSuite as setRacialSpellSuiteCommand,
   syncSpellProfiles,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
@@ -50,6 +54,8 @@ export function useSpellProfileMutations(
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
+  const filtered = useFilteredGameData()
+  const spellsByKey = useMemo(() => buildSpellLookup(filtered.spells), [filtered.spells])
 
   const synchronized = useMemo(() => {
     if (!character) return null
@@ -126,7 +132,13 @@ export function useSpellProfileMutations(
       if (!character || !commandCharacter) return
       const profile = spellProfiles.find((entry) => entry.id === profileId)
       const spellKey = normalizeKey(name)
-      if (profile?.fixedSpells?.some((fixedName) => normalizeKey(fixedName) === spellKey)) return
+      if (profile?.type === 'racial') return
+      if (
+        profile?.fixedSpells?.some(
+          (fixedName) => getSpellReferenceKey(fixedName) === getSpellReferenceKey(name),
+        )
+      )
+        return
       if (
         profile?.type === 'special' &&
         (currentLedger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')
@@ -219,10 +231,19 @@ export function useSpellProfileMutations(
         profileId,
         choiceId,
         spellName,
+        calculationContext?.raceResolution,
+        spellsByKey,
       )
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      applySpellCommand,
+      calculationContext,
+      spellsByKey,
+    ],
   )
 
   const removeRacialSpell = useCallback(
@@ -250,10 +271,35 @@ export function useSpellProfileMutations(
           profileId,
           choiceId,
           selectedSpells,
+          calculationContext?.raceResolution,
+          spellsByKey,
         ),
       )
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      applySpellCommand,
+      calculationContext,
+      spellsByKey,
+    ],
+  )
+
+  const setRacialSpellSuite = useCallback(
+    (profileId: string, suiteId: string | undefined) => {
+      if (!commandCharacter) return
+      applySpellCommand(
+        setRacialSpellSuiteCommand(
+          commandCharacter,
+          currentLedger,
+          profileId,
+          suiteId,
+          calculationContext?.raceResolution,
+        ),
+      )
+    },
+    [commandCharacter, currentLedger, applySpellCommand, calculationContext],
   )
 
   const setRacialCastingAbility = useCallback(
@@ -275,6 +321,7 @@ export function useSpellProfileMutations(
     selectRacialSpell,
     removeRacialSpell,
     setRacialSpellChoice,
+    setRacialSpellSuite,
     setRacialCastingAbility,
   }
 }

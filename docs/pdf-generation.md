@@ -55,7 +55,8 @@ modules only and serializes once. Omitted modules contribute no artwork, fields,
 - Spells default on for casting or spell selections, including racial/bonus spells and unresolved
   class profiles.
 - Companions default on for active creature choices.
-- MPMB notes default on. Other layouts add notes as needed by **Continue in notes**, unless disabled.
+- MPMB notes default on. Other layouts add notes for unknown spell levels, secondary casting
+  summaries, or **Continue in notes**, unless explicitly disabled.
 - Users may include blank pages or omit populated supplements.
 
 **Customize PDF** uses a single-open accordion and bounded lists. Automatic selection prefers
@@ -73,8 +74,9 @@ Description and overflow controls are independent:
   disabling notes reports those details as omitted. Unknown weapon-property labels display their
   abbreviation without the saved source suffix. Known weapon properties use full catalog names;
   Versatile appears once with its two-handed damage die.
-- **Shorten with ellipsis** is the default overflow mode. Aside from MPMB action details, explicit
-  notes pages remain blank.
+- **Shorten with ellipsis** is the default overflow mode. Notes preserve unknown spell levels,
+  secondary casting summaries, and MPMB action details. Otherwise, explicitly included notes pages
+  remain blank.
 - **Continue in notes** preserves full reference text and keeps a useful fitted beginning in each
   main-sheet box, plus a reference to the actual continuation page.
 
@@ -105,26 +107,45 @@ completed exports replace estimated warnings with measured results and readable 
 
 ## Spells and companions
 
-Both 2014 layouts use the shared spell asset per resolved casting class, including subclass casters.
+Both 2014 layouts use the shared spell asset per casting source, including subclasses and each
+actual native racial owner.
 Regular casters repeat the shared multiclass pool; Pact Magic retains its separate pool. Maxima
 derive from parsed progressions and usage is clamped without changing the character. Each page
 deduplicates and determines preparation independently, including always-prepared and ready
-known-caster spells. Racial, bonus, and unresolved-profile spells stay on the first page.
+known-caster spells. Racial owners retain their own rows and casting numbers; bonus and unresolved nonracial profiles
+stay on the first source page. Racial pages print no shared or Pact class slots.
 Per-level overflow continues onto extra spell-page copies independently of the long-text setting.
 
-PDF action projection uses the resolved race selection and the same spell-block/profile-label policy
-as the Spells and Actions pages. Source-qualified saved racial choices retain their existing profile
-identity; complete versions use their own grants, including explicit removal, and named traditional
-parent blocks are filtered to the selected child. An unavailable selected child preserves saved
-profiles rather than substituting the available parent's grants. Projection does not change saved
-choices or state.
-Racial spell targets retain their saved printing independently of the racial owner's source.
-An unavailable qualified target remains unresolved; a same-name spell in another printing cannot
-replace it in spell rows or actions. Independently owned printings remain distinct through projection.
+UI and PDF reuse the same effect-aware casting-number calculation with effective scores,
+total-level proficiency and global/profile-specific effect declarations. Parent and ordinary child
+abilities remain independent. Unknown or unselected ability produces unknown numbers, rather than
+using another owner's ability or assigning a fictitious class level.
+
+PDF Actions and spell rows use the complete exact race context and native selected relation.
+Versions suppress parent mechanics; ordinary owners remain separate. Missing either context member
+retains the applied snapshot. Exact target lookup cannot borrow another printing's level or rules.
+Resolve each owner's saved kind before deduplicating exact rows. When admitted saved owners
+disagree and exact metadata is absent, retain an explicit unknown level and its Notes explanation;
+one owner's cantrip cannot erase another owner's leveled contribution. Same-kind overlaps retain
+one row. Fixed/readiness fields mirroring an owner's cantrip do not create a kind conflict.
+Restored exact spell metadata remains authoritative for numeric level.
+With spell metadata absent, an exclusively saved cantrip remains a cantrip; a known leveled target
+has explicit `?` numeric level. Official 2014 pagination never places that target in a cantrip field. Its name
+and unknown-level explanation continue in notes by default when notes are enabled; disabled notes
+report the omission. Automatic selection preserves these explanations even for unprepared spells
+or rows beyond printed capacity. Explicit manual selection limits explanations to its selected
+rows; omitted optional 2014 spell pages suppress them.
+Characters without a resolved casting source use a neutral unknown-level Notes section. This
+includes bonus-only characters and unprepared class selections whose class data is unavailable;
+it creates no casting owner or spell page and follows the same selection and omission policies.
+Export remains immutable and preserves independent preparation and usage.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.
 Each 2024 form has one casting summary and fixed spell rows; excess spells and secondary summaries
 continue in notes when enabled, rather than duplicating mixed-content core pages.
+Secondary casting summaries are preserved in notes with the default ellipsis setting as well.
+Explicitly disabling notes records their omission. Optional spell-page omissions retain their
+existing overflow suppression.
 
 `buildCompanionSheetData` resolves active source-qualified creature choices; external field
 names/geometry belong in `companionSheetMapping.ts`. Each active creature gets an independent

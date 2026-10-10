@@ -1,4 +1,6 @@
-import type { RaceAdditionalSpells } from '@/types/5etools'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import type { RaceAdditionalSpells, RaceSpellItem, RaceSpellSchedule } from '@/types/5etools'
+import { getRaceSpellChoiceKey } from './raceSpellIdentity'
 import { parseSpellToken } from './spellTokens'
 
 export interface RaceSpellGrant {
@@ -6,8 +8,8 @@ export interface RaceSpellGrant {
   level: number
   isCantrip: boolean
   castingAbility?: string
-  dailyUses?: number
-  source: 'innate' | 'known'
+  dailyUses?: number | 'pb'
+  source: 'innate' | 'known' | 'prepared'
 }
 
 interface RaceSpellChoiceDescriptor {
@@ -15,15 +17,42 @@ interface RaceSpellChoiceDescriptor {
   level: number
   count: number
   isCantrip: boolean
+  source: RaceSpellGrant['source']
+  usage: string
+  dailyUses?: number | 'pb'
   filter?: { level: number; classes: string[] }
   pool?: string[]
 }
 
 export interface ParsedRaceSpellBlock {
+  name?: string
   grants: RaceSpellGrant[]
   choices: RaceSpellChoiceDescriptor[]
   ability?: string
   abilityOptions?: string[]
+  expanded?: Array<{ reference: string; spellLevel: number }>
+  scheduleIdentity: string[]
+}
+
+function requireRecord(value: unknown, label: string, keys?: readonly string[]): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error(`Invalid native spell ${label}.`)
+  if (keys && Object.keys(value).some((key) => !keys.includes(key)))
+    throw new Error(`Unsupported native spell ${label} member.`)
+}
+
+function parseNativeSpellToken(token: string) {
+  // Spell UIDs have one optional source and one optional casting modifier, on either side.
+  if (
+    typeof token !== 'string' ||
+    !/^[^|#{}]+(?:#(?:c|[1-9]))?(?:\|[^|#{}]*(?:#(?:c|[1-9]))?)?$/i.test(token.trim()) ||
+    (token.match(/#/g)?.length ?? 0) > 1
+  )
+    throw new Error('Invalid native spell token.')
+  const parsed = parseSpellToken(token, { preserveSource: true, defaultSource: 'PHB' })
+  if (!parsed.name.trim() || parsed.name.startsWith('|'))
+    throw new Error('Invalid native spell token.')
+  return parsed
 }
 
 /**
@@ -32,156 +61,202 @@ export interface ParsedRaceSpellBlock {
  */
 export function parseChooseFilter(filter: string): { level: number; classes: string[] } {
   let level = 0
+  let hasLevel = false
   const classes: string[] = []
 
   for (const segment of filter.split('|')) {
-    const [key, value] = segment.split('=')
-    if (!key || !value) continue
+    const [key, value, extra] = segment.split('=')
+    if (!key || !value || extra !== undefined) throw new Error('Incomplete native spell filter.')
     const k = key.trim().toLowerCase()
     if (k === 'level') {
-      const parsed = Number.parseInt(value.trim(), 10)
-      if (Number.isFinite(parsed)) level = parsed
+      if (hasLevel) throw new Error('Duplicate native spell filter level.')
+      hasLevel = true
+      const parsed = /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 9)
+        throw new Error('Invalid native spell filter level.')
+      level = parsed
     } else if (k === 'class') {
-      for (const cls of value.split(';')) {
-        const trimmed = cls.trim()
-        if (trimmed) classes.push(trimmed)
-      }
-    }
+      const suppliedClasses = value
+        .split(';')
+        .map((cls) => cls.trim())
+        .filter(Boolean)
+      if (!suppliedClasses.length) throw new Error('Incomplete native spell filter.')
+      classes.push(...suppliedClasses)
+    } else throw new Error('Unsupported native spell filter field: ' + key)
   }
 
   return { level, classes }
 }
 
-function parseKnownBlock(
-  levelEntries: NonNullable<RaceAdditionalSpells['known']>,
+function parseSchedule(
+  entries: RaceSpellSchedule | undefined,
   ability: string | undefined,
-): { grants: RaceSpellGrant[]; choices: RaceSpellChoiceDescriptor[] } {
+  source: RaceSpellGrant['source'],
+) {
   const grants: RaceSpellGrant[] = []
   const choices: RaceSpellChoiceDescriptor[] = []
-  let legacyChoiceIndex = 0
-
-  for (const [levelText, spellData] of Object.entries(levelEntries)) {
-    const level = levelText === '_' ? 0 : Number.parseInt(levelText, 10)
-    if (!Number.isFinite(level)) continue
-
-    const items = Array.isArray(spellData) ? spellData : spellData?._
-    if (!Array.isArray(items)) continue
-    let directChoiceIndex = 0
-    for (const item of items) {
-      if (typeof item === 'string') {
-        const parsed = parseSpellToken(item, { preserveSource: true, defaultSource: 'PHB' })
-        grants.push({
-          spellName: parsed.name,
-          level,
-          isCantrip: parsed.isCantrip,
-          castingAbility: ability,
-          source: 'known',
-        })
-      } else if (item && typeof item === 'object' && typeof item.choose === 'string') {
-        const count = item.count ?? 1
-        if (!Number.isInteger(count) || count <= 0) continue
-        const filter = parseChooseFilter(item.choose)
-        // Newly supported direct lists must not shift saved nested-list choice IDs.
-        const id = Array.isArray(spellData)
-          ? `direct-${levelText}-choose-${directChoiceIndex++}`
-          : `choose-${legacyChoiceIndex++}`
-        choices.push({
-          id,
+  const scheduleIdentity: string[] = []
+  if (entries !== undefined) requireRecord(entries, 'schedule')
+  for (const [levelText, schedule] of Object.entries(entries ?? {})) {
+    const level = levelText === '_' ? 0 : /^\d+$/.test(levelText) ? Number(levelText) : NaN
+    if (!Number.isInteger(level) || level < 0 || level > 20)
+      throw new Error('Invalid native spell eligibility level.')
+    const visit = (
+      items: RaceSpellItem[] | undefined,
+      dailyUses?: number | 'pb',
+      usage = 'direct',
+    ) => {
+      if (items !== undefined && !Array.isArray(items))
+        throw new Error('Invalid native spell list.')
+      const identities: string[] = []
+      for (const item of items ?? []) {
+        if (typeof item === 'string') {
+          const parsed = parseNativeSpellToken(item)
+          const modifier =
+            item
+              .match(/#([^|]+)/)?.[1]
+              ?.trim()
+              .toLowerCase() ?? null
+          identities.push(JSON.stringify([getSpellReferenceKey(parsed.name), modifier]))
+          grants.push({
+            spellName: parsed.name,
+            level,
+            isCantrip: parsed.isCantrip,
+            castingAbility: ability,
+            source,
+            ...(dailyUses !== undefined ? { dailyUses } : {}),
+          })
+          continue
+        }
+        requireRecord(item, 'descriptor', ['choose', 'count'])
+        if (typeof item.choose !== 'string') {
+          requireRecord(item.choose, 'choice', ['from', 'count'])
+          if (
+            item.count !== undefined &&
+            item.choose.count !== undefined &&
+            item.count !== item.choose.count
+          )
+            throw new Error('Conflicting native spell choice counts.')
+        }
+        const count =
+          item.count ?? (typeof item.choose === 'object' ? item.choose.count : undefined) ?? 1
+        const suppliedCounts = [
+          item.count,
+          typeof item.choose === 'object' ? item.choose.count : undefined,
+        ]
+        if (
+          suppliedCounts.some(
+            (value) => value !== undefined && (!Number.isSafeInteger(value) || value <= 0),
+          )
+        )
+          throw new Error('Invalid native spell choice count.')
+        let target: Pick<RaceSpellChoiceDescriptor, 'isCantrip' | 'filter' | 'pool'>
+        if (typeof item.choose === 'string') {
+          const filter = parseChooseFilter(item.choose)
+          target = { isCantrip: filter.level === 0, filter }
+        } else if (item.choose && Array.isArray(item.choose.from)) {
+          const parsed = item.choose.from.map(parseNativeSpellToken)
+          if (!parsed.length || parsed.some((entry) => entry.isCantrip !== parsed[0].isCantrip))
+            throw new Error('A native spell pool must declare a consistent spell kind.')
+          target = {
+            isCantrip: parsed[0].isCantrip,
+            pool: [
+              ...new Map(
+                parsed.map((entry) => [getSpellReferenceKey(entry.name), entry.name]),
+              ).values(),
+            ],
+          }
+        } else throw new Error('Unsupported native spell descriptor.')
+        const descriptor = {
           level,
           count,
-          isCantrip: filter.level === 0,
-          filter,
-        })
+          source,
+          usage,
+          ...target,
+          ...(dailyUses !== undefined ? { dailyUses } : {}),
+        }
+        const id = getRaceSpellChoiceKey(descriptor)
+        choices.push({ ...descriptor, id })
+        identities.push(id)
+      }
+      if (identities.length)
+        scheduleIdentity.push(JSON.stringify([source, level, usage, identities.sort()]))
+    }
+    if (Array.isArray(schedule)) visit(schedule)
+    else {
+      requireRecord(schedule, 'schedule', ['_', 'will', 'ritual', 'rest', 'daily'])
+      visit(schedule._)
+      visit(schedule.will, undefined, 'will')
+      visit(schedule.ritual, undefined, 'ritual')
+      if (schedule.rest !== undefined) requireRecord(schedule.rest, 'rest limits')
+      if (schedule.daily !== undefined) requireRecord(schedule.daily, 'daily limits')
+      for (const [uses, items] of Object.entries(schedule.rest ?? {})) {
+        if (!/^[1-9]\d*e?$/.test(uses) || !Number.isSafeInteger(Number.parseInt(uses, 10)))
+          throw new Error('Invalid native spell rest limit.')
+        visit(items, undefined, 'rest:' + uses)
+      }
+      for (const [uses, items] of Object.entries(schedule.daily ?? {})) {
+        const dailyUses =
+          uses === 'pb' ? 'pb' : /^[1-9]\d*e?$/.test(uses) ? Number.parseInt(uses, 10) : NaN
+        if (dailyUses === 'pb' || (Number.isSafeInteger(dailyUses) && Number(dailyUses) > 0))
+          visit(items, dailyUses, 'daily:' + uses)
+        else throw new Error('Invalid native spell daily limit.')
       }
     }
   }
-
-  return { grants, choices }
-}
-
-function parseInnateBlock(
-  innateEntries: NonNullable<RaceAdditionalSpells['innate']>,
-  ability: string | undefined,
-): RaceSpellGrant[] {
-  const grants: RaceSpellGrant[] = []
-
-  for (const [levelText, usageMap] of Object.entries(innateEntries)) {
-    const level = levelText === '_' ? 0 : Number.parseInt(levelText, 10)
-    if (!Number.isFinite(level) || !usageMap || typeof usageMap !== 'object') continue
-
-    if (Array.isArray(usageMap)) {
-      for (const rawSpell of usageMap) {
-        if (typeof rawSpell !== 'string') continue
-        const parsed = parseSpellToken(rawSpell, { preserveSource: true, defaultSource: 'PHB' })
-        grants.push({
-          spellName: parsed.name,
-          level,
-          isCantrip: parsed.isCantrip,
-          castingAbility: ability,
-          source: 'innate',
-        })
-      }
-      continue
-    }
-
-    const daily = (usageMap as Record<string, unknown>).daily
-    if (!daily || typeof daily !== 'object') continue
-
-    for (const [usesText, spells] of Object.entries(daily as Record<string, unknown>)) {
-      const dailyUses = Number.parseInt(usesText, 10)
-      if (!Number.isFinite(dailyUses) || !Array.isArray(spells)) continue
-
-      for (const rawSpell of spells) {
-        if (typeof rawSpell !== 'string') continue
-        const parsed = parseSpellToken(rawSpell, { preserveSource: true, defaultSource: 'PHB' })
-        grants.push({
-          spellName: parsed.name,
-          level,
-          isCantrip: parsed.isCantrip,
-          castingAbility: ability,
-          dailyUses,
-          source: 'innate',
-        })
-      }
-    }
-  }
-
-  return grants
+  return { grants, choices, scheduleIdentity }
 }
 
 function parseAbilityField(abilityField: string | { choose: string[] } | undefined): {
   ability?: string
   abilityOptions?: string[]
 } {
-  if (!abilityField) return {}
-  if (typeof abilityField === 'string') return { ability: abilityField }
-  if (
-    typeof abilityField === 'object' &&
-    'choose' in abilityField &&
-    Array.isArray(abilityField.choose)
-  ) {
-    return { abilityOptions: abilityField.choose }
+  if (abilityField === undefined) return {}
+  const parseAbility = (value: string) => {
+    if (typeof value !== 'string' || !/^(str|dex|con|int|wis|cha)$/i.test(value.trim()))
+      throw new Error('Invalid native spell casting ability.')
+    return value.trim().toLowerCase()
   }
-  return {}
+  if (typeof abilityField === 'string') return { ability: parseAbility(abilityField) }
+  requireRecord(abilityField, 'ability', ['choose'])
+  if (!Array.isArray(abilityField.choose) || !abilityField.choose.length)
+    throw new Error('Invalid native spell ability options.')
+  return { abilityOptions: [...new Set(abilityField.choose.map(parseAbility))] }
 }
 
 /**
  * Parse a single additionalSpells block into structured grants and choices.
  */
 function parseBlock(block: RaceAdditionalSpells): ParsedRaceSpellBlock {
+  requireRecord(block, 'block', ['name', 'ability', 'known', 'innate', 'prepared', 'expanded'])
+  if (block.name !== undefined && (typeof block.name !== 'string' || !block.name.trim()))
+    throw new Error('Invalid native spell block name.')
   const { ability, abilityOptions } = parseAbilityField(block.ability)
   const resolvedAbility = ability
 
-  const knownResult = block.known
-    ? parseKnownBlock(block.known, resolvedAbility)
-    : { grants: [], choices: [] }
-  const innateGrants = block.innate ? parseInnateBlock(block.innate, resolvedAbility) : []
-
+  const schedules = [
+    parseSchedule(block.known, resolvedAbility, 'known'),
+    parseSchedule(block.innate, resolvedAbility, 'innate'),
+    parseSchedule(block.prepared, resolvedAbility, 'prepared'),
+  ]
+  if (block.expanded !== undefined) requireRecord(block.expanded, 'expanded list')
+  const expanded = Object.entries(block.expanded ?? {}).flatMap(([key, references]) => {
+    const spellLevel = /^s[0-9]$/.test(key) ? Number(key.slice(1)) : NaN
+    if (!Number.isInteger(spellLevel) || !Array.isArray(references))
+      throw new Error('Invalid native spell expanded list.')
+    return references.map((token) => ({
+      reference: parseNativeSpellToken(token).name,
+      spellLevel,
+    }))
+  })
   return {
-    grants: [...knownResult.grants, ...innateGrants],
-    choices: knownResult.choices,
+    ...(block.name ? { name: block.name } : {}),
+    grants: schedules.flatMap((schedule) => schedule.grants),
+    choices: schedules.flatMap((schedule) => schedule.choices),
     ability: resolvedAbility,
     abilityOptions,
+    scheduleIdentity: schedules.flatMap((schedule) => schedule.scheduleIdentity).sort(),
+    ...(expanded.length ? { expanded } : {}),
   }
 }
 
@@ -189,21 +264,19 @@ function parseBlock(block: RaceAdditionalSpells): ParsedRaceSpellBlock {
  * Parse all additionalSpells blocks and determine mutual-exclusive vs single.
  *
  * Convention: `additionalSpells.length > 1` = mutually exclusive blocks (pick one).
- * Each block's fixed spells become a `pool` choice. Single block = all fixed spells
- * apply, plus any internal choose filters.
+ * Preserve whole blocks; the native profile evaluator activates one complete suite.
  */
 export function parseRaceSpellBlocks(
   additionalSpells: RaceAdditionalSpells[] | undefined,
 ): ParsedRaceSpellBlock[] {
-  if (!additionalSpells || additionalSpells.length === 0) return []
+  if (additionalSpells === undefined) return []
+  if (!Array.isArray(additionalSpells)) throw new Error('Invalid native spell blocks.')
   return additionalSpells.map(parseBlock)
 }
 
 export function parseRaceSpells(
   additionalSpells: RaceAdditionalSpells[] | undefined,
 ): RaceSpellGrant[] {
-  if (!additionalSpells || additionalSpells.length === 0) return []
-
   const blocks = parseRaceSpellBlocks(additionalSpells)
   const grants: RaceSpellGrant[] = []
   for (const block of blocks) {

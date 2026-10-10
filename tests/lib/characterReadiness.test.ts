@@ -965,5 +965,17 @@ describe('getCharacterReadiness', () => {
     const result = getCharacterReadiness(character, { calculation })
 
     expect(result.blockingIssues.filter((issue) => issue.id.startsWith('spells:'))).toEqual([])
+    const overPrepared = structuredClone(character)
+    overPrepared.spells.spellProfiles[0].preparedSpells.push('Detect Magic')
+    const overPreparedResult = getCharacterReadiness(overPrepared, {
+      calculation: createCharacterCalculationContext(overPrepared, {
+        classesByKey: { 'Wizard|PHB': wizard },
+      }),
+    })
+    expect(
+      overPreparedResult.blockingIssues
+        .filter((issue) => issue.id.startsWith('spells:'))
+        .map((issue) => issue.id),
+    ).toEqual(['spells:prepared-over-limit:class:Wizard|PHB'])
   })
 })

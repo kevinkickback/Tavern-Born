@@ -15,7 +15,6 @@ import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
-import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import {
   applyRaceAbilityGrants,
   applyRaceGrants,
@@ -203,8 +202,7 @@ export function applyRaceSelectionCommand(
     retainedProvenance,
     resolveRaceChoiceOptions,
     raceAsiBlockIndex,
-    getTotalCharacterLevel(character),
-    { suppressLanguageGrants: character.originSystem === '2024', suppressSpellGrants: true },
+    { suppressLanguageGrants: character.originSystem === '2024' },
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
@@ -303,10 +301,8 @@ export function applySubraceSelectionCommand(
       provenanceUpdate,
       resolveRaceChoiceOptions,
       (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-      getTotalCharacterLevel(character),
       {
         suppressLanguageGrants: character.originSystem === '2024',
-        suppressSpellGrants: true,
         suppressAbilityGrants: true,
       },
     )

@@ -124,7 +124,7 @@ export function mapCharacterSheet2024(
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
     viewModel.classFeaturesSummary2014,
   )
-  const primarySpellcasting = viewModel.spellcastingDetails[0]
+  const primarySpellcasting = viewModel.spellcastingSources[0]
   const spellRows = get2024SpellRows(viewModel)
   const attunedItems = viewModel.magicItems
     .filter((item) => item.attuned)

@@ -14,13 +14,14 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Exact nonracial source-choice cleanup measures 5,609,296 renderer bytes;
-  // use the smallest whole-KiB allowance after explicit budget review.
-  rendererCode: 5478 * KIB,
-  // The shared spell-state projection moves existing rules into the initial script:
-  // 463,554 bytes (452.7 KiB). Use the smallest whole-KiB allowance after explicit review.
-  // Other budgets and their enforcement remain unchanged; explicit budget review required.
-  initialRendererScript: 453 * KIB,
+  // Native racial suites, strict applied ownership and source-local controls measure
+  // 5,622,011 renderer bytes, including complete native parser and admission validation;
+  // use the smallest whole-KiB allowance
+  // after explicit budget review. Other budgets and enforcement remain unchanged.
+  rendererCode: 5491 * KIB,
+  // Shared native evaluation, parsing and admission measure 471,732 initial bytes.
+  // Use the smallest whole-KiB allowance after explicit budget review.
+  initialRendererScript: 461 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

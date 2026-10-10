@@ -651,16 +651,22 @@ export function CharacterOverview({
         <div className="space-y-4">
           <OverviewSection title="Spells & spellcasting" count={spells.length}>
             <div className="space-y-4">
-              {spellcasting.spellcastingDetails.map((detail) => (
+              {[
+                ...spellcasting.spellcastingDetails.map((detail) => ({
+                  ...detail,
+                  sourceName: detail.className,
+                })),
+                ...spellcasting.racialSpellcastingDetails,
+              ].map((detail) => (
                 <div key={detail.profileId} className="rounded-lg border border-border p-3 text-sm">
-                  <strong>{detail.className}</strong>
+                  <strong>{detail.sourceName}</strong>
                   <p className="mt-1 text-muted-foreground">
-                    {detail.spellcastingAbility ? `${detail.spellcastingAbility} · ` : ''}Save DC{' '}
+                    {detail.spellcastingAbility ?? 'Unselected ability'} · Save DC{' '}
                     {detail.spellSaveDC ?? '—'} · Spell attack{' '}
                     {detail.spellAttackBonus == null
                       ? '—'
                       : formatModifier(detail.spellAttackBonus)}
-                    {detail.preparedSpellLimit != null
+                    {'preparedSpellLimit' in detail && detail.preparedSpellLimit != null
                       ? ` · Prepared limit ${detail.preparedSpellLimit}`
                       : ''}
                   </p>

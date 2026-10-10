@@ -209,21 +209,49 @@ that previously omitted unattached subraces without reporting a required failure
 Array additions that use `appendIfNotExistsArr` compare JSON values structurally: object member
 order does not create a second trait, while array order and distinct values remain significant.
 
-Racial spell parsing accepts direct `known` arrays containing fixed spell tokens or filtered choice
-objects, and the existing nested `_` list shape. The `_` level key is an ungated grant; numeric keys
-retain their character-level requirement. Parsed filtered choices retain a positive integer `count`
-(default one when omitted). Innate direct arrays and daily-use groups retain spell identity, level,
-and daily limits where supplied. Spell UIDs retain the explicit target printing and `#c` marker,
-including a marker after the printing (`light|XPHB#c`). An omitted native target printing defaults
-to PHB, independently of the racial owner's source or character edition, following the pinned
-upstream `DataUtil.generic.unpackUid` / `Parser.getTagSource` spell default. Modernization is a
-separate upstream operation and is not inferred by this decoder. Complete-version spell consumers
-use the version's blocks without
-reapplying parent blocks; traditional subraces retain their existing composition behavior. Other
-racial spell schedules and choice shapes need their own supported adapter before automation.
-Previously supported nested choices keep their saved `choose-N` identifiers. Newly supported direct
-lists use a separate identifier per granting level/list so they cannot inherit an older nested
-choice's saved selection.
+Racial spell parsing preserves complete native additional-spell blocks: their names, fixed or chosen
+casting ability, character-level schedules, direct/nested lists, positive choice counts, filters,
+explicit target pools and supplied daily limits, including proficiency-based `pb` expressions.
+Known, innate and prepared grants support direct,
+`_`, will, ritual, daily and rest buckets. Expanded `sN` entries extend class-list eligibility; they
+never become automatic known racial spells. This boundary does not implement expendable daily/rest
+resources. Unsupported filter fields and invalid schedule levels/counts are diagnostic errors.
+The native evaluator validates the complete supported grammar before returning a suite. Supplied
+blocks and schedules must be objects, lists must be arrays, and every member must be recognized;
+mixed supported/unsupported rules reject together. Expanded lists accept `s0` through `s9` only,
+including cantrip eligibility. Unsupported upstream constructs such as resource/limited buckets
+and all-matching descriptors produce diagnostics rather than partial grants. This validation runs
+when native rules are evaluated; the source loader retains raw additional-spell records.
+Choice descriptors reject unknown members and conflicting inner/outer counts. Both count locations
+remain supported when unambiguous. Casting abilities must be one of the six abbreviations or a
+nonempty choice set; spelling, case and whitespace normalization never invent a missing ability.
+Malformed spell UIDs, display markup, unknown casting modifiers and extra UID fields reject locally
+before decoding; the shared codec's unrelated consumers are unchanged. Empty lists and omitted optional rules remain
+valid. No character conversion or data-cache change is needed for this live validation boundary.
+Whole-field `additionalSpells: null` remains an upstream inheritance-removal marker, normalized to
+absence before native evaluation. Null schedules or lists inside a supplied block are malformed.
+An explicitly supplied class filter requires at least one nonempty class name; whitespace or
+semicolon-only constraints reject instead of becoming unrestricted. Omitting the class segment
+remains unrestricted, and class-only filters retain their native cantrip-level default.
+Filter segments require exactly one equals sign. A level field may appear once; repeated class
+fields retain their union semantics. Conflicting or duplicate level assignments reject.
+Daily/rest usage keys must be canonical positive integers, optionally ending in `e`; only daily
+also accepts `pb`. Zero, leading zeros and unsupported rest expressions reject before materialization.
+
+Spell UIDs retain exact target printing and `#c`, including a marker after the printing. An omitted
+target source defaults to PHB independently of the owner source or origin edition, following the
+pinned upstream spell UID default. Casting modifiers and usage buckets remain part of live suite
+identity. Complete versions suppress parent blocks; ordinary parent and child each retain an actual
+owner. Named traditional parent blocks filter to the selected child.
+
+`raceSpellIdentity.ts` encodes canonical structural owner/context/suite/descriptor identities.
+Object/list order, casing and surrounding UID whitespace do not change equivalent setup. Duplicate
+suite or descriptor identities reject rather than assigning an ordinal. Descriptor scope includes
+its native grant kind and usage bucket, so identical pools at different
+daily/rest limits remain independent. IDs are opaque to eligibility
+consumers: missing rules cannot be reconstructed from an encoded identifier. The pure native evaluator
+activates one complete block, retaining an applied snapshot rather than persisting an alternative
+catalog or future schedule. See [spell ownership](provenance.md#reconciliation-rules).
 
 ## Prerequisite eligibility
 

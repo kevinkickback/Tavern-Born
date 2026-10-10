@@ -93,7 +93,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     })
     const vm = createCharacterSheetViewModel(character, lookups)
     expect(getOfficial2014SpellPages(vm)).toHaveLength(count)
-    expect(getOfficial2014SpellPages(vm).map((page) => page.detail?.className)).toEqual(
+    expect(getOfficial2014SpellPages(vm).map((page) => page.detail?.sourceName)).toEqual(
       count === 1 ? ['Wizard'] : ['Wizard', 'Fighter'],
     )
   })
@@ -146,7 +146,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     const before = structuredClone(character)
     const vm = createCharacterSheetViewModel(character, lookups)
     const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
-    expect(saved.getPageCount()).toBe(5)
+    expect(saved.getPageCount()).toBe(6)
     const form = saved.getForm()
     const prefixes = ['', 'SpellPage2__', 'SpellPage3__']
     const expectedHeaders = ['Wizard', 'Cleric', 'Warlock (Pact Magic)']
@@ -180,8 +180,15 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
       expect(form.getTextField(`${prefix}SlotsRemaining 20`).getText()).toBe(index < 2 ? '0' : '1')
       expect(
         form.getTextField(`${prefix}${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[0][0]}`).getText() ?? '',
-      ).toBe(index === 0 ? 'Light' : '')
+      ).toBe('')
     }
+    expect(form.getTextField('SpellPage4__Spellcasting Class 2').getText()).toBe('Elf')
+    expect(
+      form.getTextField('SpellPage4__' + OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[0][0]).getText(),
+    ).toBe('Light')
+    expect(form.getTextField('SpellPage4__SpellSaveDC  2').getText() ?? '').toBe('')
+    expect(form.getTextField('SpellPage4__SlotsTotal 19').getText() ?? '').toBe('')
+    expect(form.getTextField('SpellPage4__SlotsRemaining 19').getText() ?? '').toBe('')
     form
       .getTextField(`SpellPage2__${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]}`)
       .setText('Edited Cleric spell')

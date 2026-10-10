@@ -30,7 +30,12 @@ import {
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
+import {
+  buildRacialSpellcastingDetails,
+  buildSpellcastingClassDetails,
+  type SpellcastingClassDetail,
+  type SpellcastingNumbers,
+} from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
 import {
@@ -82,6 +87,13 @@ interface CharacterSheetWeaponRow {
   range: string
   notes: string
   description: string
+}
+
+interface CharacterSheetSpellcastingSource extends SpellcastingNumbers {
+  sourceName: string
+  source: string
+  sourceType: 'class' | 'racial'
+  classDetail?: SpellcastingClassDetail
 }
 
 interface CharacterSheetSpellRow {
@@ -143,7 +155,7 @@ export interface CharacterSheetViewModel {
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
   spellcastingPages: Array<{
-    detail: ReturnType<typeof buildSpellcastingClassDetails>[number]
+    detail: CharacterSheetSpellcastingSource
     spellRows: CharacterSheetSpellRow[]
   }>
   spellSlots: ReturnType<typeof calculateCharacterSpellSlots>
@@ -159,6 +171,7 @@ export interface CharacterSheetViewModel {
   mergedRace: Race5e | undefined
   background: Background5e | undefined
   spellcastingDetails: ReturnType<typeof buildSpellcastingClassDetails>
+  spellcastingSources: CharacterSheetSpellcastingSource[]
   visionSummary: string
   racialTraitsSummary: string
   backgroundFeature: { name: string; description: string }
@@ -488,7 +501,24 @@ function buildSpellRows(
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
+  const cantrips = new Set<string>()
+  const leveled = new Set<string>()
   for (const profile of profiles) {
+    const ownerCantrips = new Set(
+      profile.cantrips.map((reference) => getSpellReferenceKey(reference)),
+    )
+    for (const key of ownerCantrips) cantrips.add(key)
+    for (const reference of profile.spellsKnown) leveled.add(getSpellReferenceKey(reference))
+    // Readiness and fixed fields may mirror that owner's cantrip; another owner's
+    // cantrip must never erase a separately saved leveled contribution.
+    for (const reference of [
+      ...profile.preparedSpells,
+      ...(profile.fixedSpells ?? []),
+      ...(profile.alwaysPreparedSpells ?? []),
+    ]) {
+      const key = getSpellReferenceKey(reference)
+      if (!ownerCantrips.has(key)) leveled.add(key)
+    }
     const detail = castingDetails.find((entry) => entry.profileId === profile.id)
     const alwaysReady =
       profile.alwaysPrepared ||
@@ -522,7 +552,14 @@ function buildSpellRows(
         id: getSpellReferenceKey(reference),
         name: spell?.name ?? fallbackName,
         prepared: prepared.has(getSpellReferenceKey(reference)),
-        level: spell ? (spell.level === 0 ? 'C' : String(spell.level)) : '',
+        level: spell
+          ? spell.level === 0
+            ? 'C'
+            : String(spell.level)
+          : cantrips.has(getSpellReferenceKey(reference)) &&
+              !leveled.has(getSpellReferenceKey(reference))
+            ? 'C'
+            : '?',
         castingTimeAndDuration: spell
           ? `${formatCastingTime(spell.time)}; ${formatDuration(spell.duration)}`
           : '',
@@ -539,8 +576,10 @@ function buildSpellRows(
       }
     })
     .sort((left, right) => {
-      const leftLevel = left.level === 'C' ? 0 : Number(left.level || 99)
-      const rightLevel = right.level === 'C' ? 0 : Number(right.level || 99)
+      const leftLevel =
+        left.level === 'C' ? 0 : /^[1-9]$/.test(left.level) ? Number(left.level) : 99
+      const rightLevel =
+        right.level === 'C' ? 0 : /^[1-9]$/.test(right.level) ? Number(right.level) : 99
       return leftLevel - rightLevel || left.name.localeCompare(right.name)
     })
 }
@@ -730,6 +769,21 @@ export function createCharacterSheetViewModel(
     calculationContext.effects.declarations,
     calculationContext.effects.resolutionContext,
   )
+  const spellcastingSources: CharacterSheetSpellcastingSource[] = [
+    ...spellcastingDetails.map((detail) => ({
+      ...detail,
+      sourceName: detail.className,
+      source: detail.classSource ?? '',
+      sourceType: 'class' as const,
+      classDetail: detail,
+    })),
+    ...buildRacialSpellcastingDetails(
+      character,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ).map((detail) => ({ ...detail, sourceType: 'racial' as const })),
+  ]
   const actions = deriveCharacterActions(character, {
     abilityModifiers,
     proficiencyBonus,
@@ -791,13 +845,13 @@ export function createCharacterSheetViewModel(
       rawLookups.spellsByKey ?? {},
       spellcastingDetails,
     ),
-    spellcastingPages: spellcastingDetails.map((detail, index) => ({
+    spellcastingPages: spellcastingSources.map((detail, index) => ({
       detail,
       spellRows: buildSpellRows(
         character.spells.spellProfiles.filter(
           (profile) =>
             profile.id === detail.profileId ||
-            (index === 0 && !spellcastingDetails.some((caster) => caster.profileId === profile.id)),
+            (index === 0 && !spellcastingSources.some((caster) => caster.profileId === profile.id)),
         ),
         rawLookups.spellsByKey ?? {},
         spellcastingDetails,
@@ -810,6 +864,7 @@ export function createCharacterSheetViewModel(
     mergedRace: raceResolution.mergedRace,
     background,
     spellcastingDetails,
+    spellcastingSources,
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),

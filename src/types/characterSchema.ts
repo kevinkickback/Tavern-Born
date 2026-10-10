@@ -4,17 +4,11 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import {
-  getSpellNameKey,
-  getSpellReferenceKey,
-  parseSpellReference,
-} from '@/lib/calculations/spellIdentity'
+import { getInvalidNativeRacialSpellPaths } from '@/lib/provenance/nativeRacialSpellValidation'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
 import {
   getUnselectedRaceOwnerPaths,
   hasRaceAbilityOriginGrants,
-  isRacialSpellChoiceOwner,
-  isSelectedRaceOwner,
 } from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -659,19 +653,47 @@ const spellSlotsSchema = z
     return normalized
   })
 
-const raceSpellChoiceSchema = z.object({
-  id: z.string().min(1),
-  count: z.number().int().min(1),
-  isCantrip: z.boolean(),
-  filter: z
-    .object({
-      level: z.number().int().min(0),
-      classes: z.array(z.string().min(1)).min(1),
-    })
-    .optional(),
-  pool: z.array(z.string()).optional(),
-  selected: z.array(z.string()).default([]),
-})
+const raceSpellChoiceSchema = z
+  .object({
+    id: z.string().min(1),
+    level: z.number().int().min(0).max(MAX_CHARACTER_LEVEL),
+    source: z.enum(['known', 'innate', 'prepared']),
+    usage: z.string().regex(/^(direct|will|ritual|daily:(pb|[1-9]\d*e?)|rest:[1-9]\d*e?)$/),
+    dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
+    count: z.number().int().positive(),
+    isCantrip: z.boolean(),
+    filter: z
+      .object({ level: z.number().int().min(0).max(9), classes: z.array(z.string().min(1)) })
+      .strict()
+      .optional(),
+    pool: z.array(z.string().min(1)).optional(),
+    selected: z.array(z.string().min(1)),
+  })
+  .strict()
+
+const racialOwnerSchema = z
+  .object({ name: z.string().trim().min(1), source: z.string().trim().min(1) })
+  .strict()
+const racialSpellStateSchema = z
+  .object({
+    context: z.object({ parent: racialOwnerSchema, child: racialOwnerSchema.optional() }).strict(),
+    ownerType: z.enum(['race', 'subrace']),
+    mode: z.enum(['mandatory', 'alternative']),
+    suite: z
+      .object({ id: z.string().min(1), name: z.string().min(1).optional() })
+      .strict()
+      .optional(),
+    fixed: z.array(
+      z
+        .object({
+          reference: z.string().min(1),
+          isCantrip: z.boolean(),
+          dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
 
 const spellProfileSchema = z
   .object({
@@ -682,6 +704,7 @@ const spellProfileSchema = z
     classSource: z.string().optional(),
     raceName: z.string().optional(),
     raceSource: z.string().optional(),
+    racial: racialSpellStateSchema.optional(),
     castingAbility: z.string().optional(),
     castingAbilityOptions: z.array(z.string()).optional(),
     choices: z.array(raceSpellChoiceSchema).optional(),
@@ -695,6 +718,7 @@ const spellProfileSchema = z
       .record(z.coerce.number(), z.object({ removed: z.string(), added: z.string() }))
       .optional(),
   })
+  .strict()
   .refine(
     (profile) => {
       if (profile.type === 'class' && !profile.className) {
@@ -707,62 +731,6 @@ const spellProfileSchema = z
       path: ['className'],
     },
   )
-  .superRefine((profile, context) => {
-    if (profile.type !== 'racial') return
-    const requireTarget = (reference: string, path: (string | number)[]) => {
-      const parsed = parseSpellReference(reference)
-      if (!parsed.name || !parsed.source) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          path,
-          message: 'Racial spells require a complete target name and source.',
-        })
-      }
-    }
-    for (const field of [
-      'cantrips',
-      'spellsKnown',
-      'preparedSpells',
-      'fixedSpells',
-      'alwaysPreparedSpells',
-    ] as const) {
-      profile[field]?.forEach((reference, index) => {
-        requireTarget(reference, [field, index])
-      })
-    }
-    profile.choices?.forEach((choice, index) => {
-      choice.selected.forEach((reference, selectedIndex) => {
-        requireTarget(reference, ['choices', index, 'selected', selectedIndex])
-      })
-      choice.pool?.forEach((reference, poolIndex) => {
-        requireTarget(reference, ['choices', index, 'pool', poolIndex])
-      })
-    })
-    const fixedTargets = (profile.fixedSpells ?? []).map((reference) =>
-      getSpellReferenceKey(reference),
-    )
-    for (const [field, isCantrip] of [
-      ['cantrips', true],
-      ['spellsKnown', false],
-    ] as const) {
-      const accountedTargets = new Set([
-        ...fixedTargets,
-        ...(profile.choices ?? [])
-          .filter((choice) => choice.isCantrip === isCantrip)
-          .flatMap((choice) => choice.selected.map((reference) => getSpellReferenceKey(reference))),
-      ])
-      profile[field].forEach((reference, index) => {
-        if (!accountedTargets.has(getSpellReferenceKey(reference))) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [field, index],
-            message:
-              'Materialized racial spells must belong to a fixed grant or a selected choice of the same spell kind.',
-          })
-        }
-      })
-    }
-  })
 
 const spellSelectionSchema = z
   .object({
@@ -910,97 +878,14 @@ export const characterSchema = z
         path: ['race'],
       })
     }
+    for (const path of getInvalidNativeRacialSpellPaths(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Native racial spell setup, exact ownership and typed materialization must agree.',
+      })
+    }
     if (char.provenance) {
-      const selectedRacialTargets = new Map<string, Set<string>>()
-      char.spells.spellProfiles.forEach((profile, profileIndex) => {
-        if (profile.type !== 'racial') return
-        profile.fixedSpells?.forEach((reference, index) => {
-          const target = getSpellReferenceKey(reference)
-          const owned = (char.provenance.spells[getSpellNameKey(reference)] ?? []).some(
-            (tag) =>
-              tag.grantType === 'fixed' &&
-              isSelectedRaceOwner(tag, char) &&
-              getSpellReferenceKey(reference, tag.grantSource) === target,
-          )
-          if (!owned)
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: 'Racial fixed spell declarations require matching exact active-owner grants',
-              path: ['spells', 'spellProfiles', profileIndex, 'fixedSpells', index],
-            })
-        })
-        profile.choices?.forEach((choice, choiceIndex) => {
-          const poolTargets = choice.pool
-            ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
-            : undefined
-          const targets = selectedRacialTargets.get(choice.id) ?? new Set<string>()
-          const materialized = new Set(
-            (choice.isCantrip ? profile.cantrips : profile.spellsKnown).map((reference) =>
-              getSpellReferenceKey(reference),
-            ),
-          )
-          const names = new Set(choice.selected.map(getSpellNameKey))
-          if (names.size !== choice.selected.length || names.size > choice.count) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: 'Racial spell choices require unique logical spells within their quota',
-              path: ['spells', 'spellProfiles', profileIndex, 'choices', choiceIndex, 'selected'],
-            })
-          }
-          choice.selected.forEach((reference, selectionIndex) => {
-            const target = getSpellReferenceKey(reference)
-            targets.add(target)
-            const owned = (char.provenance.spells[getSpellNameKey(reference)] ?? []).some(
-              (tag) =>
-                isRacialSpellChoiceOwner(tag, char) &&
-                tag.grantType === 'choice' &&
-                tag.grantVariant === choice.id &&
-                getSpellReferenceKey(reference, tag.grantSource) === target,
-            )
-            if (!materialized.has(target) || !owned || (poolTargets && !poolTargets.has(target))) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message:
-                  'Racial selected spell targets must agree with materialized spells, descriptor ownership and declared pools',
-                path: [
-                  'spells',
-                  'spellProfiles',
-                  profileIndex,
-                  'choices',
-                  choiceIndex,
-                  'selected',
-                  selectionIndex,
-                ],
-              })
-            }
-          })
-          selectedRacialTargets.set(choice.id, targets)
-        })
-      })
-      Object.entries(char.provenance.spells).forEach(([name, tags]) => {
-        tags.forEach((tag, index) => {
-          if (
-            (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') ||
-            tag.grantType !== 'choice'
-          )
-            return
-          if (
-            name !== getSpellNameKey(name) ||
-            !isRacialSpellChoiceOwner(tag, char) ||
-            !tag.grantVariant ||
-            !selectedRacialTargets
-              .get(tag.grantVariant)
-              ?.has(getSpellReferenceKey(name, tag.grantSource))
-          ) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message:
-                'Racial choice ownership must match its selected descriptor and exact spell target',
-              path: ['provenance', 'spells', name, index],
-            })
-          }
-        })
-      })
       if (char.originSystem === '2024' && hasRaceAbilityOriginGrants(char.provenance)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

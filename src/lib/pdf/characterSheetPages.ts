@@ -13,6 +13,7 @@ export function getOptionalCharacterSheetPages(
       viewModel.spellcastingDetails.some(
         (detail) => detail.maxSpellLevel > 0 || (detail.cantripLimit ?? 0) > 0,
       ) ||
+      viewModel.spellcastingSources.some((source) => source.sourceType === 'racial') ||
       viewModel.spellRows.length > 0 ||
       viewModel.character.spells.spellProfiles.some(
         (profile) =>

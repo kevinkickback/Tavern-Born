@@ -3,6 +3,7 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 
 const RACE: Race5e = { name: 'Human', source: 'XPHB' }
 const CLASS_ENTITY = { name: 'Cleric', source: 'XPHB' } as unknown as Class5e
@@ -167,4 +168,58 @@ describe('buildInitialCharacter', () => {
     expect(issueIds).not.toContain('choice:subrace:variant|phb:abilityBonuses:choose:0')
     expect(issueIds).toContain('choice:subrace:variant:feats:any:0')
   })
+})
+
+test('Finish commits native grants at its final class level and strictly reopens without a later read repair', () => {
+  const race: Race5e = {
+    name: 'Tiefling',
+    source: 'PHB',
+    additionalSpells: [
+      {
+        ability: 'cha',
+        known: { 1: ['thaumaturgy#c'] },
+        innate: { 3: { daily: { 1: ['hellish rebuke#2'] } }, 5: { daily: { 1: ['darkness'] } } },
+      },
+    ],
+  }
+  const character = buildInitialCharacter(
+    {
+      initial: {
+        name: 'Finished native caster',
+        originSystem: '2014',
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
+      },
+      race,
+      classEntity: { name: 'Wizard', source: 'PHB', hd: { faces: 6, number: 1 } } as Class5e,
+    },
+    new Map(),
+    () => [],
+  )
+  expect(character.classProgression).toEqual([
+    { name: 'Wizard', source: 'PHB', levels: 5, subclass: undefined, subclassSource: undefined },
+  ])
+  const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+  expect(reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')).toMatchObject({
+    raceName: 'Tiefling',
+    castingAbility: 'cha',
+    cantrips: ['thaumaturgy|PHB'],
+    spellsKnown: ['hellish rebuke|PHB', 'darkness|PHB'],
+    racial: {
+      fixed: [
+        { reference: 'thaumaturgy|PHB', isCantrip: true },
+        { reference: 'hellish rebuke|PHB', isCantrip: false, dailyUses: 1 },
+        { reference: 'darkness|PHB', isCantrip: false, dailyUses: 1 },
+      ],
+    },
+  })
+  for (const target of ['thaumaturgy', 'hellish rebuke', 'darkness'])
+    expect(reopened.provenance.spells[target]).toContainEqual(
+      expect.objectContaining({
+        sourceType: 'race',
+        sourceName: 'Tiefling',
+        sourceRef: 'PHB',
+        grantType: 'fixed',
+        grantSource: 'PHB',
+      }),
+    )
 })

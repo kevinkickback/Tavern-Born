@@ -156,8 +156,8 @@ must not render raw 5etools syntax or build independent tooltip systems.
 ## Character format compatibility
 
 Import and hydration require the exact current character version and validate before exposing a
-record. Current schema 6 preserves complete racial spell targets and separate owner/target
-printings. Schema 2–5 and other unsupported versions are rejected without conversion. Saved-library
+record. Current schema 7 preserves complete racial spell targets and separate owner/target
+printings. Schema 2–6 and other unsupported versions are rejected without conversion. Saved-library
 rejected originals
 remain in durable, exportable quarantine until acknowledged. The version and cutoff policy lives
 in [State Management](state-management.md#schema-compatibility).

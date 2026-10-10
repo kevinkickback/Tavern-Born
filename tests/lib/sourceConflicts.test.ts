@@ -9,6 +9,7 @@ import {
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -229,38 +230,44 @@ describe('pruneSpellsForDisabledSources', () => {
     'XGE',
     'XPHB',
   ])('preserves mandatory %s grants and an independent descriptor of the same spell', (fixedSource) => {
+    const race = {
+      name: 'Choosing Caster',
+      source: 'OWNER',
+      additionalSpells: [
+        {
+          known: {
+            _: [
+              `toll the dead|${fixedSource}#c`,
+              { choose: 'level=0|class=Wizard' },
+              { choose: 'level=0|class=Cleric' },
+            ],
+          },
+        },
+      ],
+    } as Race5e
     let character = buildInitialCharacter(
-      {
-        initial: { name: 'Independent grants', originSystem: '2014' },
-        race: {
-          name: 'Choosing Caster',
-          source: 'OWNER',
-          additionalSpells: [
-            {
-              known: {
-                _: [
-                  `toll the dead|${fixedSource}#c`,
-                  { choose: 'level=0|class=Wizard' },
-                  { choose: 'level=0|class=Cleric' },
-                ],
-              },
-            },
-          ],
-        } as Race5e,
-      },
+      { initial: { name: 'Independent grants', originSystem: '2014' }, race },
       new Map(),
       () => [],
     )
     const profileId = character.spells.spellProfiles.find(
       (profile) => profile.type === 'racial',
     )!.id
+    const choices = character.spells.spellProfiles.find((profile) => profile.id === profileId)!
+      .choices!
     for (const [id, selected] of [
-      ['direct-_-choose-0', 'Toll the Dead|XGE'],
-      ['direct-_-choose-1', 'Toll the Dead|XPHB'],
+      [choices[0].id, 'Toll the Dead|XGE'],
+      [choices[1].id, 'Toll the Dead|XPHB'],
     ]) {
-      const result = setRacialSpellChoice(character, character.provenance, profileId, id, [
-        selected,
-      ])
+      const result = setRacialSpellChoice(
+        character,
+        character.provenance,
+        profileId,
+        id,
+        [selected],
+        nativeRaceResolution(race),
+        nativeChoiceSpellLookup,
+      )
       character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
     }
     character.spells.spellSlots[1] = { max: 3, used: 2 }
@@ -280,7 +287,7 @@ describe('pruneSpellsForDisabledSources', () => {
       expect.objectContaining({
         sourceType: 'race',
         grantType: 'choice',
-        grantVariant: 'direct-_-choose-1',
+        grantVariant: choices[1].id,
         grantSource: 'XPHB',
       }),
     ])
@@ -449,15 +456,13 @@ describe('pruneSpellsForDisabledSources', () => {
   })
 
   test('prunes only disabled members of a supported count-two racial descriptor', () => {
+    const race = {
+      name: 'Choosing Caster',
+      source: 'OWNER',
+      additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard', count: 2 }] } }],
+    } as Race5e
     const initial = buildInitialCharacter(
-      {
-        initial: { name: 'Partial quota', originSystem: '2014' },
-        race: {
-          name: 'Choosing Caster',
-          source: 'OWNER',
-          additionalSpells: [{ known: { _: [{ choose: 'level=0|class=Wizard', count: 2 }] } }],
-        } as Race5e,
-      },
+      { initial: { name: 'Partial quota', originSystem: '2014' }, race },
       new Map(),
       () => [],
     )
@@ -466,8 +471,10 @@ describe('pruneSpellsForDisabledSources', () => {
       initial,
       initial.provenance,
       profileId,
-      'direct-_-choose-0',
+      initial.spells.spellProfiles.find((profile) => profile.id === profileId)!.choices![0].id,
       ['Frostbite|XGE', 'Mage Hand|PHB'],
+      nativeRaceResolution(race),
+      nativeChoiceSpellLookup,
     )
     const character = {
       ...initial,
@@ -482,7 +489,7 @@ describe('pruneSpellsForDisabledSources', () => {
     expect(profile.cantrips).toEqual(['Mage Hand|PHB'])
     expect(result.provenance.spells).not.toHaveProperty('frostbite')
     expect(result.provenance.spells['mage hand']).toEqual([
-      expect.objectContaining({ grantVariant: 'direct-_-choose-0', grantSource: 'PHB' }),
+      expect.objectContaining({ grantVariant: profile.choices![0].id, grantSource: 'PHB' }),
     ])
     expect(characterPersistenceSchema.safeParse({ ...character, ...result }).success).toBe(true)
   })

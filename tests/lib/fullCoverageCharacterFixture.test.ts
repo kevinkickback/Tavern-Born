@@ -404,9 +404,10 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     for (const { profile, reference } of getStoredSpellReferences(character)) {
       const parsed = parseSpellReference(reference)
       expect(parsed.source, `Spell reference must include its source: ${reference}`).toBeTruthy()
-      expect(character.allowedSources, `Disallowed spell source in ${reference}`).toContain(
-        parsed.source,
-      )
+      expect(
+        character.allowedSources.map((source) => source.trim().toLowerCase()),
+        `Disallowed spell source in ${reference}`,
+      ).toContain(parsed.source?.trim().toLowerCase())
       const spell = resolveSpellReferenceFromMap(reference, recursiveLookup.spells)
       expect(spell, `Runtime lookup could not resolve ${reference}`).toBeDefined()
       if (
@@ -539,6 +540,13 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     const raw = readJson(companionPaths[edition])
     const character = characterSchema.parse(raw)
     expect(validateCharacterData(raw)).toBeNull()
+    expect(
+      character.spells.spellProfiles.find((profile) => profile.type === 'racial'),
+    ).toMatchObject({
+      castingAbility: 'int',
+      cantrips: edition === '2014' ? ['Friends|PHB'] : ['dancing lights|xphb'],
+      spellsKnown: edition === '2014' ? [] : ['faerie fire|xphb'],
+    })
     expect(character.classProgression).toEqual([
       expect.objectContaining({ name: 'Ranger', subclass: 'Beast Master', levels: 3 }),
     ])

@@ -1,3 +1,4 @@
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 /**
  * Unified class selection hook.
  *
@@ -16,6 +17,7 @@ export function useUnifiedClassSelection() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useItemLookup()
+  const calculationContext = useCharacterCalculationContext(character)
 
   const selectClass = useCallback(
     (className: string, classSource: string, classLookup: Record<string, Class5e | undefined>) => {
@@ -26,14 +28,16 @@ export function useUnifiedClassSelection() {
       if (!cls) return
 
       const ledger = character.provenance ?? emptyProvenance()
-      const result = applyClassSelectionCommand(character, ledger, cls, undefined, itemLookup)
+      const result = applyClassSelectionCommand(character, ledger, cls, undefined, itemLookup, {
+        raceResolution: calculationContext?.raceResolution,
+      })
 
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter, itemLookup],
+    [character, updateCharacter, itemLookup, calculationContext],
   )
 
   const selectSubclass = useCallback(
@@ -60,6 +64,7 @@ export function useUnifiedClassSelection() {
         {
           classProgression,
           viewingEntry,
+          raceResolution: calculationContext?.raceResolution,
         },
       )
 
@@ -68,7 +73,7 @@ export function useUnifiedClassSelection() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter, itemLookup],
+    [character, updateCharacter, itemLookup, calculationContext?.raceResolution],
   )
 
   return { selectClass, selectSubclass }

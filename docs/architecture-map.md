@@ -72,7 +72,10 @@ corrections and must preserve dirty-draft behavior.
 - `useSpellProfileMutations` owns profile add/remove/prepare/racial-choice writes and commits spell
   state with provenance atomically.
 - `useSpellProvenanceMutations` owns class-page per-level selection and replacement commands.
-- Shared and Pact slot usage are separate persisted pools; maxima remain derived.
+- Native racial profiles, typed applied targets and their exact provenance are evaluated together
+  by the pure native spell module; owner-local controls remain separate from granted rows.
+- Shared effect-aware casting numbers serve both UI and PDF. Class limits and shared/Pact slot
+  maxima remain class-specific; racial casting adds neither fake class levels nor slot pools.
 
 ### Parsed game data
 

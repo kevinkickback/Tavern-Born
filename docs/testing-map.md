@@ -66,6 +66,9 @@ Maintain coverage for:
   subclass changes;
 - origin-system feat/ability ownership and readiness navigation;
 - spell profile/provenance atomicity, prepared-caster models, replacements, and slot pools;
+- complete native racial suite/descriptor controls, actual parent/child ownership, structural
+  reorder/casing, missing/restored contexts at changed levels, source removal/re-enable, strict
+  current reopen, independent casting effects and all PDF source/unknown-level boundaries;
 - overlapping provenance owners and source changes;
 - source filtering, exact fallback resolution, and ingestion atomicity;
 - recursive rules previews, pin/transient behavior, anchoring, scrolling, and modal interaction;
@@ -79,6 +82,14 @@ Human/Eldritch Knight creation through level 20. The fast progression matrix cov
 core class and level. Guarded corpus tests verify that the external catalog still satisfies the
 fixtures' assumptions and that normalized class/subclass choice tracks have resolvable
 source-qualified dependencies without diagnostics.
+
+The fixture generator uses the production native spell evaluator. Companion characters retain
+their chosen racial setup and refresh its applied snapshot at their own level. All four generated
+characters pass strict admission before any fixture is written; corpus checks also require complete
+readiness and exact target resolution with source casing normalized.
+Its one-time SSR runtime disables file watching and dependency discovery, then closes after loading
+the pure producers. The child-process corpus check keeps a bounded execution time and captures
+only fixture writes, comparing all four outputs with the committed records.
 
 ## E2E conventions
 

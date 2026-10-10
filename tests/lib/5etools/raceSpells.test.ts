@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { parseChooseFilter, parseRaceSpellBlocks, parseRaceSpells } from '@/lib/5etools/raceSpells'
+import type { RaceSpellSchedule } from '@/types/5etools'
 
 describe('parseRaceSpells', () => {
   test('parses tiefling-style known and innate spell grants', () => {
@@ -55,6 +56,24 @@ describe('parseRaceSpells', () => {
 })
 
 describe('parseChooseFilter', () => {
+  test.each([
+    'level=0|class=;',
+    'level=0|class=   ',
+    'class= ; ; ',
+    'class=Wizard|class=;',
+  ])('rejects an explicitly supplied class constraint without names: %s', (filter) => {
+    expect(() => parseChooseFilter(filter)).toThrow()
+    expect(() => parseRaceSpellBlocks([{ known: { 1: [{ choose: filter }] } }])).toThrow()
+  })
+
+  test('keeps level-only unrestricted and trimmed semicolon class constraints distinct', () => {
+    expect(parseChooseFilter('level=1')).toEqual({ level: 1, classes: [] })
+    expect(parseChooseFilter('class= ; Wizard ; ; Cleric ; ')).toEqual({
+      level: 0,
+      classes: ['Wizard', 'Cleric'],
+    })
+  })
+
   test('parses level and class', () => {
     expect(parseChooseFilter('level=0|class=Wizard')).toEqual({
       level: 0,
@@ -92,7 +111,9 @@ describe('parseRaceSpellBlocks', () => {
     ])
     expect(block.choices).toEqual([
       {
-        id: 'direct-_-choose-0',
+        id: '[0,2,true,"known","direct",null,[0,["sorcerer"]],null]',
+        source: 'known',
+        usage: 'direct',
         level: 0,
         count: 2,
         isCantrip: true,
@@ -123,11 +144,10 @@ describe('parseRaceSpellBlocks', () => {
     ])
   })
 
-  test.each([0, -1, 1.5])('does not grant a filtered choice with invalid count %s', (count) => {
-    const [block] = parseRaceSpellBlocks([
-      { known: { _: [{ choose: 'level=0|class=Sorcerer', count }] } },
-    ])
-    expect(block.choices).toEqual([])
+  test.each([0, -1, 1.5])('rejects a filtered choice with invalid count %s', (count) => {
+    expect(() =>
+      parseRaceSpellBlocks([{ known: { _: [{ choose: 'level=0|class=Sorcerer', count }] } }]),
+    ).toThrow('Invalid native spell choice count.')
   })
 
   test('returns empty for undefined input', () => {
@@ -172,7 +192,9 @@ describe('parseRaceSpellBlocks', () => {
     expect(blocks[0].grants).toEqual([])
     expect(blocks[0].choices).toHaveLength(1)
     expect(blocks[0].choices[0]).toEqual({
-      id: 'choose-0',
+      id: '[1,1,true,"known","direct",null,[0,["wizard"]],null]',
+      source: 'known',
+      usage: 'direct',
       level: 1,
       count: 1,
       isCantrip: true,
@@ -232,4 +254,86 @@ describe('parseRaceSpellBlocks', () => {
     expect(blocks[0].ability).toBeUndefined()
     expect(blocks[0].abilityOptions).toEqual(['int', 'wis', 'cha'])
   })
+})
+
+test('native bucket identity preserves rest, will, ritual, daily and upcast differences', () => {
+  const schedules: RaceSpellSchedule[string][] = [
+    { rest: { 1: ['misty step'] } },
+    { will: ['misty step'] },
+    { ritual: ['misty step'] },
+    { daily: { 1: ['misty step'] } },
+    { daily: { '1e': ['misty step'] } },
+    { daily: { 1: ['misty step#2'] } },
+  ]
+  const identities = schedules.map((schedule) =>
+    parseRaceSpellBlocks([{ innate: { 1: schedule } }])[0].scheduleIdentity.map((identity) => {
+      const [source, level, bucket, targets] = JSON.parse(identity)
+      return [source, level, bucket, targets.map((target: string) => JSON.parse(target))]
+    }),
+  )
+  expect(identities).toEqual([
+    [['innate', 1, 'rest:1', [['misty step|phb', null]]]],
+    [['innate', 1, 'will', [['misty step|phb', null]]]],
+    [['innate', 1, 'ritual', [['misty step|phb', null]]]],
+    [['innate', 1, 'daily:1', [['misty step|phb', null]]]],
+    [['innate', 1, 'daily:1e', [['misty step|phb', null]]]],
+    [['innate', 1, 'daily:1', [['misty step|phb', '2']]]],
+  ])
+})
+
+test.each([
+  'level=10|class=Wizard',
+  'level=zero|class=Wizard',
+  'level=0|school=Evocation',
+  'level=',
+])('rejects unsupported or invalid filter %s with a diagnostic', (filter) => {
+  expect(() => parseRaceSpellBlocks([{ known: { _: [{ choose: filter }] } }])).toThrow(
+    /native spell filter/,
+  )
+})
+
+test('descriptors preserve independent native source and usage scopes and daily metadata', () => {
+  const [block] = parseRaceSpellBlocks([
+    {
+      known: { 1: [{ choose: 'level=0|class=Wizard' }] },
+      innate: {
+        1: {
+          daily: {
+            1: [{ choose: 'level=0|class=Wizard' }],
+            2: [{ choose: 'level=0|class=Wizard' }],
+          },
+          rest: { 1: [{ choose: 'level=0|class=Wizard' }] },
+        },
+      },
+    },
+  ])
+  expect(
+    block.choices.map((choice) => ({
+      source: choice.source,
+      usage: choice.usage,
+      dailyUses: choice.dailyUses,
+    })),
+  ).toEqual([
+    { source: 'known', usage: 'direct', dailyUses: undefined },
+    { source: 'innate', usage: 'rest:1', dailyUses: undefined },
+    { source: 'innate', usage: 'daily:1', dailyUses: 1 },
+    { source: 'innate', usage: 'daily:2', dailyUses: 2 },
+  ])
+  expect(new Set(block.choices.map((choice) => choice.id)).size).toBe(4)
+})
+
+test('native proficiency-based daily grants retain the supplied expression', () => {
+  const [block] = parseRaceSpellBlocks([
+    { innate: { 3: { daily: { pb: ['speak with animals|xphb'] } } } },
+  ])
+  expect(block.grants).toEqual([
+    {
+      spellName: 'speak with animals|xphb',
+      level: 3,
+      isCantrip: false,
+      castingAbility: undefined,
+      source: 'innate',
+      dailyUses: 'pb',
+    },
+  ])
 })

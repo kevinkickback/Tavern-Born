@@ -99,11 +99,39 @@ test.each(
   ]) {
     const ledger = emptyProvenance()
     putOwner(ledger, location, tag)
-    expect(
-      characterPersistenceSchema.safeParse(
-        makeCharacterFixture({ subrace: 'Variant', subraceSource: 'PHB', provenance: ledger }),
-      ).success,
-    ).toBe(true)
+    let character = makeCharacterFixture({
+      subrace: 'Variant',
+      subraceSource: 'PHB',
+      provenance: ledger,
+    })
+    if (location === 'spells' && (tag.sourceType === 'race' || tag.sourceType === 'subrace')) {
+      character = buildInitialCharacter(
+        {
+          initial: makeCharacterFixture(),
+          race: {
+            name: 'Human',
+            source: 'PHB',
+            ...(tag.sourceType === 'race'
+              ? { additionalSpells: [{ known: { _: ['owner-proof|PHB#c'] } }] }
+              : {}),
+          } as Race5e,
+          subrace: {
+            name: 'Variant',
+            source: 'PHB',
+            ...(tag.sourceType === 'subrace'
+              ? { additionalSpells: [{ known: { _: ['owner-proof|PHB#c'] } }] }
+              : {}),
+          } as Race5e,
+        },
+        new Map(),
+        () => [],
+      )
+      Object.assign(character.provenance.spells['owner-proof'][0], {
+        sourceName: tag.sourceName,
+        sourceRef: tag.sourceRef,
+      })
+    }
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
   }
 })
 

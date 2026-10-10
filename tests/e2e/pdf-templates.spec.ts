@@ -267,8 +267,8 @@ test('@focused exports every official and custom character-sheet template', asyn
       // Viewport restoration can rerender canvases; use the already verified PDF page count.
       const pagesBeforeCompanion = await exportTemplate(page, template, testInfo.outputDir)
       if (template.id.startsWith('2024')) {
-        const usesNotesContinuation = template.id === '2024-official'
-        const addedPages = usesNotesContinuation ? 1 : 2
+        // Both templates already retain native unknown levels and secondary casting in notes.
+        const addedPages = 1
         await page.getByRole('button', { name: 'Optional Pages', exact: true }).click()
         await expect(page.getByRole('menuitemcheckbox')).toHaveCount(2)
         await expect(
@@ -276,10 +276,8 @@ test('@focused exports every official and custom character-sheet template', asyn
         ).toHaveAttribute('aria-checked', 'false')
         await expect(page.getByRole('menuitemcheckbox', { name: 'Notes page' })).toHaveAttribute(
           'aria-checked',
-          String(usesNotesContinuation),
+          'true',
         )
-        if (!usesNotesContinuation)
-          await page.getByRole('menuitemcheckbox', { name: 'Notes page' }).click()
         await page.getByRole('menuitemcheckbox', { name: 'Companion pages' }).click()
         await page.keyboard.press('Escape')
         await expect(page.getByRole('button', { name: 'Download PDF' })).toBeDisabled()
@@ -298,6 +296,14 @@ test('@focused exports every official and custom character-sheet template', asyn
         await download.saveAs(outputPath)
         const doc = await PDFDocument.load(fs.readFileSync(outputPath))
         expect(doc.getPageCount()).toBe(pagesBeforeCompanion + addedPages)
+        const notesText = doc
+          .getForm()
+          .getFields()
+          .filter((field) => /Notes\.(Left|Right)$/.test(field.getName()))
+          .map((field) => doc.getForm().getTextField(field.getName()).getText() ?? '')
+          .join('\n')
+        expect(notesText).toContain('Additional spellcasting abilities')
+        expect(notesText).toContain('spell level unknown')
         expect(
           doc.getForm().getTextField('Companion1__companion name').acroField.getWidgets()[0].P(),
         ).toBe(doc.getPage(2).ref)

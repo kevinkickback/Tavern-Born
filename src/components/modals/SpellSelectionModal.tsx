@@ -193,7 +193,7 @@ function matchSpell(
     className &&
     !isSpellOnClassList(spell, className, classSource) &&
     !isSpellOnSubclassList(spell, className, classSource, subclassName, subclassSource) &&
-    !classListOverrides?.has(getSpellNameKey(spell.name))
+    !classListOverrides?.has(getSpellSelectionId(spell))
   ) {
     return false
   }
@@ -346,7 +346,10 @@ export function SpellSelectionModal({
     [spells, characterSpellNames, retainUnavailable],
   )
   const classListOverrideKeys = useMemo(
-    () => (classListOverrides ? buildSpellNameKeySet(classListOverrides) : undefined),
+    () =>
+      classListOverrides
+        ? new Set(Array.from(classListOverrides, (reference) => getSpellReferenceKey(reference)))
+        : undefined,
     [classListOverrides],
   )
   const initialSelectedIds = useMemo(
