@@ -25,7 +25,6 @@ import {
   getNativeRacialSpellOwners,
 } from '@/lib/calculations/nativeRacialSpells'
 import {
-  dedupeSpellNames,
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
@@ -587,9 +586,11 @@ export function SpellsPage() {
       }
     }
 
-    const mergedCantrips = dedupeSpellNames([...bonusProfile.cantrips, ...newCantrips])
-    const mergedSpells = dedupeSpellNames([...bonusProfile.spellsKnown, ...newSpells])
-    setProfileSpells(SPECIAL_SPELL_PROFILE_ID, mergedCantrips, mergedSpells)
+    setProfileSpells(
+      SPECIAL_SPELL_PROFILE_ID,
+      [...bonusProfile.cantrips, ...newCantrips],
+      [...bonusProfile.spellsKnown, ...newSpells],
+    )
 
     setBonusSpellModalOpen(false)
   }

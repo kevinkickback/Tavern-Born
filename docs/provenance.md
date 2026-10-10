@@ -91,6 +91,8 @@ remaining owners in the special profile, so class or racial ownership cannot lea
 special selection or fixed lock. Independent special owners and other printings remain intact.
 Spells-page locks use that same exact target identity. The bonus picker still prevents selecting
 an already-known logical spell; later independent feat grants can share its target.
+Bonus additions and special-profile bulk writes retain established printings and fixed targets;
+logical-name picker restrictions never deduplicate previously applied independent grants.
 
 New feat spell selections require exact spell metadata. An established selection can retain its
 saved cantrip/leveled kind without metadata when the same feat owner still owns that exact target.

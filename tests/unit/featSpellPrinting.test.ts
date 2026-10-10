@@ -4,6 +4,7 @@ import {
   editFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { addSpellToCharacter, setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import type { Spell5e } from '@/types/5etools'
@@ -176,4 +177,66 @@ test('an unqualified new selection does not infer a printing from the available 
     metadata,
   )
   expect(result).toEqual({ characterPatch: {}, provenanceUpdate: initial.provenance })
+})
+
+test.each([
+  false,
+  true,
+])('special bulk replacement retains exact fixed targets, reversed=%s', (reverse) => {
+  const { configured, feat, options } = setup()
+  const manual = apply(
+    configured,
+    addSpellToCharacter(
+      configured,
+      configured.provenance,
+      'Bless|XPHB',
+      'spell',
+      'special:unrestricted',
+    ),
+  )
+  const before = apply(
+    manual,
+    editFeatOptionsCommand(
+      manual,
+      manual.provenance,
+      feat,
+      options,
+      { spells: ['Toll the Dead|XGE', 'Bless|PHB'] },
+      [
+        { name: 'Toll the Dead', source: 'XGE', level: 0 },
+        { name: 'Bless', source: 'PHB', level: 1 },
+      ] as Spell5e[],
+    ),
+  )
+  const reorder = (values: string[]) => (reverse ? [...values].reverse() : values)
+  const bulk = apply(
+    before,
+    setProfileSpells(
+      before,
+      before.provenance,
+      'special:unrestricted',
+      reorder(special(before).cantrips),
+      reorder([...special(before).spellsKnown, 'bless|phb']),
+    ),
+  )
+  expect([...special(bulk).cantrips].sort()).toEqual(['Toll the Dead|XGE', 'Toll the Dead|XPHB'])
+  expect(
+    special(bulk)
+      .spellsKnown.map((value) => value.toLowerCase())
+      .sort(),
+  ).toEqual(['bless|phb', 'bless|xphb'])
+  expect(bulk.provenance).toEqual(before.provenance)
+  const clearedManual = apply(
+    bulk,
+    setProfileSpells(bulk, bulk.provenance, 'special:unrestricted', [], []),
+  )
+  expect(special(clearedManual).cantrips).toEqual(['Toll the Dead|XGE'])
+  expect(special(clearedManual).spellsKnown.map((value) => value.toLowerCase())).toEqual([
+    'bless|phb',
+  ])
+  expect(special(clearedManual).fixedSpells).toEqual(['Toll the Dead|XGE', 'Bless|PHB'])
+  expect(clearedManual.provenance.spells.bless).toEqual([
+    expect.objectContaining({ sourceType: 'feat', grantSource: 'PHB' }),
+  ])
+  expect(clearedManual.fixedFeatOptions).toEqual(before.fixedFeatOptions)
 })

@@ -1,6 +1,6 @@
-import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
@@ -31,13 +31,20 @@ function install() {
     activeCharacterId: character.id,
     isActiveCharacterDirty: false,
   })
-  const data = makeGameDataFixture({ spells: [requested, { ...requested, source: 'XPHB' }] })
+  const data = makeGameDataFixture({
+    spells: [
+      requested,
+      { ...requested, source: 'XPHB' },
+      makeSpellFixture({ name: 'Light', source: 'XPHB', level: 0 }),
+    ],
+  })
   useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
   return character
 }
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   useCharacterStore.setState({
     characters: [],
     activeCharacter: null,
@@ -45,6 +52,37 @@ afterEach(() => {
     isActiveCharacterDirty: false,
   })
   useGameDataStore.setState({ gameData: null })
+})
+
+test('adding an unrelated bonus spell retains both established printings and their ownership', () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800)
+  const before = install()
+  render(
+    <TooltipProvider>
+      <MemoryRouter initialEntries={['/spells?view=bonus']}>
+        <SpellsPage />
+      </MemoryRouter>
+    </TooltipProvider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Add Spell' }))
+  const dialog = within(screen.getByRole('dialog'))
+  fireEvent.change(dialog.getByRole('textbox', { name: 'Search add bonus spells' }), {
+    target: { value: 'Light' },
+  })
+  fireEvent.click(dialog.getByText('Light'))
+  fireEvent.click(dialog.getByRole('button', { name: 'Confirm' }))
+  const after = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+  const special = after.spells.spellProfiles.find((profile) => profile.type === 'special')!
+  expect(special.cantrips).toEqual(['Toll the Dead|XPHB', 'Toll the Dead|XGE', 'Light|XPHB'])
+  expect(special.fixedSpells).toEqual(['Toll the Dead|XGE'])
+  expect(after.provenance.spells['toll the dead']).toEqual(
+    before.provenance.spells['toll the dead'],
+  )
+  expect(after.provenance.spells.light).toEqual([
+    expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+  ])
+  expect(after.fixedFeatOptions).toEqual(before.fixedFeatOptions)
 })
 
 test('Spells locks the feat printing while the independent manual printing remains removable', () => {
