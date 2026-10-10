@@ -276,6 +276,9 @@ describe('acknowledged character library in IndexedDB', () => {
     'missing fixed ownership',
     'manual fixed ownership',
     'other fixed printing',
+    'duplicate fixed ownership',
+    'duplicate choice ownership',
+    'malformed saved reference',
   ])('racial %s stays quarantined and exportable after durable writes', async (corruption) => {
     const fixed = corruption.includes('fixed')
     const race = {
@@ -328,6 +331,17 @@ describe('acknowledged character library in IndexedDB', () => {
       })
     else if (corruption === 'other fixed printing')
       malformed.provenance.spells.light[0].grantSource = 'TCE'
+    else if (corruption.startsWith('duplicate'))
+      malformed.provenance.spells.light.push({
+        ...malformed.provenance.spells.light[0],
+        sourceName: ' CHOOSING CASTER ',
+        sourceRef: ' owner ',
+        grantSource: ' phb ',
+        label: 'Duplicate with another label',
+      })
+    else if (corruption === 'malformed saved reference')
+      malformed.spells.spellProfiles.find((profile) => profile.type === 'racial')!.cantrips[0] =
+        'Light|PHB|ignored'
     else if (corruption === 'mismatched target')
       malformed.provenance.spells.light[0].grantSource = 'XPHB'
     else if (corruption === 'active other owner')

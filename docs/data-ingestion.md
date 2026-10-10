@@ -225,8 +225,8 @@ when native rules are evaluated; the source loader retains raw additional-spell 
 Choice descriptors reject unknown members and conflicting inner/outer counts. Both count locations
 remain supported when unambiguous. Casting abilities must be one of the six abbreviations or a
 nonempty choice set; spelling, case and whitespace normalization never invent a missing ability.
-Malformed spell UIDs, unknown casting modifiers and extra UID fields reject locally before decoding;
-the shared codec's unrelated consumers are unchanged. Empty lists and omitted optional rules remain
+Malformed spell UIDs, display markup, unknown casting modifiers and extra UID fields reject locally
+before decoding; the shared codec's unrelated consumers are unchanged. Empty lists and omitted optional rules remain
 valid. No character conversion or data-cache change is needed for this live validation boundary.
 Whole-field `additionalSpells: null` remains an upstream inheritance-removal marker, normalized to
 absence before native evaluation. Null schedules or lists inside a supplied block are malformed.

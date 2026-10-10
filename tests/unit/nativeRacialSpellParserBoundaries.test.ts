@@ -37,6 +37,8 @@ test.each([
   ],
   ['extra filter equality', { known: { 1: [{ choose: 'level=0=1|class=Wizard' }] } }],
   ['repeated filter level', { known: { 1: [{ choose: 'level=1|level=0|class=Wizard' }] } }],
+  ['display markup instead of a spell UID', { known: { 1: ['{@spell light|PHB}'] } }],
+  ['display markup with a casting modifier', { known: { 1: ['{@spell light|PHB}#c'] } }],
 ] as const)('loaded %s rejects before creation or replacement can save a partial suite', async (_, block) => {
   const race = await loadRace(block)
   expect(() => makeNativeRacialCharacter(race)).toThrow(/native spell/i)

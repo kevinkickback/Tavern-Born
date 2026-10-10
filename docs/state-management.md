@@ -215,7 +215,11 @@ rules engine. Class/special profiles cannot carry racial choices, context or abi
 
 Catalog-independent admission checks the complete relation in both directions: every applied target
 has matching materialization and exact selected suite/descriptor ownership, and every racial spell
-tag belongs to that relation. Foreign contexts/owners, duplicate structural IDs, unselected suite
+tag belongs to that relation exactly once. Repeated fixed schedules may share one suite/target tag;
+different owners, descriptors and target printings keep separate tags. Labels and casing cannot
+create a second copy of the same ownership. Every saved native target has exactly two nonempty
+`name|source` fields, without display markup or casting modifiers. Case and surrounding whitespace
+still normalize for comparison. Foreign contexts/owners, duplicate structural IDs, unselected suite
 grants, wrong kind/printing, missing or extra materialization, out-of-pool targets and logical
 quota violations reject. Independent fixed, descriptor, class/feat/manual overlaps remain valid.
 Structural IDs validate scope; they never supply missing game rules.

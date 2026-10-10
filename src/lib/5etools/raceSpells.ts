@@ -45,7 +45,7 @@ function parseNativeSpellToken(token: string) {
   // Spell UIDs have one optional source and one optional casting modifier, on either side.
   if (
     typeof token !== 'string' ||
-    !/^[^|#]+(?:#(?:c|[1-9]))?(?:\|[^|#]*(?:#(?:c|[1-9]))?)?$/i.test(token.trim()) ||
+    !/^[^|#{}]+(?:#(?:c|[1-9]))?(?:\|[^|#{}]*(?:#(?:c|[1-9]))?)?$/i.test(token.trim()) ||
     (token.match(/#/g)?.length ?? 0) > 1
   )
     throw new Error('Invalid native spell token.')

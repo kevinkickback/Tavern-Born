@@ -3,11 +3,7 @@ import {
   encodeRaceSpellIdentity,
   getRaceSpellChoiceKey,
 } from '@/lib/5etools/raceSpellIdentity'
-import {
-  getSpellNameKey,
-  getSpellReferenceKey,
-  parseSpellReference,
-} from '@/lib/calculations/spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import type { Character, SpellProfile } from '@/types/character'
 import { normalizeOwnerIdentity } from './normalization'
 import type { SpellSourceTag } from './types'
@@ -29,8 +25,8 @@ export function getInvalidNativeRacialSpellPaths(character: Character): Path[] {
   }> = []
   const same = (a?: string, b?: string) => normalizeOwnerIdentity(a) === normalizeOwnerIdentity(b)
   const qualified = (reference: string) => {
-    const parsed = parseSpellReference(reference)
-    return !!parsed.name && !!parsed.source
+    const parts = reference.split('|')
+    return parts.length === 2 && parts.every((part) => !!part.trim() && !/[#{}]/.test(part))
   }
   profiles.forEach((profile, index) => {
     const path: Path = ['spells', 'spellProfiles', index]
@@ -215,12 +211,13 @@ export function getInvalidNativeRacialSpellPaths(character: Character): Path[] {
     tag.grantType === grant.kind &&
     tag.grantVariant === grant.variant &&
     !!tag.grantSource &&
+    qualified(`${name}|${tag.grantSource}`) &&
     getSpellReferenceKey(name, tag.grantSource) === getSpellReferenceKey(grant.reference)
   for (const grant of desired) {
     if (
-      !(character.provenance?.spells[getSpellNameKey(grant.reference)] ?? []).some((tag) =>
+      (character.provenance?.spells[getSpellNameKey(grant.reference)] ?? []).filter((tag) =>
         matches(getSpellNameKey(grant.reference), tag, grant),
-      )
+      ).length !== 1
     )
       invalid.push(grant.path)
   }
