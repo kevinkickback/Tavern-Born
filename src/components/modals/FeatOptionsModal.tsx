@@ -25,13 +25,12 @@ import {
   deriveFeatOptionSteps,
   deriveSpellStepsForClass,
   type FeatOptionStep,
-  parseFeatSpellFilter,
 } from '@/lib/5etools/parsers/featOptions'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
 import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
-import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
+import { assignSavedFeatSpells, createFeatSpellMatcher } from '@/lib/character/featSpellChoices'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
@@ -46,11 +45,15 @@ function isStepComplete(step: FeatOptionStep, stepSels: StepSelections, idx: num
   const val = getStepValue(stepSels, idx)
   switch (step.kind) {
     case 'spellcastingClass':
+      return typeof val === 'string' && step.classOptions.some((option) => option.name === val)
     case 'abilityScore':
     case 'optionalFeature':
     case 'expertise':
       return typeof val === 'string' && val.length > 0
-    case 'spells':
+    case 'spells': {
+      const arr = Array.isArray(val) ? val : []
+      return new Set(arr.map((reference) => getSpellReferenceKey(reference))).size === step.count
+    }
     case 'proficiency': {
       const arr = Array.isArray(val) ? val : []
       return arr.length >= step.count
@@ -98,24 +101,25 @@ const SpellPickStep = memo(function SpellPickStep({
   onToggle,
   spells,
   savedSpells,
+  selectedElsewhere,
+  spellLookup,
 }: {
   step: Extract<FeatOptionStep, { kind: 'spells' }>
   selected: string[]
   onToggle: (id: string) => void
   spells: Spell5e[]
   savedSpells: Readonly<Record<string, Spell5e | undefined>>
+  selectedElsewhere: ReadonlySet<string>
+  spellLookup: Readonly<Record<string, Spell5e>>
 }) {
-  const parsed = useMemo(() => parseFeatSpellFilter(step.chooseFilter), [step.chooseFilter])
+  const matches = useMemo(() => createFeatSpellMatcher(step.chooseFilter), [step.chooseFilter])
   const options = useMemo(() => {
-    const matches = (s: Spell5e) => {
-      if (parsed.level && !parsed.level.includes(s.level)) return false
-      if (parsed.school && !parsed.school.includes(s.school)) return false
-      if (parsed.className && !isSpellOnClassList(s, parsed.className)) return false
-      return true
+    const priorReferences = new Set(Object.keys(savedSpells))
+    const savedReferences = new Map<string, string>()
+    for (const reference of [...priorReferences, ...selected]) {
+      const key = getSpellReferenceKey(reference)
+      if (!savedReferences.has(key)) savedReferences.set(key, reference)
     }
-    const savedReferences = new Map(
-      Object.keys(savedSpells).map((reference) => [getSpellReferenceKey(reference), reference]),
-    )
     const available = spells.filter(matches).map((spell) => ({
       spell: spell as Spell5e | undefined,
       id:
@@ -124,16 +128,19 @@ const SpellPickStep = memo(function SpellPickStep({
       saved: false,
     }))
     const keys = new Set(available.map(({ id }) => getSpellReferenceKey(id)))
-    for (const [id, spell] of Object.entries(savedSpells)) {
+    for (const id of savedReferences.values()) {
+      const spell =
+        savedSpells[id] ??
+        (parseSpellReference(id).source ? resolveSpellReference(id, spellLookup) : undefined)
       if (
         !keys.has(getSpellReferenceKey(id)) &&
         (selected.includes(id) || (spell && matches(spell)))
       ) {
-        available.push({ spell, id, saved: true })
+        available.push({ spell, id, saved: priorReferences.has(id) })
       }
     }
     return available
-  }, [spells, parsed, savedSpells, selected])
+  }, [spells, matches, savedSpells, selected, spellLookup])
 
   return (
     <div className="space-y-3">
@@ -153,7 +160,9 @@ const SpellPickStep = memo(function SpellPickStep({
             const reference = parseSpellReference(id)
             const checkboxId = `spell-cb-${id.replace(/[^a-zA-Z0-9]/g, '-')}`
             const isSelected = selected.includes(id)
-            const atLimit = selected.length >= step.count && !isSelected
+            const atLimit =
+              !isSelected &&
+              (selected.length >= step.count || selectedElsewhere.has(getSpellReferenceKey(id)))
             return (
               <label
                 key={id}
@@ -187,6 +196,11 @@ const SpellPickStep = memo(function SpellPickStep({
                     </span>
                   )}
                   {saved && <Badge variant="outline">Saved choice</Badge>}
+                  {!isSelected && selectedElsewhere.has(getSpellReferenceKey(id)) && (
+                    <span className="block text-xs text-muted-foreground">
+                      Chosen in another step
+                    </span>
+                  )}
                 </div>
               </label>
             )
@@ -405,8 +419,13 @@ const ExpertiseStep = memo(function ExpertiseStep({
   )
 })
 
-function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections): StepSelections {
-  const result: StepSelections = {}
+function seedStepSelections(
+  steps: FeatOptionStep[],
+  init: FeatOptionSelections,
+  spellLookup: Readonly<Record<string, Spell5e>>,
+): { stepSels: StepSelections; unassignedSpells: string[] } {
+  const assigned = assignSavedFeatSpells(steps, init.spells ?? [], spellLookup)
+  const result: StepSelections = { ...assigned.selections }
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]
     switch (step.kind) {
@@ -414,7 +433,6 @@ function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections)
         if (init.spellcastingClass) result[i] = init.spellcastingClass
         break
       case 'spells':
-        if (init.spells?.length) result[i] = [...init.spells]
         break
       case 'proficiency':
         if (step.domain === 'skills' && init.skills?.length) result[i] = [...init.skills]
@@ -433,7 +451,7 @@ function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections)
         break
     }
   }
-  return result
+  return { stepSels: result, unassignedSpells: assigned.unassigned }
 }
 
 function validateFixedSpellcastingClass(
@@ -452,7 +470,8 @@ function initWizardState(
   feat: Feat5e,
   initialSelections?: FeatOptionSelections,
   fixedSpellcastingClass?: string,
-): { steps: FeatOptionStep[]; stepSels: StepSelections } {
+  spellLookup: Readonly<Record<string, Spell5e>> = {},
+): { steps: FeatOptionStep[]; stepSels: StepSelections; unassignedSpells: string[] } {
   let steps = deriveFeatOptionSteps(feat)
   const validatedFixedClass = validateFixedSpellcastingClass(feat, fixedSpellcastingClass)
   const seededSelections = validatedFixedClass
@@ -493,7 +512,7 @@ function initWizardState(
 
   return {
     steps,
-    stepSels: seededSelections ? seedStepSelections(steps, seededSelections) : {},
+    ...seedStepSelections(steps, seededSelections ?? {}, spellLookup),
   }
 }
 
@@ -504,7 +523,6 @@ export interface FeatOptionsModalProps {
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
   fixedSpellcastingClass?: string
-  fixedGrant?: boolean
   onFinish: (selections: FeatOptionSelections) => void
   onDismiss?: () => void
 }
@@ -516,7 +534,6 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   proficientSkillNames = [],
   initialSelections,
   fixedSpellcastingClass,
-  fixedGrant = false,
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
@@ -525,14 +542,14 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   const savedSpells = useMemo(
     () =>
       Object.fromEntries(
-        (fixedGrant ? (initialSelections?.spells ?? []) : []).map((reference) => [
+        (initialSelections?.spells ?? []).map((reference) => [
           reference,
           parseSpellReference(reference).source
             ? resolveSpellReference(reference, rawSpellLookup)
             : undefined,
         ]),
       ),
-    [fixedGrant, initialSelections?.spells, rawSpellLookup],
+    [initialSelections?.spells, rawSpellLookup],
   )
   const skillNames = useSkillList()
   const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
@@ -541,31 +558,59 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   )
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [allSteps, setAllSteps] = useState<FeatOptionStep[]>(
-    () => initWizardState(feat, initialSelections, validatedFixedSpellcastingClass).steps,
+  const [wizard, setWizard] = useState(() =>
+    initWizardState(feat, initialSelections, validatedFixedSpellcastingClass, rawSpellLookup),
   )
-  const [stepSels, setStepSels] = useState<StepSelections>(
-    () => initWizardState(feat, initialSelections, validatedFixedSpellcastingClass).stepSels,
-  )
+  const { steps: allSteps, stepSels, unassignedSpells } = wizard
 
   const currentStep = allSteps[stepIndex]
+  const selectedElsewhere = useMemo(() => {
+    const keys = new Set<string>()
+    allSteps.forEach((step, index) => {
+      const selected = stepSels[index]
+      if (index !== stepIndex && step.kind === 'spells' && Array.isArray(selected)) {
+        for (const reference of selected) keys.add(getSpellReferenceKey(reference))
+      }
+    })
+    return keys
+  }, [allSteps, stepSels, stepIndex])
 
   const setSingle = useCallback((idx: number, val: string) => {
-    setStepSels((prev) => ({ ...prev, [idx]: val }))
+    setWizard((prev) => ({ ...prev, stepSels: { ...prev.stepSels, [idx]: val } }))
   }, [])
 
   const toggleMulti = useCallback((idx: number, val: string, limit: number) => {
-    setStepSels((prev) => {
-      const current = Array.isArray(prev[idx]) ? (prev[idx] as string[]) : []
-      if (current.includes(val)) return { ...prev, [idx]: current.filter((v) => v !== val) }
+    setWizard((prev) => {
+      const current = Array.isArray(prev.stepSels[idx]) ? (prev.stepSels[idx] as string[]) : []
+      if (current.includes(val))
+        return { ...prev, stepSels: { ...prev.stepSels, [idx]: current.filter((v) => v !== val) } }
       if (current.length >= limit) return prev
-      return { ...prev, [idx]: [...current, val] }
+      const isSpell = prev.steps[idx]?.kind === 'spells'
+      const key = getSpellReferenceKey(val)
+      if (
+        isSpell &&
+        prev.steps.some((step, index) => {
+          const selected = prev.stepSels[index]
+          return (
+            step.kind === 'spells' &&
+            Array.isArray(selected) &&
+            selected.some((reference) => getSpellReferenceKey(reference) === key)
+          )
+        })
+      )
+        return prev
+      return {
+        ...prev,
+        stepSels: { ...prev.stepSels, [idx]: [...current, val] },
+        unassignedSpells: isSpell
+          ? prev.unassignedSpells.filter((reference) => getSpellReferenceKey(reference) !== key)
+          : prev.unassignedSpells,
+      }
     })
   }, [])
 
   const handleClassChosen = useCallback(
     (className: string, stepIdx: number) => {
-      setSingle(stepIdx, className)
       const spellSteps = deriveSpellStepsForClass(feat, className).map(
         ({ count, chooseFilter, label }): FeatOptionStep => ({
           kind: 'spells',
@@ -574,13 +619,23 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
           chooseFilter,
         }),
       )
-      setAllSteps((prev) => {
-        const before = prev.slice(0, stepIdx + 1)
-        const after = prev.slice(stepIdx + 1).filter((s) => s.kind !== 'spells')
-        return [...before, ...spellSteps, ...after]
+      setWizard((prev) => {
+        if (prev.stepSels[stepIdx] === className) return prev
+        const before = prev.steps.slice(0, stepIdx + 1)
+        const after = prev.steps.slice(stepIdx + 1).filter((s) => s.kind !== 'spells')
+        const steps = [...before, ...spellSteps, ...after]
+        const stepSels: StepSelections = { [stepIdx]: className }
+        for (let index = 0; index < steps.length; index++) {
+          if (index === stepIdx || steps[index].kind === 'spells') continue
+          const oldIndex = prev.steps.indexOf(steps[index])
+          if (oldIndex >= 0 && prev.stepSels[oldIndex] !== undefined) {
+            stepSels[index] = prev.stepSels[oldIndex]
+          }
+        }
+        return { steps, stepSels, unassignedSpells: [] }
       })
     },
-    [feat, setSingle],
+    [feat],
   )
 
   const buildSelections = useCallback((): FeatOptionSelections => {
@@ -621,12 +676,26 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
       }
     }
 
-    if (spellKeys.length > 0) result.spells = spellKeys
+    if (spellKeys.length > 0) {
+      const remaining = new Map(
+        spellKeys.map((reference) => [getSpellReferenceKey(reference), reference]),
+      )
+      result.spells = []
+      for (const reference of initialSelections?.spells ?? []) {
+        const key = getSpellReferenceKey(reference)
+        const selected = remaining.get(key)
+        if (selected !== undefined) {
+          result.spells.push(selected)
+          remaining.delete(key)
+        }
+      }
+      result.spells.push(...remaining.values())
+    }
     if (skills.length > 0) result.skills = skills
     if (languages.length > 0) result.languages = languages
     if (tools.length > 0) result.tools = tools
     return result
-  }, [allSteps, stepSels, validatedFixedSpellcastingClass])
+  }, [allSteps, stepSels, validatedFixedSpellcastingClass, initialSelections?.spells])
 
   const isLast = stepIndex === allSteps.length - 1
   const stepValue = getStepValue(stepSels, stepIndex)
@@ -635,14 +704,17 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     : currentStep?.kind === 'spells' && Array.isArray(stepValue)
       ? stepValue
       : []
-  const hasMissingSpell =
-    fixedGrant &&
-    spellReferencesToCheck.some(
-      (reference) =>
-        !parseSpellReference(reference).source || !resolveSpellReference(reference, rawSpellLookup),
-    )
+  const hasMissingSpell = spellReferencesToCheck.some(
+    (reference) =>
+      !parseSpellReference(reference).source || !resolveSpellReference(reference, rawSpellLookup),
+  )
   const canAdvance =
-    !!currentStep && isStepComplete(currentStep, stepSels, stepIndex) && !hasMissingSpell
+    !!currentStep &&
+    isStepComplete(currentStep, stepSels, stepIndex) &&
+    !hasMissingSpell &&
+    (!isLast ||
+      (unassignedSpells.length === 0 &&
+        allSteps.every((step, index) => isStepComplete(step, stepSels, index))))
 
   const handleNext = useCallback(() => {
     if (!canAdvance) return
@@ -697,6 +769,39 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
         )}
 
         <div className="py-2">
+          {unassignedSpells.length > 0 && (
+            <div className="mb-4 space-y-2 rounded-md border p-3" role="status">
+              <p className="text-sm font-medium">Saved spells need attention</p>
+              <p className="text-sm text-muted-foreground">
+                These saved choices could not be placed in the current spell steps. Restore their
+                rules and select them in a matching step, or remove them before finishing.
+              </p>
+              {unassignedSpells.map((reference) => {
+                const parsed = parseSpellReference(reference)
+                const label = `${parsed.name}${parsed.source ? ` (${parsed.source})` : ''}`
+                return (
+                  <div key={reference} className="flex items-center justify-between gap-2 text-sm">
+                    <span>{label}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Remove saved choice: ${label}`}
+                      onClick={() =>
+                        setWizard((prev) => ({
+                          ...prev,
+                          unassignedSpells: prev.unassignedSpells.filter(
+                            (value) => value !== reference,
+                          ),
+                        }))
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           {currentStep.kind === 'spellcastingClass' && (
             <SpellcastingClassStep
               step={currentStep}
@@ -712,6 +817,8 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               onToggle={(id) => toggleMulti(stepIndex, id, currentStep.count)}
               spells={spells as Spell5e[]}
               savedSpells={savedSpells}
+              selectedElsewhere={selectedElsewhere}
+              spellLookup={rawSpellLookup}
             />
           )}
           {currentStep.kind === 'proficiency' && (

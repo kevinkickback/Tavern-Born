@@ -134,15 +134,24 @@ test.each([
   })
   editSetup()
   if (stepIndex === 1) fireEvent.click(screen.getByRole('button', { name: /Next/ }))
-  const rejectedName = stepIndex === 0 ? /Saved Ray/ : /Secret Spark/
-  const retainedName = stepIndex === 0 ? /Secret Spark/ : /Saved Ray/
+  // The original choices were assigned to their matching steps. Refresh just the current
+  // choice out of that filter to exercise retained-selection removal, not aggregate seeding.
+  act(() => {
+    const current = useGameDataStore.getState().gameData!
+    const spells = current.spells.map((spell) =>
+      spell.name === (stepIndex === 0 ? 'Secret Spark' : 'Saved Ray')
+        ? { ...spell, level: 2 }
+        : spell,
+    )
+    const data = { ...current, spells }
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+  })
+  const rejectedName = stepIndex === 0 ? /Secret Spark/ : /Saved Ray/
   const rejected = screen.getByRole('checkbox', { name: rejectedName })
   expect(rejected.getAttribute('aria-checked')).toBe('true')
   fireEvent.click(rejected)
   expect(screen.queryByRole('checkbox', { name: rejectedName })).toBeNull()
-  expect(screen.getByRole('checkbox', { name: retainedName }).getAttribute('aria-checked')).toBe(
-    'true',
-  )
+  expect(screen.getByRole('button', { name: /Next|Finish/ }).hasAttribute('disabled')).toBe(true)
 })
 
 test('refreshing feat catalog casing does not duplicate option ownership on unchanged Finish', () => {

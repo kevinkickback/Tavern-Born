@@ -1,26 +1,33 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
 import type { Feat5e } from '@/types/5etools'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 
+const availableSpells = [
+  {
+    name: 'Guidance',
+    source: 'PHB',
+    level: 0,
+    school: 'D',
+    classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+  },
+  {
+    name: 'Light',
+    source: 'PHB',
+    level: 0,
+    school: 'E',
+    classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+  },
+].map((spell) => makeSpellFixture(spell))
+vi.mock('@/hooks/data/useGameData', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/data/useGameData')>()),
+  useSpellLookup: () => buildSpellLookup(availableSpells),
+}))
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
-    spells: [
-      {
-        name: 'Guidance',
-        source: 'PHB',
-        level: 0,
-        school: 'D',
-        classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
-      },
-      {
-        name: 'Light',
-        source: 'PHB',
-        level: 0,
-        school: 'E',
-        classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
-      },
-    ],
+    spells: availableSpells,
     optionalfeatures: [],
   }),
 }))
@@ -93,5 +100,18 @@ describe('FeatOptionsModal fixed spellcasting class', () => {
     )
 
     expect(screen.getByRole('combobox').getAttribute('data-disabled')).toBeNull()
+  })
+
+  test('an unavailable saved class cannot satisfy the class choice', () => {
+    render(
+      <FeatOptionsModal
+        open
+        onOpenChange={vi.fn()}
+        feat={magicInitiate}
+        initialSelections={{ spellcastingClass: 'Missing Class' }}
+        onFinish={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(true)
   })
 })

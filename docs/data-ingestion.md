@@ -329,7 +329,7 @@ the saved grant or its options.
 A source-less fixed grant remains unresolved even when only one printing is loaded; resolution
 does not infer a target source or rewrite provenance or saved option keys. Exact raw fixed
 grants remain viewable/configurable after source filtering without entering the selection list.
-Fixed feat editing resolves saved spell choices against exact raw rule records and retains them
+Feat editing resolves saved spell choices against exact raw rule records and retains them
 in the dialog, while new spell, optional-feature, and language choices remain character-filtered.
 An eligible row retains the original saved reference after complete name/source normalization,
 so source changes and catalog casing changes preserve selection and removal without rewriting it.
@@ -341,6 +341,12 @@ completion; merely opening the dialog leaves saved options and provenance intact
 Retained saved spells remain visible and removable while selected in the current step even when
 refreshed metadata no longer matches its filter. Clearing such a choice removes the out-of-filter
 row; it cannot be newly selected in an unrelated step. The filter still governs new choices.
+Aggregate saved spell choices are assigned once to eligible steps within their quotas, including
+overlapping filters. Exact references cannot occupy two steps. When multiple steps cannot place a
+saved choice from current metadata, the dialog keeps it visible for explicit recovery or removal;
+it cannot silently discard that choice on Finish. Changing the casting class clears its spell
+choices while retaining unrelated choices at their new step positions. Finish validates all steps
+and exact spell availability; saved literal references and independent ownership remain unchanged.
 Plain and tagged spell references
 use the same shared parser for exact source resolution. Fixed option teardown compares normalized
 feat name/source while preserving the distinct granting owner and variant.
