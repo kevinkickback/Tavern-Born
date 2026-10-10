@@ -2,21 +2,22 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
+import { replaceBonusFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('useFeatProvenanceMutations bonus feats', () => {
   beforeEach(() => {
-    const character = makeCharacterFixture({
-      specialFeats: [
-        {
-          id: 'bonus-skilled-phb',
-          name: 'Skilled',
-          source: 'PHB',
-          description: '',
-        },
-      ],
+    const initial = makeCharacterFixture()
+    const selected = replaceBonusFeatSelectionsCommand(initial, initial.provenance, [
+      { name: 'Skilled', source: 'PHB' },
+    ])
+    const character = characterPersistenceSchema.parse({
+      ...initial,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
     })
     useCharacterStore.setState({
       characters: [character],
