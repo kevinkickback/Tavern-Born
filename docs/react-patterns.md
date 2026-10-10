@@ -96,6 +96,11 @@ Only suppress the Biome exhaustive-deps rule when the pattern is intentional and
 
 ## Content Page Layout
 
+Builder Review's spellcasting overview consumes both class and active racial casting details from
+`useSpellSlots`. Display each actual owner's shared effect-aware ability, save DC and attack bonus,
+including explicit unknown values. Class preparation limits and shared/Pact slots retain their
+class-only APIs; unselected racial alternatives have no active casting summary.
+
 Workbench-style pages use `WorkspacePage` as the flat parent surface. If a page has functional tabs or controls, place them in a full-width `WorkspacePaneHeader`, then put the scrolling content in `WorkspaceBody` with a centered max-width inner container.
 
 List/detail workspaces use the shared `SplitPane`. Give both compact panes concise, page-specific

@@ -216,6 +216,9 @@ Known, innate and prepared grants support direct,
 `_`, will, ritual, daily and rest buckets. Expanded `sN` entries extend class-list eligibility; they
 never become automatic known racial spells. This boundary does not implement expendable daily/rest
 resources. Unsupported filter fields and invalid schedule levels/counts are diagnostic errors.
+An explicitly supplied class filter requires at least one nonempty class name; whitespace or
+semicolon-only constraints reject instead of becoming unrestricted. Omitting the class segment
+remains unrestricted, and class-only filters retain their native cantrip-level default.
 Daily/rest usage keys must be canonical positive integers, optionally ending in `e`; only daily
 also accepts `pb`. Zero, leading zeros and unsupported rest expressions reject before materialization.
 

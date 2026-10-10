@@ -56,6 +56,24 @@ describe('parseRaceSpells', () => {
 })
 
 describe('parseChooseFilter', () => {
+  test.each([
+    'level=0|class=;',
+    'level=0|class=   ',
+    'class= ; ; ',
+    'class=Wizard|class=;',
+  ])('rejects an explicitly supplied class constraint without names: %s', (filter) => {
+    expect(() => parseChooseFilter(filter)).toThrow()
+    expect(() => parseRaceSpellBlocks([{ known: { 1: [{ choose: filter }] } }])).toThrow()
+  })
+
+  test('keeps level-only unrestricted and trimmed semicolon class constraints distinct', () => {
+    expect(parseChooseFilter('level=1')).toEqual({ level: 1, classes: [] })
+    expect(parseChooseFilter('class= ; Wizard ; ; Cleric ; ')).toEqual({
+      level: 0,
+      classes: ['Wizard', 'Cleric'],
+    })
+  })
+
   test('parses level and class', () => {
     expect(parseChooseFilter('level=0|class=Wizard')).toEqual({
       level: 0,

@@ -130,6 +130,9 @@ and unknown-level explanation continue in notes by default when notes are enable
 report the omission. Automatic selection preserves these explanations even for unprepared spells
 or rows beyond printed capacity. Explicit manual selection limits explanations to its selected
 rows; omitted optional 2014 spell pages suppress them.
+Characters without a resolved casting source use a neutral unknown-level Notes section. This
+includes bonus-only characters and unprepared class selections whose class data is unavailable;
+it creates no casting owner or spell page and follows the same selection and omission policies.
 Export remains immutable and preserves independent preparation and usage.
 
 MPMB spell fields use a `WotC__` prefix; extra caster/continuation copies have distinct prefixes.

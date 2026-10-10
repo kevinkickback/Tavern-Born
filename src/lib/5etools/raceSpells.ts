@@ -52,10 +52,12 @@ export function parseChooseFilter(filter: string): { level: number; classes: str
         throw new Error('Invalid native spell filter level.')
       level = parsed
     } else if (k === 'class') {
-      for (const cls of value.split(';')) {
-        const trimmed = cls.trim()
-        if (trimmed) classes.push(trimmed)
-      }
+      const suppliedClasses = value
+        .split(';')
+        .map((cls) => cls.trim())
+        .filter(Boolean)
+      if (!suppliedClasses.length) throw new Error('Incomplete native spell filter.')
+      classes.push(...suppliedClasses)
     } else throw new Error('Unsupported native spell filter field: ' + key)
   }
 

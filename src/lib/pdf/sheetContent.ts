@@ -209,7 +209,10 @@ export function planSheetContent(
     )
   }
   const automaticSpells = groups.find((group) => group.id === 'spells')?.automatic
-  for (const page of vm.spellcastingPages) {
+  const spellPages = vm.spellcastingPages.length
+    ? vm.spellcastingPages
+    : [{ detail: undefined, spellRows: vm.spellRows }]
+  for (const page of spellPages) {
     const unknown = page.spellRows.filter(
       (row) =>
         row.level !== 'C' &&
@@ -221,9 +224,11 @@ export function planSheetContent(
     )
     if (unknown.length)
       overflow.push({
-        id: 'unknown-spell-levels:' + page.detail.profileId,
+        id: 'unknown-spell-levels:' + (page.detail?.profileId ?? 'unassigned'),
         groupId: 'spells',
-        title: page.detail.sourceName + ': spells with unknown levels',
+        title: page.detail
+          ? page.detail.sourceName + ': spells with unknown levels'
+          : 'Spells with unknown levels',
         text: unknown.map((row) => row.name + ' — spell level unknown').join('\n'),
       })
   }
