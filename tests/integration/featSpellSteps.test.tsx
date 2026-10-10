@@ -244,8 +244,8 @@ async function recoveryPage(fixedGrant: boolean) {
 test.each([
   false,
   true,
-])('zero-step dismissal and rule restoration preserve the original setup (fixed=%s)', async (fixedGrant) => {
-  const { before, originalRules } = await recoveryPage(fixedGrant)
+])('zero-step Cancel, Escape and Close preserve the original setup (fixed=%s)', async (fixedGrant) => {
+  const { before } = await recoveryPage(fixedGrant)
   openEdit()
   expect(screen.getByText(/Current rules for Training \(TEST\) have no setup choices/)).toBeTruthy()
   expect(controls().getByText('spark (test), Ray (TEST)')).toBeTruthy()
@@ -266,6 +266,17 @@ test.each([
   click(/^Close$/)
   expect(useCharacterStore.getState().activeCharacter).toBe(before)
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+})
+
+test.each([
+  false,
+  true,
+])('restoring rules after zero-step recovery retains literal saved choices (fixed=%s)', async (fixedGrant) => {
+  const { before, originalRules } = await recoveryPage(fixedGrant)
+  openEdit()
+  click(/^Cancel$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
   // Restored rules are picked up on reopening, without rewriting the literal saved references.
   catalog(originalRules)
   openEdit()
@@ -274,6 +285,7 @@ test.each([
   checked(/^Ray/)
   click(/^Close$/)
   expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
 })
 
 test.each([
