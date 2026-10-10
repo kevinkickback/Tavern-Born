@@ -88,7 +88,11 @@ Shared benefits remain until their final owner is removed. Separate complete own
 case and surrounding whitespace; literal pipes cannot collapse different name/source pairs.
 
 Strict admission validates selected setup ownership and benefits in both directions, without loaded
-rules. Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
+rules. Every selected record, including an unconfigured record, requires exactly one manual feat
+ownership marker for its copy and printing. Repeated normalized choices within a skill, language,
+tool or spell array reject at admission and before setup commands change the draft. Distinct spell
+printings remain separate choices; display aliases for the same printing do not count twice.
+Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
 5etools spell tag; trailing plain fields reject before parsing or mutation. Selected ownership uses
 canonical ledger map keys, including name-only spell keys with their printing in `grantSource`.
 Admission rejects aliases in those keys rather than normalizing them into a benefit that removal

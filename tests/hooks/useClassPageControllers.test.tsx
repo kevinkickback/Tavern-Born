@@ -5,6 +5,7 @@ import {
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { applyFeatGrant } from '@/lib/provenance'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
@@ -192,6 +193,7 @@ describe('class page controllers', () => {
         },
       ],
     })
+    character.provenance = applyFeatGrant(character.provenance, 'Alert', 'PHB', true)
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
@@ -301,6 +303,7 @@ describe('class page controllers', () => {
         },
       ],
     })
+    character.provenance = applyFeatGrant(character.provenance, first.name, first.source, true)
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,

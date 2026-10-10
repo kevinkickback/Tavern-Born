@@ -2785,54 +2785,62 @@
     "feats": {
       "alert": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "Alert",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "war caster": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "War Caster",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "resilient": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
+          "sourceType": "manual",
+          "sourceName": "Resilient",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "skilled": [
         {
-          "sourceType": "class",
-          "sourceName": "Cleric",
+          "sourceType": "manual",
+          "sourceName": "Skilled",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Cleric"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "magic initiate": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ],
       "tough": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Tough",
+          "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ]
     },

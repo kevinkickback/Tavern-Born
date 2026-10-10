@@ -5,13 +5,24 @@ import {
   isSourceQualifiedSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import type { Character } from '@/types/character'
+import type { Character, FeatOptionSelections } from '@/types/character'
 import { getFeatSelectionKey, getSelectedFeatOwnerKey } from './featSelectionIdentity'
 import { normalizeKey } from './normalization'
 import type { SourceTag } from './types'
 
 type Path = Array<string | number>
-type Owner = { expected: Set<string>; seen: Set<string>; path: Path }
+type Owner = { expected: Set<string>; seen: Set<string>; markers: number; path: Path }
+
+/** Each saved choice within a domain must identify a distinct benefit. */
+export function getRepeatedFeatOptionDomains(options: FeatOptionSelections | undefined) {
+  return (['skills', 'languages', 'tools', 'spells'] as const).filter((domain) => {
+    const values = options?.[domain] ?? []
+    const keys = values.map((value) =>
+      domain === 'spells' ? getSpellReferenceKey(value) : normalizeKey(value),
+    )
+    return new Set(keys).size !== keys.length
+  })
+}
 
 /** Catalog-independent admission of selected-copy setup and its reversible benefits. */
 export function getInvalidFeatSelectionPaths(character: Character): Path[] {
@@ -38,8 +49,10 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
       if (owners.has(key) || ids.has(feat.id) || !feat.name.trim() || !feat.source.trim())
         invalid.push(path)
       ids.add(feat.id)
-      const owner: Owner = { expected: new Set(), seen: new Set(), path }
+      const owner: Owner = { expected: new Set(), seen: new Set(), markers: 0, path }
       owners.set(key, owner)
+      for (const domain of getRepeatedFeatOptionDomains(feat.options))
+        invalid.push([...path, 'options', domain])
       const add = (domain: string, value: string) => owner.expected.add(benefitKey(domain, value))
       for (const domain of ['skills', 'languages', 'tools'] as const) {
         for (const name of feat.options?.[domain] ?? []) {
@@ -101,6 +114,7 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
         key !== normalizeKey(tag.sourceName)
       )
         invalid.push(path)
+      else if (++owner.markers !== 1) invalid.push(path)
       return
     }
     if (tag.sourceType !== 'feat' || tag.grantType !== 'choice') return
@@ -166,6 +180,7 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
     inspect(record.sourceTag, 'choices', record.id, ['provenance', 'choices', index])
   })
   for (const owner of owners.values()) {
+    if (owner.markers !== 1) invalid.push(owner.path)
     if (owner.expected.size !== owner.seen.size) invalid.push([...owner.path, 'options'])
   }
   return invalid

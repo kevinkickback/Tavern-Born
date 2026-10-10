@@ -2875,54 +2875,62 @@
     "feats": {
       "war caster": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "War Caster",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "fey-touched": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "Fey-Touched",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "resilient": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
+          "sourceType": "manual",
+          "sourceName": "Resilient",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "skill expert": [
         {
-          "sourceType": "class",
-          "sourceName": "Cleric",
+          "sourceType": "manual",
+          "sourceName": "Skill Expert",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Cleric"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "magic initiate": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ],
       "tough": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Tough",
+          "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ],
       "defense": [

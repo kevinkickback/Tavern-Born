@@ -376,6 +376,111 @@ describe('independent selected feat copies', () => {
   })
 
   test.each([
+    'ordinary',
+    'bonus',
+  ] as const)('distinct spell printings and shared proficiency/expertise choices remain reversible: %s', (kind) => {
+    const target = kind === 'ordinary' ? ordinary : bonus
+    let character = selectCopies()
+    character = reopen(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        target,
+        {
+          skills: ['History'],
+          expertiseSkill: ' history ',
+          spells: ['Spark|TEST', '{@spell Spark|OTHER|Other printing}'],
+        },
+        [
+          { name: 'Spark', source: 'TEST', level: 0 },
+          { name: 'Spark', source: 'OTHER', level: 1 },
+        ] as Spell5e[],
+      ),
+    )
+    expect(character.provenance.spells.spark.map((tag) => tag.grantSource)).toEqual([
+      'TEST',
+      'OTHER',
+    ])
+    expect(character.proficiencies.skills).toEqual(['history'])
+    expect(character.proficiencies.expertise).toEqual(['history'])
+    character = reopen(
+      character,
+      clearFeatOptionsCommand(character, character.provenance, target, {}),
+    )
+    expect(character.provenance.spells).toEqual({})
+    expect(character.proficiencies.skills).toEqual([])
+    expect(character.proficiencies.expertise).toEqual([])
+    expect(character.provenance.feats.skilled).toHaveLength(2)
+  })
+
+  test.each(
+    (['ordinary', 'bonus'] as const).flatMap((kind) =>
+      (['missing', 'duplicate'] as const).map((failure) => ({ kind, failure })),
+    ),
+  )('strict admission requires one selected-copy feat marker: $kind / $failure', ({
+    kind,
+    failure,
+  }) => {
+    const character = selectCopies()
+    const tags = character.provenance.feats.skilled
+    const marker = tags.find((tag) => tag.grantVariant === `selection:${kind}`)!
+    if (failure === 'missing')
+      character.provenance.feats.skilled = tags.filter((tag) => tag !== marker)
+    else
+      tags.push({
+        ...marker,
+        sourceName: ' skilled ',
+        sourceRef: ' xphb ',
+        label: 'Alternate label',
+      })
+    const before = structuredClone(character)
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+    expect(character).toEqual(before)
+  })
+
+  test.each(
+    (['ordinary', 'bonus'] as const).flatMap((kind) =>
+      (['skills', 'languages', 'tools', 'spells'] as const).map((domain) => ({ kind, domain })),
+    ),
+  )('repeated saved choices cannot claim one benefit twice: $kind / $domain', ({
+    kind,
+    domain,
+  }) => {
+    const target = kind === 'ordinary' ? ordinary : bonus
+    const options = {
+      skills: ['Arcana'],
+      languages: ['Elvish'],
+      tools: ['Herbalism Kit'],
+      spells: ['Spark|TEST'],
+    }
+    const metadata = [{ name: 'Spark', source: 'TEST', level: 0 }] as Spell5e[]
+    let character = selectCopies()
+    character = reopen(
+      character,
+      commitFeatOptionsCommand(character, character.provenance, target, options, metadata),
+    )
+    const duplicate =
+      domain === 'spells'
+        ? '{@spell spark|test|Different display}'
+        : ` ${options[domain][0].toLowerCase()} `
+    const repeated = { ...options, [domain]: [...options[domain], duplicate] }
+    const malformed = structuredClone(character)
+    const record = kind === 'ordinary' ? malformed.feats[0] : malformed.specialFeats![0]
+    record.options = repeated
+    const before = structuredClone(malformed)
+    expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+    expect(malformed).toEqual(before)
+    for (const result of [
+      commitFeatOptionsCommand(character, character.provenance, target, repeated, metadata),
+      editFeatOptionsCommand(character, character.provenance, target, options, repeated, metadata),
+    ]) {
+      expect(result.characterPatch).toEqual({})
+      expect(result.provenanceUpdate).toBe(character.provenance)
+    }
+  })
+
+  test.each([
     'missing-owner',
     'wrong-kind',
     'duplicate-tag',

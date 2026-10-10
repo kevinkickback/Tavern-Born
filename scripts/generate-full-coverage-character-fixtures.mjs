@@ -480,7 +480,7 @@ function buildFixtureProvenance({
   proficiencies,
   backgroundChoices,
 }) {
-  const provenance = emptyProvenance()
+  let provenance = emptyProvenance()
   const wizard = progression.find((entry) => entry.name === 'Wizard')
   const fighter = progression.find((entry) => entry.name === 'Fighter')
   const cleric = progression.find((entry) => entry.name === 'Cleric')
@@ -575,13 +575,10 @@ function buildFixtureProvenance({
   }
 
   for (const feat of selectedFeats) {
-    addLedgerGrant(
-      provenance.feats,
-      feat.name,
-      makeTag('class', feat.className, 'choice', feat.classSource),
-    )
+    provenance = applyFeatGrant(provenance, feat.name, feat.source, true, 'ordinary')
   }
-  for (const feat of specialFeats) addLedgerGrant(provenance.feats, feat.name, manualTag)
+  for (const feat of specialFeats)
+    provenance = applyFeatGrant(provenance, feat.name, feat.source, true, 'bonus')
   for (const choice of classFeatChoices) {
     for (const feat of choice.feats) {
       addLedgerGrant(
@@ -1457,6 +1454,7 @@ let parseRaces,
   refreshNativeRacialSpellState,
   setRacialSpellChoice,
   setRacialCastingAbility,
+  applyFeatGrant,
   commitFeatOptionsCommand,
   characterPersistenceSchema
 try {
@@ -1472,6 +1470,9 @@ try {
     '/src/lib/character/commands/spellCommands.ts',
   ))
   ;({ characterPersistenceSchema } = await runtime.ssrLoadModule('/src/types/characterSchema.ts'))
+  ;({ applyFeatGrant } = await runtime.ssrLoadModule(
+    '/src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts',
+  ))
   ;({ commitFeatOptionsCommand } = await runtime.ssrLoadModule(
     '/src/lib/character/commands/featCommands.ts',
   ))

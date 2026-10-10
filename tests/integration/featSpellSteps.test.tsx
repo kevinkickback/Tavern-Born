@@ -5,10 +5,12 @@ import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
+  clearFeatOptionsCommand,
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { applyFeatGrant } from '@/lib/provenance'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -41,6 +43,24 @@ const feat: Feat5e = {
 }
 const saved = { spells: [' spark | test ', '{@spell Ray|TEST|My ray}'] }
 const reader = createIdbStorage<{ characters: Character[] }>()
+
+function selectedCharacterFixture(overrides: Partial<Character>) {
+  const character = makeCharacterFixture(overrides)
+  for (const [records, kind] of [
+    [character.feats, 'ordinary'],
+    [character.specialFeats ?? [], 'bonus'],
+  ] as const) {
+    for (const record of records)
+      character.provenance = applyFeatGrant(
+        character.provenance,
+        record.name,
+        record.source,
+        true,
+        kind,
+      )
+  }
+  return character
+}
 
 function catalog(
   record = feat,
@@ -131,7 +151,7 @@ test('saved zero-step setup requires an explicit clear callback instead of borro
   expect(onFinish).not.toHaveBeenCalled()
 })
 
-async function recoveryPage(fixedGrant: boolean) {
+async function recoveryPage(fixedGrant: boolean, renderPage = true) {
   const originalRules: Feat5e = fixedGrant
     ? {
         ...feat,
@@ -177,7 +197,7 @@ async function recoveryPage(fixedGrant: boolean) {
     optionalFeature: 'Other Guard',
   }
   const otherRay = { ...ray, source: 'OTHER' }
-  let original = makeCharacterFixture({
+  let original = selectedCharacterFixture({
     allowedSources: ['TEST', 'OTHER'],
     background: 'Scholar',
     backgroundSource: 'TEST',
@@ -235,7 +255,7 @@ async function recoveryPage(fixedGrant: boolean) {
   useCharacterStore.getState().setActiveCharacter(original.id)
   // A competing feat printing still has choices; exact spells may be entirely unavailable.
   catalog(noChoices, [otherRay], [{ ...originalRules, source: 'OTHER' }])
-  page()
+  if (renderPage) page()
   return {
     before: useCharacterStore.getState().activeCharacter,
     original,
@@ -297,8 +317,8 @@ test.each([
 test.each([
   false,
   true,
-])('zero-step clear removes only its owner through durable reopen and restored choices (fixed=%s)', async (fixedGrant) => {
-  const { original, originalRules, noChoices, otherRay, independent, independentOptions } =
+])('zero-step clear saves only its owner removal and preserves independent benefits (fixed=%s)', async (fixedGrant) => {
+  const { original, noChoices, otherRay, independent, independentOptions } =
     await recoveryPage(fixedGrant)
   catalog(noChoices, [otherRay])
   openEdit()
@@ -332,7 +352,34 @@ test.each([
   expect(durable?.proficiencies).toEqual(independent.characterPatch.proficiencies)
   if (fixedGrant) expect(durable?.provenance.feats).toEqual(original.provenance.feats)
   else expect(durable?.feats[0]).toMatchObject({ name: feat.name, source: feat.source })
-  cleanup()
+})
+
+test.each([
+  false,
+  true,
+])('cleared zero-step setup reopens durably and restored choices start empty (fixed=%s)', async (fixedGrant) => {
+  const { original, originalRules } = await recoveryPage(fixedGrant, false)
+  const result = clearFeatOptionsCommand(
+    original,
+    original.provenance,
+    {
+      name: feat.name,
+      source: feat.source,
+      fixedGrant,
+      grantVariant: fixedGrant ? 'Wizard' : undefined,
+      selectionKind: fixedGrant ? undefined : 'ordinary',
+    },
+    {},
+  )
+  await act(async () => {
+    await useCharacterStore.getState().updateCharacter(original.id, {
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    })
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  const durable = (await reader.getItem('character-storage'))?.state.characters[0]
+  expect(durable).toBeTruthy()
   await act(async () => {
     useCharacterStore.getState().setActiveCharacter(null)
     await useCharacterStore.persist.rehydrate()
@@ -486,7 +533,7 @@ test.each([
   false,
   true,
 ])('zero-step clear retracts only the requested copy of the same printing (bonus=%s)', async (bonus) => {
-  let character = makeCharacterFixture({
+  let character = selectedCharacterFixture({
     allowedSources: ['TEST'],
     feats: [{ id: 'ordinary', name: feat.name, source: feat.source, description: '' }],
     specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
@@ -541,7 +588,7 @@ test.each([
 })
 
 test('zero-step clear remains available for a standalone bonus setup', () => {
-  const character = makeCharacterFixture({
+  const character = selectedCharacterFixture({
     allowedSources: ['TEST'],
     specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
   })
@@ -586,7 +633,7 @@ test.each([
     name: field === 'name' ? 'Training|Other' : 'Training',
     source: field === 'source' ? 'HB|Other' : 'HB',
   }
-  let character = makeCharacterFixture({
+  let character = selectedCharacterFixture({
     allowedSources: [selected.source, other.source],
     feats: [{ ...selected, id: 'ordinary', description: '' }],
     specialFeats: [{ ...other, id: 'bonus', description: '' }],
@@ -823,7 +870,7 @@ test.each([
   false,
   true,
 ])('page edit, replacement and durable reopen preserve separate owners (fixed=%s)', async (fixedGrant) => {
-  let original = makeCharacterFixture({
+  let original = selectedCharacterFixture({
     allowedSources: ['TEST'],
     background: 'Scholar',
     backgroundSource: 'TEST',

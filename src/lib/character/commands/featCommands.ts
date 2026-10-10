@@ -22,6 +22,7 @@ import {
   removeGrantsBySourceRef,
   resolveChoice,
 } from '@/lib/provenance'
+import { getRepeatedFeatOptionDomains } from '@/lib/provenance/featSelectionValidation'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -463,7 +464,10 @@ export function commitFeatOptionsCommand(
   selections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
-  if (!isFeatOptionTargetActive(character, feat))
+  if (
+    !isFeatOptionTargetActive(character, feat) ||
+    (feat.selectionKind && getRepeatedFeatOptionDomains(selections).length > 0)
+  )
     return { characterPatch: {}, provenanceUpdate: ledger }
   const resolved = resolveFeatOptionSpells(character, ledger, feat, selections, allSpells)
   if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
@@ -731,7 +735,10 @@ export function editFeatOptionsCommand(
   newSelections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
-  if (!isFeatOptionTargetActive(character, feat))
+  if (
+    !isFeatOptionTargetActive(character, feat) ||
+    (feat.selectionKind && getRepeatedFeatOptionDomains(newSelections).length > 0)
+  )
     return { characterPatch: {}, provenanceUpdate: ledger }
   const resolved = resolveFeatOptionSpells(character, ledger, feat, newSelections, allSpells)
   if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
