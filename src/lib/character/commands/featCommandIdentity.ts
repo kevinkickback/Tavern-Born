@@ -27,7 +27,9 @@ export interface SelectedFeat {
 }
 
 export function getFeatOptionSourceName(feat: FeatOptionTarget): string {
-  return feat.grantVariant ? `${feat.name.trim()}; ${feat.grantVariant.trim()}` : feat.name
+  return feat.grantVariant && getFeatOptionOwnerKey(feat)?.startsWith('fixed:')
+    ? `${feat.name.trim()}; ${feat.grantVariant.trim()}`
+    : feat.name
 }
 
 export function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {

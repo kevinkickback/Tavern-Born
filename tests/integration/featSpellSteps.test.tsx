@@ -8,9 +8,10 @@ import {
   clearFeatOptionsCommand,
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
+  replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
-import { applyFeatGrant } from '@/lib/provenance'
+import { addGrant, applyFeatGrant, makeSourceTag } from '@/lib/provenance'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -119,6 +120,146 @@ function page() {
     </TooltipProvider>,
   )
 }
+
+async function configuredAdjacentOwner(kind: 'choice' | 'class') {
+  let character = makeCharacterFixture({
+    feats: [],
+    specialFeats: [],
+    allowedSources: ['TEST'],
+    classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+  })
+  let target: {
+    name: string
+    source: string
+    provenanceChoiceId?: string
+    classFeatChoiceId?: string
+  }
+  if (kind === 'choice') {
+    const sourceTag = makeSourceTag('race', character.race, 'choice', character.raceSource)
+    character.provenance.choices = [
+      {
+        id: 'race-feat-choice',
+        domain: 'feats',
+        sourceTag,
+        chooseCount: 1,
+        optionPool: [],
+        selected: [feat.name],
+        selectedRefs: [{ name: feat.name, source: feat.source }],
+        status: 'resolved',
+      },
+    ]
+    character.provenance = addGrant(character.provenance, 'feats', feat.name, sourceTag)
+    target = { name: feat.name, source: feat.source, provenanceChoiceId: 'race-feat-choice' }
+  } else {
+    const result = replaceClassFeatSelectionsCommand(
+      character,
+      character.provenance,
+      {
+        className: 'Fighter',
+        classSource: 'PHB',
+        progressionName: 'Training',
+        categories: ['G'],
+        slotLevels: [1],
+      },
+      [{ name: feat.name, source: feat.source }],
+    )
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    target = {
+      name: feat.name,
+      source: feat.source,
+      classFeatChoiceId: character.classFeatChoices![0].id,
+    }
+  }
+  const result = commitFeatOptionsCommand(character, character.provenance, target, saved, [
+    spark,
+    ray,
+  ])
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  return character
+}
+
+test.each([
+  'choice',
+  'class',
+] as const)('catalog casing refresh preserves %s Edit and durable choices', async (kind) => {
+  const original = await configuredAdjacentOwner(kind)
+  catalog({ ...feat, name: 'TRAINING' })
+  page()
+  const cardName = kind === 'choice' ? 'TRAINING' : 'Training'
+  const card = screen.getByRole('button', { name: `Select ${cardName}` }).parentElement!
+  expect(within(card).queryByText('Feat data unavailable')).toBeNull()
+  openEdit(cardName)
+  checked(/^Spark/)
+  click(/Next/)
+  checked(/^Ray/)
+  click(/Finish/)
+  const active = useCharacterStore.getState().activeCharacter!
+  const refreshedProvenance = {
+    ...original.provenance,
+    spells: Object.fromEntries(
+      Object.entries(original.provenance.spells).map(([key, tags]) => [
+        key,
+        tags.map((tag) => ({ ...tag, sourceName: 'TRAINING', label: 'TRAINING' })),
+      ]),
+    ),
+  }
+  expect(active.provenance).toEqual(refreshedProvenance)
+  expect(active.spells).toEqual(original.spells)
+  expect(active.classFeatChoices).toEqual(original.classFeatChoices)
+  characterPersistenceSchema.parse(active)
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  const stored = (await reader.getItem('character-storage'))!.state.characters[0]
+  expect(stored.provenance).toEqual(refreshedProvenance)
+  expect(stored.classFeatChoices).toEqual(original.classFeatChoices)
+  characterPersistenceSchema.parse(stored)
+})
+
+test.each([
+  false,
+  true,
+])('name-only choice stays unavailable and removable without guessing a printing (refs=%s)', (refs) => {
+  const character = makeCharacterFixture({
+    feats: [],
+    specialFeats: [],
+    allowedSources: ['TEST', 'Other'],
+  })
+  const sourceTag = makeSourceTag('race', character.race, 'choice', character.raceSource)
+  character.provenance.choices = [
+    {
+      id: 'race-feat-choice',
+      domain: 'feats',
+      sourceTag,
+      chooseCount: 1,
+      optionPool: [],
+      selected: [feat.name],
+      status: 'resolved',
+      ...(refs ? { selectedRefs: [{ name: feat.name }] } : {}),
+    },
+  ]
+  character.provenance = addGrant(character.provenance, 'feats', feat.name, sourceTag)
+  characterPersistenceSchema.parse(character)
+  useCharacterStore.setState({ activeCharacter: character })
+  catalog(feat, [spark, ray], [{ ...feat, source: 'Other' }])
+  page()
+  const card = screen.getByRole('button', { name: `Select ${feat.name}` }).parentElement!
+  expect(within(card).getByText('Feat data unavailable')).toBeTruthy()
+  expect(within(card).queryByRole('button', { name: /Complete Setup|Edit Setup/ })).toBeNull()
+  fireEvent.click(within(card).getByRole('button', { name: /Remove/ }))
+  const active = useCharacterStore.getState().activeCharacter!
+  expect(active.provenance.choices[0].selected).toEqual([])
+  expect(active.provenance.feats.training).toBeUndefined()
+  expect(active.spells).toEqual(character.spells)
+  characterPersistenceSchema.parse(active)
+})
 
 beforeEach(async () => {
   await vi.waitFor(() => expect(useCharacterStore.persist.hasHydrated()).toBe(true))

@@ -235,7 +235,7 @@ export function useFeatsPageController() {
     [character, replaceFeatSelections, selectedFeat],
   )
   const handleRemoveGrantedChoice = useCallback(
-    (choiceId: string, featName: string, featSource: string) => {
+    (choiceId: string, featName: string, featSource?: string) => {
       removeFeatChoiceSelection(choiceId, featName, featSource)
       if (isSelectedFeat(selectedFeat, featName, featSource)) setSelectedFeat(null)
     },
@@ -353,15 +353,21 @@ export function useFeatsPageController() {
       )
       const choiceOptions = provenanceChoiceId
         ? character?.provenance?.choices
-            .find((choice) => choice.id === provenanceChoiceId)
+            .find((choice) => choice.domain === 'feats' && choice.id === provenanceChoiceId)
             ?.selectedRefs?.find(
-              (selected) => selected.name === featName && (selected.source ?? '') === featSource,
+              (selected) =>
+                getFeatSelectionKey(selected) ===
+                getFeatSelectionKey({ name: featName, source: featSource }),
             )?.options
         : undefined
       const classOptions = classFeatChoiceId
         ? character?.classFeatChoices
             ?.find((choice) => choice.id === classFeatChoiceId)
-            ?.feats.find((feat) => feat.name === featName && feat.source === featSource)?.options
+            ?.feats.find(
+              (feat) =>
+                getFeatSelectionKey(feat) ===
+                getFeatSelectionKey({ name: featName, source: featSource }),
+            )?.options
         : undefined
       const priorOptions = provenanceChoiceId
         ? choiceOptions
@@ -497,7 +503,7 @@ export function useFeatsPageController() {
   const pendingClassOptionCount = classProgressionFeats.filter(({ feat }) => {
     if (feat.options) return false
     const data = (feats as Feat5e[]).find(
-      (candidate) => candidate.name === feat.name && (candidate.source ?? '') === feat.source,
+      (candidate) => getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
     )
     return data ? hasFeatOptions(data) : false
   }).length
@@ -508,8 +514,8 @@ export function useFeatsPageController() {
         if (selection.options) return false
         const data = (feats as Feat5e[]).find(
           (candidate) =>
-            candidate.name.toLowerCase() === selection.name.toLowerCase() &&
-            (selection.source == null || candidate.source === selection.source),
+            !!selection.source?.trim() &&
+            getFeatSelectionKey(candidate) === getFeatSelectionKey(selection),
         )
         return data ? hasFeatOptions(data) : false
       }).length,

@@ -38,6 +38,14 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
   const hasProficiency = (domain: 'skills' | 'languages' | 'tools' | 'expertise', key: string) =>
     character.proficiencies[domain].some((entry) => normalizeKey(entry) === key)
 
+  character.provenance.choices.forEach((choice, index) => {
+    if (choice.domain !== 'feats') return
+    choice.selectedRefs?.forEach((ref, refIndex) => {
+      if (ref.options !== undefined && (!ref.name.trim() || !ref.source?.trim()))
+        invalid.push(['provenance', 'choices', index, 'selectedRefs', refIndex])
+    })
+  })
+
   for (const [field, kind] of [
     ['feats', 'ordinary'],
     ['specialFeats', 'bonus'],
@@ -121,6 +129,25 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
     // Old unqualified setup tags have no reversible selected-copy owner.
     if (!kind) {
       invalid.push(path)
+      return
+    }
+    if (kind.startsWith('choice:')) {
+      const choices = character.provenance.choices.filter(
+        (choice) => choice.domain === 'feats' && choice.id === kind.slice('choice:'.length),
+      )
+      const refs = choices.length === 1 ? (choices[0].selectedRefs ?? []) : []
+      const matches = refs.filter(
+        (ref) =>
+          getFeatSelectionKey(ref) ===
+          getFeatSelectionKey({ name: tag.sourceName, source: tag.sourceRef }),
+      )
+      if (
+        !tag.sourceName.trim() ||
+        !tag.sourceRef?.trim() ||
+        matches.length !== 1 ||
+        matches[0].options === undefined
+      )
+        invalid.push(path)
       return
     }
     if (!selected) return

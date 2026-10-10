@@ -206,6 +206,10 @@ missing/contradictory benefits reject without loaded rules. Schema 7's shared se
 cannot establish this relation by relabeling its version; recreate those prerelease characters.
 See [feat ownership](provenance.md#feat-setup-ownership) for the command contract.
 
+Configured racial/background feat choices also require a saved printing, and their setup benefit
+tags must address exactly one qualified configured reference. Unconfigured name-only choices stay
+removable but cannot borrow catalog setup; explicitly reselect a printing to configure them.
+
 The active source-qualified racial owner set remains required: the selected parent and optional
 child. Every racial provenance tag and choice belongs to that selection; a child requires a parent.
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals

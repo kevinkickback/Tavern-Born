@@ -277,6 +277,18 @@ describe('feat commands', () => {
     'classFeatChoiceId',
   ] as const)('fixed metadata cannot relax the exact %s owner key', (ownerField) => {
     const initial = makeCharacterFixture()
+    if (ownerField === 'provenanceChoiceId') {
+      initial.provenance.choices.push({
+        id: 'Owner',
+        domain: 'feats',
+        sourceTag: makeSourceTag('race', initial.race, 'choice', initial.raceSource),
+        chooseCount: 1,
+        optionPool: [],
+        selected: ['Training'],
+        status: 'resolved',
+        selectedRefs: [{ name: 'Training', source: 'PHB' }],
+      })
+    }
     const feat = {
       name: 'Training',
       source: 'PHB',
@@ -286,9 +298,10 @@ describe('feat commands', () => {
     }
     const configured = applyResult(
       initial,
-      commitFeatOptionsCommand(initial, emptyProvenance(), feat, { skills: ['Arcana'] }),
+      commitFeatOptionsCommand(initial, initial.provenance, feat, { skills: ['Arcana'] }),
     )
     expect(configured.fixedFeatOptions).toBeUndefined()
+    expect(configured.provenance.proficiencies.skills.arcana[0].sourceName).toBe('Training')
     const result = retractFeatOptionsCommand(
       configured,
       configured.provenance,

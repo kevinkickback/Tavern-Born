@@ -319,13 +319,12 @@ export function FeatsPage() {
                             {classProgressionFeats.map(({ choice, feat }) => {
                               const featData = (feats as Feat5e[]).find(
                                 (candidate) =>
-                                  candidate.name === feat.name &&
-                                  (candidate.source ?? '') === feat.source,
+                                  getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
                               )
                               const needsOptions = !!featData && hasFeatOptions(featData)
                               return (
                                 <FeatDetailCard
-                                  key={`class-${choice.id}-${feat.id}`}
+                                  key={JSON.stringify([choice.id, getFeatSelectionKey(feat)])}
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
@@ -394,15 +393,18 @@ export function FeatsPage() {
                               getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
                                   (feat) =>
-                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
-                                    (selection.source == null || feat.source === selection.source),
+                                    !!selection.source?.trim() &&
+                                    getFeatSelectionKey(feat) === getFeatSelectionKey(selection),
                                 )
                                 const selectedName = data?.name ?? selection.name
                                 const selectedSource = selection.source ?? data?.source ?? ''
                                 const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
+                                    key={JSON.stringify([
+                                      choice.id,
+                                      getFeatSelectionKey(selection),
+                                    ])}
                                     feat={{
                                       id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
                                       name: selectedName,
@@ -429,8 +431,8 @@ export function FeatsPage() {
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,
-                                        selectedName,
-                                        selectedSource,
+                                        selection.name,
+                                        selection.source,
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
@@ -496,15 +498,18 @@ export function FeatsPage() {
                               getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
                                   (feat) =>
-                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
-                                    (selection.source == null || feat.source === selection.source),
+                                    !!selection.source?.trim() &&
+                                    getFeatSelectionKey(feat) === getFeatSelectionKey(selection),
                                 )
                                 const selectedName = data?.name ?? selection.name
                                 const selectedSource = selection.source ?? data?.source ?? ''
                                 const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
+                                    key={JSON.stringify([
+                                      choice.id,
+                                      getFeatSelectionKey(selection),
+                                    ])}
                                     feat={{
                                       id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
                                       name: selectedName,
@@ -531,8 +536,8 @@ export function FeatsPage() {
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,
-                                        selectedName,
-                                        selectedSource,
+                                        selection.name,
+                                        selection.source,
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
