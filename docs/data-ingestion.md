@@ -216,9 +216,23 @@ Known, innate and prepared grants support direct,
 `_`, will, ritual, daily and rest buckets. Expanded `sN` entries extend class-list eligibility; they
 never become automatic known racial spells. This boundary does not implement expendable daily/rest
 resources. Unsupported filter fields and invalid schedule levels/counts are diagnostic errors.
+The native evaluator validates the complete supported grammar before returning a suite. Supplied
+blocks and schedules must be objects, lists must be arrays, and every member must be recognized;
+mixed supported/unsupported rules reject together. Expanded lists accept `s0` through `s9` only,
+including cantrip eligibility. Unsupported upstream constructs such as resource/limited buckets
+and all-matching descriptors produce diagnostics rather than partial grants. This validation runs
+when native rules are evaluated; the source loader retains raw additional-spell records.
+Choice descriptors reject unknown members and conflicting inner/outer counts. Both count locations
+remain supported when unambiguous. Casting abilities must be one of the six abbreviations or a
+nonempty choice set; spelling, case and whitespace normalization never invent a missing ability.
+Malformed spell UIDs, unknown casting modifiers and extra UID fields reject locally before decoding;
+the shared codec's unrelated consumers are unchanged. Empty lists and omitted optional rules remain
+valid. No character conversion or data-cache change is needed for this live validation boundary.
 An explicitly supplied class filter requires at least one nonempty class name; whitespace or
 semicolon-only constraints reject instead of becoming unrestricted. Omitting the class segment
 remains unrestricted, and class-only filters retain their native cantrip-level default.
+Filter segments require exactly one equals sign. A level field may appear once; repeated class
+fields retain their union semantics. Conflicting or duplicate level assignments reject.
 Daily/rest usage keys must be canonical positive integers, optionally ending in `e`; only daily
 also accepts `pb`. Zero, leading zeros and unsupported rest expressions reject before materialization.
 
