@@ -215,35 +215,7 @@ export function buildSpellSelectionSourceMap(params: {
   return map
 }
 
-export function isSpellOnClassList(
-  spell: {
-    classes?: {
-      fromClassList?: Array<{ name?: string; source?: string }>
-    }
-  },
-  className?: string,
-  classSource?: string,
-): boolean {
-  if (!className) return true
-
-  const targetName = className.trim().toLowerCase()
-  const targetSource = (classSource ?? '').trim().toLowerCase()
-  const fromClassList = spell.classes?.fromClassList ?? []
-
-  if (fromClassList.length === 0) {
-    return false
-  }
-
-  return fromClassList.some((entry) => {
-    const entryName = entry.name?.trim().toLowerCase()
-    if (entryName !== targetName) return false
-
-    const entrySource = entry.source?.trim().toLowerCase()
-    if (!targetSource || !entrySource) return true
-
-    return entrySource === targetSource
-  })
-}
+export { isSpellOnClassList } from './spellUtils'
 
 export function isSpellOnSubclassList(
   spell: {

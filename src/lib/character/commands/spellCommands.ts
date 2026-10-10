@@ -31,11 +31,11 @@ import {
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
-import { isSpellOnClassList } from '@/lib/calculations/spellProfiles.attribution'
 import {
   buildClassProfileLabel,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
+import { isSpellOnClassList } from '@/lib/calculations/spellUtils'
 import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
