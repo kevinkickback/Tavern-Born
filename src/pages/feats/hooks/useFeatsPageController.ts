@@ -13,6 +13,7 @@ import {
   buildPrerequisiteSnapshot,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
+import { hasSharedFeatOptionOwner } from '@/lib/character/commands/featCommandIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   getFixedFeatOptionKey,
@@ -74,6 +75,7 @@ export function useFeatsPageController() {
     removeFeatChoiceSelection,
     commitFeatWithOptions,
     editFeatWithOptions,
+    clearFeatWithOptions,
   } = useFeatProvenanceMutations()
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const [listCollapsed, setListCollapsed] = useState(false)
@@ -394,6 +396,14 @@ export function useFeatsPageController() {
     [featEditTarget, editFeatWithOptions, rawSpells, spells],
   )
 
+  const featEditClearBlocked =
+    !!character && !!featEditTarget && hasSharedFeatOptionOwner(character, featEditTarget.feat5e)
+  const handleEditClear = useCallback(() => {
+    if (!featEditTarget || featEditClearBlocked) return
+    clearFeatWithOptions(featEditTarget.feat5e, featEditTarget.priorOptions)
+    setFeatEditTarget(null)
+  }, [featEditTarget, featEditClearBlocked, clearFeatWithOptions])
+
   const pendingOptionFeatIds = useMemo(
     () =>
       new Set(
@@ -495,6 +505,7 @@ export function useFeatsPageController() {
     compactPane,
     detailCollapsed,
     featEditCandidate,
+    featEditClearBlocked,
     featEditTarget,
     featOptionsTarget,
     feats: feats as Feat5e[],
@@ -505,6 +516,7 @@ export function useFeatsPageController() {
     handleDismissEditHint,
     handleEditBonusSetup,
     handleEditConfirm,
+    handleEditClear,
     handleEditFinish,
     handleEditSetup,
     handleFeatOptionsFinish,

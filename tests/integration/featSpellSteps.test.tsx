@@ -118,10 +118,15 @@ test('a no-choice new setup is dismissible and cannot commit empty choices', () 
   expect(onFinish).not.toHaveBeenCalled()
 })
 
-test.each([
-  false,
-  true,
-])('zero-step recovery preserves on dismissal, restores choices and clears only its owner durably (fixed=%s)', async (fixedGrant) => {
+test('saved zero-step setup requires an explicit clear callback instead of borrowing Finish', () => {
+  const onFinish = modal(saved, { name: feat.name, source: feat.source, entries: [] })
+  expect(controls().getByText('spark (test), Ray (TEST)')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Clear saved setup|Finish/ })).toBeNull()
+  click(/^Cancel$/)
+  expect(onFinish).not.toHaveBeenCalled()
+})
+
+async function recoveryPage(fixedGrant: boolean) {
   const originalRules: Feat5e = fixedGrant
     ? {
         ...feat,
@@ -225,7 +230,22 @@ test.each([
   // A competing feat printing still has choices; exact spells may be entirely unavailable.
   catalog(noChoices, [otherRay], [{ ...originalRules, source: 'OTHER' }])
   page()
-  const before = useCharacterStore.getState().activeCharacter
+  return {
+    before: useCharacterStore.getState().activeCharacter,
+    original,
+    originalRules,
+    noChoices,
+    otherRay,
+    independent,
+    independentOptions,
+  }
+}
+
+test.each([
+  false,
+  true,
+])('zero-step dismissal and rule restoration preserve the original setup (fixed=%s)', async (fixedGrant) => {
+  const { before, originalRules } = await recoveryPage(fixedGrant)
   openEdit()
   expect(screen.getByText(/Current rules for Training \(TEST\) have no setup choices/)).toBeTruthy()
   expect(controls().getByText('spark (test), Ray (TEST)')).toBeTruthy()
@@ -254,6 +274,14 @@ test.each([
   checked(/^Ray/)
   click(/^Close$/)
   expect(useCharacterStore.getState().activeCharacter).toBe(before)
+})
+
+test.each([
+  false,
+  true,
+])('zero-step clear removes only its owner through durable reopen and restored choices (fixed=%s)', async (fixedGrant) => {
+  const { original, originalRules, noChoices, otherRay, independent, independentOptions } =
+    await recoveryPage(fixedGrant)
   catalog(noChoices, [otherRay])
   openEdit()
   click(/^Clear saved setup$/)
@@ -304,6 +332,76 @@ test.each([
   expect(controls().getByRole('button', { name: /Next/ }).hasAttribute('disabled')).toBe(true)
 })
 afterEach(cleanup)
+
+test.each([
+  false,
+  true,
+])('zero-step clear preserves shared ordinary/bonus setup instead of guessing its owner (bonus=%s)', async (bonus) => {
+  let character = makeCharacterFixture({
+    allowedSources: ['TEST'],
+    feats: [{ id: 'ordinary', name: feat.name, source: feat.source, description: '' }],
+    specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
+  })
+  const result = commitFeatOptionsCommand(character, character.provenance, feat, saved, [
+    spark,
+    ray,
+  ])
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  catalog({ name: feat.name, source: feat.source, entries: [] })
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: bonus ? /^Bonus/ : /^Character/ }))
+  const before = useCharacterStore.getState().activeCharacter
+  openEdit()
+  const clear = controls().getByRole('button', { name: /^Clear saved setup$/ })
+  fireEvent.click(clear)
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+  expect(clear.hasAttribute('disabled')).toBe(true)
+  expect(controls().getByRole('status').textContent).toContain(
+    'selected in both Character and Bonus',
+  )
+  click(/^Cancel$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect((await reader.getItem('character-storage'))?.state.characters[0]).toEqual(character)
+})
+
+test('zero-step clear remains available for a standalone bonus setup', () => {
+  const character = makeCharacterFixture({
+    allowedSources: ['TEST'],
+    specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
+  })
+  const result = commitFeatOptionsCommand(character, character.provenance, feat, saved, [
+    spark,
+    ray,
+  ])
+  useCharacterStore.setState({
+    activeCharacter: {
+      ...character,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    },
+  })
+  catalog({ name: feat.name, source: feat.source, entries: [] })
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Bonus/ }))
+  openEdit()
+  enabled(/^Clear saved setup$/)
+  click(/^Clear saved setup$/)
+  const cleared = useCharacterStore.getState().activeCharacter
+  expect(cleared?.specialFeats?.[0].options).toEqual({})
+  expect(
+    cleared?.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+  ).toEqual([])
+  expect(cleared?.provenance.spells).toEqual({})
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+})
 
 test('unchanged multi-step Finish retains each literal once', () => {
   const onFinish = modal(saved)

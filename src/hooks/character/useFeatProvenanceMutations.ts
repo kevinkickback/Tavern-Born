@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
   applyFeatSelectionCommand,
+  clearFeatOptionsCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   type FeatOptionTarget,
@@ -136,6 +137,14 @@ export function useFeatProvenanceMutations() {
     [character, ledger, applyCommand],
   )
 
+  const clearFeatWithOptions = useCallback(
+    (feat: FeatOptionTarget, oldOptions: FeatOptionSelections) => {
+      if (!character) return
+      applyCommand(clearFeatOptionsCommand(character, ledger, feat, oldOptions))
+    },
+    [character, ledger, applyCommand],
+  )
+
   return {
     applyFeatSelection,
     removeFeatProvenance,
@@ -147,5 +156,6 @@ export function useFeatProvenanceMutations() {
     commitFeatWithOptions,
     retractFeatOptionGrants,
     editFeatWithOptions,
+    clearFeatWithOptions,
   }
 }

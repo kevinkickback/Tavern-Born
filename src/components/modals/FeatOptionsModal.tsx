@@ -523,6 +523,8 @@ export interface FeatOptionsModalProps {
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
   fixedSpellcastingClass?: string
+  onClear?: () => void
+  clearDisabledReason?: string
   onFinish: (selections: FeatOptionSelections) => void
   onDismiss?: () => void
 }
@@ -534,6 +536,8 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   proficientSkillNames = [],
   initialSelections,
   fixedSpellcastingClass,
+  onClear,
+  clearDisabledReason,
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
@@ -772,8 +776,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
             <>
               <p className="text-sm text-muted-foreground">
                 Your saved setup and its benefits are unchanged. Cancel to keep them, then reopen
-                setup after restoring the rules to edit your choices. Clearing removes all choices
-                below and only the benefits owned by this setup; the feat remains on your character.
+                setup after restoring the rules to edit your choices.
               </p>
               <dl className="max-h-64 space-y-2 overflow-y-auto text-sm">
                 {savedChoices.map(([label, value]) => (
@@ -783,14 +786,21 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
                   </div>
                 ))}
               </dl>
+              {onClear && (
+                <p className="text-sm text-muted-foreground">
+                  Clearing removes all choices above and only the benefits owned by this setup; the
+                  feat remains on your character.
+                </p>
+              )}
+              {clearDisabledReason && <p role="status">{clearDisabledReason}</p>}
             </>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
-            {savedChoices.length > 0 && (
-              <Button variant="destructive" onClick={() => onFinish({})}>
+            {savedChoices.length > 0 && onClear && (
+              <Button variant="destructive" disabled={!!clearDisabledReason} onClick={onClear}>
                 Clear saved setup
               </Button>
             )}
