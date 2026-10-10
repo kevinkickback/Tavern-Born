@@ -2,19 +2,18 @@ import { useMemo, useState } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import type { FeatOptionTarget } from '@/lib/character/commands/featCommands'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import {
   applyClassAsiChoice,
   isClassAsiFeatForSlot,
   resetClassAsiChoice,
 } from '@/pages/build/class/model/asi'
-import {
-  buildFeatModalFeats,
-  countTotalAsiAcrossClasses,
-} from '@/pages/build/class/model/pageUtils'
+import { countTotalAsiAcrossClasses } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -41,9 +40,9 @@ export function useClassAsiFeatController({
   const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
   const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null)
   const [asiModeByLevel, setAsiModeByLevel] = useState<Record<string, 'asi' | 'feat'>>({})
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<
-    (Feat5e & { classFeatChoiceId?: string }) | null
-  >(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<(Feat5e & FeatOptionTarget) | null>(
+    null,
+  )
   const classProgression = getCharacterClassEntries(character)
   const effectiveFeats = character?.feats ?? []
 
@@ -103,23 +102,19 @@ export function useClassAsiFeatController({
               featPickerLevel ?? undefined,
             ),
         )
-        .map((feat) => `${feat.name}|${feat.source ?? ''}`),
+        .map(getFeatSelectionKey),
     )
-    return merged.filter((feat) => !assignedElsewhere.has(`${feat.name}|${feat.source ?? ''}`))
+    return merged.filter((feat) => !assignedElsewhere.has(getFeatSelectionKey(feat)))
   }, [feats, effectiveFeats, featPickerLevel, viewingClass, viewingClassSource])
   const featPickerInitialSelectedIds = useMemo(
     () =>
-      classAsiFeats
-        .filter((feat) => feat.classLevel === featPickerLevel)
-        .map((feat) => `${feat.name}|${feat.source ?? ''}`),
+      classAsiFeats.filter((feat) => feat.classLevel === featPickerLevel).map(getFeatSelectionKey),
     [classAsiFeats, featPickerLevel],
   )
 
   const confirmFeat = (selectedFeats: Feat5e[]) => {
     if (!character || !viewingClass || !viewingClassSource || featPickerLevel == null) return
-    const previousKeys = new Set(
-      effectiveFeats.map((feat) => getEntityLookupKey(feat.name, feat.source)),
-    )
+    const previousKeys = new Set(effectiveFeats.map(getFeatSelectionKey))
     const otherFeats = effectiveFeats.filter(
       (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, featPickerLevel),
     )
@@ -131,10 +126,9 @@ export function useClassAsiFeatController({
     }))
     replaceFeatSelections([...otherFeats, ...scopedSelections])
     const newlyAdded = selectedFeats.find(
-      (feat) =>
-        !previousKeys.has(getEntityLookupKey(feat.name, feat.source)) && hasFeatOptions(feat),
+      (feat) => !previousKeys.has(getFeatSelectionKey(feat)) && hasFeatOptions(feat),
     )
-    if (newlyAdded) setOptionsPendingFeat(newlyAdded)
+    if (newlyAdded) setOptionsPendingFeat({ ...newlyAdded, selectionKind: 'ordinary' })
     setFeatPickerOpen(false)
     setFeatPickerLevel(null)
   }
@@ -207,7 +201,7 @@ export function useClassAsiFeatController({
     setAsiMode,
     clearAsiMode,
     commitFeatWithOptions: (
-      feat: Feat5e & { classFeatChoiceId?: string },
+      feat: Feat5e & FeatOptionTarget,
       selections: Parameters<typeof commitFeatWithOptions>[1],
       allSpells: Spell5e[],
     ) => commitFeatWithOptions(feat, selections, allSpells),

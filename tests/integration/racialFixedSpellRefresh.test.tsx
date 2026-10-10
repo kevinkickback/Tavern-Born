@@ -8,6 +8,10 @@ import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutat
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import {
+  commitFeatOptionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
@@ -274,13 +278,36 @@ test.each([
   operation,
   childGrants,
 }) => {
-  const { character, parent, child } = native(childGrants)
-  for (const sourceType of ['class', 'feat'] as const)
-    character.provenance = addSpellGrant(
-      character.provenance,
+  const { character: initial, parent, child } = native(childGrants)
+  const added = addSpellToCharacter(
+    initial,
+    addSpellGrant(
+      initial.provenance,
       'Light|PHB',
-      makeSourceTag(sourceType, 'Independent', 'choice', 'OTHER'),
-    )
+      makeSourceTag('class', 'Independent', 'choice', 'OTHER'),
+    ),
+    'Light|PHB',
+    'cantrip',
+    'special:unrestricted',
+    { sourceType: 'manual', sourceName: 'User Choice' },
+  )
+  let character = { ...initial, ...added.characterPatch, provenance: added.provenanceUpdate }
+  const feat = { name: 'Independent', source: 'OTHER' }
+  const selected = replaceFeatSelectionsCommand(character, character.provenance, [feat])
+  character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+  const configured = commitFeatOptionsCommand(
+    character,
+    character.provenance,
+    { ...feat, selectionKind: 'ordinary' },
+    { spells: ['Light|PHB'] },
+    [makeSpellFixture({ name: 'Light', level: 0 })],
+  )
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...configured.characterPatch,
+    provenance: configured.provenanceUpdate,
+  })
+  const originalProfiles = structuredClone(character.spells.spellProfiles)
   character.spells.spellSlots[1] = { max: 3, used: 2 }
   character.spells.pactSpellSlots = { 1: { max: 2, used: 1 } }
   setActiveCharacter(character)
@@ -336,8 +363,8 @@ test.each([
   expect(racial(reopened.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(reopened.provenance.spells.light).toEqual([
     expect.objectContaining({ sourceType: 'class', grantSource: 'PHB' }),
-    expect.objectContaining({ sourceType: 'feat', grantSource: 'PHB' }),
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
+    expect.objectContaining({ sourceType: 'feat', grantSource: 'PHB' }),
     expect.objectContaining({
       sourceType: childGrants ? 'subrace' : 'race',
       sourceName: childGrants ? 'Fixed Child' : 'Fixed Parent',
@@ -348,7 +375,7 @@ test.each([
   ])
   expect(reopened.spells.spellSlots[1]).toEqual({ max: 3, used: 2 })
   expect(reopened.spells.pactSpellSlots?.[1]).toEqual({ max: 2, used: 1 })
-  expect(character.spells.spellProfiles).toEqual(native(childGrants).character.spells.spellProfiles)
+  expect(character.spells.spellProfiles).toEqual(originalProfiles)
 })
 
 test('PDF racial refresh preserves independent saved class and special preparation state', () => {

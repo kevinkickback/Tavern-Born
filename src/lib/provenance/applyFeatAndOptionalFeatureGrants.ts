@@ -1,3 +1,4 @@
+import { type FeatSelectionKind, getSelectedFeatOwnerKey } from './featSelectionIdentity'
 import { addChoicePlaceholder, addGrant } from './ledger'
 import { normalizeKey } from './normalization'
 import { makeSourceTag } from './sourceLabels'
@@ -14,9 +15,13 @@ export function applyFeatGrant(
   featSource: string | undefined,
   /** 'manual' when the player chose the feat via the ASI/feat selection UI. */
   grantedByManual: boolean,
+  selectionKind: FeatSelectionKind = 'ordinary',
 ): ProvenanceLedger {
   const tag = grantedByManual
-    ? makeSourceTag('manual', 'User Choice', 'choice', featSource)
+    ? {
+        ...makeSourceTag('manual', featName, 'choice', featSource),
+        grantVariant: getSelectedFeatOwnerKey(selectionKind),
+      }
     : { ...makeSourceTag('feat', featName, 'fixed', featSource), grantSource: featSource ?? '' }
   return addGrant(ledger, 'feats', featName, tag)
 }

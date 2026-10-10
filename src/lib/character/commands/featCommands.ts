@@ -6,6 +6,7 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
@@ -20,7 +21,9 @@ import {
   makeSourceTag,
   removeGrantsBySourceRef,
   resolveChoice,
+  resolveChoiceRecord,
 } from '@/lib/provenance'
+import { getRepeatedFeatOptionDomains } from '@/lib/provenance/featSelectionValidation'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -33,7 +36,7 @@ import {
   getFeatOptionSourceName,
   getFeatOptionSourceTag,
   getFeatSelectionKey,
-  hasSharedFeatOptionOwner,
+  isFeatOptionTargetActive,
   isSameGrantSource,
   type SelectedFeat,
 } from './featCommandIdentity'
@@ -95,34 +98,17 @@ export function retractFeatChoiceOptionsForSources(
   }
 }
 
-export function applyFeatSelectionCommand(
-  ledger: ProvenanceLedger,
-  featName: string,
-  featSource: string | undefined,
-): CharacterCommandResult {
-  return {
-    characterPatch: {},
-    provenanceUpdate: applyFeatGrant(ledger, featName, featSource, true),
-  }
-}
-
-export function removeFeatProvenanceCommand(
-  ledger: ProvenanceLedger,
-  featName: string,
-): CharacterCommandResult {
-  const feats = { ...ledger.feats }
-  delete feats[normalizeKey(featName)]
-  return { characterPatch: {}, provenanceUpdate: { ...ledger, feats } }
-}
-
 export function resolveFeatChoiceCommand(
   character: Character,
   ledger: ProvenanceLedger,
   choiceId: string,
   feat: { name: string; source?: string },
 ): CharacterCommandResult {
-  const choice = ledger.choices.find((entry) => entry.id === choiceId && entry.domain === 'feats')
-  if (!choice) return { characterPatch: {}, provenanceUpdate: ledger }
+  const choices = ledger.choices.filter(
+    (entry) => entry.id === choiceId && entry.domain === 'feats',
+  )
+  if (choices.length !== 1) return { characterPatch: {}, provenanceUpdate: ledger }
+  const choice = choices[0]
 
   let workingCharacter = character
   let provenanceUpdate = ledger
@@ -143,24 +129,8 @@ export function resolveFeatChoiceCommand(
         workingCharacter = applyResult(workingCharacter, retracted)
         provenanceUpdate = retracted.provenanceUpdate
       }
-      const normalized = normalizeKey(previous.name)
-      const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
-        (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
-      )
-      provenanceUpdate = {
-        ...provenanceUpdate,
-        feats:
-          retained.length > 0
-            ? { ...provenanceUpdate.feats, [normalized]: retained }
-            : Object.fromEntries(
-                Object.entries(provenanceUpdate.feats).filter(([key]) => key !== normalized),
-              ),
-      }
     }
-    provenanceUpdate = resolveChoice(provenanceUpdate, choiceId, [feat.name])
-  } else if (choice.selected.length < choice.chooseCount) {
-    provenanceUpdate = resolveChoice(provenanceUpdate, choiceId, [...choice.selected, feat.name])
-  } else {
+  } else if (choice.selected.length >= choice.chooseCount) {
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
 
@@ -168,8 +138,20 @@ export function resolveFeatChoiceCommand(
   provenanceUpdate = {
     ...provenanceUpdate,
     choices: provenanceUpdate.choices.map((entry) =>
-      entry.id === choiceId ? { ...entry, selectedRefs: nextRefs } : entry,
+      entry.id === choiceId && entry.domain === 'feats'
+        ? {
+            ...resolveChoiceRecord(
+              entry,
+              nextRefs.map((ref) => ref.name),
+            ),
+            selectedRefs: nextRefs,
+          }
+        : entry,
     ),
+  }
+
+  for (const previous of previousRefs) {
+    provenanceUpdate = reconcileFeatChoiceMarker(provenanceUpdate, choice.sourceTag, previous.name)
   }
 
   const tag: SourceTag = {
@@ -197,14 +179,20 @@ export function removeFeatChoiceCommand(
   featName: string,
   featSource?: string,
 ): CharacterCommandResult {
-  const choice = ledger.choices.find((entry) => entry.id === choiceId && entry.domain === 'feats')
-  if (!choice) return { characterPatch: {}, provenanceUpdate: ledger }
-  const refs = getFeatChoiceSelectedRefs(choice)
-  const removed = refs.find(
-    (entry) =>
-      normalizeKey(entry.name) === normalizeKey(featName) &&
-      (featSource == null || (entry.source ?? '') === featSource),
+  const choices = ledger.choices.filter(
+    (entry) => entry.id === choiceId && entry.domain === 'feats',
   )
+  if (choices.length !== 1) return { characterPatch: {}, provenanceUpdate: ledger }
+  const choice = choices[0]
+  const refs = getFeatChoiceSelectedRefs(choice)
+  const matches = refs.filter(
+    (entry) =>
+      normalizeOwnerIdentity(entry.name) === normalizeOwnerIdentity(featName) &&
+      (featSource === undefined ||
+        getFeatSelectionKey(entry) === getFeatSelectionKey({ name: featName, source: featSource })),
+  )
+  if (matches.length !== 1) return { characterPatch: {}, provenanceUpdate: ledger }
+  const removed = matches[0]
   let workingCharacter = character
   let provenanceUpdate = ledger
   if (removed?.options) {
@@ -217,34 +205,17 @@ export function removeFeatChoiceCommand(
     workingCharacter = applyResult(workingCharacter, retracted)
     provenanceUpdate = retracted.provenanceUpdate
   }
-  const remainingRefs = refs.filter(
-    (entry) =>
-      !(
-        normalizeKey(entry.name) === normalizeKey(featName) &&
-        (featSource == null || (entry.source ?? '') === featSource)
-      ),
-  )
+  const remainingRefs = refs.filter((entry) => entry !== removed)
   const selected = remainingRefs.map((entry) => entry.name)
-  provenanceUpdate = resolveChoice(provenanceUpdate, choiceId, selected)
   provenanceUpdate = {
     ...provenanceUpdate,
     choices: provenanceUpdate.choices.map((entry) =>
-      entry.id === choiceId ? { ...entry, selectedRefs: remainingRefs } : entry,
+      entry.id === choiceId && entry.domain === 'feats'
+        ? { ...resolveChoiceRecord(entry, selected), selectedRefs: remainingRefs }
+        : entry,
     ),
   }
-  const normalized = normalizeKey(featName)
-  const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
-    (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
-  )
-  provenanceUpdate = {
-    ...provenanceUpdate,
-    feats:
-      retained.length > 0
-        ? { ...provenanceUpdate.feats, [normalized]: retained }
-        : Object.fromEntries(
-            Object.entries(provenanceUpdate.feats).filter(([key]) => key !== normalized),
-          ),
-  }
+  provenanceUpdate = reconcileFeatChoiceMarker(provenanceUpdate, choice.sourceTag, removed.name)
   return {
     characterPatch: {
       spells: workingCharacter.spells,
@@ -252,6 +223,31 @@ export function removeFeatChoiceCommand(
     },
     provenanceUpdate,
   }
+}
+
+/** An aggregate source marker survives every choice still selecting its ledger bucket. */
+function reconcileFeatChoiceMarker(
+  ledger: ProvenanceLedger,
+  sourceTag: SourceTag,
+  featName: string,
+): ProvenanceLedger {
+  const key = normalizeKey(featName)
+  if (
+    ledger.choices.some(
+      (choice) =>
+        choice.domain === 'feats' &&
+        isSameGrantSource(choice.sourceTag, sourceTag) &&
+        getFeatChoiceSelectedRefs(choice).some((entry) => normalizeKey(entry.name) === key),
+    )
+  )
+    return ledger
+  const retained = (ledger.feats[key] ?? []).filter(
+    (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, sourceTag)),
+  )
+  const feats = { ...ledger.feats }
+  if (retained.length) feats[key] = retained
+  else delete feats[key]
+  return { ...ledger, feats }
 }
 
 export function resolveProficiencyChoiceCommand(
@@ -362,9 +358,12 @@ export function retractFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
   feat: FeatOptionTarget,
-  selections: FeatOptionSelections,
+  _selections: FeatOptionSelections,
 ): CharacterCommandResult {
   const ownerKey = getFeatOptionOwnerKey(feat)
+  if (!isFeatOptionTargetActive(character, feat) || !hasActiveFeatChoiceSetupTarget(ledger, feat))
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const selections = getSavedFeatOptions(character, ledger, feat) ?? {}
   const isFixedOwner = ownerKey?.startsWith('fixed:') === true
   const provenanceUpdate = removeGrantsBySourceRef(
     ledger,
@@ -374,7 +373,7 @@ export function retractFeatOptionsCommand(
     ownerKey,
     {
       exactVariant: true,
-      normalizeIdentity: isFixedOwner,
+      normalizeIdentity: true,
       normalizeFixedVariant: isFixedOwner,
     },
   )
@@ -467,6 +466,53 @@ export function retractFeatOptionsCommand(
   })
 }
 
+/** A choice setup cannot manufacture a printing absent from its saved selection. */
+function hasActiveFeatChoiceSetupTarget(ledger: ProvenanceLedger, feat: FeatOptionTarget): boolean {
+  if (!feat.provenanceChoiceId) return true
+  if (!feat.source?.trim()) return false
+  const choices = ledger.choices.filter(
+    (choice) => choice.domain === 'feats' && choice.id === feat.provenanceChoiceId,
+  )
+  return (
+    choices.length === 1 &&
+    getFeatChoiceSelectedRefs(choices[0]).filter(
+      (selected) => getFeatSelectionKey(selected) === getFeatSelectionKey(feat),
+    ).length === 1
+  )
+}
+
+/** Dialog snapshots are not authoritative for retracting the active owner's setup. */
+function getSavedFeatOptions(
+  character: Character,
+  ledger: ProvenanceLedger,
+  feat: FeatOptionTarget,
+): FeatOptionSelections | undefined {
+  if (feat.selectionKind) {
+    const records = feat.selectionKind === 'ordinary' ? character.feats : character.specialFeats
+    return records?.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))
+      ?.options
+  }
+  if (feat.provenanceChoiceId) {
+    const choice = ledger.choices.find(
+      (entry) => entry.domain === 'feats' && entry.id === feat.provenanceChoiceId,
+    )
+    return (
+      choice &&
+      getFeatChoiceSelectedRefs(choice).find(
+        (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
+      )?.options
+    )
+  }
+  if (feat.classFeatChoiceId) {
+    return character.classFeatChoices
+      ?.find((entry) => entry.id === feat.classFeatChoiceId)
+      ?.feats.find((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))?.options
+  }
+  return character.fixedFeatOptions?.[
+    getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)
+  ]
+}
+
 export function commitFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
@@ -474,8 +520,25 @@ export function commitFeatOptionsCommand(
   selections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
+  if (
+    !isFeatOptionTargetActive(character, feat) ||
+    !hasActiveFeatChoiceSetupTarget(ledger, feat) ||
+    (feat.selectionKind && getRepeatedFeatOptionDomains(selections).length > 0)
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
   const resolved = resolveFeatOptionSpells(character, ledger, feat, selections, allSpells)
   if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
+  const previous = getSavedFeatOptions(character, ledger, feat)
+  if (previous) {
+    const retracted = retractFeatOptionsCommand(character, ledger, feat, previous)
+    return commitResolvedFeatOptions(
+      applyResult(character, retracted),
+      retracted.provenanceUpdate,
+      feat,
+      selections,
+      resolved,
+    )
+  }
   return commitResolvedFeatOptions(character, ledger, feat, selections, resolved)
 }
 
@@ -505,6 +568,7 @@ function resolveFeatOptionSpells(
       : isSameGrantSource(tag, owner)
   const resolved: FeatSpellSelection[] = []
   for (const selected of selections.spells ?? []) {
+    if (!isSourceQualifiedSpellReference(selected)) return undefined
     const parsed = parseSpellReference(selected)
     if (!parsed.name || !parsed.source) return undefined
     const reference = formatSpellReference(selected)
@@ -657,10 +721,9 @@ function commitResolvedFeatOptions(
           !(choice.domain === 'featOptions' && isSameGrantSource(choice.sourceTag, sourceTag)),
       )
       .map((choice) => {
-        if (choice.id !== feat.provenanceChoiceId) return choice
+        if (choice.domain !== 'feats' || choice.id !== feat.provenanceChoiceId) return choice
         const selectedRefs = getFeatChoiceSelectedRefs(choice).map((selected) =>
-          normalizeKey(selected.name) === normalizeKey(feat.name) &&
-          (selected.source ?? '') === (feat.source ?? '')
+          getFeatSelectionKey(selected) === getFeatSelectionKey(feat)
             ? { ...selected, source: feat.source, options: selections }
             : selected,
         )
@@ -670,17 +733,17 @@ function commitResolvedFeatOptions(
 
   const optionOwnerKey = getFeatOptionOwnerKey(feat)
   const feats =
-    optionOwnerKey === undefined
+    feat.selectionKind === 'ordinary'
       ? character.feats.map((entry) =>
-          entry.name === feat.name && entry.source === (feat.source ?? '')
+          getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
             ? { ...entry, options: selections }
             : entry,
         )
       : character.feats
   const specialFeats =
-    optionOwnerKey === undefined
+    feat.selectionKind === 'bonus'
       ? character.specialFeats?.map((entry) =>
-          entry.name === feat.name && entry.source === (feat.source ?? '')
+          getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
             ? { ...entry, options: selections }
             : entry,
         )
@@ -690,7 +753,7 @@ function commitResolvedFeatOptions(
       ? {
           ...choice,
           feats: choice.feats.map((entry) =>
-            entry.name === feat.name && entry.source === (feat.source ?? '')
+            getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
               ? { ...entry, options: selections }
               : entry,
           ),
@@ -726,6 +789,12 @@ export function editFeatOptionsCommand(
   newSelections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
+  if (
+    !isFeatOptionTargetActive(character, feat) ||
+    !hasActiveFeatChoiceSetupTarget(ledger, feat) ||
+    (feat.selectionKind && getRepeatedFeatOptionDomains(newSelections).length > 0)
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
   const resolved = resolveFeatOptionSpells(character, ledger, feat, newSelections, allSpells)
   if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
   const retracted = retractFeatOptionsCommand(character, ledger, feat, oldOptions)
@@ -738,16 +807,13 @@ export function editFeatOptionsCommand(
   )
 }
 
-/** Clear only an identifiable setup; shared selected/bonus ownership needs an explicit resolution. */
+/** Clear one explicitly addressed setup, even when its rules metadata is unavailable. */
 export function clearFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
   feat: FeatOptionTarget,
   oldOptions: FeatOptionSelections,
 ): CharacterCommandResult {
-  if (hasSharedFeatOptionOwner(character, feat)) {
-    return { characterPatch: {}, provenanceUpdate: ledger }
-  }
   return editFeatOptionsCommand(character, ledger, feat, oldOptions, {})
 }
 
@@ -757,6 +823,8 @@ export function replaceFeatSelectionsCommand(
   selectedFeats: SelectedFeat[],
 ): CharacterCommandResult {
   const selectedKeys = new Set(selectedFeats.map(getFeatSelectionKey))
+  if (selectedKeys.size !== selectedFeats.length)
+    return { characterPatch: {}, provenanceUpdate: ledger }
   let workingCharacter = character
   let provenanceUpdate = ledger
   for (const feat of character.feats.filter(
@@ -765,7 +833,7 @@ export function replaceFeatSelectionsCommand(
     const result = retractFeatOptionsCommand(
       workingCharacter,
       provenanceUpdate,
-      feat,
+      { ...feat, selectionKind: 'ordinary' },
       feat.options as FeatOptionSelections,
     )
     workingCharacter = applyResult(workingCharacter, result)
@@ -780,9 +848,10 @@ export function replaceFeatSelectionsCommand(
       (tag) =>
         !(
           tag.sourceType === 'manual' &&
-          tag.sourceName === 'User Choice' &&
+          normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(previousFeat.name) &&
           tag.grantType === 'choice' &&
-          (tag.sourceRef ?? '') === (previousFeat.source ?? '')
+          tag.grantVariant === 'selection:ordinary' &&
+          normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(previousFeat.source)
         ),
     )
     if (retainedTags.length > 0) feats[normalizedName] = retainedTags
@@ -793,7 +862,7 @@ export function replaceFeatSelectionsCommand(
     if (
       !character.feats.some((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))
     ) {
-      provenanceUpdate = applyFeatGrant(provenanceUpdate, feat.name, feat.source, true)
+      provenanceUpdate = applyFeatGrant(provenanceUpdate, feat.name, feat.source, true, 'ordinary')
     }
   }
 
@@ -806,7 +875,7 @@ export function replaceFeatSelectionsCommand(
           (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
         )
         return {
-          id: existing?.id ?? `${feat.name}-${feat.source ?? ''}`,
+          id: existing?.id ?? `ordinary:${getFeatSelectionKey(feat)}`,
           name: feat.name,
           source: feat.source ?? '',
           description: existing?.description ?? '',
@@ -830,6 +899,8 @@ export function replaceClassFeatSelectionsCommand(
   const choiceId = getClassFeatChoiceId(owner)
   const existingChoice = character.classFeatChoices?.find((choice) => choice.id === choiceId)
   const selectedKeys = new Set(selectedFeats.map(getFeatSelectionKey))
+  if (selectedKeys.size !== selectedFeats.length)
+    return { characterPatch: {}, provenanceUpdate: ledger }
   let workingCharacter = character
   let provenanceUpdate = ledger
 
@@ -883,7 +954,7 @@ export function replaceClassFeatSelectionsCommand(
     )
     provenanceUpdate = addGrant(provenanceUpdate, 'feats', feat.name, ownerTag)
     return {
-      id: existing?.id ?? `class-${choiceId}-${feat.name}-${feat.source ?? ''}`,
+      id: existing?.id ?? `class:${JSON.stringify([choiceId, getFeatSelectionKey(feat)])}`,
       name: feat.name,
       source: feat.source ?? '',
       description: existing?.description ?? '',
@@ -927,20 +998,50 @@ export function replaceBonusFeatSelectionsCommand(
   ledger: ProvenanceLedger,
   selectedFeats: Array<{ name: string; source?: string }>,
 ): CharacterCommandResult {
-  const selectedKeys = new Set(selectedFeats.map((feat) => `${feat.name}|${feat.source ?? ''}`))
+  const selectedKeys = new Set(selectedFeats.map(getFeatSelectionKey))
+  if (selectedKeys.size !== selectedFeats.length)
+    return { characterPatch: {}, provenanceUpdate: ledger }
   let workingCharacter = character
   let provenanceUpdate = ledger
   for (const feat of (character.specialFeats ?? []).filter(
-    (entry) => entry.options != null && !selectedKeys.has(`${entry.name}|${entry.source ?? ''}`),
+    (entry) => entry.options != null && !selectedKeys.has(getFeatSelectionKey(entry)),
   )) {
     const result = retractFeatOptionsCommand(
       workingCharacter,
       provenanceUpdate,
-      feat,
+      { ...feat, selectionKind: 'bonus' },
       feat.options as FeatOptionSelections,
     )
     workingCharacter = applyResult(workingCharacter, result)
     provenanceUpdate = result.provenanceUpdate
+  }
+
+  const feats = { ...provenanceUpdate.feats }
+  for (const previous of character.specialFeats ?? []) {
+    if (selectedKeys.has(getFeatSelectionKey(previous))) continue
+    const key = normalizeKey(previous.name)
+    const retained = (feats[key] ?? []).filter(
+      (tag) =>
+        !(
+          tag.sourceType === 'manual' &&
+          normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(previous.name) &&
+          tag.grantType === 'choice' &&
+          tag.grantVariant === 'selection:bonus' &&
+          normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(previous.source)
+        ),
+    )
+    if (retained.length) feats[key] = retained
+    else delete feats[key]
+  }
+  provenanceUpdate = { ...provenanceUpdate, feats }
+  for (const feat of selectedFeats) {
+    if (
+      !(character.specialFeats ?? []).some(
+        (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
+      )
+    ) {
+      provenanceUpdate = applyFeatGrant(provenanceUpdate, feat.name, feat.source, true, 'bonus')
+    }
   }
 
   return {
@@ -949,11 +1050,11 @@ export function replaceBonusFeatSelectionsCommand(
       proficiencies: workingCharacter.proficiencies,
       specialFeats: selectedFeats.map((feat) => {
         const existing = character.specialFeats?.find(
-          (entry) => entry.name === feat.name && entry.source === (feat.source ?? ''),
+          (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
         )
         return (
           existing ?? {
-            id: `bonus-${feat.name}-${feat.source ?? ''}`,
+            id: `bonus:${getFeatSelectionKey(feat)}`,
             name: feat.name,
             source: feat.source ?? '',
             description: '',

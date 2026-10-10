@@ -27,6 +27,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -48,6 +49,7 @@ export function FeatsPage() {
     activeFeatName,
     bonusFeats,
     bonusInitialSelectedIds,
+    bonusModalFeats,
     bonusModalOpen,
     character,
     characterFeatCount,
@@ -56,7 +58,6 @@ export function FeatsPage() {
     compactPane,
     detailCollapsed,
     featEditCandidate,
-    featEditClearBlocked,
     featEditTarget,
     featOptionsTarget,
     feats,
@@ -64,6 +65,7 @@ export function FeatsPage() {
     getSourcesRowsBySection,
     handleBonusModalConfirm,
     handleCompleteSetup,
+    handleCompleteBonusSetup,
     handleDismissEditHint,
     handleEditBonusSetup,
     handleEditConfirm,
@@ -293,12 +295,9 @@ export function FeatsPage() {
                             {(character.feats ?? []).map((feat) => {
                               const featData = (feats as Feat5e[]).find(
                                 (candidate) =>
-                                  candidate.name === feat.name &&
-                                  (candidate.source ?? '') === feat.source,
+                                  getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
                               )
-                              const isPending = pendingOptionFeatIds.has(
-                                `${feat.name}|${feat.source}`,
-                              )
+                              const isPending = pendingOptionFeatIds.has(getFeatSelectionKey(feat))
                               const isConfigured = !isPending && !!feat.options
                               return (
                                 <FeatDetailCard
@@ -320,13 +319,12 @@ export function FeatsPage() {
                             {classProgressionFeats.map(({ choice, feat }) => {
                               const featData = (feats as Feat5e[]).find(
                                 (candidate) =>
-                                  candidate.name === feat.name &&
-                                  (candidate.source ?? '') === feat.source,
+                                  getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
                               )
                               const needsOptions = !!featData && hasFeatOptions(featData)
                               return (
                                 <FeatDetailCard
-                                  key={`class-${choice.id}-${feat.id}`}
+                                  key={JSON.stringify([choice.id, getFeatSelectionKey(feat)])}
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
@@ -395,15 +393,18 @@ export function FeatsPage() {
                               getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
                                   (feat) =>
-                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
-                                    (selection.source == null || feat.source === selection.source),
+                                    !!selection.source?.trim() &&
+                                    getFeatSelectionKey(feat) === getFeatSelectionKey(selection),
                                 )
                                 const selectedName = data?.name ?? selection.name
                                 const selectedSource = selection.source ?? data?.source ?? ''
                                 const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
+                                    key={JSON.stringify([
+                                      choice.id,
+                                      getFeatSelectionKey(selection),
+                                    ])}
                                     feat={{
                                       id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
                                       name: selectedName,
@@ -430,8 +431,8 @@ export function FeatsPage() {
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,
-                                        selectedName,
-                                        selectedSource,
+                                        selection.name,
+                                        selection.source,
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
@@ -497,15 +498,18 @@ export function FeatsPage() {
                               getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
                                   (feat) =>
-                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
-                                    (selection.source == null || feat.source === selection.source),
+                                    !!selection.source?.trim() &&
+                                    getFeatSelectionKey(feat) === getFeatSelectionKey(selection),
                                 )
                                 const selectedName = data?.name ?? selection.name
                                 const selectedSource = selection.source ?? data?.source ?? ''
                                 const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
+                                    key={JSON.stringify([
+                                      choice.id,
+                                      getFeatSelectionKey(selection),
+                                    ])}
                                     feat={{
                                       id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
                                       name: selectedName,
@@ -532,8 +536,8 @@ export function FeatsPage() {
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,
-                                        selectedName,
-                                        selectedSource,
+                                        selection.name,
+                                        selection.source,
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
@@ -593,11 +597,10 @@ export function FeatsPage() {
                         <div className="mt-3 space-y-3">
                           {bonusFeats.map((feat) => {
                             const featData = (feats as Feat5e[]).find(
-                              (entry) =>
-                                entry.name === feat.name && (entry.source ?? '') === feat.source,
+                              (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
                             )
                             const isPending = pendingOptionBonusFeatIds.has(
-                              `${feat.name}|${feat.source}`,
+                              getFeatSelectionKey(feat),
                             )
                             const isConfigured = !isPending && !!feat.options
                             return (
@@ -610,7 +613,7 @@ export function FeatsPage() {
                                 selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                 onSelect={handleSelectFeat}
                                 onRemove={handleRemoveBonusFeat}
-                                onCompleteSetup={isPending ? handleCompleteSetup : undefined}
+                                onCompleteSetup={isPending ? handleCompleteBonusSetup : undefined}
                                 onEditSetup={isConfigured ? handleEditBonusSetup : undefined}
                                 optionsPending={isPending}
                                 optionsConfigured={isConfigured}
@@ -669,7 +672,7 @@ export function FeatsPage() {
       <FeatSelectionModal
         open={bonusModalOpen}
         onOpenChange={setBonusModalOpen}
-        feats={feats as Feat5e[]}
+        feats={bonusModalFeats}
         maxSelections={Number.POSITIVE_INFINITY}
         initialSelectedIds={bonusInitialSelectedIds}
         characterSnapshot={characterSnapshot}
@@ -725,11 +728,6 @@ export function FeatsPage() {
           proficientSkillNames={proficientSkillNames}
           initialSelections={featEditTarget.priorOptions}
           onClear={handleEditClear}
-          clearDisabledReason={
-            featEditClearBlocked
-              ? 'This feat is selected in both Character and Bonus Feats. Clearing one setup could change the other. Cancel to keep both setups.'
-              : undefined
-          }
           onFinish={handleEditFinish}
           onDismiss={() => setFeatEditTarget(null)}
         />

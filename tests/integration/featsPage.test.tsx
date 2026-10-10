@@ -9,12 +9,14 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { replaceFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
 import { makeSourceTag } from '@/lib/provenance'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useFeatsPageController } from '@/pages/feats/hooks/useFeatsPageController'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Feat5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const configurableFeat = {
@@ -318,11 +320,15 @@ describe('FeatsPage bonus feat configuration', () => {
   })
 
   test('selects and removes regular feats by name and source', () => {
-    const character = makeCharacterFixture({
-      feats: [
-        { id: 'skilled-phb', name: 'Skilled', source: 'PHB', description: '' },
-        { id: 'skilled-xphb', name: 'Skilled', source: 'XPHB', description: '' },
-      ],
+    const initial = makeCharacterFixture()
+    const selected = replaceFeatSelectionsCommand(initial, initial.provenance, [
+      configurableFeat,
+      configurableFeat2024,
+    ])
+    const character = characterPersistenceSchema.parse({
+      ...initial,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
     })
     useCharacterStore.setState({
       characters: [character],
@@ -381,7 +387,7 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByText('MISSING')).toBeTruthy()
     expect(screen.getByText('Cleric')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Complete Setup' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Edit Setup' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Edit Setup' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Select magic initiate' }))
     expect(screen.queryByText('Prerequisites met')).toBeNull()
     expect(screen.queryByText('Prerequisites unmet')).toBeNull()

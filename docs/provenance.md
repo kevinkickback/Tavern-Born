@@ -70,9 +70,51 @@ Fixed feat option edits opt into normalized name/reference and fixed-variant mat
 with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
 variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
 
-Feat setup retraction also matches an absent option owner key exactly. Editing or removing an
-ordinary selected copy does not treat that absent key as a wildcard for fixed/class/choice setup.
-Whole-source callers keep their existing all-variant removal behavior.
+## Feat setup ownership
+
+Ordinary and bonus setup commands require an explicit `selectionKind` and exactly one active record
+with the complete normalized name/source pair in that collection. Their benefit tags retain that
+printing and distinct `selection:ordinary` / `selection:bonus` owner keys. Each collection permits
+one copy of a printing; the same repeatable printing may belong to both. Fixed, class-choice and
+racial/background-choice keys remain independent.
+
+Commit/Finish replaces the addressed owner's saved setup atomically. Edit, Clear and removal read
+its active saved choices for retraction across selected, fixed, class and provenance-choice owners;
+stale dialog options cannot leave old materialized benefits behind. Class setup requires exactly
+one class choice and one complete qualified feat reference before any setup command changes state.
+Missing, conflicting or inactive selected owners reject without changing the draft. Clear leaves an
+empty configured record and works without game data; removal deletes only the requested selection.
+Configured records retain Edit recovery when the whole feat catalog is missing. Unchanged picker
+confirmation retains unavailable saved selections; deselecting a saved entry explicitly removes it.
+Shared benefits remain until their final owner is removed. Separate complete owner fields normalize
+case and surrounding whitespace; literal pipes cannot collapse different name/source pairs.
+
+Racial/background choice removal requires exactly one matching saved reference. An omitted source
+can remove a unique complete name; absent or ambiguous targets leave the draft intact. Removing a
+choice or class progression record retains its owner's aggregate feat marker while another selected
+printing or literal name shares that ledger bucket. Racial/background reconciliation considers all
+remaining feat choices with the same source owner, including distinct choice IDs. Class level-down
+compares complete feat references rather than opaque issued IDs; new class feat IDs encode their fields without delimiter
+collisions. Cards and Edit use the same normalized complete reference after catalog casing refresh.
+
+Name-only unconfigured choice records remain visible and removable without catalog inference. They
+require explicit printing reselection before setup. Commit/Edit must match exactly one qualified
+saved choice reference; configured name-only references reject at admission. Choice setup benefit
+tags require the exact choice ID and one matching qualified reference with saved options. A matching
+unconfigured reference cannot legalize orphan setup benefits. This cutoff adds no converter.
+
+Strict admission validates selected setup ownership and benefits in both directions, without loaded
+rules. Every selected record, including an unconfigured record, requires exactly one manual feat
+ownership marker for its copy and printing. Repeated normalized choices within a skill, language,
+tool or spell array reject at admission and before setup commands change the draft. Distinct spell
+printings remain separate choices; display aliases for the same printing do not count twice.
+Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
+5etools spell tag; trailing plain fields reject before parsing or mutation. Selected ownership uses
+canonical ledger map keys, including name-only spell keys with their printing in `grantSource`.
+Admission rejects aliases in those keys rather than normalizing them into a benefit that removal
+cannot find. Readable saved references and separate owner fields still support case and whitespace.
+The [schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
+formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
 
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
 ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the

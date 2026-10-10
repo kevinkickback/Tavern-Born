@@ -599,7 +599,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "hitPoints": {
     "current": 28,
     "temporary": 0

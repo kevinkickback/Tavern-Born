@@ -353,10 +353,9 @@ Cancel and dismissal preserve the saved setup and benefits. Explicitly clearing 
 setup through the existing atomic edit command: the feat and independently owned benefits remain,
 while this setup's choices and grants are removed. The empty setup remains a configured record;
 restoring the rules and reopening allows fresh selections without a format conversion.
-Clearing requires an explicit caller action and the guarded clear command. When ordinary and bonus
-copies share the same printing and unqualified setup owner, clearing is disabled with an explanation
-and the command rejects the ambiguous transition. Their separate ownership remains unresolved;
-fixed/class/choice owners and distinct printings retain their explicit identities.
+Clearing requires an explicit caller action and an identifiable setup owner, including independent
+ordinary and bonus copies of the same printing. See [feat setup ownership](provenance.md#feat-setup-ownership)
+for the command and persistence contract. Fixed/class/choice owners retain their explicit identities.
 Plain and tagged spell references
 use the same shared parser for exact source resolution. Fixed option teardown compares normalized
 feat name/source while preserving the distinct granting owner and variant.

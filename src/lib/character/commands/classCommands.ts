@@ -64,6 +64,7 @@ import {
 import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
+import { getFeatSelectionKey } from './featCommandIdentity'
 
 export { buildInitialCharacterProficiencies } from './classProficiencies'
 
@@ -491,9 +492,10 @@ export function applyClassProgressionUpdate(
           (feat) => feat.classLevel == null || feat.classLevel <= matchingEntry.levels,
         )
       : []
-    const retainedIds = new Set(retainedFeats.map((feat) => feat.id))
+    const retainedKeys = new Set(retainedFeats.map(getFeatSelectionKey))
+    const retainedBuckets = new Set(retainedFeats.map((feat) => normalizeKey(feat.name)))
     for (const feat of choice.feats) {
-      if (retainedIds.has(feat.id)) continue
+      if (retainedKeys.has(getFeatSelectionKey(feat))) continue
       if (feat.options) {
         const result = retractFeatOptionsCommand(
           workingCharacter,
@@ -509,6 +511,7 @@ export function applyClassProgressionUpdate(
         provenanceUpdate = result.provenanceUpdate
       }
       const key = normalizeKey(feat.name)
+      if (retainedBuckets.has(key)) continue
       const retainedTags = (provenanceUpdate.feats[key] ?? []).filter(
         (tag) =>
           !(

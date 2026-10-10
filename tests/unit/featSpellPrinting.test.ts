@@ -27,7 +27,7 @@ function setup(origin: '2014' | '2024' = '2024') {
   const feat =
     origin === '2024'
       ? { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVariant: 'cleric' }
-      : { name: 'Magic Initiate', source: 'PHB' }
+      : { name: 'Magic Initiate', source: 'PHB', selectionKind: 'bonus' as const }
   let initial = makeNonracialSourceCharacter(origin)
   if (origin === '2014') {
     initial = apply(initial, replaceBonusFeatSelectionsCommand(initial, initial.provenance, [feat]))
@@ -91,7 +91,7 @@ test('same-printing manual and independent feat owners survive one setup Clear',
     manual,
     commitFeatOptionsCommand(manual, manual.provenance, feat, options, metadata),
   )
-  const otherFeat = { name: 'Magic Initiate', source: 'PHB' }
+  const otherFeat = { name: 'Magic Initiate', source: 'PHB', selectionKind: 'bonus' as const }
   const selected = apply(
     first,
     replaceBonusFeatSelectionsCommand(first, first.provenance, [otherFeat]),

@@ -112,7 +112,7 @@ describe('feat commands', () => {
     const configured = commitFeatOptionsCommand(
       character,
       character.provenance,
-      { name: 'Training', source: 'TEST' },
+      { name: 'Training', source: 'TEST', selectionKind: 'ordinary' },
       { skills: ['Arcana'] },
     )
     character = applyResult(character, configured)
@@ -121,7 +121,7 @@ describe('feat commands', () => {
       clearFeatOptionsCommand(
         character,
         character.provenance,
-        { name: 'Training', source: 'TEST' },
+        { name: 'Training', source: 'TEST', selectionKind: 'ordinary' },
         { skills: ['Arcana'] },
       ),
     )
@@ -277,6 +277,29 @@ describe('feat commands', () => {
     'classFeatChoiceId',
   ] as const)('fixed metadata cannot relax the exact %s owner key', (ownerField) => {
     const initial = makeCharacterFixture()
+    if (ownerField === 'provenanceChoiceId') {
+      initial.provenance.choices.push({
+        id: 'Owner',
+        domain: 'feats',
+        sourceTag: makeSourceTag('race', initial.race, 'choice', initial.raceSource),
+        chooseCount: 1,
+        optionPool: [],
+        selected: ['Training'],
+        status: 'resolved',
+        selectedRefs: [{ name: 'Training', source: 'PHB' }],
+      })
+    } else {
+      initial.classFeatChoices = [
+        {
+          id: 'Owner',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Training',
+          categories: [],
+          feats: [{ id: 'training', name: 'Training', source: 'PHB', description: '' }],
+        },
+      ]
+    }
     const feat = {
       name: 'Training',
       source: 'PHB',
@@ -286,9 +309,10 @@ describe('feat commands', () => {
     }
     const configured = applyResult(
       initial,
-      commitFeatOptionsCommand(initial, emptyProvenance(), feat, { skills: ['Arcana'] }),
+      commitFeatOptionsCommand(initial, initial.provenance, feat, { skills: ['Arcana'] }),
     )
     expect(configured.fixedFeatOptions).toBeUndefined()
+    expect(configured.provenance.proficiencies.skills.arcana[0].sourceName).toBe('Training')
     const result = retractFeatOptionsCommand(
       configured,
       configured.provenance,
@@ -296,7 +320,8 @@ describe('feat commands', () => {
       { skills: ['Arcana'] },
     )
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toHaveLength(1)
-    expect(result.characterPatch.proficiencies?.skills).toEqual(['arcana'])
+    expect(result).toEqual({ characterPatch: {}, provenanceUpdate: configured.provenance })
+    expect(applyResult(configured, result).proficiencies.skills).toEqual(['arcana'])
   })
   test('a fixed feat refresh retracts normalized identity without removing other printings or variants', () => {
     const initial = makeCharacterFixture()
@@ -455,7 +480,7 @@ describe('feat commands', () => {
     const committed = commitFeatOptionsCommand(
       character,
       emptyProvenance(),
-      { name: 'Skilled', source: 'PHB' },
+      { name: 'Skilled', source: 'PHB', selectionKind: 'bonus' },
       { skills: ['Arcana'], abilityScore: 'int' },
     )
     const configured = applyResult(character, committed)
@@ -471,7 +496,7 @@ describe('feat commands', () => {
     const retracted = retractFeatOptionsCommand(
       configured,
       configured.provenance,
-      { name: 'Skilled', source: 'PHB' },
+      { name: 'Skilled', source: 'PHB', selectionKind: 'bonus' },
       { skills: ['Arcana'], abilityScore: 'int' },
     )
 
@@ -530,7 +555,7 @@ describe('feat commands', () => {
     const committed = commitFeatOptionsCommand(
       character,
       emptyProvenance(),
-      { name: 'Magic Initiate', source: 'PHB' },
+      { name: 'Magic Initiate', source: 'PHB', fixedGrant: true },
       selections,
       [{ name: 'Magic Missile', source: 'PHB', level: 1 } as Spell5e],
     )
@@ -544,7 +569,7 @@ describe('feat commands', () => {
     const retracted = retractFeatOptionsCommand(
       configured,
       configured.provenance,
-      { name: 'Magic Initiate', source: 'PHB' },
+      { name: 'Magic Initiate', source: 'PHB', fixedGrant: true },
       selections,
     )
     const retractedProfile = retracted.characterPatch.spells?.spellProfiles.find(
@@ -582,14 +607,14 @@ describe('feat commands', () => {
     const committed = commitFeatOptionsCommand(
       character,
       emptyProvenance(),
-      { name: 'Skilled', source: 'PHB' },
+      { name: 'Skilled', source: 'PHB', selectionKind: 'bonus' },
       { skills: ['Arcana'] },
     )
     const configured = applyResult(character, committed)
     const edited = editFeatOptionsCommand(
       configured,
       configured.provenance,
-      { name: 'Skilled', source: 'PHB' },
+      { name: 'Skilled', source: 'PHB', selectionKind: 'bonus' },
       { skills: ['Arcana'] },
       { skills: ['History'] },
     )
@@ -603,7 +628,10 @@ describe('feat commands', () => {
     const phbChoice = {
       id: 'magic-initiate-phb-options',
       domain: 'featOptions' as const,
-      sourceTag: makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB'),
+      sourceTag: {
+        ...makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB'),
+        grantVariant: 'fixed:',
+      },
       chooseCount: 1,
       optionPool: ['Wizard'],
       selected: ['Wizard'],
@@ -612,14 +640,17 @@ describe('feat commands', () => {
     const xphbChoice = {
       ...phbChoice,
       id: 'magic-initiate-xphb-options',
-      sourceTag: makeSourceTag('feat', 'Magic Initiate', 'choice', 'XPHB'),
+      sourceTag: {
+        ...makeSourceTag('feat', 'Magic Initiate', 'choice', 'XPHB'),
+        grantVariant: 'fixed:',
+      },
     }
     const ledger = { ...emptyProvenance(), choices: [phbChoice, xphbChoice] }
 
     const result = commitFeatOptionsCommand(
       makeCharacterFixture(),
       ledger,
-      { name: 'Magic Initiate', source: 'PHB' },
+      { name: 'Magic Initiate', source: 'PHB', fixedGrant: true },
       {},
     )
 
@@ -666,9 +697,15 @@ describe('feat commands', () => {
         savingThrows: [],
       },
     })
-    const oldFeatTag = makeSourceTag('manual', 'User Choice', 'choice', 'PHB')
+    const oldFeatTag = {
+      ...makeSourceTag('manual', 'Magic Initiate', 'choice', 'PHB'),
+      grantVariant: 'selection:ordinary',
+    }
     const fixedFeatTag = makeSourceTag('background', 'Sage', 'fixed', 'XPHB')
-    const optionTag = makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB')
+    const optionTag = {
+      ...makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB'),
+      grantVariant: 'selection:ordinary',
+    }
     let ledger = addGrant(emptyProvenance(), 'feats', oldFeat.name, oldFeatTag)
     ledger = addGrant(ledger, 'feats', oldFeat.name, fixedFeatTag)
     ledger = addGrant(ledger, 'skills', 'Arcana', optionTag)
@@ -689,7 +726,10 @@ describe('feat commands', () => {
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
     expect(result.provenanceUpdate.feats['magic initiate']).toEqual([
       fixedFeatTag,
-      makeSourceTag('manual', 'User Choice', 'choice', 'XPHB'),
+      {
+        ...makeSourceTag('manual', 'Magic Initiate', 'choice', 'XPHB'),
+        grantVariant: 'selection:ordinary',
+      },
     ])
   })
 

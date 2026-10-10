@@ -301,7 +301,7 @@ export interface Feat {
   source: string
   description: string
   prerequisites?: string
-  /** Follow-up selections made after this feat was chosen. */
+  /** Setup owned by this printing in its ordinary, bonus, or explicit class-choice collection. */
   options?: FeatOptionSelections
   /** Class ASI/feat slot that supplied this feat, when applicable. */
   className?: string

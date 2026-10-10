@@ -166,7 +166,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                   </Badge>
                 )}
                 {grantVariantLabel && <Badge variant="outline">{grantVariantLabel}</Badge>}
-                {fixedGrant && !featData && <Badge variant="outline">Feat data unavailable</Badge>}
+                {!featData && <Badge variant="outline">Feat data unavailable</Badge>}
                 {prerequisiteResult && !prerequisiteResult.met && (
                   <Badge
                     variant="outline"
@@ -229,7 +229,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                 <ArrowRight className="size-3" />
               </Button>
             )}
-            {optionsConfigured && featData && onEditSetup && (
+            {optionsConfigured && onEditSetup && (
               <Button
                 size="sm"
                 variant="accentOutline"

@@ -1,18 +1,15 @@
 import { useCallback, useMemo } from 'react'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
-  applyFeatSelectionCommand,
   clearFeatOptionsCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   type FeatOptionTarget,
   removeFeatChoiceCommand,
-  removeFeatProvenanceCommand,
   replaceBonusFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
   resolveFeatChoiceCommand,
   resolveProficiencyChoiceCommand,
-  retractFeatOptionsCommand,
   type SelectedFeat,
 } from '@/lib/character/commands/featCommands'
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
@@ -41,22 +38,6 @@ export function useFeatProvenanceMutations() {
       })
     },
     [character, ledger, updateCharacter],
-  )
-
-  const applyFeatSelection = useCallback(
-    (featName: string, featSource: string | undefined) => {
-      if (!character) return
-      applyCommand(applyFeatSelectionCommand(ledger, featName, featSource))
-    },
-    [character, ledger, applyCommand],
-  )
-
-  const removeFeatProvenance = useCallback(
-    (featName: string) => {
-      if (!character) return
-      applyCommand(removeFeatProvenanceCommand(ledger, featName))
-    },
-    [character, ledger, applyCommand],
   )
 
   const replaceFeatSelections = useCallback(
@@ -114,14 +95,6 @@ export function useFeatProvenanceMutations() {
     [character, ledger, applyCommand],
   )
 
-  const retractFeatOptionGrants = useCallback(
-    (feat: FeatOptionTarget, selections: FeatOptionSelections) => {
-      if (!character) return
-      applyCommand(retractFeatOptionsCommand(character, ledger, feat, selections))
-    },
-    [character, ledger, applyCommand],
-  )
-
   const editFeatWithOptions = useCallback(
     (
       feat: FeatOptionTarget,
@@ -146,15 +119,12 @@ export function useFeatProvenanceMutations() {
   )
 
   return {
-    applyFeatSelection,
-    removeFeatProvenance,
     replaceFeatSelections,
     replaceBonusFeatSelections,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,
     resolveChoiceSelection,
     commitFeatWithOptions,
-    retractFeatOptionGrants,
     editFeatWithOptions,
     clearFeatWithOptions,
   }

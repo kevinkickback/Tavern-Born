@@ -14,13 +14,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Guarded feat setup recovery measures 5,628,641 renderer bytes (+2,346).
+  // Complete feat ownership measures 5,633,864 renderer bytes (+5,223).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
-  rendererCode: 5497 * KIB,
-  // Shared spell ownership and command handling measure 473,130 initial bytes (+1,398).
+  rendererCode: 5502 * KIB,
+  // Catalog-independent feat admission measures 479,224 initial bytes (+5,829).
   // Use the smallest whole-KiB allowance after explicit budget review.
-  initialRendererScript: 463 * KIB,
+  initialRendererScript: 468 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

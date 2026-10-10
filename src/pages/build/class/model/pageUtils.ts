@@ -19,12 +19,6 @@ interface BuildLevelsToShowParams {
   classChoiceLevels?: number[]
 }
 
-interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }> {
-  availableFeats: T[]
-  selectedFeats: Array<{ name: string; source?: string }>
-  createFallback: (selected: { name: string; source?: string }) => T
-}
-
 function resolveClassForEntry(
   entry: Pick<CharacterClassEntry, 'name' | 'source'>,
   classLookup: Record<string, Class5e | undefined>,
@@ -106,20 +100,6 @@ export function buildLevelsToShow({
     })
 
   return Array.from(levels).sort((a, b) => a - b)
-}
-
-export function buildFeatModalFeats<T extends { name: string; source?: string }>({
-  availableFeats,
-  selectedFeats,
-  createFallback,
-}: BuildFeatModalFeatsParams<T>): T[] {
-  const availableIds = new Set(availableFeats.map((feat) => `${feat.name}|${feat.source ?? ''}`))
-
-  const selectedNotInList = selectedFeats
-    .filter((feat) => !availableIds.has(`${feat.name}|${feat.source ?? ''}`))
-    .map(createFallback)
-
-  return [...availableFeats, ...selectedNotInList]
 }
 
 export function filterClassSpells<

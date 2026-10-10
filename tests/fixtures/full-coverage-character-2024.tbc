@@ -445,6 +445,7 @@
         "type": "special",
         "label": "Special (Unrestricted)",
         "fixedSpells": [
+          "Bless|XPHB",
           "Friends|XPHB",
           "Light|XPHB",
           "Detect Magic|XPHB"
@@ -454,6 +455,7 @@
           "Light|XPHB"
         ],
         "spellsKnown": [
+          "Bless|XPHB",
           "Detect Magic|XPHB"
         ],
         "preparedSpells": [],
@@ -2483,6 +2485,14 @@
             "sourceName": "Full-coverage test fixture",
             "grantType": "choice",
             "label": "User Choice"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skill Expert",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Skill Expert",
+            "grantVariant": "selection:ordinary"
           }
         ],
         "persuasion": [
@@ -2579,6 +2589,24 @@
             "label": "User Choice"
           }
         ]
+      },
+      "expertise": {
+        "performance": [
+          {
+            "sourceType": "manual",
+            "sourceName": "User Choice",
+            "grantType": "choice",
+            "label": "User Choice"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skill Expert",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Skill Expert",
+            "grantVariant": "selection:ordinary"
+          }
+        ]
       }
     },
     "abilityBonuses": [
@@ -2602,6 +2630,54 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Criminal"
+        }
+      },
+      {
+        "ability": "intelligence",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "War Caster",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "War Caster",
+          "grantVariant": "selection:ordinary"
+        }
+      },
+      {
+        "ability": "intelligence",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Fey-Touched",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fey-Touched",
+          "grantVariant": "selection:ordinary"
+        }
+      },
+      {
+        "ability": "constitution",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Resilient",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Resilient",
+          "grantVariant": "selection:ordinary"
+        }
+      },
+      {
+        "ability": "wisdom",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Skill Expert",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Skill Expert",
+          "grantVariant": "selection:ordinary"
         }
       }
     ],
@@ -2799,54 +2875,62 @@
     "feats": {
       "war caster": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "War Caster",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "fey-touched": [
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "manual",
+          "sourceName": "Fey-Touched",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "resilient": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
+          "sourceType": "manual",
+          "sourceName": "Resilient",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "skill expert": [
         {
-          "sourceType": "class",
-          "sourceName": "Cleric",
+          "sourceType": "manual",
+          "sourceName": "Skill Expert",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Cleric"
+          "label": "User Choice",
+          "grantVariant": "selection:ordinary"
         }
       ],
       "magic initiate": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ],
       "tough": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "Tough",
+          "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "User Choice"
+          "label": "User Choice",
+          "grantVariant": "selection:bonus"
         }
       ],
       "defense": [
@@ -3006,6 +3090,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "XPHB"
         }
       ],
@@ -3295,6 +3380,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "XPHB"
         }
       ],
@@ -3402,6 +3488,15 @@
           "grantType": "fixed",
           "label": "Life Domain",
           "grantSource": "XPHB"
+        },
+        {
+          "sourceType": "feat",
+          "sourceName": "Fey-Touched",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fey-Touched",
+          "grantVariant": "selection:ordinary",
+          "grantSource": "XPHB"
         }
       ],
       "cure wounds": [
@@ -3461,6 +3556,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
           "grantSource": "XPHB"
         }
       ],
@@ -4229,7 +4325,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "hitPoints": {
     "current": 121,
     "temporary": 17

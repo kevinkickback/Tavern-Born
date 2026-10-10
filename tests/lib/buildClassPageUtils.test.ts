@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
-  buildFeatModalFeats,
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
   countTotalFeatSlots,
@@ -177,6 +177,17 @@ describe('buildClassPageUtils', () => {
       'Lucky|PHB',
       'Custom Feat|HOMEBREW',
     ])
+  })
+
+  test('feat picker fallback matching retains complete fields and recognizes case refresh', () => {
+    const first = { name: 'Training|HB', source: 'One', entries: [] }
+    const second = { name: 'Training', source: 'HB|One', entries: [] }
+    const merged = buildFeatModalFeats({
+      availableFeats: [second],
+      selectedFeats: [{ ...second, name: ' training ', source: ' hb|one ' }, first],
+      createFallback: (selected) => ({ ...selected, entries: [] }),
+    })
+    expect(merged).toEqual([second, first])
   })
 
   test('filterClassSpells keeps only matching class spells', () => {

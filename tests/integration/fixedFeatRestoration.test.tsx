@@ -101,7 +101,11 @@ test.each([
   replaceCatalog([competitor])
   expect(screen.getAllByText('Feat data unavailable')).toHaveLength(2)
   expect(screen.queryByText('Prerequisites unmet')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Edit Setup' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Setup' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  expect(screen.queryByRole('button', { name: 'Finish' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(useCharacterStore.getState().activeCharacter).toEqual(character)
   expect(screen.getByRole('button', { name: 'Select training' }).getAttribute('aria-pressed')).toBe(
     'true',
   )

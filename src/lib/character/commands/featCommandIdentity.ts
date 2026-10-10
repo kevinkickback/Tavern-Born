@@ -1,5 +1,10 @@
 import { makeSourceTag } from '@/lib/provenance'
-import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import {
+  type FeatSelectionKind,
+  getFeatSelectionKey,
+  getSelectedFeatOwnerKey,
+} from '@/lib/provenance/featSelectionIdentity'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 
@@ -10,6 +15,7 @@ export type FeatOptionTarget = {
   fixedGrant?: boolean
   provenanceChoiceId?: string
   classFeatChoiceId?: string
+  selectionKind?: FeatSelectionKind
 }
 
 export interface SelectedFeat {
@@ -21,10 +27,23 @@ export interface SelectedFeat {
 }
 
 export function getFeatOptionSourceName(feat: FeatOptionTarget): string {
-  return feat.grantVariant ? `${feat.name.trim()}; ${feat.grantVariant.trim()}` : feat.name
+  return feat.grantVariant && getFeatOptionOwnerKey(feat)?.startsWith('fixed:')
+    ? `${feat.name.trim()}; ${feat.grantVariant.trim()}`
+    : feat.name
 }
 
 export function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {
+  if (feat.selectionKind) {
+    if (feat.selectionKind !== 'ordinary' && feat.selectionKind !== 'bonus') return undefined
+    if (
+      feat.provenanceChoiceId ||
+      feat.classFeatChoiceId ||
+      feat.fixedGrant ||
+      feat.grantVariant !== undefined
+    )
+      return undefined
+    return getSelectedFeatOwnerKey(feat.selectionKind)
+  }
   if (feat.provenanceChoiceId) return `choice:${feat.provenanceChoiceId}`
   if (feat.classFeatChoiceId) return `class:${feat.classFeatChoiceId}`
   return feat.fixedGrant || feat.grantVariant !== undefined
@@ -39,27 +58,38 @@ export function getFeatOptionSourceTag(feat: FeatOptionTarget): SourceTag {
   }
 }
 
-export function getFeatSelectionKey(feat: { name: string; source?: string }): string {
-  return `${normalizeKey(feat.name)}|${normalizeKey(feat.source ?? '')}`
-}
+export { getFeatSelectionKey }
 
-/** Selected and bonus setups currently share an unqualified owner; do not guess between them. */
-export function hasSharedFeatOptionOwner(
-  character: Pick<Character, 'feats' | 'specialFeats'>,
+/** Selected and class owners must address exactly one active complete reference. */
+export function isFeatOptionTargetActive(
+  character: Pick<Character, 'feats' | 'specialFeats' | 'classFeatChoices'>,
   feat: FeatOptionTarget,
 ): boolean {
-  if (getFeatOptionOwnerKey(feat) !== undefined) return false
-  const matches = (entry: { name: string; source?: string }) =>
-    normalizeOwnerIdentity(entry.name) === normalizeOwnerIdentity(feat.name) &&
-    normalizeOwnerIdentity(entry.source) === normalizeOwnerIdentity(feat.source)
-  return character.feats.some(matches) && (character.specialFeats ?? []).some(matches)
+  const ownerKey = getFeatOptionOwnerKey(feat)
+  if (ownerKey === undefined) return false
+  if (ownerKey.startsWith('class:')) {
+    if (!feat.source?.trim()) return false
+    const choices =
+      character.classFeatChoices?.filter((entry) => entry.id === feat.classFeatChoiceId) ?? []
+    return (
+      choices.length === 1 &&
+      choices[0].feats.filter((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat))
+        .length === 1
+    )
+  }
+  if (!feat.selectionKind) return true
+  const records =
+    feat.selectionKind === 'ordinary' ? character.feats : (character.specialFeats ?? [])
+  return (
+    records.filter((entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat)).length === 1
+  )
 }
 
 export function isSameGrantSource(tag: SourceTag, sourceTag: SourceTag): boolean {
   return (
     tag.sourceType === sourceTag.sourceType &&
-    tag.sourceName === sourceTag.sourceName &&
-    (tag.sourceRef ?? '') === (sourceTag.sourceRef ?? '') &&
+    normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(sourceTag.sourceName) &&
+    normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(sourceTag.sourceRef) &&
     (tag.grantVariant ?? '') === (sourceTag.grantVariant ?? '')
   )
 }

@@ -15,6 +15,7 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
@@ -130,7 +131,7 @@ export function FeatSelectionModal({
     let hasUnmet = false
     for (const f of feats) {
       const result = checkAllPrerequisites(f, characterSnapshot)
-      map.set(`${f.name}|${f.source ?? ''}`, {
+      map.set(getFeatSelectionKey(f), {
         met: result.met,
         reasons: result.failures,
       })
@@ -194,7 +195,7 @@ export function FeatSelectionModal({
       }
       const showUnmet = activeFilters.prereq?.has('showUnmet') ?? false
       if (!showUnmet) {
-        const prereq = prereqMap.get(`${item.name}|${item.source ?? ''}`)
+        const prereq = prereqMap.get(getFeatSelectionKey(item))
         if (prereq && !prereq.met) return false
       }
       return true
@@ -204,7 +205,7 @@ export function FeatSelectionModal({
 
   const renderCard = useCallback(
     (item: Feat5e, isSelected: boolean) => {
-      const prereq = prereqMap.get(`${item.name}|${item.source ?? ''}`) ?? {
+      const prereq = prereqMap.get(getFeatSelectionKey(item)) ?? {
         met: true,
         reasons: [],
       }
@@ -227,7 +228,7 @@ export function FeatSelectionModal({
       onOpenChange={onOpenChange}
       title="Select Feats"
       items={feats}
-      getItemId={(f) => `${f.name}|${f.source ?? ''}`}
+      getItemId={getFeatSelectionKey}
       renderCard={renderCard}
       matchItem={matchItem}
       filterSections={filterSections}
