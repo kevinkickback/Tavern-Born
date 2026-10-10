@@ -66,6 +66,36 @@ describe('feat commands', () => {
     expect(character.specialFeats?.[0].options).toEqual({ skills: ['History'] })
   })
 
+  test.each([
+    'source',
+    'name',
+  ])('clear rejects a shared complete literal %s with different casing', (field) => {
+    const selected = {
+      name: field === 'name' ? 'Training|Selected' : 'Training',
+      source: field === 'source' ? 'HB|Selected' : 'HB',
+    }
+    const character = makeCharacterFixture({
+      feats: [{ ...selected, id: 'ordinary', description: '', options: { skills: ['Arcana'] } }],
+      specialFeats: [
+        {
+          ...selected,
+          name: ` ${selected.name.toLowerCase()} `,
+          source: ` ${selected.source.toLowerCase()} `,
+          id: 'bonus',
+          description: '',
+          options: { skills: ['History'] },
+        },
+      ],
+    })
+    const result = clearFeatOptionsCommand(character, character.provenance, selected, {
+      skills: ['Arcana'],
+    })
+    expect(result.characterPatch).toEqual({})
+    expect(result.provenanceUpdate).toBe(character.provenance)
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(character.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+  })
+
   test('clear distinguishes bonus printings and a fixed owner beside shared selected copies', () => {
     let character = makeCharacterFixture({
       feats: [{ id: 'ordinary', name: 'Training', source: 'TEST', description: '' }],

@@ -403,6 +403,50 @@ test('zero-step clear remains available for a standalone bonus setup', () => {
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
 })
 
+test.each([
+  'source',
+  'name',
+])('zero-step clear preserves the distinct complete literal feat %s beside it', async (field) => {
+  const selected = {
+    name: field === 'name' ? 'Training|Selected' : 'Training',
+    source: field === 'source' ? 'HB|Selected' : 'HB',
+  }
+  const other = {
+    name: field === 'name' ? 'Training|Other' : 'Training',
+    source: field === 'source' ? 'HB|Other' : 'HB',
+  }
+  let character = makeCharacterFixture({
+    allowedSources: [selected.source, other.source],
+    feats: [{ ...selected, id: 'ordinary', description: '' }],
+    specialFeats: [{ ...other, id: 'bonus', description: '' }],
+  })
+  for (const [target, skills] of [
+    [selected, ['Arcana']],
+    [other, ['History']],
+  ] as const) {
+    const result = commitFeatOptionsCommand(character, character.provenance, target, {
+      skills: [...skills],
+    })
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
+  character = characterPersistenceSchema.parse(character)
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  catalog({ ...selected, entries: [] }, [], [{ ...other, entries: [] }])
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Character/ }))
+  openEdit()
+  enabled(/^Clear saved setup$/)
+  click(/^Clear saved setup$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  const cleared = useCharacterStore.getState().activeCharacter
+  expect(cleared?.feats[0].options).toEqual({})
+  expect(cleared?.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+  expect(cleared?.proficiencies.skills).toEqual(['history'])
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+})
+
 test('unchanged multi-step Finish retains each literal once', () => {
   const onFinish = modal(saved)
   expect(screen.getByText('(1/1 chosen)')).toBeTruthy()

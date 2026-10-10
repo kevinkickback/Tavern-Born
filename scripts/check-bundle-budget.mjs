@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Guarded feat setup recovery measures 5,628,617 renderer bytes (+2,322).
+  // Guarded feat setup recovery measures 5,628,641 renderer bytes (+2,346).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5497 * KIB,

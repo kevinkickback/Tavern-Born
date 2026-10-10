@@ -1,5 +1,5 @@
 import { makeSourceTag } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 
@@ -49,11 +49,10 @@ export function hasSharedFeatOptionOwner(
   feat: FeatOptionTarget,
 ): boolean {
   if (getFeatOptionOwnerKey(feat) !== undefined) return false
-  const key = getFeatSelectionKey(feat)
-  return (
-    character.feats.some((entry) => getFeatSelectionKey(entry) === key) &&
-    (character.specialFeats ?? []).some((entry) => getFeatSelectionKey(entry) === key)
-  )
+  const matches = (entry: { name: string; source?: string }) =>
+    normalizeOwnerIdentity(entry.name) === normalizeOwnerIdentity(feat.name) &&
+    normalizeOwnerIdentity(entry.source) === normalizeOwnerIdentity(feat.source)
+  return character.feats.some(matches) && (character.specialFeats ?? []).some(matches)
 }
 
 export function isSameGrantSource(tag: SourceTag, sourceTag: SourceTag): boolean {
