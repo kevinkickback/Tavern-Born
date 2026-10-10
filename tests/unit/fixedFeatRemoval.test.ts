@@ -11,6 +11,7 @@ import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
+import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import type { Background5e, Race5e, Spell5e } from '@/types/5etools'
@@ -299,7 +300,7 @@ describe('fixed feat setup owner lifecycle', () => {
 
   test('preserves manual benefits and other spell profiles after the final fixed owner leaves', () => {
     const oldChild = { name: 'Old', source: 'PHB', feats: [{ 'Training|PHB': true }] } as Race5e
-    const character = select(oldChild)
+    let character = select(oldChild)
     const manual = makeSourceTag('manual', 'User Choice', 'choice')
     for (const domain of ['skills', 'languages', 'tools', 'expertise'] as const) {
       character.provenance = addGrant(
@@ -316,6 +317,16 @@ describe('fixed feat setup owner lifecycle', () => {
       languages: ['Elvish'],
       tools: ['Flute'],
     }
+    character = applyCharacterCommandResult(
+      character,
+      addSpellToCharacter(
+        character,
+        character.provenance,
+        'Spark|PHB',
+        'cantrip',
+        'special:unrestricted',
+      ),
+    )
     character.spells.spellProfiles.push({
       id: 'class:independent',
       type: 'class',
@@ -324,14 +335,13 @@ describe('fixed feat setup owner lifecycle', () => {
       spellsKnown: ['Ward'],
       preparedSpells: [],
     })
-    character.provenance = addGrant(character.provenance, 'spells', 'Spark', manual)
     const configured = configure(character)
     const retained = replace(configured, undefined, parent, oldChild)
     expect(retained.fixedFeatOptions).toEqual({})
     expect(retained.proficiencies).toEqual(character.proficiencies)
     expect(retained.provenance.proficiencies.expertise?.arcana).toEqual([manual])
     const special = retained.spells.spellProfiles.find((profile) => profile.type === 'special')!
-    expect(special.cantrips).toEqual(['Spark'])
+    expect(special.cantrips).toEqual(['Spark|PHB'])
     expect(special.fixedSpells).toEqual([])
     expect(
       retained.spells.spellProfiles.find((profile) => profile.id === 'class:independent'),

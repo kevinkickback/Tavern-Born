@@ -29,13 +29,17 @@ export function useFeatProvenanceMutations() {
 
   const applyCommand = useCallback(
     (result: CharacterCommandResult) => {
-      if (!character) return
+      if (
+        !character ||
+        (Object.keys(result.characterPatch).length === 0 && result.provenanceUpdate === ledger)
+      )
+        return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter],
+    [character, ledger, updateCharacter],
   )
 
   const applyFeatSelection = useCallback(

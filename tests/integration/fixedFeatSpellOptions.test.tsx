@@ -196,7 +196,7 @@ test('a complete tagged saved spell resolves its exact printing and preserves it
   fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
   const after = useCharacterStore.getState().activeCharacter!
   const special = after.spells.spellProfiles.find((profile) => profile.type === 'special')
-  expect(special?.cantrips).toEqual(['Secret Spark'])
+  expect(special?.cantrips).toEqual(['Secret Spark|OTHER'])
   expect(special?.spellsKnown).toEqual([])
   expect(after.fixedFeatOptions).toEqual(before.fixedFeatOptions)
 })
@@ -214,26 +214,7 @@ test('an unchanged fixed setup edit preserves a saved hidden-source cantrip and 
 })
 
 test('editing a padded saved reference preserves canonical materialized spells and original options', () => {
-  const seeded = seed([requested], true, ' Secret Spark | OTHER ')
-  const before = {
-    ...seeded,
-    spells: {
-      ...seeded.spells,
-      spellProfiles: seeded.spells.spellProfiles.map((profile) =>
-        profile.type === 'special'
-          ? {
-              ...profile,
-              cantrips: ['Secret Spark'],
-              spellsKnown: [],
-              fixedSpells: ['Secret Spark'],
-            }
-          : profile,
-      ),
-    },
-  }
-  act(() => {
-    useCharacterStore.setState({ activeCharacter: before, characters: [before] })
-  })
+  const before = seed([requested], true, ' Secret Spark | OTHER ')
   editSetup()
   act(() => {
     fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
@@ -290,7 +271,7 @@ test('a missing saved spell can be replaced with an eligible exact choice', () =
   })
   const after = useCharacterStore.getState().activeCharacter
   const special = after?.spells.spellProfiles.find((profile) => profile.type === 'special')
-  expect(special?.cantrips).toEqual(['Allowed Spark'])
+  expect(special?.cantrips).toEqual(['Allowed Spark|TEST'])
   expect(special?.spellsKnown).toEqual([])
   expect(after?.fixedFeatOptions).toEqual({ 'training|other|': { spells: ['Allowed Spark|TEST'] } })
   expect(after?.provenance?.feats).toEqual(before.provenance?.feats)

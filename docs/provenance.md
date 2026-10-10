@@ -85,6 +85,21 @@ Option commits and edit dialogs use the requested feat owner. Fixed, class and r
 choice setups update their own records, including when a separately selected copy has the same
 name and printing. They do not overwrite or borrow that independent copy's saved selections.
 
+Feat-selected spells retain the exact target printing in the special profile, fixed list and
+`grantSource`; the granting feat's printing remains in `sourceRef`. Retraction considers only
+remaining owners in the special profile, so class or racial ownership cannot leave an orphan
+special selection or fixed lock. Independent special owners and other printings remain intact.
+Spells-page locks use that same exact target identity. The bonus picker still prevents selecting
+an already-known logical spell; later independent feat grants can share its target.
+Bonus additions and special-profile bulk writes retain established printings and fixed targets;
+logical-name picker restrictions never deduplicate previously applied independent grants.
+
+New feat spell selections require exact spell metadata. An established selection can retain its
+saved cantrip/leveled kind without metadata when the same feat owner still owns that exact target.
+Edits resolve all targets before retracting anything; an unavailable new target rejects the whole
+command without dirtying the draft. Clear and removal use saved ownership, including while offline.
+This does not infer missing target printings or convert earlier character formats.
+
 New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
 ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
 Untracked expertise is retained while its proficiency remains, and a pre-existing untracked selection

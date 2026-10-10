@@ -25,13 +25,13 @@ import {
   getNativeRacialSpellOwners,
 } from '@/lib/calculations/nativeRacialSpells'
 import {
-  dedupeSpellNames,
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
   parseSpellReference,
   resolveSpellReferenceFromMap,
 } from '@/lib/calculations/spellIdentity'
+import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
 import {
@@ -296,7 +296,6 @@ export function SpellsPage() {
 
     for (const profile of spellProfiles) {
       const detail = detailsByProfileId.get(profile.id)
-      const fixedSet = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
       const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
 
       for (const name of profile.cantrips) {
@@ -315,10 +314,7 @@ export function SpellsPage() {
           level: spell?.level ?? 0,
           kind: 'cantrip',
           prepared: alwaysPrepared,
-          isFixed:
-            fixedSet.has(spellKey) ||
-            (profile.type === 'special' &&
-              (ledger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')),
+          isFixed: isFixedProfileSpell(profile, ledger, name),
         })
       }
 
@@ -341,10 +337,7 @@ export function SpellsPage() {
           level: spell?.level ?? 1,
           kind: 'spell',
           prepared,
-          isFixed:
-            fixedSet.has(spellKey) ||
-            (profile.type === 'special' &&
-              (ledger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')),
+          isFixed: isFixedProfileSpell(profile, ledger, name),
         })
       }
     }
@@ -359,7 +352,7 @@ export function SpellsPage() {
       if (a.level !== b.level) return a.level - b.level
       return a.name.localeCompare(b.name)
     })
-  }, [detailsByProfileId, ledger.spells, spellByName, spellProfiles])
+  }, [detailsByProfileId, ledger, spellByName, spellProfiles])
 
   const groupedItems = useMemo(() => {
     const map = new Map<string, SpellListItem[]>()
@@ -593,9 +586,11 @@ export function SpellsPage() {
       }
     }
 
-    const mergedCantrips = dedupeSpellNames([...bonusProfile.cantrips, ...newCantrips])
-    const mergedSpells = dedupeSpellNames([...bonusProfile.spellsKnown, ...newSpells])
-    setProfileSpells(SPECIAL_SPELL_PROFILE_ID, mergedCantrips, mergedSpells)
+    setProfileSpells(
+      SPECIAL_SPELL_PROFILE_ID,
+      [...bonusProfile.cantrips, ...newCantrips],
+      [...bonusProfile.spellsKnown, ...newSpells],
+    )
 
     setBonusSpellModalOpen(false)
   }

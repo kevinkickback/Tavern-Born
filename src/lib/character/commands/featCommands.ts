@@ -2,7 +2,13 @@ import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
-import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import {
+  formatSpellReference,
+  getSpellNameKey,
+  getSpellReferenceKey,
+  parseSpellReference,
+} from '@/lib/calculations/spellIdentity'
+import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import { type ClassFeatChoiceOwner, getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
@@ -372,26 +378,32 @@ export function retractFeatOptionsCommand(
     },
   )
   const removedSpells = new Set(
-    (selections.spells ?? []).map((key) => normalizeKey(parseSpellReference(key).name)),
+    Object.entries(ledger.spells).flatMap(([name, tags]) =>
+      tags
+        .filter((tag) => !provenanceUpdate.spells[name]?.includes(tag))
+        .map((tag) => getSpellReferenceKey(name, tag.grantSource)),
+    ),
   )
+  const remainingSpecialGrants = (reference: string) =>
+    (provenanceUpdate.spells[getSpellNameKey(reference)] ?? []).filter(
+      (tag) =>
+        isSpecialSpellGrant(tag) &&
+        getSpellReferenceKey(reference, tag.grantSource ?? '') === getSpellReferenceKey(reference),
+    )
+  const retainSelection = (reference: string) =>
+    !removedSpells.has(getSpellReferenceKey(reference)) ||
+    remainingSpecialGrants(reference).length > 0
   const spellProfiles = character.spells.spellProfiles.map((profile) => {
     if (profile.id !== SPECIAL_SPELL_PROFILE_ID) return profile
     return {
       ...profile,
-      cantrips: profile.cantrips.filter(
-        (name) =>
-          !removedSpells.has(normalizeKey(name)) || !!provenanceUpdate.spells[normalizeKey(name)],
-      ),
-      spellsKnown: profile.spellsKnown.filter(
-        (name) =>
-          !removedSpells.has(normalizeKey(name)) || !!provenanceUpdate.spells[normalizeKey(name)],
-      ),
+      cantrips: profile.cantrips.filter(retainSelection),
+      spellsKnown: profile.spellsKnown.filter(retainSelection),
+      preparedSpells: profile.preparedSpells.filter(retainSelection),
       fixedSpells: profile.fixedSpells?.filter(
         (name) =>
-          !removedSpells.has(normalizeKey(name)) ||
-          (provenanceUpdate.spells[normalizeKey(name)] ?? []).some(
-            (tag) => tag.sourceType !== 'manual',
-          ),
+          !removedSpells.has(getSpellReferenceKey(name)) ||
+          remainingSpecialGrants(name).some((tag) => tag.sourceType !== 'manual'),
       ),
     }
   })
@@ -461,6 +473,70 @@ export function commitFeatOptionsCommand(
   selections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
+  const resolved = resolveFeatOptionSpells(character, ledger, feat, selections, allSpells)
+  if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
+  return commitResolvedFeatOptions(character, ledger, feat, selections, resolved)
+}
+
+type FeatSpellSelection = { reference: string; kind: 'cantrips' | 'spellsKnown' }
+
+/** Resolve before retraction so an established offline choice retains its saved kind. */
+function resolveFeatOptionSpells(
+  character: Character,
+  ledger: ProvenanceLedger,
+  feat: FeatOptionTarget,
+  selections: FeatOptionSelections,
+  allSpells: Spell5e[] = [],
+): FeatSpellSelection[] | undefined {
+  const lookup = buildSpellLookup(allSpells)
+  const profile = character.spells.spellProfiles.find(
+    (entry) => entry.id === SPECIAL_SPELL_PROFILE_ID,
+  )
+  const owner = getFeatOptionSourceTag(feat)
+  const normalize = getFeatOptionOwnerKey(feat)?.startsWith('fixed:') === true
+  const sameOwner = (tag: SourceTag) =>
+    normalize
+      ? tag.sourceType === owner.sourceType &&
+        tag.grantType === owner.grantType &&
+        normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(owner.sourceName) &&
+        normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(owner.sourceRef) &&
+        normalizeOwnerIdentity(tag.grantVariant) === normalizeOwnerIdentity(owner.grantVariant)
+      : isSameGrantSource(tag, owner)
+  const resolved: FeatSpellSelection[] = []
+  for (const selected of selections.spells ?? []) {
+    const parsed = parseSpellReference(selected)
+    if (!parsed.name || !parsed.source) return undefined
+    const reference = formatSpellReference(selected)
+    const key = getSpellReferenceKey(reference)
+    const spell = resolveSpellReference(reference, lookup)
+    let kind: FeatSpellSelection['kind'] | undefined = spell
+      ? spell.level === 0
+        ? 'cantrips'
+        : 'spellsKnown'
+      : undefined
+    if (
+      !kind &&
+      (ledger.spells[getSpellNameKey(reference)] ?? []).some(
+        (tag) => sameOwner(tag) && getSpellReferenceKey(reference, tag.grantSource ?? '') === key,
+      )
+    ) {
+      const cantrip = profile?.cantrips.some((value) => getSpellReferenceKey(value) === key)
+      const known = profile?.spellsKnown.some((value) => getSpellReferenceKey(value) === key)
+      if (cantrip !== known) kind = cantrip ? 'cantrips' : 'spellsKnown'
+    }
+    if (!kind) return undefined
+    resolved.push({ reference, kind })
+  }
+  return resolved
+}
+
+function commitResolvedFeatOptions(
+  character: Character,
+  ledger: ProvenanceLedger,
+  feat: FeatOptionTarget,
+  selections: FeatOptionSelections,
+  resolvedSpells: FeatSpellSelection[],
+): CharacterCommandResult {
   const sourceTag = getFeatOptionSourceTag(feat)
   let provenanceUpdate = ledger
   const existingSpecial = character.spells.spellProfiles.find(
@@ -469,16 +545,13 @@ export function commitFeatOptionsCommand(
   const cantrips = [...(existingSpecial?.cantrips ?? [])]
   const spellsKnown = [...(existingSpecial?.spellsKnown ?? [])]
   const fixedSpells = [...(existingSpecial?.fixedSpells ?? [])]
-  const spellLookup = buildSpellLookup(allSpells ?? [])
-  for (const compositeKey of selections.spells ?? []) {
-    const spellName = parseSpellReference(compositeKey).name
-    provenanceUpdate = addSpellGrant(provenanceUpdate, spellName, sourceTag)
-    const spell = resolveSpellReference(compositeKey, spellLookup)
-    const target = spell?.level === 0 ? cantrips : spellsKnown
-    if (!target.some((name) => normalizeKey(name) === normalizeKey(spellName)))
-      target.push(spellName)
-    if (!fixedSpells.some((name) => normalizeKey(name) === normalizeKey(spellName))) {
-      fixedSpells.push(spellName)
+  for (const { reference, kind } of resolvedSpells) {
+    provenanceUpdate = addSpellGrant(provenanceUpdate, reference, sourceTag)
+    const target = kind === 'cantrips' ? cantrips : spellsKnown
+    const key = getSpellReferenceKey(reference)
+    if (!target.some((name) => getSpellReferenceKey(name) === key)) target.push(reference)
+    if (!fixedSpells.some((name) => getSpellReferenceKey(name) === key)) {
+      fixedSpells.push(reference)
     }
   }
   const spellProfiles = existingSpecial
@@ -652,13 +725,15 @@ export function editFeatOptionsCommand(
   newSelections: FeatOptionSelections,
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
+  const resolved = resolveFeatOptionSpells(character, ledger, feat, newSelections, allSpells)
+  if (!resolved) return { characterPatch: {}, provenanceUpdate: ledger }
   const retracted = retractFeatOptionsCommand(character, ledger, feat, oldOptions)
-  return commitFeatOptionsCommand(
+  return commitResolvedFeatOptions(
     applyResult(character, retracted),
     retracted.provenanceUpdate,
     feat,
     newSelections,
-    allSpells,
+    resolved,
   )
 }
 

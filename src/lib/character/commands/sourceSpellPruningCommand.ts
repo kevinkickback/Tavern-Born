@@ -1,4 +1,5 @@
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
@@ -22,7 +23,7 @@ function isProfileChoiceOwner(
 ): boolean {
   if (tag.grantType !== 'choice') return false
   if (profile.type === 'special') {
-    return !['race', 'subrace', 'class', 'subclass'].includes(tag.sourceType)
+    return isSpecialSpellGrant(tag)
   }
   if (profile.type !== 'class') return false
   const sameOwner = (name: string | undefined, source: string | undefined) =>

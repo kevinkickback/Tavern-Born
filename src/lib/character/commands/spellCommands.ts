@@ -31,6 +31,7 @@ import {
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
+import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
 import {
   buildClassProfileLabel,
   toClassProfileId,
@@ -603,10 +604,21 @@ export function setProfileSpells(
   cantrips: string[],
   spellsKnown: string[],
 ): SpellCommandResult {
-  if (character.spells.spellProfiles.find((profile) => profile.id === profileId)?.type === 'racial')
-    return { characterPatch: {}, provenanceUpdate: ledger }
-  const dedupedCantrips = dedupeSpellNames(cantrips)
-  const dedupedSpellsKnown = dedupeSpellNames(spellsKnown)
+  const previous = character.spells.spellProfiles.find((profile) => profile.id === profileId)
+  if (previous?.type === 'racial') return { characterPatch: {}, provenanceUpdate: ledger }
+  const retainTargets = (references: string[], kind: 'cantrips' | 'spellsKnown') => {
+    if (previous?.type !== 'special') return dedupeSpellNames(references)
+    const fixed = previous[kind].filter((reference) =>
+      isFixedProfileSpell(previous, ledger, reference),
+    )
+    return [
+      ...new Map(
+        [...references, ...fixed].map((reference) => [getSpellReferenceKey(reference), reference]),
+      ).values(),
+    ]
+  }
+  const dedupedCantrips = retainTargets(cantrips, 'cantrips')
+  const dedupedSpellsKnown = retainTargets(spellsKnown, 'spellsKnown')
   const knownSpellKeys = buildSpellNameKeySet(dedupedSpellsKnown)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
@@ -622,7 +634,6 @@ export function setProfileSpells(
   })
 
   let provenanceUpdate = ledger
-  const previous = character.spells.spellProfiles.find((profile) => profile.id === profileId)
   if (previous?.type === 'special') {
     const previousTargets = new Set(
       [...previous.cantrips, ...previous.spellsKnown].map((reference) =>
