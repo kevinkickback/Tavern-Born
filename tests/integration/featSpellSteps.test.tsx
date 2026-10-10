@@ -866,10 +866,7 @@ test('a fixed casting class assigns multiple spell steps without exposing anothe
   expect(onFinish).toHaveBeenCalledExactlyOnceWith({ ...saved, spellcastingClass: 'Wizard' })
 })
 
-test.each([
-  false,
-  true,
-])('page edit, replacement and durable reopen preserve separate owners (fixed=%s)', async (fixedGrant) => {
+async function configuredEditCharacter(fixedGrant: boolean) {
   let original = selectedCharacterFixture({
     allowedSources: ['TEST'],
     background: 'Scholar',
@@ -917,6 +914,14 @@ test.each([
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
   await useCharacterStore.getState().importCharacters([original])
   useCharacterStore.getState().setActiveCharacter(original.id)
+  return original
+}
+
+test.each([
+  false,
+  true,
+])('unchanged page edit and Finish save the literal choices and owners (fixed=%s)', async (fixedGrant) => {
+  const original = await configuredEditCharacter(fixedGrant)
   page()
   openEdit()
   checked(/^Spark/)
@@ -930,13 +935,20 @@ test.each([
   expect((await reader.getItem('character-storage'))?.state.characters[0].spells).toEqual(
     original.spells,
   )
-  cleanup()
+})
+
+test.each([
+  false,
+  true,
+])('page replacement after durable reopen preserves separate owners (fixed=%s)', async (fixedGrant) => {
+  const original = await configuredEditCharacter(fixedGrant)
   await act(async () => {
     useCharacterStore.getState().setActiveCharacter(null)
     await useCharacterStore.persist.rehydrate()
     useCharacterStore.getState().setActiveCharacter(original.id)
   })
   expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  expect(useCharacterStore.getState().activeCharacter?.spells).toEqual(original.spells)
   page()
   openEdit()
   checked(/^Spark/)
