@@ -1,212 +1,106 @@
 # CI/CD Workflow
 
+This guide owns repository protection, validation and release operations. Use the
+[documentation index](README.md) for architecture and implementation contracts.
+
 ## Branches and repository settings
 
-`main` is the only long-lived branch. Normally start each change from current `main` on a
-short-lived branch, open a pull request back to `main`, and delete the branch after its squash
-merge. A user-requested [local-only remediation phase](#local-only-remediation) postpones publishing
-and merging while allowing implementation, independent review, validation, and local commits.
+Start scoped feature branches from current `main`; merge reviewed work by protected squash PR.
+Keep dependent work behind its foundation until that change has merged. After a squash merge,
+reconcile any descendants with the resulting main so the parent changes are not submitted again.
 
-Protect `main` with the repository's **Main Protection** ruleset:
+The **Main Protection** ruleset requires:
 
-- Disable direct pushes and require the branch to be up to date before merging.
-- Allow squash merging only; disable merge commits and rebase merging.
-- Enable GitHub native auto-merge and automatic head-branch deletion.
-- Require these two CI checks:
-  - **Lint, type-check, coverage, and build**
-  - **Browser end-to-end tests**
-- Enable automatic advisory review, including review of new pushes.
-- Do not require review-conversation resolution. Review findings are advisory input before enabling
-  auto-merge and before publishing a release.
+- An up-to-date branch and both **Lint, type-check, coverage, and build** and
+  **Browser end-to-end tests** at the final PR revision.
+- Pull requests and squash merging, with no protection bypass or direct pushes to main.
+- Automatic advisory review, including new pushes. Review-conversation resolution is not a
+  protection requirement; findings still need disposition before opting into merge.
 
-Passing CI does not opt a pull request into merging. Once a change is intentionally ready, select
-**Enable auto-merge** with the squash method. GitHub then merges the exact eligible revision after
-all branch-protection requirements pass. There is no custom merge workflow or repository-dispatch
-handoff.
-
-Pull requests that change `.github/workflows/**`, `.github/scripts/**`, or
-`scripts/check-release.mjs` are the exception: do not enable auto-merge until the complete workflow
-diff and advisory review have been inspected. Once that review is complete, the pull request may use
-the same native squash auto-merge path. CI status names alone are not a trust boundary because a pull
-request can change the workflow that produces them. Add required CODEOWNERS approval for these paths
-when the project has a second maintainer; a solo maintainer cannot provide an independent approval.
-
----
+GitHub native auto-merge and automatic head-branch deletion are enabled. Passing checks alone
+never opts a PR into merge. No release is implied by a feature PR or merge.
 
 ## Day-to-day development
 
-When GitHub delivery is enabled, create a branch from current `main`:
+1. Pull current main and create a scoped branch. State the intended behavior and affected callers.
+2. Implement the change, update its owning guide, inspect the complete diff and run focused checks.
+3. Obtain independent read-only review. Resolve verified blockers and validate the final revision.
+4. Before each push, pull main into the branch and inspect committed and uncommitted changes.
+   Renew affected review and validation when integration or later edits change accepted behavior.
+5. Publish the focused PR. Read the completed advisory review's summary and all findings, reproduce
+   concerns, and record their disposition. Zero findings or a COMMENTED review is not approval.
+   Automatic review covers new pushes; avoid duplicate review requests.
+6. After review disposition and both required checks pass at the exact head, enable native squash
+   auto-merge. Verify the actual merge, synchronize main, and update related issues.
+
+Useful commands, in that sequence:
 
 ```bash
 git switch main
 git pull --ff-only
 git switch -c feat/short-description
-```
-
-Complete the [independent review](#independent-review) for each bounded change, including changes
-kept locally. Local-only delivery follows the section below; the following push/PR commands apply
-only after the user explicitly resumes GitHub delivery.
-
-Before each push, pull current `main` into the branch, inspect the exact branch diff against
-`origin/main`, and run the relevant checks. Review the changed behavior and nearby callers for
-correctness, error handling, and regressions; passing lint and tests is not a substitute for this
-local code review. Check both the committed diff and any uncommitted changes that will be included
-in the push. Fix findings and repeat the review before pushing:
-
-```bash
+# Implement, review and validate the bounded change.
 git pull --no-rebase origin main
 git diff --check origin/main...HEAD
 git diff --check
-git diff --stat origin/main...HEAD
 git diff origin/main...HEAD
 git diff
-npm run check:pr
-```
-
-When a reviewer finds an issue on a pull request, inspect the related code paths for other instances or
-missed edge cases while fixing it. Run focused tests and repeat the local diff review before pushing
-the fix. One completed advisory review satisfies the advisory review step; request another
-only when a later change needs fresh review, rather than after every fix push. The separate local
-independent review is also required. It does not replace the eventual advisory review or required
-GitHub checks.
-
-Commit and push the reviewed branch, then open a pull request:
-
-```bash
 git push -u origin feat/short-description
 gh pr create --base main --fill
-gh pr merge --auto --squash
+# Wait for completed review disposition and both exact-head checks.
+gh pr merge --auto --squash --match-head-commit <reviewed-head-sha>
 ```
 
-`check:pr` runs the main PR checks locally before the push: architecture and dead-code checks,
-read-only linting, the production build (which type-checks) and bundle budgets, full coverage, and
-browser E2E. Run focused tests during development, then use this command once the branch is ready
-for review. Install Chromium with `npx playwright install chromium` if Playwright has not been set
-up on the machine. Electron smoke remains a separate local command because headless Linux needs a
-virtual display and the test skips affected Windows builds; CI runs it on Linux.
+For changes to `.github/workflows/**`, `.github/scripts/**` or `scripts/check-release.mjs`, inspect
+the complete workflow/script diff and advisory review before enabling auto-merge. Check names
+alone cannot establish trust when the PR changes the workflow that produces them. Add required
+CODEOWNERS approval for these paths when a second maintainer is available; a solo maintainer
+cannot provide independent approval for their own changes.
 
-The final command opts that pull request into GitHub native auto-merge. It does not bypass CI,
-branch protection, or an out-of-date base.
+## Validation
 
-`ci.yml` runs on every non-draft pull request targeting `main`. It checks unused code and
-architectural boundaries, linting, type checking, coverage thresholds, a production build, bundle
-budgets, the complete browser suite, and the compiled Electron smoke test. Repository-run Node
-commands use Node 24, matching `.nvmrc` and the package engine requirement.
-Build and bundle checks run before coverage so a budget failure is reported without waiting for the
-full test suite. A new run for the same pull request cancels its older run; only the latest revision
-needs to finish validation.
+Use Node 24, matching `.nvmrc` and package engines. Run `npm run check:pr` at the final functional
+head after focused tests and independent review. It runs architecture/dead-code checks, read-only
+lint, types, production build, normal bundle budgets, coverage and the complete browser suite.
+See the [testing commands](testing-map.md#commands) for focused runs and platform details.
 
-Linux CI and release jobs use the explicit `ubuntu-26.04` runner instead of `ubuntu-latest`, so a
-future GitHub runner migration cannot change the build environment without a reviewed repository
-change.
+Documentation-only edits require exact-text, relative-link and scope validation; runtime tests
+are unnecessary unless executable behavior changes. Required GitHub checks remain mandatory for
+all PRs. Do not weaken tests or budgets to pass a change. An intentional bundle allowance increase
+requires explicit review of the measured artifact. Do not repeat successful validation without a
+new change, failure or unresolved concern; distinguish setup failures from product failures.
 
-The browser job includes the `@golden` level-1-to-20 journeys and narrower `@focused` checks.
-Developers can run those groups independently with `npm run test:e2e:golden` and
-`npm run test:e2e:focused`; `npm run test:e2e:release` runs the complete suite serially for local
-release validation.
-
----
+`ci.yml` runs for non-draft PRs targeting main. Both required jobs use Node 24 and `ubuntu-26.04`.
+The quality job checks architecture, lint, types, build, budgets and coverage. The browser job runs
+the complete suite, builds the desktop application and runs Electron smoke tests under a virtual
+display. Electron smoke remains a separate, platform-dependent local command. A new run for the
+same PR cancels its older run; only the final revision qualifies for merge.
 
 ## Independent review
 
-Each completed change, including a documentation-only change, needs a separate read-only review
-before it is marked locally reviewed or published. The implementer still inspects the exact diff
-and nearby callers; the second review is performed in a fresh session without the implementation
-conversation history. Use a separate reviewer who did not implement the change. If no
-fresh reviewer is available, continue implementation and validation but record review pending;
-do not represent self-review as the completed second review.
+Every completed change, including documentation, needs a separate reviewer who did not implement
+it before acceptance or publication. The initial review starts without the implementation history;
+provide the exact base/head, expected behavior and constraints for independent assessment. If a
+separate reviewer is unavailable, record review pending; self-review does not satisfy this gate.
 
-Give the reviewer the repository path, exact base and final revisions, the task's expected behavior,
-applicable constraints, and report destination. Do not supply the implementer's explanation as proof
-that the change is correct. Identify the exact base and final revisions, examine affected
-callers, record the scope, and check the resulting evidence.
-
-The review must:
-
-- Inspect the complete final diff, affected callers, and relevant unchanged surrounding code.
-- Challenge failure handling, ordering/concurrency, saved-character compatibility, source-qualified
-  identities, and upstream data contracts where relevant to the change.
-- Check that tests have independently expected outcomes and exercise meaningful edge cases;
-  passing CI or a large test count does not establish correctness.
-- Report actionable findings with priority, file/line, triggering input or sequence, expected and
-  actual behavior, and supporting evidence. Distinguish verified defects from untested concerns.
-- Make no source edits, commits, network publications, or merge/release decisions.
-
-The implementer verifies each finding, reproduces defects where practical, inspects nearby paths,
-and adds behavior regressions for confirmed defects. Record false positives with code or test
-evidence. Repeat focused validation after fixes, then review the final diff. A substantive fix needs
-fresh review of the corrected behavior; unchanged, already-reviewed areas need not be reviewed
-repeatedly. Run `npm run check:pr` before marking a functional change locally validated. For changes
-limited to instructions/documentation, validate the exact diff and referenced paths/anchors; runtime
-tests are needed only when executable behavior also changes. Existing mandatory pre-push validation
-still applies once publishing resumes.
-
-Keep the reviewer report and finding dispositions in ignored `docs/review/`. Record base/head
-revisions, covered paths, pending concerns, and validation results. A report does not cover later
-source changes automatically. Track implementation, local validation, independent review, advisory
-review, GitHub CI, and merge as separate states. A fresh independent review adds evidence but can share
-blind spots with the implementing model; neither an empty report nor passing tests certifies a
-defect-free release.
+Review behavior and affected callers, including failure paths, ordering, persistence, identity and
+ownership where relevant. Derive expected results independently from the implementation. Record
+verified findings with an exact revision, location, trigger, expected/actual result and evidence.
+Reviewers make no source edits or publication decisions. The implementer verifies findings, adds
+meaningful regressions, resolves blockers and renews affected review after corrections. Passing
+checks or an empty review does not certify a defect-free release.
 
 ## Local-only remediation
 
-When the user pauses GitHub delivery, including when advisory review is unavailable, that pause
-persists across new chats until the user explicitly resumes publishing. Read local development guidelines and the private `docs/review/workflow-state.md` when present at the start of
-remediation. The private state file records the active mode, authorization to resume, branch
-dependencies, holds, review reports and checkpoints; it is not source material for public issues
-or PR descriptions. A current explicit user instruction takes precedence over an older mode
-record; update the record before continuing work.
+During an explicit delivery pause, keep work on scoped local branches. Do not push, update PRs,
+merge into main or release until delivery is explicitly resumed. Preserve existing PRs and accepted
+checkpoints; fetching for comparison and read-only investigation remain allowed. Record dependency
+holds before starting related work. Resumption does not lift an unrelated hold or authorize a
+release or disclosure of private findings.
 
-Continue bounded implementations on local branches. Local checkpoint commits may freeze a revision
-for review; mark a checkpoint locally accepted only after validation and independent review.
-Fetching current `origin/main` for comparison is allowed. Do not push branches,
-create/update PRs, enable auto-merge, merge into local or remote `main`, publish findings, or release
-during this phase. Preserve existing PRs and their heads for eventual advisory review; implement
-follow-ups on separate local branches and record their relationship instead of extending those PRs.
-
-Keep the review-policy commit in the ancestry of subsequent local remediation branches so new chats
-retain these rules. Start unrelated changes from that policy branch. For a dependent change, start
-from the exact local dependency revision and record the parent branch/commit in the private state
-file. Review the bounded change against that dependency base and inspect the accumulated diff
-against `origin/main` for interactions. A deferred merge is not permission to collect unrelated
-changes into one large branch. Do not discard or overwrite another branch's reviewed work.
-
-### Local remediation scope
-
-While advisory review is unavailable, prioritize independent fixes, regression tests, data-contract
-checks, and profiling. Start each independent implementation from the latest locally accepted
-review-policy revision based on `main`, not from an unrelated functional branch. Read the private
-workflow state to identify that exact revision and any held branch chains before creating a branch.
-
-Preserve dependency chains marked on hold at their exact reviewed checkpoints. Do not extend a
-held chain or begin a larger dependent rewrite, including a saved-character identity migration,
-until the user explicitly authorizes it or the required advisory review of its foundation completes
-and the hold is updated. Read-only characterization and isolated probes can continue; they do not
-change acceptance status or justify extending a held implementation chain.
-
-For each new bounded change, record why it is independent of held work, its exact base/head,
-validation, and fresh review. Policy updates use their own branch and review; do not silently add
-them to previously reviewed heads. Existing branches still read the private workflow state, and
-new implementation branches inherit the latest accepted policy revision. Do not treat a clean
-merge or passing tests as proof that two changes are independent.
-
-When review findings change an earlier dependency, identify every affected descendant, incorporate
-the correction, resolve interactions, and repeat validation and fresh review at the updated exact
-heads. Prior acceptance records remain historical evidence, not approval of later revisions. After
-a dependency is squash-merged, reconcile its descendants with the resulting `main` history before
-delivery so the parent changes are not submitted again. Keep integration validation separate from
-the acceptance of individual branches.
-
-Mark completed local work as locally implemented/validated/reviewed, with advisory/CI/merge pending;
-do not close its audit finding or public issue as delivered. Record partial coverage explicitly.
-Keep security-sensitive fixes and evidence local until the user authorizes an appropriate private
-publication path; resuming ordinary GitHub delivery does not authorize public disclosure.
-
-When the user resumes delivery, record that authorization and prepare focused PRs in dependency
-order. Include the policy change, reconcile each branch with current `main`, and review/test the
-exact final diff again after integration.
-Obtain advisory review, address available actionable findings, and require both GitHub CI jobs before
-using native squash auto-merge. Never bypass these steps merely because a local checkpoint passed.
+Resume bounded changes on current main. Reconcile dependency corrections, renew affected review
+and validation, and complete the protected delivery steps above. Only mark an issue delivered after
+its acceptance criteria and actual merge are verified. Keep private evidence outside public work.
 
 ---
 
