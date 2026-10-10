@@ -78,6 +78,11 @@ same PR cancels its older run; only the final revision qualifies for merge.
 
 ## Independent review
 
+Every completed change, including documentation, needs a separate reviewer who did not implement
+it before acceptance or publication. The initial review starts without the implementation history;
+provide the exact base/head, expected behavior and constraints for independent assessment. If a
+separate reviewer is unavailable, record review pending; self-review does not satisfy this gate.
+
 Review behavior and affected callers, including failure paths, ordering, persistence, identity and
 ownership where relevant. Derive expected results independently from the implementation. Record
 verified findings with an exact revision, location, trigger, expected/actual result and evidence.
