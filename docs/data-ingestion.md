@@ -228,6 +228,8 @@ nonempty choice set; spelling, case and whitespace normalization never invent a 
 Malformed spell UIDs, unknown casting modifiers and extra UID fields reject locally before decoding;
 the shared codec's unrelated consumers are unchanged. Empty lists and omitted optional rules remain
 valid. No character conversion or data-cache change is needed for this live validation boundary.
+Whole-field `additionalSpells: null` remains an upstream inheritance-removal marker, normalized to
+absence before native evaluation. Null schedules or lists inside a supplied block are malformed.
 An explicitly supplied class filter requires at least one nonempty class name; whitespace or
 semicolon-only constraints reject instead of becoming unrestricted. Omitting the class segment
 remains unrestricted, and class-only filters retain their native cantrip-level default.

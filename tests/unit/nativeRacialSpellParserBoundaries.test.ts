@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import { parseRaces } from '@/lib/5etools/parsers/races'
 import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { reconcileRaceSpellProfileCommand } from '@/lib/character/commands/raceSpellProfileCommand'
-import type { RaceAdditionalSpells } from '@/types/5etools'
+import type { Race5e, RaceAdditionalSpells } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeNativeRacialCharacter, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
@@ -134,4 +135,22 @@ test('explicit target pools support both count locations, while omitted rules an
   expect(parseRaceSpellBlocks(undefined)).toEqual([])
   expect(parseRaceSpellBlocks([])).toEqual([])
   expect(parseRaceSpellBlocks([{ known: { 1: [] }, expanded: { s0: [] } }])[0].grants).toEqual([])
+})
+
+test('a normalized variant can remove inherited spells without reactivating its parent suite', () => {
+  const parent = parseRaces({
+    race: [
+      {
+        name: 'Versioned caster',
+        source: 'PHB',
+        additionalSpells: [{ known: { 1: ['light#c'] } }],
+        _versions: [{ name: 'Versioned caster; Removed', additionalSpells: null }],
+      },
+    ],
+  })[0] as Race5e
+  const variant = parent.subraces![0]
+  expect(variant.additionalSpells).toBeUndefined()
+  const character = makeNativeRacialCharacter(parent, variant)
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+  expect(character.spells.spellProfiles.filter((profile) => profile.type === 'racial')).toEqual([])
 })
