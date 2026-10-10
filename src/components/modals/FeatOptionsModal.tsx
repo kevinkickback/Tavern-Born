@@ -523,6 +523,8 @@ export interface FeatOptionsModalProps {
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
   fixedSpellcastingClass?: string
+  onClear?: () => void
+  clearDisabledReason?: string
   onFinish: (selections: FeatOptionSelections) => void
   onDismiss?: () => void
 }
@@ -534,6 +536,8 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   proficientSkillNames = [],
   initialSelections,
   fixedSpellcastingClass,
+  onClear,
+  clearDisabledReason,
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
@@ -733,7 +737,78 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     [onOpenChange, onDismiss],
   )
 
-  if (!currentStep) return null
+  if (!currentStep) {
+    const savedChoices = [
+      ['Spellcasting class', initialSelections?.spellcastingClass],
+      [
+        'Spells',
+        initialSelections?.spells
+          ?.map((reference) => {
+            const { name, source } = parseSpellReference(reference)
+            return `${name}${source ? ` (${source})` : ''}`
+          })
+          .join(', '),
+      ],
+      ['Skills', initialSelections?.skills?.join(', ')],
+      ['Languages', initialSelections?.languages?.join(', ')],
+      ['Tools', initialSelections?.tools?.join(', ')],
+      [
+        'Ability score',
+        initialSelections?.abilityScore
+          ? (ABILITY_ABBREV_TO_TITLE[initialSelections.abilityScore] ??
+            initialSelections.abilityScore)
+          : undefined,
+      ],
+      ['Optional feature', initialSelections?.optionalFeature],
+      ['Expertise', initialSelections?.expertiseSkill],
+    ].filter(([, value]) => value)
+
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Configure: {feat.name}</DialogTitle>
+            <DialogDescription>
+              Current rules for {feat.name} ({feat.source}) have no setup choices.
+            </DialogDescription>
+          </DialogHeader>
+          {savedChoices.length > 0 && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Your saved setup and its benefits are unchanged. Cancel to keep them, then reopen
+                setup after restoring the rules to edit your choices.
+              </p>
+              <dl className="max-h-64 space-y-2 overflow-y-auto text-sm">
+                {savedChoices.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="font-medium">{label}</dt>
+                    <dd className="text-muted-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {onClear && (
+                <p className="text-sm text-muted-foreground">
+                  Clearing removes all choices above and only the benefits owned by this setup; the
+                  feat remains on your character.
+                </p>
+              )}
+              {clearDisabledReason && <p role="status">{clearDisabledReason}</p>}
+            </>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            {savedChoices.length > 0 && onClear && (
+              <Button variant="destructive" disabled={!!clearDisabledReason} onClick={onClear}>
+                Clear saved setup
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   const currentValue = getStepValue(stepSels, stepIndex)
 

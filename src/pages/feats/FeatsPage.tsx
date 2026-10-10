@@ -56,6 +56,7 @@ export function FeatsPage() {
     compactPane,
     detailCollapsed,
     featEditCandidate,
+    featEditClearBlocked,
     featEditTarget,
     featOptionsTarget,
     feats,
@@ -66,6 +67,7 @@ export function FeatsPage() {
     handleDismissEditHint,
     handleEditBonusSetup,
     handleEditConfirm,
+    handleEditClear,
     handleEditFinish,
     handleEditSetup,
     handleFeatOptionsFinish,
@@ -722,6 +724,12 @@ export function FeatsPage() {
           fixedSpellcastingClass={featEditTarget.feat5e.fixedSpellcastingClass}
           proficientSkillNames={proficientSkillNames}
           initialSelections={featEditTarget.priorOptions}
+          onClear={handleEditClear}
+          clearDisabledReason={
+            featEditClearBlocked
+              ? 'This feat is selected in both Character and Bonus Feats. Clearing one setup could change the other. Cancel to keep both setups.'
+              : undefined
+          }
           onFinish={handleEditFinish}
           onDismiss={() => setFeatEditTarget(null)}
         />

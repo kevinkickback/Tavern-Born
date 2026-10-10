@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
+  clearFeatOptionsCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
@@ -29,6 +30,135 @@ function applyResult(
 }
 
 describe('feat commands', () => {
+  test.each([
+    'TEST',
+    ' test ',
+  ])('clear refuses shared ordinary/bonus ownership including source casing: %s', (source) => {
+    const character = makeCharacterFixture({
+      feats: [
+        {
+          id: 'ordinary',
+          name: 'Training',
+          source: 'TEST',
+          description: '',
+          options: { skills: ['Arcana'] },
+        },
+      ],
+      specialFeats: [
+        {
+          id: 'bonus',
+          name: ' training ',
+          source,
+          description: '',
+          options: { skills: ['History'] },
+        },
+      ],
+    })
+    const result = clearFeatOptionsCommand(
+      character,
+      character.provenance,
+      { name: 'Training', source: 'TEST' },
+      { skills: ['Arcana'] },
+    )
+    expect(result.characterPatch).toEqual({})
+    expect(result.provenanceUpdate).toBe(character.provenance)
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(character.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+  })
+
+  test.each([
+    'source',
+    'name',
+  ])('clear rejects a shared complete literal %s with different casing', (field) => {
+    const selected = {
+      name: field === 'name' ? 'Training|Selected' : 'Training',
+      source: field === 'source' ? 'HB|Selected' : 'HB',
+    }
+    const character = makeCharacterFixture({
+      feats: [{ ...selected, id: 'ordinary', description: '', options: { skills: ['Arcana'] } }],
+      specialFeats: [
+        {
+          ...selected,
+          name: ` ${selected.name.toLowerCase()} `,
+          source: ` ${selected.source.toLowerCase()} `,
+          id: 'bonus',
+          description: '',
+          options: { skills: ['History'] },
+        },
+      ],
+    })
+    const result = clearFeatOptionsCommand(character, character.provenance, selected, {
+      skills: ['Arcana'],
+    })
+    expect(result.characterPatch).toEqual({})
+    expect(result.provenanceUpdate).toBe(character.provenance)
+    expect(character.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(character.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+  })
+
+  test('clear distinguishes bonus printings and a fixed owner beside shared selected copies', () => {
+    let character = makeCharacterFixture({
+      feats: [{ id: 'ordinary', name: 'Training', source: 'TEST', description: '' }],
+      specialFeats: [
+        {
+          id: 'bonus',
+          name: 'Training',
+          source: 'OTHER',
+          description: '',
+          options: { skills: ['History'] },
+        },
+      ],
+    })
+    const configured = commitFeatOptionsCommand(
+      character,
+      character.provenance,
+      { name: 'Training', source: 'TEST' },
+      { skills: ['Arcana'] },
+    )
+    character = applyResult(character, configured)
+    const cleared = applyResult(
+      character,
+      clearFeatOptionsCommand(
+        character,
+        character.provenance,
+        { name: 'Training', source: 'TEST' },
+        { skills: ['Arcana'] },
+      ),
+    )
+    expect(cleared.feats[0].options).toEqual({})
+    expect(cleared.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+    expect(cleared.proficiencies.skills).toEqual([])
+    character = {
+      ...character,
+      specialFeats: [
+        {
+          id: 'bonus',
+          name: 'Training',
+          source: 'TEST',
+          description: '',
+          options: { skills: ['Arcana'] },
+        },
+      ],
+    }
+    const fixedTarget = { name: 'Training', source: 'TEST', fixedGrant: true }
+    character = applyResult(
+      character,
+      commitFeatOptionsCommand(character, character.provenance, fixedTarget, {
+        skills: ['Stealth'],
+      }),
+    )
+    const fixedCleared = applyResult(
+      character,
+      clearFeatOptionsCommand(character, character.provenance, fixedTarget, {
+        skills: ['Stealth'],
+      }),
+    )
+    expect(fixedCleared.fixedFeatOptions?.['training|test|']).toEqual({})
+    expect(fixedCleared.feats[0].options).toEqual({ skills: ['Arcana'] })
+    expect(fixedCleared.specialFeats?.[0].options).toEqual({ skills: ['Arcana'] })
+    expect(fixedCleared.proficiencies.skills).toEqual(['arcana'])
+  })
+
   test.each([
     'fixed',
     'class',

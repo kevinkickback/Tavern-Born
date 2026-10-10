@@ -33,6 +33,7 @@ import {
   getFeatOptionSourceName,
   getFeatOptionSourceTag,
   getFeatSelectionKey,
+  hasSharedFeatOptionOwner,
   isSameGrantSource,
   type SelectedFeat,
 } from './featCommandIdentity'
@@ -735,6 +736,19 @@ export function editFeatOptionsCommand(
     newSelections,
     resolved,
   )
+}
+
+/** Clear only an identifiable setup; shared selected/bonus ownership needs an explicit resolution. */
+export function clearFeatOptionsCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  feat: FeatOptionTarget,
+  oldOptions: FeatOptionSelections,
+): CharacterCommandResult {
+  if (hasSharedFeatOptionOwner(character, feat)) {
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
+  return editFeatOptionsCommand(character, ledger, feat, oldOptions, {})
 }
 
 export function replaceFeatSelectionsCommand(

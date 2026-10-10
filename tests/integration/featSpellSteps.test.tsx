@@ -38,8 +38,12 @@ const feat: Feat5e = {
 const saved = { spells: [' spark | test ', '{@spell Ray|TEST|My ray}'] }
 const reader = createIdbStorage<{ characters: Character[] }>()
 
-function catalog(record = feat, spells: Spell5e[] = [spark, ray, replacement]) {
-  const data = makeGameDataFixture({ feats: [record], spells })
+function catalog(
+  record = feat,
+  spells: Spell5e[] = [spark, ray, replacement],
+  otherFeats: Feat5e[] = [],
+) {
+  const data = makeGameDataFixture({ feats: [record, ...otherFeats], spells })
   act(() => {
     useGameDataStore.setState({
       gameData: { ...data, lookups: buildGameDataLookups(data) },
@@ -104,7 +108,356 @@ beforeEach(async () => {
   })
   catalog()
 })
+
+test('a no-choice new setup is dismissible and cannot commit empty choices', () => {
+  const onFinish = modal({}, { name: feat.name, source: feat.source, entries: [] })
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(screen.getByText(/have no setup choices/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Clear saved setup|Finish/ })).toBeNull()
+  click(/^Cancel$/)
+  expect(onFinish).not.toHaveBeenCalled()
+})
+
+test('saved zero-step setup requires an explicit clear callback instead of borrowing Finish', () => {
+  const onFinish = modal(saved, { name: feat.name, source: feat.source, entries: [] })
+  expect(controls().getByText('spark (test), Ray (TEST)')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Clear saved setup|Finish/ })).toBeNull()
+  click(/^Cancel$/)
+  expect(onFinish).not.toHaveBeenCalled()
+})
+
+async function recoveryPage(fixedGrant: boolean) {
+  const originalRules: Feat5e = fixedGrant
+    ? {
+        ...feat,
+        additionalSpells: [
+          {
+            name: 'Wizard',
+            known: {
+              _: [
+                { choose: 'level=0', count: 1 },
+                { choose: 'level=1', count: 1 },
+              ],
+            },
+          },
+          { name: 'Bard', known: { _: [{ choose: 'level=0', count: 1 }] } },
+        ],
+      }
+    : feat
+  const noChoices: Feat5e = fixedGrant
+    ? {
+        ...feat,
+        additionalSpells: [
+          { name: 'Wizard' },
+          { name: 'Bard', known: { _: [{ choose: 'level=0' }] } },
+        ],
+      }
+    : { name: feat.name, source: feat.source, entries: [] }
+  const priorOptions: FeatOptionSelections = {
+    ...saved,
+    ...(fixedGrant ? { spellcastingClass: 'Wizard' } : {}),
+    skills: ['Arcana', 'History'],
+    languages: ['Elvish', 'Dwarvish'],
+    tools: ['Lute'],
+    abilityScore: 'wis',
+    optionalFeature: 'Guard',
+    expertiseSkill: 'History',
+  }
+  const independentOptions: FeatOptionSelections = {
+    spells: ['Spark|TEST', 'Ray|OTHER'],
+    skills: ['Arcana'],
+    languages: ['Elvish'],
+    tools: ['Flute'],
+    abilityScore: 'int',
+    optionalFeature: 'Other Guard',
+  }
+  const otherRay = { ...ray, source: 'OTHER' }
+  let original = makeCharacterFixture({
+    allowedSources: ['TEST', 'OTHER'],
+    background: 'Scholar',
+    backgroundSource: 'TEST',
+    feats: [
+      ...(!fixedGrant
+        ? [{ id: 'training', name: feat.name, source: feat.source, description: '' }]
+        : []),
+      { id: 'companion', name: 'Companion', source: 'TEST', description: '' },
+    ],
+  })
+  if (fixedGrant)
+    original.provenance.feats.training = [
+      {
+        sourceType: 'background',
+        sourceName: 'Scholar',
+        sourceRef: 'TEST',
+        grantSource: 'TEST',
+        grantType: 'fixed',
+        grantVariant: 'Wizard',
+        label: 'Scholar',
+      },
+    ]
+  const independent = commitFeatOptionsCommand(
+    original,
+    original.provenance,
+    { name: 'Companion', source: 'TEST' },
+    independentOptions,
+    [spark, otherRay],
+  )
+  original = {
+    ...original,
+    ...independent.characterPatch,
+    provenance: independent.provenanceUpdate,
+  }
+  const configured = commitFeatOptionsCommand(
+    original,
+    original.provenance,
+    {
+      name: feat.name,
+      source: feat.source,
+      fixedGrant,
+      grantVariant: fixedGrant ? 'Wizard' : undefined,
+    },
+    priorOptions,
+    [spark, ray],
+  )
+  original = characterPersistenceSchema.parse({
+    ...original,
+    ...configured.characterPatch,
+    provenance: configured.provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([original])
+  useCharacterStore.getState().setActiveCharacter(original.id)
+  // A competing feat printing still has choices; exact spells may be entirely unavailable.
+  catalog(noChoices, [otherRay], [{ ...originalRules, source: 'OTHER' }])
+  page()
+  return {
+    before: useCharacterStore.getState().activeCharacter,
+    original,
+    originalRules,
+    noChoices,
+    otherRay,
+    independent,
+    independentOptions,
+  }
+}
+
+test.each([
+  false,
+  true,
+])('zero-step Cancel, Escape and Close preserve the original setup (fixed=%s)', async (fixedGrant) => {
+  const { before } = await recoveryPage(fixedGrant)
+  openEdit()
+  expect(screen.getByText(/Current rules for Training \(TEST\) have no setup choices/)).toBeTruthy()
+  expect(controls().getByText('spark (test), Ray (TEST)')).toBeTruthy()
+  expect(controls().getByText('Arcana, History')).toBeTruthy()
+  expect(controls().getByText('Wisdom')).toBeTruthy()
+  if (fixedGrant) expect(controls().getByText('Wizard')).toBeTruthy()
+  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+  click(/^Cancel$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  openEdit()
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  openEdit()
+  click(/^Close$/)
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+})
+
+test.each([
+  false,
+  true,
+])('restoring rules after zero-step recovery retains literal saved choices (fixed=%s)', async (fixedGrant) => {
+  const { before, originalRules } = await recoveryPage(fixedGrant)
+  openEdit()
+  click(/^Cancel$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  // Restored rules are picked up on reopening, without rewriting the literal saved references.
+  catalog(originalRules)
+  openEdit()
+  checked(/^Spark/)
+  click(/Next/)
+  checked(/^Ray/)
+  click(/^Close$/)
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+})
+
+test.each([
+  false,
+  true,
+])('zero-step clear removes only its owner through durable reopen and restored choices (fixed=%s)', async (fixedGrant) => {
+  const { original, originalRules, noChoices, otherRay, independent, independentOptions } =
+    await recoveryPage(fixedGrant)
+  catalog(noChoices, [otherRay])
+  openEdit()
+  click(/^Clear saved setup$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  const durable = (await reader.getItem('character-storage'))?.state.characters[0]
+  expect(durable).toBeTruthy()
+  const options = fixedGrant
+    ? durable?.fixedFeatOptions?.['training|test|wizard']
+    : durable?.feats[0].options
+  expect(options).toEqual({})
+  expect(durable?.feats.find((entry) => entry.name === 'Companion')?.options).toEqual(
+    independentOptions,
+  )
+  expect(durable?.spells.spellProfiles.find((entry) => entry.type === 'special')).toMatchObject({
+    cantrips: ['Spark|TEST'],
+    spellsKnown: ['Ray|OTHER'],
+    fixedSpells: ['Spark|TEST', 'Ray|OTHER'],
+  })
+  expect(durable?.provenance.spells).toEqual(independent.provenanceUpdate.spells)
+  expect(durable?.provenance.abilityBonuses).toEqual(independent.provenanceUpdate.abilityBonuses)
+  expect(durable?.provenance.proficiencies).toEqual({
+    ...independent.provenanceUpdate.proficiencies,
+    expertise: independent.provenanceUpdate.proficiencies.expertise ?? {},
+  })
+  expect(durable?.provenance.features).toEqual(independent.provenanceUpdate.features)
+  expect(durable?.proficiencies).toEqual(independent.characterPatch.proficiencies)
+  if (fixedGrant) expect(durable?.provenance.feats).toEqual(original.provenance.feats)
+  else expect(durable?.feats[0]).toMatchObject({ name: feat.name, source: feat.source })
+  cleanup()
+  await act(async () => {
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(original.id)
+  })
+  expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  expect(useCharacterStore.getState().activeCharacter).toEqual(durable)
+  page()
+  openEdit()
+  expect(screen.queryByRole('button', { name: /^Clear saved setup$/ })).toBeNull()
+  click(/^Cancel$/)
+  catalog(originalRules)
+  openEdit()
+  checked(/^Spark/, false)
+  expect(controls().getByRole('button', { name: /Next/ }).hasAttribute('disabled')).toBe(true)
+})
 afterEach(cleanup)
+
+test.each([
+  false,
+  true,
+])('zero-step clear preserves shared ordinary/bonus setup instead of guessing its owner (bonus=%s)', async (bonus) => {
+  let character = makeCharacterFixture({
+    allowedSources: ['TEST'],
+    feats: [{ id: 'ordinary', name: feat.name, source: feat.source, description: '' }],
+    specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
+  })
+  const result = commitFeatOptionsCommand(character, character.provenance, feat, saved, [
+    spark,
+    ray,
+  ])
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  catalog({ name: feat.name, source: feat.source, entries: [] })
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: bonus ? /^Bonus/ : /^Character/ }))
+  const before = useCharacterStore.getState().activeCharacter
+  openEdit()
+  const clear = controls().getByRole('button', { name: /^Clear saved setup$/ })
+  fireEvent.click(clear)
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+  expect(clear.hasAttribute('disabled')).toBe(true)
+  expect(controls().getByRole('status').textContent).toContain(
+    'selected in both Character and Bonus',
+  )
+  click(/^Cancel$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect((await reader.getItem('character-storage'))?.state.characters[0]).toEqual(character)
+})
+
+test('zero-step clear remains available for a standalone bonus setup', () => {
+  const character = makeCharacterFixture({
+    allowedSources: ['TEST'],
+    specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
+  })
+  const result = commitFeatOptionsCommand(character, character.provenance, feat, saved, [
+    spark,
+    ray,
+  ])
+  useCharacterStore.setState({
+    activeCharacter: {
+      ...character,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    },
+  })
+  catalog({ name: feat.name, source: feat.source, entries: [] })
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Bonus/ }))
+  openEdit()
+  enabled(/^Clear saved setup$/)
+  click(/^Clear saved setup$/)
+  const cleared = useCharacterStore.getState().activeCharacter
+  expect(cleared?.specialFeats?.[0].options).toEqual({})
+  expect(
+    cleared?.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+  ).toEqual([])
+  expect(cleared?.provenance.spells).toEqual({})
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+})
+
+test.each([
+  'source',
+  'name',
+])('zero-step clear preserves the distinct complete literal feat %s beside it', async (field) => {
+  const selected = {
+    name: field === 'name' ? 'Training|Selected' : 'Training',
+    source: field === 'source' ? 'HB|Selected' : 'HB',
+  }
+  const other = {
+    name: field === 'name' ? 'Training|Other' : 'Training',
+    source: field === 'source' ? 'HB|Other' : 'HB',
+  }
+  let character = makeCharacterFixture({
+    allowedSources: [selected.source, other.source],
+    feats: [{ ...selected, id: 'ordinary', description: '' }],
+    specialFeats: [{ ...other, id: 'bonus', description: '' }],
+  })
+  for (const [target, skills] of [
+    [selected, ['Arcana']],
+    [other, ['History']],
+  ] as const) {
+    const result = commitFeatOptionsCommand(character, character.provenance, target, {
+      skills: [...skills],
+    })
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
+  character = characterPersistenceSchema.parse(character)
+  useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  catalog({ ...selected, entries: [] }, [], [{ ...other, entries: [] }])
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Character/ }))
+  openEdit()
+  enabled(/^Clear saved setup$/)
+  click(/^Clear saved setup$/)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  const cleared = useCharacterStore.getState().activeCharacter
+  expect(cleared?.feats[0].options).toEqual({})
+  expect(cleared?.specialFeats?.[0].options).toEqual({ skills: ['History'] })
+  expect(cleared?.proficiencies.skills).toEqual(['history'])
+  expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+})
 
 test('unchanged multi-step Finish retains each literal once', () => {
   const onFinish = modal(saved)

@@ -347,6 +347,16 @@ saved choice from current metadata, the dialog keeps it visible for explicit rec
 it cannot silently discard that choice on Finish. Changing the casting class clears its spell
 choices while retaining unrelated choices at their new step positions. Finish validates all steps
 and exact spell availability; saved literal references and independent ownership remain unchanged.
+If the exact feat's current rules leave no setup steps, reopening shows a dismissible recovery
+dialog with the saved choices, including a fixed casting class whose entry has no picks. Opening,
+Cancel and dismissal preserve the saved setup and benefits. Explicitly clearing applies an empty
+setup through the existing atomic edit command: the feat and independently owned benefits remain,
+while this setup's choices and grants are removed. The empty setup remains a configured record;
+restoring the rules and reopening allows fresh selections without a format conversion.
+Clearing requires an explicit caller action and the guarded clear command. When ordinary and bonus
+copies share the same printing and unqualified setup owner, clearing is disabled with an explanation
+and the command rejects the ambiguous transition. Their separate ownership remains unresolved;
+fixed/class/choice owners and distinct printings retain their explicit identities.
 Plain and tagged spell references
 use the same shared parser for exact source resolution. Fixed option teardown compares normalized
 feat name/source while preserving the distinct granting owner and variant.
