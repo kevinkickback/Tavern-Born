@@ -1,4 +1,4 @@
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
 /**
  * Spell profile mutation hook.
  *
@@ -131,20 +131,8 @@ export function useSpellProfileMutations(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character || !commandCharacter) return
       const profile = spellProfiles.find((entry) => entry.id === profileId)
-      const spellKey = normalizeKey(name)
       if (profile?.type === 'racial') return
-      if (
-        profile?.fixedSpells?.some(
-          (fixedName) => getSpellReferenceKey(fixedName) === getSpellReferenceKey(name),
-        )
-      )
-        return
-      if (
-        profile?.type === 'special' &&
-        (currentLedger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')
-      ) {
-        return
-      }
+      if (profile && isFixedProfileSpell(profile, currentLedger, name)) return
       const result = removeSpellFromCharacter(commandCharacter, currentLedger, name, {
         spellKind: kind,
         profileId,

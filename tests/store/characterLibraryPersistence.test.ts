@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
+import {
+  commitFeatOptionsCommand,
+  editFeatOptionsCommand,
+  replaceBonusFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import { pruneSpellsForDisabledSources } from '@/lib/sourceConflicts'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Race5e } from '@/types/5etools'
+import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
@@ -34,6 +39,63 @@ describe('acknowledged character library in IndexedDB', () => {
   test('a new character is available to a fresh storage read when creation completes', async () => {
     const created = await useCharacterStore.getState().createNewCharacter({ name: 'Durable Hero' })
     expect(await readCharacters()).toEqual([created])
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('%s feat printing survives durable Save, offline Edit and Clear', async (origin) => {
+    let original = makeNonracialSourceCharacter(origin)
+    const feat =
+      origin === '2024'
+        ? { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVariant: 'cleric' }
+        : { name: 'Magic Initiate', source: 'PHB' }
+    if (origin === '2014') {
+      const selected = replaceBonusFeatSelectionsCommand(original, original.provenance, [feat])
+      original = { ...original, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+    }
+    const name = origin === '2024' ? 'Toll the Dead' : 'Booming Blade'
+    const source = origin === '2024' ? 'XGE' : 'SCAG'
+    const manual = origin === '2024' ? 'Toll the Dead|XPHB' : 'Booming Blade|TCE'
+    const options = { spells: [`${name}|${source}`] }
+    await useCharacterStore.getState().importCharacters([original])
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const commit = async (result: ReturnType<typeof commitFeatOptionsCommand>) => {
+      useCharacterStore.getState().updateCharacter(original.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+      await useCharacterStore.getState().saveActiveCharacter()
+      useCharacterStore.getState().setActiveCharacter(null)
+      await useCharacterStore.persist.rehydrate()
+      useCharacterStore.getState().setActiveCharacter(original.id)
+      expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
+      expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+      return useCharacterStore.getState().activeCharacter!
+    }
+    const configured = await commit(
+      commitFeatOptionsCommand(original, original.provenance, feat, options, [
+        { name, source, level: 0 },
+      ] as Spell5e[]),
+    )
+    const unchanged = await commit(
+      editFeatOptionsCommand(configured, configured.provenance, feat, options, options, []),
+    )
+    expect(
+      unchanged.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+    ).toEqual([manual, `${name}|${source}`])
+    expect(unchanged.provenance.spells[name.toLowerCase()]).toContainEqual(
+      expect.objectContaining({ sourceType: 'feat', sourceRef: feat.source, grantSource: source }),
+    )
+    const cleared = await commit(
+      editFeatOptionsCommand(unchanged, unchanged.provenance, feat, options, {}, []),
+    )
+    const special = cleared.spells.spellProfiles.find((profile) => profile.type === 'special')!
+    expect(special.cantrips).toEqual([manual])
+    expect(special.fixedSpells).toEqual([])
+    expect(
+      cleared.spells.spellProfiles.find((profile) => profile.type === 'class')?.cantrips,
+    ).toEqual([`${name}|${source}`])
   })
 
   test('racial source removal survives an acknowledged save and fresh library reopen', async () => {
