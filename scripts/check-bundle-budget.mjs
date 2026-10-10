@@ -15,11 +15,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
   // Native racial suites, strict applied ownership and source-local controls measure
-  // 5,621,924 renderer bytes, including complete native parser validation;
+  // 5,622,011 renderer bytes, including complete native parser and admission validation;
   // use the smallest whole-KiB allowance
   // after explicit budget review. Other budgets and enforcement remain unchanged.
   rendererCode: 5491 * KIB,
-  // Shared native evaluation, parsing and admission measure 471,645 initial bytes.
+  // Shared native evaluation, parsing and admission measure 471,732 initial bytes.
   // Use the smallest whole-KiB allowance after explicit budget review.
   initialRendererScript: 461 * KIB,
   initialStylesheet: 185 * KIB,
