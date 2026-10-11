@@ -565,7 +565,19 @@ test.each([
       ray,
     ]),
   )
+  const existing =
+    selectionKind === 'bonus'
+      ? (
+          await useCharacterStore
+            .getState()
+            .importCharacters([
+              makeCharacterFixture({ id: character.id, name: 'Existing character' }),
+            ])
+        )[0]
+      : undefined
   await importActiveCharacter(character)
+  expect(useCharacterStore.getState().activeCharacter!.name).toBe(character.name)
+  if (existing) expect(useCharacterStore.getState().activeCharacter!.id).not.toBe(existing.id)
   page()
   fireEvent.click(
     screen.getByRole('tab', { name: selectionKind === 'bonus' ? /^Bonus/ : /^Character/ }),
@@ -587,7 +599,9 @@ test.each([
   await act(async () => {
     await useCharacterStore.getState().saveActiveCharacter()
   })
-  const durable = (await reader.getItem('character-storage'))?.state.characters[0]
+  const stored = (await reader.getItem('character-storage'))!.state.characters
+  const durable = stored.find((entry) => entry.id === configured.id)
+  if (existing) expect(stored.find((entry) => entry.id === existing.id)).toEqual(existing)
   expect(characterPersistenceSchema.parse(durable)).toEqual({
     ...configured,
     lastModified: durable?.lastModified,
@@ -595,7 +609,9 @@ test.each([
   await act(async () => {
     await useCharacterStore.persist.rehydrate()
   })
-  expect(useCharacterStore.getState().characters[0]).toEqual(durable)
+  expect(
+    useCharacterStore.getState().characters.find((entry) => entry.id === configured.id),
+  ).toEqual(durable)
 })
 
 test.each([
