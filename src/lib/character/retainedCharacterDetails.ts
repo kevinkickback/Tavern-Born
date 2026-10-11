@@ -4,7 +4,10 @@ import {
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
-import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
 import {
   collectSubclassFeatures,
   getCreatureChoiceEntries,
@@ -109,9 +112,10 @@ export function buildRetainedCharacterDetails(
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
         if (details[index]?.availability === 'available') return
-        const entity = option.source?.trim()
-          ? resolveClassChoiceOptionEntity(option, catalogs)
-          : undefined
+        const entity =
+          option.source?.trim() || getClassChoiceFeatureTarget(option)
+            ? resolveClassChoiceOptionEntity(option, catalogs)
+            : undefined
         details[index] = entity
           ? {
               availability,

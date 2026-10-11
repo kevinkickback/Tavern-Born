@@ -1,6 +1,7 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import {
   getClassChoiceFeatureId,
+  getClassChoiceFeatureTarget,
   getClassChoiceOptionKey,
 } from '@/lib/character/classChoiceIdentity'
 import { addGrant } from '@/lib/provenance/ledger'
@@ -171,7 +172,10 @@ function rebuildClassChoiceFeatures(
       retained.push({
         id: identity,
         name: option.name,
-        source: option.source ?? '',
+        source:
+          option.source?.trim() ||
+          getClassChoiceFeatureTarget(option)?.split('|').slice(-1)[0] ||
+          '',
         description: '',
         level: option.slotLevel,
       })

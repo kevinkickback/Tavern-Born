@@ -314,8 +314,10 @@ An unavailable or ineligible source leaves its manual action explicit; restoring
 reunites it by exact ID, and removing an override reveals the still-earned action.
 
 Class-choice normalization, option views and persistence retain the full feature UID. Choices resolve
-only that complete target; a matching label cannot supply another owner, gain or printing. Materialized
-feature IDs use actual owner plus exact target, independent of the granting choice's order or ID.
+only that complete target; a matching label cannot supply another owner, gain or printing. An omitted
+or empty duplicate source uses the source encoded or defaulted by the UID; an explicit conflicting
+source rejects resolution. Materialized features retain that source so new selections remain saveable.
+Feature IDs use actual owner plus exact target, independent of the granting choice's order or ID.
 Removing one choice retains the same feature when another choice of that owner still grants it.
 Different owners retain separate materialized rows and action groups.
 Subclass-owned choices and readiness resolve within the full selected subclass, so a shared short name cannot

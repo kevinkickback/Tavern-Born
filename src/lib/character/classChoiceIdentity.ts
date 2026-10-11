@@ -34,7 +34,7 @@ export function getClassChoiceFeatureTarget(
   if (
     !target ||
     getEntityLookupKey(target.name, target.source).toLowerCase() !==
-      getEntityLookupKey(option.name, option.source).toLowerCase()
+      getEntityLookupKey(option.name, option.source?.trim() || target.source).toLowerCase()
   )
     return undefined
   return option.entityType === 'classFeature'

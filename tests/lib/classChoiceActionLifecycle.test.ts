@@ -219,6 +219,116 @@ test('unresolved qualified choices never emit an opaque action before complete t
   expect(observe(reopen(character), []).actions).toEqual([])
 })
 
+test.each([
+  { entityType: 'classFeature' as const, classSource: 'PHB', targetSource: 'PHB' },
+  { entityType: 'classFeature' as const, classSource: 'XPHB', targetSource: 'XPHB' },
+  { entityType: 'classFeature' as const, classSource: 'PHB', targetSource: 'TCE' },
+  { entityType: 'subclassFeature' as const, classSource: 'PHB', targetSource: 'PHB' },
+  { entityType: 'subclassFeature' as const, classSource: 'XPHB', targetSource: 'TCE' },
+])('complete $entityType UIDs own omitted source defaults ($targetSource)', ({
+  entityType,
+  classSource,
+  targetSource,
+}) => {
+  const target = {
+    ...beacon,
+    source: entityType === 'classFeature' && targetSource !== classSource ? targetSource : '',
+    classSource,
+    ...(entityType === 'subclassFeature'
+      ? { subclassShortName: 'School', subclassSource: targetSource }
+      : {}),
+  }
+  const ref =
+    entityType === 'classFeature'
+      ? `Beacon|Wizard|${classSource}|1|${targetSource === classSource ? '' : targetSource}`
+      : `Beacon|Wizard|${classSource}|School|${targetSource}|1`
+  const classes = [
+    makeClassFixture({
+      source: classSource,
+      classFeatureRefs: [],
+      subclasses:
+        entityType === 'subclassFeature'
+          ? [
+              {
+                name: 'First School',
+                shortName: 'School',
+                source: targetSource,
+                className: 'Wizard',
+                classSource,
+                subclassFeatures: [target],
+              },
+            ]
+          : [],
+    }),
+  ]
+  const targets = entityType === 'classFeature' ? [target] : []
+  const choiceCatalogs = {
+    ...catalogs,
+    classFeatures: targets,
+    subclassFeatures: entityType === 'subclassFeature' ? [target] : [],
+    subclassTargets: indexSubclassFeatureTargets(classes),
+  }
+  const descriptor = {
+    ...choice(),
+    owner: { type: 'class' as const, name: 'Wizard', source: classSource },
+    options: [{ entityType, name: 'Beacon', source: targetSource, ref }],
+  }
+  const [view] = resolveClassChoiceOptions(descriptor, choiceCatalogs)
+  expect(view).toMatchObject({ availability: 'eligible', entries: beacon.entries })
+  expect(view.reference.source).toBe(target.source || undefined)
+  for (const source of [undefined, '', ' ', targetSource.toLowerCase()]) {
+    const [resolved] = resolveClassChoiceOptions(
+      { ...descriptor, options: [{ ...view.reference, source }] },
+      choiceCatalogs,
+    )
+    expect(resolved).toMatchObject({ availability: 'eligible', entries: beacon.entries })
+    expect(getClassChoiceOptionKey(resolved.reference)).toBe(
+      getClassChoiceOptionKey(descriptor.options[0]),
+    )
+  }
+  for (const conflict of [
+    { source: 'OTHER' },
+    { name: 'Other Beacon' },
+    { ref: undefined, source: undefined },
+  ]) {
+    expect(
+      resolveClassChoiceOptions(
+        { ...descriptor, options: [{ ...view.reference, ...conflict }] },
+        choiceCatalogs,
+      ),
+    ).toMatchObject([{ availability: 'retained', entries: [] }])
+  }
+  const initial = createEmptyCharacter({
+    name: 'Defaulted target',
+    originSystem: classSource === 'XPHB' ? '2024' : '2014',
+    classProgression: [{ name: 'Wizard', source: classSource, levels: 1 }],
+  })
+  const result = applyClassChoiceSelectionWithGrantsCommand(
+    initial,
+    initial.provenance!,
+    descriptor,
+    [view.reference],
+  )
+  let character: Character = reopen({
+    ...initial,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  const actions = observe(character, classes, targets).actions
+  expect(actions).toMatchObject([{ kind: 'action', description: 'As an action, light a beacon.' }])
+  const data = makeGameDataFixture({ classes, classFeatures: targets })
+  expect(characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(data))).toBe(
+    false,
+  )
+  expect(
+    buildRetainedCharacterDetails(character, data, null).choiceDetailsById.get(descriptor.id),
+  ).toEqual([{ availability: 'available', entries: beacon.entries }])
+  expect(observe(character, [], []).actions).toEqual([])
+  expect(observe(reopen(character), classes, targets).actions).toEqual(actions)
+  character = apply(character, descriptor, true)
+  expect(observe(reopen(character), classes, targets).actions).toEqual([])
+})
+
 test('restoring an earlier identical gain preserves an issued current ID and exact PDF/manual preferences', () => {
   const later = { ...beacon, level: 17 }
   const character = createEmptyCharacter({
