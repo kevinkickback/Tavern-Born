@@ -71,9 +71,11 @@ describe('automatic class-action gain levels', () => {
     const actions = observe(uid, metadata, feature, level)
     expect(actions).toHaveLength(count)
     if (count) {
-      expect(actions[0]?.id).toBe(
-        `class-feature:${encodeURIComponent(JSON.stringify(['wizard|phb', `class-feature|shared|wizard|phb|${level}|phb`]))}`,
-      )
+      expect(JSON.parse(decodeURIComponent(actions[0].id.slice('class-feature:'.length)))).toEqual([
+        JSON.stringify(['wizard|phb']),
+        ['class-feature', 'shared', 'wizard', 'phb', 'phb'],
+        expect.stringMatching(/^[a-f0-9]{64}$/),
+      ])
     }
   })
 

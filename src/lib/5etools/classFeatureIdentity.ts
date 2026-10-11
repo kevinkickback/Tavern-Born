@@ -69,8 +69,8 @@ export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): str
     : undefined
 }
 
-/** Compatibility matching requires a unique catalog target for this canonical name/source. */
-export function getClassFeatureLegacyLookupKey(
+/** Text enrichment for an unbound saved feature; this key cannot establish action ownership. */
+export function getClassFeatureTextLookupKey(
   feature: ClassFeatureIdentityInput,
 ): string | undefined {
   const identity = normalizeClassFeatureIdentity(feature)

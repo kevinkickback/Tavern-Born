@@ -1,4 +1,8 @@
 import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classData'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   buildCreatureChoiceSummary,
@@ -29,6 +33,7 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
+import { getClassChoiceFeatureTarget, getClassChoiceOptionKey } from './classChoiceIdentity'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
@@ -88,11 +93,7 @@ function normalized(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? ''
 }
 
-export function getClassChoiceOptionKey(
-  option: Pick<NormalizedChoiceOptionReference, 'entityType' | 'name' | 'source'>,
-): string {
-  return `${option.entityType}|${normalized(option.name)}|${normalized(option.source)}`
-}
+export { getClassChoiceOptionKey } from './classChoiceIdentity'
 
 function getCatalog(
   entityType: ChoiceOptionEntityType,
@@ -471,6 +472,19 @@ function getOptionSearchText(
   return terms.filter((term): term is string => Boolean(term)).join(' ')
 }
 
+function featureReference(
+  entityType: ChoiceOptionEntityType,
+  entity: ChoiceCatalogEntity,
+): { ref?: string } {
+  const target =
+    entityType === 'classFeature'
+      ? getClassFeatureIdentity(entity)
+      : entityType === 'subclassFeature'
+        ? getSubclassFeatureIdentity(entity)
+        : undefined
+  return target ? { ref: target.split('|').slice(1).join('|') } : {}
+}
+
 function toView(
   entityType: ChoiceOptionEntityType,
   entity: ChoiceCatalogEntity,
@@ -510,6 +524,7 @@ function toView(
       entityType,
       name: entity.name,
       ...(entity.source ? { source: entity.source } : {}),
+      ...featureReference(entityType, entity),
     },
     entries: creature
       ? getCreatureChoiceEntries(creature)
@@ -533,6 +548,16 @@ export function resolveClassChoiceOptionEntity(
   option: NormalizedChoiceOptionReference,
   catalogs: Parameters<typeof getCatalog>[1],
 ): ChoiceCatalogEntity | undefined {
+  if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
+    const target = getClassChoiceFeatureTarget(option)
+    if (!target) return undefined
+    return getCatalog(option.entityType, catalogs).find(
+      (entity) =>
+        (option.entityType === 'classFeature'
+          ? getClassFeatureIdentity(entity)
+          : getSubclassFeatureIdentity(entity)) === target,
+    )
+  }
   return getCatalog(option.entityType, catalogs).find(
     (entity) =>
       normalized(entity.name) === normalized(option.name) &&
@@ -554,6 +579,7 @@ function resolveExplicitOption(
           entityType: option.entityType,
           name: option.name,
           ...(option.source ? { source: option.source } : {}),
+          ...(option.ref ? { ref: option.ref } : {}),
         },
         entries: [],
       }

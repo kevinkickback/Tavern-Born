@@ -101,6 +101,8 @@ export interface CharacterClassChoiceOption {
   entityType: 'classFeature' | 'subclassFeature' | 'feat' | 'item' | 'optionalFeature' | 'creature'
   name: string
   source?: string
+  /** Exact class/subclass feature target; an unresolved intent never borrows named rules. */
+  ref?: string
   /** Class level at which this selection occupied an available choice slot. */
   slotLevel: number
 }

@@ -216,8 +216,6 @@ describe('CharacterSheetPage', () => {
     return { character, gameData }
   }
 
-  const sharedClassActionId = `class-feature:${encodeURIComponent(JSON.stringify(['wizard|phb', 'class-feature|shared|wizard|phb|1|phb']))}`
-
   function exportedSavedActions(id = 'feature:saved-shared') {
     return vi
       .mocked(createCharacterSheetViewModel)
@@ -232,7 +230,7 @@ describe('CharacterSheetPage', () => {
     const { character } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     const expected = kind === 'class' ? 'bonus-action' : 'action'
-    const id = kind === 'class' ? sharedClassActionId : 'feature:saved-shared'
+    const id = 'feature:saved-shared'
     const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe(expected)
@@ -242,7 +240,7 @@ describe('CharacterSheetPage', () => {
     if (kind === 'class') {
       expect(
         result.current.filter((action) => action.name.toLowerCase() === 'shared'),
-      ).toHaveLength(1)
+      ).toHaveLength(2)
     }
 
     renderPage()
@@ -268,7 +266,7 @@ describe('CharacterSheetPage', () => {
     const { character, gameData } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     renderPage()
-    const id = kind === 'class' ? sharedClassActionId : 'feature:saved-shared'
+    const id = 'feature:saved-shared'
     expect(result.current.find((action) => action.id === id)?.kind).toBe(
       kind === 'class' ? 'bonus-action' : 'action',
     )

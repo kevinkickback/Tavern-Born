@@ -50,6 +50,9 @@ references are re-linked the same way, their level groupings are rebuilt, and th
 choice descriptors are normalized after layering. Explicit class and subclass choice references
 are checked against the completed class-feature, subclass-feature, creature, feat, item, and
 optional-feature catalogs.
+Class/subclass choice options preserve their complete encoded feature UIDs through normalization
+and exact catalog resolution. Dependency audits check every owner, gain and printing field rather
+than only `name|source`. Cache schema28 rebuilds parsed choices that predate this identity contract.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names

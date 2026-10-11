@@ -10,6 +10,10 @@ import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
+function groupIdentity(id: string) {
+  return JSON.parse(decodeURIComponent(id.slice(id.indexOf(':') + 1)))
+}
+
 const reference = (
   owner = 'Wizard',
   level = 1,
@@ -75,8 +79,12 @@ test('bundled Fighter repeated Action Surge gains use one canonical owned action
   const vm = createCharacterSheetViewModel(character, context)
   const actions = vm.actions.filter((action) => action.name === 'Action Surge')
   expect(actions).toHaveLength(1)
-  const id = `class-feature:${encodeURIComponent(JSON.stringify(['fighter|xphb', 'class-feature|action surge|fighter|xphb|2|xphb']))}`
-  expect(actions[0].id).toBe(id)
+  const id = actions[0].id
+  expect(groupIdentity(id)).toEqual([
+    JSON.stringify(['fighter|xphb']),
+    ['class-feature', 'action surge', 'fighter', 'xphb', 'xphb'],
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+  ])
   expect(
     planSheetContent(vm, '2014-custom', { action: [id] }).groups.find(
       (group) => group.id === 'action',
@@ -99,9 +107,11 @@ test('canonical UID casing, defaults and display aliases denote one complete own
   }
   const actions = observe([makeClassFixture({ classFeatureRefs: [first, alias] })])
   expect(actions).toHaveLength(1)
-  expect(actions[0].id).toBe(
-    `class-feature:${encodeURIComponent(JSON.stringify(['wizard|phb', 'class-feature|shared|wizard|phb|1|phb']))}`,
-  )
+  expect(groupIdentity(actions[0].id)).toEqual([
+    JSON.stringify(['wizard|phb']),
+    ['class-feature', 'shared', 'wizard', 'phb', 'phb'],
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+  ])
   expect(actions[0]).not.toHaveProperty('idAliases')
   expect(actions[0]).not.toHaveProperty('featureIdentities')
 })
@@ -173,12 +183,20 @@ test.each([
   })
   const view = () =>
     createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
-  const owner = kind === 'class' ? 'wizard|phb' : JSON.stringify(['wizard|phb', 'school|tce'])
-  const expectedId = (classSource: string) =>
-    `${kind}-feature:${encodeURIComponent(JSON.stringify([owner, kind === 'class' ? `class-feature|shared|wizard|${classSource}|1|tce` : `subclass-feature|shared|wizard|${classSource}|school|tce|1|tce`]))}`
+  const owner = JSON.stringify(kind === 'class' ? ['wizard|phb'] : ['wizard|phb', 'school|tce'])
+  const expectedId = (classSource: string) => [
+    owner,
+    kind === 'class'
+      ? ['class-feature', 'shared', 'wizard', classSource, 'tce']
+      : ['subclass-feature', 'shared', 'wizard', classSource, 'school', 'tce', 'tce'],
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+  ]
   const before = structuredClone({ character, classes })
   const actions = view().actions
-  expect(actions.map((action) => action.id)).toEqual([expectedId('phb'), expectedId('xphb')])
+  expect(actions.map((action) => groupIdentity(action.id))).toEqual([
+    expectedId('phb'),
+    expectedId('xphb'),
+  ])
   expect(deriveRulesTextActions(character, undefined, { classes })).toEqual(actions)
   expect({ character, classes }).toEqual(before)
   for (const action of actions) {
@@ -196,7 +214,10 @@ test.each([
   }
   expect(view().actions).toEqual(actions)
   references[1].classSource = 'XGE'
-  expect(view().actions.map((action) => action.id)).toEqual([expectedId('phb'), expectedId('xge')])
+  expect(view().actions.map((action) => groupIdentity(action.id))).toEqual([
+    expectedId('phb'),
+    expectedId('xge'),
+  ])
 })
 
 test('different gain rules remain independent; passive earlier references never hide an action', () => {
@@ -210,7 +231,7 @@ test('different gain rules remain independent; passive earlier references never 
   expect(observe(classes)).toMatchObject([{ description: 'As an action, open a gate.' }])
 })
 
-test('structurally identical repeated gains ignore object field order and choose the lowest gain deterministically', () => {
+test('structurally identical repeated gains retain their group when an earlier gain returns', () => {
   const first = reference()
   const later = reference('Wizard', 17)
   first.feature!.entries = [
@@ -229,12 +250,11 @@ test('structurally identical repeated gains ignore object field order and choose
       type: 'entries',
     },
   ]
-  const classes = [makeClassFixture({ classFeatureRefs: [later, first] })]
+  const classes = [makeClassFixture({ classFeatureRefs: [later] })]
   const actions = observe(classes)
   expect(actions).toHaveLength(1)
-  expect(actions[0].id).toBe(
-    `class-feature:${encodeURIComponent(JSON.stringify(['wizard|phb', 'class-feature|shared|wizard|phb|1|phb']))}`,
-  )
+  classes[0].classFeatureRefs!.push(first)
+  expect(observe(classes)).toEqual(actions)
   classes[0].classFeatureRefs!.reverse()
   expect(observe(classes)[0].id).toBe(actions[0].id)
 })
@@ -254,12 +274,13 @@ test.each([
   expect(new Set(actions.map((action) => action.description)).size).toBe(1)
 })
 
-test('one saved action supplies text while the earned canonical ID survives handoff', () => {
+test('one unbound saved action retains its own ID when same-named earned rules resolve', () => {
   const classes = [makeClassFixture({ classFeatureRefs: [reference()] })]
   const canonical = observe(classes)[0].id
   const actions = observe(classes, true)
-  expect(actions).toHaveLength(1)
-  expect(actions[0]).toMatchObject({ id: canonical, kind: 'bonus-action' })
+  expect(actions).toHaveLength(2)
+  expect(actions[0]).toMatchObject({ id: 'feature:saved-shared', kind: 'bonus-action' })
+  expect(actions[1]).toMatchObject({ id: canonical, kind: 'action' })
 })
 
 test('an ambiguous saved name hides neither independently earned owner', () => {
@@ -290,7 +311,11 @@ test('multiple saved rows do not select an arbitrary canonical replacement', () 
   const actions = createCharacterSheetViewModel(character, {
     classesByKey: buildClassLookup(classes),
   }).actions
-  expect(actions.map((action) => action.id)).toEqual(['feature:one', 'feature:two'])
+  expect(actions.map((action) => action.id)).toEqual([
+    'feature:one',
+    'feature:two',
+    observe(classes)[0].id,
+  ])
 })
 
 test.each(['1', '8', '8junk', '0'])('subclass gains use the complete encoded level: %s', (gain) => {

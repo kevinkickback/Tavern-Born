@@ -13,7 +13,13 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
-import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import {
+  decodeClassFeatureReference,
+  decodeSubclassFeatureReference,
+  getClassFeatureIdentity,
+  getClassFeatureReferenceLevel,
+  getSubclassFeatureIdentity,
+} from './classFeatureIdentity'
 
 interface ParsedFilterTag {
   label: string
@@ -125,31 +131,25 @@ function normalizeProgression(progression: OptFeatureProg['progression']): numbe
   })
 }
 
-function parseClassFeatureReference(
-  value: string,
-  fallbackSource: string,
-): NormalizedChoiceOptionReference | undefined {
-  const parts = value.split('|')
-  const name = parts[0]?.trim()
-  if (!name) return undefined
+function parseClassFeatureReference(value: string): NormalizedChoiceOptionReference | undefined {
+  const target = decodeClassFeatureReference(value)
+  if (!getClassFeatureIdentity(target)) return undefined
   return {
     entityType: 'classFeature',
-    name,
-    source: parts[4]?.trim() || parts[2]?.trim() || fallbackSource,
+    name: target.name,
+    source: target.source,
+    ref: value,
   }
 }
 
-function parseSubclassFeatureReference(
-  value: string,
-  fallbackSource: string,
-): NormalizedChoiceOptionReference | undefined {
-  const parts = value.split('|')
-  const name = parts[0]?.trim()
-  if (!name) return undefined
+function parseSubclassFeatureReference(value: string): NormalizedChoiceOptionReference | undefined {
+  const target = decodeSubclassFeatureReference(value)
+  if (!getSubclassFeatureIdentity(target)) return undefined
   return {
     entityType: 'subclassFeature',
-    name,
-    source: parts[6]?.trim() || parts[4]?.trim() || fallbackSource,
+    name: target.name,
+    source: target.source,
+    ref: value,
   }
 }
 
@@ -175,10 +175,10 @@ function getOptionReference(
   const entry = asRecord(value)
   if (!entry) return undefined
   if (typeof entry.classFeature === 'string') {
-    return parseClassFeatureReference(entry.classFeature, fallbackSource)
+    return parseClassFeatureReference(entry.classFeature)
   }
   if (typeof entry.subclassFeature === 'string') {
-    return parseSubclassFeatureReference(entry.subclassFeature, fallbackSource)
+    return parseSubclassFeatureReference(entry.subclassFeature)
   }
   if (typeof entry.optionalfeature === 'string') {
     return parseNamedEntityReference(entry.optionalfeature, 'optionalFeature', fallbackSource)

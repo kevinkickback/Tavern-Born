@@ -1,7 +1,8 @@
+import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
-import { getClassFeatureIdentity } from './classFeatureIdentity'
+import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { normalizeClassRules } from './classRuleNormalization'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
@@ -252,13 +253,9 @@ export function findLayerDependencyIssues(
   const layerClasses = new Set(layer.classes.map((value) => entityKey(value.name, value.source)))
   const issues: ContentLayerDependencyIssue[] = []
   const optionCatalogs = {
-    classFeature: new Set(
-      gameData.classFeatures.map((value) => entityKey(value.name, value.source)),
-    ),
+    classFeature: new Set(gameData.classFeatures.map(getClassFeatureIdentity)),
     subclassFeature: new Set(
-      [...collectSubclassFeatures([gameData]).values()].map((value) =>
-        entityKey(value.name, value.source),
-      ),
+      [...collectSubclassFeatures([gameData]).values()].map(getSubclassFeatureIdentity),
     ),
     creature: new Set(
       (gameData.creatures ?? []).map((value) => entityKey(value.name, value.source)),
@@ -301,11 +298,12 @@ export function findLayerDependencyIssues(
     }
     for (const [choiceIndex, choice] of (classData.normalizedRules?.choices ?? []).entries()) {
       for (const [optionIndex, option] of choice.options.entries()) {
-        const reference = `${option.name}|${option.source ?? ''}`
-        if (
-          option.source &&
-          optionCatalogs[option.entityType].has(entityKey(option.name, option.source))
-        ) {
+        const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
+        const key =
+          option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
+            ? getClassChoiceFeatureTarget(option)
+            : entityKey(option.name, option.source)
+        if (option.source && key && optionCatalogs[option.entityType].has(key)) {
           continue
         }
         issues.push({
@@ -318,11 +316,12 @@ export function findLayerDependencyIssues(
     for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
       for (const [choiceIndex, choice] of (subclass.normalizedRules?.choices ?? []).entries()) {
         for (const [optionIndex, option] of choice.options.entries()) {
-          const reference = `${option.name}|${option.source ?? ''}`
-          if (
-            option.source &&
-            optionCatalogs[option.entityType].has(entityKey(option.name, option.source))
-          ) {
+          const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
+          const key =
+            option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
+              ? getClassChoiceFeatureTarget(option)
+              : entityKey(option.name, option.source)
+          if (option.source && key && optionCatalogs[option.entityType].has(key)) {
             continue
           }
           issues.push({

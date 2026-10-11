@@ -1,6 +1,8 @@
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
+import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import type { Class5e, GameData, Race5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
+import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 
 const FIELD_COLLECTIONS = [
   'races',
@@ -136,7 +138,7 @@ function optionCatalogs(
   return {
     classFeature: new Set(
       [...gameData.classFeatures, ...embeddedClassFeatures].flatMap(
-        (value) => entityKey(value) ?? [],
+        (value) => getClassFeatureIdentity(value) ?? [],
       ),
     ),
     creature: new Set((gameData.creatures ?? []).flatMap((value) => entityKey(value) ?? [])),
@@ -145,7 +147,11 @@ function optionCatalogs(
       [...gameData.items, ...gameData.itemsBase].flatMap((value) => entityKey(value) ?? []),
     ),
     optionalFeature: new Set(gameData.optionalfeatures.flatMap((value) => entityKey(value) ?? [])),
-    subclassFeature: new Set(embeddedSubclassFeatures.flatMap((value) => entityKey(value) ?? [])),
+    subclassFeature: new Set(
+      embeddedSubclassFeatures.flatMap(
+        (value) => getSubclassFeatureIdentity(asRecord(value) ?? {}) ?? [],
+      ),
+    ),
   }
 }
 
@@ -166,14 +172,17 @@ function inspectReference(
     })
     return
   }
-  const key = `${option.name}|${option.source}`
-  if (catalogs[option.entityType].has(key)) return
+  const key =
+    option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
+      ? getClassChoiceFeatureTarget(option)
+      : `${option.name}|${option.source}`
+  if (key && catalogs[option.entityType].has(key)) return
   issues.push({
     code: 'unresolved-reference',
     collection: 'classes',
     entity: owner,
     path,
-    message: `The ${option.entityType} option ${key} was not found in the parsed catalog.`,
+    message: `The ${option.entityType} option ${option.ref ?? `${option.name}|${option.source}`} was not found in the parsed catalog.`,
   })
 }
 

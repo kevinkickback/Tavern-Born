@@ -148,19 +148,43 @@ describe('class choice option resolution', () => {
     expect(collectSubclassFeatures(subclass)).toEqual([earlier, later])
   })
 
-  test('resolves explicit references by name and source', () => {
+  test('resolves explicit complete feature references and retains each printing', () => {
     const result = resolveClassChoiceOptions(
       choice({
         options: [
-          { entityType: 'classFeature', name: 'First Path', source: 'HB' },
-          { entityType: 'classFeature', name: 'First Path', source: 'ALT' },
+          {
+            entityType: 'classFeature',
+            name: 'First Path',
+            source: 'HB',
+            ref: 'First Path|Any|HB|1|HB',
+          },
+          {
+            entityType: 'classFeature',
+            name: 'First Path',
+            source: 'ALT',
+            ref: 'First Path|Any|HB|1|ALT',
+          },
         ],
       }),
       {
         ...emptyCatalogs,
         classFeatures: [
-          { name: 'First Path', source: 'HB', entries: ['HB text'] },
-          { name: 'First Path', source: 'ALT', entries: ['ALT text'] },
+          {
+            name: 'First Path',
+            source: 'HB',
+            className: 'Any',
+            classSource: 'HB',
+            level: 1,
+            entries: ['HB text'],
+          },
+          {
+            name: 'First Path',
+            source: 'ALT',
+            className: 'Any',
+            classSource: 'HB',
+            level: 1,
+            entries: ['ALT text'],
+          },
         ],
       },
     )

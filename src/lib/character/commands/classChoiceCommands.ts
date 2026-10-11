@@ -1,6 +1,9 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getClassChoiceFeatureId,
+  getClassChoiceOptionKey,
+} from '@/lib/character/classChoiceIdentity'
 import { addGrant } from '@/lib/provenance/ledger'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type {
@@ -16,10 +19,6 @@ import { replaceClassFeatSelectionsCommand } from './featCommands'
 import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
-
-function optionKey(option: NormalizedChoiceOptionReference): string {
-  return `${option.entityType}|${option.name.trim().toLowerCase()}|${option.source?.trim().toLowerCase() ?? ''}`
-}
 
 function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
   const levels: number[] = []
@@ -47,12 +46,12 @@ function validateSelectedOptions(
   selected: readonly NormalizedChoiceOptionReference[],
   previouslySelected: readonly CharacterClassChoiceOption[] = [],
 ): void {
-  const keys = selected.map(optionKey)
+  const keys = selected.map(getClassChoiceOptionKey)
   if (!choice.repeatable && new Set(keys).size !== keys.length) {
     throw new RangeError(`${choice.label} does not allow duplicate selections.`)
   }
   if (choice.options.length === 0 || choice.optionFilter) return
-  const allowed = new Set([...choice.options, ...previouslySelected].map(optionKey))
+  const allowed = new Set([...choice.options, ...previouslySelected].map(getClassChoiceOptionKey))
   if (keys.some((key) => !allowed.has(key))) {
     throw new RangeError(`A selected option is not available for ${choice.label}.`)
   }
@@ -87,10 +86,10 @@ export function applyClassChoiceSelectionCommand(
   validateSelectedOptions(choice, selected, existingSelection?.selected)
   const slotLevels = assignProgressionSlotLevels(
     (existingSelection?.selected ?? []).map((option) => ({
-      key: optionKey(option),
+      key: getClassChoiceOptionKey(option),
       slotLevel: option.slotLevel,
     })),
-    selected.map(optionKey),
+    selected.map(getClassChoiceOptionKey),
     getChoiceSlotLevels(choice).slice(0, requiredCount),
     choice.level,
   )
@@ -130,10 +129,6 @@ function isFeatureOption(
   )
 }
 
-function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'source'>): string {
-  return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
-}
-
 export function reconcileClassChoiceFeatMirror(
   character: Character,
   ledger: ProvenanceLedger,
@@ -159,13 +154,6 @@ export function reconcileClassChoiceFeatMirror(
   )
 }
 
-function generatedFeatureId(
-  selection: CharacterClassChoiceSelection,
-  option: CharacterClassChoiceOption,
-): string {
-  return `${CLASS_CHOICE_FEATURE_ID_PREFIX}${encodeURIComponent(selection.choiceId)}:${encodeURIComponent(featureIdentity(option))}`
-}
-
 function rebuildClassChoiceFeatures(
   existing: readonly Feature[],
   selections: readonly CharacterClassChoiceSelection[],
@@ -173,15 +161,15 @@ function rebuildClassChoiceFeatures(
   const retained = existing.filter(
     (feature) => !feature.id.startsWith(CLASS_CHOICE_FEATURE_ID_PREFIX),
   )
-  const existingIdentities = new Set(retained.map(featureIdentity))
+  const existingIdentities = new Set(retained.map((feature) => feature.id))
 
   for (const selection of selections) {
     for (const option of selection.selected) {
       if (!isFeatureOption(option)) continue
-      const identity = featureIdentity(option)
+      const identity = getClassChoiceFeatureId(selection, option)
       if (existingIdentities.has(identity)) continue
       retained.push({
-        id: generatedFeatureId(selection, option),
+        id: identity,
         name: option.name,
         source: option.source ?? '',
         description: '',

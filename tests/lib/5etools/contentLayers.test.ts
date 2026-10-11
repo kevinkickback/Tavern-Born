@@ -506,7 +506,14 @@ describe('game-data content layers', () => {
                 minimumSelections: 1,
                 maximumSelections: 1,
                 selectionCountByLevel: [0, 0, 1],
-                options: [{ entityType: 'subclassFeature', name: 'Bear', source: 'PHB' }],
+                options: [
+                  {
+                    entityType: 'subclassFeature',
+                    name: 'Bear',
+                    source: 'PHB',
+                    ref: 'Bear|Barbarian||Totem Warrior||3',
+                  },
+                ],
                 repeatable: false,
                 replacement: { cadence: 'never' },
                 source: { kind: 'class-feature-options', field: 'entries' },

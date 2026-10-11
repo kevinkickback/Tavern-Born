@@ -14,13 +14,13 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Canonical owned action identity measures 5,635,657 renderer bytes (+1,793).
+  // Stable feature action groups and complete choice targets measure 5,642,436 renderer bytes (+8,572).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
-  rendererCode: 5504 * KIB,
-  // Shared UID decoding measures 480,049 initial bytes (+825).
+  rendererCode: 5511 * KIB,
+  // Shared choice identity measures 480,491 initial bytes (+1,267).
   // Use the smallest whole-KiB allowance after explicit budget review.
-  initialRendererScript: 469 * KIB,
+  initialRendererScript: 470 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

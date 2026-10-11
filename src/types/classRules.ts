@@ -18,6 +18,8 @@ export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
   name: string
   source?: string
+  /** Complete 5etools UID for class/subclass feature options, including gain and printing. */
+  ref?: string
   minimumClassLevel?: number
 }
 

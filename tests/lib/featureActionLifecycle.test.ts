@@ -152,9 +152,9 @@ test('a newly issued earned ID stays stable when a unique saved feature arrives 
       description: 'As an action, use saved training.',
     },
   ]
-  expect(view().actions[0].id).toBe(id)
+  expect(view().actions.find((action) => action.id === id)).toBeDefined()
   Object.assign(character, upsertManualActionCommand(character, manual(id)))
-  expect(view(reopen()).actions).toHaveLength(1)
+  expect(view(reopen()).actions).toHaveLength(2)
   character.features = []
   expect(view(reopen()).actions).toMatchObject([{ id, active: false }])
 })
@@ -195,9 +195,11 @@ test('canonical subclass source defaults remain independent of the parent class 
   character.classProgression[0].subclassSource = 'PHB'
   const action = view().actions[0]
   expect(action.source.source).toBe('PHB')
-  expect(action.id).toBe(
-    `subclass-feature:${encodeURIComponent(JSON.stringify([JSON.stringify(['wizard|phb', 'school|phb']), 'subclass-feature|beacon|wizard|xphb|school|phb|1|phb']))}`,
-  )
+  expect(JSON.parse(decodeURIComponent(action.id.slice('subclass-feature:'.length)))).toEqual([
+    JSON.stringify(['wizard|phb', 'school|phb']),
+    ['subclass-feature', 'beacon', 'wizard', 'xphb', 'school', 'phb', 'phb'],
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+  ])
   expect(action).not.toHaveProperty('idAliases')
   expect(action).not.toHaveProperty('featureIdentities')
 })

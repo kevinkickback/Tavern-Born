@@ -289,8 +289,9 @@ This allows multiclass-safe removal, per-level spell editing, level rollback, an
 
 ### Automatic feature actions
 
-Actions and PDF use one pure projection. Earned class/subclass actions retain the complete encoded
-feature UID and the actual selected owner. UID source defaults, casing and display aliases identify
+Actions and PDF use one pure projection. Class/subclass references retain the complete encoded
+feature UID and the actual selected owner, including the full selected subclass name and printing.
+UID source defaults, casing and display aliases identify
 one feature; subclass UIDs use their separate field order. A positive integer encoded gain level
 is authoritative; malformed nonempty UIDs never borrow materialized metadata. Rows without a UID
 require valid materialized levels and complete feature ownership. Absent reference fields retain
@@ -300,17 +301,29 @@ Distinct owners, printings and different gain-level rules remain separate. Repea
 one action only when their parsed entries are structurally identical within the same owner/feature
 family. Object field order is immaterial; array order, all field values and embedded qualified
 targets remain significant even when rendered text matches.
-Passive references do not consume an action identity. Saved name/source feature actions suppress
-only one unambiguous active earned projection; catalog enrichment retains its unique-match policy.
-When exactly one saved action replaces exactly one earned projection, the projection keeps its
-canonical ID and uses the saved text. Multiple matching saved rows do not select an arbitrary replacement.
+Passive references do not consume an action identity. Standalone saved feature rows permanently
+retain their own IDs. Unique catalog enrichment may supply their text, but cannot establish an owner,
+replace their ID or suppress an independently earned action.
 
-New earned IDs encode the complete canonical target and actual selected owner. A repeated group
-uses its lowest eligible gain deterministically. Its ID remains stable through UID enrichment,
-canonical spelling refresh, owner competition and unique saved-feature handoffs. Manual overrides
+Action group IDs encode the actual owner, canonical target family/printing and a SHA-256 signature
+of canonicalized parsed entries. Only the gain level is excluded from the family. No available
+member supplies the group's identity, so an earlier identical gain returning cannot change it.
+Its ID remains stable through UID enrichment, canonical spelling refresh and owner competition. Manual overrides
 and PDF selections match the exact current ID. Different manual IDs remain independent player rows.
 An unavailable or ineligible source leaves its manual action explicit; restoring the same target
 reunites it by exact ID, and removing an override reveals the still-earned action.
+
+Class-choice normalization, option views and persistence retain the full feature UID. Choices resolve
+only that complete target; a matching label cannot supply another owner, gain or printing. Materialized
+feature IDs use actual owner plus exact target, independent of the granting choice's order or ID.
+Removing one choice retains the same feature when another choice of that owner still grants it.
+Different owners retain separate materialized rows and action groups.
+
+Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
+remain saved intents without emitting or enriching an opaque action. Their materialized feature rows
+are excluded from standalone action projection. Exact manual overrides remain explicit during
+absence, and stored PDF preferences can select the same group when unchanged rules return.
+No action/rules snapshot or derived mirror is added to the saved character.
 
 Version 1.0 does not support earlier action-ID forms. No raw-UID/name-source compatibility aliases,
 opaque saved-row handoff aliases, historical ownership inference or character conversion are added.

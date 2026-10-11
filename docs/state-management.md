@@ -131,6 +131,11 @@ multiclass math. There are no top-level class mirrors.
 - Other normalized class and subclass choices retain descriptor identity, source-qualified owner,
   and earned level in `classChoiceSelections`. Supported selections include class features,
   subclass features, optional features, feats, items, and creatures.
+- Class/subclass feature options retain their complete 5etools UID in `ref`, separately from the
+  actual granting owner. Normalization, option keys, persistence and exact resolution share that
+  identity. Missing target rules retain the intent without borrowing a same-named feature.
+  Materialized feature IDs use owner plus target rather than the first granting choice; action
+  grouping and missing/restored behavior follow [the provenance contract](provenance.md#automatic-feature-actions).
 - Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
   retracts both the normalized selection and its materialized feat state.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
