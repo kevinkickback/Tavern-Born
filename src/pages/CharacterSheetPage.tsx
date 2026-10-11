@@ -149,10 +149,12 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
   const readiness = useCharacterReadiness(character)
   const calculation = useCharacterCalculationContext(character)
+  const classChoiceClassesByKey = calculation?.lookups.primary.classesByKey
   const viewModel = useMemo(
     () =>
       character
         ? createCharacterSheetViewModel(character, {
+            classChoiceClassesByKey,
             classesByKey,
             classFeaturesByKey,
             optionalFeaturesByKey,
@@ -170,6 +172,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       backgroundsByKey,
       character,
       classFeaturesByKey,
+      classChoiceClassesByKey,
       classesByKey,
       creaturesByKey,
       featsByKey,

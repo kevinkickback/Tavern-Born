@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
-import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { DataFilter } from '@/lib/5etools/filters'
+import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
@@ -278,6 +279,7 @@ describe('CharacterSheetPage', () => {
     const choice = wizard.normalizedRules!.choices[0]
     const draft = createEmptyCharacter({
       name: 'Current cross-parent choice',
+      allowedSources: ['PHB'],
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
     })
     const transition = applyClassChoiceSelectionWithGrantsCommand(
@@ -300,8 +302,14 @@ describe('CharacterSheetPage', () => {
       gameData.lookups = buildGameDataLookups(gameData)
       act(() => {
         useGameDataStore.setState({ gameData })
+        useCharacterStore.setState({ activeCharacter: character })
       })
-      return gameData.lookups
+      return {
+        ...gameData.lookups,
+        classChoiceClassesByKey: buildClassLookup(
+          DataFilter.filterClasses(available, { sources: character.allowedSources }),
+        ),
+      }
     }
     const complete = install(classes)
     const { result } = renderHook(() => useCharacterActions(character))
@@ -331,6 +339,19 @@ describe('CharacterSheetPage', () => {
     const restored = install(classes)
     expect(result.current).toEqual(initial)
     expect(createCharacterSheetViewModel(character, restored).actions).toEqual(initial)
+    const unavailableCompetitor = {
+      ...structuredClone(competingWizard),
+      subclasses: competingWizard.subclasses.map((subclass) => ({ ...subclass, source: 'TCE' })),
+    }
+    const filtered = install([unavailableCompetitor, bard])
+    expect(result.current).toEqual(initial)
+    expect(createCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
+    renderPage()
+    expect(
+      vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
+    ).toEqual(initial)
+    const explicitEmpty = { ...complete, classChoiceClassesByKey: {} }
+    expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
   })
 
   test.each([

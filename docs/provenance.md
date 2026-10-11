@@ -326,6 +326,8 @@ owner do not make a target ambiguous. A class-owned subclass target requires one
 competing owners leave the option unresolved in the picker, readiness, details and action projection.
 Actions and PDF receive the complete target catalog separately from selected classes: an explicit
 target may belong to an unselected class, whose unrelated features are not thereby earned.
+Production choice targets use the same filtered catalog as picker/readiness; unavailable competing
+owners cannot suppress a resolved choice. Raw lookups still supply retained descriptive details.
 
 Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
 remain saved intents without emitting or enriching an opaque action. Their materialized feature rows

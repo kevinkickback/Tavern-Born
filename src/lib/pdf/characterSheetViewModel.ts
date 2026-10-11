@@ -69,6 +69,8 @@ import type { CharacterEffect } from '@/types/effects'
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
+  /** Complete filtered choice targets; raw lookups remain available for retained details. */
+  classChoiceClassesByKey?: Readonly<Record<string, Class5e>>
   creaturesByKey?: Readonly<Record<string, Creature5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
@@ -795,7 +797,7 @@ export function createCharacterSheetViewModel(
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,
-    classesByKey: rawLookups.classesByKey,
+    classesByKey: rawLookups.classChoiceClassesByKey ?? rawLookups.classesByKey,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,

@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Stable feature action groups and complete choice targets measure 5,643,422 renderer bytes (+9,558).
+  // Stable feature action groups and complete choice targets measure 5,643,534 renderer bytes (+9,670).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5512 * KIB,
