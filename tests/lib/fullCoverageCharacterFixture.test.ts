@@ -8,6 +8,7 @@ import {
   getEffectiveSpellcastingClassData,
   getSelectedSubclassData,
 } from '@/lib/5etools/classData'
+import { DataFilter } from '@/lib/5etools/filters'
 import {
   buildBackgroundLookup,
   buildClassLookup,
@@ -45,6 +46,7 @@ import {
   collectSubclassFeatures,
   getCharacterClassChoices,
   getClassChoiceOptionKey,
+  indexSubclassFeatureTargets,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -203,6 +205,9 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
         (classData.subclasses ?? []).flatMap((subclass) => collectSubclassFeatures(subclass)),
       )
       .filter(fromAllowedSource),
+    subclassTargets: indexSubclassFeatureTargets(
+      DataFilter.filterClasses(classes, { sources: character.allowedSources }),
+    ),
     creatures: companionCreatures.filter(fromAllowedSource),
     feats: feats.filter(fromAllowedSource),
     items: items.filter(fromAllowedSource),

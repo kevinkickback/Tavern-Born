@@ -292,8 +292,18 @@ const divineOrder = classChoice(
   'Cleric',
   1,
   [
-    { entityType: 'classFeature', name: 'Protector', source: 'XPHB' },
-    { entityType: 'classFeature', name: 'Thaumaturge', source: 'XPHB' },
+    {
+      entityType: 'classFeature',
+      name: 'Protector',
+      source: 'XPHB',
+      ref: 'Protector|Cleric|XPHB|1',
+    },
+    {
+      entityType: 'classFeature',
+      name: 'Thaumaturge',
+      source: 'XPHB',
+      ref: 'Thaumaturge|Cleric|XPHB|1',
+    },
   ],
 )
 const cleric2024 = {
@@ -341,7 +351,15 @@ const clericCharacter = standardCharacter({
       className: 'Cleric',
       classSource: 'XPHB',
       classLevel: 1,
-      selected: [{ entityType: 'classFeature', name: 'Protector', source: 'XPHB', slotLevel: 1 }],
+      selected: [
+        {
+          entityType: 'classFeature',
+          name: 'Protector',
+          source: 'XPHB',
+          ref: 'Protector|Cleric|XPHB|1',
+          slotLevel: 1,
+        },
+      ],
     },
   ],
   features: [
@@ -397,8 +415,8 @@ const clericData = withLookups(
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [cleric2024],
     classFeatures: [
-      { name: 'Protector', source: 'XPHB' },
-      { name: 'Thaumaturge', source: 'XPHB' },
+      { name: 'Protector', source: 'XPHB', className: 'Cleric', classSource: 'XPHB', level: 1 },
+      { name: 'Thaumaturge', source: 'XPHB', className: 'Cleric', classSource: 'XPHB', level: 1 },
     ],
     backgrounds: [
       {
@@ -424,8 +442,18 @@ const primalOrder = classChoice(
   'Druid',
   1,
   [
-    { entityType: 'classFeature', name: 'Magician', source: 'XPHB' },
-    { entityType: 'classFeature', name: 'Warden', source: 'XPHB' },
+    {
+      entityType: 'classFeature',
+      name: 'Magician',
+      source: 'XPHB',
+      ref: 'Magician|Druid|XPHB|1',
+    },
+    {
+      entityType: 'classFeature',
+      name: 'Warden',
+      source: 'XPHB',
+      ref: 'Warden|Druid|XPHB|1',
+    },
   ],
 )
 const elementalFury = classChoice(
@@ -434,8 +462,18 @@ const elementalFury = classChoice(
   'Druid',
   7,
   [
-    { entityType: 'classFeature', name: 'Potent Spellcasting', source: 'XPHB' },
-    { entityType: 'classFeature', name: 'Primal Strike', source: 'XPHB' },
+    {
+      entityType: 'classFeature',
+      name: 'Potent Spellcasting',
+      source: 'XPHB',
+      ref: 'Potent Spellcasting|Druid|XPHB|7',
+    },
+    {
+      entityType: 'classFeature',
+      name: 'Primal Strike',
+      source: 'XPHB',
+      ref: 'Primal Strike|Druid|XPHB|7',
+    },
   ],
 )
 const druid2024 = {
@@ -494,7 +532,15 @@ const druidCharacter = standardCharacter({
       className: 'Druid',
       classSource: 'XPHB',
       classLevel: 7,
-      selected: [{ entityType: 'classFeature', name: 'Warden', source: 'XPHB', slotLevel: 1 }],
+      selected: [
+        {
+          entityType: 'classFeature',
+          name: 'Warden',
+          source: 'XPHB',
+          ref: 'Warden|Druid|XPHB|1',
+          slotLevel: 1,
+        },
+      ],
     },
     {
       choiceId: elementalFury.id,
@@ -504,7 +550,13 @@ const druidCharacter = standardCharacter({
       classSource: 'XPHB',
       classLevel: 7,
       selected: [
-        { entityType: 'classFeature', name: 'Potent Spellcasting', source: 'XPHB', slotLevel: 7 },
+        {
+          entityType: 'classFeature',
+          name: 'Potent Spellcasting',
+          source: 'XPHB',
+          ref: 'Potent Spellcasting|Druid|XPHB|7',
+          slotLevel: 7,
+        },
       ],
     },
   ],
@@ -556,10 +608,16 @@ const druidData = withLookups(
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [druid2024],
     classFeatures: [
-      { name: 'Magician', source: 'XPHB' },
-      { name: 'Warden', source: 'XPHB' },
-      { name: 'Potent Spellcasting', source: 'XPHB' },
-      { name: 'Primal Strike', source: 'XPHB' },
+      { name: 'Magician', source: 'XPHB', className: 'Druid', classSource: 'XPHB', level: 1 },
+      { name: 'Warden', source: 'XPHB', className: 'Druid', classSource: 'XPHB', level: 1 },
+      {
+        name: 'Potent Spellcasting',
+        source: 'XPHB',
+        className: 'Druid',
+        classSource: 'XPHB',
+        level: 7,
+      },
+      { name: 'Primal Strike', source: 'XPHB', className: 'Druid', classSource: 'XPHB', level: 7 },
     ],
     backgrounds: [
       {

@@ -3,7 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { deriveRulesTextActions } from '@/lib/calculations/actions'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
   createCharacterSheetViewModel,
   generateFilledCharacterSheetPdf,
@@ -13,7 +20,8 @@ import { isHintDismissed, resetAllHints } from '@/lib/storage/hints'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -216,12 +224,366 @@ describe('CharacterSheetPage', () => {
     return { character, gameData }
   }
 
-  function exportedSavedActions() {
+  function exportedSavedActions(id = 'feature:saved-shared') {
     return vi
       .mocked(createCharacterSheetViewModel)
       .mock.results.slice(-1)[0]
-      ?.value.actions.filter((action: { id: string }) => action.id === 'feature:saved-shared')
+      ?.value.actions.filter((action: { id: string }) => action.id === id)
   }
+
+  test('Actions and PDF resolve a chosen subclass target across the complete available catalog', () => {
+    const classes = parseClasses({
+      class: [
+        { name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||3'] },
+        { name: 'Bard', source: 'PHB', classFeatures: [] },
+      ],
+      classFeature: [
+        {
+          name: 'Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 3,
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [{ type: 'refSubclassFeature', subclassFeature: 'Beacon|Bard||School||3' }],
+            },
+          ],
+        },
+      ],
+      subclass: [
+        {
+          name: 'First School',
+          shortName: 'School',
+          source: 'PHB',
+          className: 'Bard',
+          classSource: 'PHB',
+          subclassFeatures: ['Beacon|Bard||School||3'],
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Beacon',
+          source: 'PHB',
+          className: 'Bard',
+          classSource: 'PHB',
+          subclassShortName: 'School',
+          subclassSource: 'PHB',
+          level: 3,
+          entries: ['As an action, light a beacon.'],
+        },
+      ],
+    }) as Class5e[]
+    const wizard = classes.find((entry) => entry.name === 'Wizard')!
+    const bard = classes.find((entry) => entry.name === 'Bard')!
+    const choice = wizard.normalizedRules!.choices[0]
+    const draft = createEmptyCharacter({
+      name: 'Current cross-parent choice',
+      allowedSources: ['PHB'],
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+    })
+    const transition = applyClassChoiceSelectionWithGrantsCommand(
+      draft,
+      draft.provenance!,
+      choice,
+      choice.options,
+    )
+    const character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...draft,
+          ...transition.characterPatch,
+          provenance: transition.provenanceUpdate,
+        }),
+      ),
+    )
+    const install = (available: Class5e[]) => {
+      const gameData = makeGameDataFixture({ classes: available })
+      gameData.lookups = buildGameDataLookups(gameData)
+      act(() => {
+        useGameDataStore.setState({ gameData })
+        useCharacterStore.setState({ activeCharacter: character })
+      })
+      return {
+        ...gameData.lookups,
+        classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+          classes: DataFilter.filterClasses(available, { sources: character.allowedSources }),
+          classFeatures: [],
+        }),
+      }
+    }
+    const complete = install(classes)
+    const { result } = renderHook(() => useCharacterActions(character))
+    const initial = result.current
+    expect(initial).toMatchObject([
+      {
+        kind: 'action',
+        source: { kind: 'class', name: 'Beacon' },
+        description: 'As an action, light a beacon.',
+      },
+    ])
+    expect(createCharacterSheetViewModel(character, complete).actions).toEqual(initial)
+    expect(
+      deriveRulesTextActions(character, undefined, {
+        classes: [wizard],
+        classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+          classes: [],
+          classFeatures: [],
+        }),
+      }),
+    ).toEqual([])
+    const competingWizard = {
+      ...structuredClone(wizard),
+      subclasses: [
+        { ...structuredClone(bard.subclasses![0]), name: 'Second School', className: 'Wizard' },
+      ],
+    }
+    for (const available of [[competingWizard, bard], [bard, competingWizard], [wizard]]) {
+      const lookups = install(available)
+      expect(result.current).toEqual([])
+      expect(createCharacterSheetViewModel(character, lookups).actions).toEqual([])
+    }
+    const restored = install(classes)
+    expect(result.current).toEqual(initial)
+    expect(createCharacterSheetViewModel(character, restored).actions).toEqual(initial)
+    const unavailableCompetitor = {
+      ...structuredClone(competingWizard),
+      subclasses: competingWizard.subclasses.map((subclass) => ({ ...subclass, source: 'TCE' })),
+    }
+    const filtered = install([unavailableCompetitor, bard])
+    expect(result.current).toEqual(initial)
+    expect(createCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
+    renderPage()
+    expect(
+      vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
+    ).toEqual(initial)
+    const explicitEmpty = {
+      ...complete,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+        classes: [],
+        classFeatures: [],
+      }),
+    }
+    expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
+  })
+
+  test('Actions and PDF honor current reprint suppression across source casing', () => {
+    const variantRules = {
+      optionalClassFeatures: false,
+      averageHitPoints: false,
+      anyRaceSubclasses: false,
+      ignoreEquipRestrictions: false,
+    }
+    const old = {
+      name: 'Signal',
+      source: 'phb',
+      className: 'Bard',
+      classSource: 'PHB',
+      level: 1,
+      entries: ['As an action, use the old signal.'],
+      reprintedAs: ['Signal|Bard|TCE|1|TCE'],
+    }
+    const newer = {
+      ...old,
+      source: 'TCE',
+      entries: ['As a reaction, use the newer signal.'],
+      reprintedAs: [],
+    }
+    const root = {
+      name: 'Training',
+      source: 'PHB',
+      className: 'Wizard',
+      classSource: 'PHB',
+      level: 1,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [{ type: 'refClassFeature', classFeature: 'Signal|Bard||1' }],
+        },
+      ],
+    }
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||1'] }],
+      classFeature: [root, old, newer],
+    }) as Class5e[]
+    const draft = createEmptyCharacter({
+      name: 'Current reprint choice',
+      allowedSources: ['PHB', 'TCE'],
+      variantRules,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    })
+    const choice = classes[0].normalizedRules!.choices[0]
+    const granted = applyClassChoiceSelectionWithGrantsCommand(
+      draft,
+      draft.provenance!,
+      choice,
+      choice.options,
+    )
+    let character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...draft,
+          ...granted.characterPatch,
+          provenance: granted.provenanceUpdate,
+        }),
+      ),
+    )
+    const originalSelection = structuredClone(character.classChoiceSelections)
+    const data = makeGameDataFixture({ classes, classFeatures: [root, old, newer] })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
+    useCharacterStore.setState({ activeCharacter: character })
+    const hook = renderHook(() => ({
+      actions: useCharacterActions(character),
+      filtered: useFilteredGameData(),
+    }))
+    renderPage()
+    const original = hook.result.current.actions
+    expect(original).toHaveLength(1)
+    const observe = (preferNewerPrintings: boolean, allowedSources = ['PHB', 'TCE']) => {
+      act(() => {
+        character = {
+          ...character,
+          allowedSources,
+          variantRules: { ...variantRules, preferNewerPrintings },
+        }
+        useCharacterStore.setState({ activeCharacter: character })
+      })
+      hook.rerender()
+      expect(
+        vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
+      ).toEqual(hook.result.current.actions)
+      expect(character.classChoiceSelections).toEqual(originalSelection)
+      return hook.result.current.actions
+    }
+    expect(observe(true)).toEqual([])
+    expect(
+      hook.result.current.filtered.classFeatures.filter((feature) => feature.name === 'Signal'),
+    ).toEqual([newer])
+    expect(observe(false)).toEqual(original)
+    expect(observe(true, ['PHB'])).toEqual(original)
+    expect(observe(true)).toEqual([])
+    expect(observe(false)).toEqual(original)
+  })
+
+  test.each([
+    'TCE',
+    '',
+  ])('Actions and PDF suppress a disabled qualified target with source %j while retaining standalone text', (source) => {
+    const signal: ClassFeature = {
+      name: 'Signal',
+      source,
+      className: 'Bard',
+      classSource: source ? 'PHB' : 'TCE',
+      level: 1,
+      entries: ['As a bonus action, send the exact signal.'],
+    }
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||1'] }],
+      classFeature: [
+        {
+          name: 'Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [
+                {
+                  type: 'refClassFeature',
+                  classFeature: `Signal|Bard|${signal.classSource}|1|${source}`,
+                },
+              ],
+            },
+          ],
+        },
+        signal,
+      ],
+    }) as Class5e[]
+    const draft = createEmptyCharacter({
+      name: 'Current filtered target',
+      allowedSources: ['PHB', 'TCE'],
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      features: [
+        { id: 'saved-signal', name: 'Signal', source: 'TCE', description: 'Saved signal.' },
+      ],
+    })
+    const choice = classes[0].normalizedRules!.choices[0]
+    const transition = applyClassChoiceSelectionWithGrantsCommand(
+      draft,
+      draft.provenance!,
+      choice,
+      choice.options,
+    )
+    let character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...draft,
+          ...transition.characterPatch,
+          provenance: transition.provenanceUpdate,
+        }),
+      ),
+    )
+    const originalSelection = structuredClone(character.classChoiceSelections)
+    const install = (allowedSources: string[], targets: ClassFeature[] = [signal]) => {
+      character = { ...character, allowedSources }
+      const gameData = makeGameDataFixture({ classes, classFeatures: targets })
+      gameData.lookups = buildGameDataLookups(gameData)
+      act(() => {
+        useGameDataStore.setState({ gameData })
+        useCharacterStore.setState({ activeCharacter: character })
+      })
+    }
+    install(['PHB', 'TCE'])
+    const hook = renderHook(() => useCharacterActions(character))
+    renderPage()
+    const original = hook.result.current
+    expect(original).toHaveLength(2)
+    const chosen = original.find((action) => action.id !== 'feature:saved-signal')!
+    expect(chosen.description).toContain('exact signal')
+    const rawData = makeGameDataFixture({ classes, classFeatures: [signal] })
+    rawData.lookups = buildGameDataLookups(rawData)
+    expect(
+      createCharacterSheetViewModel(character, rawData.lookups).actions.some(
+        (action) => action.id === chosen.id,
+      ),
+    ).toBe(false)
+    const empty = buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] })
+    expect(
+      createCharacterSheetViewModel(character, {
+        ...rawData.lookups,
+        classChoiceFeatureCatalogs: empty,
+      }).actions.some((action) => action.id === chosen.id),
+    ).toBe(false)
+    const observe = () => {
+      hook.rerender()
+      const exported = vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]
+        ?.value.actions
+      expect(exported).toEqual(hook.result.current)
+      expect(character.classChoiceSelections).toEqual(originalSelection)
+      return hook.result.current
+    }
+    const competing = { ...signal, source: 'PHB', entries: ['As an action, use another printing.'] }
+    for (const targets of [
+      [signal, competing],
+      [competing, signal],
+    ]) {
+      install(['PHB'], targets)
+      expect(observe()).toEqual(original.filter((action) => action.id === 'feature:saved-signal'))
+      install(['PHB', 'TCE'], targets)
+      expect(observe()).toEqual(original)
+    }
+    install(['PHB', 'TCE'], [competing])
+    expect(observe().some((action) => action.id === chosen.id)).toBe(false)
+    install(['PHB', 'TCE'])
+    expect(observe()).toEqual(original)
+  })
 
   test.each([
     'class',
@@ -230,7 +592,8 @@ describe('CharacterSheetPage', () => {
     const { character } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     const expected = kind === 'class' ? 'bonus-action' : 'action'
-    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    const id = 'feature:saved-shared'
+    const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe(expected)
     expect(actions[0]?.description).toContain(
@@ -239,11 +602,11 @@ describe('CharacterSheetPage', () => {
     if (kind === 'class') {
       expect(
         result.current.filter((action) => action.name.toLowerCase() === 'shared'),
-      ).toHaveLength(1)
+      ).toHaveLength(2)
     }
 
     renderPage()
-    expect(exportedSavedActions()).toEqual(actions)
+    expect(exportedSavedActions(id)).toEqual(actions)
   })
 
   test('preserves ambiguous saved class rules in both Actions and PDF without optional fallback', () => {
@@ -265,7 +628,8 @@ describe('CharacterSheetPage', () => {
     const { character, gameData } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     renderPage()
-    expect(result.current.find((action) => action.id === 'feature:saved-shared')?.kind).toBe(
+    const id = 'feature:saved-shared'
+    expect(result.current.find((action) => action.id === id)?.kind).toBe(
       kind === 'class' ? 'bonus-action' : 'action',
     )
     const key = kind === 'class' ? 'classFeaturesByKey' : 'optionalFeaturesByKey'
@@ -282,11 +646,11 @@ describe('CharacterSheetPage', () => {
       })
     })
 
-    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe('reaction')
     expect(actions[0]?.description).toContain('refreshed catalog rules')
-    expect(exportedSavedActions()).toEqual(actions)
+    expect(exportedSavedActions(id)).toEqual(actions)
   })
 
   test('runs an export preflight before downloading a sheet', async () => {

@@ -17,7 +17,13 @@ function selection(
     subclassName: 'Scholar',
     subclassSource: 'SUPP',
     selected: [
-      { entityType: 'subclassFeature', name: 'Shared Option', source: 'SUPP', slotLevel: 3 },
+      {
+        entityType: 'subclassFeature',
+        name: 'Shared Option',
+        source: 'SUPP',
+        ref: `Shared Option|${overrides.className ?? 'Wizard'}|${overrides.classSource ?? 'PHB'}|${overrides.subclassName ?? 'Scholar'}|${overrides.subclassSource ?? 'SUPP'}|3|SUPP`,
+        slotLevel: 3,
+      },
     ],
     ...overrides,
   }
@@ -32,6 +38,11 @@ function scholarClass(
   const feature = {
     name: 'Shared Option',
     source: subclassSource,
+    className,
+    classSource,
+    subclassShortName: subclassName,
+    subclassSource,
+    level: 3,
     entries: [`${className}|${classSource}|${subclassName}|${subclassSource}`],
   }
   return makeClassFixture({
@@ -46,7 +57,7 @@ function scholarClass(
         classSource,
         subclassFeatureRefs: [
           {
-            ref: 'shared-option',
+            ref: `Shared Option|${className}|${classSource}|${subclassName}|${subclassSource}|3`,
             name: feature.name,
             source: feature.source,
             className,
@@ -105,11 +116,11 @@ describe('retained character details', () => {
             entityType: 'subclassFeature',
             name: 'Shared Option',
             source: 'ALT',
+            ref: 'Shared Option|Wizard|PHB|Scholar|ALT|3|ALT',
             slotLevel: 3,
           },
         ],
       }),
-      selection({ choiceId: 'short-name', subclassName: 'Scholar Short' }),
     ]
     const result = buildRetainedCharacterDetails(
       makeCharacterFixture({ classChoiceSelections: choices }),
@@ -122,22 +133,35 @@ describe('retained character details', () => {
       ['revised', 'Wizard|XPHB|Scholar|SUPP'],
       ['other', 'Wizard|PHB|Other Scholar|SUPP'],
       ['alternate', 'Wizard|PHB|Scholar|ALT'],
-      ['short-name', 'Wizard|PHB|Scholar|SUPP'],
     ])
       expect(result.choiceDetailsById.get(id)?.[0].entries).toEqual([entries])
   })
 
-  test('uses class context for top-level and nested class features', () => {
-    const feature = { name: 'Shared Feature', source: 'SUPP', entries: ['wizard feature'] }
+  test('uses the authoritative complete class-feature targets without nested replenishment', () => {
+    const feature = {
+      name: 'Shared Feature',
+      source: 'SUPP',
+      className: 'Wizard',
+      classSource: 'PHB',
+      level: 3,
+      entries: ['wizard feature'],
+    }
     const raw = makeGameDataFixture({
       classFeatures: [
+        feature,
         { ...feature, className: 'Fighter', classSource: 'PHB', entries: ['fighter feature'] },
       ],
       classes: [makeClassFixture({ classFeatures: [feature] })],
     })
     const choice = selection({
       selected: [
-        { entityType: 'classFeature', name: feature.name, source: feature.source, slotLevel: 3 },
+        {
+          entityType: 'classFeature',
+          name: feature.name,
+          source: feature.source,
+          ref: 'Shared Feature|Wizard|PHB|3|SUPP',
+          slotLevel: 3,
+        },
       ],
     })
     const result = buildRetainedCharacterDetails(
@@ -146,6 +170,14 @@ describe('retained character details', () => {
       raw,
     )
     expect(result.choiceDetailsById.get(choice.choiceId)?.[0].entries).toEqual(['wizard feature'])
+    const empty = { ...raw, classFeatures: [] }
+    expect(
+      buildRetainedCharacterDetails(
+        makeCharacterFixture({ classChoiceSelections: [choice] }),
+        empty,
+        empty,
+      ).choiceDetailsById.get(choice.choiceId)?.[0],
+    ).toEqual({ availability: 'missing', entries: [] })
   })
 
   test('prefers exact filtered details and treats empty loaded entries as available', () => {

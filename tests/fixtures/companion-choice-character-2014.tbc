@@ -70,7 +70,7 @@
       "level": 3
     },
     {
-      "id": "class-choice:class%3Aranger%7Cphb%7Cchoice%3Afighting-style%7C2:Defense%7CPHB",
+      "id": "class-choice:%5B%22%5B%5C%22ranger%7Cphb%5C%22%5D%22%2C%22optionalFeature%7Cdefense%7Cphb%22%5D",
       "name": "Defense",
       "source": "PHB",
       "description": "",
@@ -556,7 +556,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "hitPoints": {
     "current": 28,
     "temporary": 0

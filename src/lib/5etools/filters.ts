@@ -1,4 +1,10 @@
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
+import {
+  decodeClassFeatureReference,
+  decodeSubclassFeatureReference,
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
@@ -91,17 +97,44 @@ const isSuppressed = (
 
 type SubclassFeatureInclusion = (name: string | undefined, source: string) => boolean
 
+function buildFeatureSuppressionCheck(keys: ReadonlySet<string> | undefined) {
+  const normalized = new Set(keys ? [...keys].map((key) => key.trim().toLowerCase()) : [])
+  return (name: string | undefined, source: string) =>
+    normalized.has(`${name?.trim() ?? ''}|${source.trim()}`.toLowerCase())
+}
+
 const removedNestedSubclassFeature = Symbol('removedNestedSubclassFeature')
 
-function subclassFeatureIdentity(
-  feature: string | SubclassFeature,
+function classFeatureIdentity(
+  feature: string | ClassFeature | ClassFeatureReference,
   fallbackSource: string,
 ): { name: string | undefined; source: string } {
-  if (typeof feature !== 'string') {
-    return { name: feature.name, source: feature.source || fallbackSource }
+  const decoded = typeof feature === 'string' ? decodeClassFeatureReference(feature) : feature
+  const identity = getClassFeatureIdentity(decoded)
+  return {
+    name: decoded.name,
+    source: identity
+      ? identity.split('|').slice(-1)[0].toUpperCase()
+      : typeof feature === 'string'
+        ? ''
+        : decoded.source?.trim() || fallbackSource,
   }
-  const parts = feature.split('|')
-  return { name: parts[0], source: parts[6] || fallbackSource }
+}
+
+function subclassFeatureIdentity(
+  feature: string | SubclassFeature | SubclassFeatureReference,
+  fallbackSource: string,
+): { name: string | undefined; source: string } {
+  const decoded = typeof feature === 'string' ? decodeSubclassFeatureReference(feature) : feature
+  const identity = getSubclassFeatureIdentity(decoded)
+  return {
+    name: decoded.name,
+    source: identity
+      ? identity.split('|').slice(-1)[0].toUpperCase()
+      : typeof feature === 'string'
+        ? ''
+        : decoded.source?.trim() || fallbackSource,
+  }
 }
 
 function pruneNestedSubclassFeatureRecords(
@@ -120,18 +153,21 @@ function pruneNestedSubclassFeatureRecords(
   const record = value as Record<string, unknown>
   let nestedSource = fallbackSource
   if (record.type === 'refSubclassFeature') {
-    const parts =
-      typeof record.subclassFeature === 'string' ? record.subclassFeature.split('|') : []
     const embeddedFeature =
       record.feature && typeof record.feature === 'object'
         ? (record.feature as Record<string, unknown>)
         : undefined
-    const name =
-      parts[0] || (typeof embeddedFeature?.name === 'string' ? embeddedFeature.name : undefined)
-    nestedSource =
-      parts[6] ||
-      (typeof embeddedFeature?.source === 'string' ? embeddedFeature.source : fallbackSource)
-    if (!include(name, nestedSource)) return removedNestedSubclassFeature
+    const identity = subclassFeatureIdentity(
+      typeof record.subclassFeature === 'string' && record.subclassFeature.trim()
+        ? record.subclassFeature
+        : ((embeddedFeature as SubclassFeature | undefined) ?? {
+            name: '',
+            source: fallbackSource,
+          }),
+      fallbackSource,
+    )
+    nestedSource = identity.source
+    if (!include(identity.name, nestedSource)) return removedNestedSubclassFeature
   }
 
   const filteredEntries = Object.entries(record).flatMap(([key, entry]) => {
@@ -159,15 +195,19 @@ function filterSubclassContent(
   include: SubclassFeatureInclusion,
 ): Pick<Subclass5e, 'subclassFeatures' | 'subclassFeatureRefs' | 'levelFeatures'> {
   const prune = (feature: SubclassFeature) =>
-    pruneNestedSubclassFeatures(feature, include, feature.source || subclass.source)
+    pruneNestedSubclassFeatures(
+      feature,
+      include,
+      subclassFeatureIdentity(feature, subclass.source).source,
+    )
   const subclassFeatures = subclass.subclassFeatures?.flatMap((feature) => {
     const identity = subclassFeatureIdentity(feature, subclass.source)
     if (!include(identity.name, identity.source)) return []
     return [typeof feature === 'string' ? feature : prune(feature)]
   }) as typeof subclass.subclassFeatures
   const subclassFeatureRefs = subclass.subclassFeatureRefs?.flatMap((reference) => {
-    const source = reference.source || reference.feature?.source || subclass.source
-    if (!include(reference.name, source)) return []
+    const identity = subclassFeatureIdentity(reference.ref?.trim() || reference, subclass.source)
+    if (!include(identity.name, identity.source)) return []
     return [reference.feature ? { ...reference, feature: prune(reference.feature) } : reference]
   })
   const levelFeatures = subclass.levelFeatures
@@ -189,9 +229,9 @@ function directClassFeatureReferences(classData: Class5e): ClassFeatureReference
     const level = typedFeature.level
     return [
       {
-        ref: `${typedFeature.name}|${typedFeature.className || classData.name}|${typedFeature.classSource || classData.source}|${level ?? ''}|${typedFeature.source || classData.source}`,
+        ref: `${typedFeature.name}|${typedFeature.className || classData.name}|${typedFeature.classSource || classData.source}|${level ?? ''}|${classFeatureIdentity(typedFeature, classData.source).source}`,
         name: typedFeature.name,
-        source: typedFeature.source || classData.source,
+        source: classFeatureIdentity(typedFeature, classData.source).source,
         className: typedFeature.className || classData.name,
         classSource: typedFeature.classSource || classData.source,
         level,
@@ -223,9 +263,9 @@ function directSubclassFeatureReferences(
     const subclassShortName = feature.subclassShortName || subclass.shortName
     const subclassSource = feature.subclassSource || subclass.source
     return {
-      ref: `${feature.name}|${className}|${classSource}|${subclassShortName}|${subclassSource}|${level ?? ''}|${feature.source || subclass.source}`,
+      ref: `${feature.name}|${className}|${classSource}|${subclassShortName}|${subclassSource}|${level ?? ''}|${subclassFeatureIdentity(feature, subclass.source).source}`,
       name: feature.name,
-      source: feature.source || subclass.source,
+      source: subclassFeatureIdentity(feature, subclass.source).source,
       className,
       classSource,
       subclassShortName,
@@ -303,6 +343,21 @@ const getSubclassKey = (
 ): string => `${className}|${classSource}|${subclassName}|${subclassSource}`
 
 export class DataFilter {
+  static filterClassFeatures(
+    features: ClassFeature[],
+    filters: Pick<ClassFilters, 'sources' | 'suppressedKeys'>,
+  ): ClassFeature[] {
+    const sources = new Set(filters.sources?.map((source) => source.toUpperCase()))
+    const featureIsSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)
+    return features.filter((feature) => {
+      const identity = classFeatureIdentity(feature, '')
+      return (
+        (sources.size === 0 || sources.has(identity.source.toUpperCase())) &&
+        !featureIsSuppressed(identity.name, identity.source)
+      )
+    })
+  }
+
   static filterRaces(races: Race5e[], filters: RaceFilters): Race5e[] {
     let filtered = [...races]
 
@@ -380,15 +435,14 @@ export class DataFilter {
       filtered = filtered.map((cls) => ({
         ...cls,
         classFeatures: cls.classFeatures?.filter((feature) => {
-          const source =
-            typeof feature === 'string'
-              ? feature.split('|')[4] || feature.split('|')[2] || cls.source
-              : feature.source || cls.source
-          return sourcesUpper.has(source.toUpperCase())
+          return sourcesUpper.has(classFeatureIdentity(feature, cls.source).source.toUpperCase())
         }) as typeof cls.classFeatures,
         classFeatureRefs: cls.classFeatureRefs?.filter((reference) =>
           sourcesUpper.has(
-            (reference.source || reference.feature?.source || cls.source).toUpperCase(),
+            classFeatureIdentity(
+              reference.ref?.trim() || reference,
+              cls.source,
+            ).source.toUpperCase(),
           ),
         ),
         subclasses: cls.subclasses
@@ -424,25 +478,19 @@ export class DataFilter {
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      const featureIsSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)
       filtered = filtered
         .filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
         .map((cls) => ({
           ...cls,
           classFeatures: cls.classFeatures?.filter((feature) => {
-            const [name, source] =
-              typeof feature === 'string'
-                ? [feature.split('|')[0], feature.split('|')[4] || feature.split('|')[2]]
-                : [feature.name, feature.source]
-            return !isSuppressed(name, source || cls.source, filters.suppressedKeys)
+            const identity = classFeatureIdentity(feature, cls.source)
+            return !featureIsSuppressed(identity.name, identity.source)
           }) as typeof cls.classFeatures,
-          classFeatureRefs: cls.classFeatureRefs?.filter(
-            (reference) =>
-              !isSuppressed(
-                reference.name,
-                reference.source || reference.feature?.source || cls.source,
-                filters.suppressedKeys,
-              ),
-          ),
+          classFeatureRefs: cls.classFeatureRefs?.filter((reference) => {
+            const identity = classFeatureIdentity(reference.ref?.trim() || reference, cls.source)
+            return !featureIsSuppressed(identity.name, identity.source)
+          }),
           subclasses: cls.subclasses
             ?.filter(
               (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
@@ -452,7 +500,7 @@ export class DataFilter {
                 ...subclass,
                 ...filterSubclassContent(
                   subclass,
-                  (name, source) => !isSuppressed(name, source, filters.suppressedKeys),
+                  (name, source) => !featureIsSuppressed(name, source),
                 ),
               }
             }),

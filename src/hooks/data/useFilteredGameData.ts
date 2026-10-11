@@ -152,11 +152,10 @@ export function useFilteredGameDataParams(params: FilterParams) {
           (source) => source.toUpperCase() === mastery.source.toUpperCase(),
         ),
       ),
-      classFeatures: classFeatures.filter(
-        (cf) =>
-          compatibleAllowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
-          !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
-      ),
+      classFeatures: DataFilter.filterClassFeatures(classFeatures, {
+        sources: compatibleAllowedSources,
+        suppressedKeys,
+      }),
       creatures: creatures.filter((creature) => {
         const source = creature.source.toUpperCase()
         const implicitMonsterSource = originSystem === '2024' ? 'XMM' : 'MM'

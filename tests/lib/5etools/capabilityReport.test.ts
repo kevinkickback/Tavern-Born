@@ -188,7 +188,15 @@ describe('createCorpusCapabilityReport', () => {
   })
 
   it('resolves options backed by direct subclass feature objects', () => {
-    const directFeature = { name: 'Direct Ward', source: 'TST', level: 3 }
+    const directFeature = {
+      name: 'Direct Ward',
+      source: 'TST',
+      level: 3,
+      className: 'Test Adept',
+      classSource: 'TST',
+      subclassShortName: 'Tests',
+      subclassSource: 'TST',
+    }
     const subclassRules: NormalizedClassRules = {
       ...EMPTY_RULES,
       choices: [
@@ -207,7 +215,14 @@ describe('createCorpusCapabilityReport', () => {
           minimumSelections: 1,
           maximumSelections: 1,
           selectionCountByLevel: [1],
-          options: [{ entityType: 'subclassFeature', name: 'Direct Ward', source: 'TST' }],
+          options: [
+            {
+              entityType: 'subclassFeature',
+              name: 'Direct Ward',
+              source: 'TST',
+              ref: 'Direct Ward|Test Adept|TST|Tests|TST|3|TST',
+            },
+          ],
           repeatable: false,
           replacement: { cadence: 'never' },
           source: { kind: 'class-feature-options', field: 'test.direct-options' },

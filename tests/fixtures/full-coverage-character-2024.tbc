@@ -236,28 +236,28 @@
       "level": 2
     },
     {
-      "id": "class-choice:class%3Acleric%7Cxphb%7Cchoice%3Adivine-order%7C1:Protector%7CXPHB",
+      "id": "class-choice:%5B%22%5B%5C%22cleric%7Cxphb%5C%22%5D%22%2C%22class-feature%7Cprotector%7Ccleric%7Cxphb%7C1%7Cxphb%22%5D",
       "name": "Protector",
       "source": "XPHB",
       "description": "",
       "level": 1
     },
     {
-      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Commander's%20Strike%7CXPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cxphb%5C%22%2C%5C%22battle%20master%7Cxphb%5C%22%5D%22%2C%22optionalFeature%7Ccommander's%20strike%7Cxphb%22%5D",
       "name": "Commander's Strike",
       "source": "XPHB",
       "description": "",
       "level": 3
     },
     {
-      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Disarming%20Attack%7CXPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cxphb%5C%22%2C%5C%22battle%20master%7Cxphb%5C%22%5D%22%2C%22optionalFeature%7Cdisarming%20attack%7Cxphb%22%5D",
       "name": "Disarming Attack",
       "source": "XPHB",
       "description": "",
       "level": 3
     },
     {
-      "id": "class-choice:class%3Afighter%7Cxphb%7Csubclass%3Abattle-master%7Cxphb%7Cchoice%3Amaneuvers%7C3:Precision%20Attack%7CXPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cxphb%5C%22%2C%5C%22battle%20master%7Cxphb%5C%22%5D%22%2C%22optionalFeature%7Cprecision%20attack%7Cxphb%22%5D",
       "name": "Precision Attack",
       "source": "XPHB",
       "description": "",
@@ -4325,7 +4325,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "hitPoints": {
     "current": 121,
     "temporary": 17
@@ -4393,6 +4393,7 @@
           "entityType": "classFeature",
           "name": "Protector",
           "source": "XPHB",
+          "ref": "Protector|Cleric|XPHB|1",
           "slotLevel": 1
         }
       ]

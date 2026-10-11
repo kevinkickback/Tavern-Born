@@ -45,6 +45,7 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
@@ -69,6 +70,8 @@ import type { CharacterEffect } from '@/types/effects'
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
+  /** Complete filtered choice targets; raw lookups remain available for retained details. */
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   creaturesByKey?: Readonly<Record<string, Creature5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
@@ -795,6 +798,7 @@ export function createCharacterSheetViewModel(
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,
+    classChoiceFeatureCatalogs: rawLookups.classChoiceFeatureCatalogs,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,

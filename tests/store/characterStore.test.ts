@@ -419,6 +419,7 @@ describe('characterStore', () => {
     2,
     3,
     4,
+    CURRENT_CHARACTER_SCHEMA_VERSION - 1,
     CURRENT_CHARACTER_SCHEMA_VERSION + 1,
     String(CURRENT_CHARACTER_SCHEMA_VERSION),
     'invalid',

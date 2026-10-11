@@ -1,6 +1,11 @@
+import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
+import {
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import type { GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 
@@ -16,6 +21,7 @@ export interface GameDataAvailabilityIndex {
   spells: ReadonlySet<string>
   subclasses: ReadonlySet<string>
   subclassFeatures: ReadonlySet<string>
+  subclassFeaturesByOwner: ReadonlyMap<string, ReadonlySet<string>>
 }
 
 function entityKey(value: { name?: unknown; source?: unknown }): string | null {
@@ -44,7 +50,14 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
   }
 
   const subclasses = new Set<string>()
-  const subclassFeatures = new Set<string>()
+  const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
+  const subclassTargets = featureCatalogs.subclassTargets
+  const classFeatures = new Set(
+    featureCatalogs.classFeatures.flatMap((feature) => {
+      const key = getClassFeatureIdentity(feature)
+      return key ? [key] : []
+    }),
+  )
   for (const cls of gameData.classes) {
     for (const subclass of cls.subclasses ?? []) {
       subclasses.add(getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source))
@@ -53,21 +66,13 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
           getSubclassLookupKey(cls.name, cls.source, subclass.shortName, subclass.source),
         )
       }
-      for (const reference of subclass.subclassFeatureRefs ?? []) {
-        const key = reference.feature ? entityKey(reference.feature) : null
-        if (key) subclassFeatures.add(key)
-      }
-      for (const feature of collectSubclassFeatures(subclass)) {
-        const key = entityKey(feature)
-        if (key) subclassFeatures.add(key)
-      }
     }
   }
 
   return {
     backgrounds: entityKeys(gameData.backgrounds),
     classes: entityKeys(gameData.classes),
-    classFeatures: entityKeys(gameData.classFeatures),
+    classFeatures,
     creatures: entityKeys(gameData.creatures ?? []),
     feats: entityKeys(gameData.feats),
     items: entityKeys([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
@@ -75,7 +80,10 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
     races,
     spells: entityKeys(gameData.spells),
     subclasses,
-    subclassFeatures,
+    subclassFeatures: new Set(subclassTargets.unique.keys()),
+    subclassFeaturesByOwner: new Map(
+      [...subclassTargets.byOwner].map(([owner, targets]) => [owner, new Set(targets.keys())]),
+    ),
   }
 }
 
@@ -99,7 +107,18 @@ function itemIsMissing(item: Pick<Equipment, 'name' | 'source'>, index: GameData
 function choiceIsMissing(
   choice: CharacterClassChoiceOption,
   index: GameDataAvailabilityIndex,
+  subclassOwner?: string,
 ): boolean {
+  if (choice.entityType === 'classFeature' || choice.entityType === 'subclassFeature') {
+    const target = getClassChoiceFeatureTarget(choice)
+    const available =
+      choice.entityType === 'classFeature'
+        ? index.classFeatures
+        : subclassOwner
+          ? index.subclassFeaturesByOwner.get(subclassOwner)
+          : index.subclassFeatures
+    return !target || !available?.has(target)
+  }
   const catalogs: Record<CharacterClassChoiceOption['entityType'], ReadonlySet<string>> = {
     classFeature: index.classFeatures,
     creature: index.creatures,
@@ -123,7 +142,7 @@ function itemReferenceIsMissing(reference: string, index: GameDataAvailabilityIn
 
 /**
  * Reports whether a character has exact, source-qualified saved choices that are absent from the
- * currently loaded catalog. Unqualified legacy/custom values are ignored because their origin
+ * currently loaded catalog. Unqualified custom values are ignored because their origin
  * cannot be determined reliably.
  */
 export function characterUsesContentOutsideCatalog(
@@ -161,7 +180,21 @@ export function characterUsesContentOutsideCatalog(
   if (
     (character.classChoiceSelections ?? []).some(
       (selection) =>
-        !selection.inactive && selection.selected.some((choice) => choiceIsMissing(choice, index)),
+        !selection.inactive &&
+        selection.selected.some((choice) =>
+          choiceIsMissing(
+            choice,
+            index,
+            selection.subclassName
+              ? getFeatureOwnerKey(
+                  selection.className,
+                  selection.classSource,
+                  selection.subclassName,
+                  selection.subclassSource,
+                )
+              : undefined,
+          ),
+        ),
     )
   ) {
     return true

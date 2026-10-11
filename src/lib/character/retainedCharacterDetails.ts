@@ -5,9 +5,15 @@ import {
 } from '@/lib/5etools/lookups'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
+import {
+  buildClassChoiceFeatureCatalogs,
   collectSubclassFeatures,
   getCreatureChoiceEntries,
   resolveClassChoiceOptionEntity,
+  scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import type {
   Class5e,
@@ -60,6 +66,7 @@ export function buildRetainedCharacterDetails(
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
     const lookups = buildGameDataLookups(data)
+    const featureCatalogs = buildClassChoiceFeatureCatalogs(data)
     for (const feature of [
       ...data.classFeatures,
       ...(data.optionalfeatures as OptionalFeatureLike[]),
@@ -83,33 +90,29 @@ export function buildRetainedCharacterDetails(
       ).forEach(addFeature)
     }
     for (const choice of character.classChoiceSelections ?? []) {
-      const classKey = getEntityLookupKey(choice.className, choice.classSource)
-      const classData = lookups.classesByKey[classKey]
       const catalogs = {
         ...data,
         creatures: data.creatures ?? [],
         optionalFeatures: data.optionalfeatures as OptionalFeatureLike[],
-        classFeatures: [
-          ...classFeatures(classData),
-          ...data.classFeatures.filter(
-            (feature) => getEntityLookupKey(feature.className, feature.classSource) === classKey,
-          ),
-        ],
-        subclassFeatures: collectSubclassFeatures(
-          subclassFor(
-            choice.className,
-            choice.classSource,
-            choice.subclassName,
-            choice.subclassSource,
-          ),
+        ...scopeClassChoiceFeatureCatalogs(
+          featureCatalogs,
+          choice.subclassName
+            ? getFeatureOwnerKey(
+                choice.className,
+                choice.classSource,
+                choice.subclassName,
+                choice.subclassSource,
+              )
+            : undefined,
         ),
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
         if (details[index]?.availability === 'available') return
-        const entity = option.source?.trim()
-          ? resolveClassChoiceOptionEntity(option, catalogs)
-          : undefined
+        const entity =
+          option.source?.trim() || getClassChoiceFeatureTarget(option)
+            ? resolveClassChoiceOptionEntity(option, catalogs)
+            : undefined
         details[index] = entity
           ? {
               availability,

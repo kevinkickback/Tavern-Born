@@ -422,18 +422,15 @@ function buildClassChoiceState(features, selections) {
 
   for (const selection of selections) {
     const featureOptions = selection.selected.filter((option) =>
-      ['classFeature', 'optionalFeature'].includes(option.entityType),
+      ['classFeature', 'subclassFeature', 'optionalFeature'].includes(option.entityType),
     )
     for (const option of featureOptions) {
-      if (
-        materializedFeatures.some(
-          (feature) => feature.name === option.name && feature.source === option.source,
-        )
-      ) {
+      const id = getClassChoiceFeatureId(selection, option)
+      if (materializedFeatures.some((feature) => feature.id === id)) {
         continue
       }
       materializedFeatures.push({
-        id: `class-choice:${encodeURIComponent(selection.choiceId)}:${encodeURIComponent(`${option.name}|${option.source ?? ''}`)}`,
+        id,
         name: option.name,
         source: option.source ?? '',
         description: '',
@@ -882,6 +879,7 @@ function buildClassChoiceSelections(edition) {
             entityType: 'classFeature',
             name: 'Protector',
             source,
+            ref: `Protector|Cleric|${source}|1`,
             slotLevel: 1,
           },
         ],
@@ -1456,6 +1454,7 @@ let parseRaces,
   setRacialCastingAbility,
   applyFeatGrant,
   commitFeatOptionsCommand,
+  getClassChoiceFeatureId,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
@@ -1475,6 +1474,9 @@ try {
   ))
   ;({ commitFeatOptionsCommand } = await runtime.ssrLoadModule(
     '/src/lib/character/commands/featCommands.ts',
+  ))
+  ;({ getClassChoiceFeatureId } = await runtime.ssrLoadModule(
+    '/src/lib/character/classChoiceIdentity.ts',
   ))
 } finally {
   await runtime.close()

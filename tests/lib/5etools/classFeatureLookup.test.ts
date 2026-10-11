@@ -154,7 +154,7 @@ describe('global class-feature identity', () => {
   })
 })
 
-describe('legacy stored-feature action descriptions', () => {
+describe('saved-feature action descriptions', () => {
   test.each([
     {
       first: wizard,
@@ -281,7 +281,7 @@ describe('legacy stored-feature action descriptions', () => {
     expect(deriveRulesTextActions(character, undefined, context)[0]?.kind).toBe('bonus-action')
   })
 
-  test('accepts a unique legacy map supplied without rebuilding the catalog', () => {
+  test('accepts a unique name/source map supplied without rebuilding the catalog', () => {
     const character = makeCharacterFixture({
       classProgression: [],
       features: [{ id: 'saved', name: 'Shared', source: 'PHB', description: '' }],
@@ -296,7 +296,7 @@ describe('legacy stored-feature action descriptions', () => {
   test.each([
     { first: wizard, duplicate: { ...wizard, name: 'shared', source: 'phb' } },
     { first: { ...wizard, source: '' }, duplicate: wizard },
-  ])('treats complete duplicate identities in legacy alias maps as a single target: %j', ({
+  ])('treats complete duplicate identities in catalog alias maps as a single target: %j', ({
     first,
     duplicate,
   }) => {
@@ -330,7 +330,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
     expect({ character, context }).toEqual(before)
   })
 
-  test('keeps a real saved action without duplicating the earned action', () => {
+  test('keeps an unbound saved action independent of the earned action', () => {
     const { character, context } = earnedFeatureFixture(
       kind,
       'As a reaction, use the saved feature.',
@@ -338,14 +338,24 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
     const actions = deriveRulesTextActions(character, undefined, context)
     expect(actions).toMatchObject([
       { id: 'feature:saved', kind: 'reaction', source: { kind: 'other' } },
+      {
+        id: expect.stringMatching(new RegExp(`^${kind}-feature:`)),
+        kind: 'action',
+        source: { kind },
+      },
     ])
     expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
 
-  test('keeps unique saved-feature enrichment without duplicating the earned action', () => {
+  test('keeps unique saved-feature text enrichment without rebinding its identity', () => {
     const { character, context } = earnedFeatureFixture(kind, '', [wizard])
     expect(deriveRulesTextActions(character, undefined, context)).toMatchObject([
       { id: 'feature:saved', kind: 'action', source: { kind: 'other' } },
+      {
+        id: expect.stringMatching(new RegExp(`^${kind}-feature:`)),
+        kind: 'action',
+        source: { kind },
+      },
     ])
   })
 
@@ -358,7 +368,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
   test.each([
     '',
     'As a reaction, use the saved feature.',
-  ])('matches canonical saved spelling when suppressing an earned action: %j', (description) => {
+  ])('enriches canonical saved spelling without suppressing an earned action: %j', (description) => {
     const { character, context } = earnedFeatureFixture(
       kind,
       description,
@@ -367,7 +377,16 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
     character.features[0] = { ...character.features[0], name: 'shared', source: 'phb' }
     const actions = deriveRulesTextActions(character, undefined, context)
     expect(actions).toMatchObject([
-      { id: 'feature:saved', kind: description ? 'reaction' : 'action', source: { kind: 'other' } },
+      {
+        id: 'feature:saved',
+        kind: description ? 'reaction' : 'action',
+        source: { kind: 'other' },
+      },
+      {
+        id: expect.stringMatching(new RegExp(`^${kind}-feature:`)),
+        kind: 'action',
+        source: { kind },
+      },
     ])
     expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
@@ -385,12 +404,12 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
   })
 })
 
-describe('earned class-action source compatibility', () => {
+describe('earned class-action canonical source defaults', () => {
   test.each(
     ['PHB', 'XPHB'].flatMap((classSource) =>
       ['', undefined].map((source) => ({ classSource, source })),
     ),
-  )('suppresses the parsed earned action after unique default-source enrichment: %j', ({
+  )('retains independent saved and earned IDs after unique default-source enrichment: %j', ({
     classSource,
     source,
   }) => {
@@ -414,7 +433,16 @@ describe('earned class-action source compatibility', () => {
     expect(classes[0].classFeatureRefs?.[0]?.feature).toBeDefined()
     const actions = deriveRulesTextActions(character, undefined, context)
     expect(actions).toMatchObject([
-      { id: 'feature:saved', kind: 'action', source: { source: classSource } },
+      {
+        id: 'feature:saved',
+        kind: 'action',
+        source: { source: classSource },
+      },
+      {
+        id: expect.stringMatching(/^class-feature:/),
+        kind: 'action',
+        source: { source: classSource },
+      },
     ])
     expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
@@ -447,12 +475,13 @@ describe('earned class-action source compatibility', () => {
     ).toEqual(['action', 'bonus-action'])
   })
 
-  test('preserves an existing materialized action ID when no UID is supplied', () => {
+  test('retains the same owned group after a complete materialized target gains its UID', () => {
     const { character, context } = earnedFeatureFixture('class', '')
     character.features = []
     context.classes[0].classFeatureRefs![0].ref = ''
-    expect(deriveRulesTextActions(character, undefined, context)[0]?.id).toBe(
-      'class-feature:Shared%7CPHB',
-    )
+    const id = deriveRulesTextActions(character, undefined, context)[0]?.id
+    expect(id).toMatch(/^class-feature:/)
+    context.classes[0].classFeatureRefs![0].ref = ' Shared | Wizard ||1||Display alias'
+    expect(deriveRulesTextActions(character, undefined, context)[0]?.id).toBe(id)
   })
 })

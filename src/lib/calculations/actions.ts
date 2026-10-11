@@ -1,8 +1,12 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
+  decodeClassFeatureReference,
+  decodeSubclassFeatureReference,
   getClassFeatureIdentity,
-  getClassFeatureLegacyLookupKey,
   getClassFeatureReferenceLevel,
+  getClassFeatureTextLookupKey,
+  getSubclassFeatureIdentity,
+  getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
@@ -12,23 +16,36 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
+import {
+  getClassChoiceFeatureId,
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
+import {
+  type ClassChoiceFeatureCatalogs,
+  resolveClassChoiceFeatureEntity,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
   Class5e,
   ClassFeature,
+  ClassFeatureReference,
   Feat5e,
   Item5e,
   OptionalFeatureLike,
   Race5e,
   Spell5e,
+  SubclassFeatureReference,
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { getFeatureActionGroupId } from './featureActionGroups'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 
@@ -70,6 +87,8 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   race?: Race5e
   raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
+  /** Explicit available choice targets; raw text lookups never replenish this catalog. */
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -203,7 +222,11 @@ export function deriveSpellActions(
 
 type RulesTextActionContext = Pick<
   CharacterActionProjectionContext,
-  'classes' | 'feats' | 'classFeaturesByKey' | 'optionalFeaturesByKey'
+  | 'classes'
+  | 'classChoiceFeatureCatalogs'
+  | 'feats'
+  | 'classFeaturesByKey'
+  | 'optionalFeaturesByKey'
 >
 
 function rulesTextAction(
@@ -245,19 +268,21 @@ function deriveStoredFeatureActions(
       identities.add(identity)
     }
     const key =
-      getClassFeatureLegacyLookupKey(feature) ??
+      getClassFeatureTextLookupKey(feature) ??
       getEntityLookupKey(feature.name, feature.source).toLowerCase()
     if (!classFeatures.has(key)) classFeatures.set(key, feature)
     else if (classFeatures.get(key) !== feature) classFeatures.set(key, null)
   }
-  return character.features.flatMap((feature) =>
-    rulesTextAction(
-      `feature:${feature.id}`,
-      feature.name,
-      resolveStoredFeatureDescription(feature, context, classFeatures),
-      { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
-    ),
-  )
+  return character.features
+    .filter((feature) => !feature.id.startsWith('class-choice:'))
+    .flatMap((feature) =>
+      rulesTextAction(
+        `feature:${feature.id}`,
+        feature.name,
+        resolveStoredFeatureDescription(feature, context, classFeatures),
+        { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
+      ),
+    )
 }
 
 function deriveFeatActions(
@@ -290,15 +315,61 @@ function deriveFeatActions(
 function deriveClassFeatureActions(
   character: Character,
   context: RulesTextActionContext,
-  storedActions: readonly CharacterAction[],
 ): CharacterAction[] {
-  const storedKeys = new Set(
-    storedActions.map((action) =>
-      getEntityLookupKey(action.source.name, action.source.source).toLowerCase(),
-    ),
-  )
-  const projectedKeys = new Set<string>()
-  const actions: CharacterAction[] = []
+  const actions = new Map<string, CharacterAction>()
+  const addAction = (
+    owner: string,
+    target: string,
+    feature: ClassFeature,
+    source: CharacterAction['source'],
+  ) => {
+    const description = renderEntriesToText(feature.entries)
+    const kind = inferRulesTextActionKind(description)
+    if (!kind) return
+    const id = getFeatureActionGroupId(owner, target, feature.entries ?? [])
+    if (!actions.has(id))
+      actions.set(id, { id, name: feature.name, kind, description, source, active: true })
+  }
+  function collect(
+    reference: ClassFeatureReference | SubclassFeatureReference,
+    kind: 'class' | 'subclass',
+    owner: string,
+    currentLevel: number,
+  ) {
+    const feature = reference.feature
+    const subclass = kind === 'subclass'
+    const level = subclass
+      ? getSubclassFeatureReferenceLevel(reference)
+      : getClassFeatureReferenceLevel(reference)
+    if (!feature || level === undefined || level > currentLevel) return
+    const decoded = reference.ref?.trim()
+      ? subclass
+        ? decodeSubclassFeatureReference(reference.ref)
+        : decodeClassFeatureReference(reference.ref)
+      : {
+          ...feature,
+          ...Object.fromEntries(
+            Object.entries(reference).filter(([, value]) => value !== undefined && value !== null),
+          ),
+          level,
+          source: reference.source ?? feature.source,
+        }
+    const identity = subclass
+      ? getSubclassFeatureIdentity(decoded)
+      : getClassFeatureIdentity(decoded)
+    if (!identity) return
+    const inheritedSource = subclass
+      ? 'subclassSource' in decoded
+        ? decoded.subclassSource
+        : undefined
+      : decoded.classSource
+    const source = decoded.source?.trim() || inheritedSource?.trim() || 'PHB'
+    addAction(owner, identity, feature, {
+      kind,
+      name: feature.name,
+      source,
+    })
+  }
   for (const entry of getCharacterClassEntries(character)) {
     const classData = (context.classes ?? [])
       .filter(
@@ -307,44 +378,83 @@ function deriveClassFeatureActions(
       )
       .sort((left, right) => left.source.localeCompare(right.source))[0]
     if (!classData) continue
-
+    const owner = getFeatureOwnerKey(classData.name, classData.source)
     for (const reference of classData.classFeatureRefs ?? []) {
-      const feature = reference.feature
-      const level = getClassFeatureReferenceLevel(reference)
-      if (!feature || level === undefined || level > entry.levels) continue
-      const key = getEntityLookupKey(feature.name, feature.source)
-      const storedKey = getClassFeatureLegacyLookupKey(feature) ?? key.toLowerCase()
-      if (storedKeys.has(storedKey) || projectedKeys.has(key)) continue
-      projectedKeys.add(key)
-      actions.push(
-        ...rulesTextAction(
-          `class-feature:${encodeURIComponent(reference.ref || key)}`,
-          feature.name,
-          renderEntriesToText(feature.entries),
-          { kind: 'class', name: feature.name, source: feature.source },
-        ),
-      )
+      collect(reference, 'class', owner, entry.levels)
     }
 
     const subclass = getSelectedSubclassData(classData, entry)
     for (const reference of subclass?.subclassFeatureRefs ?? []) {
-      const feature = reference.feature
-      const level = reference.level ?? feature?.level ?? 0
-      if (!feature || level > entry.levels) continue
-      const key = getEntityLookupKey(feature.name, feature.source)
-      if (storedKeys.has(key.toLowerCase()) || projectedKeys.has(key)) continue
-      projectedKeys.add(key)
-      actions.push(
-        ...rulesTextAction(
-          `subclass-feature:${encodeURIComponent(reference.ref || key)}`,
-          feature.name,
-          renderEntriesToText(feature.entries),
-          { kind: 'subclass', name: feature.name, source: feature.source },
-        ),
+      collect(
+        reference,
+        'subclass',
+        getFeatureOwnerKey(classData.name, classData.source, subclass?.name, subclass?.source),
+        entry.levels,
       )
     }
   }
-  return actions
+  for (const selection of character.classChoiceSelections ?? []) {
+    if (selection.inactive) continue
+    const entry = getCharacterClassEntries(character).find(
+      (candidate) =>
+        getFeatureOwnerKey(
+          candidate.name,
+          candidate.source,
+          selection.subclassName ? candidate.subclass : undefined,
+          selection.subclassName ? candidate.subclassSource : undefined,
+        ) ===
+        getFeatureOwnerKey(
+          selection.className,
+          selection.classSource,
+          selection.subclassName,
+          selection.subclassSource,
+        ),
+    )
+    if (!entry || entry.levels < selection.classLevel) continue
+    const owner = getFeatureOwnerKey(
+      selection.className,
+      selection.classSource,
+      selection.subclassName,
+      selection.subclassSource,
+    )
+    for (const option of selection.selected) {
+      if (option.slotLevel > entry.levels) continue
+      if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
+        const target = getClassChoiceFeatureTarget(option)
+        const feature = context.classChoiceFeatureCatalogs
+          ? resolveClassChoiceFeatureEntity(
+              option,
+              scopeClassChoiceFeatureCatalogs(
+                context.classChoiceFeatureCatalogs,
+                selection.subclassName ? owner : undefined,
+              ),
+            )
+          : undefined
+        if (target && feature)
+          addAction(owner, target, feature, {
+            kind: selection.subclassName ? 'subclass' : 'class',
+            name: feature.name,
+            source: option.source?.trim() || target.split('|').slice(-1)[0],
+          })
+      } else if (option.entityType === 'optionalFeature') {
+        const feature = context.optionalFeaturesByKey?.[
+          getEntityLookupKey(option.name, option.source)
+        ] as OptionalFeatureLike | undefined
+        const [action] = rulesTextAction(
+          `feature:${getClassChoiceFeatureId(selection, option)}`,
+          option.name,
+          renderEntriesToText(feature?.entries),
+          {
+            kind: selection.subclassName ? 'subclass' : 'class',
+            name: option.name,
+            source: option.source,
+          },
+        )
+        if (action) actions.set(action.id, action)
+      }
+    }
+  }
+  return [...actions.values()]
 }
 
 /** Projects feature, feat, and species rules only when their text explicitly grants an action. */
@@ -354,7 +464,7 @@ export function deriveRulesTextActions(
   context: RulesTextActionContext = {},
 ): CharacterAction[] {
   const featureActions = deriveStoredFeatureActions(character, context)
-  const classFeatureActions = deriveClassFeatureActions(character, context, featureActions)
+  const classFeatureActions = deriveClassFeatureActions(character, context)
   const featActions = deriveFeatActions(character, context)
   const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(
     (entry, index): CharacterAction[] => {

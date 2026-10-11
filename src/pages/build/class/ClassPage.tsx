@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspace'
+import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -18,7 +19,6 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -40,7 +40,6 @@ import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
 import type {
   Class5e,
-  ClassFeature,
   Creature5e,
   Feat5e,
   Item5e,
@@ -66,6 +65,7 @@ export function BuildClassPage() {
     itemsBase,
     itemMasteries,
   } = useFilteredGameData()
+  const featureCatalogs = useClassChoiceFeatureCatalogs()
   const classLookup = useClassLookup()
   const spellLookup = useSpellLookup()
   const { selectClass } = useUnifiedClassSelection()
@@ -123,8 +123,7 @@ export function BuildClassPage() {
   )
   const classChoiceCatalogs = useMemo(
     () => ({
-      classFeatures: classFeatures as ClassFeature[],
-      subclassFeatures: collectSubclassFeatures(viewingSubclassSpellcastingData),
+      ...featureCatalogs,
       creatures: creatures as Creature5e[],
       feats: feats as Feat5e[],
       items: items as Item5e[],
@@ -135,7 +134,7 @@ export function BuildClassPage() {
       ).filter((feature) => includeClassFeatureVariants || !feature.isClassFeatureVariant),
     }),
     [
-      classFeatures,
+      featureCatalogs,
       creatures,
       feats,
       includeClassFeatureVariants,
@@ -143,7 +142,6 @@ export function BuildClassPage() {
       items,
       itemsBase,
       optionalfeatures,
-      viewingSubclassSpellcastingData,
     ],
   )
   const spellController = useClassSpellChoiceController(

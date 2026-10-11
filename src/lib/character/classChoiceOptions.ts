@@ -1,19 +1,26 @@
 import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classData'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
+  Class5e,
   ClassFeature,
   Creature5e,
   Feat5e,
+  GameData,
   Item5e,
   ItemMastery5e,
   ItemPropertyReference,
@@ -29,6 +36,11 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
+import {
+  getClassChoiceFeatureTarget,
+  getClassChoiceOptionKey,
+  getFeatureOwnerKey,
+} from './classChoiceIdentity'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
@@ -62,9 +74,14 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
   return option.availability === 'eligible'
 }
 
-export interface ClassChoiceCatalogs {
+export interface ClassChoiceFeatureCatalogs {
   classFeatures: readonly ClassFeature[]
   subclassFeatures: readonly SubclassFeature[]
+  /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
+  subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
+}
+
+export interface ClassChoiceCatalogs extends ClassChoiceFeatureCatalogs {
   creatures: readonly Creature5e[]
   feats: readonly Feat5e[]
   items: readonly Item5e[]
@@ -88,11 +105,7 @@ function normalized(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? ''
 }
 
-export function getClassChoiceOptionKey(
-  option: Pick<NormalizedChoiceOptionReference, 'entityType' | 'name' | 'source'>,
-): string {
-  return `${option.entityType}|${normalized(option.name)}|${normalized(option.source)}`
-}
+export { getClassChoiceOptionKey } from './classChoiceIdentity'
 
 function getCatalog(
   entityType: ChoiceOptionEntityType,
@@ -471,6 +484,19 @@ function getOptionSearchText(
   return terms.filter((term): term is string => Boolean(term)).join(' ')
 }
 
+function featureReference(
+  entityType: ChoiceOptionEntityType,
+  entity: ChoiceCatalogEntity,
+): { ref?: string } {
+  const target =
+    entityType === 'classFeature'
+      ? getClassFeatureIdentity(entity)
+      : entityType === 'subclassFeature'
+        ? getSubclassFeatureIdentity(entity)
+        : undefined
+  return target ? { ref: target.split('|').slice(1).join('|') } : {}
+}
+
 function toView(
   entityType: ChoiceOptionEntityType,
   entity: ChoiceCatalogEntity,
@@ -510,6 +536,7 @@ function toView(
       entityType,
       name: entity.name,
       ...(entity.source ? { source: entity.source } : {}),
+      ...featureReference(entityType, entity),
     },
     entries: creature
       ? getCreatureChoiceEntries(creature)
@@ -533,11 +560,52 @@ export function resolveClassChoiceOptionEntity(
   option: NormalizedChoiceOptionReference,
   catalogs: Parameters<typeof getCatalog>[1],
 ): ChoiceCatalogEntity | undefined {
+  if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
+    return resolveClassChoiceFeatureEntity(option, catalogs)
+  }
   return getCatalog(option.entityType, catalogs).find(
     (entity) =>
       normalized(entity.name) === normalized(option.name) &&
       (!option.source || normalized(entity.source) === normalized(option.source)),
   )
+}
+
+/** Feature choices resolve only within their explicitly supplied target catalog. */
+export function resolveClassChoiceFeatureEntity(
+  option: NormalizedChoiceOptionReference,
+  catalogs: Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'>,
+): ClassFeature | SubclassFeature | undefined {
+  const target = getClassChoiceFeatureTarget(option)
+  if (!target) return undefined
+  if (option.entityType === 'classFeature') {
+    return catalogs.classFeatures.find((feature) => getClassFeatureIdentity(feature) === target)
+  }
+  if (option.entityType !== 'subclassFeature') return undefined
+  const matches = catalogs.subclassFeatures.filter(
+    (feature) => getSubclassFeatureIdentity(feature) === target,
+  )
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+export function scopeClassChoiceFeatureCatalogs(
+  catalogs: ClassChoiceFeatureCatalogs,
+  subclassOwner?: string,
+): Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'> {
+  if (!catalogs.subclassTargets) return catalogs
+  const targets = subclassOwner
+    ? catalogs.subclassTargets.byOwner.get(subclassOwner)
+    : catalogs.subclassTargets.unique
+  return { classFeatures: catalogs.classFeatures, subclassFeatures: [...(targets?.values() ?? [])] }
+}
+
+/** Build all qualified targets together from one authoritative, complete filtered data view. */
+export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' | 'classFeatures'>) {
+  const subclassTargets = indexSubclassFeatureTargets(data.classes)
+  return {
+    classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
+    subclassFeatures: [...subclassTargets.unique.values()],
+    subclassTargets,
+  }
 }
 
 function resolveExplicitOption(
@@ -554,6 +622,7 @@ function resolveExplicitOption(
           entityType: option.entityType,
           name: option.name,
           ...(option.source ? { source: option.source } : {}),
+          ...(option.ref ? { ref: option.ref } : {}),
         },
         entries: [],
       }
@@ -566,6 +635,18 @@ export function resolveClassChoiceOptions(
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
 ): ClassChoiceOptionView[] {
+  if (catalogs.subclassTargets) {
+    const owner =
+      choice.owner.type === 'subclass'
+        ? getFeatureOwnerKey(
+            choice.owner.name,
+            choice.owner.source,
+            choice.owner.subclassName,
+            choice.owner.subclassSource,
+          )
+        : undefined
+    catalogs = { ...catalogs, ...scopeClassChoiceFeatureCatalogs(catalogs, owner) }
+  }
   const filter = choice.optionFilter
   const resolved: ClassChoiceOptionView[] = []
   if (choice.options.length > 0) {
@@ -740,4 +821,36 @@ export function collectSubclassFeatures(subclass: Subclass5e | undefined): Subcl
   for (const reference of subclass?.subclassFeatureRefs ?? []) visit(reference.feature)
   for (const group of subclass?.levelFeatures ?? []) group.features.forEach(visit)
   return [...features]
+}
+
+/** Catalog copies of one target remain unique within their actual full owner. */
+export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
+  const byOwner = new Map<string, Map<string, SubclassFeature>>()
+  for (const classData of classes) {
+    for (const subclass of classData.subclasses ?? []) {
+      const owner = getFeatureOwnerKey(
+        classData.name,
+        classData.source,
+        subclass.name,
+        subclass.source,
+      )
+      const targets = byOwner.get(owner) ?? new Map<string, SubclassFeature>()
+      for (const feature of collectSubclassFeatures(subclass)) {
+        const target = getSubclassFeatureIdentity(feature)
+        if (target) targets.set(target, feature)
+      }
+      byOwner.set(owner, targets)
+    }
+  }
+  const unique = new Map<string, SubclassFeature>()
+  const ambiguous = new Set<string>()
+  for (const targets of byOwner.values()) {
+    for (const [target, feature] of targets) {
+      if (unique.has(target)) {
+        unique.delete(target)
+        ambiguous.add(target)
+      } else if (!ambiguous.has(target)) unique.set(target, feature)
+    }
+  }
+  return { byOwner, unique }
 }

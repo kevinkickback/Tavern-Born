@@ -1,6 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
+import {
+  collectSubclassFeatures,
+  getClassChoiceOptionKey,
+  indexSubclassFeatureTargets,
+} from '@/lib/character/classChoiceOptions'
 import {
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
@@ -12,7 +18,7 @@ import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClas
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Feat5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, Feat5e, Subclass5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
@@ -539,7 +545,14 @@ describe('class page controllers', () => {
       minimumSelections: 1,
       maximumSelections: 1,
       selectionCountByLevel: Array(20).fill(1),
-      options: [{ entityType: 'classFeature' as const, name: 'Current Study', source: 'PHB' }],
+      options: [
+        {
+          entityType: 'classFeature' as const,
+          name: 'Current Study',
+          source: 'PHB',
+          ref: 'Current Study|Wizard||1',
+        },
+      ],
       repeatable: false,
       replacement: { cadence: 'never' as const },
       source: { kind: 'class-feature-options' as const, field: 'fixture' },
@@ -568,6 +581,7 @@ describe('class page controllers', () => {
               entityType: 'classFeature',
               name: 'Archived Study',
               source: 'OLD',
+              ref: 'Archived Study|Wizard||1|OLD',
               slotLevel: 1,
             },
           ],
@@ -585,7 +599,16 @@ describe('class page controllers', () => {
         viewingClassData: classEntity,
         viewingClassLevel: 4,
         catalogs: {
-          classFeatures: [{ name: 'Current Study', source: 'PHB', entries: [] }],
+          classFeatures: [
+            {
+              name: 'Current Study',
+              source: 'PHB',
+              className: 'Wizard',
+              classSource: 'PHB',
+              level: 1,
+              entries: [],
+            },
+          ],
           subclassFeatures: [],
           creatures: [],
           feats: [],
@@ -602,7 +625,9 @@ describe('class page controllers', () => {
       (option) => option.reference.name === 'Archived Study',
     )
     expect(retained?.availability).toBe('retained')
-    expect(result.current.activeInitialSelectedIds).toEqual(['classFeature|archived study|old'])
+    expect(result.current.activeInitialSelectedIds).toEqual([
+      getClassChoiceOptionKey(character.classChoiceSelections![0].selected[0]),
+    ])
 
     act(() => result.current.confirm(retained ? [retained] : []))
     expect(
@@ -614,5 +639,97 @@ describe('class page controllers', () => {
     expect(
       useCharacterStore.getState().activeCharacter?.classChoiceSelections?.[0]?.selected,
     ).toEqual([expect.objectContaining({ name: 'Current Study', source: 'PHB' })])
+  })
+  test('a class choice picker keeps competing full subclass owners unresolved', () => {
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||3'] }],
+      classFeature: [
+        {
+          name: 'Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 3,
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [
+                { type: 'refSubclassFeature', subclassFeature: 'Beacon|Wizard||School||3' },
+              ],
+            },
+          ],
+        },
+      ],
+      subclass: [
+        {
+          name: 'First School',
+          shortName: 'School',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: ['Beacon|Wizard||School||3'],
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Beacon',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassShortName: 'School',
+          subclassSource: 'PHB',
+          level: 3,
+          entries: ['As an action, light a beacon.'],
+        },
+      ],
+    }) as Class5e[]
+    const first = classes[0].subclasses![0]
+    const choice = classes[0].normalizedRules!.choices[0]
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3, subclass: first.name, subclassSource: 'PHB' },
+      ],
+    })
+    const catalogs = (allClasses: Class5e[]) => ({
+      classFeatures: [],
+      // The page's viewing subclass is only a subset of the composed catalog.
+      subclassFeatures: collectSubclassFeatures(first),
+      subclassTargets: indexSubclassFeatureTargets(allClasses),
+      creatures: [],
+      feats: [],
+      items: [],
+      itemsBase: [],
+      itemMasteries: [],
+      optionalFeatures: [],
+    })
+    const { result, rerender } = renderHook(
+      ({ allClasses }) =>
+        useClassChoiceController({
+          character,
+          viewingClassData: classes[0],
+          viewingSubclassData: first,
+          viewingClassLevel: 3,
+          catalogs: catalogs(allClasses),
+        }),
+      { initialProps: { allClasses: classes } },
+    )
+    act(() => result.current.open(choice))
+    expect(result.current.activeOptionViews).toMatchObject([
+      { availability: 'eligible', entries: ['As an action, light a beacon.'] },
+    ])
+    const competing = structuredClone(classes)
+    competing[0].subclasses!.push({ ...structuredClone(first), name: 'Second School' })
+    for (const reverse of [false, true]) {
+      if (reverse) competing[0].subclasses!.reverse()
+      rerender({ allClasses: competing })
+      expect(result.current.activeOptionViews).toMatchObject([
+        { availability: 'retained', entries: [] },
+      ])
+    }
+    rerender({ allClasses: classes })
+    expect(result.current.activeOptionViews).toMatchObject([
+      { availability: 'eligible', entries: ['As an action, light a beacon.'] },
+    ])
   })
 })

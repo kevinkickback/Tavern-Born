@@ -30,6 +30,7 @@ import {
 } from '@/components/workspace'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
+import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   useBackgroundLookup,
@@ -148,11 +149,13 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
   const readiness = useCharacterReadiness(character)
+  const classChoiceFeatureCatalogs = useClassChoiceFeatureCatalogs()
   const calculation = useCharacterCalculationContext(character)
   const viewModel = useMemo(
     () =>
       character
         ? createCharacterSheetViewModel(character, {
+            classChoiceFeatureCatalogs,
             classesByKey,
             classFeaturesByKey,
             optionalFeaturesByKey,
@@ -170,6 +173,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       backgroundsByKey,
       character,
       classFeaturesByKey,
+      classChoiceFeatureCatalogs,
       classesByKey,
       creaturesByKey,
       featsByKey,

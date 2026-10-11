@@ -21,6 +21,7 @@ import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 const catalog = vi.hoisted(() => ({
@@ -32,7 +33,7 @@ const catalog = vi.hoisted(() => ({
   },
 }))
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
-  useFilteredGameData: () => ({ races: catalog.filtered }),
+  useFilteredGameData: () => makeGameDataFixture({ races: catalog.filtered }),
 }))
 vi.mock('@/hooks/data/useGameData', () => ({
   useRaceLookup: () => catalog.lookups.racesByKey,
