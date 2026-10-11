@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Canonical owned action identity measures 5,635,597 renderer bytes (+1,733).
+  // Canonical owned action identity measures 5,635,657 renderer bytes (+1,793).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5504 * KIB,

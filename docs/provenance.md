@@ -293,7 +293,8 @@ Actions and PDF use one pure projection. Earned class/subclass actions retain th
 feature UID and the actual selected owner. UID source defaults, casing and display aliases identify
 one feature; subclass UIDs use their separate field order. A positive integer encoded gain level
 is authoritative; malformed nonempty UIDs never borrow materialized metadata. Rows without a UID
-require valid materialized levels and complete feature ownership.
+require valid materialized levels and complete feature ownership. Absent reference fields retain
+the materialized target's identity fields; explicit reference values remain authoritative.
 
 Distinct owners, printings and different gain-level rules remain separate. Repeated gains share
 one action only when their parsed entries are structurally identical within the same owner/feature

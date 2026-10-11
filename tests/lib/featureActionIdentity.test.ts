@@ -6,7 +6,7 @@ import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
-import type { Class5e, ClassFeatureReference } from '@/types/5etools'
+import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
@@ -128,6 +128,75 @@ test('different target printings remain independent under one actual owner', () 
   const actions = observe([makeClassFixture({ classFeatureRefs: [first, other] })])
   expect(actions.map((action) => action.source.source)).toEqual(['PHB', 'TCE'])
   expect(new Set(actions.map((action) => action.id)).size).toBe(2)
+})
+
+test.each([
+  'class',
+  'subclass',
+] as const)('missing %s reference fields retain complete materialized target identity', (kind) => {
+  const references: SubclassFeatureReference[] = ['PHB', 'XPHB'].map((classSource) => ({
+    ...reference(),
+    ref: '',
+    source: undefined,
+    classSource: undefined,
+    level: undefined,
+    subclassShortName: 'School',
+    subclassSource: undefined,
+    feature: {
+      ...reference().feature!,
+      classSource,
+      source: 'TCE',
+      subclassShortName: 'School',
+      subclassSource: 'TCE',
+    },
+  }))
+  const classes = [
+    makeClassFixture({
+      classFeatureRefs: kind === 'class' ? references : [],
+      subclasses: [
+        {
+          name: 'School',
+          shortName: 'School',
+          source: 'TCE',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatureRefs: kind === 'subclass' ? references : [],
+        },
+      ],
+    }),
+  ]
+  const character = makeCharacterFixture({
+    features: [],
+    classProgression: [
+      { name: 'Wizard', source: 'PHB', levels: 1, subclass: 'School', subclassSource: 'TCE' },
+    ],
+  })
+  const view = () =>
+    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+  const owner = kind === 'class' ? 'wizard|phb' : JSON.stringify(['wizard|phb', 'school|tce'])
+  const expectedId = (classSource: string) =>
+    `${kind}-feature:${encodeURIComponent(JSON.stringify([owner, kind === 'class' ? `class-feature|shared|wizard|${classSource}|1|tce` : `subclass-feature|shared|wizard|${classSource}|school|tce|1|tce`]))}`
+  const before = structuredClone({ character, classes })
+  const actions = view().actions
+  expect(actions.map((action) => action.id)).toEqual([expectedId('phb'), expectedId('xphb')])
+  expect(deriveRulesTextActions(character, undefined, { classes })).toEqual(actions)
+  expect({ character, classes }).toEqual(before)
+  for (const action of actions) {
+    expect(
+      planSheetContent(view(), '2014-custom', { action: [action.id] }).groups.find(
+        (group) => group.id === 'action',
+      ),
+    ).toMatchObject({ automatic: false, selected: [action.id] })
+  }
+  for (const ref of references) {
+    delete ref.classSource
+    delete ref.subclassSource
+    delete ref.source
+    delete ref.level
+  }
+  expect(view().actions).toEqual(actions)
+  references[1].classSource = 'XGE'
+  expect(view().actions.map((action) => action.id)).toEqual([expectedId('phb'), expectedId('xge')])
 })
 
 test('different gain rules remain independent; passive earlier references never hide an action', () => {

@@ -328,7 +328,14 @@ function deriveClassFeatureActions(
       ? subclass
         ? decodeSubclassFeatureReference(reference.ref)
         : decodeClassFeatureReference(reference.ref)
-      : { ...feature, ...reference, level, source: reference.source ?? feature.source }
+      : {
+          ...feature,
+          ...Object.fromEntries(
+            Object.entries(reference).filter(([, value]) => value !== undefined && value !== null),
+          ),
+          level,
+          source: reference.source ?? feature.source,
+        }
     const identity = subclass
       ? getSubclassFeatureIdentity(decoded)
       : getClassFeatureIdentity(decoded)
