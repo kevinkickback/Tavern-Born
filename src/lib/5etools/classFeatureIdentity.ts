@@ -1,4 +1,4 @@
-import type { ClassFeatureReference } from '@/types/5etools'
+import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 
 interface ClassFeatureIdentityInput {
   name?: unknown
@@ -6,6 +6,11 @@ interface ClassFeatureIdentityInput {
   classSource?: unknown
   level?: unknown
   source?: unknown
+}
+
+interface SubclassFeatureIdentityInput extends ClassFeatureIdentityInput {
+  subclassShortName?: unknown
+  subclassSource?: unknown
 }
 
 function sourceKey(value: unknown, fallback: string): string | undefined {
@@ -79,6 +84,69 @@ export function getClassFeatureReferenceLevel(
   if (typeof ref.ref === 'string' && ref.ref.trim()) {
     const decoded = decodeClassFeatureReference(ref.ref)
     return getClassFeatureIdentity(decoded) ? decoded.level : undefined
+  }
+  if (ref.ref !== undefined && typeof ref.ref !== 'string') return undefined
+  const level = ref.level !== undefined ? ref.level : ref.feature?.level
+  return typeof level === 'number' && Number.isInteger(level) && level > 0 ? level : undefined
+}
+
+/** Subclass UIDs have their own field order and PHB defaults in DataUtil.class. */
+export function decodeSubclassFeatureReference(uid: string): SubclassFeatureReference {
+  const [
+    name = '',
+    className = '',
+    classSource,
+    subclassShortName = '',
+    subclassSource,
+    level,
+    source,
+  ] = uid.split('|').map((part) => part.trim())
+  const gainLevel = Number(level)
+  return {
+    ref: uid,
+    name,
+    className,
+    classSource: classSource || 'PHB',
+    subclassShortName,
+    subclassSource: subclassSource || 'PHB',
+    source: source || subclassSource || 'PHB',
+    ...(Number.isInteger(gainLevel) && gainLevel > 0 ? { level: gainLevel } : {}),
+  }
+}
+
+export function getSubclassFeatureIdentity(
+  feature: SubclassFeatureIdentityInput,
+): string | undefined {
+  const subclassShortName =
+    typeof feature.subclassShortName === 'string'
+      ? feature.subclassShortName.trim().toLowerCase()
+      : ''
+  const subclassSource = sourceKey(feature.subclassSource, 'phb')
+  const identity = normalizeClassFeatureIdentity({
+    ...feature,
+    source: sourceKey(feature.source, subclassSource ?? 'phb'),
+  })
+  return identity && subclassShortName && subclassSource
+    ? [
+        'subclass-feature',
+        identity.name,
+        identity.className,
+        identity.classSource,
+        subclassShortName,
+        subclassSource,
+        identity.level,
+        identity.source,
+      ].join('|')
+    : undefined
+}
+
+/** Never repair a malformed encoded subclass level with materialized metadata. */
+export function getSubclassFeatureReferenceLevel(
+  ref: Pick<SubclassFeatureReference, 'ref' | 'level' | 'feature'>,
+): number | undefined {
+  if (typeof ref.ref === 'string' && ref.ref.trim()) {
+    const decoded = decodeSubclassFeatureReference(ref.ref)
+    return getSubclassFeatureIdentity(decoded) ? decoded.level : undefined
   }
   if (ref.ref !== undefined && typeof ref.ref !== 'string') return undefined
   const level = ref.level !== undefined ? ref.level : ref.feature?.level
