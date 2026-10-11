@@ -162,7 +162,9 @@ function inspectReference(
   catalogs: ReturnType<typeof optionCatalogs>,
   issues: CapabilityIssue[],
 ): void {
-  if (!option.source?.trim()) {
+  const featureOption =
+    option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
+  if (!featureOption && !option.source?.trim()) {
     issues.push({
       code: 'unqualified-reference',
       collection: 'classes',
@@ -172,10 +174,9 @@ function inspectReference(
     })
     return
   }
-  const key =
-    option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
-      ? getClassChoiceFeatureTarget(option)
-      : `${option.name}|${option.source}`
+  const key = featureOption
+    ? getClassChoiceFeatureTarget(option)
+    : `${option.name}|${option.source}`
   if (key && catalogs[option.entityType].has(key)) return
   issues.push({
     code: 'unresolved-reference',

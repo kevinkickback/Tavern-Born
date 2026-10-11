@@ -51,8 +51,11 @@ choice descriptors are normalized after layering. Explicit class and subclass ch
 are checked against the completed class-feature, subclass-feature, creature, feat, item, and
 optional-feature catalogs.
 Class/subclass choice options preserve their complete encoded feature UIDs through normalization
-and exact catalog resolution. Dependency audits check every owner, gain and printing field rather
-than only `name|source`. Cache schema28 rebuilds parsed choices that predate this identity contract.
+and exact catalog resolution. Dependency and capability audits check every owner, gain and printing
+field rather than only `name|source`. A complete feature UID supplies its encoded or upstream-default
+printing when the duplicated source is absent or blank; explicit source/name conflicts remain
+unresolved. Other choice types still require an explicit source. Cache schema28 rebuilds parsed
+choices that predate this identity contract.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names

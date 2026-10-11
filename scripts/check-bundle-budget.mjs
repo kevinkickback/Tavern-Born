@@ -14,11 +14,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Stable feature actions and filtered choice targets measure 5,644,380 renderer bytes (+10,516).
+  // Stable feature actions and filtered choice targets measure 5,644,414 renderer bytes (+10,550).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5513 * KIB,
-  // Shared choice identity and filtering measure 480,380 initial bytes (+1,156).
+  // Shared choice identity and filtering measure 480,414 initial bytes (+1,190).
   // Use the smallest whole-KiB allowance after explicit budget review.
   initialRendererScript: 470 * KIB,
   initialStylesheet: 185 * KIB,

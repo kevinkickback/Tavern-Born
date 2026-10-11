@@ -1,11 +1,160 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { parseItemProperties } from '@/lib/5etools/parsers/basic'
+import type { NormalizedChoiceOptionReference, NormalizedClassRules } from '@/types/classRules'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
+  test.each([
+    ['classFeature', 'class'],
+    ['classFeature', 'subclass'],
+    ['subclassFeature', 'class'],
+    ['subclassFeature', 'subclass'],
+  ] as const)('%s dependency audits honor complete UIDs in %s choices', (entityType, ownerType) => {
+    const target = {
+      name: 'Signal',
+      source: '',
+      className: 'Wizard',
+      classSource: 'PHB',
+      level: 3,
+      subclassShortName: 'School',
+      subclassSource: 'PHB',
+      entries: ['As an action, send a signal.'],
+    }
+    const ref = entityType === 'classFeature' ? 'Signal|Wizard||3' : 'Signal|Wizard||School||3'
+    const option: NormalizedChoiceOptionReference = { entityType, name: 'Signal', ref }
+    const emptyRules: NormalizedClassRules = {
+      resources: [],
+      asiLevels: [],
+      ritualCasting: false,
+      choices: [],
+      choiceDiagnostics: [],
+    }
+    const rules: NormalizedClassRules = {
+      ...emptyRules,
+      choices: [
+        {
+          id: 'signal-choice',
+          label: 'Signal choice',
+          kind: entityType === 'classFeature' ? 'class-feature' : 'subclass-feature',
+          owner: { type: 'class', name: 'Wizard', source: 'PHB' },
+          level: 3,
+          minimumSelections: 1,
+          maximumSelections: 1,
+          selectionCountByLevel: [0, 0, 1],
+          options: [option],
+          repeatable: false,
+          replacement: { cadence: 'never' },
+          source: { kind: 'class-feature-options', field: 'entries' },
+        },
+      ],
+    }
+    if (ownerType === 'subclass') {
+      rules.choices[0].owner = {
+        ...rules.choices[0].owner,
+        type: 'subclass',
+        subclassName: 'School of Signals',
+        subclassSource: 'PHB',
+      }
+    }
+    const classData = makeClassFixture({
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: ownerType === 'class' ? rules : emptyRules,
+      subclasses: [
+        {
+          name: 'School of Signals',
+          shortName: 'School',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: entityType === 'subclassFeature' ? [target] : [],
+          normalizedRules: ownerType === 'subclass' ? rules : emptyRules,
+        },
+      ],
+    })
+    const data = makeGameDataFixture({
+      classes: [classData],
+      classFeatures: entityType === 'classFeature' ? [target] : [],
+    })
+    const audit = (reference: NormalizedChoiceOptionReference, available = data) => {
+      rules.choices[0].options = [reference]
+      const before = structuredClone(available)
+      const result = {
+        dependencies: findLayerDependencyIssues(available, data),
+        capabilities: createCorpusCapabilityReport(available).issues,
+      }
+      expect(available).toEqual(before)
+      return result
+    }
+    for (const source of [undefined, '', '  ', 'PHB', 'phb', ' PHB ']) {
+      expect(audit({ ...option, source })).toEqual({ dependencies: [], capabilities: [] })
+    }
+    for (const invalid of [
+      { ...option, source: 'TCE' },
+      { ...option, name: 'Other target' },
+      { ...option, ref: `${ref}junk` },
+      { ...option, ref: undefined },
+    ]) {
+      const result = audit(invalid)
+      expect(result.dependencies).toHaveLength(1)
+      expect(result.capabilities).toMatchObject([{ code: 'unresolved-reference' }])
+    }
+    rules.choices[0].options = [option]
+    const missing = structuredClone(data)
+    missing.classFeatures = []
+    missing.classes[0].subclasses![0].subclassFeatures = []
+    const missingResult = audit(option, missing)
+    expect(missingResult.dependencies).toHaveLength(1)
+    expect(missingResult.capabilities).toMatchObject([{ code: 'unresolved-reference' }])
+    expect(audit(option)).toEqual({ dependencies: [], capabilities: [] })
+  })
+
+  test('non-feature choice audits still require an explicit printing', () => {
+    const classData = makeClassFixture({
+      classFeatures: [],
+      classFeatureRefs: [],
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [
+          {
+            id: 'feat-choice',
+            label: 'Feat choice',
+            kind: 'feat',
+            owner: { type: 'class', name: 'Wizard', source: 'PHB' },
+            level: 1,
+            minimumSelections: 1,
+            maximumSelections: 1,
+            selectionCountByLevel: [1],
+            options: [{ entityType: 'feat', name: 'Signal Feat', source: 'PHB' }],
+            repeatable: false,
+            replacement: { cadence: 'never' },
+            source: { kind: 'class-feature-options', field: 'entries' },
+          },
+        ],
+        choiceDiagnostics: [],
+      },
+    })
+    const data = makeGameDataFixture({
+      classes: [classData],
+      feats: [{ name: 'Signal Feat', source: 'PHB' }],
+    })
+    expect(findLayerDependencyIssues(data, data)).toEqual([])
+    expect(createCorpusCapabilityReport(data).issues).toEqual([])
+    for (const source of [undefined, '', '  ']) {
+      classData.normalizedRules!.choices[0].options[0].source = source
+      expect(findLayerDependencyIssues(data, data)).toHaveLength(1)
+      expect(createCorpusCapabilityReport(data).issues).toMatchObject([
+        { code: 'unqualified-reference' },
+      ])
+    }
+  })
+
   test('resolves an added copied item against its base-layer parent', () => {
     const composed = composeGameDataLayers([
       makeGameDataFixture({

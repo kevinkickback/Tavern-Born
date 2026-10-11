@@ -299,11 +299,16 @@ export function findLayerDependencyIssues(
     for (const [choiceIndex, choice] of (classData.normalizedRules?.choices ?? []).entries()) {
       for (const [optionIndex, option] of choice.options.entries()) {
         const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
-        const key =
+        const featureOption =
           option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
-            ? getClassChoiceFeatureTarget(option)
-            : entityKey(option.name, option.source)
-        if (option.source && key && optionCatalogs[option.entityType].has(key)) {
+        const key = featureOption
+          ? getClassChoiceFeatureTarget(option)
+          : entityKey(option.name, option.source)
+        if (
+          (featureOption || option.source?.trim()) &&
+          key &&
+          optionCatalogs[option.entityType].has(key)
+        ) {
           continue
         }
         issues.push({
@@ -317,11 +322,16 @@ export function findLayerDependencyIssues(
       for (const [choiceIndex, choice] of (subclass.normalizedRules?.choices ?? []).entries()) {
         for (const [optionIndex, option] of choice.options.entries()) {
           const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
-          const key =
+          const featureOption =
             option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
-              ? getClassChoiceFeatureTarget(option)
-              : entityKey(option.name, option.source)
-          if (option.source && key && optionCatalogs[option.entityType].has(key)) {
+          const key = featureOption
+            ? getClassChoiceFeatureTarget(option)
+            : entityKey(option.name, option.source)
+          if (
+            (featureOption || option.source?.trim()) &&
+            key &&
+            optionCatalogs[option.entityType].has(key)
+          ) {
             continue
           }
           issues.push({
