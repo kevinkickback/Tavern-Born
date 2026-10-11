@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Complete action identity/aliases measure 5,637,128 renderer bytes (+3,264).
+  // Complete action identity/aliases measure 5,637,247 renderer bytes (+3,383).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
   rendererCode: 5506 * KIB,

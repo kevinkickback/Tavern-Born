@@ -296,7 +296,9 @@ is authoritative; malformed nonempty UIDs never borrow materialized metadata. Ro
 require valid materialized levels and complete feature ownership.
 
 Distinct owners, printings and different gain-level rules remain separate. Repeated gains share
-one action only when their parsed entries are identical within the same owner/feature family.
+one action only when their parsed entries are structurally identical within the same owner/feature
+family. Object field order is immaterial; array order, all field values and embedded qualified
+targets remain significant even when rendered text matches.
 Passive references do not consume an action identity. Saved name/source feature actions suppress
 only one unambiguous active earned projection; catalog enrichment retains its unique-match policy.
 When exactly one saved action replaces exactly one earned projection, its compatible IDs follow

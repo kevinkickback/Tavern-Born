@@ -665,6 +665,58 @@ describe('automatic feature action ownership', () => {
     }
   })
 
+  test('repeated gains ignore nested object field order and retain both gain selections', () => {
+    const first = reference('Wizard', 1, '')
+    const second = reference('Wizard', 2, '')
+    first.feature!.entries = [
+      {
+        type: 'entries',
+        name: 'Training',
+        entries: [{ type: 'entries', entries: ['As an action, cast {@spell Light|PHB}.'] }],
+      },
+    ]
+    second.feature!.entries = [
+      {
+        entries: [{ entries: ['As an action, cast {@spell Light|PHB}.'], type: 'entries' }],
+        name: 'Training',
+        type: 'entries',
+      },
+    ]
+    const classes = [makeClassFixture({ classFeatureRefs: [first, second] })]
+    const actions = observe(classes)
+    expect(actions).toHaveLength(1)
+    const character = characterSchema.parse(
+      JSON.parse(
+        JSON.stringify(
+          makeCharacterFixture({
+            features: [],
+            classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
+          }),
+        ),
+      ),
+    )
+    for (const gain of [first, second]) {
+      const group = planSheetContent(
+        createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }),
+        '2014-custom',
+        { action: [`class-feature:${encodeURIComponent(gain.ref)}`] },
+      ).groups.find((entry) => entry.id === 'action')!
+      expect(group).toMatchObject({ automatic: false, selected: [actions[0].id] })
+    }
+  })
+
+  test('repeated gains preserve array order even when every entry has the same text', () => {
+    const first = reference('Wizard', 1, '')
+    const second = reference('Wizard', 2, '')
+    const phb = 'As an action, cast {@spell Light|PHB}.'
+    const xphb = 'As an action, cast {@spell Light|XPHB}.'
+    first.feature!.entries = [phb, xphb]
+    second.feature!.entries = [xphb, phb]
+    const actions = observe([makeClassFixture({ classFeatureRefs: [first, second] })])
+    expect(actions).toHaveLength(2)
+    expect(new Set(actions.map((action) => action.description)).size).toBe(1)
+  })
+
   test('repeated gains with different parsed spell targets remain separate despite matching text', () => {
     const actions = observe([
       makeClassFixture({

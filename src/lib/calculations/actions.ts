@@ -359,7 +359,15 @@ function deriveClassFeatureActions(
     }
     // Repeated gains share an action only when their parsed rules are identical.
     const family = identity.split('|').filter((_, index) => index !== (subclass ? 6 : 4))
-    const mechanics = JSON.stringify([owner, family, feature.entries])
+    const mechanics = JSON.stringify([owner, family, feature.entries], (_key, value: unknown) =>
+      value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, (value as Record<string, unknown>)[key]]),
+          )
+        : value,
+    )
     const repeated = repeatedMechanics.get(mechanics)
     if (repeated) {
       repeated.ids.add(id)
