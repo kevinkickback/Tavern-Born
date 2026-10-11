@@ -113,7 +113,7 @@ Spell targets require exactly two nonempty plain name/source fields or a valid s
 canonical ledger map keys, including name-only spell keys with their printing in `grantSource`.
 Admission rejects aliases in those keys rather than normalizing them into a benefit that removal
 cannot find. Readable saved references and separate owner fields still support case and whitespace.
-The [schema 8 cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
+The [current schema cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
 formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
 
 Race, subrace and background commands reconcile fixed feat setup after the complete replacement
@@ -301,21 +301,21 @@ family. Object field order is immaterial; array order, all field values and embe
 targets remain significant even when rendered text matches.
 Passive references do not consume an action identity. Saved name/source feature actions suppress
 only one unambiguous active earned projection; catalog enrichment retains its unique-match policy.
-When exactly one saved action replaces exactly one earned projection, its compatible IDs follow
-that saved row. Multiple matching saved rows do not assign an override to an arbitrary row.
+When exactly one saved action replaces exactly one earned projection, the projection keeps its
+canonical ID and uses the saved text. Multiple matching saved rows do not select an arbitrary replacement.
 
-Existing unique raw-UID and no-UID action IDs remain usable. Projection-only aliases preserve manual
-overrides and PDF selections across canonical UID spelling changes and identical repeated gains.
-Issued owner-qualified IDs remain aliases when competing owners/gains leave. Unique materialized
-name/source IDs also survive casing/whitespace changes; ambiguous normalized labels cannot bind.
-Legacy uniqueness includes every eligible same-kind name/source target, including complete UID
-targets that never issued that legacy label. Other printings and class/subclass ID kinds remain
-independent.
-Aliases are not character-format fields and are rebuilt from current eligible rules. Ambiguous
-legacy name/source IDs cannot recover an owner: their manual actions remain separate, and wholly
-stale PDF selections follow the usual automatic fallback. Explicit manual actions remain available
-when their source disappears or their gain becomes ineligible; removing the override reveals any
-still-earned action. No historical ownership guessing or character conversion is performed.
+New earned IDs encode the complete canonical target and actual selected owner. A repeated group
+uses its lowest eligible gain deterministically. Its ID remains stable through UID enrichment,
+canonical spelling refresh, owner competition and unique saved-feature handoffs. Manual overrides
+and PDF selections match the exact current ID. Different manual IDs remain independent player rows.
+An unavailable or ineligible source leaves its manual action explicit; restoring the same target
+reunites it by exact ID, and removing an override reveals the still-earned action.
+
+Version 1.0 does not support earlier action-ID forms. No raw-UID/name-source compatibility aliases,
+opaque saved-row handoff aliases, historical ownership inference or character conversion are added.
+Wholly stale PDF selections follow the usual automatic fallback. Upstream UID defaults and complete
+materialized current feature metadata still determine canonical data identity; they are not saved
+character compatibility adapters.
 
 Class-page spell choices and replacements use pure spell commands. `useSpellProvenanceMutations`
 exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes

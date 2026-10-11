@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Complete action identity/aliases measure 5,637,247 renderer bytes (+3,383).
+  // Canonical owned action identity measures 5,635,597 renderer bytes (+1,733).
   // Use the smallest whole-KiB allowance after explicit budget review.
   // Other budgets and enforcement remain unchanged.
-  rendererCode: 5506 * KIB,
+  rendererCode: 5504 * KIB,
   // Shared UID decoding measures 480,049 initial bytes (+825).
   // Use the smallest whole-KiB allowance after explicit budget review.
   initialRendererScript: 469 * KIB,

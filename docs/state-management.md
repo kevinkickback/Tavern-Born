@@ -199,7 +199,11 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-Schema 8 requires independent ordinary/bonus feat setup ownership and a complete relation between
+Schema 9 uses canonical owned action IDs, exact manual/PDF selection matching, and no earlier-ID
+compatibility. Schema 8 prerelease saves are rejected by the version cutoff; no ID conversion is
+performed. See [automatic feature actions](provenance.md#automatic-feature-actions).
+
+The current schema also requires independent ordinary/bonus feat setup ownership and a complete relation between
 saved options, owned benefits and materialized proficiencies/spells. One printing may appear once in
 each collection; duplicate printings in one collection, unqualified setup tags, orphan ownership and
 missing/contradictory benefits reject without loaded rules. Schema 7's shared selected-copy owner
@@ -242,7 +246,7 @@ suite and descriptor Clear work from saved membership without missing-data infer
 usage and independent preparation remain mutable and retain their existing shapes.
 
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
-supported. Schema 2–7 characters must be recreated; merely relabeling a version cannot establish
+supported. Schema 2–8 characters must be recreated; merely relabeling a version cannot establish
 native ownership. Incompatible originals remain untouched in durable quarantine and exportable
 through hydration, rejected imports in either order, retry and later successful library writes.
 There are no prerelease converters, flattened-profile adapters or age-based rejection.

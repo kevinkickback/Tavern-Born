@@ -1,4 +1,3 @@
-import { matchesCharacterActionId } from '@/lib/calculations/featureActionIdentity'
 import type { CharacterAction } from '@/types/actions'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
 import { getOptionalCharacterSheetPages } from './characterSheetPages'
@@ -72,13 +71,13 @@ export function planSheetContent(
     limit: number,
     describe: (row: T, index: number) => SheetContentGroup['entries'][number],
     eligible: (row: T) => boolean = () => true,
-    matchesId: (row: T, id: string) => boolean = () => false,
   ) {
     const entries = rows.map(describe)
     const previous = choices[id]
-    const matches = (entry: SheetContentGroup['entries'][number], index: number) =>
-      previous?.some((savedId) => entry.id === savedId || matchesId(rows[index], savedId))
-    const saved = previous?.length && !entries.some(matches) ? undefined : previous
+    const saved =
+      previous?.length && !entries.some((entry) => previous.includes(entry.id))
+        ? undefined
+        : previous
     const selected =
       saved === undefined
         ? entries
@@ -86,7 +85,7 @@ export function planSheetContent(
             .slice(0, limit)
             .map((entry) => entry.id)
         : entries
-            .filter(matches)
+            .filter((entry) => saved.includes(entry.id))
             .slice(0, limit)
             .map((entry) => entry.id)
     groups.push({ id, label, capacity: limit, entries, selected, automatic: saved === undefined })
@@ -173,7 +172,6 @@ export function planSheetContent(
             text: actionText(action),
           }),
           (action) => action.active,
-          matchesCharacterActionId,
         ).map((action) => ({ ...action, active: true })),
       )
     }

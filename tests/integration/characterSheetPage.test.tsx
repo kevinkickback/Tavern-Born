@@ -216,11 +216,13 @@ describe('CharacterSheetPage', () => {
     return { character, gameData }
   }
 
-  function exportedSavedActions() {
+  const sharedClassActionId = `class-feature:${encodeURIComponent(JSON.stringify(['wizard|phb', 'class-feature|shared|wizard|phb|1|phb']))}`
+
+  function exportedSavedActions(id = 'feature:saved-shared') {
     return vi
       .mocked(createCharacterSheetViewModel)
       .mock.results.slice(-1)[0]
-      ?.value.actions.filter((action: { id: string }) => action.id === 'feature:saved-shared')
+      ?.value.actions.filter((action: { id: string }) => action.id === id)
   }
 
   test.each([
@@ -230,7 +232,8 @@ describe('CharacterSheetPage', () => {
     const { character } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     const expected = kind === 'class' ? 'bonus-action' : 'action'
-    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    const id = kind === 'class' ? sharedClassActionId : 'feature:saved-shared'
+    const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe(expected)
     expect(actions[0]?.description).toContain(
@@ -243,7 +246,7 @@ describe('CharacterSheetPage', () => {
     }
 
     renderPage()
-    expect(exportedSavedActions()).toEqual(actions)
+    expect(exportedSavedActions(id)).toEqual(actions)
   })
 
   test('preserves ambiguous saved class rules in both Actions and PDF without optional fallback', () => {
@@ -265,7 +268,8 @@ describe('CharacterSheetPage', () => {
     const { character, gameData } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     renderPage()
-    expect(result.current.find((action) => action.id === 'feature:saved-shared')?.kind).toBe(
+    const id = kind === 'class' ? sharedClassActionId : 'feature:saved-shared'
+    expect(result.current.find((action) => action.id === id)?.kind).toBe(
       kind === 'class' ? 'bonus-action' : 'action',
     )
     const key = kind === 'class' ? 'classFeaturesByKey' : 'optionalFeaturesByKey'
@@ -282,11 +286,11 @@ describe('CharacterSheetPage', () => {
       })
     })
 
-    const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
+    const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe('reaction')
     expect(actions[0]?.description).toContain('refreshed catalog rules')
-    expect(exportedSavedActions()).toEqual(actions)
+    expect(exportedSavedActions(id)).toEqual(actions)
   })
 
   test('runs an export preflight before downloading a sheet', async () => {

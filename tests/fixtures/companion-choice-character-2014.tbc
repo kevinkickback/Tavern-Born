@@ -556,7 +556,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "hitPoints": {
     "current": 28,
     "temporary": 0

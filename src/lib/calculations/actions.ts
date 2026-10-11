@@ -35,7 +35,6 @@ import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
-import { getFeatureActionIdIdentity } from './featureActionIdentity'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 
@@ -308,9 +307,8 @@ function deriveClassFeatureActions(
   }
   const groups: {
     action: CharacterAction
-    ids: Set<string>
-    identity: string
-    uids: Set<string>
+    level: number
+    nameKey: string
   }[] = []
   const identities = new Map<string, (typeof groups)[number]>()
   const repeatedMechanics = new Map<string, (typeof groups)[number]>()
@@ -335,30 +333,24 @@ function deriveClassFeatureActions(
       ? getSubclassFeatureIdentity(decoded)
       : getClassFeatureIdentity(decoded)
     if (!identity) return
-    const source =
-      decoded.source ||
-      ('subclassSource' in decoded ? decoded.subclassSource : decoded.classSource) ||
-      'PHB'
-    const key = getEntityLookupKey(feature.name, feature.source)
-    const id = `${kind}-feature:${encodeURIComponent(reference.ref || key)}`
+    const identityParts = identity.split('|')
+    const inheritedSource = subclass
+      ? 'subclassSource' in decoded
+        ? decoded.subclassSource
+        : undefined
+      : decoded.classSource
+    const source = decoded.source?.trim() || inheritedSource?.trim() || 'PHB'
+    const ownedIdentity = JSON.stringify([owner, identity])
+    const id = `${kind}-feature:${encodeURIComponent(ownedIdentity)}`
     const [action] = rulesTextAction(id, feature.name, renderEntriesToText(feature.entries), {
       kind,
       name: feature.name,
       source,
     })
     if (!action) return
-    const ownedIdentity = JSON.stringify([owner, identity])
-    const qualifiedId = `${kind}-feature:${encodeURIComponent(ownedIdentity)}`
-    const compatibleIdentity = getFeatureActionIdIdentity(id)
-    const sameIdentity = identities.get(ownedIdentity)
-    if (sameIdentity) {
-      sameIdentity.ids.add(id)
-      sameIdentity.ids.add(qualifiedId)
-      if (compatibleIdentity) sameIdentity.uids.add(compatibleIdentity)
-      return
-    }
+    const nameKey = `${identityParts[1]}|${identityParts[identityParts.length - 1]}`
     // Repeated gains share an action only when their parsed rules are identical.
-    const family = identity.split('|').filter((_, index) => index !== (subclass ? 6 : 4))
+    const family = identityParts.filter((_, index) => index !== (subclass ? 6 : 4))
     const mechanics = JSON.stringify([owner, family, feature.entries], (_key, value: unknown) =>
       value !== null && typeof value === 'object' && !Array.isArray(value)
         ? Object.fromEntries(
@@ -368,20 +360,19 @@ function deriveClassFeatureActions(
           )
         : value,
     )
-    const repeated = repeatedMechanics.get(mechanics)
-    if (repeated) {
-      repeated.ids.add(id)
-      repeated.ids.add(qualifiedId)
-      repeated.uids.add(identity)
-      if (compatibleIdentity) repeated.uids.add(compatibleIdentity)
-      identities.set(ownedIdentity, repeated)
+    const existing = identities.get(ownedIdentity) ?? repeatedMechanics.get(mechanics)
+    if (existing) {
+      if (level < existing.level || (level === existing.level && id < existing.action.id)) {
+        existing.action.id = id
+        existing.level = level
+      }
+      identities.set(ownedIdentity, existing)
       return
     }
     const group = {
       action,
-      ids: new Set([id, qualifiedId]),
-      identity: ownedIdentity,
-      uids: new Set([identity, ...(compatibleIdentity ? [compatibleIdentity] : [])]),
+      level,
+      nameKey,
     }
     groups.push(group)
     identities.set(ownedIdentity, group)
@@ -413,56 +404,24 @@ function deriveClassFeatureActions(
       )
     }
   }
-  const idOwners = new Map<string, number>()
   const nameOwners = new Map<string, number>()
-  const legacyOwners = new Map<string, number>()
-  const uidOwners = new Map<string, number>()
   for (const group of groups) {
-    for (const id of new Set([...group.ids].map((id) => getFeatureActionIdIdentity(id) ?? id)))
-      idOwners.set(id, (idOwners.get(id) ?? 0) + 1)
-    for (const uid of group.uids) uidOwners.set(uid, (uidOwners.get(uid) ?? 0) + 1)
-    const key = getEntityLookupKey(
-      group.action.source.name,
-      group.action.source.source,
-    ).toLowerCase()
-    nameOwners.set(key, (nameOwners.get(key) ?? 0) + 1)
-    const legacyKey = `${group.action.source.kind}|${key}`
-    legacyOwners.set(legacyKey, (legacyOwners.get(legacyKey) ?? 0) + 1)
+    nameOwners.set(group.nameKey, (nameOwners.get(group.nameKey) ?? 0) + 1)
   }
   const savedReplacements = new Map<string, CharacterAction>()
-  const earned = groups.flatMap(({ action, ids, identity, uids }) => {
-    const key = getEntityLookupKey(action.source.name, action.source.source).toLowerCase()
-    const unambiguousLegacy = legacyOwners.get(`${action.source.kind}|${key}`) === 1
-    const isUnambiguous = (uid: string) => !uid.startsWith('legacy:') || unambiguousLegacy
-    const uniqueIds = [...ids].filter((id) => {
-      const uid = getFeatureActionIdIdentity(id) ?? id
-      return idOwners.get(uid) === 1 && isUnambiguous(uid)
-    })
-    const id = uniqueIds[0] ?? `${action.source.kind}-feature:${encodeURIComponent(identity)}`
-    const aliases = uniqueIds.filter((alias) => alias !== id)
-    const featureIdentities = [...uids].filter(
-      (uid) => uidOwners.get(uid) === 1 && isUnambiguous(uid),
-    )
-    const matches = storedByKey.get(key)
-    if (matches && nameOwners.get(key) === 1) {
+  const earned = groups.flatMap(({ action, nameKey }) => {
+    const matches = storedByKey.get(nameKey)
+    if (matches && nameOwners.get(nameKey) === 1) {
       if (matches.length === 1) {
         const saved = matches[0]
         savedReplacements.set(saved.id, {
           ...saved,
-          idAliases: [id, ...aliases],
-          featureIdentities,
+          id: action.id,
         })
       }
       return []
     }
-    return [
-      {
-        ...action,
-        id,
-        ...(aliases.length ? { idAliases: aliases } : {}),
-        ...(featureIdentities.length ? { featureIdentities } : {}),
-      },
-    ]
+    return [action]
   })
   return { earned, stored: storedActions.map((saved) => savedReplacements.get(saved.id) ?? saved) }
 }
@@ -510,27 +469,7 @@ function mergeCharacterActions(
   manualActions: readonly CharacterAction[] = [],
 ): CharacterAction[] {
   const byId = new Map<string, CharacterAction>()
-  const aliases = new Map<string, string>()
-  const identities = new Map<string, string>()
-  for (const action of sourceActions) {
-    byId.set(action.id, action)
-    for (const alias of [action.id, ...(action.idAliases ?? [])]) aliases.set(alias, action.id)
-    for (const identity of action.featureIdentities ?? []) identities.set(identity, action.id)
-  }
-  for (const action of manualActions) {
-    const identity = getFeatureActionIdIdentity(action.id)
-    const key =
-      aliases.get(action.id) ?? (identity ? identities.get(identity) : undefined) ?? action.id
-    const original = byId.get(key)
-    const equivalent = original
-      ? [...new Set([original.id, ...(original.idAliases ?? [])])].filter((id) => id !== action.id)
-      : []
-    byId.set(key, {
-      ...action,
-      ...(equivalent.length ? { idAliases: equivalent } : {}),
-      ...(original?.featureIdentities ? { featureIdentities: original.featureIdentities } : {}),
-    })
-  }
+  for (const action of [...sourceActions, ...manualActions]) byId.set(action.id, action)
   return [...byId.values()]
 }
 
