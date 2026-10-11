@@ -32,6 +32,9 @@ and cross-surface contracts.
 ## Patterns
 
 - Use `test.each` for input/output matrices and ruleset/class variants.
+- Before adding a case, identify the distinct behavior or failure it protects. Prefer extending an
+  existing case or matrix when it covers the same contract; keep separate hook, page, or durable
+  storage checks when they exercise a different boundary.
 - Assert the public command/hook result, not intermediate implementation calls.
 - For ownership changes, assert materialized state and provenance together.
 - For library transactions, cover pending success, rejection/retry, overlapping writes, an edit
@@ -167,6 +170,9 @@ historical APIs, or comments saying the asserted workflow does not run.
 
 Large suites should be split by behavior domain when navigation becomes difficult. Do not split
 only to satisfy a line count; shared setup and cohesive assertions matter more than file size.
+Consolidate repeated setup into small fixtures without sharing expected outcomes or hiding the
+transition under test. Judge cleanup by clearer scenarios and measured execution cost, rather than
+test counts or line quotas. Preserve meaningful assertions and the normal validation gates.
 
 ## Definition of done
 

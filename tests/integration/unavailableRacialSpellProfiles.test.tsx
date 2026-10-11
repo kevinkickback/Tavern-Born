@@ -1,9 +1,6 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
-import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
-import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
-import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
@@ -26,6 +23,7 @@ import {
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { renderSpellEditing } from '../fixtures/spellEditing'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
@@ -120,17 +118,6 @@ function savedCharacter(withChild = true, previousChild = child): Character {
   native = { ...native, ...selected.characterPatch, provenance: selected.provenanceUpdate }
   const ability = setRacialCastingAbility(native, native.provenance, profile.id, 'wis')
   return { ...native, ...ability.characterPatch, provenance: ability.provenanceUpdate }
-}
-
-function renderSpellEditing() {
-  return renderHook(() => {
-    const slots = useSpellSlots()
-    return {
-      slots,
-      mutations: useSpellProfileMutations(slots.spellProfiles, slots.spellcastingDetailByProfileId),
-      raceMutations: useRaceProvenanceMutations(),
-    }
-  })
 }
 
 function racialProfiles(profiles: SpellProfile[]) {

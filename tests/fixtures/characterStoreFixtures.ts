@@ -16,3 +16,9 @@ export function setActiveCharacter(character: Character): void {
     activeCharacter: character,
   })
 }
+
+/** Await a real durable import before selecting its character for a page journey. */
+export async function importActiveCharacter(character: Character): Promise<void> {
+  await useCharacterStore.getState().importCharacters([character])
+  useCharacterStore.getState().setActiveCharacter(character.id)
+}

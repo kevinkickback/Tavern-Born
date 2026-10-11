@@ -4,9 +4,11 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   clearFeatOptionsCommand,
   commitFeatOptionsCommand,
+  type FeatOptionTarget,
   replaceBonusFeatSelectionsCommand,
   replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
@@ -20,6 +22,7 @@ import type { Feat5e, Spell5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { importActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 
 vi.unmock('@/lib/storage/idb-storage')
@@ -44,6 +47,31 @@ const feat: Feat5e = {
 }
 const saved = { spells: [' spark | test ', '{@spell Ray|TEST|My ray}'] }
 const reader = createIdbStorage<{ characters: Character[] }>()
+
+function selectedCopies(...kinds: ('ordinary' | 'bonus')[]) {
+  let character = makeCharacterFixture({ allowedSources: ['TEST'] })
+  for (const kind of kinds) {
+    const select =
+      kind === 'ordinary' ? replaceFeatSelectionsCommand : replaceBonusFeatSelectionsCommand
+    character = applyCharacterCommandResult(
+      character,
+      select(character, character.provenance, [feat]),
+    )
+  }
+  return character
+}
+
+function configureFeat(
+  character: Character,
+  target: FeatOptionTarget,
+  options: FeatOptionSelections,
+  spells: Spell5e[] = [spark, ray],
+) {
+  return applyCharacterCommandResult(
+    character,
+    commitFeatOptionsCommand(character, character.provenance, target, options, spells),
+  )
+}
 
 function selectedCharacterFixture(overrides: Partial<Character>) {
   const character = makeCharacterFixture(overrides)
@@ -170,18 +198,9 @@ async function configuredAdjacentOwner(kind: 'choice' | 'class') {
       classFeatChoiceId: character.classFeatChoices![0].id,
     }
   }
-  const result = commitFeatOptionsCommand(character, character.provenance, target, saved, [
-    spark,
-    ray,
-  ])
-  character = characterPersistenceSchema.parse({
-    ...character,
-    ...result.characterPatch,
-    provenance: result.provenanceUpdate,
-  })
+  character = characterPersistenceSchema.parse(configureFeat(character, target, saved))
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
-  await useCharacterStore.getState().importCharacters([character])
-  useCharacterStore.getState().setActiveCharacter(character.id)
+  await importActiveCharacter(character)
   return character
 }
 
@@ -373,27 +392,21 @@ async function recoveryPage(fixedGrant: boolean, renderPage = true) {
     ...independent.characterPatch,
     provenance: independent.provenanceUpdate,
   }
-  const configured = commitFeatOptionsCommand(
-    original,
-    original.provenance,
-    {
-      name: feat.name,
-      source: feat.source,
-      fixedGrant,
-      grantVariant: fixedGrant ? 'Wizard' : undefined,
-      selectionKind: fixedGrant ? undefined : 'ordinary',
-    },
-    priorOptions,
-    [spark, ray],
+  original = characterPersistenceSchema.parse(
+    configureFeat(
+      original,
+      {
+        name: feat.name,
+        source: feat.source,
+        fixedGrant,
+        grantVariant: fixedGrant ? 'Wizard' : undefined,
+        selectionKind: fixedGrant ? undefined : 'ordinary',
+      },
+      priorOptions,
+    ),
   )
-  original = characterPersistenceSchema.parse({
-    ...original,
-    ...configured.characterPatch,
-    provenance: configured.provenanceUpdate,
-  })
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
-  await useCharacterStore.getState().importCharacters([original])
-  useCharacterStore.getState().setActiveCharacter(original.id)
+  await importActiveCharacter(original)
   // A competing feat printing still has choices; exact spells may be entirely unavailable.
   catalog(noChoices, [otherRay], [{ ...originalRules, source: 'OTHER' }])
   if (renderPage) page()
@@ -543,27 +556,16 @@ test.each([
   'ordinary',
   'bonus',
 ] as const)('normal Complete Setup and Finish use only the requested copy through durable reopen: %s', async (selectionKind) => {
-  let character = makeCharacterFixture({ allowedSources: ['TEST'] })
-  for (const select of [replaceFeatSelectionsCommand, replaceBonusFeatSelectionsCommand]) {
-    const result = select(character, character.provenance, [feat])
-    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
-  }
+  let character = selectedCopies('ordinary', 'bonus')
   const independentKind = selectionKind === 'ordinary' ? 'bonus' : 'ordinary'
   const independentOptions = { spells: ['Other Spark|TEST', 'Ray|TEST'] }
-  const result = commitFeatOptionsCommand(
-    character,
-    character.provenance,
-    { ...feat, selectionKind: independentKind },
-    independentOptions,
-    [replacement, ray],
+  character = characterPersistenceSchema.parse(
+    configureFeat(character, { ...feat, selectionKind: independentKind }, independentOptions, [
+      replacement,
+      ray,
+    ]),
   )
-  character = characterPersistenceSchema.parse({
-    ...character,
-    ...result.characterPatch,
-    provenance: result.provenanceUpdate,
-  })
-  await useCharacterStore.getState().importCharacters([character])
-  useCharacterStore.getState().setActiveCharacter(character.id)
+  await importActiveCharacter(character)
   page()
   fireEvent.click(
     screen.getByRole('tab', { name: selectionKind === 'bonus' ? /^Bonus/ : /^Character/ }),
@@ -600,20 +602,9 @@ test.each([
   'ordinary',
   'bonus',
 ] as const)('an unavailable feat retains recovery and clears only its saved copy: %s', (selectionKind) => {
-  let character = makeCharacterFixture({ allowedSources: ['TEST'] })
-  for (const select of [replaceFeatSelectionsCommand, replaceBonusFeatSelectionsCommand]) {
-    const result = select(character, character.provenance, [feat])
-    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
-  }
+  let character = selectedCopies('ordinary', 'bonus')
   for (const kind of ['ordinary', 'bonus'] as const) {
-    const result = commitFeatOptionsCommand(
-      character,
-      character.provenance,
-      { ...feat, selectionKind: kind },
-      saved,
-      [spark, ray],
-    )
-    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    character = configureFeat(character, { ...feat, selectionKind: kind }, saved)
   }
   useCharacterStore.setState({ activeCharacter: character })
   const data = makeGameDataFixture({ feats: [], spells: [] })
@@ -636,21 +627,9 @@ test.each([
 })
 
 test('confirming the bonus picker without its catalog preserves the configured saved selection', () => {
-  let character = makeCharacterFixture({ allowedSources: ['TEST'] })
-  const selected = replaceBonusFeatSelectionsCommand(character, character.provenance, [feat])
-  character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
-  const configured = commitFeatOptionsCommand(
-    character,
-    character.provenance,
-    { ...feat, selectionKind: 'bonus' },
-    saved,
-    [spark, ray],
+  const character = characterPersistenceSchema.parse(
+    configureFeat(selectedCopies('bonus'), { ...feat, selectionKind: 'bonus' }, saved),
   )
-  character = characterPersistenceSchema.parse({
-    ...character,
-    ...configured.characterPatch,
-    provenance: configured.provenanceUpdate,
-  })
   useCharacterStore.setState({ activeCharacter: character })
   const data = makeGameDataFixture({ feats: [], spells: [] })
   useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
@@ -684,22 +663,12 @@ test.each([
     ['ordinary', saved],
     ['bonus', bonusSaved],
   ] as const) {
-    const result = commitFeatOptionsCommand(
-      character,
-      character.provenance,
-      { ...feat, selectionKind },
-      selections,
-      [spark, ray],
+    character = characterPersistenceSchema.parse(
+      configureFeat(character, { ...feat, selectionKind }, selections),
     )
-    character = characterPersistenceSchema.parse({
-      ...character,
-      ...result.characterPatch,
-      provenance: result.provenanceUpdate,
-    })
   }
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
-  await useCharacterStore.getState().importCharacters([character])
-  useCharacterStore.getState().setActiveCharacter(character.id)
+  await importActiveCharacter(character)
   catalog({ name: feat.name, source: feat.source, entries: [] })
   page()
   fireEvent.click(screen.getByRole('tab', { name: bonus ? /^Bonus/ : /^Character/ }))
@@ -733,19 +702,8 @@ test('zero-step clear remains available for a standalone bonus setup', () => {
     allowedSources: ['TEST'],
     specialFeats: [{ id: 'bonus', name: feat.name, source: feat.source, description: '' }],
   })
-  const result = commitFeatOptionsCommand(
-    character,
-    character.provenance,
-    { ...feat, selectionKind: 'bonus' },
-    saved,
-    [spark, ray],
-  )
   useCharacterStore.setState({
-    activeCharacter: {
-      ...character,
-      ...result.characterPatch,
-      provenance: result.provenanceUpdate,
-    },
+    activeCharacter: configureFeat(character, { ...feat, selectionKind: 'bonus' }, saved),
   })
   catalog({ name: feat.name, source: feat.source, entries: [] })
   page()
@@ -790,8 +748,7 @@ test.each([
   }
   character = characterPersistenceSchema.parse(character)
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
-  await useCharacterStore.getState().importCharacters([character])
-  useCharacterStore.getState().setActiveCharacter(character.id)
+  await importActiveCharacter(character)
   catalog({ ...selected, entries: [] }, [], [{ ...other, entries: [] }])
   page()
   fireEvent.click(screen.getByRole('tab', { name: /^Character/ }))
@@ -1027,34 +984,26 @@ async function configuredEditCharacter(fixedGrant: boolean) {
         label: 'Scholar',
       },
     ]
-  const other = commitFeatOptionsCommand(
+  original = configureFeat(
     original,
-    original.provenance,
     { name: 'Companion', source: 'TEST', fixedGrant: true },
     { spells: ['Spark|TEST'] },
     [spark],
   )
-  original = { ...original, ...other.characterPatch, provenance: other.provenanceUpdate }
-  const configured = commitFeatOptionsCommand(
-    original,
-    original.provenance,
-    {
-      name: feat.name,
-      source: feat.source,
-      fixedGrant,
-      selectionKind: fixedGrant ? undefined : 'ordinary',
-    },
-    saved,
-    [spark, ray],
+  original = characterPersistenceSchema.parse(
+    configureFeat(
+      original,
+      {
+        name: feat.name,
+        source: feat.source,
+        fixedGrant,
+        selectionKind: fixedGrant ? undefined : 'ordinary',
+      },
+      saved,
+    ),
   )
-  original = characterPersistenceSchema.parse({
-    ...original,
-    ...configured.characterPatch,
-    provenance: configured.provenanceUpdate,
-  })
   useCharacterStore.setState({ activeCharacter: null, activeCharacterId: null })
-  await useCharacterStore.getState().importCharacters([original])
-  useCharacterStore.getState().setActiveCharacter(original.id)
+  await importActiveCharacter(original)
   return original
 }
 

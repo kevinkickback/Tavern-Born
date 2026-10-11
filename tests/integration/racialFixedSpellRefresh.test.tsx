@@ -3,9 +3,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
-import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
-import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
-import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import {
@@ -25,6 +22,7 @@ import type { SpellProfile } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { renderSpellEditing as editing } from '../fixtures/spellEditing'
 
 const lightBlock = { ability: 'int', known: { _: ['light|PHB#c'] } }
 
@@ -77,17 +75,6 @@ function install(races: Race5e[]) {
   data.lookups = buildGameDataLookups(data)
   useGameDataStore.setState({ gameData: data })
   return data
-}
-
-function editing() {
-  return renderHook(() => {
-    const slots = useSpellSlots()
-    return {
-      slots,
-      mutations: useSpellProfileMutations(slots.spellProfiles, slots.spellcastingDetailByProfileId),
-      race: useRaceProvenanceMutations(),
-    }
-  })
 }
 
 function reopenedActive() {
@@ -467,12 +454,12 @@ test('Builder Clear child and Replace parent retain an independent printing', ()
   act(() =>
     result.current.mutations.addSpellToProfile('special:unrestricted', 'Light|TCE', 'cantrip'),
   )
-  act(() => result.current.race.applySubraceChange(parent, undefined))
+  act(() => result.current.raceMutations.applySubraceChange(parent, undefined))
   const cleared = reopenedActive()
   expect(cleared.subrace).toBeUndefined()
   expect(racial(cleared.spells.spellProfiles).fixedSpells).toEqual(['light|PHB'])
   const replacement = owner('Replacement', 'PARENT')
-  act(() => result.current.race.applyRaceSelection(replacement))
+  act(() => result.current.raceMutations.applyRaceSelection(replacement))
   const replaced = reopenedActive()
   expect(replaced.spells.spellProfiles.filter((profile) => profile.type === 'racial')).toEqual([])
   expect(
