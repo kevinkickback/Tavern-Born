@@ -318,6 +318,9 @@ only that complete target; a matching label cannot supply another owner, gain or
 feature IDs use actual owner plus exact target, independent of the granting choice's order or ID.
 Removing one choice retains the same feature when another choice of that owner still grants it.
 Different owners retain separate materialized rows and action groups.
+Subclass-owned choices and readiness resolve within the full selected subclass, so a shared short name cannot
+supply another owner's rules. Missing-content indicators and retained choice details use the same
+complete target identity; a class choice may explicitly target another class's feature.
 
 Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
 remain saved intents without emitting or enriching an opaque action. Their materialized feature rows

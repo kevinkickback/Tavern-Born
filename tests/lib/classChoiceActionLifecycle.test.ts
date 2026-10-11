@@ -1,8 +1,18 @@
 import { expect, test } from 'vitest'
-import { normalizeClassChoices } from '@/lib/5etools/classChoiceNormalization'
-import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
-import { deriveCharacterActions } from '@/lib/calculations/actions'
 import {
+  normalizeClassChoices,
+  normalizeSubclassRules,
+} from '@/lib/5etools/classChoiceNormalization'
+import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { deriveCharacterActions } from '@/lib/calculations/actions'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import {
+  characterUsesContentOutsideCatalog,
+  createGameDataAvailabilityIndex,
+} from '@/lib/character/additionalContentAvailability'
+import {
+  collectSubclassFeatures,
   getClassChoiceOptionKey,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -12,13 +22,21 @@ import {
 } from '@/lib/character/commands/actionCommands'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
+import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import {
   readSheetExportPreferences,
   writeSheetExportPreferences,
 } from '@/lib/storage/sheetExportPreferences'
-import type { Class5e, ClassFeature, ClassFeatureReference } from '@/types/5etools'
+import type {
+  Class5e,
+  ClassFeature,
+  ClassFeatureReference,
+  SubclassFeature,
+  SubclassFeatureReference,
+} from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -349,4 +367,235 @@ test('full selected subclass names isolate same-short-name definitions and their
   expect(actions.find((action) => action.source.kind === 'subclass')!.id).not.toBe(first)
   character.classProgression[0].subclass = 'First School'
   expectConfigured(character, classes, first)
+})
+
+const schoolBeacon: SubclassFeature = {
+  ...beacon,
+  level: 3,
+  subclassShortName: 'School',
+  subclassSource: 'PHB',
+}
+const schoolOption = {
+  type: 'refSubclassFeature',
+  subclassFeature: 'Beacon|Wizard||School||3',
+}
+function schoolTraining(gain: string, numericLevel = 3): SubclassFeatureReference {
+  return {
+    ref: gain ? `Training|Wizard||School||${gain}` : '',
+    name: 'Training',
+    className: 'Wizard',
+    classSource: 'PHB',
+    subclassShortName: 'School',
+    subclassSource: 'PHB',
+    source: 'PHB',
+    level: numericLevel,
+    feature: {
+      ...schoolBeacon,
+      name: 'Training',
+      level: numericLevel,
+      entries: [{ type: 'options', count: 1, entries: [schoolOption] }],
+    },
+  }
+}
+function schoolChoice(name = 'First School', gain = '3', numericLevel = 3) {
+  return normalizeSubclassRules({ name: 'Wizard', source: 'PHB' }, { name, source: 'PHB' }, [
+    schoolTraining(gain, numericLevel),
+  ]).choices
+}
+function schoolCharacter() {
+  return createEmptyCharacter({
+    name: 'Current School',
+    classProgression: [
+      { name: 'Wizard', source: 'PHB', levels: 3, subclass: 'First School', subclassSource: 'PHB' },
+    ],
+  })
+}
+
+test.each([
+  '3junk',
+  '0',
+  '3.5',
+])('production parsing never admits a new subclass choice from malformed gain %s', (gain) => {
+  const classes = parseClasses({
+    class: [{ name: 'Wizard', source: 'PHB', classFeatures: [] }],
+    subclass: [
+      {
+        name: 'First School',
+        shortName: 'School',
+        source: 'PHB',
+        className: 'Wizard',
+        classSource: 'PHB',
+        subclassFeatures: [`Training|Wizard||School||${gain}`],
+      },
+    ],
+    subclassFeature: [schoolTraining('3').feature, schoolBeacon],
+  }) as Class5e[]
+  expect(classes[0].subclasses![0].normalizedRules!.choices).toEqual([])
+  expect(schoolChoice('First School', gain)).toEqual([])
+  expect(observe(reopen(schoolCharacter()), classes, []).actions).toEqual([])
+})
+
+test('subclass choice eligibility honors encoded gain and rejects premature commands atomically', () => {
+  const character = schoolCharacter()
+  const before = structuredClone(character)
+  const descriptor = schoolChoice('First School', '8', 3)[0]
+  expect(descriptor.level).toBe(8)
+  expect(() => apply(character, descriptor)).toThrow(/current class level/)
+  expect(character).toEqual(before)
+  expect(schoolChoice('First School', '', 0)).toEqual([])
+  for (const gain of ['3', '']) {
+    const available = schoolChoice('First School', gain)[0]
+    const views = resolveClassChoiceOptions(available, {
+      ...catalogs,
+      subclassFeatures: [schoolBeacon],
+    })
+    expect(views).toMatchObject([{ availability: 'eligible' }])
+    const result = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      character.provenance!,
+      available,
+      views.map((view) => view.reference),
+    )
+    const saved = reopen({
+      ...character,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    })
+    expect(saved.classChoiceSelections![0].selected[0].ref).toBe(
+      'beacon|wizard|phb|school|phb|3|phb',
+    )
+  }
+})
+
+test('subclass choice rules stay with the full selected owner through competition and absence', () => {
+  let character = apply(schoolCharacter(), schoolChoice()[0])
+  const classes = [
+    makeClassFixture({
+      classFeatureRefs: [],
+      subclasses: ['First School', 'Second School'].map((name, index) => ({
+        name,
+        shortName: 'School',
+        source: 'PHB',
+        className: 'Wizard',
+        classSource: 'PHB',
+        normalizedRules: normalizeSubclassRules(
+          { name: 'Wizard', source: 'PHB' },
+          { name, source: 'PHB' },
+          [schoolTraining('3')],
+        ),
+        subclassFeatureRefs: [
+          {
+            ref: 'Beacon|Wizard||School||3',
+            name: 'Beacon',
+            className: 'Wizard',
+            subclassShortName: 'School',
+            feature: {
+              ...schoolBeacon,
+              entries: index === 0 ? beacon.entries : ['As a reaction, dismiss a beacon.'],
+            },
+          },
+        ],
+      })),
+    }),
+  ]
+  const initial = observe(reopen(character), classes).actions
+  expect(initial).toMatchObject([{ kind: 'action' }])
+  const id = initial[0].id
+  classes[0].subclasses!.reverse()
+  expect(observe(reopen(character), classes).actions).toEqual(initial)
+  const readiness = (subclassFeatures = classes[0].subclasses!.flatMap(collectSubclassFeatures)) =>
+    validateClassChoices(
+      character,
+      createCharacterCalculationContext(character, { classesByKey: buildClassLookup(classes) }),
+      {
+        ...catalogs,
+        subclassFeatures,
+      },
+    ).map((issue) => issue.id)
+  expect(readiness()).not.toContain(`class-choice:${schoolChoice()[0].id}`)
+  expect(readiness([])).toContain(`class-choice:${schoolChoice()[0].id}`)
+  const firstSchool = classes[0].subclasses![1]
+  const savedRefs = firstSchool.subclassFeatureRefs
+  firstSchool.subclassFeatureRefs = []
+  expect(readiness()).toContain(`class-choice:${schoolChoice()[0].id}`)
+  firstSchool.subclassFeatureRefs = savedRefs
+  configure(character, id)
+  character.classProgression[0].subclass = 'Second School'
+  character = apply(character, schoolChoice('Second School')[0])
+  const switched = observe(reopen(character), classes).actions
+  expect(switched).toHaveLength(3)
+  expect(switched.find((row) => row.source.kind === 'subclass')).toMatchObject({
+    kind: 'reaction',
+    active: true,
+  })
+  expect(switched.find((row) => row.source.kind === 'subclass')!.id).not.toBe(id)
+  character = apply(character, schoolChoice('Second School')[0], true)
+  character.classProgression[0].subclass = 'First School'
+  expectConfigured(character, classes, id)
+  const absent = [{ ...classes[0], subclasses: [classes[0].subclasses![0]] }]
+  expect(absent[0].subclasses[0].name).toBe('Second School')
+  expectConfigured(character, absent, id)
+  expect(
+    characterUsesContentOutsideCatalog(
+      reopen(character),
+      createGameDataAvailabilityIndex(makeGameDataFixture({ classes: absent })),
+    ),
+  ).toBe(true)
+  expect(
+    buildRetainedCharacterDetails(
+      character,
+      makeGameDataFixture({ classes: absent }),
+      null,
+    ).choiceDetailsById.get(character.classChoiceSelections![0].choiceId),
+  ).toEqual([{ availability: 'missing', entries: [] }])
+  expectConfigured(character, classes, id)
+  Object.assign(character, removeManualActionCommand(character, id))
+  expect(observe(reopen(character), absent).actions).toMatchObject([
+    { id: 'independent-player-row' },
+  ])
+  expect(observe(reopen(character), classes).actions).toMatchObject([
+    { id, kind: 'action' },
+    { id: 'independent-player-row' },
+  ])
+})
+
+test('availability and Overview recover the complete cross-parent target without borrowing its label', () => {
+  const descriptor = choice()
+  descriptor.options[0].ref = 'Beacon|Bard||1'
+  const character = reopen(
+    apply(
+      createEmptyCharacter({
+        name: 'Current Cross-parent',
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      }),
+      descriptor,
+    ),
+  )
+  const classes = [makeClassFixture({ classFeatureRefs: [] })]
+  const exact = { ...beacon, className: 'Bard', entries: ['As a reaction, answer a beacon.'] }
+  const competing = makeGameDataFixture({ classes, classFeatures: [beacon] })
+  const restored = makeGameDataFixture({ classes, classFeatures: [beacon, exact] })
+  expect(
+    characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(competing)),
+  ).toBe(true)
+  expect(
+    buildRetainedCharacterDetails(character, competing, null).choiceDetailsById.get(descriptor.id),
+  ).toEqual([{ availability: 'missing', entries: [] }])
+  expect(observe(character, classes, [beacon]).actions).toEqual([])
+  expect(
+    characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(restored)),
+  ).toBe(false)
+  expect(
+    buildRetainedCharacterDetails(character, competing, restored).choiceDetailsById.get(
+      descriptor.id,
+    ),
+  ).toEqual([{ availability: 'source-unavailable', entries: exact.entries }])
+  expect(
+    buildRetainedCharacterDetails(character, restored, competing).choiceDetailsById.get(
+      descriptor.id,
+    ),
+  ).toEqual([{ availability: 'available', entries: exact.entries }])
+  expect(observe(character, classes, [beacon, exact]).actions).toMatchObject([
+    { kind: 'reaction', description: 'As a reaction, answer a beacon.' },
+  ])
 })

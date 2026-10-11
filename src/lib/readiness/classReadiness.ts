@@ -1,9 +1,12 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools/classData'
+import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   type ClassChoiceCatalogs,
+  collectSubclassFeatures,
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
   getClassChoiceOptionKey,
@@ -64,6 +67,11 @@ export function validateClassChoices(
       .filter((selection) => !selection.inactive)
       .map((selection) => [selection.choiceId, selection]),
   )
+  const availableSubclassTargets = new Set(
+    (catalogs?.subclassFeatures ?? []).flatMap(
+      (feature) => getSubclassFeatureIdentity(feature) ?? [],
+    ),
+  )
 
   for (const entry of entries) {
     const classData = classDataByKey.get(toClassProfileId(entry.name, entry.source))
@@ -87,6 +95,20 @@ export function validateClassChoices(
       )
     }
     const subclassData = getSelectedSubclassData(classData, entry)
+    const subclassCatalogs = catalogs
+      ? {
+          ...catalogs,
+          subclassFeatures: collectSubclassFeatures(
+            getSelectedSubclassData(
+              resolveClassReference(entry, calculation.lookups.primary),
+              entry,
+            ),
+          ).filter((feature) => {
+            const target = getSubclassFeatureIdentity(feature)
+            return target !== undefined && availableSubclassTargets.has(target)
+          }),
+        }
+      : undefined
     if (entry.subclass && !subclassData) {
       issues.push(
         readinessIssue(
@@ -109,9 +131,10 @@ export function validateClassChoices(
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
       const storedSelection = selections.get(choice.id)?.selected ?? []
-      const eligibleOptionKeys = catalogs
+      const choiceCatalogs = choice.owner.type === 'subclass' ? subclassCatalogs : catalogs
+      const eligibleOptionKeys = choiceCatalogs
         ? new Set(
-            resolveClassChoiceOptions(choice, catalogs, [], entry.levels)
+            resolveClassChoiceOptions(choice, choiceCatalogs, [], entry.levels)
               .filter(isClassChoiceOptionEligible)
               .map((option) => getClassChoiceOptionKey(option.reference)),
           )

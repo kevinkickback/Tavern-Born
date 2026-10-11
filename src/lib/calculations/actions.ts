@@ -308,10 +308,10 @@ function deriveClassFeatureActions(
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
   const targets = new Map<string, ClassFeature>()
-  const addTarget = (feature: ClassFeature, subclass = false) => {
-    const identity = subclass
-      ? getSubclassFeatureIdentity(feature)
-      : getClassFeatureIdentity(feature)
+  const subclassTargets = new Map<string, Map<string, ClassFeature>>()
+  const uniqueSubclassTargets = new Map<string, ClassFeature | undefined>()
+  const addTarget = (feature: ClassFeature) => {
+    const identity = getClassFeatureIdentity(feature)
     if (identity) targets.set(identity, feature)
   }
   if (
@@ -322,7 +322,23 @@ function deriveClassFeatureActions(
     for (const classData of context.classes ?? []) {
       for (const ref of classData.classFeatureRefs ?? []) if (ref.feature) addTarget(ref.feature)
       for (const subclass of classData.subclasses ?? []) {
-        for (const feature of collectSubclassFeatures(subclass)) addTarget(feature, true)
+        const owner = getFeatureOwnerKey(
+          classData.name,
+          classData.source,
+          subclass.name,
+          subclass.source,
+        )
+        const ownedTargets = new Map<string, ClassFeature>()
+        for (const feature of collectSubclassFeatures(subclass)) {
+          const identity = getSubclassFeatureIdentity(feature)
+          if (!identity) continue
+          ownedTargets.set(identity, feature)
+          uniqueSubclassTargets.set(
+            identity,
+            uniqueSubclassTargets.has(identity) ? undefined : feature,
+          )
+        }
+        subclassTargets.set(owner, ownedTargets)
       }
     }
     for (const feature of Object.values(context.classFeaturesByKey ?? {})) addTarget(feature)
@@ -431,7 +447,13 @@ function deriveClassFeatureActions(
       if (option.slotLevel > entry.levels) continue
       if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
         const target = getClassChoiceFeatureTarget(option)
-        const feature = target ? targets.get(target) : undefined
+        const feature = target
+          ? option.entityType === 'classFeature'
+            ? targets.get(target)
+            : selection.subclassName
+              ? subclassTargets.get(owner)?.get(target)
+              : uniqueSubclassTargets.get(target)
+          : undefined
         if (target && feature)
           addAction(owner, target, feature, {
             kind: selection.subclassName ? 'subclass' : 'class',

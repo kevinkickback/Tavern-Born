@@ -19,6 +19,7 @@ import {
   getClassFeatureIdentity,
   getClassFeatureReferenceLevel,
   getSubclassFeatureIdentity,
+  getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
 
 interface ParsedFilterTag {
@@ -97,16 +98,13 @@ function buildChoiceId(owner: ChoiceOwner, label: string, level: number) {
   return `class:${normalizedIdPart(owner.name)}|${normalizedIdPart(owner.source)}${subclassPart}|choice:${normalizedIdPart(label)}|${level}`
 }
 
-function getReferenceLevel(ref: ChoiceFeatureReference): number | undefined {
-  if (!('subclassShortName' in ref)) return getClassFeatureReferenceLevel(ref)
-  if (ref.level !== undefined) return ref.level
-  if (ref.feature?.level !== undefined) return ref.feature.level
-  const parts = typeof ref.ref === 'string' ? ref.ref.split('|') : []
-  for (const index of [5, 3]) {
-    const encodedLevel = Number.parseInt(parts[index] ?? '', 10)
-    if (!Number.isNaN(encodedLevel)) return encodedLevel
-  }
-  return undefined
+function getReferenceLevel(
+  ref: ChoiceFeatureReference,
+  kind: 'class' | 'subclass',
+): number | undefined {
+  return kind === 'subclass'
+    ? getSubclassFeatureReferenceLevel(ref)
+    : getClassFeatureReferenceLevel(ref)
 }
 
 function countsFromLevel(level: number, count: number): number[] {
@@ -603,7 +601,7 @@ function normalizeFeatureOptionChoices(
   const diagnostics: ClassChoiceDiagnostic[] = []
 
   for (const ref of refs) {
-    const level = getReferenceLevel(ref)
+    const level = getReferenceLevel(ref, owner.type)
     const feature = ref.feature
     if (!level || !feature) continue
     const blocks: Record<string, unknown>[] = []
@@ -842,7 +840,7 @@ function normalizeSingleFilterChoices(
   const choices: NormalizedCharacterChoice[] = []
   const diagnostics: ClassChoiceDiagnostic[] = []
   for (const ref of refs) {
-    const level = getReferenceLevel(ref)
+    const level = getReferenceLevel(ref, owner.type)
     if (!level) continue
     if (
       existing.some((choice) => choice.owner.featureName === ref.name && choice.level === level)
@@ -934,7 +932,7 @@ function normalizeCreatureTagChoices(
   owner: ChoiceOwner,
 ): NormalizedCharacterChoice[] {
   return refs.flatMap((ref) => {
-    const level = getReferenceLevel(ref)
+    const level = getReferenceLevel(ref, owner.type)
     if (!level || existing.some((choice) => choice.owner.featureName === ref.name)) return []
     const text = getFeatureText(ref)
     const searchableText = toSearchableText(text)
@@ -971,9 +969,10 @@ function collectSubclassChoiceFeatureRefs(
   const seen = new Set<string>()
 
   const add = (ref: ChoiceFeatureReference) => {
-    const subclassRef = ref as SubclassFeatureReference
     const feature = ref.feature
-    const identity = `${ref.ref}|${feature?.name ?? ref.name}|${feature?.source ?? ref.source ?? ''}|${getReferenceLevel(ref) ?? ''}`
+    const level = getReferenceLevel(ref, 'subclass')
+    if (level === undefined) return
+    const identity = `${ref.ref}|${feature?.name ?? ref.name}|${feature?.source ?? ref.source ?? ''}|${level}`
     if (seen.has(identity)) return
     seen.add(identity)
     collected.push(ref)
@@ -981,25 +980,8 @@ function collectSubclassChoiceFeatureRefs(
       if (record.type !== 'refSubclassFeature' || typeof record.subclassFeature !== 'string') return
       const nestedFeature = asRecord(record.feature)
       if (!nestedFeature || typeof nestedFeature.name !== 'string') return
-      const parts = record.subclassFeature.split('|')
       add({
-        ref: record.subclassFeature,
-        name: parts[0] ?? nestedFeature.name,
-        className: parts[1] ?? ref.className,
-        classSource: parts[2] || ref.classSource,
-        subclassShortName: parts[3] || subclassRef.subclassShortName,
-        subclassSource: parts[4] || subclassRef.subclassSource,
-        source: parts[6] || (typeof nestedFeature.source === 'string' ? nestedFeature.source : ''),
-        ...(() => {
-          const parsedLevel = Number.parseInt(parts[5] ?? '', 10)
-          const level =
-            typeof nestedFeature.level === 'number'
-              ? nestedFeature.level
-              : Number.isNaN(parsedLevel)
-                ? undefined
-                : parsedLevel
-          return level === undefined ? {} : { level }
-        })(),
+        ...decodeSubclassFeatureReference(record.subclassFeature),
         feature: nestedFeature as unknown as NonNullable<SubclassFeatureReference['feature']>,
       })
     })

@@ -34,6 +34,7 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
+import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
 import {
   CUSTOM_ORGANIZATION_KEY,
   getOrganizationKey,
@@ -564,9 +565,7 @@ export function CharacterOverview({
                               const details = choiceDetailsById.get(choice.choiceId)?.[index]
                               const entries = details?.entries
                               return (
-                                <li
-                                  key={`${option.entityType}|${option.name}|${option.source ?? ''}`}
-                                >
+                                <li key={getClassChoiceOptionKey(option)}>
                                   <div className="flex flex-wrap items-center gap-2 font-medium">
                                     <span>
                                       {option.name}

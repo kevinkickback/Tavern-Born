@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
@@ -33,7 +32,17 @@ describe('additional content availability', () => {
               shortName: 'Tests',
               source: 'HB',
               className: 'Wizard',
-              subclassFeatures: [{ name: 'Direct Ward', source: 'HB', level: 3 }],
+              subclassFeatures: [
+                {
+                  name: 'Direct Ward',
+                  source: 'HB',
+                  className: 'Wizard',
+                  classSource: 'PHB',
+                  subclassShortName: 'Tests',
+                  subclassSource: 'HB',
+                  level: 3,
+                },
+              ],
             },
           ],
         }),
@@ -41,7 +50,7 @@ describe('additional content availability', () => {
     })
 
     expect(createGameDataAvailabilityIndex(gameData).subclassFeatures).toContain(
-      getEntityLookupKey('Direct Ward', 'HB'),
+      'subclass-feature|direct ward|wizard|phb|tests|hb|3|hb',
     )
   })
 

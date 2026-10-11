@@ -83,18 +83,11 @@ export function buildRetainedCharacterDetails(
       ).forEach(addFeature)
     }
     for (const choice of character.classChoiceSelections ?? []) {
-      const classKey = getEntityLookupKey(choice.className, choice.classSource)
-      const classData = lookups.classesByKey[classKey]
       const catalogs = {
         ...data,
         creatures: data.creatures ?? [],
         optionalFeatures: data.optionalfeatures as OptionalFeatureLike[],
-        classFeatures: [
-          ...classFeatures(classData),
-          ...data.classFeatures.filter(
-            (feature) => getEntityLookupKey(feature.className, feature.classSource) === classKey,
-          ),
-        ],
+        classFeatures: [...data.classFeatures, ...data.classes.flatMap(classFeatures)],
         subclassFeatures: collectSubclassFeatures(
           subclassFor(
             choice.className,
