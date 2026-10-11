@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
@@ -366,6 +367,106 @@ describe('CharacterSheetPage', () => {
       }),
     }
     expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
+  })
+
+  test('Actions and PDF honor current reprint suppression across source casing', () => {
+    const variantRules = {
+      optionalClassFeatures: false,
+      averageHitPoints: false,
+      anyRaceSubclasses: false,
+      ignoreEquipRestrictions: false,
+    }
+    const old = {
+      name: 'Signal',
+      source: 'phb',
+      className: 'Bard',
+      classSource: 'PHB',
+      level: 1,
+      entries: ['As an action, use the old signal.'],
+      reprintedAs: ['Signal|Bard|TCE|1|TCE'],
+    }
+    const newer = {
+      ...old,
+      source: 'TCE',
+      entries: ['As a reaction, use the newer signal.'],
+      reprintedAs: [],
+    }
+    const root = {
+      name: 'Training',
+      source: 'PHB',
+      className: 'Wizard',
+      classSource: 'PHB',
+      level: 1,
+      entries: [
+        {
+          type: 'options',
+          count: 1,
+          entries: [{ type: 'refClassFeature', classFeature: 'Signal|Bard||1' }],
+        },
+      ],
+    }
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||1'] }],
+      classFeature: [root, old, newer],
+    }) as Class5e[]
+    const draft = createEmptyCharacter({
+      name: 'Current reprint choice',
+      allowedSources: ['PHB', 'TCE'],
+      variantRules,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    })
+    const choice = classes[0].normalizedRules!.choices[0]
+    const granted = applyClassChoiceSelectionWithGrantsCommand(
+      draft,
+      draft.provenance!,
+      choice,
+      choice.options,
+    )
+    let character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...draft,
+          ...granted.characterPatch,
+          provenance: granted.provenanceUpdate,
+        }),
+      ),
+    )
+    const originalSelection = structuredClone(character.classChoiceSelections)
+    const data = makeGameDataFixture({ classes, classFeatures: [root, old, newer] })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
+    useCharacterStore.setState({ activeCharacter: character })
+    const hook = renderHook(() => ({
+      actions: useCharacterActions(character),
+      filtered: useFilteredGameData(),
+    }))
+    renderPage()
+    const original = hook.result.current.actions
+    expect(original).toHaveLength(1)
+    const observe = (preferNewerPrintings: boolean, allowedSources = ['PHB', 'TCE']) => {
+      act(() => {
+        character = {
+          ...character,
+          allowedSources,
+          variantRules: { ...variantRules, preferNewerPrintings },
+        }
+        useCharacterStore.setState({ activeCharacter: character })
+      })
+      hook.rerender()
+      expect(
+        vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
+      ).toEqual(hook.result.current.actions)
+      expect(character.classChoiceSelections).toEqual(originalSelection)
+      return hook.result.current.actions
+    }
+    expect(observe(true)).toEqual([])
+    expect(
+      hook.result.current.filtered.classFeatures.filter((feature) => feature.name === 'Signal'),
+    ).toEqual([newer])
+    expect(observe(false)).toEqual(original)
+    expect(observe(true, ['PHB'])).toEqual(original)
+    expect(observe(true)).toEqual([])
+    expect(observe(false)).toEqual(original)
   })
 
   test.each([

@@ -97,6 +97,12 @@ const isSuppressed = (
 
 type SubclassFeatureInclusion = (name: string | undefined, source: string) => boolean
 
+function buildFeatureSuppressionCheck(keys: ReadonlySet<string> | undefined) {
+  const normalized = new Set(keys ? [...keys].map((key) => key.trim().toLowerCase()) : [])
+  return (name: string | undefined, source: string) =>
+    normalized.has(`${name?.trim() ?? ''}|${source.trim()}`.toLowerCase())
+}
+
 const removedNestedSubclassFeature = Symbol('removedNestedSubclassFeature')
 
 function classFeatureIdentity(
@@ -342,11 +348,12 @@ export class DataFilter {
     filters: Pick<ClassFilters, 'sources' | 'suppressedKeys'>,
   ): ClassFeature[] {
     const sources = new Set(filters.sources?.map((source) => source.toUpperCase()))
+    const featureIsSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)
     return features.filter((feature) => {
       const identity = classFeatureIdentity(feature, '')
       return (
         (sources.size === 0 || sources.has(identity.source.toUpperCase())) &&
-        !isSuppressed(identity.name, identity.source, filters.suppressedKeys)
+        !featureIsSuppressed(identity.name, identity.source)
       )
     })
   }
@@ -471,22 +478,19 @@ export class DataFilter {
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      const featureIsSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)
       filtered = filtered
         .filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
         .map((cls) => ({
           ...cls,
           classFeatures: cls.classFeatures?.filter((feature) => {
             const identity = classFeatureIdentity(feature, cls.source)
-            return !isSuppressed(identity.name, identity.source, filters.suppressedKeys)
+            return !featureIsSuppressed(identity.name, identity.source)
           }) as typeof cls.classFeatures,
-          classFeatureRefs: cls.classFeatureRefs?.filter(
-            (reference) =>
-              !isSuppressed(
-                reference.name,
-                classFeatureIdentity(reference.ref?.trim() || reference, cls.source).source,
-                filters.suppressedKeys,
-              ),
-          ),
+          classFeatureRefs: cls.classFeatureRefs?.filter((reference) => {
+            const identity = classFeatureIdentity(reference.ref?.trim() || reference, cls.source)
+            return !featureIsSuppressed(identity.name, identity.source)
+          }),
           subclasses: cls.subclasses
             ?.filter(
               (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
@@ -496,7 +500,7 @@ export class DataFilter {
                 ...subclass,
                 ...filterSubclassContent(
                   subclass,
-                  (name, source) => !isSuppressed(name, source, filters.suppressedKeys),
+                  (name, source) => !featureIsSuppressed(name, source),
                 ),
               }
             }),

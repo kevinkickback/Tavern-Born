@@ -112,12 +112,14 @@ describe('5etools/filters', () => {
         catalogs,
       ),
     ).toMatchObject([{ availability: 'retained', entries: [] }])
-    expect(
-      DataFilter.filterClasses(classes, {
-        ...filters,
-        suppressedKeys: new Set(['Nested default|PHB']),
-      })[0].subclasses![0].normalizedRules!.choices,
-    ).toEqual([])
+    for (const source of ['PHB', 'phb']) {
+      expect(
+        DataFilter.filterClasses(classes, {
+          ...filters,
+          suppressedKeys: new Set([`Nested default|${source}`]),
+        })[0].subclasses![0].normalizedRules!.choices,
+      ).toEqual([])
+    }
   })
 
   test('filters complete class-feature defaults by effective target printing', () => {
