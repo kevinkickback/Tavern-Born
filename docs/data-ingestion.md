@@ -155,16 +155,14 @@ Incomplete records are retained under opaque catalog-local keys, which are not v
 Stored features with only name/source may enrich their descriptions from exactly one matching
 catalog record. Multiple owner/level matches preserve saved text; they cannot select a printing or
 fall through to an optional feature. Actions and PDF use this shared description projection.
-An earned class or subclass action is suppressed by a saved feature only when that feature
-actually projects an action; missing or passive saved text cannot hide a qualified earned action.
-Matching a produced saved action uses canonical case and complete class-feature source defaults;
-subclass matching retains its separate source layout. Different saved printings remain distinct.
-Matching uses the codec's name/source case normalization and effective source defaults for complete
-records; incomplete rows use only their supplied name/source. A missing saved printing cannot prove
-a match with a complete canonical record.
-Fully qualified choice persistence and tooltip resolution retain their separate contracts.
-Cache schema 27 rebuilds older cached catalogs, including normalized class schedules, global
-lookup dictionaries, and the existing race/subrace normalization together.
+Standalone saved feature actions retain their own IDs; description enrichment cannot attach them
+to or suppress an earned class/subclass action. Qualified class choices retain complete target UIDs
+and actual granting owners. Their actions require exact parsed rules and share stable structural
+groups only within the same owner and feature family. Missing or ambiguous targets remain saved
+intents without emitting opaque source-backed actions. The [provenance contract](provenance.md)
+owns grouping, manual override and restoration behavior.
+Cache schema28 rebuilds older cached catalogs, including normalized class choices and schedules,
+global lookup dictionaries, and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
 modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path segments are rejected
