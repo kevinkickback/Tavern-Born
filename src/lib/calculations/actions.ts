@@ -444,7 +444,7 @@ function deriveClassFeatureActions(
           addAction(owner, target, feature, {
             kind: selection.subclassName ? 'subclass' : 'class',
             name: feature.name,
-            source: option.source,
+            source: option.source?.trim() || target.split('|').slice(-1)[0],
           })
       } else if (option.entityType === 'optionalFeature') {
         const feature = context.optionalFeaturesByKey?.[

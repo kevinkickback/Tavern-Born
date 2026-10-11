@@ -315,7 +315,13 @@ test.each([
     provenance: result.provenanceUpdate,
   })
   const actions = observe(character, classes, targets).actions
-  expect(actions).toMatchObject([{ kind: 'action', description: 'As an action, light a beacon.' }])
+  expect(actions).toMatchObject([
+    {
+      kind: 'action',
+      description: 'As an action, light a beacon.',
+      source: { source: target.source || targetSource.toLowerCase() },
+    },
+  ])
   const data = makeGameDataFixture({ classes, classFeatures: targets })
   expect(characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(data))).toBe(
     false,
