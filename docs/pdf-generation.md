@@ -65,6 +65,10 @@ group shows its capacity and supports manual selections or Automatic reset. Choi
 source-qualified spell IDs or entity/action IDs. Removed IDs are ignored; an entirely stale
 nonempty selection falls back to automatic.
 
+Automatic class/subclass action choices also accept unambiguous canonical UID aliases and identical
+repeated-gain IDs. One choice selects the shared projection once; ambiguous legacy IDs never select
+an arbitrary owner. See [automatic feature actions](provenance.md#automatic-feature-actions).
+
 Description and overflow controls are independent:
 
 - Full descriptions are the default; names-only keeps combat numbers while removing rules

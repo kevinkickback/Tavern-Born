@@ -17,6 +17,10 @@ interface CharacterActionDamage {
 
 export interface CharacterAction {
   id: string
+  /** Projection-only equivalent IDs; never used to infer an ambiguous saved owner. */
+  idAliases?: string[]
+  /** Unambiguous normalized feature keys, rebuilt from currently earned targets. */
+  featureIdentities?: string[]
   name: string
   kind: CharacterActionKind
   description: string

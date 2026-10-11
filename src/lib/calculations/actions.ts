@@ -1,8 +1,12 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
+  decodeClassFeatureReference,
+  decodeSubclassFeatureReference,
   getClassFeatureIdentity,
   getClassFeatureLegacyLookupKey,
   getClassFeatureReferenceLevel,
+  getSubclassFeatureIdentity,
+  getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
@@ -18,17 +22,20 @@ import { renderEntriesToText } from '@/lib/entryText'
 import type {
   Class5e,
   ClassFeature,
+  ClassFeatureReference,
   Feat5e,
   Item5e,
   OptionalFeatureLike,
   Race5e,
   Spell5e,
+  SubclassFeatureReference,
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { getFeatureActionIdIdentity } from './featureActionIdentity'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 
@@ -291,14 +298,95 @@ function deriveClassFeatureActions(
   character: Character,
   context: RulesTextActionContext,
   storedActions: readonly CharacterAction[],
-): CharacterAction[] {
-  const storedKeys = new Set(
-    storedActions.map((action) =>
-      getEntityLookupKey(action.source.name, action.source.source).toLowerCase(),
-    ),
-  )
-  const projectedKeys = new Set<string>()
-  const actions: CharacterAction[] = []
+): { earned: CharacterAction[]; stored: CharacterAction[] } {
+  const storedByKey = new Map<string, CharacterAction[]>()
+  for (const action of storedActions) {
+    const key = getEntityLookupKey(action.source.name, action.source.source).toLowerCase()
+    const matches = storedByKey.get(key)
+    if (matches) matches.push(action)
+    else storedByKey.set(key, [action])
+  }
+  const groups: {
+    action: CharacterAction
+    ids: Set<string>
+    identity: string
+    uids: Set<string>
+  }[] = []
+  const identities = new Map<string, (typeof groups)[number]>()
+  const repeatedMechanics = new Map<string, (typeof groups)[number]>()
+  function collect(
+    reference: ClassFeatureReference | SubclassFeatureReference,
+    kind: 'class' | 'subclass',
+    owner: string,
+    currentLevel: number,
+  ) {
+    const feature = reference.feature
+    const subclass = kind === 'subclass'
+    const level = subclass
+      ? getSubclassFeatureReferenceLevel(reference)
+      : getClassFeatureReferenceLevel(reference)
+    if (!feature || level === undefined || level > currentLevel) return
+    const decoded = reference.ref?.trim()
+      ? subclass
+        ? decodeSubclassFeatureReference(reference.ref)
+        : decodeClassFeatureReference(reference.ref)
+      : { ...feature, ...reference, level, source: reference.source ?? feature.source }
+    const identity = subclass
+      ? getSubclassFeatureIdentity(decoded)
+      : getClassFeatureIdentity(decoded)
+    if (!identity) return
+    const source =
+      decoded.source ||
+      ('subclassSource' in decoded ? decoded.subclassSource : decoded.classSource) ||
+      'PHB'
+    const key = getEntityLookupKey(feature.name, feature.source)
+    const id = `${kind}-feature:${encodeURIComponent(reference.ref || key)}`
+    const [action] = rulesTextAction(id, feature.name, renderEntriesToText(feature.entries), {
+      kind,
+      name: feature.name,
+      source,
+    })
+    if (!action) return
+    const ownedIdentity = JSON.stringify([owner, identity])
+    const qualifiedId = `${kind}-feature:${encodeURIComponent(ownedIdentity)}`
+    const compatibleIdentity = getFeatureActionIdIdentity(id)
+    const sameIdentity = identities.get(ownedIdentity)
+    if (sameIdentity) {
+      sameIdentity.ids.add(id)
+      sameIdentity.ids.add(qualifiedId)
+      if (compatibleIdentity) sameIdentity.uids.add(compatibleIdentity)
+      return
+    }
+    // Repeated gains share an action only when their parsed rules are identical.
+    const family = identity.split('|').filter((_, index) => index !== (subclass ? 6 : 4))
+    const mechanics = JSON.stringify([owner, family, feature.entries], (_key, value: unknown) =>
+      value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, (value as Record<string, unknown>)[key]]),
+          )
+        : value,
+    )
+    const repeated = repeatedMechanics.get(mechanics)
+    if (repeated) {
+      repeated.ids.add(id)
+      repeated.ids.add(qualifiedId)
+      repeated.uids.add(identity)
+      if (compatibleIdentity) repeated.uids.add(compatibleIdentity)
+      identities.set(ownedIdentity, repeated)
+      return
+    }
+    const group = {
+      action,
+      ids: new Set([id, qualifiedId]),
+      identity: ownedIdentity,
+      uids: new Set([identity, ...(compatibleIdentity ? [compatibleIdentity] : [])]),
+    }
+    groups.push(group)
+    identities.set(ownedIdentity, group)
+    repeatedMechanics.set(mechanics, group)
+  }
   for (const entry of getCharacterClassEntries(character)) {
     const classData = (context.classes ?? [])
       .filter(
@@ -307,44 +395,76 @@ function deriveClassFeatureActions(
       )
       .sort((left, right) => left.source.localeCompare(right.source))[0]
     if (!classData) continue
-
+    const owner = getEntityLookupKey(classData.name, classData.source).toLowerCase()
     for (const reference of classData.classFeatureRefs ?? []) {
-      const feature = reference.feature
-      const level = getClassFeatureReferenceLevel(reference)
-      if (!feature || level === undefined || level > entry.levels) continue
-      const key = getEntityLookupKey(feature.name, feature.source)
-      const storedKey = getClassFeatureLegacyLookupKey(feature) ?? key.toLowerCase()
-      if (storedKeys.has(storedKey) || projectedKeys.has(key)) continue
-      projectedKeys.add(key)
-      actions.push(
-        ...rulesTextAction(
-          `class-feature:${encodeURIComponent(reference.ref || key)}`,
-          feature.name,
-          renderEntriesToText(feature.entries),
-          { kind: 'class', name: feature.name, source: feature.source },
-        ),
-      )
+      collect(reference, 'class', owner, entry.levels)
     }
 
     const subclass = getSelectedSubclassData(classData, entry)
     for (const reference of subclass?.subclassFeatureRefs ?? []) {
-      const feature = reference.feature
-      const level = reference.level ?? feature?.level ?? 0
-      if (!feature || level > entry.levels) continue
-      const key = getEntityLookupKey(feature.name, feature.source)
-      if (storedKeys.has(key.toLowerCase()) || projectedKeys.has(key)) continue
-      projectedKeys.add(key)
-      actions.push(
-        ...rulesTextAction(
-          `subclass-feature:${encodeURIComponent(reference.ref || key)}`,
-          feature.name,
-          renderEntriesToText(feature.entries),
-          { kind: 'subclass', name: feature.name, source: feature.source },
-        ),
+      collect(
+        reference,
+        'subclass',
+        JSON.stringify([
+          owner,
+          getEntityLookupKey(subclass?.shortName, subclass?.source).toLowerCase(),
+        ]),
+        entry.levels,
       )
     }
   }
-  return actions
+  const idOwners = new Map<string, number>()
+  const nameOwners = new Map<string, number>()
+  const legacyOwners = new Map<string, number>()
+  const uidOwners = new Map<string, number>()
+  for (const group of groups) {
+    for (const id of new Set([...group.ids].map((id) => getFeatureActionIdIdentity(id) ?? id)))
+      idOwners.set(id, (idOwners.get(id) ?? 0) + 1)
+    for (const uid of group.uids) uidOwners.set(uid, (uidOwners.get(uid) ?? 0) + 1)
+    const key = getEntityLookupKey(
+      group.action.source.name,
+      group.action.source.source,
+    ).toLowerCase()
+    nameOwners.set(key, (nameOwners.get(key) ?? 0) + 1)
+    const legacyKey = `${group.action.source.kind}|${key}`
+    legacyOwners.set(legacyKey, (legacyOwners.get(legacyKey) ?? 0) + 1)
+  }
+  const savedReplacements = new Map<string, CharacterAction>()
+  const earned = groups.flatMap(({ action, ids, identity, uids }) => {
+    const key = getEntityLookupKey(action.source.name, action.source.source).toLowerCase()
+    const unambiguousLegacy = legacyOwners.get(`${action.source.kind}|${key}`) === 1
+    const isUnambiguous = (uid: string) => !uid.startsWith('legacy:') || unambiguousLegacy
+    const uniqueIds = [...ids].filter((id) => {
+      const uid = getFeatureActionIdIdentity(id) ?? id
+      return idOwners.get(uid) === 1 && isUnambiguous(uid)
+    })
+    const id = uniqueIds[0] ?? `${action.source.kind}-feature:${encodeURIComponent(identity)}`
+    const aliases = uniqueIds.filter((alias) => alias !== id)
+    const featureIdentities = [...uids].filter(
+      (uid) => uidOwners.get(uid) === 1 && isUnambiguous(uid),
+    )
+    const matches = storedByKey.get(key)
+    if (matches && nameOwners.get(key) === 1) {
+      if (matches.length === 1) {
+        const saved = matches[0]
+        savedReplacements.set(saved.id, {
+          ...saved,
+          idAliases: [id, ...aliases],
+          featureIdentities,
+        })
+      }
+      return []
+    }
+    return [
+      {
+        ...action,
+        id,
+        ...(aliases.length ? { idAliases: aliases } : {}),
+        ...(featureIdentities.length ? { featureIdentities } : {}),
+      },
+    ]
+  })
+  return { earned, stored: storedActions.map((saved) => savedReplacements.get(saved.id) ?? saved) }
 }
 
 /** Projects feature, feat, and species rules only when their text explicitly grants an action. */
@@ -376,7 +496,12 @@ export function deriveRulesTextActions(
       ]
     },
   )
-  return [...featureActions, ...classFeatureActions, ...featActions, ...raceActions]
+  return [
+    ...classFeatureActions.stored,
+    ...classFeatureActions.earned,
+    ...featActions,
+    ...raceActions,
+  ]
 }
 
 /** Merges runtime projections with persisted manual actions by stable ID. */
@@ -385,7 +510,27 @@ function mergeCharacterActions(
   manualActions: readonly CharacterAction[] = [],
 ): CharacterAction[] {
   const byId = new Map<string, CharacterAction>()
-  for (const action of [...sourceActions, ...manualActions]) byId.set(action.id, action)
+  const aliases = new Map<string, string>()
+  const identities = new Map<string, string>()
+  for (const action of sourceActions) {
+    byId.set(action.id, action)
+    for (const alias of [action.id, ...(action.idAliases ?? [])]) aliases.set(alias, action.id)
+    for (const identity of action.featureIdentities ?? []) identities.set(identity, action.id)
+  }
+  for (const action of manualActions) {
+    const identity = getFeatureActionIdIdentity(action.id)
+    const key =
+      aliases.get(action.id) ?? (identity ? identities.get(identity) : undefined) ?? action.id
+    const original = byId.get(key)
+    const equivalent = original
+      ? [...new Set([original.id, ...(original.idAliases ?? [])])].filter((id) => id !== action.id)
+      : []
+    byId.set(key, {
+      ...action,
+      ...(equivalent.length ? { idAliases: equivalent } : {}),
+      ...(original?.featureIdentities ? { featureIdentities: original.featureIdentities } : {}),
+    })
+  }
   return [...byId.values()]
 }
 

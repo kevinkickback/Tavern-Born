@@ -287,6 +287,36 @@ Explicit race selection chooses its initial child; explicit child selection owns
 Class tags include source-qualified class identity and, where needed, the granting level/choice.
 This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
 
+### Automatic feature actions
+
+Actions and PDF use one pure projection. Earned class/subclass actions retain the complete encoded
+feature UID and the actual selected owner. UID source defaults, casing and display aliases identify
+one feature; subclass UIDs use their separate field order. A positive integer encoded gain level
+is authoritative; malformed nonempty UIDs never borrow materialized metadata. Rows without a UID
+require valid materialized levels and complete feature ownership.
+
+Distinct owners, printings and different gain-level rules remain separate. Repeated gains share
+one action only when their parsed entries are structurally identical within the same owner/feature
+family. Object field order is immaterial; array order, all field values and embedded qualified
+targets remain significant even when rendered text matches.
+Passive references do not consume an action identity. Saved name/source feature actions suppress
+only one unambiguous active earned projection; catalog enrichment retains its unique-match policy.
+When exactly one saved action replaces exactly one earned projection, its compatible IDs follow
+that saved row. Multiple matching saved rows do not assign an override to an arbitrary row.
+
+Existing unique raw-UID and no-UID action IDs remain usable. Projection-only aliases preserve manual
+overrides and PDF selections across canonical UID spelling changes and identical repeated gains.
+Issued owner-qualified IDs remain aliases when competing owners/gains leave. Unique materialized
+name/source IDs also survive casing/whitespace changes; ambiguous normalized labels cannot bind.
+Legacy uniqueness includes every eligible same-kind name/source target, including complete UID
+targets that never issued that legacy label. Other printings and class/subclass ID kinds remain
+independent.
+Aliases are not character-format fields and are rebuilt from current eligible rules. Ambiguous
+legacy name/source IDs cannot recover an owner: their manual actions remain separate, and wholly
+stale PDF selections follow the usual automatic fallback. Explicit manual actions remain available
+when their source disappears or their gain becomes ineligible; removing the override reveals any
+still-earned action. No historical ownership guessing or character conversion is performed.
+
 Class-page spell choices and replacements use pure spell commands. `useSpellProvenanceMutations`
 exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes
 use `useSpellProfileMutations`, which already commits profile and provenance changes together.
