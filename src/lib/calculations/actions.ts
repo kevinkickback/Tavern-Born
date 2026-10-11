@@ -407,6 +407,7 @@ function deriveClassFeatureActions(
   }
   const idOwners = new Map<string, number>()
   const nameOwners = new Map<string, number>()
+  const legacyOwners = new Map<string, number>()
   const uidOwners = new Map<string, number>()
   for (const group of groups) {
     for (const id of new Set([...group.ids].map((id) => getFeatureActionIdIdentity(id) ?? id)))
@@ -417,16 +418,23 @@ function deriveClassFeatureActions(
       group.action.source.source,
     ).toLowerCase()
     nameOwners.set(key, (nameOwners.get(key) ?? 0) + 1)
+    const legacyKey = `${group.action.source.kind}|${key}`
+    legacyOwners.set(legacyKey, (legacyOwners.get(legacyKey) ?? 0) + 1)
   }
   const savedReplacements = new Map<string, CharacterAction>()
   const earned = groups.flatMap(({ action, ids, identity, uids }) => {
     const key = getEntityLookupKey(action.source.name, action.source.source).toLowerCase()
-    const uniqueIds = [...ids].filter(
-      (id) => idOwners.get(getFeatureActionIdIdentity(id) ?? id) === 1,
-    )
+    const unambiguousLegacy = legacyOwners.get(`${action.source.kind}|${key}`) === 1
+    const isUnambiguous = (uid: string) => !uid.startsWith('legacy:') || unambiguousLegacy
+    const uniqueIds = [...ids].filter((id) => {
+      const uid = getFeatureActionIdIdentity(id) ?? id
+      return idOwners.get(uid) === 1 && isUnambiguous(uid)
+    })
     const id = uniqueIds[0] ?? `${action.source.kind}-feature:${encodeURIComponent(identity)}`
     const aliases = uniqueIds.filter((alias) => alias !== id)
-    const featureIdentities = [...uids].filter((uid) => uidOwners.get(uid) === 1)
+    const featureIdentities = [...uids].filter(
+      (uid) => uidOwners.get(uid) === 1 && isUnambiguous(uid),
+    )
     const matches = storedByKey.get(key)
     if (matches && nameOwners.get(key) === 1) {
       if (matches.length === 1) {

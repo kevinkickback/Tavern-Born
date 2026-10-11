@@ -215,10 +215,14 @@ describe('automatic feature action ownership', () => {
     expect(character).not.toHaveProperty('featureIdentities')
   })
 
-  test('ambiguous legacy IDs neither override nor select one of multiple no-UID owners', () => {
+  test.each([
+    undefined,
+    'Wizard',
+    'Bard',
+  ])('ambiguous legacy IDs cannot select an owner when the complete UID belongs to %j', (uidOwner) => {
     const classes = ['Wizard', 'Bard'].map((owner) => {
       const ref = reference(owner, 1, 'As an action, use this training.')
-      ref.ref = ''
+      if (owner !== uidOwner) ref.ref = ''
       return makeClassFixture({ name: owner, classFeatureRefs: [ref] })
     })
     const character = makeCharacterFixture({
@@ -237,7 +241,7 @@ describe('automatic feature action ownership', () => {
     const group = planSheetContent(vm, '2014-custom', { action: [legacyId] }).groups.find(
       (entry) => entry.id === 'action',
     )!
-    expect(group.automatic).toBe(true)
+    expect.soft(group.automatic).toBe(true)
     character.manualActions = [
       {
         id: legacyId,
@@ -248,7 +252,17 @@ describe('automatic feature action ownership', () => {
         active: true,
       },
     ]
-    expect(createCharacterSheetViewModel(character, context).actions).toHaveLength(3)
+    expect.soft(createCharacterSheetViewModel(character, context).actions).toHaveLength(3)
+    if (uidOwner) {
+      character.classProgression = character.classProgression.filter(
+        (entry) => entry.name !== uidOwner,
+      )
+      const reopened = characterSchema.parse(JSON.parse(JSON.stringify(character)))
+      expect(createCharacterSheetViewModel(reopened, context).actions).toMatchObject([
+        { id: legacyId, name: 'Ambiguous manual entry', source: { kind: 'manual' } },
+      ])
+      expect(createCharacterSheetViewModel(reopened, context).actions).toHaveLength(1)
+    }
   })
 
   test.each([
@@ -545,8 +559,12 @@ describe('automatic feature action ownership', () => {
     expect(createCharacterSheetViewModel(character, context).actions).toHaveLength(2)
   })
 
-  test('class and selected subclass actions with the same name keep separate identities', () => {
+  test.each([
+    false,
+    true,
+  ])('class and subclass actions keep typed identities (materialized class: %s)', (materialized) => {
     const feature = reference('Wizard', 1, 'As an action, use the class training.')
+    if (materialized) feature.ref = ''
     const classes = [
       makeClassFixture({
         classFeatureRefs: [feature],
@@ -582,12 +600,44 @@ describe('automatic feature action ownership', () => {
     expect(
       deriveRulesTextActions(character, undefined, { classes }).map((action) => action.kind),
     ).toEqual(['action', 'reaction'])
+    if (materialized) {
+      const context = { classesByKey: buildClassLookup(classes) }
+      const legacyId = 'class-feature:Shared%7CPHB'
+      const group = planSheetContent(
+        createCharacterSheetViewModel(character, context),
+        '2014-custom',
+        {
+          action: [legacyId],
+        },
+      ).groups.find((entry) => entry.id === 'action')!
+      expect(group).toMatchObject({ automatic: false, selected: [legacyId] })
+      Object.assign(
+        character,
+        upsertManualActionCommand(character, {
+          id: legacyId,
+          name: 'My class training',
+          kind: 'action',
+          description: 'Player rules.',
+          source: { kind: 'manual', name: 'My class training' },
+          active: false,
+        }),
+      )
+      expect(createCharacterSheetViewModel(character, context).actions).toMatchObject([
+        { name: 'My class training', active: false },
+        { kind: 'reaction', active: true },
+      ])
+      expect(createCharacterSheetViewModel(character, context).actions).toHaveLength(2)
+    }
     character.classProgression![0].subclass = undefined
     expect(deriveRulesTextActions(character, undefined, { classes })).toHaveLength(1)
   })
 
-  test('different feature printings remain independent even with identical entries', () => {
+  test.each([
+    false,
+    true,
+  ])('different feature printings remain independent (materialized first: %s)', (materialized) => {
     const first = reference('Wizard', 1, 'As an action, use this training.')
+    if (materialized) first.ref = ''
     const second = {
       ...first,
       ref: 'Shared|Wizard||1|TCE',
@@ -599,6 +649,33 @@ describe('automatic feature action ownership', () => {
         (action) => action.source.source,
       ),
     ).toEqual(['PHB', 'TCE'])
+    if (materialized) {
+      const classes = [makeClassFixture({ classFeatureRefs: [first, second] })]
+      const character = makeCharacterFixture({
+        features: [],
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      })
+      const legacyId = 'class-feature:Shared%7CPHB'
+      const group = planSheetContent(
+        createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }),
+        '2014-custom',
+        { action: [legacyId] },
+      ).groups.find((entry) => entry.id === 'action')!
+      expect(group).toMatchObject({ automatic: false, selected: [legacyId] })
+    }
+  })
+
+  test('repeated gains with different parsed spell targets remain separate despite matching text', () => {
+    const actions = observe([
+      makeClassFixture({
+        classFeatureRefs: [
+          reference('Wizard', 1, 'As an action, cast {@spell Light|PHB}.'),
+          reference('Wizard', 2, 'As an action, cast {@spell Light|XPHB}.'),
+        ],
+      }),
+    ])
+    expect(actions).toHaveLength(2)
+    expect(new Set(actions.map((action) => action.description)).size).toBe(1)
   })
 
   test('copied subclasses retain their original class-printing feature UID', () => {

@@ -306,6 +306,9 @@ Existing unique raw-UID and no-UID action IDs remain usable. Projection-only ali
 overrides and PDF selections across canonical UID spelling changes and identical repeated gains.
 Issued owner-qualified IDs remain aliases when competing owners/gains leave. Unique materialized
 name/source IDs also survive casing/whitespace changes; ambiguous normalized labels cannot bind.
+Legacy uniqueness includes every eligible same-kind name/source target, including complete UID
+targets that never issued that legacy label. Other printings and class/subclass ID kinds remain
+independent.
 Aliases are not character-format fields and are rebuilt from current eligible rules. Ambiguous
 legacy name/source IDs cannot recover an owner: their manual actions remain separate, and wholly
 stale PDF selections follow the usual automatic fallback. Explicit manual actions remain available
