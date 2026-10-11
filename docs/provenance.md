@@ -324,6 +324,8 @@ complete target identity; a class choice may explicitly target another class's f
 Composed subclass catalogs retain complete owner indexes. Repeated catalog copies within one
 owner do not make a target ambiguous. A class-owned subclass target requires one exact owner;
 competing owners leave the option unresolved in the picker, readiness, details and action projection.
+Actions and PDF receive the complete target catalog separately from selected classes: an explicit
+target may belong to an unselected class, whose unrelated features are not thereby earned.
 
 Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
 remain saved intents without emitting or enriching an opaque action. Their materialized feature rows

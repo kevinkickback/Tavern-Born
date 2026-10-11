@@ -83,6 +83,8 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   race?: Race5e
   raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
+  /** Complete available targets, separate from the character's selected earned classes. */
+  classesByKey?: Readonly<Record<string, Class5e>>
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -216,7 +218,7 @@ export function deriveSpellActions(
 
 type RulesTextActionContext = Pick<
   CharacterActionProjectionContext,
-  'classes' | 'feats' | 'classFeaturesByKey' | 'optionalFeaturesByKey'
+  'classes' | 'classesByKey' | 'feats' | 'classFeaturesByKey' | 'optionalFeaturesByKey'
 >
 
 function rulesTextAction(
@@ -318,8 +320,11 @@ function deriveClassFeatureActions(
       (selection) => !selection.inactive && selection.selected.some(getClassChoiceFeatureTarget),
     )
   ) {
-    subclassTargets = indexSubclassFeatureTargets(context.classes ?? [])
-    for (const classData of context.classes ?? []) {
+    const catalogClasses = context.classesByKey
+      ? Object.values(context.classesByKey)
+      : (context.classes ?? [])
+    subclassTargets = indexSubclassFeatureTargets(catalogClasses)
+    for (const classData of catalogClasses) {
       for (const ref of classData.classFeatureRefs ?? []) if (ref.feature) addTarget(ref.feature)
     }
     for (const feature of Object.values(context.classFeaturesByKey ?? {})) addTarget(feature)

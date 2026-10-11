@@ -106,6 +106,7 @@ function observe(character: Character, classes: Class5e[], targets: ClassFeature
   expect(
     deriveCharacterActions(character, {
       classes,
+      classesByKey: context.classesByKey,
       classFeaturesByKey: context.classFeaturesByKey,
       abilityModifiers: {
         strength: 0,
