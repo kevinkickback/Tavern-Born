@@ -4,9 +4,11 @@ import {
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   collectSubclassFeatures,
   getCreatureChoiceEntries,
+  indexSubclassFeatureTargets,
   resolveClassChoiceOptionEntity,
 } from '@/lib/character/classChoiceOptions'
 import type {
@@ -60,6 +62,7 @@ export function buildRetainedCharacterDetails(
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
     const lookups = buildGameDataLookups(data)
+    const subclassTargets = indexSubclassFeatureTargets(data.classes)
     for (const feature of [
       ...data.classFeatures,
       ...(data.optionalfeatures as OptionalFeatureLike[]),
@@ -88,14 +91,20 @@ export function buildRetainedCharacterDetails(
         creatures: data.creatures ?? [],
         optionalFeatures: data.optionalfeatures as OptionalFeatureLike[],
         classFeatures: [...data.classFeatures, ...data.classes.flatMap(classFeatures)],
-        subclassFeatures: collectSubclassFeatures(
-          subclassFor(
-            choice.className,
-            choice.classSource,
-            choice.subclassName,
-            choice.subclassSource,
-          ),
-        ),
+        subclassFeatures: choice.subclassName
+          ? [
+              ...(subclassTargets.byOwner
+                .get(
+                  getFeatureOwnerKey(
+                    choice.className,
+                    choice.classSource,
+                    choice.subclassName,
+                    choice.subclassSource,
+                  ),
+                )
+                ?.values() ?? []),
+            ]
+          : [...subclassTargets.unique.values()],
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {

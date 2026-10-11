@@ -21,7 +21,7 @@ import {
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
+import { indexSubclassFeatureTargets } from '@/lib/character/classChoiceOptions'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -308,8 +308,7 @@ function deriveClassFeatureActions(
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
   const targets = new Map<string, ClassFeature>()
-  const subclassTargets = new Map<string, Map<string, ClassFeature>>()
-  const uniqueSubclassTargets = new Map<string, ClassFeature | undefined>()
+  let subclassTargets: ReturnType<typeof indexSubclassFeatureTargets> | undefined
   const addTarget = (feature: ClassFeature) => {
     const identity = getClassFeatureIdentity(feature)
     if (identity) targets.set(identity, feature)
@@ -319,27 +318,9 @@ function deriveClassFeatureActions(
       (selection) => !selection.inactive && selection.selected.some(getClassChoiceFeatureTarget),
     )
   ) {
+    subclassTargets = indexSubclassFeatureTargets(context.classes ?? [])
     for (const classData of context.classes ?? []) {
       for (const ref of classData.classFeatureRefs ?? []) if (ref.feature) addTarget(ref.feature)
-      for (const subclass of classData.subclasses ?? []) {
-        const owner = getFeatureOwnerKey(
-          classData.name,
-          classData.source,
-          subclass.name,
-          subclass.source,
-        )
-        const ownedTargets = new Map<string, ClassFeature>()
-        for (const feature of collectSubclassFeatures(subclass)) {
-          const identity = getSubclassFeatureIdentity(feature)
-          if (!identity) continue
-          ownedTargets.set(identity, feature)
-          uniqueSubclassTargets.set(
-            identity,
-            uniqueSubclassTargets.has(identity) ? undefined : feature,
-          )
-        }
-        subclassTargets.set(owner, ownedTargets)
-      }
     }
     for (const feature of Object.values(context.classFeaturesByKey ?? {})) addTarget(feature)
   }
@@ -451,8 +432,8 @@ function deriveClassFeatureActions(
           ? option.entityType === 'classFeature'
             ? targets.get(target)
             : selection.subclassName
-              ? subclassTargets.get(owner)?.get(target)
-              : uniqueSubclassTargets.get(target)
+              ? subclassTargets?.byOwner.get(owner)?.get(target)
+              : subclassTargets?.unique.get(target)
           : undefined
         if (target && feature)
           addAction(owner, target, feature, {

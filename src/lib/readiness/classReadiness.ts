@@ -131,7 +131,8 @@ export function validateClassChoices(
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
       const storedSelection = selections.get(choice.id)?.selected ?? []
-      const choiceCatalogs = choice.owner.type === 'subclass' ? subclassCatalogs : catalogs
+      const choiceCatalogs =
+        choice.owner.type === 'subclass' && !catalogs?.subclassTargets ? subclassCatalogs : catalogs
       const eligibleOptionKeys = choiceCatalogs
         ? new Set(
             resolveClassChoiceOptions(choice, choiceCatalogs, [], entry.levels)

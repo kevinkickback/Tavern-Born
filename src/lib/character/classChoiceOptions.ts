@@ -15,6 +15,7 @@ import {
 } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
+  Class5e,
   ClassFeature,
   Creature5e,
   Feat5e,
@@ -33,7 +34,11 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
-import { getClassChoiceFeatureTarget, getClassChoiceOptionKey } from './classChoiceIdentity'
+import {
+  getClassChoiceFeatureTarget,
+  getClassChoiceOptionKey,
+  getFeatureOwnerKey,
+} from './classChoiceIdentity'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
@@ -70,6 +75,8 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
 export interface ClassChoiceCatalogs {
   classFeatures: readonly ClassFeature[]
   subclassFeatures: readonly SubclassFeature[]
+  /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
+  subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
   creatures: readonly Creature5e[]
   feats: readonly Feat5e[]
   items: readonly Item5e[]
@@ -551,12 +558,12 @@ export function resolveClassChoiceOptionEntity(
   if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
     const target = getClassChoiceFeatureTarget(option)
     if (!target) return undefined
-    return getCatalog(option.entityType, catalogs).find(
-      (entity) =>
-        (option.entityType === 'classFeature'
-          ? getClassFeatureIdentity(entity)
-          : getSubclassFeatureIdentity(entity)) === target,
-    )
+    const candidates = getCatalog(option.entityType, catalogs)
+    if (option.entityType === 'classFeature') {
+      return candidates.find((entity) => getClassFeatureIdentity(entity) === target)
+    }
+    const matches = candidates.filter((entity) => getSubclassFeatureIdentity(entity) === target)
+    return matches.length === 1 ? matches[0] : undefined
   }
   return getCatalog(option.entityType, catalogs).find(
     (entity) =>
@@ -592,6 +599,20 @@ export function resolveClassChoiceOptions(
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
 ): ClassChoiceOptionView[] {
+  if (catalogs.subclassTargets) {
+    const targets =
+      choice.owner.type === 'subclass'
+        ? catalogs.subclassTargets.byOwner.get(
+            getFeatureOwnerKey(
+              choice.owner.name,
+              choice.owner.source,
+              choice.owner.subclassName,
+              choice.owner.subclassSource,
+            ),
+          )
+        : catalogs.subclassTargets.unique
+    catalogs = { ...catalogs, subclassFeatures: [...(targets?.values() ?? [])] }
+  }
   const filter = choice.optionFilter
   const resolved: ClassChoiceOptionView[] = []
   if (choice.options.length > 0) {
@@ -766,4 +787,36 @@ export function collectSubclassFeatures(subclass: Subclass5e | undefined): Subcl
   for (const reference of subclass?.subclassFeatureRefs ?? []) visit(reference.feature)
   for (const group of subclass?.levelFeatures ?? []) group.features.forEach(visit)
   return [...features]
+}
+
+/** Catalog copies of one target remain unique within their actual full owner. */
+export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
+  const byOwner = new Map<string, Map<string, SubclassFeature>>()
+  for (const classData of classes) {
+    for (const subclass of classData.subclasses ?? []) {
+      const owner = getFeatureOwnerKey(
+        classData.name,
+        classData.source,
+        subclass.name,
+        subclass.source,
+      )
+      const targets = byOwner.get(owner) ?? new Map<string, SubclassFeature>()
+      for (const feature of collectSubclassFeatures(subclass)) {
+        const target = getSubclassFeatureIdentity(feature)
+        if (target) targets.set(target, feature)
+      }
+      byOwner.set(owner, targets)
+    }
+  }
+  const unique = new Map<string, SubclassFeature>()
+  const ambiguous = new Set<string>()
+  for (const targets of byOwner.values()) {
+    for (const [target, feature] of targets) {
+      if (unique.has(target)) {
+        unique.delete(target)
+        ambiguous.add(target)
+      } else if (!ambiguous.has(target)) unique.set(target, feature)
+    }
+  }
+  return { byOwner, unique }
 }

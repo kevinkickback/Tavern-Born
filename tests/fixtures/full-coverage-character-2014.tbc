@@ -236,28 +236,28 @@
       "level": 2
     },
     {
-      "id": "class-choice:class%3Afighter%7Cphb%7Cchoice%3Afighting-style%7C1:Defense%7CPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cphb%5C%22%5D%22%2C%22optionalFeature%7Cdefense%7Cphb%22%5D",
       "name": "Defense",
       "source": "PHB",
       "description": "",
       "level": 1
     },
     {
-      "id": "class-choice:class%3Afighter%7Cphb%7Csubclass%3Abattle-master%7Cphb%7Cchoice%3Amaneuvers%7C3:Commander's%20Strike%7CPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cphb%5C%22%2C%5C%22battle%20master%7Cphb%5C%22%5D%22%2C%22optionalFeature%7Ccommander's%20strike%7Cphb%22%5D",
       "name": "Commander's Strike",
       "source": "PHB",
       "description": "",
       "level": 3
     },
     {
-      "id": "class-choice:class%3Afighter%7Cphb%7Csubclass%3Abattle-master%7Cphb%7Cchoice%3Amaneuvers%7C3:Disarming%20Attack%7CPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cphb%5C%22%2C%5C%22battle%20master%7Cphb%5C%22%5D%22%2C%22optionalFeature%7Cdisarming%20attack%7Cphb%22%5D",
       "name": "Disarming Attack",
       "source": "PHB",
       "description": "",
       "level": 3
     },
     {
-      "id": "class-choice:class%3Afighter%7Cphb%7Csubclass%3Abattle-master%7Cphb%7Cchoice%3Amaneuvers%7C3:Precision%20Attack%7CPHB",
+      "id": "class-choice:%5B%22%5B%5C%22fighter%7Cphb%5C%22%2C%5C%22battle%20master%7Cphb%5C%22%5D%22%2C%22optionalFeature%7Cprecision%20attack%7Cphb%22%5D",
       "name": "Precision Attack",
       "source": "PHB",
       "description": "",

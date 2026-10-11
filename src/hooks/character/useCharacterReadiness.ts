@@ -5,6 +5,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import {
   type ClassChoiceCatalogs,
   collectSubclassFeatures,
+  indexSubclassFeatureTargets,
 } from '@/lib/character/classChoiceOptions'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -43,6 +44,7 @@ export function useCharacterReadiness(character: Character | null | undefined) {
       subclassFeatures: classes.flatMap((classData) =>
         (classData.subclasses ?? []).flatMap(collectSubclassFeatures),
       ),
+      subclassTargets: indexSubclassFeatureTargets(classes),
       creatures: creatures as Creature5e[],
       feats: filteredFeats,
       items,

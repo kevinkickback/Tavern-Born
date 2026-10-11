@@ -1,14 +1,11 @@
-import {
-  getClassFeatureIdentity,
-  getSubclassFeatureIdentity,
-} from '@/lib/5etools/classFeatureIdentity'
+import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import {
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
+import { indexSubclassFeatureTargets } from '@/lib/character/classChoiceOptions'
 import type { GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 
@@ -53,9 +50,7 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
   }
 
   const subclasses = new Set<string>()
-  const subclassFeatures = new Set<string>()
-  const ambiguousSubclassFeatures = new Set<string>()
-  const subclassFeaturesByOwner = new Map<string, Set<string>>()
+  const subclassTargets = indexSubclassFeatureTargets(gameData.classes)
   const classFeatures = new Set(
     gameData.classFeatures.flatMap((feature) => {
       const key = getClassFeatureIdentity(feature)
@@ -74,20 +69,6 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
           getSubclassLookupKey(cls.name, cls.source, subclass.shortName, subclass.source),
         )
       }
-      const ownedFeatures = new Set<string>()
-      for (const feature of collectSubclassFeatures(subclass)) {
-        const key = getSubclassFeatureIdentity(feature)
-        if (!key || ownedFeatures.has(key)) continue
-        ownedFeatures.add(key)
-        if (subclassFeatures.has(key)) {
-          subclassFeatures.delete(key)
-          ambiguousSubclassFeatures.add(key)
-        } else if (!ambiguousSubclassFeatures.has(key)) subclassFeatures.add(key)
-      }
-      subclassFeaturesByOwner.set(
-        getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source),
-        ownedFeatures,
-      )
     }
   }
 
@@ -102,8 +83,10 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
     races,
     spells: entityKeys(gameData.spells),
     subclasses,
-    subclassFeatures,
-    subclassFeaturesByOwner,
+    subclassFeatures: new Set(subclassTargets.unique.keys()),
+    subclassFeaturesByOwner: new Map(
+      [...subclassTargets.byOwner].map(([owner, targets]) => [owner, new Set(targets.keys())]),
+    ),
   }
 }
 

@@ -3,6 +3,7 @@ import {
   normalizeClassChoices,
   normalizeSubclassRules,
 } from '@/lib/5etools/classChoiceNormalization'
+import { DataFilter } from '@/lib/5etools/filters'
 import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
@@ -14,6 +15,7 @@ import {
 import {
   collectSubclassFeatures,
   getClassChoiceOptionKey,
+  indexSubclassFeatureTargets,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -598,4 +600,93 @@ test('availability and Overview recover the complete cross-parent target without
   expect(observe(character, classes, [beacon, exact]).actions).toMatchObject([
     { kind: 'reaction', description: 'As a reaction, answer a beacon.' },
   ])
+})
+
+test('normal source filtering retains a class-owned subclass-target action and its exact details', () => {
+  const raw = parseClasses({
+    class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||3'] }],
+    classFeature: [
+      {
+        ...beacon,
+        name: 'Training',
+        level: 3,
+        entries: [{ type: 'options', count: 1, entries: [schoolOption] }],
+      },
+    ],
+    subclass: [
+      {
+        name: 'First School',
+        shortName: 'School',
+        source: 'PHB',
+        className: 'Wizard',
+        classSource: 'PHB',
+        subclassFeatures: ['Beacon|Wizard||School||3'],
+      },
+    ],
+    subclassFeature: [schoolBeacon],
+  }) as Class5e[]
+  const descriptor = raw[0].normalizedRules!.choices[0]
+  const character = reopen(apply(schoolCharacter(), descriptor))
+  const initial = observe(character, raw, []).actions
+  expect(initial).toHaveLength(2)
+  expect(initial.map((action) => action.source.kind).sort()).toEqual(['class', 'subclass'])
+  const filtered = DataFilter.filterClasses(raw, { sources: ['PHB'] })
+  expect(observe(character, filtered, []).actions).toEqual(initial)
+  const options = (classes: Class5e[]) => ({
+    ...catalogs,
+    subclassFeatures: classes.flatMap(
+      (classData) => classData.subclasses?.flatMap(collectSubclassFeatures) ?? [],
+    ),
+    subclassTargets: indexSubclassFeatureTargets(classes),
+  })
+  expect(resolveClassChoiceOptions(descriptor, options(filtered))).toMatchObject([
+    { availability: 'eligible', entries: schoolBeacon.entries },
+  ])
+  const recovery = (classes: Class5e[]) =>
+    validateClassChoices(
+      character,
+      createCharacterCalculationContext(character, { classesByKey: buildClassLookup(classes) }),
+      options(classes),
+    ).map((issue) => issue.id)
+  expect(recovery(filtered)).not.toContain(`class-choice:${descriptor.id}`)
+  const data = makeGameDataFixture({ classes: filtered })
+  expect(characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(data))).toBe(
+    false,
+  )
+  expect(
+    buildRetainedCharacterDetails(character, data, null).choiceDetailsById.get(descriptor.id),
+  ).toEqual([{ availability: 'available', entries: schoolBeacon.entries }])
+  expect(
+    buildRetainedCharacterDetails(character, makeGameDataFixture(), data).choiceDetailsById.get(
+      descriptor.id,
+    ),
+  ).toEqual([{ availability: 'source-unavailable', entries: schoolBeacon.entries }])
+  const competing = structuredClone(filtered)
+  competing[0].subclasses!.push({
+    ...competing[0].subclasses![0],
+    name: 'Second School',
+    subclassFeatureRefs: [
+      {
+        ...competing[0].subclasses![0].subclassFeatureRefs![0],
+        feature: { ...schoolBeacon, entries: ['As a reaction, dismiss a beacon.'] },
+      },
+    ],
+  })
+  const ambiguous = makeGameDataFixture({ classes: competing })
+  const actions = observe(character, competing, []).actions
+  expect(actions).toMatchObject([{ source: { kind: 'subclass' }, kind: 'action' }])
+  expect(
+    characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(ambiguous)),
+  ).toBe(true)
+  expect(
+    buildRetainedCharacterDetails(character, ambiguous, null).choiceDetailsById.get(descriptor.id),
+  ).toEqual([{ availability: 'missing', entries: [] }])
+  for (const reverse of [false, true]) {
+    if (reverse) competing[0].subclasses!.reverse()
+    expect(resolveClassChoiceOptions(descriptor, options(competing))).toMatchObject([
+      { availability: 'retained', entries: [] },
+    ])
+    expect(recovery(competing)).toContain(`class-choice:${descriptor.id}`)
+  }
+  expect(observe(character, filtered, []).actions).toEqual(initial)
 })

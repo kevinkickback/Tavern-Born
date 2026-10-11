@@ -18,7 +18,10 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
-import { collectSubclassFeatures } from '@/lib/character/classChoiceOptions'
+import {
+  collectSubclassFeatures,
+  indexSubclassFeatureTargets,
+} from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -125,6 +128,7 @@ export function BuildClassPage() {
     () => ({
       classFeatures: classFeatures as ClassFeature[],
       subclassFeatures: collectSubclassFeatures(viewingSubclassSpellcastingData),
+      subclassTargets: indexSubclassFeatureTargets(classes as Class5e[]),
       creatures: creatures as Creature5e[],
       feats: feats as Feat5e[],
       items: items as Item5e[],
@@ -136,6 +140,7 @@ export function BuildClassPage() {
     }),
     [
       classFeatures,
+      classes,
       creatures,
       feats,
       includeClassFeatureVariants,
