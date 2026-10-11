@@ -425,11 +425,18 @@ describe('BuildReviewPage', () => {
           subclassName: 'Scholar',
           subclassSource: 'SUPP',
           selected: [
-            { entityType: 'subclassFeature', name: 'Scholar Option', source: 'SUPP', slotLevel: 3 },
+            {
+              entityType: 'subclassFeature',
+              name: 'Scholar Option',
+              source: 'SUPP',
+              ref: `Scholar Option|Wizard|${classSource}|Scholar|SUPP|3|SUPP`,
+              slotLevel: 3,
+            },
             {
               entityType: 'subclassFeature',
               name: 'Unloaded Option',
               source: 'SUPP',
+              ref: `Unloaded Option|Wizard|${classSource}|Scholar|SUPP|3|SUPP`,
               slotLevel: 3,
             },
           ],
