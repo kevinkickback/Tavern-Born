@@ -6,9 +6,11 @@ import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 import { useCharacterCalculationContext } from './useCharacterCalculationContext'
+import { useClassChoiceFeatureCatalogs } from './useClassChoiceFeatureCatalogs'
 
 export function useCharacterActions(character: Character | null | undefined) {
   const calculation = useCharacterCalculationContext(character)
+  const classChoiceFeatureCatalogs = useClassChoiceFeatureCatalogs()
   const lookups = useGameDataStore((state) => state.gameData?.lookups)
   const propertyLookup = useItemPropertyLookup()
 
@@ -25,10 +27,10 @@ export function useCharacterActions(character: Character | null | undefined) {
       race: calculation.raceResolution.mergedRace,
       raceResolution: calculation.raceResolution,
       classes: calculation.classes,
-      classesByKey: calculation.lookups.primary.classesByKey,
+      classChoiceFeatureCatalogs,
       feats: calculation.feats,
       classFeaturesByKey: lookups?.classFeaturesByKey,
       optionalFeaturesByKey: lookups?.optionalFeaturesByKey,
     })
-  }, [calculation, character, lookups, propertyLookup])
+  }, [calculation, character, classChoiceFeatureCatalogs, lookups, propertyLookup])
 }

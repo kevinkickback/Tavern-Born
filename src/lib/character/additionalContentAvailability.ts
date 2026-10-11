@@ -5,7 +5,7 @@ import {
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
-import { indexSubclassFeatureTargets } from '@/lib/character/classChoiceOptions'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import type { GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 
@@ -50,18 +50,15 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
   }
 
   const subclasses = new Set<string>()
-  const subclassTargets = indexSubclassFeatureTargets(gameData.classes)
+  const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
+  const subclassTargets = featureCatalogs.subclassTargets
   const classFeatures = new Set(
-    gameData.classFeatures.flatMap((feature) => {
+    featureCatalogs.classFeatures.flatMap((feature) => {
       const key = getClassFeatureIdentity(feature)
       return key ? [key] : []
     }),
   )
   for (const cls of gameData.classes) {
-    for (const reference of cls.classFeatureRefs ?? []) {
-      const key = reference.feature && getClassFeatureIdentity(reference.feature)
-      if (key) classFeatures.add(key)
-    }
     for (const subclass of cls.subclasses ?? []) {
       subclasses.add(getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source))
       if (subclass.shortName) {

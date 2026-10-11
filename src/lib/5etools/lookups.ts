@@ -36,9 +36,11 @@ export function getSubclassLookupKey(
   ].join('|')
 }
 
-function buildClassFeatureLookup(classFeatures: ClassFeature[]): Record<string, ClassFeature> {
+export function buildClassFeatureLookup(
+  classFeatures: ClassFeature[],
+): Record<string, ClassFeature> {
   return classFeatures.reduce<Record<string, ClassFeature>>((lookup, feature, index) => {
-    // Incomplete rows remain available for unique legacy matching, without guessed identity.
+    // Incomplete rows remain available for standalone text enrichment, without guessed identity.
     const key = getClassFeatureIdentity(feature) ?? `unresolved-class-feature|${index}`
     if (!lookup[key]) {
       lookup[key] = feature

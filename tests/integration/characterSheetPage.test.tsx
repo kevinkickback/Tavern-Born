@@ -4,9 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { DataFilter } from '@/lib/5etools/filters'
-import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
@@ -306,9 +307,10 @@ describe('CharacterSheetPage', () => {
       })
       return {
         ...gameData.lookups,
-        classChoiceClassesByKey: buildClassLookup(
-          DataFilter.filterClasses(available, { sources: character.allowedSources }),
-        ),
+        classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+          classes: DataFilter.filterClasses(available, { sources: character.allowedSources }),
+          classFeatures: [],
+        }),
       }
     }
     const complete = install(classes)
@@ -323,7 +325,13 @@ describe('CharacterSheetPage', () => {
     ])
     expect(createCharacterSheetViewModel(character, complete).actions).toEqual(initial)
     expect(
-      deriveRulesTextActions(character, undefined, { classes: [wizard], classesByKey: {} }),
+      deriveRulesTextActions(character, undefined, {
+        classes: [wizard],
+        classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+          classes: [],
+          classFeatures: [],
+        }),
+      }),
     ).toEqual([])
     const competingWizard = {
       ...structuredClone(wizard),
@@ -350,8 +358,130 @@ describe('CharacterSheetPage', () => {
     expect(
       vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
     ).toEqual(initial)
-    const explicitEmpty = { ...complete, classChoiceClassesByKey: {} }
+    const explicitEmpty = {
+      ...complete,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+        classes: [],
+        classFeatures: [],
+      }),
+    }
     expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
+  })
+
+  test.each([
+    'TCE',
+    '',
+  ])('Actions and PDF suppress a disabled qualified target with source %j while retaining standalone text', (source) => {
+    const signal: ClassFeature = {
+      name: 'Signal',
+      source,
+      className: 'Bard',
+      classSource: source ? 'PHB' : 'TCE',
+      level: 1,
+      entries: ['As a bonus action, send the exact signal.'],
+    }
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: ['Training|Wizard||1'] }],
+      classFeature: [
+        {
+          name: 'Training',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [
+                {
+                  type: 'refClassFeature',
+                  classFeature: `Signal|Bard|${signal.classSource}|1|${source}`,
+                },
+              ],
+            },
+          ],
+        },
+        signal,
+      ],
+    }) as Class5e[]
+    const draft = createEmptyCharacter({
+      name: 'Current filtered target',
+      allowedSources: ['PHB', 'TCE'],
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      features: [
+        { id: 'saved-signal', name: 'Signal', source: 'TCE', description: 'Saved signal.' },
+      ],
+    })
+    const choice = classes[0].normalizedRules!.choices[0]
+    const transition = applyClassChoiceSelectionWithGrantsCommand(
+      draft,
+      draft.provenance!,
+      choice,
+      choice.options,
+    )
+    let character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...draft,
+          ...transition.characterPatch,
+          provenance: transition.provenanceUpdate,
+        }),
+      ),
+    )
+    const originalSelection = structuredClone(character.classChoiceSelections)
+    const install = (allowedSources: string[], targets: ClassFeature[] = [signal]) => {
+      character = { ...character, allowedSources }
+      const gameData = makeGameDataFixture({ classes, classFeatures: targets })
+      gameData.lookups = buildGameDataLookups(gameData)
+      act(() => {
+        useGameDataStore.setState({ gameData })
+        useCharacterStore.setState({ activeCharacter: character })
+      })
+    }
+    install(['PHB', 'TCE'])
+    const hook = renderHook(() => useCharacterActions(character))
+    renderPage()
+    const original = hook.result.current
+    expect(original).toHaveLength(2)
+    const chosen = original.find((action) => action.id !== 'feature:saved-signal')!
+    expect(chosen.description).toContain('exact signal')
+    const rawData = makeGameDataFixture({ classes, classFeatures: [signal] })
+    rawData.lookups = buildGameDataLookups(rawData)
+    expect(
+      createCharacterSheetViewModel(character, rawData.lookups).actions.some(
+        (action) => action.id === chosen.id,
+      ),
+    ).toBe(false)
+    const empty = buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] })
+    expect(
+      createCharacterSheetViewModel(character, {
+        ...rawData.lookups,
+        classChoiceFeatureCatalogs: empty,
+      }).actions.some((action) => action.id === chosen.id),
+    ).toBe(false)
+    const observe = () => {
+      hook.rerender()
+      const exported = vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]
+        ?.value.actions
+      expect(exported).toEqual(hook.result.current)
+      expect(character.classChoiceSelections).toEqual(originalSelection)
+      return hook.result.current
+    }
+    const competing = { ...signal, source: 'PHB', entries: ['As an action, use another printing.'] }
+    for (const targets of [
+      [signal, competing],
+      [competing, signal],
+    ]) {
+      install(['PHB'], targets)
+      expect(observe()).toEqual(original.filter((action) => action.id === 'feature:saved-signal'))
+      install(['PHB', 'TCE'], targets)
+      expect(observe()).toEqual(original)
+    }
+    install(['PHB', 'TCE'], [competing])
+    expect(observe().some((action) => action.id === chosen.id)).toBe(false)
+    install(['PHB', 'TCE'])
+    expect(observe()).toEqual(original)
   })
 
   test.each([

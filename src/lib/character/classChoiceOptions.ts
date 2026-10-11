@@ -9,6 +9,7 @@ import {
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
@@ -19,6 +20,7 @@ import type {
   ClassFeature,
   Creature5e,
   Feat5e,
+  GameData,
   Item5e,
   ItemMastery5e,
   ItemPropertyReference,
@@ -72,11 +74,14 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
   return option.availability === 'eligible'
 }
 
-export interface ClassChoiceCatalogs {
+export interface ClassChoiceFeatureCatalogs {
   classFeatures: readonly ClassFeature[]
   subclassFeatures: readonly SubclassFeature[]
   /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
   subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
+}
+
+export interface ClassChoiceCatalogs extends ClassChoiceFeatureCatalogs {
   creatures: readonly Creature5e[]
   feats: readonly Feat5e[]
   items: readonly Item5e[]
@@ -556,20 +561,51 @@ export function resolveClassChoiceOptionEntity(
   catalogs: Parameters<typeof getCatalog>[1],
 ): ChoiceCatalogEntity | undefined {
   if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
-    const target = getClassChoiceFeatureTarget(option)
-    if (!target) return undefined
-    const candidates = getCatalog(option.entityType, catalogs)
-    if (option.entityType === 'classFeature') {
-      return candidates.find((entity) => getClassFeatureIdentity(entity) === target)
-    }
-    const matches = candidates.filter((entity) => getSubclassFeatureIdentity(entity) === target)
-    return matches.length === 1 ? matches[0] : undefined
+    return resolveClassChoiceFeatureEntity(option, catalogs)
   }
   return getCatalog(option.entityType, catalogs).find(
     (entity) =>
       normalized(entity.name) === normalized(option.name) &&
       (!option.source || normalized(entity.source) === normalized(option.source)),
   )
+}
+
+/** Feature choices resolve only within their explicitly supplied target catalog. */
+export function resolveClassChoiceFeatureEntity(
+  option: NormalizedChoiceOptionReference,
+  catalogs: Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'>,
+): ClassFeature | SubclassFeature | undefined {
+  const target = getClassChoiceFeatureTarget(option)
+  if (!target) return undefined
+  if (option.entityType === 'classFeature') {
+    return catalogs.classFeatures.find((feature) => getClassFeatureIdentity(feature) === target)
+  }
+  if (option.entityType !== 'subclassFeature') return undefined
+  const matches = catalogs.subclassFeatures.filter(
+    (feature) => getSubclassFeatureIdentity(feature) === target,
+  )
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+export function scopeClassChoiceFeatureCatalogs(
+  catalogs: ClassChoiceFeatureCatalogs,
+  subclassOwner?: string,
+): Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'> {
+  if (!catalogs.subclassTargets) return catalogs
+  const targets = subclassOwner
+    ? catalogs.subclassTargets.byOwner.get(subclassOwner)
+    : catalogs.subclassTargets.unique
+  return { classFeatures: catalogs.classFeatures, subclassFeatures: [...(targets?.values() ?? [])] }
+}
+
+/** Build all qualified targets together from one authoritative, complete filtered data view. */
+export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' | 'classFeatures'>) {
+  const subclassTargets = indexSubclassFeatureTargets(data.classes)
+  return {
+    classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
+    subclassFeatures: [...subclassTargets.unique.values()],
+    subclassTargets,
+  }
 }
 
 function resolveExplicitOption(
@@ -600,18 +636,16 @@ export function resolveClassChoiceOptions(
   classLevel = 20,
 ): ClassChoiceOptionView[] {
   if (catalogs.subclassTargets) {
-    const targets =
+    const owner =
       choice.owner.type === 'subclass'
-        ? catalogs.subclassTargets.byOwner.get(
-            getFeatureOwnerKey(
-              choice.owner.name,
-              choice.owner.source,
-              choice.owner.subclassName,
-              choice.owner.subclassSource,
-            ),
+        ? getFeatureOwnerKey(
+            choice.owner.name,
+            choice.owner.source,
+            choice.owner.subclassName,
+            choice.owner.subclassSource,
           )
-        : catalogs.subclassTargets.unique
-    catalogs = { ...catalogs, subclassFeatures: [...(targets?.values() ?? [])] }
+        : undefined
+    catalogs = { ...catalogs, ...scopeClassChoiceFeatureCatalogs(catalogs, owner) }
   }
   const filter = choice.optionFilter
   const resolved: ClassChoiceOptionView[] = []

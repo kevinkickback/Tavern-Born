@@ -329,7 +329,13 @@ competing owners leave the option unresolved in the picker, readiness, details a
 Actions and PDF receive the complete target catalog separately from selected classes: an explicit
 target may belong to an unselected class, whose unrelated features are not thereby earned.
 Production choice targets use the same filtered catalog as picker/readiness; unavailable competing
-owners cannot suppress a resolved choice. Raw lookups still supply retained descriptive details.
+owners cannot suppress a resolved choice. One explicit feature-choice bundle contains the authoritative
+filtered class-feature catalog and complete subclass owner index; missing or empty inputs cannot be
+replenished from selected classes, embedded class references or raw dictionaries. Picker, readiness,
+availability, retained-details availability, Actions and PDF share its builder and exact resolver.
+Raw lookups still supply standalone saved-feature text and separately labelled source-unavailable
+retained details. Filtering uses the encoded or canonical current target printing, including upstream
+blank-source defaults, independently of the actual enclosing or granting owner.
 
 Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
 remain saved intents without emitting or enriching an opaque action. Their materialized feature rows

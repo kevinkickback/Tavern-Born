@@ -21,7 +21,11 @@ import {
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
-import { indexSubclassFeatureTargets } from '@/lib/character/classChoiceOptions'
+import {
+  type ClassChoiceFeatureCatalogs,
+  resolveClassChoiceFeatureEntity,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -83,8 +87,8 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   race?: Race5e
   raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
-  /** Complete available targets, separate from the character's selected earned classes. */
-  classesByKey?: Readonly<Record<string, Class5e>>
+  /** Explicit available choice targets; raw text lookups never replenish this catalog. */
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -218,7 +222,11 @@ export function deriveSpellActions(
 
 type RulesTextActionContext = Pick<
   CharacterActionProjectionContext,
-  'classes' | 'classesByKey' | 'feats' | 'classFeaturesByKey' | 'optionalFeaturesByKey'
+  | 'classes'
+  | 'classChoiceFeatureCatalogs'
+  | 'feats'
+  | 'classFeaturesByKey'
+  | 'optionalFeaturesByKey'
 >
 
 function rulesTextAction(
@@ -309,26 +317,6 @@ function deriveClassFeatureActions(
   context: RulesTextActionContext,
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
-  const targets = new Map<string, ClassFeature>()
-  let subclassTargets: ReturnType<typeof indexSubclassFeatureTargets> | undefined
-  const addTarget = (feature: ClassFeature) => {
-    const identity = getClassFeatureIdentity(feature)
-    if (identity) targets.set(identity, feature)
-  }
-  if (
-    (character.classChoiceSelections ?? []).some(
-      (selection) => !selection.inactive && selection.selected.some(getClassChoiceFeatureTarget),
-    )
-  ) {
-    const catalogClasses = context.classesByKey
-      ? Object.values(context.classesByKey)
-      : (context.classes ?? [])
-    subclassTargets = indexSubclassFeatureTargets(catalogClasses)
-    for (const classData of catalogClasses) {
-      for (const ref of classData.classFeatureRefs ?? []) if (ref.feature) addTarget(ref.feature)
-    }
-    for (const feature of Object.values(context.classFeaturesByKey ?? {})) addTarget(feature)
-  }
   const addAction = (
     owner: string,
     target: string,
@@ -433,12 +421,14 @@ function deriveClassFeatureActions(
       if (option.slotLevel > entry.levels) continue
       if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
         const target = getClassChoiceFeatureTarget(option)
-        const feature = target
-          ? option.entityType === 'classFeature'
-            ? targets.get(target)
-            : selection.subclassName
-              ? subclassTargets?.byOwner.get(owner)?.get(target)
-              : subclassTargets?.unique.get(target)
+        const feature = context.classChoiceFeatureCatalogs
+          ? resolveClassChoiceFeatureEntity(
+              option,
+              scopeClassChoiceFeatureCatalogs(
+                context.classChoiceFeatureCatalogs,
+                selection.subclassName ? owner : undefined,
+              ),
+            )
           : undefined
         if (target && feature)
           addAction(owner, target, feature, {

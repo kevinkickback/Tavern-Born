@@ -13,6 +13,7 @@ import {
   createGameDataAvailabilityIndex,
 } from '@/lib/character/additionalContentAvailability'
 import {
+  buildClassChoiceFeatureCatalogs,
   collectSubclassFeatures,
   getClassChoiceOptionKey,
   indexSubclassFeatureTargets,
@@ -97,6 +98,10 @@ function reopen(character: Character) {
 }
 function observe(character: Character, classes: Class5e[], targets: ClassFeature[] = [beacon]) {
   const context = {
+    classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+      classes,
+      classFeatures: targets,
+    }),
     classesByKey: buildClassLookup(classes),
     classFeaturesByKey: buildGameDataLookups(makeGameDataFixture({ classFeatures: targets }))
       .classFeaturesByKey,
@@ -106,7 +111,7 @@ function observe(character: Character, classes: Class5e[], targets: ClassFeature
   expect(
     deriveCharacterActions(character, {
       classes,
-      classesByKey: context.classesByKey,
+      classChoiceFeatureCatalogs: context.classChoiceFeatureCatalogs,
       classFeaturesByKey: context.classFeaturesByKey,
       abilityModifiers: {
         strength: 0,

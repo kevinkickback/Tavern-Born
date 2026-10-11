@@ -9,10 +9,11 @@ import {
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
+  buildClassChoiceFeatureCatalogs,
   collectSubclassFeatures,
   getCreatureChoiceEntries,
-  indexSubclassFeatureTargets,
   resolveClassChoiceOptionEntity,
+  scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import type {
   Class5e,
@@ -65,7 +66,7 @@ export function buildRetainedCharacterDetails(
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
     const lookups = buildGameDataLookups(data)
-    const subclassTargets = indexSubclassFeatureTargets(data.classes)
+    const featureCatalogs = buildClassChoiceFeatureCatalogs(data)
     for (const feature of [
       ...data.classFeatures,
       ...(data.optionalfeatures as OptionalFeatureLike[]),
@@ -93,21 +94,17 @@ export function buildRetainedCharacterDetails(
         ...data,
         creatures: data.creatures ?? [],
         optionalFeatures: data.optionalfeatures as OptionalFeatureLike[],
-        classFeatures: [...data.classFeatures, ...data.classes.flatMap(classFeatures)],
-        subclassFeatures: choice.subclassName
-          ? [
-              ...(subclassTargets.byOwner
-                .get(
-                  getFeatureOwnerKey(
-                    choice.className,
-                    choice.classSource,
-                    choice.subclassName,
-                    choice.subclassSource,
-                  ),
-                )
-                ?.values() ?? []),
-            ]
-          : [...subclassTargets.unique.values()],
+        ...scopeClassChoiceFeatureCatalogs(
+          featureCatalogs,
+          choice.subclassName
+            ? getFeatureOwnerKey(
+                choice.className,
+                choice.classSource,
+                choice.subclassName,
+                choice.subclassSource,
+              )
+            : undefined,
+        ),
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {

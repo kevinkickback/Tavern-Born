@@ -12,7 +12,12 @@ import {
   searchByName,
   sortByName,
 } from '@/lib/5etools/filters'
-import type { Feat5e, Race5e, Subclass5e } from '@/types/5etools'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
+import {
+  buildClassChoiceFeatureCatalogs,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
+import type { Class5e, Feat5e, Race5e, Subclass5e } from '@/types/5etools'
 import {
   makeClassFixture,
   makeRaceFixture,
@@ -20,6 +25,121 @@ import {
 } from '../../fixtures/gameDataFixtures'
 
 describe('5etools/filters', () => {
+  test.each([
+    'PHB',
+    'TCE',
+  ])('retains encoded PHB nested defaults under actual %s owners', (ownerSource) => {
+    const target = {
+      name: 'Nested default',
+      source: '',
+      className: 'Wizard',
+      classSource: 'PHB',
+      subclassShortName: 'School',
+      subclassSource: 'PHB',
+      level: 3,
+      entries: ['As a reaction, answer the signal.'],
+    }
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB', classFeatures: [] }],
+      subclass: [
+        {
+          name: 'Actual School',
+          shortName: 'School',
+          source: ownerSource,
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: ['Root|Wizard||School||3'],
+        },
+      ],
+      subclassFeature: [
+        {
+          ...target,
+          name: 'Root',
+          source: 'PHB',
+          entries: [
+            {
+              type: 'options',
+              count: 1,
+              entries: [
+                {
+                  type: 'refSubclassFeature',
+                  subclassFeature: 'Nested default|Wizard||School||3',
+                },
+              ],
+            },
+          ],
+        },
+        target,
+      ],
+    }) as Class5e[]
+    const filters = {
+      sources: ['PHB'],
+      allowedSubclassKeys: new Set([`Wizard|PHB|Actual School|${ownerSource}`]),
+    }
+    const filtered = DataFilter.filterClasses(classes, filters)
+    const choice = filtered[0].subclasses![0].normalizedRules!.choices[0]
+    expect(choice.owner).toMatchObject({
+      subclassName: 'Actual School',
+      subclassSource: ownerSource,
+    })
+    const catalogs = {
+      ...buildClassChoiceFeatureCatalogs({ classes: filtered, classFeatures: [] }),
+      creatures: [],
+      feats: [],
+      items: [],
+      itemsBase: [],
+      itemMasteries: [],
+      optionalFeatures: [],
+      itemPropertyByAbbr: {},
+      itemTypeByAbbr: {},
+      weaponProficiencies: [],
+    }
+    expect(resolveClassChoiceOptions(choice, catalogs)).toMatchObject([
+      { availability: 'eligible', entries: target.entries },
+    ])
+    expect(
+      resolveClassChoiceOptions(
+        { ...choice, options: [{ ...choice.options[0], source: 'TCE' }] },
+        catalogs,
+      ),
+    ).toMatchObject([{ availability: 'retained', entries: [] }])
+    expect(
+      resolveClassChoiceOptions(
+        {
+          ...choice,
+          options: [{ ...choice.options[0], ref: 'Nested default|Wizard||School||bad' }],
+        },
+        catalogs,
+      ),
+    ).toMatchObject([{ availability: 'retained', entries: [] }])
+    expect(
+      DataFilter.filterClasses(classes, {
+        ...filters,
+        suppressedKeys: new Set(['Nested default|PHB']),
+      })[0].subclasses![0].normalizedRules!.choices,
+    ).toEqual([])
+  })
+
+  test('filters complete class-feature defaults by effective target printing', () => {
+    const feature = { name: 'Signal', source: '', className: 'Bard', classSource: 'TCE', level: 1 }
+    expect(DataFilter.filterClassFeatures([feature], { sources: ['TCE'] })).toEqual([feature])
+    expect(DataFilter.filterClassFeatures([feature], { sources: ['PHB'] })).toEqual([])
+    expect(
+      DataFilter.filterClassFeatures([feature], {
+        sources: ['TCE'],
+        suppressedKeys: new Set(['Signal|TCE']),
+      }),
+    ).toEqual([])
+    expect(
+      DataFilter.filterClassFeatures([{ ...feature, classSource: '', level: 1 }], {
+        sources: ['PHB'],
+      }),
+    ).toHaveLength(1)
+    expect(
+      DataFilter.filterClassFeatures([{ ...feature, level: 0 }], { sources: ['PHB', 'TCE'] }),
+    ).toEqual([])
+  })
+
   test('filterRaces applies source, size, and darkvision filters', () => {
     const races = [
       makeRaceFixture({ name: 'Human', source: 'PHB', size: ['M'] }),

@@ -137,7 +137,7 @@ describe('retained character details', () => {
       expect(result.choiceDetailsById.get(id)?.[0].entries).toEqual([entries])
   })
 
-  test('uses the complete target for top-level and nested class features', () => {
+  test('uses the authoritative complete class-feature targets without nested replenishment', () => {
     const feature = {
       name: 'Shared Feature',
       source: 'SUPP',
@@ -148,6 +148,7 @@ describe('retained character details', () => {
     }
     const raw = makeGameDataFixture({
       classFeatures: [
+        feature,
         { ...feature, className: 'Fighter', classSource: 'PHB', entries: ['fighter feature'] },
       ],
       classes: [makeClassFixture({ classFeatures: [feature] })],
@@ -169,6 +170,14 @@ describe('retained character details', () => {
       raw,
     )
     expect(result.choiceDetailsById.get(choice.choiceId)?.[0].entries).toEqual(['wizard feature'])
+    const empty = { ...raw, classFeatures: [] }
+    expect(
+      buildRetainedCharacterDetails(
+        makeCharacterFixture({ classChoiceSelections: [choice] }),
+        empty,
+        empty,
+      ).choiceDetailsById.get(choice.choiceId)?.[0],
+    ).toEqual({ availability: 'missing', entries: [] })
   })
 
   test('prefers exact filtered details and treats empty loaded entries as available', () => {

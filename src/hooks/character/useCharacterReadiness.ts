@@ -2,24 +2,20 @@ import { useMemo } from 'react'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import {
-  type ClassChoiceCatalogs,
-  collectSubclassFeatures,
-  indexSubclassFeatureTargets,
-} from '@/lib/character/classChoiceOptions'
+import type { ClassChoiceCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Creature5e, OptionalFeatureLike } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { useCharacterCalculationContext } from './useCharacterCalculationContext'
+import { useClassChoiceFeatureCatalogs } from './useClassChoiceFeatureCatalogs'
 
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
 export function useCharacterReadiness(character: Character | null | undefined) {
   const calculation = useCharacterCalculationContext(character)
+  const featureCatalogs = useClassChoiceFeatureCatalogs()
   const {
-    classFeatures,
-    classes,
     creatures,
     feats: filteredFeats,
     itemMasteries,
@@ -40,11 +36,7 @@ export function useCharacterReadiness(character: Character | null | undefined) {
   )
   const classChoiceCatalogs = useMemo<ClassChoiceCatalogs>(
     () => ({
-      classFeatures,
-      subclassFeatures: classes.flatMap((classData) =>
-        (classData.subclasses ?? []).flatMap(collectSubclassFeatures),
-      ),
-      subclassTargets: indexSubclassFeatureTargets(classes),
+      ...featureCatalogs,
       creatures: creatures as Creature5e[],
       feats: filteredFeats,
       items,
@@ -57,8 +49,7 @@ export function useCharacterReadiness(character: Character | null | undefined) {
     }),
     [
       character?.proficiencies.weapons,
-      classFeatures,
-      classes,
+      featureCatalogs,
       creatures,
       filteredFeats,
       itemMasteries,
