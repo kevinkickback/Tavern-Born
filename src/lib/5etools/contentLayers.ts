@@ -61,21 +61,6 @@ function classFeatureIdentity(value: unknown): string {
   ].join('|')
 }
 
-function subclassFeatureIdentity(value: unknown): string {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
-  const record = value as Record<string, unknown>
-  return [
-    'subclass-feature',
-    normalizeIdentityPart(record.name),
-    normalizeIdentityPart(record.source),
-    normalizeIdentityPart(record.className),
-    normalizeIdentityPart(record.classSource),
-    normalizeIdentityPart(record.subclassShortName),
-    normalizeIdentityPart(record.subclassSource),
-    typeof record.level === 'number' ? String(record.level) : '',
-  ].join('|')
-}
-
 function sourceIdentity(value: unknown): string {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return recordIdentity(value)
   return `source:${normalizeIdentityPart((value as Record<string, unknown>).abbreviation)}`
@@ -120,8 +105,8 @@ function collectSubclassFeatures(layers: readonly GameData[]): Map<string, Subcl
 
   const visit = (feature: SubclassFeature | undefined) => {
     if (!feature) return
-    const identity = subclassFeatureIdentity(feature)
-    features.set(identity, feature)
+    const identity = getSubclassFeatureIdentity(feature)
+    if (identity) features.set(identity, feature)
 
     const walk = (value: unknown) => {
       if (Array.isArray(value)) {
@@ -197,17 +182,8 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
     const subclasses = (classData.subclasses ?? []).map((subclass) => {
       let subclassChanged = false
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
-        const feature = subclassFeatures.get(
-          subclassFeatureIdentity({
-            name: reference.name,
-            source: reference.source ?? reference.subclassSource ?? subclass.source,
-            className: reference.className || classData.name,
-            classSource: reference.classSource ?? subclass.classSource ?? classData.source,
-            subclassShortName: reference.subclassShortName || subclass.shortName,
-            subclassSource: reference.subclassSource ?? subclass.source,
-            level: reference.level,
-          }),
-        )
+        const identity = getSubclassFeatureIdentity(reference)
+        const feature = identity ? subclassFeatures.get(identity) : undefined
         if (!feature || reference.feature === feature) return reference
         subclassChanged = true
         return { ...reference, feature }

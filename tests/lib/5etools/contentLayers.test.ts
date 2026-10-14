@@ -3,8 +3,14 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItemProperties } from '@/lib/5etools/parsers/basic'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { deriveRulesTextActions } from '@/lib/calculations/actions'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import type { Class5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference, NormalizedClassRules } from '@/types/classRules'
+import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
 describe('game-data content layers', () => {
@@ -368,84 +374,124 @@ describe('game-data content layers', () => {
     expect(composed.classes[0].classFeatureRefs?.[0].feature).toBe(additionalFeature)
   })
 
-  test('resolves subclass feature references across layers and rebuilds level groups', () => {
-    const sharedFeature = {
-      name: 'Inventive Method',
-      source: 'TEST',
-      className: 'Inventor',
-      classSource: 'TEST',
-      subclassShortName: 'Smith',
-      subclassSource: 'TEST',
-      level: 3,
-      entries: ['Provided by the base layer.'],
+  test.each([
+    {
+      sourceFields: { source: 'TEST', classSource: 'TEST', subclassSource: 'TEST' },
+      target: 'TEST',
+      provided: 'TEST',
+      restored: true,
+    },
+    {
+      sourceFields: { source: '', classSource: '', subclassSource: '' },
+      target: 'PHB',
+      provided: 'PHB',
+      restored: true,
+    },
+    { sourceFields: {}, target: 'PHB', provided: 'PHB', restored: true },
+    {
+      sourceFields: { source: 'TCE', classSource: 'PHB', subclassSource: 'PHB' },
+      target: 'PHB',
+      provided: 'TCE',
+      restored: false,
+    },
+  ])('restores exact subclass layer identity with sources $sourceFields', ({
+    sourceFields,
+    target,
+    provided,
+    restored,
+  }) => {
+    const ref = ['Inventive Method', 'Inventor', target, 'Smith', target, '3', target].join('|')
+    const donorRef = ['Inventive Method', 'Inventor', target, 'Smith', target, '3', provided].join(
+      '|',
+    )
+    const declaration = {
+      class: [{ name: 'Inventor', source: 'TEST' }],
+      subclass: [
+        {
+          name: 'The Smith',
+          shortName: 'Smith',
+          source: 'TEST',
+          className: 'Inventor',
+          classSource: 'TEST',
+          subclassFeatures: [ref],
+        },
+      ],
     }
-    const baseClass = makeClassFixture({
-      name: 'Inventor',
-      source: 'TEST',
-      classFeatureRefs: [],
-      subclasses: [
+    const physicalFeature = {
+      name: 'Inventive Method',
+      className: 'Inventor',
+      subclassShortName: 'Smith',
+      level: 3,
+      ...sourceFields,
+      entries: [
+        'As an action, use the method.',
         {
-          name: 'The Smith',
-          shortName: 'Smith',
-          source: 'TEST',
-          className: 'Inventor',
-          classSource: 'TEST',
-          subclassFeatureRefs: [
+          type: 'options',
+          count: 1,
+          entries: [{ type: 'refOptionalfeature', optionalfeature: 'Training|PHB' }],
+        },
+      ],
+    }
+    const base = makeGameDataFixture({
+      classes: parseClasses({
+        ...declaration,
+        subclass: declaration.subclass.map((subclass) => ({
+          ...subclass,
+          subclassFeatures: [donorRef],
+        })),
+        subclassFeature: [physicalFeature],
+      }) as Class5e[],
+      optionalfeatures: [
+        { name: 'Training', source: 'PHB', featureType: ['TEST'], entries: ['Training.'] },
+      ],
+    })
+    const additional = makeGameDataFixture({
+      classes: parseClasses({ ...declaration, subclassFeature: [] }) as Class5e[],
+    })
+    const before = structuredClone([base, additional])
+    const sharedFeature = base.classes[0].subclasses![0].subclassFeatureRefs![0].feature
+    expect(sharedFeature).toBeDefined()
+    const composed = composeGameDataLayers([base, additional])
+    const subclass = composed.classes[0].subclasses![0]
+    expect(subclass.subclassFeatureRefs![0].ref).toBe(ref)
+    expect(subclass.subclassFeatureRefs![0].feature).toBe(restored ? sharedFeature : undefined)
+    expect(subclass.levelFeatures).toEqual(
+      restored ? [{ level: 3, features: [sharedFeature] }] : [],
+    )
+    expect(subclass.normalizedRules!.choices).toHaveLength(restored ? 1 : 0)
+    expect(findLayerDependencyIssues(composed, additional)).toEqual(
+      restored
+        ? []
+        : [
             {
-              ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
-              name: 'Inventive Method',
-              source: 'TEST',
-              className: 'Inventor',
-              classSource: 'TEST',
-              subclassShortName: 'Smith',
-              subclassSource: 'TEST',
-              level: 3,
-              feature: sharedFeature,
+              owner: 'Inventor|TEST/The Smith|TEST',
+              path: 'subclasses[0].subclassFeatureRefs[0]',
+              reference: ref,
             },
           ],
+    )
+    const character = makeCharacterFixture({
+      features: [],
+      classProgression: [
+        {
+          name: 'Inventor',
+          source: 'TEST',
+          levels: 3,
+          subclass: 'The Smith',
+          subclassSource: 'TEST',
         },
       ],
     })
-    const additionalClass = makeClassFixture({
-      name: 'Inventor',
-      source: 'TEST',
-      classFeatureRefs: [],
-      subclasses: [
-        {
-          name: 'The Smith',
-          shortName: 'Smith',
-          source: 'TEST',
-          className: 'Inventor',
-          classSource: 'TEST',
-          subclassFeatureRefs: [
-            {
-              ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
-              name: 'Inventive Method',
-              source: 'TEST',
-              className: 'Inventor',
-              classSource: 'TEST',
-              subclassShortName: 'Smith',
-              subclassSource: 'TEST',
-              level: 3,
-            },
-          ],
-        },
-      ],
-    })
-
-    const composed = composeGameDataLayers([
-      makeGameDataFixture({ classes: [baseClass] }),
-      makeGameDataFixture({ classes: [additionalClass] }),
-    ])
-
-    const subclass = composed.classes[0].subclasses?.[0]
-    expect(subclass?.subclassFeatureRefs?.[0].feature).toBe(sharedFeature)
-    expect(subclass?.levelFeatures).toEqual([{ level: 3, features: [sharedFeature] }])
     expect(
-      findLayerDependencyIssues(composed, makeGameDataFixture({ classes: [additionalClass] })),
-    ).toEqual([])
+      deriveRulesTextActions(character, undefined, { classes: composed.classes }),
+    ).toHaveLength(restored ? 1 : 0)
+    expect(
+      createCharacterSheetViewModel(character, {
+        classesByKey: buildClassLookup(composed.classes),
+      }).actions,
+    ).toHaveLength(restored ? 1 : 0)
+    expect([base, additional]).toEqual(before)
   })
-
   test('uses the latest layered subclass feature for matching references', () => {
     const baseFeature = {
       name: 'Inventive Method',

@@ -60,7 +60,9 @@ and feature printing, must match the declared UID. A copied subclass may have a 
 class owner while retaining the exact original target; this does not relax target identity. An absent
 printing stays unresolved, including inline references, intro text and level groups. Subclass intro
 and level content come only from declared references; unreferenced raw rows are never synthesized
-into subclass content or target catalogs. Cache schema29
+into subclass content or target catalogs. Content-layer collection and restoration use this same
+complete identity, including omitted/blank upstream defaults; selected owners do not supply target
+source fallbacks. Cache schema30
 rebuilds catalogs that could previously substitute another printing.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
@@ -170,7 +172,7 @@ and actual granting owners. Their actions require exact parsed rules and share s
 groups only within the same owner and feature family. Missing or ambiguous targets remain saved
 intents without emitting opaque source-backed actions. The [provenance contract](provenance.md)
 owns grouping, manual override and restoration behavior.
-Cache schema29 rebuilds older cached catalogs, including normalized class choices and schedules,
+Cache schema30 rebuilds older cached catalogs, including normalized class choices and schedules,
 global lookup dictionaries, and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
