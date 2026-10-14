@@ -298,7 +298,7 @@ export function resolveSubclassFeatureRefs(
     // Expand resolved feature entries
     const feature = obj.feature as Record<string, unknown> | undefined
     if (feature?.entries && Array.isArray(feature.entries)) {
-      return feature.entries as unknown[]
+      return resolveSubclassFeatureRefs(feature.entries, selectedShortName)
     }
     // No resolved feature — return feature name as a string stub
     const featureName = refStr.split('|')[0] ?? ''

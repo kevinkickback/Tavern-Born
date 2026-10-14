@@ -55,7 +55,15 @@ test.each([true, false])('renders complete intro content once with level groups 
         level: 3,
         entries: [
           { type: 'entries', name: 'Practice', entries: ['As an action, practice the method.'] },
+          { type: 'refSubclassFeature', subclassFeature: 'Deep practice|Wizard||School||3' },
         ],
+      },
+      {
+        name: 'Deep practice',
+        className: 'Wizard',
+        subclassShortName: 'School',
+        level: 3,
+        entries: ['As a bonus action, use the deeper method.'],
       },
     ],
   }) as Class5e[]
@@ -77,6 +85,7 @@ test.each([true, false])('renders complete intro content once with level groups 
 
   expect(screen.getAllByText('Study the school.')).toHaveLength(1)
   expect(screen.getAllByText('As an action, practice the method.')).toHaveLength(1)
+  expect(screen.getAllByText('As a bonus action, use the deeper method.')).toHaveLength(1)
   expect(subclass.subclassFeatureRefs![0].feature).toBeDefined()
   expect(subclass.levelFeatures![0].features).toHaveLength(1)
   expect(subclass.normalizedRules!.choices).toHaveLength(1)
