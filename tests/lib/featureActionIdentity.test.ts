@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, test } from 'vitest'
+import { DataFilter } from '@/lib/5etools/filters'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
@@ -398,6 +399,19 @@ test('copied subclasses qualify identical encoded UIDs by their actual selected 
     })),
   })
   const alternate = { ...payload.subclassFeature[0], source: 'PHB' }
+  const unlisted = DataFilter.filterClasses(
+    parseClasses({
+      ...payload,
+      subclass: payload.subclass.map((subclass) => ({ ...subclass, subclassFeatures: [] })),
+    }) as Class5e[],
+    {},
+  )
+  expect(unlisted.map((entry) => entry.subclasses![0].levelFeatures)).toEqual([[], []])
+  expect(unlisted.map((entry) => entry.subclasses![0].normalizedRules!.choices)).toEqual([[], []])
+  expect(deriveRulesTextActions(character, undefined, { classes: unlisted })).toEqual([])
+  expect(
+    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unlisted) }).actions,
+  ).toEqual([])
   const unavailable = parseClasses({ ...payload, subclassFeature: [alternate] }) as Class5e[]
   expect(deriveRulesTextActions(character, undefined, { classes: unavailable })).toEqual([])
   expect(

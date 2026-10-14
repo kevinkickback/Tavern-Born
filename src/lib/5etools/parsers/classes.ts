@@ -192,15 +192,6 @@ export function parseClasses(data: unknown): unknown[] {
   const classFeatureRecords: unknown[] = asArray(obj.classFeature)
   const classFeatureIndex = getClassFeatureIndex(classFeatureRecords)
 
-  // Build maps for intro entries and per-level features from subclassFeature records.
-  // XPHB-style subclasses have an intro record whose name === shortName (e.g. "Abjurer").
-  // PHB-style subclasses have an intro record whose name === the full subclass name (e.g.
-  // "School of Abjuration"), which never matches the shortName ("Abjuration").
-  // We capture both patterns: introEntriesMap keyed by shortName, fullNameIntroMap keyed
-  // by feature name, so that the lookup below can fall back for PHB-style entries.
-  const introEntriesMap = new Map<string, unknown[]>()
-  const fullNameIntroMap = new Map<string, unknown[]>()
-  const levelFeaturesMap = new Map<string, { level: number; features: unknown[] }[]>()
   const rawSubclassFeatureRecords: unknown[] = asArray(obj.subclassFeature)
   const subclassFeatureRecords: unknown[] = rawSubclassFeatureRecords.map((feature) => {
     const record = asObject(feature)
@@ -211,33 +202,6 @@ export function parseClasses(data: unknown): unknown[] {
         }
       : feature
   })
-  for (const scf of subclassFeatureRecords) {
-    const scfObj = asObject(scf)
-    if (!scfObj.subclassShortName || !scfObj.className || !scfObj.entries) continue
-    const key = `${String(scfObj.subclassShortName)}|${String(scfObj.className)}|${String(scfObj.classSource ?? '')}`
-    if (scfObj.name === scfObj.subclassShortName) {
-      // XPHB-style intro: name === shortName - capture for shortName-keyed lookup
-      if (!introEntriesMap.has(key)) introEntriesMap.set(key, asArray(scfObj.entries))
-    } else {
-      // PHB-style: feature name is the full subclass name (e.g. "School of Abjuration").
-      // Index by feature name so the lookup below can find it via sc.name.
-      const nameKey = `${String(scfObj.name ?? '')}|${String(scfObj.className)}|${String(scfObj.classSource ?? '')}`
-      if (!fullNameIntroMap.has(nameKey)) fullNameIntroMap.set(nameKey, asArray(scfObj.entries))
-
-      // Content feature - group by level for the rich detail pane
-      if (!levelFeaturesMap.has(key)) levelFeaturesMap.set(key, [])
-      const levels = levelFeaturesMap.get(key)
-      if (!levels) continue
-      const level = typeof scfObj.level === 'number' ? scfObj.level : 0
-      const existing = levels.find((l) => l.level === level)
-      if (existing) {
-        existing.features.push(scf)
-      } else {
-        levels.push({ level, features: [scf] })
-      }
-    }
-  }
-
   // Group subclasses by parent class (by className + classSource)
   const subclassMap = new Map<string, unknown[]>()
   for (const sc of subclassEntries) {
@@ -247,31 +211,14 @@ export function parseClasses(data: unknown): unknown[] {
     if (!className) continue
     const parentKey = `${className}|${classSource ?? ''}`
     if (!subclassMap.has(parentKey)) subclassMap.set(parentKey, [])
-    const introKey = `${String(scObj.shortName ?? '')}|${className}|${classSource ?? ''}`
-    // Fallback: PHB-style subclasses where shortName != feature name; look up by sc.name
-    const fullNameKey = `${String(scObj.name ?? '')}|${className}|${classSource ?? ''}`
-    const copiedSubclass = asObject(scObj._copy)
-    const copiedClassName = String(copiedSubclass.className ?? '')
-    const copiedClassSource = String(copiedSubclass.classSource ?? '')
-    const copiedIntroKey = `${String(copiedSubclass.shortName ?? '')}|${copiedClassName}|${copiedClassSource}`
-    const copiedFullNameKey = `${String(copiedSubclass.name ?? '')}|${copiedClassName}|${copiedClassSource}`
     const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
     const introRef = subclassFeatureRefs.find(
       (ref) =>
         normalizeKey(ref.name) === normalizeKey(scObj.shortName) ||
         normalizeKey(ref.name) === normalizeKey(scObj.name),
     )
-    const entries = introRef
-      ? asArray(asObject(introRef.feature).entries)
-      : (introEntriesMap.get(introKey) ??
-        fullNameIntroMap.get(fullNameKey) ??
-        introEntriesMap.get(copiedIntroKey) ??
-        fullNameIntroMap.get(copiedFullNameKey) ??
-        [])
-    const levelFeatures =
-      subclassFeatureRefs.length > 0
-        ? groupSubclassFeaturesByLevel(subclassFeatureRefs)
-        : (levelFeaturesMap.get(introKey) ?? [])
+    const entries = asArray(asObject(introRef?.feature).entries)
+    const levelFeatures = groupSubclassFeaturesByLevel(subclassFeatureRefs)
     subclassMap.get(parentKey)?.push({
       ...scObj,
       entries,

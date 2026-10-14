@@ -56,7 +56,14 @@ describe('5etools/parsers', () => {
     expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['Default'])
   })
 
-  test('parseClasses nests subclasses and resolves intro entries + level features', () => {
+  test.each([
+    { declaredIntro: true, declaredFeatures: true },
+    { declaredIntro: false, declaredFeatures: true },
+    { declaredIntro: false, declaredFeatures: false },
+  ])('parseClasses projects declared intro=$declaredIntro / features=$declaredFeatures', ({
+    declaredIntro,
+    declaredFeatures,
+  }) => {
     const parsed = parseClasses({
       classFeature: [
         {
@@ -96,7 +103,10 @@ describe('5etools/parsers', () => {
           className: 'Wizard',
           classSource: 'PHB',
           source: 'PHB',
-          subclassFeatures: ['Arcane Ward|Wizard||Abjuration||2'],
+          subclassFeatures: [
+            ...(declaredIntro ? ['School of Abjuration|Wizard||Abjuration||2'] : []),
+            ...(declaredFeatures ? ['Arcane Ward|Wizard||Abjuration||2'] : []),
+          ],
         },
       ],
       subclassFeature: [
@@ -105,6 +115,7 @@ describe('5etools/parsers', () => {
           subclassShortName: 'Abjuration',
           className: 'Wizard',
           classSource: 'PHB',
+          level: 2,
           entries: ['intro text'],
         },
         {
@@ -139,16 +150,18 @@ describe('5etools/parsers', () => {
 
     const subclass = parsed[0]?.subclasses?.[0]
     expect(subclass?.shortName).toBe('Abjuration')
-    expect(subclass?.entries).toEqual(['intro text'])
-    expect(subclass?.levelFeatures?.some((l) => l.level === 2)).toBe(true)
+    expect(subclass?.entries).toEqual(declaredIntro ? ['intro text'] : [])
+    expect(subclass?.levelFeatures?.some((l) => l.level === 2)).toBe(declaredFeatures)
     expect(subclass?.subclassFeatureRefs).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'Arcane Ward',
-          level: 2,
-          feature: expect.objectContaining({ entries: ['feature text'] }),
-        }),
-      ]),
+      declaredFeatures
+        ? expect.arrayContaining([
+            expect.objectContaining({
+              name: 'Arcane Ward',
+              level: 2,
+              feature: expect.objectContaining({ entries: ['feature text'] }),
+            }),
+          ])
+        : [],
     )
     expect(parsed[0]?.classFeatureRefs).toEqual(
       expect.arrayContaining([

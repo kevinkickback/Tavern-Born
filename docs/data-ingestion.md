@@ -58,7 +58,9 @@ unresolved. Other choice types still require an explicit source. Subclass featur
 the same UID defaults and complete identity codec. Every target field, including class, subclass
 and feature printing, must match the declared UID. A copied subclass may have a different selected
 class owner while retaining the exact original target; this does not relax target identity. An absent
-printing stays unresolved, including inline references, intro text and level groups. Cache schema29
+printing stays unresolved, including inline references, intro text and level groups. Subclass intro
+and level content come only from declared references; unreferenced raw rows are never synthesized
+into subclass content or target catalogs. Cache schema29
 rebuilds catalogs that could previously substitute another printing.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
