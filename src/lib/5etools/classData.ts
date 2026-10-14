@@ -1,6 +1,7 @@
 import {
   decodeSubclassFeatureReference,
   getClassFeatureReferenceLevel,
+  getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
@@ -225,7 +226,16 @@ export function getEffectiveSpellcastingClassData(
 export function getSubclassFeatureGroups(
   subclass: Subclass5e | undefined,
 ): Array<{ level: number; features: SubclassFeature[] }> {
-  return (subclass?.levelFeatures ?? [])
+  const groups = subclass?.levelFeatures ?? []
+  const displayedFeatureKeys = new Set(
+    groups.flatMap((group) =>
+      group.features.flatMap((feature) => {
+        const key = getSubclassFeatureIdentity(feature)
+        return key ? [key] : []
+      }),
+    ),
+  )
+  return groups
     .map((group) => ({
       ...group,
       features: group.features.map((feature) => ({
@@ -233,6 +243,7 @@ export function getSubclassFeatureGroups(
         entries: resolveSubclassFeatureRefs(
           feature.entries ?? [],
           feature.subclassShortName ?? subclass?.shortName,
+          displayedFeatureKeys,
         ),
       })),
     }))
@@ -266,10 +277,12 @@ export function getOptFeatureTotal(prog: OptFeatureProg['progression'], level: n
  * - Refs for other subclasses are removed.
  * - Non-ref entries pass through unchanged; objects with nested `entries` are recursed.
  * - If `subclassShortName` is undefined or empty, all refs are filtered out.
+ * - Targets already displayed as level features are omitted from nested expansion.
  */
 export function resolveSubclassFeatureRefs(
   entries: unknown[],
   subclassShortName: string | undefined,
+  displayedFeatureKeys?: ReadonlySet<string>,
 ): unknown[] {
   const selectedShortName = subclassShortName?.trim().toLowerCase()
   return entries.flatMap((e) => {
@@ -280,7 +293,11 @@ export function resolveSubclassFeatureRefs(
         return [
           {
             ...obj,
-            entries: resolveSubclassFeatureRefs(obj.entries, selectedShortName),
+            entries: resolveSubclassFeatureRefs(
+              obj.entries,
+              selectedShortName,
+              displayedFeatureKeys,
+            ),
           },
         ]
       }
@@ -288,17 +305,18 @@ export function resolveSubclassFeatureRefs(
     }
     // Extract this ref's subclass shortName (segment 3 of the pipe-delimited string)
     const refStr = typeof obj.subclassFeature === 'string' ? obj.subclassFeature : ''
-    const refShortName = decodeSubclassFeatureReference(refStr)
-      .subclassShortName.trim()
-      .toLowerCase()
+    const reference = decodeSubclassFeatureReference(refStr)
+    const refShortName = reference.subclassShortName.trim().toLowerCase()
     // Filter out if no subclass selected or ref is for a different subclass
     if (!selectedShortName || (refShortName && refShortName !== selectedShortName)) {
       return []
     }
+    const key = getSubclassFeatureIdentity(reference)
+    if (key && displayedFeatureKeys?.has(key)) return []
     // Expand resolved feature entries
     const feature = obj.feature as Record<string, unknown> | undefined
     if (feature?.entries && Array.isArray(feature.entries)) {
-      return resolveSubclassFeatureRefs(feature.entries, selectedShortName)
+      return resolveSubclassFeatureRefs(feature.entries, selectedShortName, displayedFeatureKeys)
     }
     // No resolved feature — return feature name as a string stub
     const featureName = refStr.split('|')[0] ?? ''

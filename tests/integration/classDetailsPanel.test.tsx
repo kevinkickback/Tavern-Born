@@ -29,7 +29,12 @@ test.each([true, false])('renders complete intro content once with level groups 
         source: 'PHB',
         className: 'Wizard',
         classSource: 'PHB',
-        subclassFeatures: ['School|Wizard||School||3'],
+        subclassFeatures: [
+          'School|Wizard||School||3',
+          'Practice|Wizard||School||3',
+          'Practice|Wizard||School||3|TCE',
+          'Practice|Wizard||School||6',
+        ],
       },
     ],
     subclassFeature: [
@@ -65,6 +70,19 @@ test.each([true, false])('renders complete intro content once with level groups 
         level: 3,
         entries: ['As a bonus action, use the deeper method.'],
       },
+      ...(
+        [
+          [3, 'TCE', 'Use the other printing.'],
+          [6, 'PHB', 'Use the later gain.'],
+        ] as const
+      ).map(([level, source, text]) => ({
+        name: 'Practice',
+        className: 'Wizard',
+        subclassShortName: 'School',
+        level,
+        source,
+        entries: [text],
+      })),
     ],
   }) as Class5e[]
   const subclass = classes[0].subclasses![0]
@@ -87,7 +105,11 @@ test.each([true, false])('renders complete intro content once with level groups 
   expect(screen.getAllByText('As an action, practice the method.')).toHaveLength(1)
   expect(screen.getAllByText('As a bonus action, use the deeper method.')).toHaveLength(1)
   expect(subclass.subclassFeatureRefs![0].feature).toBeDefined()
-  expect(subclass.levelFeatures![0].features).toHaveLength(1)
+  if (grouped) {
+    expect(screen.getAllByText('Use the other printing.')).toHaveLength(1)
+    expect(screen.getAllByText('Use the later gain.')).toHaveLength(1)
+  }
+  expect(subclass.levelFeatures![0].features).toHaveLength(3)
   expect(subclass.normalizedRules!.choices).toHaveLength(1)
   expect(subclass).toEqual(before)
 })
