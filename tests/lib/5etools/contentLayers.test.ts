@@ -492,18 +492,28 @@ describe('game-data content layers', () => {
     ).toHaveLength(restored ? 1 : 0)
     expect([base, additional]).toEqual(before)
   })
-  test('uses the latest layered subclass feature for matching references', () => {
+  test.each([
+    { source: 'PHB', valid: true },
+    { source: undefined, valid: true },
+    { source: null, valid: false },
+    { source: 5, valid: false },
+    { source: {}, valid: false },
+  ])('uses the latest valid layered subclass feature with source $source', ({ source, valid }) => {
     const baseFeature = {
       name: 'Inventive Method',
-      source: 'TEST',
+      source: 'PHB',
       className: 'Inventor',
       classSource: 'TEST',
       subclassShortName: 'Smith',
-      subclassSource: 'TEST',
+      subclassSource: 'PHB',
       level: 3,
       entries: ['Base rules.'],
     }
-    const additionalFeature = { ...baseFeature, entries: ['Additional rules.'] }
+    const additionalFeature = {
+      ...baseFeature,
+      source: source as string,
+      entries: ['Additional rules.'],
+    }
     const classWithFeature = (feature: typeof baseFeature) =>
       makeClassFixture({
         name: 'Inventor',
@@ -518,13 +528,13 @@ describe('game-data content layers', () => {
             classSource: 'TEST',
             subclassFeatureRefs: [
               {
-                ref: 'Inventive Method|Inventor|TEST|Smith|TEST|3|TEST',
+                ref: 'Inventive Method|Inventor|TEST|Smith|PHB|3|PHB',
                 name: 'Inventive Method',
-                source: 'TEST',
+                source: 'PHB',
                 className: 'Inventor',
                 classSource: 'TEST',
                 subclassShortName: 'Smith',
-                subclassSource: 'TEST',
+                subclassSource: 'PHB',
                 level: 3,
                 feature,
               },
@@ -539,7 +549,7 @@ describe('game-data content layers', () => {
     ])
 
     expect(composed.classes[0].subclasses?.[0].subclassFeatureRefs?.[0].feature).toBe(
-      additionalFeature,
+      valid ? additionalFeature : baseFeature,
     )
   })
 

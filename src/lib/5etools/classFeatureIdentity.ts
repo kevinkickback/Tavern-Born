@@ -122,9 +122,11 @@ export function getSubclassFeatureIdentity(
       ? feature.subclassShortName.trim().toLowerCase()
       : ''
   const subclassSource = sourceKey(feature.subclassSource, 'phb')
+  const source = sourceKey(feature.source, subclassSource ?? 'phb')
+  if (!subclassSource || !source) return undefined
   const identity = normalizeClassFeatureIdentity({
     ...feature,
-    source: sourceKey(feature.source, subclassSource ?? 'phb'),
+    source,
   })
   return identity && subclassShortName && subclassSource
     ? [
