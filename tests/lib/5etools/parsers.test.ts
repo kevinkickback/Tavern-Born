@@ -11,7 +11,7 @@ import {
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
-import type { Race5e } from '@/types/5etools'
+import type { Class5e, Race5e } from '@/types/5etools'
 
 describe('5etools/parsers', () => {
   test('parseRaces nests subraces by race name and source', () => {
@@ -328,7 +328,16 @@ describe('5etools/parsers', () => {
     ).toEqual([{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }])
   })
 
-  test('resolves a uniquely source-qualified feature retained by a copied subclass', () => {
+  test.each([
+    { printing: 'EXT', requested: 'EXT', resolved: true },
+    { printing: 'OTHER', requested: 'EXT', resolved: false },
+    { printing: 'EXT', requested: '', resolved: true },
+    { printing: 'OTHER', requested: '', resolved: false },
+  ])('copied subclass resolves only its requested printing: $printing / $requested', ({
+    printing,
+    requested,
+    resolved,
+  }) => {
     const parsed = parseClasses({
       class: [{ name: 'Test Class', source: 'NEW' }],
       subclass: [
@@ -338,30 +347,27 @@ describe('5etools/parsers', () => {
           source: 'EXT',
           className: 'Test Class',
           classSource: 'NEW',
-          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+          subclassFeatures: [`Copied|Test Class|OLD|Copied|EXT|6|${requested}`],
         },
       ],
       subclassFeature: [
         {
-          name: 'Retained Feature',
-          source: 'OLD',
+          name: 'Copied',
+          source: printing,
           className: 'Test Class',
-          classSource: 'OLD',
+          classSource: 'NEW',
           subclassShortName: 'Copied',
-          subclassSource: 'OLD',
+          subclassSource: 'EXT',
           level: 6,
           entries: ['retained feature text'],
         },
       ],
-    }) as Array<{
-      subclasses?: Array<{
-        subclassFeatureRefs?: Array<{ feature?: { entries?: unknown[] } }>
-      }>
-    }>
+    }) as Class5e[]
 
-    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature?.entries).toEqual([
-      'retained feature text',
-    ])
+    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature?.entries).toEqual(
+      resolved ? ['retained feature text'] : undefined,
+    )
+    expect(parsed[0]?.subclasses?.[0]?.entries).toEqual(resolved ? ['retained feature text'] : [])
   })
 
   test('does not guess when a copied subclass feature reference remains ambiguous', () => {
@@ -382,21 +388,17 @@ describe('5etools/parsers', () => {
           source: 'EXT',
           className: 'Test Class',
           classSource: 'NEW',
-          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+          subclassFeatures: ['Retained Feature|Test Class|NEW|Copied|EXT|6'],
         },
       ],
       subclassFeature: [
         {
           ...sharedFeature,
-          source: 'OLD-A',
-          subclassSource: 'OLD-A',
           classSource: 'OLD-A',
           entries: ['first'],
         },
         {
           ...sharedFeature,
-          source: 'OLD-B',
-          subclassSource: 'OLD-B',
           classSource: 'OLD-B',
           entries: ['second'],
         },
@@ -571,6 +573,12 @@ describe('5etools/parsers', () => {
         },
       ],
     }
+
+    const missingPrinting = parseClassFeatures({
+      ...data,
+      subclassFeature: data.subclassFeature.map((feature) => ({ ...feature, source: 'TCE' })),
+    }) as Array<{ entries: unknown[] }>
+    expect(missingPrinting[0].entries[1]).toEqual(data.classFeature[0].entries[1])
 
     const features = parseClassFeatures(data) as Array<{
       name: string

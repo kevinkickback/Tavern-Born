@@ -54,8 +54,11 @@ Class/subclass choice options preserve their complete encoded feature UIDs throu
 and exact catalog resolution. Dependency and capability audits check every owner, gain and printing
 field rather than only `name|source`. A complete feature UID supplies its encoded or upstream-default
 printing when the duplicated source is absent or blank; explicit source/name conflicts remain
-unresolved. Other choice types still require an explicit source. Cache schema28 rebuilds parsed
-choices that predate this identity contract.
+unresolved. Other choice types still require an explicit source. Subclass feature parsing shares
+the same UID defaults and complete identity codec. A copied-class fallback may vary only the class
+source and must select one unique record with the requested feature and subclass printing; an absent
+printing stays unresolved, including inline references, intro text and level groups. Cache schema29
+rebuilds catalogs that could previously substitute another printing.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names

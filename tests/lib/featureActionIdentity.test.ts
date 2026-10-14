@@ -356,7 +356,7 @@ test.each(['1', '8', '8junk', '0'])('subclass gains use the complete encoded lev
 })
 
 test('copied subclasses qualify identical encoded UIDs by their actual selected owner', () => {
-  const classes = parseClasses({
+  const payload = {
     class: ['PHB', 'XPHB'].map((source) => ({ name: 'Wizard', source, classFeatures: [] })),
     subclass: ['PHB', 'XPHB'].map((classSource) => ({
       name: 'School',
@@ -375,10 +375,18 @@ test('copied subclasses qualify identical encoded UIDs by their actual selected 
         subclassShortName: 'School',
         subclassSource: 'TCE',
         level: 1,
-        entries: ['As an action, use training.'],
+        entries: [
+          'As an action, use training.',
+          {
+            type: 'options',
+            count: 1,
+            entries: [{ type: 'refOptionalfeature', optionalfeature: 'Training|TCE' }],
+          },
+        ],
       },
     ],
-  }) as Class5e[]
+  }
+  const classes = parseClasses(payload) as Class5e[]
   const character = makeCharacterFixture({
     features: [],
     classProgression: classes.map((entry) => ({
@@ -389,6 +397,40 @@ test('copied subclasses qualify identical encoded UIDs by their actual selected 
       subclassSource: 'TCE',
     })),
   })
+  const alternate = { ...payload.subclassFeature[0], source: 'PHB' }
+  const unavailable = parseClasses({ ...payload, subclassFeature: [alternate] }) as Class5e[]
+  expect(deriveRulesTextActions(character, undefined, { classes: unavailable })).toEqual([])
+  expect(
+    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unavailable) })
+      .actions,
+  ).toEqual([])
+  for (const entry of unavailable) {
+    const subclass = entry.subclasses![0]
+    expect(subclass.subclassFeatureRefs![0]).toMatchObject({
+      ref: 'Shared|Wizard||School|TCE|1',
+      source: 'TCE',
+    })
+    expect(subclass.subclassFeatureRefs![0].feature).toBeUndefined()
+    expect(subclass.levelFeatures).toEqual([])
+    expect(subclass.normalizedRules!.choices).toEqual([])
+  }
+  const restored = parseClasses({
+    ...payload,
+    subclassFeature: [alternate, ...payload.subclassFeature],
+  }) as Class5e[]
+  expect(restored.map((entry) => entry.subclasses![0].subclassFeatureRefs![0].ref)).toEqual([
+    'Shared|Wizard||School|TCE|1',
+    'Shared|Wizard||School|TCE|1',
+  ])
+  expect(restored.map((entry) => entry.subclasses![0].normalizedRules!.choices.length)).toEqual([
+    1, 1,
+  ])
+  expect(
+    restored.map((entry) => entry.subclasses![0].subclassFeatureRefs![0].feature!.source),
+  ).toEqual(['TCE', 'TCE'])
+  expect(deriveRulesTextActions(character, undefined, { classes: restored })).toEqual(
+    deriveRulesTextActions(character, undefined, { classes }),
+  )
   const context = { classesByKey: buildClassLookup(classes) }
   const actions = createCharacterSheetViewModel(character, context).actions
   expect(actions).toHaveLength(2)

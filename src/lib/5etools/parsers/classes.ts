@@ -1,7 +1,9 @@
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import {
   decodeClassFeatureReference,
+  decodeSubclassFeatureReference,
   getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import type { ClassFeatureReference } from '@/types/5etools'
@@ -83,120 +85,29 @@ function resolveSubclassFeatureRecord(
   ref: ParsedObject,
   subclassFeatureRecords: unknown[],
 ): ParsedObject | undefined {
-  const name = normalizeKey(ref.name)
-  const source = normalizeKey(ref.source)
-  const className = normalizeKey(ref.className)
-  const classSource = normalizeKey(ref.classSource)
-  const subclassShortName = normalizeKey(ref.subclassShortName)
-  const subclassSource = normalizeKey(ref.subclassSource)
-  const level = typeof ref.level === 'number' ? ref.level : undefined
-
-  for (const record of subclassFeatureRecords) {
-    const feature = asObject(record)
-    if (normalizeKey(feature.name) !== name) continue
-    if (className && normalizeKey(feature.className) !== className) continue
-    if (
-      classSource &&
-      typeof feature.classSource === 'string' &&
-      normalizeKey(feature.classSource) !== classSource
-    )
-      continue
-    if (
-      subclassShortName &&
-      typeof feature.subclassShortName === 'string' &&
-      normalizeKey(feature.subclassShortName) !== subclassShortName
-    )
-      continue
-    if (
-      subclassSource &&
-      typeof feature.subclassSource === 'string' &&
-      normalizeKey(feature.subclassSource) !== subclassSource
-    )
-      continue
-    if (level !== undefined && feature.level !== level) continue
-    if (source && typeof feature.source === 'string' && normalizeKey(feature.source) !== source)
-      continue
-    return feature
-  }
+  const identity = getSubclassFeatureIdentity(ref)
+  if (!identity) return undefined
+  const features = subclassFeatureRecords.map(asObject)
+  const exact = features.find((feature) => getSubclassFeatureIdentity(feature) === identity)
+  if (exact) return exact
 
   // A copied subclass can retain source-qualified feature references from its original
   // class printing while changing only the parent class source. Resolve that mismatch
   // only when every other encoded identity field selects one unique record.
-  if (source) {
-    const sourceQualifiedCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
-      if (normalizeKey(feature.name) !== name) return false
-      if (className && normalizeKey(feature.className) !== className) return false
-      if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
-        return false
-      if (subclassSource && normalizeKey(feature.subclassSource) !== subclassSource) return false
-      if (level !== undefined && feature.level !== level) return false
-      return normalizeKey(feature.source) === source
-    })
-    if (sourceQualifiedCandidates.length === 1) return sourceQualifiedCandidates[0]
-  }
-
-  const encodedIdentityCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
-    if (normalizeKey(feature.name) !== name) return false
-    if (className && normalizeKey(feature.className) !== className) return false
-    if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
-      return false
-    return level === undefined || feature.level === level
-  })
-  if (encodedIdentityCandidates.length === 1) return encodedIdentityCandidates[0]
-
-  if (!source) {
-    for (const record of subclassFeatureRecords) {
-      const feature = asObject(record)
-      if (normalizeKey(feature.name) !== name) continue
-      if (className && normalizeKey(feature.className) !== className) continue
-      if (
-        classSource &&
-        typeof feature.classSource === 'string' &&
-        normalizeKey(feature.classSource) !== classSource
-      )
-        continue
-      if (
-        subclassShortName &&
-        typeof feature.subclassShortName === 'string' &&
-        normalizeKey(feature.subclassShortName) !== subclassShortName
-      )
-        continue
-      if (
-        subclassSource &&
-        typeof feature.subclassSource === 'string' &&
-        normalizeKey(feature.subclassSource) !== subclassSource
-      )
-        continue
-      if (level !== undefined && feature.level !== level) continue
-      return feature
-    }
-  }
-
-  return undefined
+  const candidates = features.filter(
+    (feature) =>
+      getSubclassFeatureIdentity({ ...feature, classSource: ref.classSource }) === identity,
+  )
+  return candidates.length === 1 ? candidates[0] : undefined
 }
 
 function parseSubclassFeatureReference(
   rawRef: unknown,
-  subclassObj: ParsedObject,
   subclassFeatureRecords: unknown[],
 ): ParsedObject | null {
   if (typeof rawRef !== 'string') return null
 
-  const parts = rawRef.split('|')
-  const level = Number.parseInt(parts[5] ?? '', 10)
-  const parsedRef: ParsedObject = {
-    ref: rawRef,
-    name: parts[0] ?? '',
-    className: parts[1] || subclassObj.className || '',
-    classSource: parts[2] || subclassObj.classSource,
-    subclassShortName: parts[3] || subclassObj.shortName || subclassObj.subclassShortName || '',
-    subclassSource: parts[4] || subclassObj.source,
-    source: parts[6] || subclassObj.source,
-  }
-
-  if (!Number.isNaN(level)) {
-    parsedRef.level = level
-  }
+  const parsedRef = { ...decodeSubclassFeatureReference(rawRef) }
 
   const feature = resolveSubclassFeatureRecord(parsedRef, subclassFeatureRecords)
   if (!feature) return parsedRef
@@ -225,7 +136,7 @@ function parseSubclassFeatureReferences(
   subclassFeatureRecords: unknown[],
 ): ParsedObject[] {
   return asArray(subclassObj.subclassFeatures)
-    .map((ref) => parseSubclassFeatureReference(ref, subclassObj, subclassFeatureRecords))
+    .map((ref) => parseSubclassFeatureReference(ref, subclassFeatureRecords))
     .filter((ref): ref is ParsedObject => ref !== null)
 }
 
@@ -353,15 +264,21 @@ export function parseClasses(data: unknown): unknown[] {
     const copiedClassSource = String(copiedSubclass.classSource ?? '')
     const copiedIntroKey = `${String(copiedSubclass.shortName ?? '')}|${copiedClassName}|${copiedClassSource}`
     const copiedFullNameKey = `${String(copiedSubclass.name ?? '')}|${copiedClassName}|${copiedClassSource}`
-    const entries =
-      introEntriesMap.get(introKey) ??
-      fullNameIntroMap.get(fullNameKey) ??
-      introEntriesMap.get(copiedIntroKey) ??
-      fullNameIntroMap.get(copiedFullNameKey) ??
-      []
     const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
+    const introRef = subclassFeatureRefs.find(
+      (ref) =>
+        normalizeKey(ref.name) === normalizeKey(scObj.shortName) ||
+        normalizeKey(ref.name) === normalizeKey(scObj.name),
+    )
+    const entries = introRef
+      ? asArray(asObject(introRef.feature).entries)
+      : (introEntriesMap.get(introKey) ??
+        fullNameIntroMap.get(fullNameKey) ??
+        introEntriesMap.get(copiedIntroKey) ??
+        fullNameIntroMap.get(copiedFullNameKey) ??
+        [])
     const levelFeatures =
-      groupSubclassFeaturesByLevel(subclassFeatureRefs).length > 0
+      subclassFeatureRefs.length > 0
         ? groupSubclassFeaturesByLevel(subclassFeatureRefs)
         : (levelFeaturesMap.get(introKey) ?? [])
     subclassMap.get(parentKey)?.push({
@@ -519,17 +436,7 @@ function resolveInlineSubclassFeatureRef(
 ): ParsedObject {
   const refStr = typeof entry.subclassFeature === 'string' ? entry.subclassFeature : ''
   if (!refStr) return entry
-  const parts = refStr.split('|')
-  const parsedRef: ParsedObject = {
-    name: parts[0] ?? '',
-    className: parts[1] ?? '',
-    classSource: parts[2] ?? '',
-    subclassShortName: parts[3] ?? '',
-    subclassSource: parts[4] ?? '',
-    source: parts[6] || parts[4] || '',
-  }
-  const level = Number.parseInt(parts[5] ?? '', 10)
-  if (!Number.isNaN(level)) parsedRef.level = level
+  const parsedRef = { ...decodeSubclassFeatureReference(refStr) }
   const feature = resolveSubclassFeatureRecord(parsedRef, subclassFeatureRecords)
   if (!feature) return entry
   return {
