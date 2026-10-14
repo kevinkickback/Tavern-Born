@@ -139,6 +139,7 @@ export interface Subclass5e {
   entries?: unknown[]
   subclassFeatures?: string[] | SubclassFeature[]
   subclassFeatureRefs?: SubclassFeatureReference[]
+  introFeatureRef?: string
   levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>
   normalizedRules?: import('./classRules').NormalizedClassRules
   optionalfeatureProgression?: OptFeatureProg[]

@@ -15,6 +15,7 @@ import {
 import { buildGameDataLookups } from './lookups'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
+import { getSubclassIntroEntries } from './subclassContent'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
 
@@ -193,6 +194,7 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
       return {
         ...subclass,
         subclassFeatureRefs,
+        entries: getSubclassIntroEntries(subclass, subclassFeatureRefs),
         levelFeatures: groupSubclassFeaturesByLevel(subclassFeatureRefs),
         normalizedRules: normalizeSubclassRules(classData, subclass, subclassFeatureRefs),
       }

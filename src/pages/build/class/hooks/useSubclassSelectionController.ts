@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
-import { useSubclass } from '@/hooks/data/useGameData'
-import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { isSubclassEligible } from '@/lib/calculations/subclassEligibility'
 import { getImplicitSource } from '@/lib/sourcePresets'
-import type { SelectedFeatureState } from '@/pages/build/class/components/DetailsPanel'
+import {
+  type ClassDetailsSelection,
+  createSubclassDetailsSelection,
+} from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 
@@ -16,7 +18,7 @@ interface SubclassSelectionControllerParams {
   viewingClassSource?: string
   viewingEntry?: CharacterClassEntry
   classProgression: CharacterClassEntry[]
-  onSelectionApplied: (feature: SelectedFeatureState) => void
+  onSelectionApplied: (feature: ClassDetailsSelection) => void
 }
 
 export function useSubclassSelectionController({
@@ -66,21 +68,14 @@ export function useSubclassSelectionController({
       ? viewingClassData.subclassTitle
       : 'Subclass'
   const viewingSubclass = viewingEntry?.subclass
-  const viewingSubclassData = useSubclass(
-    viewingClass ?? '',
-    viewingClassSource,
-    viewingSubclass ?? '',
-    viewingEntry?.subclassSource,
-  )
+  const viewingSubclassData = viewingEntry
+    ? getSelectedSubclassData(viewingClassData, viewingEntry)
+    : undefined
 
   const select = (subclass: Subclass5e) => {
+    if (!viewingClassData) return
     selectSubclass(subclass.name, subclass.source, classProgression, viewingEntry)
-    onSelectionApplied({
-      name: subclass.name,
-      source: subclass.source,
-      entries: resolveSubclassFeatureRefs(subclass.entries ?? [], subclass.shortName),
-      levelFeatures: subclass.levelFeatures,
-    })
+    onSelectionApplied(createSubclassDetailsSelection(viewingClassData, subclass))
     setPickerOpen(false)
   }
 
