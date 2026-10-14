@@ -39,7 +39,7 @@ describe('5etools/filters', () => {
       level: 3,
       entries: ['As a reaction, answer the signal.'],
     }
-    const classes = parseClasses({
+    const input = {
       class: [{ name: 'Wizard', source: 'PHB', classFeatures: [] }],
       subclass: [
         {
@@ -48,13 +48,13 @@ describe('5etools/filters', () => {
           source: ownerSource,
           className: 'Wizard',
           classSource: 'PHB',
-          subclassFeatures: ['Root|Wizard||School||3'],
+          subclassFeatures: ['School|Wizard||School||3'],
         },
       ],
       subclassFeature: [
         {
           ...target,
-          name: 'Root',
+          name: 'School',
           source: 'PHB',
           entries: [
             {
@@ -71,12 +71,16 @@ describe('5etools/filters', () => {
         },
         target,
       ],
-    }) as Class5e[]
+    }
+    const classes = parseClasses(input) as Class5e[]
+    const before = structuredClone(classes)
     const filters = {
       sources: ['PHB'],
       allowedSubclassKeys: new Set([`Wizard|PHB|Actual School|${ownerSource}`]),
     }
     const filtered = DataFilter.filterClasses(classes, filters)
+    const subclass = filtered[0].subclasses![0]
+    expect(subclass.entries).toEqual(subclass.subclassFeatureRefs![0].feature!.entries)
     const choice = filtered[0].subclasses![0].normalizedRules!.choices[0]
     expect(choice.owner).toMatchObject({
       subclassName: 'Actual School',
@@ -113,13 +117,39 @@ describe('5etools/filters', () => {
       ),
     ).toMatchObject([{ availability: 'retained', entries: [] }])
     for (const source of ['PHB', 'phb']) {
-      expect(
-        DataFilter.filterClasses(classes, {
-          ...filters,
-          suppressedKeys: new Set([`Nested default|${source}`]),
-        })[0].subclasses![0].normalizedRules!.choices,
-      ).toEqual([])
+      const suppressed = DataFilter.filterClasses(classes, {
+        ...filters,
+        suppressedKeys: new Set([`Nested default|${source}`]),
+      })[0].subclasses![0]
+      expect(suppressed.normalizedRules!.choices).toEqual([])
+      expect(suppressed.entries).toEqual(suppressed.subclassFeatureRefs![0].feature!.entries)
     }
+    const missing = DataFilter.filterClasses(classes, {
+      ...filters,
+      suppressedKeys: new Set(['School|PHB']),
+    })[0].subclasses![0]
+    expect(missing.entries).toEqual([])
+    expect(missing.subclassFeatureRefs).toEqual([])
+    expect(missing.levelFeatures).toEqual([])
+    expect(missing.normalizedRules!.choices).toEqual([])
+    const disabledClasses = parseClasses({
+      ...input,
+      subclass: input.subclass.map((value) => ({
+        ...value,
+        subclassFeatures: ['School|Wizard||School||3|XGE'],
+      })),
+      subclassFeature: input.subclassFeature.map((value) => ({
+        ...value,
+        source: value.name === 'School' ? 'XGE' : value.source,
+      })),
+    }) as Class5e[]
+    expect(disabledClasses[0].subclasses![0].entries).not.toEqual([])
+    const disabled = DataFilter.filterClasses(disabledClasses, filters)[0].subclasses![0]
+    expect(disabled.entries).toEqual([])
+    expect(DataFilter.filterClasses(classes, filters)[0].subclasses![0].entries).toEqual(
+      classes[0].subclasses![0].entries,
+    )
+    expect(classes).toEqual(before)
   })
 
   test('filters complete class-feature defaults by effective target printing', () => {

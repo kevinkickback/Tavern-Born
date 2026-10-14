@@ -6,6 +6,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { getSubclassIntroEntries } from '@/lib/5etools/subclassContent'
 import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
   Background5e,
@@ -303,6 +304,9 @@ function rebuildFilteredClassRules(classData: Class5e, originalClassData: Class5
         : filteredDirectRefs
     return {
       ...subclass,
+      entries: originalSubclass?.subclassFeatureRefs?.length
+        ? getSubclassIntroEntries(subclass, subclass.subclassFeatureRefs ?? [])
+        : subclass.entries,
       normalizedRules: shouldRebuild
         ? normalizeSubclassRules(classData, subclass, featureRefs)
         : subclass.normalizedRules,

@@ -3,6 +3,7 @@ import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
+import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import {
   formatProficiencyList,
   getSavingThrowsDisplay,
@@ -89,46 +90,39 @@ export function BuildClassDetailsPanel({
         <ScrollArea className="flex-1 overflow-hidden">
           <WorkspaceDetailContent className="space-y-4">
             {selectedFeature.levelFeatures ? (
-              <>
-                {selectedFeature.entries
-                  .filter((entry) => typeof entry === 'string')
-                  .map((entry) => (
-                    <GameContent
-                      key={entry}
-                      entry={entry}
-                      className="text-sm text-muted-foreground leading-relaxed"
-                    />
-                  ))}
-
-                {selectedFeature.levelFeatures
-                  .slice()
-                  .sort((a, b) => a.level - b.level)
-                  .map(({ level, features }) => (
-                    <div key={level}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
-                          Level {level}
-                        </Badge>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-
-                      <div className="space-y-4">
-                        {features.map((feature) => (
-                          <div key={`${feature.name}|${feature.source ?? ''}`}>
-                            <div className="text-sm font-semibold mb-1">{feature.name}</div>
-                            {feature.entries?.map((entry, idx) => (
-                              <GameContent
-                                key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                                entry={entry}
-                                className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
+              selectedFeature.levelFeatures
+                .slice()
+                .sort((a, b) => a.level - b.level)
+                .map(({ level, features }) => (
+                  <div key={level}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
+                        Level {level}
+                      </Badge>
+                      <div className="flex-1 h-px bg-border" />
                     </div>
-                  ))}
-              </>
+
+                    <div className="space-y-4">
+                      {features.map((feature) => (
+                        <div
+                          key={
+                            getSubclassFeatureIdentity(feature) ??
+                            `${feature.name}|${feature.source ?? ''}`
+                          }
+                        >
+                          <div className="text-sm font-semibold mb-1">{feature.name}</div>
+                          {feature.entries?.map((entry, idx) => (
+                            <GameContent
+                              key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                              entry={entry}
+                              className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
             ) : selectedFeature.entries.length > 0 ? (
               selectedFeature.entries.map((entry, idx) => (
                 <GameContent

@@ -400,10 +400,8 @@ describe('game-data content layers', () => {
     provided,
     restored,
   }) => {
-    const ref = ['Inventive Method', 'Inventor', target, 'Smith', target, '3', target].join('|')
-    const donorRef = ['Inventive Method', 'Inventor', target, 'Smith', target, '3', provided].join(
-      '|',
-    )
+    const ref = ['Smith', 'Inventor', target, 'Smith', target, '3', target].join('|')
+    const donorRef = ['Smith', 'Inventor', target, 'Smith', target, '3', provided].join('|')
     const declaration = {
       class: [{ name: 'Inventor', source: 'TEST' }],
       subclass: [
@@ -418,7 +416,7 @@ describe('game-data content layers', () => {
       ],
     }
     const physicalFeature = {
-      name: 'Inventive Method',
+      name: 'Smith',
       className: 'Inventor',
       subclassShortName: 'Smith',
       level: 3,
@@ -455,6 +453,7 @@ describe('game-data content layers', () => {
     const subclass = composed.classes[0].subclasses![0]
     expect(subclass.subclassFeatureRefs![0].ref).toBe(ref)
     expect(subclass.subclassFeatureRefs![0].feature).toBe(restored ? sharedFeature : undefined)
+    expect(subclass.entries).toEqual(restored ? physicalFeature.entries : [])
     expect(subclass.levelFeatures).toEqual(
       restored ? [{ level: 3, features: [sharedFeature] }] : [],
     )
@@ -491,6 +490,35 @@ describe('game-data content layers', () => {
       }).actions,
     ).toHaveLength(restored ? 1 : 0)
     expect([base, additional]).toEqual(before)
+
+    const replacement = {
+      ...physicalFeature,
+      entries: ['As an action, use the replacement method.', ...physicalFeature.entries.slice(1)],
+    }
+    const replacementLayer = makeGameDataFixture({
+      classes: parseClasses({
+        class: [{ name: 'Archive', source: 'OTHER' }],
+        subclass: declaration.subclass.map((value) => ({
+          ...value,
+          className: 'Archive',
+          classSource: 'OTHER',
+          subclassFeatures: [donorRef],
+        })),
+        subclassFeature: [replacement],
+      }) as Class5e[],
+    })
+    const replacementInputs = structuredClone([composed, replacementLayer])
+    const replaced = composeGameDataLayers([composed, replacementLayer])
+    const replacedSubclass = replaced.classes[0].subclasses![0]
+    expect(replacedSubclass.subclassFeatureRefs![0].ref).toBe(ref)
+    expect(replacedSubclass.entries).toEqual(restored ? replacement.entries : [])
+    expect(replacedSubclass.normalizedRules!.choices).toHaveLength(restored ? 1 : 0)
+    expect(
+      deriveRulesTextActions(character, undefined, { classes: replaced.classes }),
+    ).toMatchObject(
+      restored ? [{ description: expect.stringContaining('replacement method') }] : [],
+    )
+    expect([composed, replacementLayer]).toEqual(replacementInputs)
   })
   test.each([
     { source: 'PHB', valid: true },
