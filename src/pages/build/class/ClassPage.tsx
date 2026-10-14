@@ -25,17 +25,18 @@ import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassChoiceSelectionModal'
-import {
-  BuildClassDetailsPanel,
-  type SelectedFeatureState,
-} from '@/pages/build/class/components/DetailsPanel'
+import { BuildClassDetailsPanel } from '@/pages/build/class/components/DetailsPanel'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
-import { buildLevelsToShow } from '@/pages/build/class/model/pageUtils'
+import {
+  buildLevelsToShow,
+  type ClassDetailsSelection,
+  resolveSubclassDetailsSelection,
+} from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
 import type {
@@ -77,7 +78,7 @@ export function BuildClassPage() {
     classPickerSearch,
     detailCollapsed,
     leftCollapsed,
-    selectedFeature,
+    selectedFeature: featureSelection,
     setClassPickerOpen,
     setClassPickerSearch,
     setDetailCollapsed,
@@ -116,6 +117,10 @@ export function BuildClassPage() {
       (classData) => getEntityLookupKey(classData.name, classData.source) === viewingKey,
     )
   }, [classes, viewingClass, viewingClassSource])
+  const selectedFeature = useMemo(
+    () => resolveSubclassDetailsSelection(featureSelection, viewingClassData),
+    [featureSelection, viewingClassData],
+  )
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const viewingSubclassSpellcastingData = useMemo(
     () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
@@ -184,7 +189,7 @@ export function BuildClassPage() {
     },
   })
 
-  const handleSelectFeature = (feature: SelectedFeatureState) => {
+  const handleSelectFeature = (feature: ClassDetailsSelection) => {
     setSelectedFeature(feature)
     setCompactPane('right')
   }

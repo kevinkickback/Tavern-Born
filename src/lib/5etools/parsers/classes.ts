@@ -6,7 +6,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
-import { getSubclassIntroEntries } from '@/lib/5etools/subclassContent'
+import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
@@ -213,14 +213,19 @@ export function parseClasses(data: unknown): unknown[] {
     const parentKey = `${className}|${classSource ?? ''}`
     if (!subclassMap.has(parentKey)) subclassMap.set(parentKey, [])
     const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
-    const entries = getSubclassIntroEntries(
+    const introFeatureRef = getSubclassIntroReference(
       scObj,
+      subclassFeatureRefs as unknown as SubclassFeatureReference[],
+    )?.ref
+    const entries = getSubclassIntroEntries(
+      { introFeatureRef },
       subclassFeatureRefs as unknown as SubclassFeatureReference[],
     )
     const levelFeatures = groupSubclassFeaturesByLevel(subclassFeatureRefs)
     subclassMap.get(parentKey)?.push({
       ...scObj,
       entries,
+      introFeatureRef,
       subclassFeatureRefs,
       levelFeatures,
       normalizedRules: normalizeSubclassRules(

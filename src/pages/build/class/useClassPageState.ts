@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { SelectedFeatureState } from '@/pages/build/class/components/DetailsPanel'
+import type { ClassDetailsSelection } from '@/pages/build/class/model/pageUtils'
 
 export function useClassPageState() {
   const [selectedClassTab, setSelectedClassTab] = useState('')
@@ -7,7 +7,7 @@ export function useClassPageState() {
   const [classPickerSearch, setClassPickerSearch] = useState('')
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [selectedFeature, setSelectedFeature] = useState<SelectedFeatureState | null>(null)
+  const [selectedFeature, setSelectedFeature] = useState<ClassDetailsSelection | null>(null)
 
   const handleSelectClassTab = useCallback((value: string) => {
     setSelectedClassTab(value)

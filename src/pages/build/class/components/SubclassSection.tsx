@@ -1,8 +1,12 @@
 import { CaretRight, Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import { getSubclassFeatureGroups, resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
 import { cn } from '@/lib/utils'
+import {
+  type ClassDetailsSelection,
+  createSubclassDetailsSelection,
+} from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
@@ -15,7 +19,7 @@ interface BuildClassSubclassSectionProps {
   viewingSubclassData?: Subclass5e
   selectedFeature: SelectedFeatureState | null
   detailCollapsed: boolean
-  onSelectFeature: (feature: SelectedFeatureState) => void
+  onSelectFeature: (feature: ClassDetailsSelection) => void
   onExpandDetails: () => void
   onOpenSubclassPicker: () => void
   highlighted?: boolean
@@ -42,6 +46,11 @@ export function BuildClassSubclassSection({
     : undefined
 
   const title = (viewingClassData as { subclassTitle?: string })?.subclassTitle ?? 'Subclass'
+  const showSubclassDetails = () => {
+    if (viewingClassData && viewingSubclassData) {
+      onSelectFeature(createSubclassDetailsSelection(viewingClassData, viewingSubclassData))
+    }
+  }
 
   return (
     <div
@@ -98,28 +107,10 @@ export function BuildClassSubclassSection({
           <button
             type="button"
             onMouseEnter={() => {
-              onSelectFeature({
-                name: viewingSubclass,
-                source: viewingSubclassData?.source,
-                entries: resolveSubclassFeatureRefs(
-                  viewingSubclassData?.entries ?? [],
-                  viewingSubclassData?.shortName,
-                ),
-                levelFeatures: getSubclassFeatureGroups(viewingSubclassData),
-              })
+              showSubclassDetails()
               if (detailCollapsed) onExpandDetails()
             }}
-            onClick={() =>
-              onSelectFeature({
-                name: viewingSubclass,
-                source: viewingSubclassData?.source,
-                entries: resolveSubclassFeatureRefs(
-                  viewingSubclassData?.entries ?? [],
-                  viewingSubclassData?.shortName,
-                ),
-                levelFeatures: getSubclassFeatureGroups(viewingSubclassData),
-              })
-            }
+            onClick={showSubclassDetails}
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
           >
             <span className="font-medium">{viewingSubclass}</span>

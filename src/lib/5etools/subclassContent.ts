@@ -1,16 +1,31 @@
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type { SubclassFeatureReference } from '@/types/5etools'
+import type { Subclass5e, SubclassFeatureReference } from '@/types/5etools'
+import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
 
-/** Derive the intro from its declared, exactly resolved feature. */
-export function getSubclassIntroEntries(
+/** Choose the original intro declaration before any source filtering. */
+export function getSubclassIntroReference(
   subclass: { name?: unknown; shortName?: unknown },
   references: readonly SubclassFeatureReference[],
-): unknown[] {
+): SubclassFeatureReference | undefined {
   const name = normalizeKey(subclass.name)
   const shortName = normalizeKey(subclass.shortName)
-  const intro = references.find(
+  return references.find(
     (reference) =>
       normalizeKey(reference.name) === shortName || normalizeKey(reference.name) === name,
   )
-  return Array.isArray(intro?.feature?.entries) ? intro.feature.entries : []
+}
+
+/** Filtering may remove the target but cannot promote a different intro declaration. */
+export function getSubclassIntroEntries(
+  subclass: Pick<Subclass5e, 'introFeatureRef'>,
+  references: readonly SubclassFeatureReference[],
+): unknown[] {
+  const identity = subclass.introFeatureRef
+    ? getSubclassFeatureIdentity(decodeSubclassFeatureReference(subclass.introFeatureRef))
+    : undefined
+  if (!identity) return []
+  const feature = references.find(
+    (reference) => getSubclassFeatureIdentity(reference) === identity,
+  )?.feature
+  return Array.isArray(feature?.entries) ? feature.entries : []
 }

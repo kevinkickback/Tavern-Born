@@ -222,7 +222,18 @@ export function getEffectiveSpellcastingClassData(
 export function getSubclassFeatureGroups(
   subclass: Subclass5e | undefined,
 ): Array<{ level: number; features: SubclassFeature[] }> {
-  return (subclass?.levelFeatures ?? []).slice().sort((a, b) => a.level - b.level)
+  return (subclass?.levelFeatures ?? [])
+    .map((group) => ({
+      ...group,
+      features: group.features.map((feature) => ({
+        ...feature,
+        entries: resolveSubclassFeatureRefs(
+          feature.entries ?? [],
+          feature.subclassShortName ?? subclass?.shortName,
+        ),
+      })),
+    }))
+    .sort((a, b) => a.level - b.level)
 }
 
 export function getClassFeatureGroups(features: ClassFeature[]): Map<number, ClassFeature[]> {

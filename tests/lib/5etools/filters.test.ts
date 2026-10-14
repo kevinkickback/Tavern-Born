@@ -26,6 +26,58 @@ import {
 
 describe('5etools/filters', () => {
   test.each([
+    3, 6,
+  ])('does not promote a later intro printing at level %s after filtering', (level) => {
+    const originalRef = 'School|Wizard||School||3|XGE'
+    const laterRef = `School|Wizard||School||${level}|TCE`
+    const classes = parseClasses({
+      class: [{ name: 'Wizard', source: 'PHB' }],
+      subclass: [
+        {
+          name: 'School',
+          shortName: 'School',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: [originalRef, laterRef],
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'School',
+          className: 'Wizard',
+          subclassShortName: 'School',
+          source: 'XGE',
+          level: 3,
+          entries: ['Original intro.'],
+        },
+        {
+          name: 'School',
+          className: 'Wizard',
+          subclassShortName: 'School',
+          source: 'TCE',
+          level,
+          entries: ['Later different printing and gain.'],
+        },
+      ],
+    }) as Class5e[]
+    const before = structuredClone(classes)
+    const filtered = DataFilter.filterClasses(classes, { sources: ['PHB', 'TCE'] })[0]
+      .subclasses![0]
+    expect(filtered.introFeatureRef).toBe(originalRef)
+    expect(filtered.entries).toEqual([])
+    expect(filtered.subclassFeatureRefs!.map((reference) => reference.ref)).toEqual([laterRef])
+    expect(filtered.levelFeatures![0].features[0].entries).toEqual([
+      'Later different printing and gain.',
+    ])
+    expect(
+      DataFilter.filterClasses(classes, { sources: ['PHB', 'TCE', 'XGE'] })[0].subclasses![0]
+        .entries,
+    ).toEqual(['Original intro.'])
+    expect(classes).toEqual(before)
+  })
+
+  test.each([
     'PHB',
     'TCE',
   ])('retains encoded PHB nested defaults under actual %s owners', (ownerSource) => {

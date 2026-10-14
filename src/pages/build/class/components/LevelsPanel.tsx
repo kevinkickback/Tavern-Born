@@ -37,6 +37,7 @@ import {
 } from '@/lib/navigation/readinessFocus'
 import { readinessClassKey } from '@/lib/readiness/readinessIssue'
 import { cn } from '@/lib/utils'
+import type { ClassDetailsSelection } from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
@@ -97,7 +98,7 @@ interface BuildClassLevelsPanelProps {
   onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
-  onSelectFeature: (feature: SelectedFeatureState) => void
+  onSelectFeature: (feature: ClassDetailsSelection) => void
   onExpandDetails: () => void
   onAsiReset: (level: number) => void
   onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void

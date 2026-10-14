@@ -63,8 +63,11 @@ and level content come only from declared references; unreferenced raw rows are 
 into subclass content or target catalogs. Content-layer collection and restoration use this same
 complete identity, including omitted/blank upstream defaults; non-string sources are invalid and
 selected owners do not supply target source fallbacks. Intro entries share one declared-reference
-projection across parsing, composition and source filtering. The class details panel renders the
-intro feature once within its level group; the feature still owns its mechanical choices and Actions.
+projection across parsing, composition and source filtering. The original intro UID remains its
+target even when filtered out; another printing or gain cannot replace it. Subclass detail selection
+retains its qualified owner/printing and derives content from the current filtered catalog. The panel
+renders expanded intro references once within their level group; the authoritative feature retains
+its mechanical choices and Actions.
 Cache schema31
 rebuilds catalogs with older target identity or intro projections.
 
