@@ -54,8 +54,14 @@ Class/subclass choice options preserve their complete encoded feature UIDs throu
 and exact catalog resolution. Dependency and capability audits check every owner, gain and printing
 field rather than only `name|source`. A complete feature UID supplies its encoded or upstream-default
 printing when the duplicated source is absent or blank; explicit source/name conflicts remain
-unresolved. Other choice types still require an explicit source. Cache schema28 rebuilds parsed
-choices that predate this identity contract.
+unresolved. Other choice types still require an explicit source. Subclass feature parsing shares
+the same UID defaults and complete identity codec. Every target field, including class, subclass
+and feature printing, must match the declared UID. A copied subclass may have a different selected
+class owner while retaining the exact original target; this does not relax target identity. An absent
+printing stays unresolved, including inline references, intro text and level groups. Subclass intro
+and level content come only from declared references; unreferenced raw rows are never synthesized
+into subclass content or target catalogs. Cache schema29
+rebuilds catalogs that could previously substitute another printing.
 
 Top-level entities use source-qualified identity. Nested or repeated definitions require their
 complete structural identity; class features include their parent class and level so repeated names
@@ -164,7 +170,7 @@ and actual granting owners. Their actions require exact parsed rules and share s
 groups only within the same owner and feature family. Missing or ambiguous targets remain saved
 intents without emitting opaque source-backed actions. The [provenance contract](provenance.md)
 owns grouping, manual override and restoration behavior.
-Cache schema28 rebuilds older cached catalogs, including normalized class choices and schedules,
+Cache schema29 rebuilds older cached catalogs, including normalized class choices and schedules,
 global lookup dictionaries, and the existing race/subrace normalization together.
 
 The data-only copy resolver validates copied records, parent data, and applied templates before
