@@ -96,6 +96,7 @@ function resolveSubclassFeatureRecord(
   // only when every other encoded identity field selects one unique record.
   const candidates = features.filter(
     (feature) =>
+      getSubclassFeatureIdentity(feature) !== undefined &&
       getSubclassFeatureIdentity({ ...feature, classSource: ref.classSource }) === identity,
   )
   return candidates.length === 1 ? candidates[0] : undefined

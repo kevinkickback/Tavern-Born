@@ -370,7 +370,10 @@ describe('5etools/parsers', () => {
     expect(parsed[0]?.subclasses?.[0]?.entries).toEqual(resolved ? ['retained feature text'] : [])
   })
 
-  test('does not guess when a copied subclass feature reference remains ambiguous', () => {
+  test.each([
+    { classSources: ['OLD-A', 'OLD-B'] },
+    { classSources: [null] },
+  ])('rejects ambiguous or invalid copied-class sources: $classSources', ({ classSources }) => {
     const sharedFeature = {
       name: 'Retained Feature',
       source: 'EXT',
@@ -391,18 +394,11 @@ describe('5etools/parsers', () => {
           subclassFeatures: ['Retained Feature|Test Class|NEW|Copied|EXT|6'],
         },
       ],
-      subclassFeature: [
-        {
-          ...sharedFeature,
-          classSource: 'OLD-A',
-          entries: ['first'],
-        },
-        {
-          ...sharedFeature,
-          classSource: 'OLD-B',
-          entries: ['second'],
-        },
-      ],
+      subclassFeature: classSources.map((classSource) => ({
+        ...sharedFeature,
+        classSource,
+        entries: ['candidate'],
+      })),
     }) as Array<{
       subclasses?: Array<{
         subclassFeatureRefs?: Array<{ feature?: unknown }>
