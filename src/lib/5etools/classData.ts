@@ -1,4 +1,7 @@
-import { getClassFeatureReferenceLevel } from '@/lib/5etools/classFeatureIdentity'
+import {
+  decodeSubclassFeatureReference,
+  getClassFeatureReferenceLevel,
+} from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   FEAT_CATEGORY_LABEL_FALLBACKS,
@@ -268,6 +271,7 @@ export function resolveSubclassFeatureRefs(
   entries: unknown[],
   subclassShortName: string | undefined,
 ): unknown[] {
+  const selectedShortName = subclassShortName?.trim().toLowerCase()
   return entries.flatMap((e) => {
     if (typeof e !== 'object' || e === null) return [e]
     const obj = e as Record<string, unknown>
@@ -276,7 +280,7 @@ export function resolveSubclassFeatureRefs(
         return [
           {
             ...obj,
-            entries: resolveSubclassFeatureRefs(obj.entries, subclassShortName),
+            entries: resolveSubclassFeatureRefs(obj.entries, selectedShortName),
           },
         ]
       }
@@ -284,9 +288,11 @@ export function resolveSubclassFeatureRefs(
     }
     // Extract this ref's subclass shortName (segment 3 of the pipe-delimited string)
     const refStr = typeof obj.subclassFeature === 'string' ? obj.subclassFeature : ''
-    const refShortName = refStr.split('|')[3] ?? ''
+    const refShortName = decodeSubclassFeatureReference(refStr)
+      .subclassShortName.trim()
+      .toLowerCase()
     // Filter out if no subclass selected or ref is for a different subclass
-    if (!subclassShortName || (refShortName && refShortName !== subclassShortName)) {
+    if (!selectedShortName || (refShortName && refShortName !== selectedShortName)) {
       return []
     }
     // Expand resolved feature entries

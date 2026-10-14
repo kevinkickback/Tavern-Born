@@ -40,7 +40,7 @@ test.each([true, false])('renders complete intro content once with level groups 
         level: 3,
         entries: [
           'Study the school.',
-          { type: 'refSubclassFeature', subclassFeature: 'Practice|Wizard||School||3' },
+          { type: 'refSubclassFeature', subclassFeature: 'Practice|Wizard|| school ||3' },
           {
             type: 'options',
             count: 1,
