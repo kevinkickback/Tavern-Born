@@ -1,11 +1,5 @@
 import { useMemo } from 'react'
-import {
-  type ClassFilters,
-  DataFilter,
-  getSubclassLookupKey,
-  searchByName,
-  sortByName,
-} from '@/lib/5etools'
+import { type ClassFilters, DataFilter, searchByName, sortByName } from '@/lib/5etools'
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
@@ -16,7 +10,6 @@ import type {
   Item5e,
   Organization5e,
   Race5e,
-  Subclass5e,
 } from '@/types/5etools'
 
 export { useRetainedCharacterDetails } from './useRetainedCharacterDetails'
@@ -130,41 +123,6 @@ export function useSpellLookup() {
   const gameData = useGameDataStore((state) => state.gameData)
 
   return useMemo(() => gameData?.lookups?.spellsByKey ?? {}, [gameData?.lookups?.spellsByKey])
-}
-
-function useSubclassLookup() {
-  const gameData = useGameDataStore((state) => state.gameData)
-
-  return useMemo(
-    () => gameData?.lookups?.subclassesByKey ?? {},
-    [gameData?.lookups?.subclassesByKey],
-  )
-}
-
-export function useSubclass(
-  className: string,
-  classSource: string | undefined,
-  subclassName: string,
-  subclassSource?: string,
-): Subclass5e | undefined {
-  const subclassLookup = useSubclassLookup()
-  const classes = useClasses()
-
-  return useMemo(() => {
-    if (classSource && subclassSource) {
-      const exact =
-        subclassLookup[getSubclassLookupKey(className, classSource, subclassName, subclassSource)]
-      if (exact) return exact
-    }
-
-    return classes
-      .find((c) => c.name === className && (!classSource || c.source === classSource))
-      ?.subclasses?.find(
-        (subclass) =>
-          (subclass.name === subclassName || subclass.shortName === subclassName) &&
-          (!subclassSource || subclass.source === subclassSource),
-      )
-  }, [subclassLookup, classes, className, classSource, subclassName, subclassSource])
 }
 
 /** Returns parsed condition rule records, excluding disease records and malformed entries. */
