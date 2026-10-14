@@ -55,8 +55,9 @@ and exact catalog resolution. Dependency and capability audits check every owner
 field rather than only `name|source`. A complete feature UID supplies its encoded or upstream-default
 printing when the duplicated source is absent or blank; explicit source/name conflicts remain
 unresolved. Other choice types still require an explicit source. Subclass feature parsing shares
-the same UID defaults and complete identity codec. A copied-class fallback may vary only the class
-source and must select one unique record with the requested feature and subclass printing; an absent
+the same UID defaults and complete identity codec. Every target field, including class, subclass
+and feature printing, must match the declared UID. A copied subclass may have a different selected
+class owner while retaining the exact original target; this does not relax target identity. An absent
 printing stays unresolved, including inline references, intro text and level groups. Cache schema29
 rebuilds catalogs that could previously substitute another printing.
 

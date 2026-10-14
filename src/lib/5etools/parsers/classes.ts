@@ -87,19 +87,9 @@ function resolveSubclassFeatureRecord(
 ): ParsedObject | undefined {
   const identity = getSubclassFeatureIdentity(ref)
   if (!identity) return undefined
-  const features = subclassFeatureRecords.map(asObject)
-  const exact = features.find((feature) => getSubclassFeatureIdentity(feature) === identity)
-  if (exact) return exact
-
-  // A copied subclass can retain source-qualified feature references from its original
-  // class printing while changing only the parent class source. Resolve that mismatch
-  // only when every other encoded identity field selects one unique record.
-  const candidates = features.filter(
-    (feature) =>
-      getSubclassFeatureIdentity(feature) !== undefined &&
-      getSubclassFeatureIdentity({ ...feature, classSource: ref.classSource }) === identity,
-  )
-  return candidates.length === 1 ? candidates[0] : undefined
+  return subclassFeatureRecords
+    .map(asObject)
+    .find((feature) => getSubclassFeatureIdentity(feature) === identity)
 }
 
 function parseSubclassFeatureReference(

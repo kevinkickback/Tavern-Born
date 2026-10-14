@@ -329,13 +329,15 @@ describe('5etools/parsers', () => {
   })
 
   test.each([
-    { printing: 'EXT', requested: 'EXT', resolved: true },
-    { printing: 'OTHER', requested: 'EXT', resolved: false },
-    { printing: 'EXT', requested: '', resolved: true },
-    { printing: 'OTHER', requested: '', resolved: false },
-  ])('copied subclass resolves only its requested printing: $printing / $requested', ({
+    { printing: 'EXT', requested: 'EXT', classSource: 'OLD', resolved: true },
+    { printing: 'OTHER', requested: 'EXT', classSource: 'OLD', resolved: false },
+    { printing: 'EXT', requested: '', classSource: 'OLD', resolved: true },
+    { printing: 'OTHER', requested: '', classSource: 'OLD', resolved: false },
+    { printing: 'EXT', requested: 'EXT', classSource: 'NEW', resolved: false },
+  ])('subclass resolves its complete requested printing: $printing / $requested / $classSource', ({
     printing,
     requested,
+    classSource,
     resolved,
   }) => {
     const parsed = parseClasses({
@@ -355,7 +357,7 @@ describe('5etools/parsers', () => {
           name: 'Copied',
           source: printing,
           className: 'Test Class',
-          classSource: 'NEW',
+          classSource,
           subclassShortName: 'Copied',
           subclassSource: 'EXT',
           level: 6,
