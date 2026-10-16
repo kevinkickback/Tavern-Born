@@ -1,4 +1,5 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   buildSpellNameKeySet,
   getSpellNameKey,
@@ -138,6 +139,7 @@ export function validateSpells(
   })
 
   for (const profile of spellProfiles) {
+    const label = getSpellProfileDisplayLabel(profile)
     if (profile.type === 'racial' && profile.racial) {
       if (profile.racial.mode === 'alternative' && !profile.racial.suite)
         issues.push(
@@ -145,7 +147,7 @@ export function validateSpells(
             spellProfileReadinessId('profile', profile.id),
             'blocking',
             'spells',
-            'Choose ' + profile.label + ' spell suite',
+            `Choose ${label} spell suite`,
             'Choose one of the racial spell suites.',
           ),
         )
@@ -155,7 +157,7 @@ export function validateSpells(
             spellProfileReadinessId('profile', profile.id),
             'blocking',
             'spells',
-            'Choose ' + profile.label + ' casting ability',
+            `Choose ${label} casting ability`,
             'Choose the ability used for these spells.',
           ),
         )
@@ -167,7 +169,7 @@ export function validateSpells(
             spellChoiceReadinessId(profile.id, choice.id),
             'blocking',
             'spells',
-            `Finish ${profile.label} spell choices`,
+            `Finish ${label} spell choices`,
             `${choice.count} spell choices are available; ${choice.selected.length} chosen.`,
           ),
         )

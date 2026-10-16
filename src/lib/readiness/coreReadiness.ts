@@ -1,6 +1,7 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
 import {
@@ -178,8 +179,12 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
         provenanceChoiceReadinessId(choice.id),
         'blocking',
         sectionByDomain[choice.domain],
-        `Finish ${choice.sourceTag.label}`,
-        `${choice.sourceTag.sourceName} offers ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} chosen.`,
+        `Finish ${
+          choice.sourceTag.label === choice.sourceTag.sourceName
+            ? getRacialSourceDisplayName(character, choice.sourceTag)
+            : choice.sourceTag.label
+        }`,
+        `${getRacialSourceDisplayName(character, choice.sourceTag)} offers ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} chosen.`,
         targetForChoice(choice),
       ),
     )

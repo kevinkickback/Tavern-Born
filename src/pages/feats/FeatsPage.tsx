@@ -25,6 +25,7 @@ import {
 } from '@/components/workspace'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
@@ -361,7 +362,7 @@ export function FeatsPage() {
                                   isFocusedFeat(granted.name, granted.source)
                                 }
                                 onSelect={handleSelectFeat}
-                                grantedBy={granted.sourceLabel}
+                                grantedBy={granted.sourceDisplayLabel}
                                 grantVariant={granted.grantVariant}
                                 fixedGrant
                                 grantVariantLabel={granted.variantLabel}
@@ -427,7 +428,7 @@ export function FeatsPage() {
                                       isFocusedFeat(selectedName, selectedSource)
                                     }
                                     onSelect={handleSelectFeat}
-                                    grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                    grantedBy={`${choice.sourceTag.sourceType}: ${getRacialSourceDisplayName(character, choice.sourceTag)}`}
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,
@@ -465,7 +466,7 @@ export function FeatsPage() {
                                   isFocusedFeat(granted.name, granted.source)
                                 }
                                 onSelect={handleSelectFeat}
-                                grantedBy={granted.sourceLabel}
+                                grantedBy={granted.sourceDisplayLabel}
                                 grantVariant={granted.grantVariant}
                                 fixedGrant
                                 grantVariantLabel={granted.variantLabel}
@@ -532,7 +533,7 @@ export function FeatsPage() {
                                       isFocusedFeat(selectedName, selectedSource)
                                     }
                                     onSelect={handleSelectFeat}
-                                    grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                    grantedBy={`${choice.sourceTag.sourceType}: ${getRacialSourceDisplayName(character, choice.sourceTag)}`}
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
                                         choice.id,

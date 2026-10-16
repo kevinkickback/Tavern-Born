@@ -354,6 +354,13 @@ parent context. Unsafe name shapes retain their full names. These are presentati
 canonical parsed/saved names, selection values, lookup keys, spell profiles and grant owners stay
 unchanged, including when exact metadata is filtered out or missing.
 
+Readiness, source-conflict notices, movement and action/effect attribution derive the same
+contextual labels. A racial source is associated with the selected child only when its complete
+normalized name and book match the saved selection; missing or conflicting references retain
+their original names. Native profiles use their saved parent/child context even before a spell
+suite is chosen. Source objects, generated effect titles, custom labels and list/choice identities
+remain canonical; display formatting never supplies an identity or rewrites the character.
+
 Fixed feat grants retain their explicit name/source and optional variant when the requested record
 is missing. Their resolver checks the filtered catalog, then the exact raw catalog; it never
 substitutes a same-name printing. Background and Feats projections show unavailable data and do

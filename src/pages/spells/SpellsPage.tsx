@@ -103,7 +103,7 @@ export function SpellsPage() {
     isSpellcaster,
     spellcastingDetailByProfileId,
   } = useSpellSlots()
-  const { getSourcesRowsBySection } = useProvenanceRows({ ledger })
+  const { getSourcesRowsBySection } = useProvenanceRows({ ledger, selection: character })
   const {
     removeSpellFromProfile,
     setProfileSpells,

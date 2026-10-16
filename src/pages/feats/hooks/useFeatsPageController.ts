@@ -14,6 +14,7 @@ import {
   buildPrerequisiteSnapshot,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
+import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getFeatSelectionKey } from '@/lib/character/commands/featCommandIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
@@ -171,6 +172,7 @@ export function useFeatsPageController() {
               source: resolved.source,
               sourceType: tag.sourceType,
               sourceLabel: `${tag.sourceType}: ${tag.sourceName}`,
+              sourceDisplayLabel: `${tag.sourceType}: ${getRacialSourceDisplayName(character, tag)}`,
               featData: resolved.feat,
               grantVariant: resolved.variant,
               variantLabel: resolved.variantLabel,
@@ -178,7 +180,7 @@ export function useFeatsPageController() {
             }
           }),
       ),
-    [ledger.feats, feats, rawFeats],
+    [character, ledger.feats, feats, rawFeats],
   )
   const { originFixedFeats, racialFixedFeats } = useMemo(
     () => ({

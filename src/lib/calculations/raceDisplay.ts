@@ -1,4 +1,12 @@
-import type { SpellProfile } from '@/types/character'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import type { SourceTag } from '@/lib/provenance/types'
+import type { Character, SpellProfile } from '@/types/character'
+
+export type RaceDisplaySelection = Pick<Character, 'race' | 'subrace' | 'subraceSource'>
+
+type RacialDisplaySource =
+  | { kind: string; name: string; source?: string }
+  | Pick<SourceTag, 'sourceType' | 'sourceName' | 'sourceRef'>
 
 /** Presentation only: never use these labels as selection values or owner identities. */
 export function getSubraceDisplayName(parentName: string, subraceName: string): string {
@@ -47,6 +55,28 @@ export function getRaceDisplayName(parentName: string, subraceName?: string): st
   if (!subraceName) return parentName
   if (!parentName) return subraceName
   return `${parentName} (${getSubraceDisplayName(parentName, subraceName)})`
+}
+
+/** Derived racial sources may call a child owner "race"; match its complete saved printing. */
+export function getRacialSourceDisplayName(
+  selection: RaceDisplaySelection | null | undefined,
+  source: RacialDisplaySource,
+): string {
+  const [kind, name, book] =
+    'sourceType' in source
+      ? ([source.sourceType, source.sourceName, source.sourceRef] as const)
+      : ([source.kind, source.name, source.source] as const)
+  if (
+    !selection ||
+    !normalizeOwnerIdentity(selection.race) ||
+    !normalizeOwnerIdentity(selection.subrace) ||
+    !normalizeOwnerIdentity(selection.subraceSource) ||
+    (kind !== 'race' && kind !== 'subrace') ||
+    normalizeOwnerIdentity(name) !== normalizeOwnerIdentity(selection.subrace) ||
+    normalizeOwnerIdentity(book) !== normalizeOwnerIdentity(selection.subraceSource)
+  )
+    return name
+  return getRaceDisplayName(selection.race, name)
 }
 
 export function getSpellProfileDisplayLabel(profile: {

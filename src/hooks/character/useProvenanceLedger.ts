@@ -13,7 +13,7 @@ export function useProvenanceLedger() {
     return character?.provenance ?? emptyProvenance()
   }, [character])
 
-  const rows = useProvenanceRows({ ledger })
+  const rows = useProvenanceRows({ ledger, selection: character })
 
   return { ledger, ...rows }
 }

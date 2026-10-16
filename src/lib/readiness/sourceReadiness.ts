@@ -1,6 +1,7 @@
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Character } from '@/types/character'
 import { readinessClassKey, readinessIssue } from './readinessIssue'
@@ -28,7 +29,7 @@ export function validateSourceReferences(
         `source:subrace:${getEntityLookupKey(character.subrace, character.subraceSource)}`,
         'blocking',
         'sources',
-        `Restore the source for ${character.subrace}`,
+        `Restore the source for ${getRaceDisplayName(character.race, character.subrace)}`,
         'The selected subrace cannot be resolved from the enabled or cached content.',
       ),
     )

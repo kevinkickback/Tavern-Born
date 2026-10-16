@@ -1,11 +1,37 @@
 import { expect, test } from 'vitest'
 import {
   getRaceDisplayName,
+  getRacialSourceDisplayName,
   getSpellProfileDisplayLabel,
   getSubraceDisplayName,
 } from '@/lib/calculations/raceDisplay'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
+
+const selection = { race: 'Elf', subrace: 'High', subraceSource: 'PHB' }
+
+test.each([
+  [{ kind: 'race', name: 'High', source: 'PHB' }, 'Elf (High)'],
+  [{ kind: 'subrace', name: 'High', source: ' phb ' }, 'Elf (High)'],
+  [{ kind: 'race', name: 'Wood', source: 'PHB' }, 'Wood'],
+  [{ kind: 'race', name: 'High', source: 'XPHB' }, 'High'],
+  [{ kind: 'race', name: 'High' }, 'High'],
+  [{ kind: 'manual', name: 'High', source: 'PHB' }, 'High'],
+  [{ kind: 'class', name: 'High', source: 'PHB' }, 'High'],
+  [{ kind: 'race', name: 'Elf', source: 'PHB' }, 'Elf'],
+])('qualifies only the exact selected racial source %j', (source, expected) => {
+  const before = JSON.stringify({ selection, source })
+  expect(getRacialSourceDisplayName(selection, source)).toBe(expected)
+  expect(JSON.stringify({ selection, source })).toBe(before)
+})
+
+test('source tags and incomplete context retain conservative presentation fallbacks', () => {
+  const tag = { sourceType: 'subrace' as const, sourceName: 'High', sourceRef: 'PHB' }
+  expect(getRacialSourceDisplayName(selection, tag)).toBe('Elf (High)')
+  expect(getRacialSourceDisplayName(undefined, tag)).toBe('High')
+  expect(getRacialSourceDisplayName({ ...selection, race: '' }, tag)).toBe('High')
+  expect(getRacialSourceDisplayName({ ...selection, subraceSource: ' ' }, tag)).toBe('High')
+})
 
 test.each([
   ['Dragonborn', 'Dragonborn (Black)', 'Black'],

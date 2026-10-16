@@ -25,7 +25,11 @@ import {
 } from '@/lib/calculations/abilityScores'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
-import { getRaceDisplayName, getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
+import {
+  getRaceDisplayName,
+  getRacialSourceDisplayName,
+  getSpellProfileDisplayLabel,
+} from '@/lib/calculations/raceDisplay'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
@@ -476,7 +480,7 @@ export function CharacterOverview({
                           <DetailEntry
                             key={action.id}
                             name={action.name}
-                            source={action.source.name}
+                            source={getRacialSourceDisplayName(character, action.source)}
                             status={!action.active ? 'Inactive' : undefined}
                           >
                             <div className="space-y-1">
