@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
@@ -8,10 +9,11 @@ import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
  */
 export function useProvenanceLedger() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculation = useCharacterCalculationContext(character)
 
   const ledger = useMemo(() => {
-    return character?.provenance ?? emptyProvenance()
-  }, [character])
+    return calculation?.character.provenance ?? character?.provenance ?? emptyProvenance()
+  }, [character, calculation])
 
   const rows = useProvenanceRows({ ledger, selection: character })
 

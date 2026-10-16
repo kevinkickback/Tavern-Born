@@ -7,17 +7,112 @@ const storageMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => storageMocks,
+  createIdbStorage: () => ({
+    ...storageMocks,
+    // Catalog-setting persistence is a different transaction from character saves.
+    setItem: (name: string, ...args: unknown[]) =>
+      name === 'game-data-storage' ? Promise.resolve() : storageMocks.setItem(name, ...args),
+  }),
 }))
 
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   CURRENT_CHARACTER_SCHEMA_VERSION,
   UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
 } from '@/lib/schema/characterSchemaVersion'
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { selectRace } from '../fixtures/racialAbilityCharacter'
 
 describe('characterStore', () => {
+  describe('loaded racial ability reconciliation', () => {
+    const race = {
+      name: 'Queued refresh',
+      source: 'PHB',
+      ability: [{ choose: { from: ['str', 'dex'], amount: 2 } }],
+    } as Race5e
+    const install = (amount: number, count = 1) => {
+      const gameData = makeGameDataFixture({
+        races: [{ ...race, ability: [{ choose: { from: ['str', 'dex'], amount, count } }] }],
+      })
+      gameData.lookups = buildGameDataLookups(gameData)
+      useGameDataStore.setState({ gameData })
+    }
+    const start = async () => {
+      install(2)
+      const [character] = await useCharacterStore
+        .getState()
+        .importCharacters([selectRace(race, 0, [['strength']])])
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      storageMocks.setItem.mockClear()
+      return character
+    }
+
+    test('unchanged catalog replacement is a complete no-op', async () => {
+      await start()
+      const before = useCharacterStore.getState()
+      const notify = vi.fn()
+      const unsubscribe = useCharacterStore.subscribe(notify)
+      install(2)
+      unsubscribe()
+      expect(useCharacterStore.getState()).toBe(before)
+      expect(notify).not.toHaveBeenCalled()
+      expect(storageMocks.setItem).not.toHaveBeenCalled()
+    })
+
+    test('an acknowledged older correction preserves newer dirty edits and newer rules', async () => {
+      const character = await start()
+      let finish: () => void = () => undefined
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve
+          }),
+      )
+      install(1, 2)
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      useCharacterStore.getState().updateCharacter(character.id, { name: 'Newer unsaved edit' })
+      install(3)
+      expect(useCharacterStore.getState().activeCharacter?.provenance.choices[0].amount).toBe(3)
+      finish()
+      await vi.waitFor(() =>
+        expect(useCharacterStore.getState().characters[0].provenance.choices[0].amount).toBe(1),
+      )
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe('Newer unsaved edit')
+      expect(useCharacterStore.getState().activeCharacter?.provenance.choices[0].amount).toBe(3)
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+      await useCharacterStore.getState().saveActiveCharacter()
+      expect(useCharacterStore.getState().characters[0].name).toBe('Newer unsaved edit')
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    })
+
+    test('failed automatic correction retains the old library and allows explicit durable retry', async () => {
+      await start()
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        storageMocks.setItem.mockRejectedValueOnce(new Error('Storage unavailable'))
+        install(1)
+        await vi.waitFor(() =>
+          expect(log).toHaveBeenCalledWith(
+            'Racial ability reconciliation failed:',
+            expect.any(Error),
+          ),
+        )
+        expect(useCharacterStore.getState().characters[0].provenance.choices[0].amount).toBe(2)
+        expect(useCharacterStore.getState().activeCharacter?.provenance.choices[0].amount).toBe(1)
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+        await useCharacterStore.getState().saveActiveCharacter()
+        expect(useCharacterStore.getState().characters[0].provenance.choices[0].amount).toBe(1)
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+      } finally {
+        log.mockRestore()
+      }
+    })
+  })
   beforeEach(async () => {
     storageMocks.getItem.mockReset().mockResolvedValue(null)
     storageMocks.setItem.mockReset().mockResolvedValue(undefined)

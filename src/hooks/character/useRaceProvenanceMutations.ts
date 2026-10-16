@@ -106,7 +106,20 @@ export function useRaceProvenanceMutations() {
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {
       if (!character) return
-      const result = applyRaceAsiChoicesCommand(character, ledger, choices)
+      const result = applyRaceAsiChoicesCommand(
+        character,
+        ledger,
+        choices,
+        resolveRaceReference(
+          {
+            name: character.race,
+            source: character.raceSource,
+            subraceName: character.subrace,
+            subraceSource: character.subraceSource,
+          },
+          { racesByKey },
+        ),
+      )
       if (result.provenanceUpdate === ledger && Object.keys(result.characterPatch).length === 0)
         return
       updateCharacter(character.id, {
@@ -114,7 +127,7 @@ export function useRaceProvenanceMutations() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, racesByKey],
   )
   const applyRaceAsiDistribution = useCallback(
     (race: Race5e, subrace: Race5e | undefined, mode: 0 | 1) => {

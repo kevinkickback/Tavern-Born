@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
 import {
   commitFeatOptionsCommand,
@@ -11,11 +13,14 @@ import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVe
 import { pruneSpellsForDisabledSources } from '@/lib/sourceConflicts'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
+import { selectRace } from '../fixtures/racialAbilityCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
 vi.unmock('@/lib/storage/idb-storage')
@@ -24,6 +29,40 @@ const reader = createIdbStorage<{ characters: Character[]; unsupportedCharacters
 const readCharacters = async () => (await reader.getItem('character-storage'))?.state.characters
 
 describe('acknowledged character library in IndexedDB', () => {
+  test('passive exact ability refresh is durable before metadata disappears and reopens without a page', async () => {
+    const old = {
+      name: 'Durable refresh',
+      source: 'PHB',
+      ability: [{ choose: { from: ['str', 'dex'], amount: 2 } }],
+    } as Race5e
+    const install = (races: Race5e[]) => {
+      const gameData = makeGameDataFixture({ races })
+      gameData.lookups = buildGameDataLookups(gameData)
+      useGameDataStore.setState({ gameData })
+    }
+    install([old])
+    const [imported] = await useCharacterStore
+      .getState()
+      .importCharacters([selectRace(old, 0, [['strength']])])
+    useCharacterStore.getState().setActiveCharacter(imported.id)
+    install([{ ...old, ability: [{ choose: { from: ['str', 'wis'], amount: 1, count: 2 } }] }])
+    const saved = useCharacterStore.getState().saveActiveCharacter()
+    install([])
+    await saved
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(imported.id)
+    const reopened = useCharacterStore.getState().activeCharacter!
+    expect(createCharacterCalculationContext(reopened, {}).abilityScores.racialBonuses).toEqual({
+      strength: 1,
+    })
+    expect(reopened.provenance.choices).toMatchObject([
+      { amount: 1, chooseCount: 2, selected: ['strength'], optionPool: ['strength', 'wisdom'] },
+    ])
+    expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  })
   beforeEach(async () => {
     await vi.waitFor(() => expect(useCharacterStore.persist.hasHydrated()).toBe(true))
     await useCharacterStore.persist.clearStorage()

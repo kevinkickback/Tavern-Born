@@ -7,6 +7,7 @@ import {
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
@@ -179,6 +180,7 @@ export function deriveEffectiveAbilityScores(
   background?: Background5e,
   sourceEffects: readonly CharacterEffect[] = [],
 ): EffectiveAbilityScoreData {
+  if (character) character = refreshRaceAbilityState(character, race, subrace)
   const base = character ? { ...character.abilityScores } : makeDefaultAbilityScores(8)
   const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
     race,
@@ -276,6 +278,11 @@ export function createCharacterCalculationContext(
     },
     primaryLookups,
     rawLookups,
+  )
+  character = refreshRaceAbilityState(
+    character,
+    raceResolution.parentRace,
+    raceResolution.subraceData,
   )
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },

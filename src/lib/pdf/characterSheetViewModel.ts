@@ -697,7 +697,7 @@ export function createCharacterSheetViewModel(
     ]),
   )
   const character = deriveSpellProfileState(
-    savedCharacter,
+    calculationContext.character,
     classesById,
     undefined,
     calculationContext.raceResolution,

@@ -23,31 +23,32 @@ Element.prototype.releasePointerCapture = () => undefined
 
 describe('Race page summary', () => {
   beforeEach(() => {
-    const character = makeCharacterFixture({
-      originSystem: '2014',
-      race: 'Choice Lineage',
-      raceSource: 'TEST',
-      allowedSources: ['TEST'],
-      raceAsiChoices: [],
-      variantRules: { abilityScoreMethod: 'custom' },
+    useCharacterStore.setState({ characters: [], activeCharacterId: null, activeCharacter: null })
+    const race = makeRaceFixture({
+      name: 'Choice Lineage',
+      source: 'TEST',
+      ability: [{ choose: { count: 1, amount: 2, from: ['str', 'dex'] } }],
+      size: ['M'],
+      speed: 30,
     })
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ races: [race] }) })
+    const character = buildInitialCharacter(
+      {
+        initial: makeCharacterFixture({
+          originSystem: '2014',
+          allowedSources: ['TEST'],
+          variantRules: { abilityScoreMethod: 'custom' },
+        }),
+        race,
+      },
+      new Map(),
+      () => [],
+    )
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    })
-    useGameDataStore.setState({
-      gameData: makeGameDataFixture({
-        races: [
-          makeRaceFixture({
-            name: 'Choice Lineage',
-            source: 'TEST',
-            ability: [{ choose: { count: 1, amount: 2, from: ['str', 'dex'] } }],
-            size: ['M'],
-            speed: 30,
-          }),
-        ],
-      }),
+      isActiveCharacterDirty: false,
     })
   })
 
@@ -300,14 +301,19 @@ describe('Race page summary', () => {
   })
 
   test('hides bonus editing after a parsed race choice is complete', () => {
-    const character = makeCharacterFixture({
-      originSystem: '2014',
-      race: 'Choice Lineage',
-      raceSource: 'TEST',
-      allowedSources: ['TEST'],
-      raceAsiChoices: [['strength']],
-      variantRules: { abilityScoreMethod: 'custom' },
-    })
+    const character = buildInitialCharacter(
+      {
+        initial: makeCharacterFixture({
+          originSystem: '2014',
+          allowedSources: ['TEST'],
+          variantRules: { abilityScoreMethod: 'custom' },
+        }),
+        race: useGameDataStore.getState().gameData!.races[0],
+        raceAsiChoices: [['strength']],
+      },
+      new Map(),
+      () => [],
+    )
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,

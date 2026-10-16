@@ -131,7 +131,7 @@ export function BuildRacePage() {
     calculationContext &&
     hasUnresolvedRaceAbilityChoices(
       calculationContext.abilityScores.raceAsiData,
-      character.raceAsiChoices ?? [],
+      calculationContext.character.raceAsiChoices ?? [],
     )
   const selectedRaceKey = catalogRace ? `${catalogRace.name}|${catalogRace.source ?? ''}` : null
   const hasResolvedRaceSelection =
@@ -141,7 +141,7 @@ export function BuildRacePage() {
     ? getAsiDisplay(
         calculationContext?.abilityScores.normalizedRaceSelection.race,
         (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
-        character?.raceAsiChoices,
+        calculationContext?.character.raceAsiChoices,
         calculationContext?.abilityScores.normalizedRaceSelection.subrace,
       )
     : Object.entries(calculationContext?.abilityScores.racialBonuses ?? {}).map(

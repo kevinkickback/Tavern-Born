@@ -8,7 +8,16 @@ const storage = vi.hoisted(() => ({
   setItem: vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined),
   removeItem: vi.fn(async () => undefined),
 }))
-vi.mock('@/lib/storage/idb-storage', () => ({ createIdbStorage: () => storage }))
+vi.mock('@/lib/storage/idb-storage', () => ({
+  createIdbStorage: () => ({
+    getItem: (name: string) =>
+      name === 'character-storage' ? storage.getItem() : Promise.resolve(null),
+    setItem: (name: string, ...args: unknown[]) =>
+      name === 'character-storage' ? storage.setItem(name, ...args) : Promise.resolve(),
+    removeItem: (name: string) =>
+      name === 'character-storage' ? storage.removeItem() : Promise.resolve(),
+  }),
+}))
 
 beforeEach(() => {
   vi.resetModules()

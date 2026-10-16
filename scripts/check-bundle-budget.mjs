@@ -14,13 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Stable feature actions and filtered choice targets measure 5,644,414 renderer bytes (+10,550).
-  // Use the smallest whole-KiB allowance after explicit budget review.
-  // Other budgets and enforcement remain unchanged.
-  rendererCode: 5513 * KIB,
-  // Shared choice identity and filtering measure 480,414 initial bytes (+1,190).
-  // Use the smallest whole-KiB allowance after explicit budget review.
-  initialRendererScript: 470 * KIB,
+  // Exact racial ability refresh measures 5,646,601 renderer bytes. Independently reviewed
+  // shared projection and synchronous correction use the smallest whole-KiB allowance.
+  rendererCode: 5515 * KIB,
+  // The same measured artifact has 484,208 initial script bytes. Other limits and
+  // normal enforcement remain unchanged; avoid a separate rules parser or async Save gap.
+  initialRendererScript: 473 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
