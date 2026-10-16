@@ -158,6 +158,7 @@ export function deriveSpellActions(
     classesById,
     options.race,
     options.raceResolution,
+    { spellsByKey },
   ).spells.spellProfiles
 
   const preparationRequiredByProfile = new Map<string, boolean>()

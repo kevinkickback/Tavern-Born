@@ -142,6 +142,22 @@ Edits resolve all targets before retracting anything; an unavailable new target 
 command without dirtying the draft. Clear and removal use saved ownership, including while offline.
 This does not infer missing target printings or convert earlier character formats.
 
+All owners of one exact special-profile spell share its current cantrip/leveled classification.
+Exact live metadata reclassifies that target atomically without changing its manual or feat owners,
+fixed status, other printings or independent class/racial profiles. Clear retains the current kind
+while a special owner remains; it never restores an inferred predecessor kind. Pure projections and
+acknowledged active-character catalog corrections use the same rule, including durable reopen and
+later metadata absence. No per-owner kind history is stored.
+
+An explicit manual add creates its independent ownership, retaining an established target's kind
+when metadata is unavailable. Bulk replacement preserves fixed targets in their established kind
+without inventing a manual owner, and rejects contradictory input grouping atomically. Omitting or
+removing a manual contribution retains the exact feat-owned target and lock. Manual-only kind edits
+remain supported; exact available metadata takes precedence. Bare-name manual API values remain
+unresolved, distinct from qualified targets, and excluded from exact-metadata reclassification.
+The [format 10 cutoff](state-management.md#schema-compatibility) rejects ambiguous special kinds
+and inconsistent fixed membership while preserving original-file recovery.
+
 New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
 ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
 Untracked expertise is retained while its proficiency remains, and a pre-existing untracked selection

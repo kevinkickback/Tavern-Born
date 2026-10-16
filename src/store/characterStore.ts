@@ -9,6 +9,7 @@ import {
 } from '@/lib/character/characterTransfer'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
+import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
   CURRENT_CHARACTER_SCHEMA_VERSION,
@@ -600,7 +601,7 @@ export const useCharacterStore = create<CharacterState>()(
 // Catalog refresh is a system correction independent of the currently visible page.
 // Publish synchronously so an immediate Save captures the coherent relation; the
 // existing reconciliation queue preserves later edits and acknowledges durable writes.
-function reconcileActiveRaceAbilities() {
+function reconcileActiveRuleState() {
   const { activeCharacter, reconcileCharacter } = useCharacterStore.getState()
   if (!activeCharacter) return
   const resolution = resolveRaceReference(
@@ -612,23 +613,31 @@ function reconcileActiveRaceAbilities() {
     },
     useGameDataStore.getState().gameData?.lookups ?? {},
   )
-  const refreshed = refreshRaceAbilityState(
+  const abilities = refreshRaceAbilityState(
     activeCharacter,
     resolution.parentRace,
     resolution.subraceData,
+  )
+  const refreshed = refreshSpecialSpellKinds(
+    abilities,
+    useGameDataStore.getState().gameData?.lookups?.spellsByKey,
   )
   if (refreshed === activeCharacter) return
   const saved = reconcileCharacter(activeCharacter.id, {
     raceAsiChoices: refreshed.raceAsiChoices,
     provenance: refreshed.provenance,
+    spells: refreshed.spells,
   })
-  void saved?.catch((error) => console.error('Racial ability reconciliation failed:', error))
+  void saved?.catch((error) => console.error('Rule reconciliation failed:', error))
 }
 
 useCharacterStore.subscribe((state, previous) => {
-  if (state.activeCharacter !== previous.activeCharacter) reconcileActiveRaceAbilities()
+  if (state.activeCharacter !== previous.activeCharacter) reconcileActiveRuleState()
 })
 useGameDataStore.subscribe((state, previous) => {
-  if (state.gameData?.lookups?.racesByKey !== previous.gameData?.lookups?.racesByKey)
-    reconcileActiveRaceAbilities()
+  if (
+    state.gameData?.lookups?.racesByKey !== previous.gameData?.lookups?.racesByKey ||
+    state.gameData?.lookups?.spellsByKey !== previous.gameData?.lookups?.spellsByKey
+  )
+    reconcileActiveRuleState()
 })

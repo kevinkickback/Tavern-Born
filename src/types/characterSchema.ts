@@ -12,6 +12,7 @@ import {
   hasRaceAbilityOriginGrants,
 } from '@/lib/provenance/raceOwnership'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
+import { getInvalidSpecialSpellPaths } from '@/lib/provenance/specialSpellValidation'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
@@ -860,6 +861,13 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const path of getInvalidSpecialSpellPaths(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Special spells require one kind and matching fixed ownership per target.',
+      })
+    }
     for (const path of getInvalidFeatSelectionPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

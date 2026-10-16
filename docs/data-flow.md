@@ -24,6 +24,10 @@ Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dat
 6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads
    do not.
 
+Cached parsed data without optional lookup indexes receives the standard indexes once when it
+enters memory. Input arrays remain unchanged; supplied indexes, including empty maps, are retained.
+Spell edits use available exact filtered metadata first, then the raw exact catalog.
+
 The bundled manifest is read through a fixed Electron capability. Development and packaged builds
 require the committed `tavern-born-srd-core` identity; packaged builds also require
 `approved-for-distribution` and read the reviewed files from `process.resourcesPath`. Unpackaged
@@ -158,8 +162,8 @@ must not render raw 5etools syntax or build independent tooltip systems.
 ## Character format compatibility
 
 Import and hydration require the exact current character version and validate before exposing a
-record. Current schema 9 also requires explicit ordinary/bonus feat setup ownership; complete racial
-spell targets and separate owner/target printings remain required. Schema 2–8 and other unsupported
+record. Current schema 10 also requires explicit ordinary/bonus feat setup ownership and one current
+kind per special spell target; complete racial spell targets and separate owner/target printings remain required. Schema 2–9 and other unsupported
 versions are rejected without conversion. Saved-library rejected originals
 remain in durable, exportable quarantine until acknowledged. The version and cutoff policy lives
 in [State Management](state-management.md#schema-compatibility).

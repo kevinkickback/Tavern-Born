@@ -61,7 +61,7 @@ export function useSpellSlots(): SpellSlotsState {
   const spellState = useMemo(() => {
     if (!character) return null
     return deriveSpellProfileState(
-      character,
+      calculationContext?.character ?? character,
       classesById,
       undefined,
       calculationContext?.raceResolution,
