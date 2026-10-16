@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
+import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
   getAsiDisplay,
   getDamageTraitDisplay,
@@ -224,7 +225,9 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 <h2 className="font-display text-xl font-bold">
                   {selectedRace.name}
                   {selectedSubrace && (
-                    <span className="text-primary ml-1.5">({selectedSubrace.name})</span>
+                    <span className="text-primary ml-1.5">
+                      ({getSubraceDisplayName(selectedRace.name, selectedSubrace.name)})
+                    </span>
                   )}
                 </h2>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -271,7 +274,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                               : 'bg-card border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
                           )}
                         >
-                          {sr.name}
+                          {getSubraceDisplayName(selectedRace.name, sr.name)}
+                          {sr.source && ` · ${sr.source}`}
                         </button>
                       )
                     })}

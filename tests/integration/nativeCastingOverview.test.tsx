@@ -101,6 +101,7 @@ test('actual overview shows independent effect-aware parent/child casting withou
   ]
   character.effectFlags = { active: true }
   const section = await overview(character, [parent])
+  expect(section.getAllByText('Parent (Child)').length).toBeGreaterThan(0)
   expect(section.getByText(/intelligence.*Save DC 16.*Spell attack \+7/)).toBeTruthy()
   expect(section.getByText(/wisdom.*Save DC 18.*Spell attack \+10/)).toBeTruthy()
   expect(section.queryByText(/Prepared limit/)).toBeNull()

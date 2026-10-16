@@ -3,6 +3,7 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { safeEvalArithmetic } from '@/lib/calculations/formulaEval'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   type CasterProgression,
   getCasterLevelContribution,
@@ -301,7 +302,7 @@ export function buildRacialSpellcastingDetails(
         effects,
         effectContext,
       ),
-      sourceName: profile.raceName ?? profile.label,
+      sourceName: getSpellProfileDisplayLabel(profile),
       source: profile.raceSource ?? '',
     }))
 }

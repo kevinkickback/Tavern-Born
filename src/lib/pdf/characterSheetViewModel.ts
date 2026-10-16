@@ -27,6 +27,7 @@ import {
   getAdditionalMovementSummary,
   getWalkingSpeed,
 } from '@/lib/calculations/movement'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -220,8 +221,7 @@ function getClassLevelSummary(character: Character): string {
 }
 
 function getRaceSummary(character: Character): string {
-  if (!character.subrace) return character.race || ''
-  return `${character.subrace} ${character.race}`.trim()
+  return getRaceDisplayName(character.race, character.subrace)
 }
 
 function extractBackgroundFeatureBlock(

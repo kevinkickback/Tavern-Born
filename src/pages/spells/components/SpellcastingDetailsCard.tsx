@@ -8,9 +8,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatModifier, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import type { RacialSpellcastingDetail } from '@/lib/calculations/spellProfiles.casting'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { cn } from '@/lib/utils'
+import type { SpellProfile } from '@/types/character'
 
 interface SpellcastingDetailLike {
   profileId: string
@@ -26,6 +28,7 @@ interface RacialProfileLike {
   id: string
   raceName?: string
   label: string
+  racial?: SpellProfile['racial']
   castingAbility?: string
   castingAbilityOptions?: string[]
 }
@@ -166,7 +169,7 @@ export function SpellcastingDetailsCard({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm leading-tight truncate">
-                        {profile.raceName ?? profile.label}
+                        {getSpellProfileDisplayLabel(profile)}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         Racial Spellcasting
@@ -178,7 +181,7 @@ export function SpellcastingDetailsCard({
                         onValueChange={(value) => onSetRacialCastingAbility?.(profile.id, value)}
                       >
                         <SelectTrigger
-                          aria-label={`${profile.raceName ?? profile.label} casting ability`}
+                          aria-label={`${getSpellProfileDisplayLabel(profile)} casting ability`}
                           className="h-8 w-auto min-w-24 max-w-36 cursor-pointer text-xs"
                         >
                           <SelectValue placeholder="Choose..." />

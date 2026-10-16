@@ -1,7 +1,7 @@
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import type { Spell5e } from '@/types/5etools'
-import type { RaceSpellChoice } from '@/types/character'
+import type { RaceSpellChoice, SpellProfile } from '@/types/character'
 import { countUniqueSpellNames } from './spellProfiles.profiles'
 
 export interface SpellListItem {
@@ -28,6 +28,7 @@ export interface SpellProfileLike {
   id: string
   type?: string
   label: string
+  racial?: SpellProfile['racial']
   className?: string
   classSource?: string
   alwaysPrepared?: boolean

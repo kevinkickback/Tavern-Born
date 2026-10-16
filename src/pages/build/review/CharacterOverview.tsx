@@ -25,6 +25,7 @@ import {
 } from '@/lib/calculations/abilityScores'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { getRaceDisplayName, getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
@@ -316,7 +317,7 @@ export function CharacterOverview({
                   .filter(Boolean)
                   .join(' · ')
               : '',
-            profile: profile.label,
+            profile: getSpellProfileDisplayLabel(profile),
             status: profile.cantrips.includes(reference)
               ? 'Cantrip'
               : profile.preparedSpells.includes(reference) ||
@@ -355,9 +356,7 @@ export function CharacterOverview({
               {character.name || 'Unnamed Character'}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {character.subrace
-                ? `${character.subrace} ${character.race}`
-                : character.race || 'Species undecided'}
+              {getRaceDisplayName(character.race, character.subrace) || 'Species undecided'}
               {' · '}
               {classes
                 .map(

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import {
   buildSpellProfileDisplayModels,
@@ -396,7 +397,9 @@ export const SpellProfileManager = memo(function SpellProfileManager({
               >
                 <AccordionTrigger className="min-h-11 cursor-pointer rounded-none border-b border-border bg-transparent px-1 py-2.5 transition-colors hover:bg-surface-hover/35 hover:no-underline">
                   <div className="flex items-center gap-2 text-left w-full min-w-0">
-                    <span className="font-medium text-sm">{profile.label}</span>
+                    <span className="font-medium text-sm">
+                      {getSpellProfileDisplayLabel(profile)}
+                    </span>
                     <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 pr-1">
                       {hasMissingSpells || hasUnfulfilledChoices ? (
                         <Tooltip>

@@ -25,6 +25,7 @@ import {
   getNativeExpandedSpellReferences,
   getNativeRacialSpellOwners,
 } from '@/lib/calculations/nativeRacialSpells'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   formatSpellReference,
   getSpellNameKey,
@@ -277,7 +278,7 @@ export function SpellsPage() {
             spell,
             item: {
               profileId: profile.id,
-              profileLabel: profile.label,
+              profileLabel: getSpellProfileDisplayLabel(profile),
               className: profile.className,
               classSource: profile.classSource,
               name: formatSpellReference(spell.name, spell.source),
@@ -308,7 +309,7 @@ export function SpellsPage() {
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         items.push({
           profileId: profile.id,
-          profileLabel: profile.label,
+          profileLabel: getSpellProfileDisplayLabel(profile),
           removable: profile.type !== 'racial',
           className: profile.className,
           classSource: profile.classSource,
@@ -331,7 +332,7 @@ export function SpellsPage() {
           profile.preparedSpells.some((item) => getSpellNameKey(item) === spellKey)
         items.push({
           profileId: profile.id,
-          profileLabel: profile.label,
+          profileLabel: getSpellProfileDisplayLabel(profile),
           removable: profile.type !== 'racial',
           className: profile.className,
           classSource: profile.classSource,
@@ -407,7 +408,7 @@ export function SpellsPage() {
       { value: 'all' as const, label: 'All' },
       ...classSpellProfiles.map((profile) => ({
         value: profile.id as ClassSpellView,
-        label: profile.className ?? profile.label,
+        label: profile.className ?? getSpellProfileDisplayLabel(profile),
       })),
       { value: 'racial' as const, label: 'Racial' },
       { value: 'bonus' as const, label: 'Bonus' },
