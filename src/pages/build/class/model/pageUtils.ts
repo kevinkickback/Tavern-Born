@@ -1,4 +1,5 @@
 import { getSubclassFeatureGroups, resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
@@ -35,8 +36,11 @@ export function resolveSubclassDetailsSelection(
   classData: Class5e | undefined,
 ): SelectedFeatureState | null {
   if (!selection || !('kind' in selection)) return selection
-  const ownerKey = getEntityLookupKey(selection.className, selection.classSource)
-  if (classData && getEntityLookupKey(classData.name, classData.source) !== ownerKey) return null
+  if (
+    classData &&
+    !findClassReference({ name: selection.className, source: selection.classSource }, [classData])
+  )
+    return null
   const key = getEntityLookupKey(selection.name, selection.source)
   const subclass = classData?.subclasses?.find(
     (value) => getEntityLookupKey(value.name, value.source) === key,
@@ -68,7 +72,7 @@ function resolveClassForEntry(
   entry: Pick<CharacterClassEntry, 'name' | 'source'>,
   classLookup: Record<string, Class5e | undefined>,
 ): Class5e | undefined {
-  return classLookup[getEntityLookupKey(entry.name, entry.source)]
+  return findClassReference(entry, Object.values(classLookup))
 }
 
 export function countTotalAsiAcrossClasses({

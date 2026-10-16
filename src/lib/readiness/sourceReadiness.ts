@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -43,9 +44,8 @@ export function validateSourceReferences(
       ),
     )
   }
-  const resolvedClasses = new Set(calculation.classes.map(readinessClassKey))
   for (const entry of getCharacterClassEntries(character)) {
-    if (resolvedClasses.has(readinessClassKey(entry))) continue
+    if (findClassReference(entry, calculation.classes)) continue
     issues.push(
       readinessIssue(
         `source:class:${readinessClassKey(entry)}`,

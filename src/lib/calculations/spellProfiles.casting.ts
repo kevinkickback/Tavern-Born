@@ -1,4 +1,5 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { safeEvalArithmetic } from '@/lib/calculations/formulaEval'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -214,7 +215,10 @@ function getClassMaxSpellLevel(
 
   if (progression === 'pact' || progression === 'none') return 0
 
-  const ruleset = classData.edition === 'one' || classData.source === 'XPHB' ? '2024' : '2014'
+  const ruleset =
+    classData.edition === 'one' || classData.source.trim().toUpperCase() === 'XPHB'
+      ? '2024'
+      : '2014'
   const standardSlots = getStandardSpellSlotsFromClassData(
     standardProgressionClasses,
     getCasterLevelContribution(progression, classLevel),
@@ -315,7 +319,7 @@ export function buildSpellcastingClassDetails(
   return entries
     .map((entry) => {
       const profileId = toClassProfileId(entry.name, entry.source)
-      const classData = classesById.get(toClassProfileId(entry.name, entry.source))
+      const classData = findClassReference(entry, classesById.values())
       const subclassData = getSelectedSubclassData(classData, entry)
       const effectiveSpellcastingData = getEffectiveSpellcastingClassData(classData, subclassData)
       const effectiveProgression = getEffectiveCasterProgression(classData, subclassData)

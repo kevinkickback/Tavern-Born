@@ -1,4 +1,5 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getCharacterClassChoices,
   getCharacterClassFeatureVariantChoices,
@@ -36,19 +37,13 @@ export function reconcileOptionalClassFeatureChoicesCommand(
   const activeChoiceIds = new Set<string>()
 
   for (const entry of character.classProgression) {
-    const scopedClassData = catalogs.allClasses.find(
-      (candidate) =>
-        candidate.name === entry.name && (candidate.source ?? '') === (entry.source ?? ''),
-    )
+    const scopedClassData = findClassReference(entry, catalogs.allClasses)
     if (scopedClassData) {
       const scopedSubclass = getSelectedSubclassData(scopedClassData, entry)
       allChoices.push(...getCharacterClassFeatureVariantChoices(scopedClassData, scopedSubclass))
     }
 
-    const availableClassData = catalogs.availableClasses.find(
-      (candidate) =>
-        candidate.name === entry.name && (candidate.source ?? '') === (entry.source ?? ''),
-    )
+    const availableClassData = findClassReference(entry, catalogs.availableClasses)
     if (!availableClassData) continue
     const availableSubclass = getSelectedSubclassData(availableClassData, entry)
     for (const choice of getCharacterClassChoices(

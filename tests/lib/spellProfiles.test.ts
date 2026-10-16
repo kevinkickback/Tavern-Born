@@ -388,7 +388,10 @@ describe('spellProfiles', () => {
     expect(slots.pact[1]?.max).toBe(2)
   })
 
-  test('calculateCharacterSpellSlots prefers 2024 progression for mixed-edition classes', () => {
+  test.each([
+    false,
+    true,
+  ])('prefers exact 2024 shared-slot tables (catalog spelling refresh %s)', (refreshed) => {
     const phbRows = Array.from({ length: 20 }, () => [2])
     const xphbRows = Array.from({ length: 20 }, () => [2])
     phbRows[16] = [4, 3, 3, 3, 3, 1, 1, 1, 1]
@@ -427,6 +430,17 @@ describe('spellProfiles', () => {
         { name: 'Cleric', source: 'XPHB', levels: 8 },
       ],
     })
+
+    if (refreshed) {
+      for (const [key, cls] of classesById) {
+        classesById.set(key, {
+          ...cls,
+          name: ` ${cls.name.toUpperCase()} `,
+          source: ` ${cls.source.toLowerCase()} `,
+          edition: undefined,
+        })
+      }
+    }
 
     expect(calculateCharacterSpellSlots(classicCharacter, classesById).shared[5]?.max).toBe(3)
     expect(calculateCharacterSpellSlots(mixedCharacter, classesById).shared[5]?.max).toBe(2)

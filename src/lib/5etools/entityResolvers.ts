@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
@@ -45,7 +46,10 @@ export function resolveClassReference(
   primaryLookups: EntityLookupSet,
   rawLookups: EntityLookupSet = primaryLookups,
 ): Class5e | undefined {
-  return resolveEntity(reference, primaryLookups.classesByKey, rawLookups.classesByKey)
+  return (
+    findClassReference(reference, Object.values(primaryLookups.classesByKey ?? {})) ??
+    findClassReference(reference, Object.values(rawLookups.classesByKey ?? {}))
+  )
 }
 
 export function resolveBackgroundReference(

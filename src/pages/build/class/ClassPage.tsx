@@ -15,7 +15,7 @@ import {
   getSelectedSubclassData,
   getSubclassSelectionInfo,
 } from '@/lib/5etools/classData'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
@@ -111,11 +111,7 @@ export function BuildClassPage() {
     [spellLookup],
   )
   const viewingClassData = useMemo(() => {
-    if (!viewingClassSource) return undefined
-    const viewingKey = getEntityLookupKey(viewingClass, viewingClassSource)
-    return (classes as Class5e[]).find(
-      (classData) => getEntityLookupKey(classData.name, classData.source) === viewingKey,
-    )
+    return findClassReference({ name: viewingClass, source: viewingClassSource }, classes)
   }, [classes, viewingClass, viewingClassSource])
   const selectedFeature = useMemo(
     () => resolveSubclassDetailsSelection(featureSelection, viewingClassData),
@@ -166,7 +162,7 @@ export function BuildClassPage() {
     swapClassSpellAtLevel,
   } = spellController
   const classEquipmentChoiceKey =
-    viewingClass && viewingClassData ? `${viewingClass}|${viewingClassData.source ?? ''}` : ''
+    viewingClass && viewingClassSource ? `${viewingClass}|${viewingClassSource}` : ''
   const classEquipmentBlockChoices: string[] =
     (classEquipmentChoiceKey
       ? character?.classEquipmentChoices?.[classEquipmentChoiceKey]

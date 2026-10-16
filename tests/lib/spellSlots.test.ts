@@ -13,14 +13,25 @@ import {
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 describe('spellSlots', () => {
-  test('getStandardSpellSlotsFromClassData selects rows by ruleset', () => {
+  test.each([
+    false,
+    true,
+  ])('standard tables retain exact ruleset rows after spelling refresh %s', (refreshed) => {
     const phbRows = Array.from({ length: 20 }, () => [2])
     const xphbRows = Array.from({ length: 20 }, () => [2])
     phbRows[16] = [4, 3, 3, 3, 3, 1, 1, 1, 1]
     xphbRows[16] = [4, 3, 3, 3, 2, 1, 1, 1, 1]
     const classes = [
-      makeClassFixture({ source: 'PHB', classTableGroups: [{ rowsSpellProgression: phbRows }] }),
-      makeClassFixture({ source: 'XPHB', classTableGroups: [{ rowsSpellProgression: xphbRows }] }),
+      makeClassFixture({
+        name: refreshed ? ' WIZARD ' : 'Wizard',
+        source: refreshed ? ' phb ' : 'PHB',
+        classTableGroups: [{ rowsSpellProgression: phbRows }],
+      }),
+      makeClassFixture({
+        name: refreshed ? ' WIZARD ' : 'Wizard',
+        source: refreshed ? ' xphb ' : 'XPHB',
+        classTableGroups: [{ rowsSpellProgression: xphbRows }],
+      }),
     ]
 
     expect(getStandardSpellSlotsFromClassData(classes, 17, '2014')?.[5]?.max).toBe(3)

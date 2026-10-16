@@ -259,7 +259,10 @@ describe('class choice commands', () => {
     expect(replacement.provenanceUpdate.features['scholar training']).toHaveLength(1)
   })
 
-  test('switches replacement grants atomically across toggles and source filtering', () => {
+  test.each([
+    false,
+    true,
+  ])('switches replacement grants atomically across toggles/filtering (class spelling refresh %s)', (refreshed) => {
     const originalFeature = choice({
       id: 'original-feature',
       label: 'Original Training',
@@ -325,8 +328,8 @@ describe('class choice commands', () => {
       optionFilter: undefined,
     })
     const classData = {
-      name: 'Test Class',
-      source: 'TEST',
+      name: refreshed ? ' TEST CLASS ' : 'Test Class',
+      source: refreshed ? ' test ' : 'TEST',
       hd: { faces: 8 },
       normalizedRules: {
         resources: [],
@@ -642,7 +645,10 @@ describe('class choice commands', () => {
     ).toThrow(/current subclass/i)
   })
 
-  test('retracts a subclass-owned feat mirror when the subclass changes', () => {
+  test.each([
+    false,
+    true,
+  ])('preserves saved feat-mirror ownership through Edit/Clear/subclass replacement (parent refresh %s)', (refreshed) => {
     const featChoice = choice({
       id: 'class:ranger|phb|subclass:beast-master|phb|choice:bonus-feat|3',
       label: 'Bonus Feat',
@@ -689,7 +695,39 @@ describe('class choice commands', () => {
       feats: [{ name: 'Skilled', source: 'PHB' }],
     })
 
-    const reconciled = selectSubclass(appliedCharacter, applied.provenanceUpdate, 'Hunter', 'PHB')
+    const currentChoice = refreshed
+      ? { ...featChoice, owner: { ...featChoice.owner, name: ' RANGER ', source: ' phb ' } }
+      : featChoice
+    const edited = applyClassChoiceSelectionWithGrantsCommand(
+      appliedCharacter,
+      applied.provenanceUpdate,
+      currentChoice,
+      [{ entityType: 'feat', name: 'Skilled', source: 'PHB' }],
+    )
+    const editedCharacter = {
+      ...appliedCharacter,
+      ...edited.characterPatch,
+      provenance: edited.provenanceUpdate,
+    }
+    expect(editedCharacter.classFeatChoices).toHaveLength(1)
+    expect(editedCharacter.classFeatChoices?.[0]).toMatchObject({
+      className: 'Ranger',
+      classSource: 'PHB',
+    })
+    expect(editedCharacter.classChoiceSelections?.[0]).toMatchObject({
+      className: 'Ranger',
+      classSource: 'PHB',
+    })
+    const cleared = applyClassChoiceSelectionWithGrantsCommand(
+      editedCharacter,
+      edited.provenanceUpdate,
+      currentChoice,
+      [],
+    )
+    expect(cleared.characterPatch.classChoiceSelections).toEqual([])
+    expect(cleared.characterPatch.classFeatChoices).toEqual([])
+    expect(cleared.provenanceUpdate.feats.skilled).toBeUndefined()
+    const reconciled = selectSubclass(editedCharacter, edited.provenanceUpdate, 'Hunter', 'PHB')
 
     expect(reconciled.characterPatch.classChoiceSelections).toEqual([])
     expect(reconciled.characterPatch.classFeatChoices).toEqual([])

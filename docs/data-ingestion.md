@@ -332,9 +332,16 @@ class-feature setting can swap the original and replacement choice without showi
 
 ## Identity and entity resolution
 
-Lookup keys are case-normalized `name|source`. Exact resolution checks the filtered primary lookup,
+Lookup keys use trimmed `name|source` fields. Exact resolution checks the filtered primary lookup,
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Persisted references without a source are rejected rather than matched to the first printing.
+
+Class selections compare complete name and source fields independently after trimming and
+case normalization through `findClassReference`. Catalog spelling changes retain calculations,
+HP, spells, Actions, readiness and PDF rules without rewriting saved owner fields or profile IDs.
+Explicit different names or book printings remain distinct, including during missing/restored
+metadata; a source-less class never acquires a printing from a unique candidate. Generic entity
+lookup keys and subclass name/source matching retain their own existing contracts.
 
 Fixed feat grants retain their explicit name/source and optional variant when the requested record
 is missing. Their resolver checks the filtered catalog, then the exact raw catalog; it never

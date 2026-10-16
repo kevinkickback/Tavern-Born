@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   buildGameDataLookups,
   getEntityLookupKey,
@@ -77,14 +78,16 @@ export function buildRetainedCharacterDetails(
       classSource: string,
       subclassName?: string,
       subclassSource?: string,
-    ) =>
-      lookups.subclassesByKey[
-        getSubclassLookupKey(className, classSource, subclassName, subclassSource)
-      ]
+    ) => {
+      const owner = findClassReference({ name: className, source: classSource }, data.classes)
+      return owner
+        ? lookups.subclassesByKey[
+            getSubclassLookupKey(owner.name, owner.source, subclassName, subclassSource)
+          ]
+        : undefined
+    }
     for (const entry of character.classProgression) {
-      classFeatures(lookups.classesByKey[getEntityLookupKey(entry.name, entry.source)]).forEach(
-        addFeature,
-      )
+      classFeatures(findClassReference(entry, data.classes)).forEach(addFeature)
       collectSubclassFeatures(
         subclassFor(entry.name, entry.source, entry.subclass, entry.subclassSource),
       ).forEach(addFeature)

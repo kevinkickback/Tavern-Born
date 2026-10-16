@@ -33,6 +33,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   checkMulticlassRequirements,
   getAbilityModifier,
@@ -120,9 +121,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         cls,
         meetsRequirements,
         requirementText,
-        already: classProgression.some(
-          (entry) => entry.name === cls.name && (entry.source ?? '') === (cls.source ?? ''),
-        ),
+        already: !!findClassReference(cls, classProgression),
       }
     })
   const multiclassOptionByKey = new Map(
@@ -130,13 +129,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   )
 
   const findClass = (name: string, source?: string) => {
-    const normalizedSource = source?.trim()
-    if (!normalizedSource) {
-      return classes.find((cls) => cls.name === name) ?? allClasses.find((cls) => cls.name === name)
-    }
     return (
-      classes.find((cls) => cls.name === name && cls.source === normalizedSource) ??
-      allClasses.find((cls) => cls.name === name && cls.source === normalizedSource)
+      findClassReference({ name, source }, classes) ??
+      findClassReference({ name, source }, allClasses)
     )
   }
 

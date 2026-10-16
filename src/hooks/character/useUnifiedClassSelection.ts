@@ -7,7 +7,7 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 
 import { useCallback } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
@@ -23,7 +23,10 @@ export function useUnifiedClassSelection() {
     (className: string, classSource: string, classLookup: Record<string, Class5e | undefined>) => {
       if (!character) return
 
-      const cls = classLookup[getEntityLookupKey(className, classSource)]
+      const cls = findClassReference(
+        { name: className, source: classSource },
+        Object.values(classLookup),
+      )
 
       if (!cls) return
 

@@ -1,4 +1,5 @@
 import { getClassFeatureReferenceLevel } from '@/lib/5etools/classFeatureIdentity'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry, Proficiencies } from '@/types/character'
@@ -236,8 +237,7 @@ export function getExpertiseSlotsFromClasses(
   if (!classProgression?.length) return 0
   let slots = 0
   for (const entry of classProgression) {
-    const key = `${entry.name}|${entry.source ?? ''}`
-    const cls = classesByKey[key]
+    const cls = findClassReference(entry, Object.values(classesByKey))
     if (!cls?.classFeatureRefs) continue
     for (const ref of cls.classFeatureRefs) {
       const level = getClassFeatureReferenceLevel(ref)

@@ -19,6 +19,7 @@ import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import {
   getNativeExpandedSpellReferences,
@@ -209,7 +210,10 @@ export function SpellsPage() {
     for (const entry of getCharacterClassEntries(character)) {
       if (!entry.subclass) continue
       const profileId = toClassProfileId(entry.name, entry.source)
-      const subclassData = getSelectedSubclassData(classesById.get(profileId), entry)
+      const subclassData = getSelectedSubclassData(
+        findClassReference(entry, classesById.values()),
+        entry,
+      )
       const grants = parseSubclassSpells(subclassData?.additionalSpells, entry.levels).filter(
         (grant) => grant.mode !== 'expanded',
       )
