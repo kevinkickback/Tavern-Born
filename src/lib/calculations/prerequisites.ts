@@ -1,4 +1,4 @@
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { buildSpellNameKeySet, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
@@ -37,9 +37,10 @@ export function buildPrerequisiteSnapshot({
 
   return {
     progression: classProgression.map((entry) => {
-      const subclass = classLookup?.[
-        getEntityLookupKey(entry.name, entry.source)
-      ]?.subclasses?.find(
+      const subclass = findClassReference(
+        entry,
+        Object.values(classLookup ?? {}),
+      )?.subclasses?.find(
         (candidate) =>
           candidate.name === entry.subclass && candidate.source === entry.subclassSource,
       )

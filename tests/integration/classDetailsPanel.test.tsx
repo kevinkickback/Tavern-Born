@@ -114,8 +114,11 @@ test.each([true, false])('renders complete intro content once with level groups 
   expect(subclass).toEqual(before)
 })
 
-test('keeps selected subclass details current through replacement, disable, reselect and restore', async () => {
-  const makeCatalog = (text: string) => {
+test.each([
+  false,
+  true,
+])('keeps subclass details through replacement/filter/restore (parent spelling refresh %s)', async (refreshed) => {
+  const makeCatalog = (text: string, refreshParent = false) => {
     const classes = parseClasses({
       class: [{ name: 'Wizard', source: 'PHB', classFeatures: [] }],
       subclass: [
@@ -139,7 +142,11 @@ test('keeps selected subclass details current through replacement, disable, rese
         },
       ],
     }) as Class5e[]
-    const data = makeGameDataFixture({ classes })
+    const data = makeGameDataFixture({
+      classes: refreshParent
+        ? classes.map((cls) => ({ ...cls, name: ' WIZARD ', source: ' phb ' }))
+        : classes,
+    })
     data.lookups = buildGameDataLookups(data)
     return data
   }
@@ -162,7 +169,7 @@ test('keeps selected subclass details current through replacement, disable, rese
   }
   fireEvent.click(screen.getByRole('button', { name: 'School' }))
   expect(screen.getAllByText('Original school rules.')).toHaveLength(1)
-  const replacement = makeCatalog('Replacement school rules.')
+  const replacement = makeCatalog('Replacement school rules.', refreshed)
   const before = structuredClone(replacement)
   await act(async () => {
     useGameDataStore.setState({ gameData: replacement })

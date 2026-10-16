@@ -8,6 +8,49 @@ import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 
 describe('entity resolvers', () => {
+  test.each([
+    ['WIZARD', 'PHB'],
+    ['Wizard', 'phb'],
+    [' Wizard ', ' PHB '],
+    [' WIZARD ', ' phb '],
+  ])('retains an exact class through catalog spelling refresh %s/%s', (name, source) => {
+    const refreshed = { name, source } as Class5e
+    const other = { name: 'Wizard', source: 'XPHB' } as Class5e
+    const reference = { name: 'Wizard', source: 'PHB' }
+    const primary = { classesByKey: buildClassLookup([other, refreshed]) }
+    const raw = { classesByKey: buildClassLookup([{ ...refreshed, page: 1 }]) }
+    expect(resolveClassReference(reference, primary, raw)).toBe(refreshed)
+    expect(resolveClassReference(reference, { classesByKey: {} }, primary)).toBe(refreshed)
+  })
+
+  test.each([
+    [
+      { name: 'Sorcerer', source: 'PHB' },
+      { name: 'Wizard', source: 'PHB' },
+    ],
+    [
+      { name: 'Wizard', source: 'XPHB' },
+      { name: 'Wizard', source: 'PHB' },
+    ],
+    [{ name: 'Wizard', source: 'PHB' }, { name: 'Wizard' }],
+    [
+      { name: 'Wizard', source: 'PHB' },
+      { name: 'Wizard', source: ' ' },
+    ],
+    [
+      { name: 'Wizard', source: 'PHB' },
+      { name: ' ', source: 'PHB' },
+    ],
+    [
+      { name: 'Wizard|School', source: 'PHB' },
+      { name: 'Wizard', source: 'School|PHB' },
+    ],
+  ])('does not erase a qualified field conflict or infer a source: %j', (candidate, reference) => {
+    expect(
+      resolveClassReference(reference, { classesByKey: buildClassLookup([candidate as Class5e]) }),
+    ).toBeUndefined()
+  })
+
   test('resolves normalized complete nested child fields from raw data without borrowing another printing', () => {
     const child = { name: ' Child|Exact ', source: ' CASE ' } as Race5e
     const primaryParent = {

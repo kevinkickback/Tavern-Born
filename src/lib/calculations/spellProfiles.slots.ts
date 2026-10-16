@@ -1,4 +1,5 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getCasterLevelContribution,
   getEffectiveCasterProgression,
@@ -10,7 +11,6 @@ import {
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { toClassProfileId } from './spellProfiles.constants'
 
 function normalizeProgression(value?: string) {
   if (value === 'full') return 'full'
@@ -66,8 +66,9 @@ export function calculateCharacterSpellSlots(
   const sharedEntries: Array<{ classData: Class5e | undefined; levels: number }> = []
 
   for (const entry of entries) {
-    const classData = classesById.get(toClassProfileId(entry.name, entry.source))
-    if (classData?.edition === 'one' || classData?.source === 'XPHB') has2024Class = true
+    const classData = findClassReference(entry, classesById.values())
+    if (classData?.edition === 'one' || classData?.source.trim().toUpperCase() === 'XPHB')
+      has2024Class = true
     const subclassData = getSelectedSubclassData(classData, entry)
     const progression = normalizeProgression(getEffectiveCasterProgression(classData, subclassData))
 

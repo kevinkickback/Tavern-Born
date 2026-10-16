@@ -162,9 +162,14 @@ export function getStandardSpellSlotsFromClassData(
 ): SpellSlotsResult | null {
   const source = ruleset === '2024' ? 'XPHB' : 'PHB'
   const candidates = Array.from(classes).filter(
-    (classData) => classData.source === source && classData.casterProgression === 'full',
+    (classData) =>
+      classData.source.trim().toUpperCase() === source && classData.casterProgression === 'full',
   )
-  candidates.sort((left, right) => Number(right.name === 'Wizard') - Number(left.name === 'Wizard'))
+  candidates.sort(
+    (left, right) =>
+      Number(right.name.trim().toLowerCase() === 'wizard') -
+      Number(left.name.trim().toLowerCase() === 'wizard'),
+  )
   for (const candidate of candidates) {
     const slots = getSpellSlotsFromClassData(candidate, casterLevel)
     if (slots !== null) return slots
@@ -176,7 +181,7 @@ export function getStandardSpellSlotsFromClassData(
 export function validateParsedSpellSlotProgressions(classes: Class5e[]): void {
   for (const ruleset of ['2014', '2024'] as const) {
     const source = ruleset === '2024' ? 'XPHB' : 'PHB'
-    if (!classes.some((classData) => classData.source === source)) continue
+    if (!classes.some((classData) => classData.source.trim().toUpperCase() === source)) continue
     if (!getStandardSpellSlotsFromClassData(classes, 20, ruleset)) {
       console.warn(
         `[spellSlots] Missing parsed ${ruleset} full-caster progression at level 20 (${source}).`,
@@ -197,7 +202,8 @@ export function getMaxSpellLevelForClassLevel(
   classData: Class5e,
   level: number,
   standardProgressionClasses: Iterable<Class5e> = [],
-  ruleset: SpellSlotRuleset = classData.edition === 'one' || classData.source === 'XPHB'
+  ruleset: SpellSlotRuleset = classData.edition === 'one' ||
+  classData.source.trim().toUpperCase() === 'XPHB'
     ? '2024'
     : '2014',
 ): number {

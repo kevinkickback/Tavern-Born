@@ -8,6 +8,7 @@ import {
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
+import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
@@ -151,8 +152,6 @@ export function deriveSpellActions(
   const classesById = new Map<string, Class5e>()
   for (const classData of options.classes ?? []) {
     classesById.set(toClassProfileId(classData.name, classData.source), classData)
-    const sourceLessId = toClassProfileId(classData.name)
-    if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
   }
   const profiles = deriveSpellProfileState(
     character,
@@ -163,7 +162,7 @@ export function deriveSpellActions(
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {
-    const classData = classesById.get(toClassProfileId(entry.name, entry.source))
+    const classData = findClassReference(entry, classesById.values())
     const subclassData = getSelectedSubclassData(classData, entry)
     const effectiveClassData = getEffectiveSpellcastingClassData(classData, subclassData)
     if (!effectiveClassData?.spellcastingAbility) continue
@@ -371,12 +370,7 @@ function deriveClassFeatureActions(
     })
   }
   for (const entry of getCharacterClassEntries(character)) {
-    const classData = (context.classes ?? [])
-      .filter(
-        (candidate) =>
-          candidate.name === entry.name && (!entry.source || candidate.source === entry.source),
-      )
-      .sort((left, right) => left.source.localeCompare(right.source))[0]
+    const classData = findClassReference(entry, context.classes)
     if (!classData) continue
     const owner = getFeatureOwnerKey(classData.name, classData.source)
     for (const reference of classData.classFeatureRefs ?? []) {

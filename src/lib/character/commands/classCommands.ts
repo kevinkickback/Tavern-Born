@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 /**
@@ -222,17 +223,16 @@ export function applyClassEquipmentChoiceCommand(
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
-  genericSelections: Readonly<Record<string, string>> = character.classEquipmentItemChoices?.[
-    getClassChoiceKey(cls.name, cls.source)
-  ] ?? {},
+  genericSelections?: Readonly<Record<string, string>>,
 ): CharacterCommandResult {
+  const owner = findClassReference(cls, character.classProgression) ?? cls
   const equipmentToRemove = Object.entries(ledger.equipment)
     .filter(([, tags]) =>
       tags.every(
         (tag) =>
           tag.sourceType === 'class' &&
-          tag.sourceName === cls.name &&
-          (tag.sourceRef ?? '') === (cls.source ?? ''),
+          tag.sourceName === owner.name &&
+          (tag.sourceRef ?? '') === (owner.source ?? ''),
       ),
     )
     .map(([name]) => name)
@@ -240,13 +240,15 @@ export function applyClassEquipmentChoiceCommand(
     [...(character.equipment ?? [])],
     equipmentToRemove,
   )
-  const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
+  const classChoiceKey = getClassChoiceKey(owner.name, owner.source)
+  const itemSelections =
+    genericSelections ?? character.classEquipmentItemChoices?.[classChoiceKey] ?? {}
   const choices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
   while (choices.length <= blockIndex) choices.push('a')
   choices[blockIndex] = choice.toLowerCase()
 
   const blocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices, genericSelections)
+  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices, itemSelections)
 
   return {
     characterPatch: {
@@ -257,13 +259,13 @@ export function applyClassEquipmentChoiceCommand(
       },
       classEquipmentItemChoices: {
         ...(character.classEquipmentItemChoices ?? {}),
-        [classChoiceKey]: { ...genericSelections },
+        [classChoiceKey]: { ...itemSelections },
       },
     },
     provenanceUpdate: replaceClassEquipmentGrants(
       ledger,
-      cls.name,
-      cls.source,
+      owner.name,
+      owner.source,
       resolved.items.map((item) => item.name),
     ),
   }
@@ -993,10 +995,7 @@ export function addMulticlass(
   startAtLevel: number = 1,
   raceResolution?: ResolvedRaceReference,
 ): ClassCommandResult {
-  const existingClassIndex = character.classProgression.findIndex(
-    (entry) => entry.name === className && entry.source === classSource,
-  )
-  if (existingClassIndex >= 0) {
+  if (findClassReference({ name: className, source: classSource }, character.classProgression)) {
     throw new Error(
       `Character already has class ${className}|${classSource}. Cannot add duplicate class.`,
     )

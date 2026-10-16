@@ -315,7 +315,10 @@ describe('Class Commands', () => {
     expect(result.characterPatch.classProgression?.[1]?.name).toBe('Fighter')
   })
 
-  test('addMulticlass permits a source-distinct printing but rejects an exact duplicate', () => {
+  test.each([
+    'Wizard',
+    ' WIZARD ',
+  ])('addMulticlass permits another printing but rejects canonical duplicate %s', (name) => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
     })
@@ -328,7 +331,7 @@ describe('Class Commands', () => {
       { name: 'Wizard', source: 'PHB', levels: 3 },
       { name: 'Wizard', source: 'XPHB', levels: 1 },
     ])
-    expect(() => addMulticlass(character, ledger, 'Wizard', xphbWizard, 'PHB')).toThrow(
+    expect(() => addMulticlass(character, ledger, name, xphbWizard, ' phb ')).toThrow(
       'Cannot add duplicate class',
     )
   })
@@ -918,10 +921,14 @@ describe('Class Commands', () => {
     expect(result.provenanceUpdate.features['kept path']).toHaveLength(1)
   })
 
-  test('applies a class equipment choice as one character and provenance result', () => {
+  test.each([
+    false,
+    true,
+  ])('applies class equipment with the saved owner (catalog spelling refresh %s)', (refreshed) => {
     const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
     const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
     const character = makeCharacterFixture({
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       classEquipmentChoices: { 'Rogue|PHB': ['a'] },
       equipment: [
         {
@@ -944,8 +951,8 @@ describe('Class Commands', () => {
       character,
       ledger,
       {
-        name: 'Rogue',
-        source: 'PHB',
+        name: refreshed ? ' ROGUE ' : 'Rogue',
+        source: refreshed ? ' phb ' : 'PHB',
         startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
       },
       0,
@@ -959,10 +966,14 @@ describe('Class Commands', () => {
     expect(result.provenanceUpdate.equipment.shortbow).toEqual([classTag])
   })
 
-  test('preserves equipment that remains granted by another source', () => {
+  test.each([
+    false,
+    true,
+  ])('preserves independently owned equipment (catalog spelling refresh %s)', (refreshed) => {
     const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
     const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
     const character = makeCharacterFixture({
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       classEquipmentChoices: { 'Rogue|PHB': ['a'] },
       equipment: [
         {
@@ -986,8 +997,8 @@ describe('Class Commands', () => {
       character,
       ledger,
       {
-        name: 'Rogue',
-        source: 'PHB',
+        name: refreshed ? ' ROGUE ' : 'Rogue',
+        source: refreshed ? ' phb ' : 'PHB',
         startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
       },
       0,

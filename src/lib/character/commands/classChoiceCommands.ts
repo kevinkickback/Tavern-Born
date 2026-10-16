@@ -1,4 +1,5 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
@@ -36,10 +37,7 @@ function findOwner(
   character: Character,
   choice: NormalizedCharacterChoice,
 ): CharacterClassEntry | undefined {
-  return character.classProgression?.find(
-    (entry) =>
-      entry.name === choice.owner.name && (entry.source ?? '') === (choice.owner.source ?? ''),
-  )
+  return findClassReference(choice.owner, character.classProgression)
 }
 
 function validateSelectedOptions(
@@ -66,7 +64,7 @@ export function applyClassChoiceSelectionCommand(
 ): Pick<Character, 'classChoiceSelections'> {
   const owner = findOwner(character, choice)
   const classLevel = owner?.levels ?? 0
-  if (classLevel < choice.level) {
+  if (!owner || classLevel < choice.level) {
     throw new RangeError(`${choice.label} is not available at the character's current class level.`)
   }
   if (
@@ -98,8 +96,8 @@ export function applyClassChoiceSelectionCommand(
     choiceId: choice.id,
     label: choice.label,
     kind: choice.kind,
-    className: choice.owner.name,
-    classSource: choice.owner.source,
+    className: owner.name,
+    classSource: owner.source,
     ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
     ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
@@ -137,14 +135,15 @@ export function reconcileClassChoiceFeatMirror(
   selection: CharacterClassChoiceSelection | undefined,
 ): CharacterCommandResult {
   if (choice.kind !== 'feat') return { characterPatch: {}, provenanceUpdate: ledger }
+  const owner = findOwner(character, choice)
   const categories = choice.optionFilter?.categories ?? []
   return replaceClassFeatSelectionsCommand(
     character,
     ledger,
     {
       choiceId: choice.id,
-      className: choice.owner.name,
-      classSource: choice.owner.source,
+      className: selection?.className ?? owner?.name ?? choice.owner.name,
+      classSource: selection?.classSource ?? owner?.source ?? choice.owner.source,
       ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
       ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
       progressionName: choice.label,

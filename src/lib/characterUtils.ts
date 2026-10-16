@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import type { Class5e } from '@/types/5etools'
 import type {
   AbilityScores,
@@ -67,9 +68,7 @@ export function calculateHPBreakdown(
     const classLevels = Math.max(0, entry.levels || 0)
     if (classLevels <= 0) continue
 
-    const classData = classesData?.find(
-      (classData) => classData.name === entry.name && classData.source === entry.source,
-    )
+    const classData = findClassReference(entry, classesData)
     const die = getHitDiceFromClass(classData)
     const avgRoll = Math.floor(die / 2) + 1
 

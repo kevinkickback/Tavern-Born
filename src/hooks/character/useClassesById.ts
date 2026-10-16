@@ -15,16 +15,10 @@ export function useClassesById(): Map<string, Class5e> {
     const map = new Map<string, Class5e>()
     for (const cls of classes) {
       map.set(toClassProfileId(cls.name, cls.source), cls)
-      if (!map.has(toClassProfileId(cls.name))) {
-        map.set(toClassProfileId(cls.name), cls)
-      }
     }
     for (const cls of Object.values(classLookup)) {
       if (!cls) continue
       map.set(toClassProfileId(cls.name, cls.source), cls)
-      if (!map.has(toClassProfileId(cls.name))) {
-        map.set(toClassProfileId(cls.name), cls)
-      }
     }
     return map
   }, [classes, classLookup])

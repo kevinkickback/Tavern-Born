@@ -1,4 +1,5 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -137,7 +138,7 @@ export function ensureSpellProfiles(
   for (const entry of classEntries) {
     const id = toClassProfileId(entry.name, entry.source)
     const existingProfile = byId.get(id)
-    const classData = classesById?.get(id)
+    const classData = findClassReference(entry, classesById?.values())
     const subclassData = getSelectedSubclassData(classData, entry)
     if (
       options?.preserveUnavailableClassProfiles &&

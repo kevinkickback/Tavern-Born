@@ -6,6 +6,7 @@ import type {
 } from '@/types/classRules'
 import { normalizeClassChoices } from './classChoiceNormalization'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import { findClassReference } from './classReference'
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
 const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -151,6 +152,22 @@ const PROSE_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
   ],
 }
 
+// These keys are the explicit, source-qualified whitelist declared above.
+const CLASS_RESOURCE_RULES = [
+  ...new Set([
+    ...Object.keys(TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE),
+    ...Object.keys(PROSE_RESOURCE_FIXUPS),
+  ]),
+].map((key) => {
+  const [name, source] = key.split('|')
+  return {
+    name,
+    source,
+    labels: TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE[key],
+    fixups: PROSE_RESOURCE_FIXUPS[key] ?? [],
+  }
+})
+
 function parseResourceValue(value: unknown): number | 'unlimited' | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value !== 'string') return null
@@ -224,7 +241,7 @@ export function formatClassResourceRecovery(recovery: ClassResourceRecovery): st
 }
 
 function normalizeId(className: string, label: string): string {
-  return `${className.toLowerCase()}-${label
+  return `${className.trim().toLowerCase()}-${label
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')}`
@@ -235,8 +252,7 @@ function parseTableResources(
   refs: readonly ClassFeatureReference[],
 ): ClassResourceDef[] {
   const resources: ClassResourceDef[] = []
-  const supportedLabels =
-    TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE[`${classData.name}|${classData.source}`]
+  const supportedLabels = findClassReference(classData, CLASS_RESOURCE_RULES)?.labels
   for (const rawGroup of classData.classTableGroups ?? []) {
     if (!rawGroup || typeof rawGroup !== 'object') continue
     const group = rawGroup as Record<string, unknown>
@@ -272,7 +288,7 @@ export function normalizeClassRules(
 ): NormalizedClassRules {
   const resources = parseTableResources(classData, refs)
   const seen = new Set(resources.map((resource) => resource.id))
-  for (const fixup of PROSE_RESOURCE_FIXUPS[`${classData.name}|${classData.source}`] ?? []) {
+  for (const fixup of findClassReference(classData, CLASS_RESOURCE_RULES)?.fixups ?? []) {
     if (!seen.has(fixup.id)) resources.push(fixup)
   }
 

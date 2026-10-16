@@ -117,13 +117,16 @@ describe('level up modal multiclass requirement text', () => {
     expect(screen.getByText('(XPHB)')).toBeTruthy()
   })
 
-  test('marks only the already-selected class printing as taken', () => {
+  test.each([
+    'Wizard',
+    ' WIZARD ',
+  ])('marks only the selected printing as taken after catalog refresh %s', (name) => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
     resetCharacterStoreWith(character)
     mockClasses = [
-      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name, source: ' phb ' }),
       makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
     ]
 
@@ -145,12 +148,15 @@ describe('level up hit-point choices', () => {
     vi.clearAllMocks()
   })
 
-  test('uses the raw hit die for an exact class hidden by source filters', async () => {
+  test.each([
+    'Fighter',
+    ' FIGHTER ',
+  ])('uses the exact raw hit die after filtering and catalog refresh %s', async (name) => {
     const user = userEvent.setup()
     const classSource = 'PHB'
     const fighter = makeClassFixture({
-      name: 'Fighter',
-      source: 'PHB',
+      name,
+      source: ' phb ',
       hd: { faces: 10, number: 1 },
     })
     mockClasses = []

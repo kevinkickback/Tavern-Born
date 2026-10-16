@@ -434,8 +434,8 @@ export class DataFilter {
     )
 
     if (filters.sources && filters.sources.length > 0) {
-      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
-      filtered = filtered.filter((c) => sourcesUpper.has(c.source.toUpperCase()))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.trim().toUpperCase()))
+      filtered = filtered.filter((c) => sourcesUpper.has(c.source.trim().toUpperCase()))
       filtered = filtered.map((cls) => ({
         ...cls,
         classFeatures: cls.classFeatures?.filter((feature) => {
