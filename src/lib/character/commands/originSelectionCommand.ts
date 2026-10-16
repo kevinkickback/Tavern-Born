@@ -99,7 +99,7 @@ export function buildInitialCharacter(
       getHitDiceFromClass(selections.classEntity) +
         getAbilityModifier(
           deriveEffectiveAbilityScores(
-            character,
+            { ...character, provenance: ledger },
             selections.race,
             selections.subrace,
             selections.background,

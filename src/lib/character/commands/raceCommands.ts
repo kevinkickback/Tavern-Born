@@ -16,15 +16,19 @@ import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/fea
 import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import {
-  applyRaceAbilityGrants,
+  hasResolvedRaceAbilitySelection,
+  rebuildRaceAbilityGrants,
+  refreshRaceAbilityState,
+} from '@/lib/character/raceAbilityState'
+import {
   applyRaceGrants,
   reconcileRaceChange,
   reconcileSubraceChange,
   resolveRaceAsiChoicesInLedger,
 } from '@/lib/provenance'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
-import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
-import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
+import { getSelectedRaceAbilityChoices } from '@/lib/provenance/raceOwnership'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -38,35 +42,6 @@ export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subra
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
   return deduped.length > 0 ? deduped : undefined
-}
-
-function rebuildRaceAbilityGrants(
-  ledger: ProvenanceLedger,
-  race: Race5e,
-  subrace: Race5e | undefined,
-  mode: 0 | 1,
-): ProvenanceLedger {
-  const selection = {
-    race: race.name,
-    raceSource: race.source,
-    subrace: subrace?.name,
-    subraceSource: subrace?.source,
-  }
-  const isSelectedAbilityOwner = (tag: SourceTag) => isSelectedRaceOwner(tag, selection)
-  return applyRaceAbilityGrants(
-    race,
-    subrace,
-    {
-      ...ledger,
-      abilityBonuses: ledger.abilityBonuses.filter(
-        (record) => !isSelectedAbilityOwner(record.sourceTag),
-      ),
-      choices: ledger.choices.filter(
-        (choice) => choice.domain !== 'abilityBonuses' || !isSelectedAbilityOwner(choice.sourceTag),
-      ),
-    },
-    mode,
-  )
 }
 
 function removeSourceProficiencies(
@@ -374,13 +349,23 @@ export function applyRaceAsiChoicesCommand(
   character: Character,
   ledger: ProvenanceLedger,
   choices: string[][],
+  resolution?: { parentRace: Race5e | undefined; subraceData: Race5e | undefined },
 ): CharacterCommandResult {
+  let refreshPatch: Partial<Character> = {}
+  if (resolution) {
+    if (!hasResolvedRaceAbilitySelection(character, resolution.parentRace, resolution.subraceData))
+      return { characterPatch: {}, provenanceUpdate: ledger }
+    const working = { ...character, provenance: ledger }
+    character = refreshRaceAbilityState(working, resolution.parentRace, resolution.subraceData)
+    if (character !== working) refreshPatch = { raceAsiChoices: character.raceAsiChoices }
+    ledger = character.provenance ?? ledger
+  }
   if (
     !character.race ||
     character.originSystem === '2024' ||
     getSelectedRaceAbilityChoices(ledger, character).length === 0
   )
-    return { characterPatch: {}, provenanceUpdate: ledger }
+    return { characterPatch: refreshPatch, provenanceUpdate: ledger }
   return {
     characterPatch: { raceAsiChoices: choices },
     provenanceUpdate: resolveRaceAsiChoicesInLedger(character, ledger, choices),

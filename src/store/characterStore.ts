@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { type PersistStorage, persist } from 'zustand/middleware'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import {
   duplicateCharacter,
@@ -7,6 +8,7 @@ import {
   getImportedCharacterName,
 } from '@/lib/character/characterTransfer'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
+import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
   CURRENT_CHARACTER_SCHEMA_VERSION,
@@ -15,6 +17,7 @@ import {
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { useGameDataStore } from './gameDataStore'
 
 export { emptyProvenance } from '@/lib/character/createCharacter'
 
@@ -593,3 +596,39 @@ export const useCharacterStore = create<CharacterState>()(
     },
   ),
 )
+
+// Catalog refresh is a system correction independent of the currently visible page.
+// Publish synchronously so an immediate Save captures the coherent relation; the
+// existing reconciliation queue preserves later edits and acknowledges durable writes.
+function reconcileActiveRaceAbilities() {
+  const { activeCharacter, reconcileCharacter } = useCharacterStore.getState()
+  if (!activeCharacter) return
+  const resolution = resolveRaceReference(
+    {
+      name: activeCharacter.race,
+      source: activeCharacter.raceSource,
+      subraceName: activeCharacter.subrace,
+      subraceSource: activeCharacter.subraceSource,
+    },
+    useGameDataStore.getState().gameData?.lookups ?? {},
+  )
+  const refreshed = refreshRaceAbilityState(
+    activeCharacter,
+    resolution.parentRace,
+    resolution.subraceData,
+  )
+  if (refreshed === activeCharacter) return
+  const saved = reconcileCharacter(activeCharacter.id, {
+    raceAsiChoices: refreshed.raceAsiChoices,
+    provenance: refreshed.provenance,
+  })
+  void saved?.catch((error) => console.error('Racial ability reconciliation failed:', error))
+}
+
+useCharacterStore.subscribe((state, previous) => {
+  if (state.activeCharacter !== previous.activeCharacter) reconcileActiveRaceAbilities()
+})
+useGameDataStore.subscribe((state, previous) => {
+  if (state.gameData?.lookups?.racesByKey !== previous.gameData?.lookups?.racesByKey)
+    reconcileActiveRaceAbilities()
+})

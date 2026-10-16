@@ -113,9 +113,10 @@ export function BuildAbilityScoresPage() {
     selectedRace,
     subraceData,
     raceAsiBlockIndex,
+    raceAsiChoices: projectedRaceAsiChoices,
   } = useTotalAbilityScores(character)
 
-  const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
+  const raceAsiChoices: string[][] = projectedRaceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
   const backgroundAbilityEntity = useMemo(
     () =>

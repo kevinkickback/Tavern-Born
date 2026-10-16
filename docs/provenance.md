@@ -274,6 +274,17 @@ leave the draft, modification timestamp and unsaved-change state untouched.
 Selecting the already active distribution is also a no-op and retains assigned bonuses.
 Direct ability-choice calls without a matching current racial block leave the complete draft and
 save state untouched. Known matching records remain usable by pure commands without catalog inputs.
+When exact loaded ability rules change, the shared ability refresh replaces only the selected
+parent/child ability relation. An unchanged owner layout retains its slots. Changed layouts retain
+unique matches by normalized pool membership, count and amount, then compatible selections from a
+sole remaining old/new block within that owner. Ambiguous matches start empty; owner ordinals do not
+identify blocks across a refresh. Rejected or out-of-count choices are discarded, so restoration
+cannot resurrect them. Fixed bonuses follow the current parsed rules without resetting unchanged
+choice blocks. Missing either exact context member freezes the complete saved ability snapshot.
+Calculation, Sources, readiness and PDF project that same refreshed relation. The character store
+acknowledges active-character corrections independently of page navigation; dirty drafts retain the
+correction until explicit Save. Builder choice edits reconcile current rules and intentional slots
+in one command. Repeating coherent refresh preserves references, timestamps and save state.
 Opening the race page or refreshing its catalog does not clear or substitute a saved child.
 Saved selection details resolve the exact current reference even when catalog filters hide it;
 new race and child options remain restricted to the filtered catalog. Child option values retain

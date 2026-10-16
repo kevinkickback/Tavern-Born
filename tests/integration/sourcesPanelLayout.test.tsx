@@ -19,48 +19,56 @@ const dataSourceFixture = vi.hoisted(() => ({
   hasReprints: true,
 }))
 
-vi.mock('@/store/gameDataStore', () => ({
-  useGameDataStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      dataSourceConfig: { type: dataSourceFixture.type },
-      gameData: {
-        sources: [
-          { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
-          { name: "Dungeon Master's Guide", abbreviation: 'DMG', group: 'core' },
-          { name: "Dungeon Master's Guide (2024)", abbreviation: 'XDMG', group: 'core' },
-          {
-            name: 'Monster Manual',
-            abbreviation: 'MM',
-            group: 'core',
-            hasCharacterOptions: false,
-          },
-          { name: "Xanathar's Guide to Everything", abbreviation: 'XGE', group: 'supplement' },
-          { name: "Tasha's Cauldron of Everything", abbreviation: 'TCE', group: 'supplement' },
-          { name: "Sword Coast Adventurer's Guide", abbreviation: 'SCAG', group: 'setting' },
-          {
-            name: 'Eberron: Forge of the Artificer',
-            abbreviation: 'EFA',
-            group: 'setting',
-            minimumRuleset: '2024',
-          },
-        ],
-        races: dataSourceFixture.hasReprints
-          ? [
-              { name: 'Legacy Race', source: 'PHB', reprintedAs: ['Updated Race|XGE'] },
-              { name: 'Updated Race', source: 'XGE' },
-            ]
-          : [],
-        classes: [],
-        backgrounds: [],
-        spells: [],
-        feats: [],
-        items: [],
-        itemsBase: [],
-        classFeatures: [],
-        optionalfeatures: [],
+vi.mock('@/store/gameDataStore', () => {
+  const getState = () => ({
+    dataSourceConfig: { type: dataSourceFixture.type },
+    gameData: {
+      sources: [
+        { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
+        { name: "Dungeon Master's Guide", abbreviation: 'DMG', group: 'core' },
+        { name: "Dungeon Master's Guide (2024)", abbreviation: 'XDMG', group: 'core' },
+        {
+          name: 'Monster Manual',
+          abbreviation: 'MM',
+          group: 'core',
+          hasCharacterOptions: false,
+        },
+        { name: "Xanathar's Guide to Everything", abbreviation: 'XGE', group: 'supplement' },
+        { name: "Tasha's Cauldron of Everything", abbreviation: 'TCE', group: 'supplement' },
+        { name: "Sword Coast Adventurer's Guide", abbreviation: 'SCAG', group: 'setting' },
+        {
+          name: 'Eberron: Forge of the Artificer',
+          abbreviation: 'EFA',
+          group: 'setting',
+          minimumRuleset: '2024',
+        },
+      ],
+      races: dataSourceFixture.hasReprints
+        ? [
+            { name: 'Legacy Race', source: 'PHB', reprintedAs: ['Updated Race|XGE'] },
+            { name: 'Updated Race', source: 'XGE' },
+          ]
+        : [],
+      classes: [],
+      backgrounds: [],
+      spells: [],
+      feats: [],
+      items: [],
+      itemsBase: [],
+      classFeatures: [],
+      optionalfeatures: [],
+    },
+  })
+  return {
+    useGameDataStore: Object.assign(
+      (selector: (state: unknown) => unknown) => selector(getState()),
+      {
+        getState,
+        subscribe: () => () => undefined,
       },
-    }),
-}))
+    ),
+  }
+})
 
 describe('Rules Additional Content panel layout', () => {
   beforeEach(() => {

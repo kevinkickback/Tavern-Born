@@ -1,7 +1,7 @@
 import { act, cleanup, render, renderHook, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
@@ -24,11 +24,79 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
+import {
+  importActiveCharacter,
+  resetCharacterStore,
+  setActiveCharacter,
+} from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { races, selectRace } from '../fixtures/racialAbilityCharacter'
 
 const [dhampir, halfElf, customLineage] = races
+
+test.each([
+  false,
+  true,
+])('Builder edits refreshed exact ability rules and Sources through Save/reopen (child: %s)', async (asChild) => {
+  const old = {
+    name: 'Refresh owner',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str', 'dex'], amount: 2 } }],
+  } as Race5e
+  const next = { ...old, ability: [{ choose: { from: ['con', 'wis'], amount: 1, count: 1 } }] }
+  const parent = { name: 'Parent', source: 'PHB', ability: [{ cha: 1 }] } as Race5e
+  install(asChild ? [{ ...parent, subraces: [old] }] : [old])
+  await importActiveCharacter(
+    selectRace(asChild ? parent : old, 0, [['strength']], asChild ? old : undefined),
+  )
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  act(() => install(asChild ? [{ ...parent, subraces: [next] }] : [next]))
+  await vi.waitFor(() => expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false))
+  const snapshots: Character[] = []
+  const unsubscribe = useCharacterStore.subscribe((state, previous) => {
+    if (state.activeCharacter && state.activeCharacter !== previous.activeCharacter)
+      snapshots.push(state.activeCharacter)
+  })
+  const user = userEvent.setup()
+  await user.click(within(screen.getByTestId('race-ability-choices')).getByRole('combobox'))
+  await user.click(screen.getByRole('option', { name: 'WIS' }))
+  unsubscribe()
+  await user.click(screen.getByRole('button', { name: /^Sources/ }))
+  expect(screen.getByText('WIS +1')).toBeTruthy()
+  expect(screen.queryByText('STR +2')).toBeNull()
+  expect(snapshots).toHaveLength(1)
+  expect(getSelectedRaceAbilityChoices(snapshots[0].provenance!, snapshots[0])).toMatchObject([
+    {
+      chooseCount: 1,
+      amount: 1,
+      optionPool: ['constitution', 'wisdom'],
+      selected: ['wisdom'],
+      status: 'resolved',
+    },
+  ])
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  const reopened = characterPersistenceSchema.parse(
+    JSON.parse(prepareCharacterDownload(useCharacterStore.getState().characters[0]).text),
+  )
+  act(() => {
+    install([])
+    setActiveCharacter(reopened)
+  })
+  expect(getAbilityBonusRows(reopened.provenance).map((row) => row.itemName)).toContain('WIS +1')
+  expect(createCharacterCalculationContext(reopened, {}).abilityScores.racialBonuses).toEqual(
+    asChild ? { charisma: 1, wisdom: 1 } : { wisdom: 1 },
+  )
+  const before = useCharacterStore.getState().activeCharacter
+  act(() => install(asChild ? [{ ...parent, subraces: [next] }] : [next]))
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+})
 
 function install(races: Race5e[]) {
   const data = makeGameDataFixture({ races })

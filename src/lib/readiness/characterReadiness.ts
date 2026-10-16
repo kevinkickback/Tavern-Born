@@ -26,6 +26,7 @@ export function getCharacterReadiness(
   character: Character,
   context: CharacterReadinessContext = {},
 ): CharacterReadinessResult {
+  character = context.calculation?.character ?? character
   const issues: CharacterReadinessIssue[] = [
     ...validateIdentity(character),
     ...validateBaseScores(character),

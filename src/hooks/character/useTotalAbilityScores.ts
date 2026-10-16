@@ -15,6 +15,7 @@ export interface TotalAbilityScoresData
   selectedRace: Race5e | undefined
   subraceData: Race5e | undefined
   raceAsiBlockIndex: 0 | 1
+  raceAsiChoices: string[][] | undefined
   normalizedBackground: { ability?: unknown[] } | undefined
   bgAsiData: EffectiveAbilityScoreData['backgroundAbilityData']
 }
@@ -32,6 +33,7 @@ export function useTotalAbilityScores(
     selectedRace: context?.raceResolution.parentRace,
     subraceData: context?.raceResolution.subraceData,
     raceAsiBlockIndex: (character?.raceAsiBlockIndex ?? 0) as 0 | 1,
+    raceAsiChoices: context?.character.raceAsiChoices ?? character?.raceAsiChoices,
     normalizedRaceSelection: data.normalizedRaceSelection,
     raceAsiData: data.raceAsiData,
     hasDataDrivenRacialBonuses: data.hasDataDrivenRacialBonuses,

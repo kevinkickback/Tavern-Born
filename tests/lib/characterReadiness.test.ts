@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { makeSourceTag } from '@/lib/provenance'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
@@ -398,11 +399,15 @@ describe('getCharacterReadiness', () => {
         { choose: { count: 1, amount: 1, from: ['str', 'dex'] } },
       ],
     } as Race5e
-    const character = makeCharacterFixture({
-      race: testRace.name,
-      raceSource: testRace.source,
-      raceAsiChoices: [['str'], ['str']],
-    })
+    const character = buildInitialCharacter(
+      {
+        initial: makeCharacterFixture(),
+        race: testRace,
+        raceAsiChoices: [['str'], ['str']],
+      },
+      new Map(),
+      () => [],
+    )
     const calculation = createCharacterCalculationContext(character, {
       racesByKey: { 'Test Race|TEST': testRace },
     })
@@ -536,25 +541,32 @@ describe('getCharacterReadiness', () => {
         choiceDiagnostics: [],
       },
     } as Class5e
-    const character = makeCharacterFixture({
-      name: 'Test Character',
-      race: testRace.name,
-      raceSource: testRace.source,
-      classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
-      background: 'Test Background',
-      backgroundSource: 'TEST',
-      portrait: undefined,
-      variantRules: { abilityScoreMethod: 'standard-array' },
-      raceAsiChoices: [['strength'], ['dexterity']],
-      abilityScores: {
-        strength: 15,
-        dexterity: 14,
-        constitution: 13,
-        intelligence: 12,
-        wisdom: 10,
-        charisma: 8,
+    const character = buildInitialCharacter(
+      {
+        initial: makeCharacterFixture({
+          name: 'Test Character',
+          race: testRace.name,
+          raceSource: testRace.source,
+          classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
+          background: 'Test Background',
+          backgroundSource: 'TEST',
+          portrait: undefined,
+          variantRules: { abilityScoreMethod: 'standard-array' },
+          abilityScores: {
+            strength: 15,
+            dexterity: 14,
+            constitution: 13,
+            intelligence: 12,
+            wisdom: 10,
+            charisma: 8,
+          },
+        }),
+        race: testRace,
+        raceAsiChoices: [['strength'], ['dexterity']],
       },
-    })
+      new Map(),
+      () => [],
+    )
     const calculation = createCharacterCalculationContext(character, {
       racesByKey: { [`${testRace.name}|${testRace.source}`]: testRace },
       classesByKey: { [`${testClass.name}|${testClass.source}`]: testClass },
