@@ -8,6 +8,7 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
+import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
@@ -283,6 +284,11 @@ export function createCharacterCalculationContext(
     character,
     raceResolution.parentRace,
     raceResolution.subraceData,
+  )
+  character = refreshSpecialSpellKinds(
+    character,
+    primaryLookups.spellsByKey,
+    rawLookups.spellsByKey,
   )
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },

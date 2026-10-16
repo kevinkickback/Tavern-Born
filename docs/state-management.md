@@ -164,6 +164,13 @@ Canonical state lives in `character.spells.spellProfiles`.
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
 `useSpellProvenanceMutations` exposes only class-page per-level selection/replacement adapters.
 
+Each normalized target occurs once in `special:unrestricted`, in either cantrips or known spells.
+Available exact spell metadata determines its current kind for all special owners together. Pure
+views use that projection; active catalog corrections use acknowledged reconciliation and preserve
+dirty drafts until explicit Save. Missing exact data retains the saved kind. Bare-name manual values
+remain unresolved and never borrow a printing or kind from a catalog. Class and racial profiles
+retain independent memberships, including conflicting saved kinds when exact metadata is absent.
+
 ## Proficiencies and equipment
 
 `character.proficiencies` is the canonical list model. Expertise must be a subset of skill
@@ -204,7 +211,7 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-Schema 9 uses canonical owned action IDs, exact manual/PDF selection matching, and no earlier-ID
+The current format retains canonical owned action IDs, exact manual/PDF selection matching, and no earlier-ID
 compatibility. Schema 8 prerelease saves are rejected by the version cutoff; no ID conversion is
 performed. See [automatic feature actions](provenance.md#automatic-feature-actions).
 
@@ -251,10 +258,15 @@ suite and descriptor Clear work from saved membership without missing-data infer
 usage and independent preparation remain mutable and retain their existing shapes.
 
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
-supported. Schema 2–8 characters must be recreated; merely relabeling a version cannot establish
+supported. Schema 2–9 characters must be recreated; merely relabeling a version cannot establish
 native ownership. Incompatible originals remain untouched in durable quarantine and exportable
 through hydration, rejected imports in either order, retry and later successful library writes.
 There are no prerelease converters, flattened-profile adapters or age-based rejection.
+
+Schema 10 rejects duplicate special targets within or across kind lists and mismatched fixed
+membership/nonmanual special grants without loading catalogs. It adds no per-owner historical kind
+or conversion. Format 9 originals remain untouched and exportable through the same quarantine and
+recovery paths; changing their version alone cannot legalize contradictory memberships.
 
 For a breaking change, update together:
 

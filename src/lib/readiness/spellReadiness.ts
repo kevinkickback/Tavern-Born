@@ -8,6 +8,7 @@ import {
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
+import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
@@ -93,6 +94,7 @@ export function validateSpells(
   calculation: CharacterCalculationContext,
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): CharacterReadinessIssue[] {
+  character = refreshSpecialSpellKinds(character, spellsByKey, calculation.lookups.raw.spellsByKey)
   const classMap = new Map(
     calculation.classes.map((classData) => [
       toClassProfileId(classData.name, classData.source),

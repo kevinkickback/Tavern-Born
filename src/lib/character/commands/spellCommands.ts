@@ -29,14 +29,21 @@ import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
-import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
+import { isFixedProfileSpell, isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
 import {
   buildClassProfileLabel,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
 import { isSpellOnClassList } from '@/lib/calculations/spellUtils'
+import {
+  getSpecialSpellKind,
+  refreshSpecialSpellKinds,
+  resolveSpecialSpellKind,
+  setSpecialSpellKind,
+} from '@/lib/character/specialSpellState'
 import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -424,6 +431,7 @@ export function addSpellToCharacter(
     sourceType?: 'class' | 'subclass' | 'feat' | 'manual'
     grantedAtLevel?: number
     attributionMode?: 'exact' | 'inferred-lowest-eligible'
+    spellsByKey?: Readonly<Record<string, Spell5e>>
   },
 ): SpellCommandResult {
   let targetProfileId = profileId
@@ -437,10 +445,27 @@ export function addSpellToCharacter(
     'racial'
   )
     return { characterPatch: {}, provenanceUpdate: ledger }
+  const targetProfile = character.spells.spellProfiles.find(
+    (profile) => profile.id === targetProfileId,
+  )
+  if (
+    targetProfile?.type === 'special' &&
+    (!getSpellNameKey(spellName) ||
+      (spellName.includes('|') && !isSourceQualifiedSpellReference(spellName)))
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== targetProfileId) return profile
 
     const list = spellKind === 'cantrip' ? 'cantrips' : 'spellsKnown'
+    if (profile.type === 'special')
+      return setSpecialSpellKind(
+        profile,
+        spellName,
+        resolveSpecialSpellKind(spellName, options?.spellsByKey) ??
+          getSpecialSpellKind(profile, spellName) ??
+          list,
+      )
     if (profile[list].some((name) => getSpellNameKey(name) === getSpellNameKey(spellName))) {
       return profile
     }
@@ -503,19 +528,6 @@ export function removeSpellFromCharacter(
     (profile) =>
       profile.type !== 'racial' && (!options?.profileId || profile.id === options.profileId),
   )
-  const updatedProfiles = character.spells.spellProfiles.map((profile) => {
-    if (!affectedProfiles.includes(profile)) return profile
-    return {
-      ...profile,
-      ...(!options?.spellKind || options.spellKind === 'cantrip'
-        ? { cantrips: profile.cantrips.filter((reference) => !matchesReference(reference)) }
-        : {}),
-      ...(!options?.spellKind || options.spellKind === 'spell'
-        ? { spellsKnown: profile.spellsKnown.filter((reference) => !matchesReference(reference)) }
-        : {}),
-      preparedSpells: profile.preparedSpells.filter((reference) => !matchesReference(reference)),
-    }
-  })
   const retainedTags = (ledger.spells[normKey] ?? []).filter((tag) => {
     if (
       target.source &&
@@ -531,6 +543,31 @@ export function removeSpellFromCharacter(
   const spells = { ...ledger.spells }
   if (retainedTags.length) spells[normKey] = retainedTags
   else delete spells[normKey]
+  const updatedProfiles = character.spells.spellProfiles.map((profile) => {
+    if (!affectedProfiles.includes(profile)) return profile
+    const keep = (reference: string) =>
+      !matchesReference(reference) ||
+      (profile.type === 'special' &&
+        retainedTags.some(
+          (tag) =>
+            isSpecialSpellGrant(tag) &&
+            getSpellReferenceKey(normKey, tag.grantSource ?? '') ===
+              getSpellReferenceKey(reference),
+        ))
+    return {
+      ...profile,
+      ...(!options?.spellKind || options.spellKind === 'cantrip' || profile.type === 'special'
+        ? { cantrips: profile.cantrips.filter(keep) }
+        : {}),
+      ...(!options?.spellKind || options.spellKind === 'spell' || profile.type === 'special'
+        ? { spellsKnown: profile.spellsKnown.filter(keep) }
+        : {}),
+      preparedSpells: profile.preparedSpells.filter(keep),
+      ...(profile.type === 'special'
+        ? { alwaysPreparedSpells: profile.alwaysPreparedSpells?.filter(keep) }
+        : {}),
+    }
+  })
   return {
     characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: reconcileNativeRacialSpellLedger({ ...ledger, spells }, updatedProfiles),
@@ -603,9 +640,21 @@ export function setProfileSpells(
   profileId: string,
   cantrips: string[],
   spellsKnown: string[],
+  spellsByKey?: Readonly<Record<string, Spell5e>>,
 ): SpellCommandResult {
   const previous = character.spells.spellProfiles.find((profile) => profile.id === profileId)
   if (previous?.type === 'racial') return { characterPatch: {}, provenanceUpdate: ledger }
+  const requestedCantrips = new Set(cantrips.map((reference) => getSpellReferenceKey(reference)))
+  if (
+    previous?.type === 'special' &&
+    (spellsKnown.some((reference) => requestedCantrips.has(getSpellReferenceKey(reference))) ||
+      [...cantrips, ...spellsKnown].some(
+        (reference) =>
+          !getSpellNameKey(reference) ||
+          (reference.includes('|') && !isSourceQualifiedSpellReference(reference)),
+      ))
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
   const retainTargets = (references: string[], kind: 'cantrips' | 'spellsKnown') => {
     if (previous?.type !== 'special') return dedupeSpellNames(references)
     const fixed = previous[kind].filter((reference) =>
@@ -613,7 +662,14 @@ export function setProfileSpells(
     )
     return [
       ...new Map(
-        [...references, ...fixed].map((reference) => [getSpellReferenceKey(reference), reference]),
+        [
+          ...references.filter(
+            (reference) =>
+              !isFixedProfileSpell(previous, ledger, reference) ||
+              getSpecialSpellKind(previous, reference) === kind,
+          ),
+          ...fixed,
+        ].map((reference) => [getSpellReferenceKey(reference), reference]),
       ).values(),
     ]
   }
@@ -642,7 +698,7 @@ export function setProfileSpells(
     )
     const selectedTargets = [...dedupedCantrips, ...dedupedSpellsKnown]
     const selectedKeys = new Set(
-      selectedTargets.map((reference) => getSpellReferenceKey(reference)),
+      [...cantrips, ...spellsKnown].map((reference) => getSpellReferenceKey(reference)),
     )
     const removedTargets = new Set([...previousTargets].filter((key) => !selectedKeys.has(key)))
     provenanceUpdate = {
@@ -667,7 +723,13 @@ export function setProfileSpells(
         )
   }
   return {
-    characterPatch: createSpellProfilePatch(character, updatedProfiles),
+    characterPatch: createSpellProfilePatch(
+      character,
+      refreshSpecialSpellKinds(
+        { ...character, spells: { ...character.spells, spellProfiles: updatedProfiles } },
+        spellsByKey,
+      ).spells.spellProfiles,
+    ),
     provenanceUpdate,
   }
 }

@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Exact racial ability refresh measures 5,646,601 renderer bytes. Independently reviewed
-  // shared projection and synchronous correction use the smallest whole-KiB allowance.
-  rendererCode: 5515 * KIB,
-  // The same measured artifact has 484,208 initial script bytes. Other limits and
-  // normal enforcement remain unchanged; avoid a separate rules parser or async Save gap.
-  initialRendererScript: 473 * KIB,
+  // Shared special-spell kind projection, strict admission and acknowledged correction
+  // measure 5,649,221 renderer bytes; use the smallest reviewed whole-KiB allowance.
+  rendererCode: 5517 * KIB,
+  // The same measured artifact has 486,661 initial script bytes. Other limits and
+  // normal enforcement remain unchanged; avoid catalog guessing or an async Save gap.
+  initialRendererScript: 476 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

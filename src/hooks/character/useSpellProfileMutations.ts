@@ -56,6 +56,7 @@ export function useSpellProfileMutations(
   const calculationContext = useCharacterCalculationContext(character)
   const filtered = useFilteredGameData()
   const spellsByKey = useMemo(() => buildSpellLookup(filtered.spells), [filtered.spells])
+  const currentSpellLookup = calculationContext?.lookups.raw.spellsByKey ?? spellsByKey
 
   const synchronized = useMemo(() => {
     if (!character) return null
@@ -99,17 +100,20 @@ export function useSpellProfileMutations(
       const sourceMeta = profile
         ? getSpellSourceMeta(profile)
         : { sourceType: 'manual' as const, sourceName: 'User Choice' }
-      const result = addSpellToCharacter(
-        commandCharacter,
-        currentLedger,
-        name,
-        kind,
-        profileId,
-        sourceMeta,
-      )
+      const result = addSpellToCharacter(commandCharacter, currentLedger, name, kind, profileId, {
+        ...sourceMeta,
+        spellsByKey: currentSpellLookup,
+      })
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      spellProfiles,
+      applySpellCommand,
+      currentSpellLookup,
+    ],
   )
 
   const setProfileSpells = useCallback(
@@ -121,10 +125,11 @@ export function useSpellProfileMutations(
         profileId,
         cantrips,
         spellsKnown,
+        currentSpellLookup,
       )
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [character, commandCharacter, currentLedger, applySpellCommand, currentSpellLookup],
   )
 
   const removeSpellFromProfile = useCallback(

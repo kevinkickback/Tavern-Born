@@ -17,9 +17,15 @@ const feat = { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVa
 const options = { spells: ['Toll the Dead|XGE'] }
 const requested = makeSpellFixture({ name: 'Toll the Dead', source: 'XGE', level: 0 })
 
-function install() {
+function install(target = 'XGE') {
   const original = makeNonracialSourceCharacter()
-  const result = commitFeatOptionsCommand(original, original.provenance, feat, options, [requested])
+  const result = commitFeatOptionsCommand(
+    original,
+    original.provenance,
+    feat,
+    { spells: [`Toll the Dead|${target}`] },
+    [{ ...requested, source: target }],
+  )
   const character = characterPersistenceSchema.parse({
     ...original,
     ...result.characterPatch,
@@ -141,4 +147,44 @@ test('rejected feat edits leave the whole draft, timestamp and dirty status unch
   )
   expect(useCharacterStore.getState().activeCharacter).toBe(before)
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+})
+
+test('the actual Spells page follows a refreshed kind and Clear unlocks its remaining manual owner', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800)
+  install('XPHB')
+  const data = makeGameDataFixture({ spells: [{ ...requested, source: 'XPHB', level: 1 }] })
+  await act(async () => {
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  render(
+    <TooltipProvider>
+      <MemoryRouter initialEntries={['/spells?view=bonus']}>
+        <SpellsPage />
+      </MemoryRouter>
+    </TooltipProvider>,
+  )
+  const after = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+  expect(
+    after.spells.spellProfiles.find((profile) => profile.type === 'special')?.spellsKnown,
+  ).toEqual(['Toll the Dead|XPHB'])
+  expect(screen.queryByRole('button', { name: 'Remove Toll the Dead|XPHB' })).toBeNull()
+  expect(screen.getAllByLabelText('Granted spell — cannot be removed')).toHaveLength(1)
+  expect(screen.queryByText('Cantrips')).toBeNull()
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  const { result } = renderHook(useFeatProvenanceMutations)
+  act(() => result.current.editFeatWithOptions(feat, { spells: ['Toll the Dead|XPHB'] }, {}, []))
+  expect(
+    useCharacterStore
+      .getState()
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.type === 'special')
+      ?.fixedSpells,
+  ).toEqual([])
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Toll the Dead|XPHB' }))
+  const removed = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+  expect(
+    removed.spells.spellProfiles.find((profile) => profile.type === 'special')?.spellsKnown,
+  ).toEqual([])
+  expect(removed.provenance.spells['toll the dead'].map((tag) => tag.sourceType)).toEqual(['class'])
 })

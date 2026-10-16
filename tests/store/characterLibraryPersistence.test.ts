@@ -17,7 +17,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
@@ -29,6 +29,63 @@ const reader = createIdbStorage<{ characters: Character[]; unsupportedCharacters
 const readCharacters = async () => (await reader.getItem('character-storage'))?.state.characters
 
 describe('acknowledged character library in IndexedDB', () => {
+  test.each([
+    0, 1,
+  ])('passive special spell refresh to level %s survives absence and strict durable reopen', async (level) => {
+    useGameDataStore.setState({ gameData: null })
+    const original = makeNonracialSourceCharacter()
+    const feat = {
+      name: 'Magic Initiate',
+      source: 'XPHB',
+      fixedGrant: true,
+      grantVariant: 'cleric',
+    }
+    const reference = 'Toll the Dead|XPHB'
+    const old = makeSpellFixture({
+      name: 'Toll the Dead',
+      source: 'XPHB',
+      level: level === 0 ? 1 : 0,
+    })
+    const configured = commitFeatOptionsCommand(
+      original,
+      original.provenance,
+      feat,
+      { spells: [reference] },
+      [old],
+    )
+    const [imported] = await useCharacterStore
+      .getState()
+      .importCharacters([
+        { ...original, ...configured.characterPatch, provenance: configured.provenanceUpdate },
+      ])
+    const neighbor = await useCharacterStore
+      .getState()
+      .createNewCharacter({ name: 'Unrelated library entry' })
+    useCharacterStore.getState().setActiveCharacter(imported.id)
+    const data = makeGameDataFixture({ spells: [{ ...old, level }] })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    const saved = useCharacterStore.getState().saveActiveCharacter()
+    useGameDataStore.setState({ gameData: null })
+    await saved
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(imported.id)
+    const reopened = useCharacterStore.getState().activeCharacter!
+    const profile = reopened.spells.spellProfiles.find((profile) => profile.type === 'special')!
+    expect(profile.cantrips).toEqual(level === 0 ? [reference] : [])
+    expect(profile.spellsKnown).toEqual(level === 1 ? [reference] : [])
+    expect(profile.fixedSpells).toEqual([reference])
+    expect(reopened.provenance.spells).toEqual(imported.provenance.spells)
+    expect(
+      reopened.spells.spellProfiles.find((profile) => profile.type === 'class')?.cantrips,
+    ).toEqual(['Toll the Dead|XGE'])
+    expect(
+      useCharacterStore.getState().characters.find((character) => character.id === neighbor.id),
+    ).toEqual(neighbor)
+    expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+  })
   test('passive exact ability refresh is durable before metadata disappears and reopens without a page', async () => {
     const old = {
       name: 'Durable refresh',
@@ -360,6 +417,13 @@ describe('acknowledged character library in IndexedDB', () => {
       missingTarget,
       { ...sharedSetup, schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION - 1 },
       { ...sharedSetup, id: 'relabeled-shared-setup' },
+      (() => {
+        const contradictory = makeNonracialSourceCharacter()
+        contradictory.spells.spellProfiles.find(
+          (profile) => profile.type === 'special',
+        )!.spellsKnown = ['Toll the Dead|XPHB']
+        return contradictory
+      })(),
     ]
     const before = structuredClone(originals)
     const rawStorage = createIdbStorage<{

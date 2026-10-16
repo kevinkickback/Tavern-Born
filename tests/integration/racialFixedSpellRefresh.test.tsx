@@ -12,13 +12,13 @@ import {
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
+import { addSpellGrant, applyFeatGrant, makeSourceTag } from '@/lib/provenance'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
-import type { SpellProfile } from '@/types/character'
+import type { Character, SpellProfile } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
@@ -54,6 +54,23 @@ function native(childGrants = false, originSystem: '2014' | '2024' = '2014') {
 
 function racial(profiles: SpellProfile[]) {
   return profiles.find((profile) => profile.type === 'racial')!
+}
+
+function independentFixedSpell(character: Character): Character {
+  const feat = { name: 'Independent Feat', source: 'OTHER', fixedGrant: true }
+  const provenance = applyFeatGrant(character.provenance, feat.name, feat.source, false)
+  const configured = commitFeatOptionsCommand(
+    { ...character, provenance },
+    provenance,
+    feat,
+    { spells: ['Light|TCE'] },
+    [makeSpellFixture({ name: 'Light', source: 'TCE', level: 0 })],
+  )
+  return characterPersistenceSchema.parse({
+    ...character,
+    ...configured.characterPatch,
+    provenance: configured.provenanceUpdate,
+  })
 }
 
 function install(races: Race5e[]) {
@@ -111,14 +128,10 @@ test.each(
     'special:unrestricted',
     { sourceType: 'manual', sourceName: 'User Choice' },
   )
-  const character = characterPersistenceSchema.parse({
+  const character = independentFixedSpell({
     ...initial,
     ...added.characterPatch,
-    provenance: addSpellGrant(
-      added.provenanceUpdate,
-      'Light|TCE',
-      makeSourceTag('feat', 'Independent Feat', 'fixed', 'OTHER'),
-    ),
+    provenance: added.provenanceUpdate,
   })
   setActiveCharacter(character)
   const original = structuredClone(character)
@@ -366,7 +379,8 @@ test.each([
 })
 
 test('PDF racial refresh preserves independent saved class and special preparation state', () => {
-  const { character, child } = native()
+  const { character: initial, child } = native()
+  const character = independentFixedSpell(initial)
   character.spells.spellProfiles.push({
     id: 'class:Unresolved|OTHER',
     type: 'class',

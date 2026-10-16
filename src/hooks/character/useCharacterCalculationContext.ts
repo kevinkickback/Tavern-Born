@@ -5,6 +5,7 @@ import {
   buildClassLookup,
   buildFeatLookup,
   buildRaceLookup,
+  buildSpellLookup,
 } from '@/lib/5etools/lookups'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
@@ -40,6 +41,7 @@ export function useCharacterCalculationContext(
         ...(filteredData.itemsBase ?? []),
       ]),
       racesByKey: buildRaceLookup(filteredData.races ?? []),
+      spellsByKey: buildSpellLookup(filteredData.spells ?? []),
     }
     const rawLookups = {
       backgroundsByKey: rawLookupSet?.backgroundsByKey ?? {},
@@ -47,6 +49,7 @@ export function useCharacterCalculationContext(
       featsByKey: rawLookupSet?.featsByKey ?? {},
       itemLookup: rawLookupSet?.itemLookup,
       racesByKey: rawLookupSet?.racesByKey ?? {},
+      spellsByKey: rawLookupSet?.spellsByKey ?? {},
     }
     const result = createCharacterCalculationContext(character, primaryLookups, rawLookups)
     let byData = calculationCache.get(character)

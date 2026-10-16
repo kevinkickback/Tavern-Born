@@ -24,10 +24,109 @@ import { useCharacterStore, validateCharacterData } from '@/store/characterStore
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
 
 describe('characterStore', () => {
+  describe('loaded special spell reconciliation', () => {
+    const special = (character: ReturnType<typeof makeNonracialSourceCharacter>) =>
+      character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+    const install = (level: number) => {
+      const gameData = makeGameDataFixture({
+        spells: [makeSpellFixture({ name: 'Toll the Dead', source: 'XPHB', level })],
+      })
+      useGameDataStore.setState({
+        gameData: { ...gameData, lookups: buildGameDataLookups(gameData) },
+      })
+    }
+    const start = async () => {
+      useGameDataStore.setState({ gameData: null })
+      const [character] = await useCharacterStore
+        .getState()
+        .importCharacters([makeNonracialSourceCharacter()])
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      storageMocks.setItem.mockClear()
+      return character
+    }
+
+    test('dirty corrections wait for Save, retain later edits, and do not follow a selection switch', async () => {
+      const original = await start()
+      const neighbor = await useCharacterStore.getState().createNewCharacter({ name: 'Neighbor' })
+      storageMocks.setItem.mockClear()
+      useCharacterStore.getState().updateCharacter(original.id, { name: 'Unsaved name' })
+      install(1)
+      expect(special(useCharacterStore.getState().activeCharacter!).spellsKnown).toEqual([
+        'Toll the Dead|XPHB',
+      ])
+      expect(special(useCharacterStore.getState().characters[0]).cantrips).toEqual([
+        'Toll the Dead|XPHB',
+      ])
+      expect(storageMocks.setItem).not.toHaveBeenCalled()
+      let finish: () => void = () => undefined
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve
+          }),
+      )
+      const saved = useCharacterStore.getState().saveActiveCharacter()
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      useCharacterStore.getState().updateCharacter(original.id, { name: 'Later edit' })
+      install(0)
+      finish()
+      await saved
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe('Later edit')
+      expect(special(useCharacterStore.getState().activeCharacter!).cantrips).toEqual([
+        'Toll the Dead|XPHB',
+      ])
+      expect(special(useCharacterStore.getState().characters[0]).spellsKnown).toEqual([
+        'Toll the Dead|XPHB',
+      ])
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+      useGameDataStore.setState({ gameData: null })
+      await useCharacterStore.getState().saveActiveCharacter()
+      useCharacterStore.getState().setActiveCharacter(neighbor.id)
+      install(1)
+      expect(useCharacterStore.getState().activeCharacter?.id).toBe(neighbor.id)
+      expect(special(useCharacterStore.getState().characters[0]).cantrips).toEqual([
+        'Toll the Dead|XPHB',
+      ])
+      useGameDataStore.setState({ gameData: null })
+    })
+
+    test('failed passive correction is retryable and same-kind metadata is a no-op', async () => {
+      await start()
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        const before = useCharacterStore.getState()
+        install(0)
+        expect(useCharacterStore.getState()).toBe(before)
+        expect(storageMocks.setItem).not.toHaveBeenCalled()
+        storageMocks.setItem.mockRejectedValueOnce(new Error('Spell refresh storage failure'))
+        install(1)
+        await vi.waitFor(() =>
+          expect(log).toHaveBeenCalledWith('Rule reconciliation failed:', expect.any(Error)),
+        )
+        expect(special(useCharacterStore.getState().characters[0]).cantrips).toEqual([
+          'Toll the Dead|XPHB',
+        ])
+        expect(special(useCharacterStore.getState().activeCharacter!).spellsKnown).toEqual([
+          'Toll the Dead|XPHB',
+        ])
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+        useGameDataStore.setState({ gameData: null })
+        await useCharacterStore.getState().saveActiveCharacter()
+        expect(special(useCharacterStore.getState().characters[0]).spellsKnown).toEqual([
+          'Toll the Dead|XPHB',
+        ])
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+      } finally {
+        useGameDataStore.setState({ gameData: null })
+        log.mockRestore()
+      }
+    })
+  })
   describe('loaded racial ability reconciliation', () => {
     const race = {
       name: 'Queued refresh',
@@ -97,10 +196,7 @@ describe('characterStore', () => {
         storageMocks.setItem.mockRejectedValueOnce(new Error('Storage unavailable'))
         install(1)
         await vi.waitFor(() =>
-          expect(log).toHaveBeenCalledWith(
-            'Racial ability reconciliation failed:',
-            expect.any(Error),
-          ),
+          expect(log).toHaveBeenCalledWith('Rule reconciliation failed:', expect.any(Error)),
         )
         expect(useCharacterStore.getState().characters[0].provenance.choices[0].amount).toBe(2)
         expect(useCharacterStore.getState().activeCharacter?.provenance.choices[0].amount).toBe(1)
