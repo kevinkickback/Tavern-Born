@@ -34,6 +34,7 @@ vi.mock('@/lib/storage/dataCache', () => ({
   computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 function makeGameDataFixture(): GameData {
@@ -88,6 +89,16 @@ describe('gameDataStore', () => {
       cacheStatus: 'unknown',
       hasHydrated: false,
     })
+  })
+
+  test('a supplied empty lookup map remains authoritative and retains indexed data identity', () => {
+    const data = makeGameDataFixture()
+    data.lookups = buildGameDataLookups(data)
+    const indexes = data.lookups
+    useGameDataStore.getState().setGameData(data)
+    expect(useGameDataStore.getState().gameData).toBe(data)
+    expect(useGameDataStore.getState().gameData?.lookups).toBe(indexes)
+    expect(indexes.spellsByKey).toEqual({})
   })
 
   test('loadGameData foreground success updates data and cache status', async () => {

@@ -6,6 +6,7 @@ import {
   loadGameDataSourceStack,
 } from '@/lib/5etools'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   clearGameDataCache,
   computeGameDataFingerprint,
@@ -177,7 +178,10 @@ export const useGameDataStore = create<GameDataState>()(
       cacheStatus: 'unknown',
       hasHydrated: false,
 
-      setGameData: (data) => set({ gameData: data }),
+      setGameData: (data) =>
+        set({
+          gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
+        }),
       setCacheStatus: (status) => set({ cacheStatus: status }),
       setDataSourceConfig: (config) => set({ dataSourceConfig: config }),
       setLoading: (loading) => set({ isLoading: loading }),

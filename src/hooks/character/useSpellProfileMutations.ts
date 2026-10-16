@@ -56,7 +56,11 @@ export function useSpellProfileMutations(
   const calculationContext = useCharacterCalculationContext(character)
   const filtered = useFilteredGameData()
   const spellsByKey = useMemo(() => buildSpellLookup(filtered.spells), [filtered.spells])
-  const currentSpellLookup = calculationContext?.lookups.raw.spellsByKey ?? spellsByKey
+  const rawSpellLookup = calculationContext?.lookups.raw.spellsByKey
+  const currentSpellLookup = useMemo(
+    () => ({ ...rawSpellLookup, ...spellsByKey }),
+    [rawSpellLookup, spellsByKey],
+  )
 
   const synchronized = useMemo(() => {
     if (!character) return null

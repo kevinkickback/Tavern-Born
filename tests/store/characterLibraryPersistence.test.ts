@@ -29,9 +29,12 @@ const reader = createIdbStorage<{ characters: Character[]; unsupportedCharacters
 const readCharacters = async () => (await reader.getItem('character-storage'))?.state.characters
 
 describe('acknowledged character library in IndexedDB', () => {
-  test.each([
-    0, 1,
-  ])('passive special spell refresh to level %s survives absence and strict durable reopen', async (level) => {
+  test.each(
+    [0, 1].flatMap((level) => [false, true].map((indexed) => ({ level, indexed }))),
+  )('passive special spell refresh $level, indexed=$indexed survives absence and strict durable reopen', async ({
+    level,
+    indexed,
+  }) => {
     useGameDataStore.setState({ gameData: null })
     const original = makeNonracialSourceCharacter()
     const feat = {
@@ -63,7 +66,10 @@ describe('acknowledged character library in IndexedDB', () => {
       .createNewCharacter({ name: 'Unrelated library entry' })
     useCharacterStore.getState().setActiveCharacter(imported.id)
     const data = makeGameDataFixture({ spells: [{ ...old, level }] })
-    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    if (indexed) data.lookups = buildGameDataLookups(data)
+    useGameDataStore.getState().setGameData(data)
+    expect(useGameDataStore.getState().gameData === data).toBe(indexed)
+    if (!indexed) expect(data.lookups).toBeUndefined()
     const saved = useCharacterStore.getState().saveActiveCharacter()
     useGameDataStore.setState({ gameData: null })
     await saved

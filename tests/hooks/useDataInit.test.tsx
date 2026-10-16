@@ -26,12 +26,13 @@ vi.mock('sonner', () => ({
 
 import { toast } from 'sonner'
 import { useDataInit } from '@/hooks/data/useDataInit'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { isCacheForSource, isCacheStale, readGameDataCache } from '@/lib/storage/dataCache'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 function makeGameData(): GameData {
-  return {
+  const data: GameData = {
     races: [],
     classes: [],
     backgrounds: [],
@@ -56,6 +57,7 @@ function makeGameData(): GameData {
     organizations: [],
     sources: [],
   }
+  return { ...data, lookups: buildGameDataLookups(data) }
 }
 
 function resetGameDataStore() {

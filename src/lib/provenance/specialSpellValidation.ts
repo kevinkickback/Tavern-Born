@@ -39,7 +39,12 @@ export function getInvalidSpecialSpellPaths(character: Character): Array<Array<s
   const fixed = new Set<string>()
   for (const [i, reference] of (profile.fixedSpells ?? []).entries()) {
     const key = getSpellReferenceKey(reference)
-    if (fixed.has(key) || !seen.has(key) || !ownedFixed.has(key))
+    if (
+      !isSourceQualifiedSpellReference(reference) ||
+      fixed.has(key) ||
+      !seen.has(key) ||
+      !ownedFixed.has(key)
+    )
       invalid.push([...path, 'fixedSpells', i])
     fixed.add(key)
   }

@@ -402,6 +402,11 @@ test('format10 rejects contradictory special kind and fixed-owner state without 
     (c: Character) => {
       special(c).fixedSpells?.push(reference)
     },
+    ...['Toll the Dead|XPHB|literal', 'Toll the Dead|XPHB|', 'Toll the Dead|XPHB|OTHER'].map(
+      (reference) => (c: Character) => {
+        special(c).fixedSpells = [reference]
+      },
+    ),
   ]) {
     const candidate = structuredClone(configured)
     mutate(candidate)
@@ -412,4 +417,13 @@ test('format10 rejects contradictory special kind and fixed-owner state without 
   expect(characterPersistenceSchema.safeParse({ ...configured, schemaVersion: 9 }).success).toBe(
     false,
   )
+  const alias = structuredClone(configured)
+  special(alias).fixedSpells = ['{@spell Toll the Dead|XPHB|Display alias}']
+  expect(characterPersistenceSchema.safeParse(alias).success).toBe(true)
+  const cleared = apply(
+    alias,
+    editFeatOptionsCommand(alias, alias.provenance, feat, options, {}, []),
+  )
+  expect(special(cleared).fixedSpells).toEqual([])
+  expect(special(cleared).cantrips).toEqual([reference])
 })

@@ -15,9 +15,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
   // Shared special-spell kind projection, strict admission and acknowledged correction
-  // measure 5,649,221 renderer bytes; use the smallest reviewed whole-KiB allowance.
+  // measure 5,649,294 renderer bytes; use the smallest reviewed whole-KiB allowance.
   rendererCode: 5517 * KIB,
-  // The same measured artifact has 486,661 initial script bytes. Other limits and
+  // The same measured artifact has 486,700 initial script bytes. Other limits and
   // normal enforcement remain unchanged; avoid catalog guessing or an async Save gap.
   initialRendererScript: 476 * KIB,
   initialStylesheet: 185 * KIB,

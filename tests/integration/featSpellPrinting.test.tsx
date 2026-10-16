@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
+import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { commitFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
@@ -187,4 +188,56 @@ test('the actual Spells page follows a refreshed kind and Clear unlocks its rema
     removed.spells.spellProfiles.find((profile) => profile.type === 'special')?.spellsKnown,
   ).toEqual([])
   expect(removed.provenance.spells['toll the dead'].map((tag) => tag.sourceType)).toEqual(['class'])
+})
+
+test.each(
+  [0, 1].flatMap((level) => ['add', 'bulk'].map((action) => ({ level, action }))),
+)('cached missing-index metadata $level governs actual $action edits', async ({
+  level,
+  action,
+}) => {
+  const original = characterPersistenceSchema.parse(makeNonracialSourceCharacter())
+  useCharacterStore.setState({
+    characters: [original],
+    activeCharacter: original,
+    activeCharacterId: original.id,
+    isActiveCharacterDirty: false,
+  })
+  const data = makeGameDataFixture({
+    spells: [makeSpellFixture({ name: 'Light', source: 'XPHB', level })],
+  })
+  useGameDataStore.getState().setGameData(data)
+  expect(data.lookups).toBeUndefined()
+  expect(useGameDataStore.getState().gameData?.spells).toBe(data.spells)
+  const { result } = renderHook(() => {
+    const slots = useSpellSlots()
+    return useSpellProfileMutations(slots.spellProfiles, slots.spellcastingDetailByProfileId)
+  })
+  act(() => {
+    if (action === 'add')
+      result.current.addSpellToProfile(
+        'special:unrestricted',
+        'Light|XPHB',
+        level === 0 ? 'spell' : 'cantrip',
+      )
+    else
+      result.current.setProfileSpells(
+        'special:unrestricted',
+        ['Toll the Dead|XPHB', ...(level === 1 ? ['Light|XPHB'] : [])],
+        level === 0 ? ['Light|XPHB'] : [],
+      )
+  })
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  useGameDataStore.getState().setGameData(makeGameDataFixture())
+  const saved = characterPersistenceSchema.parse(useCharacterStore.getState().characters[0])
+  const profile = saved.spells.spellProfiles.find((profile) => profile.type === 'special')!
+  expect(profile.cantrips).toEqual(
+    level === 0 ? ['Toll the Dead|XPHB', 'Light|XPHB'] : ['Toll the Dead|XPHB'],
+  )
+  expect(profile.spellsKnown).toEqual(level === 1 ? ['Light|XPHB'] : [])
+  expect(saved.provenance.spells.light).toEqual([
+    expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+  ])
 })

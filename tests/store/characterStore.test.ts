@@ -32,13 +32,12 @@ describe('characterStore', () => {
   describe('loaded special spell reconciliation', () => {
     const special = (character: ReturnType<typeof makeNonracialSourceCharacter>) =>
       character.spells.spellProfiles.find((profile) => profile.type === 'special')!
-    const install = (level: number) => {
+    const install = (level: number, indexed = true) => {
       const gameData = makeGameDataFixture({
         spells: [makeSpellFixture({ name: 'Toll the Dead', source: 'XPHB', level })],
       })
-      useGameDataStore.setState({
-        gameData: { ...gameData, lookups: buildGameDataLookups(gameData) },
-      })
+      if (indexed) gameData.lookups = buildGameDataLookups(gameData)
+      useGameDataStore.getState().setGameData(gameData)
     }
     const start = async () => {
       useGameDataStore.setState({ gameData: null })
@@ -55,7 +54,7 @@ describe('characterStore', () => {
       const neighbor = await useCharacterStore.getState().createNewCharacter({ name: 'Neighbor' })
       storageMocks.setItem.mockClear()
       useCharacterStore.getState().updateCharacter(original.id, { name: 'Unsaved name' })
-      install(1)
+      install(1, false)
       expect(special(useCharacterStore.getState().activeCharacter!).spellsKnown).toEqual([
         'Toll the Dead|XPHB',
       ])
