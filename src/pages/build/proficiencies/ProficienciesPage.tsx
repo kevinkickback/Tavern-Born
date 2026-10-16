@@ -189,10 +189,11 @@ export function BuildProficienciesPage() {
     () =>
       buildToolChoiceSlots({
         choices: ledger.choices,
+        selection: character,
         selectedTools: character?.proficiencies.tools ?? [],
         toolSubtypeOptionsByKind,
       }),
-    [character?.proficiencies.tools, ledger.choices, toolSubtypeOptionsByKind],
+    [character, ledger.choices, toolSubtypeOptionsByKind],
   )
 
   const artisanToolSlots = useMemo(

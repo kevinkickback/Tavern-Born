@@ -8,6 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { formatModifier } from '@/lib/calculations/abilityScores'
 import { isActionSizedCharacterAction } from '@/lib/calculations/actions'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
+import {
+  getRacialSourceDisplayName,
+  type RaceDisplaySelection,
+} from '@/lib/calculations/raceDisplay'
 import type { CharacterAction } from '@/types/actions'
 import type { CharacterEffect } from '@/types/effects'
 
@@ -61,8 +65,11 @@ function actionDetails(action: CharacterAction): string[] {
   return details.filter(Boolean)
 }
 
-function sourceLabel(source: CharacterAction['source'] | CharacterEffect['source']): string {
-  return [source.name, source.source].filter(Boolean).join(' · ')
+function sourceLabel(
+  source: CharacterAction['source'] | CharacterEffect['source'],
+  selection?: RaceDisplaySelection | null,
+): string {
+  return [getRacialSourceDisplayName(selection, source), source.source].filter(Boolean).join(' · ')
 }
 
 function titleCase(value: string): string {
@@ -86,7 +93,13 @@ function effectOperationLabel(effect: CharacterEffect): string {
   return titleCase(operation.kind)
 }
 
-export function SourceDerivedActions({ actions }: { actions: readonly CharacterAction[] }) {
+export function SourceDerivedActions({
+  actions,
+  selection,
+}: {
+  actions: readonly CharacterAction[]
+  selection?: RaceDisplaySelection | null
+}) {
   const derivedActions = actions.filter(
     (action) => action.source.kind !== 'manual' && isActionSizedCharacterAction(action),
   )
@@ -119,7 +132,7 @@ export function SourceDerivedActions({ actions }: { actions: readonly CharacterA
                       <Badge variant="secondary">{ACTION_KIND_LABELS[action.kind]}</Badge>
                       {!action.active && <Badge variant="outline">Inactive</Badge>}
                       <span className="text-xs text-muted-foreground">
-                        {sourceLabel(action.source)}
+                        {sourceLabel(action.source, selection)}
                       </span>
                     </div>
                     {details.length > 0 && (
@@ -147,9 +160,11 @@ export function SourceDerivedActions({ actions }: { actions: readonly CharacterA
 export function SourceDerivedEffects({
   effects,
   resolutionContext,
+  selection,
 }: {
   effects: readonly CharacterEffect[]
   resolutionContext: EffectResolutionContext
+  selection?: RaceDisplaySelection | null
 }) {
   const derivedEffects = effects.filter((effect) => effect.source.kind !== 'manual')
 
@@ -177,15 +192,21 @@ export function SourceDerivedEffects({
             <div className="divide-y divide-border border-y border-border">
               {derivedEffects.map((effect) => {
                 const active = isCharacterEffectActive(effect, resolutionContext)
+                const label =
+                  effect.target.kind === 'sense' &&
+                  effect.operation.kind === 'base' &&
+                  effect.label === `${effect.source.name} sense`
+                    ? `${getRacialSourceDisplayName(selection, effect.source)} sense`
+                    : effect.label
                 return (
                   <div key={effect.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{effect.label}</span>
+                      <span className="font-medium">{label}</span>
                       <Badge variant={active ? 'secondary' : 'outline'}>
                         {active ? 'Active' : 'Inactive'}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {sourceLabel(effect.source)}
+                        {sourceLabel(effect.source, selection)}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">

@@ -1,15 +1,65 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
+import { deriveRulesTextActions } from '@/lib/calculations/actions'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   SourceDerivedActions,
   SourceDerivedEffects,
 } from '@/pages/adjustments/components/DerivedMechanicsOverview'
+import type { Race5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { CharacterEffect } from '@/types/effects'
+import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 
 afterEach(cleanup)
 
 describe('source-derived mechanics overview', () => {
+  test('contextualizes actual child-owned action, effect and generated sense labels only at display', () => {
+    const child = {
+      name: 'Dragonborn (Draconblood; Brass)',
+      source: 'EGW',
+      _isVersion: true,
+      darkvision: 60,
+      entries: [
+        {
+          name: 'Breath Weapon',
+          type: 'entries',
+          entries: ['As an action, exhale magical energy.'],
+        },
+      ],
+    } as Race5e
+    const parent = { name: 'Dragonborn', source: 'PHB', subraces: [child] } as Race5e
+    const character = characterPersistenceSchema.parse(makeNativeRacialCharacter(parent, child))
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: buildRaceLookup([parent]),
+    })
+    const actions = deriveRulesTextActions(character, calculation.raceResolution.mergedRace)
+    const effects = calculation.effects.declarations
+    const before = JSON.stringify({ character, actions, effects })
+    render(
+      <>
+        <SourceDerivedActions actions={actions} selection={character} />
+        <SourceDerivedEffects effects={effects} resolutionContext={{}} selection={character} />
+      </>,
+    )
+    expect(screen.getByText('Breath Weapon')).toBeTruthy()
+    expect(screen.getAllByText('Dragonborn (Draconblood: Brass) · EGW').length).toBeGreaterThan(0)
+    expect(screen.getByText('Dragonborn (Draconblood: Brass) sense')).toBeTruthy()
+    expect(JSON.stringify({ character, actions, effects })).toBe(before)
+    cleanup()
+    const sense = effects.find((effect) => effect.target.kind === 'sense')!
+    render(
+      <SourceDerivedEffects
+        effects={[{ ...sense, label: 'Custom darkvision' }]}
+        resolutionContext={{}}
+        selection={character}
+      />,
+    )
+    expect(screen.getByText('Custom darkvision')).toBeTruthy()
+  })
+
   test('shows source-owned actions without edit controls and omits manual actions', () => {
     const actions: CharacterAction[] = [
       {

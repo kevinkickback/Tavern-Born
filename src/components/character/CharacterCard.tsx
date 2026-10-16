@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import type { Character } from '@/types/character'
@@ -79,7 +80,7 @@ export const CharacterCard = memo(function CharacterCard({
         imageAlt={`${character.name || 'Character'} portrait`}
         name={character.name}
         level={getTotalCharacterLevel(character)}
-        race={character.race}
+        race={getRaceDisplayName(character.race, character.subrace)}
         characterClass={getCharacterClassEntries(character)[0]?.name ?? ''}
         lastModified={character.lastModified}
         transform={character.portraitTransform}

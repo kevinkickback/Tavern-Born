@@ -16,6 +16,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
@@ -148,7 +149,7 @@ export function ReviewStep({
                   image={data.portrait}
                   name={data.name}
                   level={1}
-                  race={[data.race, data.subrace].filter(Boolean).join(' • ')}
+                  race={getRaceDisplayName(data.race, data.subrace)}
                   characterClass={data.class}
                   gender={data.gender}
                   transform={data.portraitTransform}

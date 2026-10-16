@@ -4,6 +4,7 @@ import {
   getBaseCharacterMovement,
   getEffectiveCharacterMovement,
 } from '@/lib/calculations/movement'
+import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { type MovementSettings, resolveMovementSettings } from '@/lib/calculations/statSettings'
 import { useCharacterStore } from '@/store/characterStore'
 import type { MovementAdjustment } from '@/types/character'
@@ -30,6 +31,7 @@ export function useMovement() {
 
   return {
     baseMovement,
+    baseMovementSourceLabel: getRacialSourceDisplayName(character, baseMovement.source),
     effectiveMovement,
     adjustments: character?.movementAdjustments ?? EMPTY_ADJUSTMENTS,
     overrides: character?.movementOverrides ?? EMPTY_OVERRIDES,

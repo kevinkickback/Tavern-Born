@@ -19,7 +19,7 @@ export function useProvenance() {
   }, [character])
 
   const mutations = useProvenanceMutations()
-  const rows = useProvenanceRows({ ledger })
+  const rows = useProvenanceRows({ ledger, selection: character })
 
   return {
     ledger,

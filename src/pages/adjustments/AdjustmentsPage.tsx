@@ -152,13 +152,14 @@ export function AdjustmentsPage() {
                   <WorkspaceDetailContent className="space-y-4">
                     {section === 'actions' ? (
                       <>
-                        <SourceDerivedActions actions={actions} />
+                        <SourceDerivedActions actions={actions} selection={character} />
                         <ManualActionsList />
                       </>
                     ) : (
                       <>
                         <SourceDerivedEffects
                           effects={calculation?.effects.declarations ?? []}
+                          selection={character}
                           resolutionContext={calculation?.effects.resolutionContext ?? {}}
                         />
                         <ManualEffectsList />

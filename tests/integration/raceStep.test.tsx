@@ -14,6 +14,28 @@ describe('RaceStep', () => {
     vi.restoreAllMocks()
   })
 
+  test('shortens complete lineage labels while selection values and opening stay unchanged', () => {
+    const child = { name: 'Dragonborn (Draconblood; Brass)', source: 'EGW' } as Race5e
+    const parent = { name: 'Dragonborn', source: 'PHB', subraces: [child] } as Race5e
+    const onChange = vi.fn()
+    const { getByRole } = render(
+      <RaceStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          race: parent.name,
+          raceSource: parent.source,
+          subrace: child.name,
+          subraceSource: child.source,
+        }}
+        onChange={onChange}
+        races={[parent]}
+      />,
+    )
+    expect(getByRole('heading', { name: /Dragonborn\s*\(Draconblood: Brass\)/ })).toBeTruthy()
+    expect(getByRole('button', { name: 'Draconblood: Brass · EGW' })).toBeTruthy()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   test('renders repeated trait names without duplicate React keys', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const trait = { type: 'entries', name: 'Keen Senses', entries: ['A benefit.'] }

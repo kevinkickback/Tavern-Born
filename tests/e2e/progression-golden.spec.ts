@@ -413,7 +413,7 @@ test('@golden 2014 Variant Human Arcane Trickster progresses from creation throu
     classSource: 'PHB',
     background: 'Criminal',
     backgroundSource: 'PHB',
-    subrace: 'Variant',
+    subrace: 'Variant · PHB',
     racialBonuses: ['DEX', 'INT'],
   })
   await selectCharacterFromHome(page, 'Golden Arcane Trickster')

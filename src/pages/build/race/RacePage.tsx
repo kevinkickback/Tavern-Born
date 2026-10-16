@@ -48,6 +48,7 @@ import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
   getAsiDisplay,
   getAvailableSubraces,
@@ -58,8 +59,10 @@ import {
   getSpeedDisplay,
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
+import { getFeatChoiceSelectedRefs } from '@/lib/character/commands/featCommandSupport'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -165,6 +168,13 @@ export function BuildRacePage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
+  const featModalSelectedIds = useMemo(() => {
+    if (!activeFeatChoice) return []
+    const selected = getFeatChoiceSelectedRefs(activeFeatChoice)[0]
+    if (!selected?.source?.trim()) return []
+    const key = getFeatSelectionKey(selected)
+    return featModalFeats.some((feat) => getFeatSelectionKey(feat) === key) ? [key] : []
+  }, [activeFeatChoice, featModalFeats])
   const characterSnapshot = useMemo(
     () =>
       buildPrerequisiteSnapshot({
@@ -183,6 +193,12 @@ export function BuildRacePage() {
     (selectedFeats: Feat5e[]) => {
       if (!activeFeatChoiceId || selectedFeats.length === 0) return
       const feat = selectedFeats[0]
+      const selected = activeFeatChoice && getFeatChoiceSelectedRefs(activeFeatChoice)[0]
+      if (selected && getFeatSelectionKey(selected) === getFeatSelectionKey(feat)) {
+        setFeatModalOpen(false)
+        setActiveFeatChoiceId(null)
+        return
+      }
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
@@ -190,12 +206,12 @@ export function BuildRacePage() {
         setOptionsPendingFeat({ ...feat, provenanceChoiceId: activeFeatChoiceId })
       }
     },
-    [activeFeatChoiceId, resolveFeatChoiceSelection],
+    [activeFeatChoice, activeFeatChoiceId, resolveFeatChoiceSelection],
   )
 
   const selectedRaceFeatChoices = racialFeatChoices.filter(
     (choice) =>
-      choice.sourceTag.sourceName === selectedRace?.name ||
+      choice.sourceTag.sourceName === (selectedRace?.name ?? character?.race) ||
       choice.sourceTag.sourceName === character?.subrace,
   )
   const readinessFocus = getReadinessFocus(searchParams)
@@ -324,20 +340,21 @@ export function BuildRacePage() {
           right={
             <div className="flex h-full min-h-0 flex-col">
               <WorkspacePaneHeader title="Race details" className="pr-20" />
-              {displayRace && (
+              {(displayRace || character.race) && (
                 <section className="shrink-0 border-b border-border bg-surface-raised/60 px-5 py-4">
                   <div className="mx-auto flex w-full max-w-4xl flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
                       <h3 className="truncate font-display text-xl font-semibold leading-tight text-foreground">
-                        {selectedRace?.name ?? displayRace.name}
+                        {selectedRace?.name ?? (character.race || displayRace?.name)}
                       </h3>
                       <div className="mt-1 flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
-                          {selectedRace?.source ?? displayRace.source}
+                          {selectedRace?.source ?? character.raceSource ?? displayRace?.source}
                         </Badge>
                         {character.subrace && (
                           <span className="truncate text-xs text-muted-foreground">
-                            {character.subrace}
+                            {getSubraceDisplayName(character.race, character.subrace)}
+                            {character.subraceSource && ` · ${character.subraceSource}`}
                           </span>
                         )}
                       </div>
@@ -384,7 +401,12 @@ export function BuildRacePage() {
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
                               <SelectValue placeholder="Choose a subrace">
-                                {selectedSubrace?.name ?? character.subrace}
+                                {getSubraceDisplayName(
+                                  selectedRace.name,
+                                  selectedSubrace?.name ?? character.subrace ?? '',
+                                )}
+                                {(selectedSubrace?.source ?? character.subraceSource) &&
+                                  ` · ${selectedSubrace?.source ?? character.subraceSource}`}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -394,7 +416,8 @@ export function BuildRacePage() {
                                   value={getSubraceSelectionValue(subrace.name, subrace.source)}
                                   className="text-xs"
                                 >
-                                  {subrace.name}
+                                  {getSubraceDisplayName(selectedRace.name, subrace.name)}
+                                  {subrace.source && ` · ${subrace.source}`}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -403,15 +426,16 @@ export function BuildRacePage() {
                       )}
 
                       {selectedRaceFeatChoices.map((choice) => {
-                        const isResolved = choice.selected.length > 0
+                        const selectedRef = getFeatChoiceSelectedRefs(choice)[0]
+                        const isResolved = !!selectedRef
                         const poolLabel = choice.optionPool
                           .filter((option) => option.startsWith('category:'))
                           .map((option) => featCategoryToFull(option.replace('category:', '')))
                           .join(', ')
-                        const resolvedFeat = isResolved
+                        const resolvedFeat = selectedRef?.source?.trim()
                           ? (feats as Feat5e[]).find(
                               (feat) =>
-                                feat.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                getFeatSelectionKey(feat) === getFeatSelectionKey(selectedRef),
                             )
                           : undefined
 
@@ -428,7 +452,8 @@ export function BuildRacePage() {
                                     className="h-6 gap-1 border-success/50 px-2 text-xs text-success"
                                   >
                                     <Check className="size-3" />
-                                    {resolvedFeat?.name ?? choice.selected[0]}
+                                    {resolvedFeat?.name ?? selectedRef?.name}
+                                    {selectedRef?.source && ` · ${selectedRef.source}`}
                                   </Badge>
                                   <Button
                                     size="sm"
@@ -609,7 +634,9 @@ export function BuildRacePage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                      Select a race to view details
+                      {character.race
+                        ? 'Race rules unavailable. Restore the selected sources to view details.'
+                        : 'Select a race to view details'}
                     </div>
                   )}
                 </WorkspaceDetailContent>
@@ -627,6 +654,7 @@ export function BuildRacePage() {
         }}
         feats={featModalFeats}
         maxSelections={1}
+        initialSelectedIds={featModalSelectedIds}
         characterSnapshot={characterSnapshot}
         onConfirm={handleFeatModalConfirm}
         initialFilters={featModalInitialFilters}

@@ -1,3 +1,7 @@
+import {
+  getRacialSourceDisplayName,
+  type RaceDisplaySelection,
+} from '@/lib/calculations/raceDisplay'
 import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord } from '@/lib/provenance/types'
 
@@ -337,12 +341,14 @@ export function getSelectedToolNames(choices: ChoiceRecord[]): string[] {
 
 interface BuildToolChoiceSlotsParams {
   choices: ChoiceRecord[]
+  selection?: RaceDisplaySelection | null
   selectedTools: string[]
   toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>
 }
 
 export function buildToolChoiceSlots({
   choices,
+  selection,
   selectedTools,
   toolSubtypeOptionsByKind,
 }: BuildToolChoiceSlotsParams): ToolChoiceSlot[] {
@@ -375,7 +381,7 @@ export function buildToolChoiceSlots({
         id: `${choice.id}:${idx}`,
         choiceId: choice.id,
         label,
-        sourceName: choice.sourceTag.sourceName,
+        sourceName: getRacialSourceDisplayName(selection, choice.sourceTag),
         options: pool,
       })
     }

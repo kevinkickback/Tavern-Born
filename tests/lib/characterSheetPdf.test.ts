@@ -107,7 +107,7 @@ describe('characterSheetPdf', () => {
 
     expect(map.textFields.Text_1).toBe('Aria Stormborn')
     expect(map.textFields.Text_2).toBe('Outlander')
-    expect(map.textFields.Text_3).toBe('Wood Elf')
+    expect(map.textFields.Text_3).toBe('Elf (Wood)')
     expect(map.textFields.Text_4).toBe('Ranger / Fighter')
     expect(map.textFields.Text_5).toBe('')
     expect(map.textFields.Text_6).toBe('4')

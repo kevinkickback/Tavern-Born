@@ -48,12 +48,13 @@ describe('detectSourceConflicts', () => {
 
   test('flags subrace from disabled source', () => {
     const char = makeCharacterFixture({
+      race: 'Gnome',
       raceSource: 'PHB',
       subrace: 'Deep Gnome',
       subraceSource: 'SCAG',
     })
     const conflicts = detectSourceConflicts(char, ['PHB'])
-    expect(conflicts[0]).toMatchObject({ source: 'SCAG', items: ['Deep Gnome'] })
+    expect(conflicts[0]).toMatchObject({ source: 'SCAG', items: ['Gnome (Deep Gnome)'] })
   })
 
   test('flags class from disabled source using classProgression', () => {

@@ -3,9 +3,31 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MovementModal } from '@/components/modals/MovementModal'
 import { useCharacterStore } from '@/store/characterStore'
+import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 
 describe('MovementModal', () => {
+  test('shows a child-owned base with parent context and leaves opening/Cancel unchanged', async () => {
+    const child = { name: 'Wood', source: 'PHB', speed: 35 } as Race5e
+    const parent = { name: 'Elf', source: 'PHB', subraces: [child] } as Race5e
+    const character = characterPersistenceSchema.parse(makeNativeRacialCharacter(parent, child))
+    useCharacterStore.setState({
+      activeCharacter: character,
+      activeCharacterId: character.id,
+      isActiveCharacterDirty: false,
+    })
+    const before = JSON.stringify(character)
+    render(<MovementModal open onOpenChange={() => {}} />)
+    expect(screen.getByText('Base source: Elf (Wood) (PHB)')).toBeTruthy()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(JSON.stringify(character)).toBe(before)
+    expect(character.movement.source).toEqual({ kind: 'race', name: 'Wood', source: 'PHB' })
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
   beforeEach(() => {
     const character = makeCharacterFixture({
       id: 'movement-character',

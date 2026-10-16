@@ -36,6 +36,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
   const {
     adjustments: persistedAdjustments,
     baseMovement,
+    baseMovementSourceLabel,
     hoverOverride,
     overrides: persistedOverrides,
     previewMovementSettings,
@@ -166,7 +167,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
               {formatEffectiveMovement(preview)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Base source: {baseMovement.source.name}
+              Base source: {baseMovementSourceLabel}
               {baseMovement.source.source ? ` (${baseMovement.source.source})` : ''}
             </p>
           </section>

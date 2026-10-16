@@ -18,11 +18,16 @@ function resetCharacterStore() {
   const character = makeCharacterFixture({
     id: 'portrait-1',
     name: 'Portrait',
+    race: 'Dragonborn',
+    raceSource: 'PHB',
+    subrace: 'Dragonborn (Draconblood; Brass)',
+    subraceSource: 'EGW',
   })
   useCharacterStore.setState({
     characters: [character],
     activeCharacterId: character.id,
     activeCharacter: character,
+    isActiveCharacterDirty: false,
   })
 }
 
@@ -34,6 +39,15 @@ describe('PortraitPage upload guards', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  test('shows contextual lineage in the actual portrait preview without changing saved fields', () => {
+    const character = useCharacterStore.getState().activeCharacter
+    const { getByText } = render(<PortraitPage />)
+    expect(getByText('Dragonborn (Draconblood: Brass)')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(character?.subrace).toBe('Dragonborn (Draconblood; Brass)')
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
   })
 
   test('rejects non-image uploads', async () => {

@@ -111,6 +111,23 @@ describe('app header character summary', () => {
     expect(summary.getAttribute('data-slot')).toBeNull()
   })
 
+  test('keeps contextual lineage in the header without changing the character', () => {
+    const character = {
+      ...useCharacterStore.getState().activeCharacter!,
+      subrace: 'Elf (High; Moon)',
+      subraceSource: 'PHB',
+    }
+    useCharacterStore.setState({ activeCharacter: character, isActiveCharacterDirty: false })
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('Elf (High: Moon) · Level 5 · Fighter / Wizard')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
   test('condenses three or more classes and shows their breakdown on hover', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState((state) => ({

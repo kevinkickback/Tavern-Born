@@ -113,10 +113,10 @@ describe('Race page summary', () => {
     } else {
       const user = userEvent.setup()
       const selector = screen.getByRole('combobox', { name: 'Subrace' })
-      expect(selector.textContent).toBe('Saved child')
+      expect(selector.textContent).toBe('Saved child · CHILD')
       await user.click(selector)
       expect(screen.getAllByRole('option')).toHaveLength(1)
-      await user.click(screen.getByRole('option', { name: 'Saved child' }))
+      await user.click(screen.getByRole('option', { name: 'Saved child · TEST' }))
       const changed = characterPersistenceSchema.parse(
         JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
       )
@@ -164,7 +164,7 @@ describe('Race page summary', () => {
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('combobox', { name: 'Subrace' }))
-    await user.click(screen.getByRole('option', { name: /^A$/ }))
+    await user.click(screen.getByRole('option', { name: 'A · B|C' }))
     const changed = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
     )
@@ -249,7 +249,7 @@ describe('Race page summary', () => {
     if (variant === 'parsed-name-trim') {
       const user = userEvent.setup()
       await user.click(screen.getByRole('combobox', { name: 'Subrace' }))
-      await user.click(screen.getByRole('option', { name: 'Child|Exact' }))
+      await user.click(screen.getByRole('option', { name: 'Child|Exact · CASE' }))
     } else {
       expect(useCharacterStore.getState().activeCharacter).toBe(character)
       expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
@@ -475,11 +475,13 @@ describe('Race page summary', () => {
     } else {
       const user = userEvent.setup()
       const selector = screen.getByRole('combobox', { name: 'Subrace' })
-      expect(selector.textContent).toBe('Child')
+      expect(selector.textContent).toBe('Child · TEST')
       await user.click(selector)
       expect(screen.getAllByRole('option')).toHaveLength(1)
       expect(
-        screen.getByRole('option', { name: missing === 'sibling' ? 'Sibling' : 'Child' }),
+        screen.getByRole('option', {
+          name: missing === 'sibling' ? 'Sibling · TEST' : 'Child · OTHER',
+        }),
       ).toBeTruthy()
       await user.keyboard('{Escape}')
       expect(useCharacterStore.getState().activeCharacter).toBe(character)
@@ -492,7 +494,7 @@ describe('Race page summary', () => {
     })
     expect(useCharacterStore.getState().activeCharacter).toBe(character)
     expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
-    expect(screen.getByRole('combobox', { name: 'Subrace' }).textContent).toBe('Child')
+    expect(screen.getByRole('combobox', { name: 'Subrace' }).textContent).toBe('Child · TEST')
     expect(screen.getByText('CON +1')).toBeTruthy()
   })
 

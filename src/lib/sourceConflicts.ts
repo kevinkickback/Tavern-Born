@@ -3,6 +3,7 @@ import {
   XPHB_LEGACY_RACE_KEYS,
   XPHB_LEGACY_SUBCLASS_KEYS,
 } from '@/lib/5etools/rulesetMetadata'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { pruneNonracialSpellSelections } from '@/lib/character/commands/sourceSpellPruningCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
@@ -40,7 +41,7 @@ export function detectSourceConflicts(
   flag(character.race, character.raceSource, selectedRaceIsLegacyException)
   if (character.subrace) {
     flag(
-      character.subrace,
+      getRaceDisplayName(character.race, character.subrace),
       character.subraceSource,
       selectedRaceIsLegacyException && character.subraceSource === character.raceSource,
     )

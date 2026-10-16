@@ -3,6 +3,10 @@ import {
   formatBackgroundAbilityPatterns,
   isBackgroundAbilitySelectionComplete,
 } from '@/lib/calculations/abilityScores'
+import {
+  getRacialSourceDisplayName,
+  type RaceDisplaySelection,
+} from '@/lib/calculations/raceDisplay'
 import { normalizeOwnerIdentity, stripItemTag, toDisplayName } from './normalization'
 import type {
   ProficiencyProvenance,
@@ -57,7 +61,10 @@ function rowsFromMap(map: Record<string, SourceTag[]>, category: string): Source
 }
 
 /** Derive source rows for all proficiency categories merged with pending choice rows. */
-export function getAllProficiencyRows(ledger: ProvenanceLedger): {
+export function getAllProficiencyRows(
+  ledger: ProvenanceLedger,
+  selection?: RaceDisplaySelection | null,
+): {
   skills: SourceRow[]
   savingThrows: SourceRow[]
   armor: SourceRow[]
@@ -85,7 +92,10 @@ export function getAllProficiencyRows(ledger: ProvenanceLedger): {
       const source = formatSourceType(c.sourceTag.sourceType)
       const domain = c.domain.charAt(0).toUpperCase() + c.domain.slice(1)
       const remaining = c.chooseCount - c.selected.length
-      const pool = c.optionPool.length > 0 ? ` from ${c.sourceTag.sourceName} options` : ''
+      const pool =
+        c.optionPool.length > 0
+          ? ` from ${getRacialSourceDisplayName(selection, c.sourceTag)} options`
+          : ''
       const label =
         c.status === 'partially-resolved'
           ? `choose ${remaining} more ${domain}${pool}`

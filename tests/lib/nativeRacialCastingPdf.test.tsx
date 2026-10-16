@@ -103,7 +103,7 @@ test('effective scores and global/profile/conditional effects give independent r
     })),
   ).toEqual([
     { name: 'Parent', ability: 'intelligence', dc: 16, attack: 7 },
-    { name: 'Child', ability: 'wisdom', dc: 18, attack: 10 },
+    { name: 'Parent (Child)', ability: 'wisdom', dc: 18, attack: 10 },
   ])
   const details = buildRacialSpellcastingDetails(
     vm.character,
@@ -123,7 +123,7 @@ test('effective scores and global/profile/conditional effects give independent r
     />,
   )
   const parent = screen.getByText('Parent').closest('.overflow-hidden')!
-  const child = screen.getByText('Child').closest('.overflow-hidden')!
+  const child = screen.getByText('Parent (Child)').closest('.overflow-hidden')!
   expect(within(parent as HTMLElement).getByText('16')).toBeTruthy()
   expect(within(parent as HTMLElement).getByText('+7')).toBeTruthy()
   expect(within(child as HTMLElement).getByText('18')).toBeTruthy()
@@ -133,7 +133,7 @@ test('effective scores and global/profile/conditional effects give independent r
     expect.objectContaining({ name: 'missing ward', level: '?', castingTime: '', range: '' }),
   )
   const pages = paginateOfficial2014SpellPages(vm)
-  expect(pages.map((page) => page.detail?.sourceName)).toEqual(['Parent', 'Child'])
+  expect(pages.map((page) => page.detail?.sourceName)).toEqual(['Parent', 'Parent (Child)'])
   const maps = pages.map((page) => mapOfficial2014SpellPage(vm, page))
   expect(maps.map((map) => map.textFields['SpellSaveDC  2'])).toEqual(['16', '18'])
   expect(maps.map((map) => map.textFields['SpellAtkBonus 2'])).toEqual(['+7', '+10'])
@@ -160,7 +160,7 @@ test('community 2014 and both 2024 summaries keep actual owners and report secon
     expect(planSheetContent(vm, id).overflow).toContainEqual(
       expect.objectContaining({
         id: 'capacity:spellcasting-profiles',
-        text: 'Child: wisdom; save DC 18; attack 10',
+        text: 'Parent (Child): wisdom; save DC 18; attack 10',
       }),
     )
   }
@@ -194,14 +194,16 @@ test.each([
   const form = saved.getForm()
   expect(report?.preserved).toContainEqual(
     expect.objectContaining({
-      title: 'Child: spells with unknown levels',
+      title: 'Parent (Child): spells with unknown levels',
       text: 'missing ward — spell level unknown',
     }),
   )
   if (id.startsWith('2014')) {
     const prefix = id === '2014-custom' ? 'WotC__' : ''
     expect(form.getTextField(prefix + 'Spellcasting Class 2').getText()).toBe('Parent')
-    expect(form.getTextField(prefix + 'SpellPage2__Spellcasting Class 2').getText()).toBe('Child')
+    expect(form.getTextField(prefix + 'SpellPage2__Spellcasting Class 2').getText()).toBe(
+      'Parent (Child)',
+    )
     expect(form.getTextField(prefix + 'SpellPage2__SpellSaveDC  2').getText()).toBe('18')
     expect(form.getTextField(prefix + 'SpellPage2__SlotsTotal 19').getText() ?? '').toBe('')
     expect(
@@ -214,7 +216,7 @@ test.each([
     expect(report?.preserved).toContainEqual(
       expect.objectContaining({
         id: 'capacity:spellcasting-profiles',
-        text: 'Child: wisdom; save DC 18; attack 10',
+        text: 'Parent (Child): wisdom; save DC 18; attack 10',
       }),
     )
   }
@@ -240,7 +242,7 @@ test.each([
   const expected = {
     id: 'capacity:spellcasting-profiles',
     title: 'Additional spellcasting abilities',
-    text: 'Child: wisdom; save DC 18; attack 10',
+    text: 'Parent (Child): wisdom; save DC 18; attack 10',
   }
   let report: SheetExportReport | undefined
   const bytes = await generateTestCharacterSheet(vm, id, {
@@ -271,7 +273,9 @@ test('an unselected casting ability has unknown numbers despite global numeric m
   character.spells.spellProfiles.find((profile) => profile.raceName === 'Child')!.castingAbility =
     undefined
   const vm = createCharacterSheetViewModel(character, {})
-  expect(vm.spellcastingSources.find((source) => source.sourceName === 'Child')).toMatchObject({
+  expect(
+    vm.spellcastingSources.find((source) => source.sourceName === 'Parent (Child)'),
+  ).toMatchObject({
     spellSaveDC: null,
     spellAttackBonus: null,
   })
@@ -302,13 +306,13 @@ test('a competing cantrip printing cannot fill missing leveled spell metadata or
     components: '',
   })
   const childPage = paginateOfficial2014SpellPages(vm).find(
-    (page) => page.detail?.sourceName === 'Child',
+    (page) => page.detail?.sourceName === 'Parent (Child)',
   )!
   const map = mapOfficial2014SpellPage(vm, childPage)
   expect(Object.values(map.textFields)).not.toContain('missing ward')
   expect(planSheetContent(vm, '2014-official').overflow).toContainEqual(
     expect.objectContaining({
-      title: 'Child: spells with unknown levels',
+      title: 'Parent (Child): spells with unknown levels',
       text: 'missing ward — spell level unknown',
     }),
   )

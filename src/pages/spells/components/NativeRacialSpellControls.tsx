@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { NativeRacialSpellOwner } from '@/lib/calculations/nativeRacialSpells'
+import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import type { SpellProfile } from '@/types/character'
 
@@ -31,14 +32,15 @@ export function NativeRacialSpellControls({
       {profiles.map((profile) => {
         const state = profile.racial
         if (!state) return null
+        const label = getSpellProfileDisplayLabel(profile)
         const live = owners?.find((owner) => owner.id === profile.id)
         return (
           <section
             key={profile.id}
-            aria-label={`${profile.label} spell setup`}
+            aria-label={`${label} spell setup`}
             className="rounded-lg border border-border p-3"
           >
-            <h3 className="mb-2 font-semibold text-sm">{profile.label} spells</h3>
+            <h3 className="mb-2 font-semibold text-sm">{label} spells</h3>
             {state.mode === 'alternative' ? (
               <div className="flex items-center gap-2">
                 <Select
@@ -46,7 +48,7 @@ export function NativeRacialSpellControls({
                   disabled={!live}
                   onValueChange={(value) => onSetSuite(profile.id, value)}
                 >
-                  <SelectTrigger aria-label={`${profile.label} spell suite`} className="flex-1">
+                  <SelectTrigger aria-label={`${label} spell suite`} className="flex-1">
                     <SelectValue placeholder="Choose spell suite" />
                   </SelectTrigger>
                   <SelectContent>
@@ -71,7 +73,7 @@ export function NativeRacialSpellControls({
                   variant="outline"
                   size="sm"
                   disabled={!state.suite}
-                  aria-label={`Clear ${profile.label} spell suite`}
+                  aria-label={`Clear ${label} spell suite`}
                   onClick={() => onSetSuite(profile.id, undefined)}
                 >
                   Clear
@@ -108,7 +110,7 @@ export function NativeRacialSpellControls({
                   variant="outline"
                   size="sm"
                   disabled={!live}
-                  aria-label={`Edit ${profile.label} spell choice ${index + 1}`}
+                  aria-label={`Edit ${label} spell choice ${index + 1}`}
                   onClick={() => onEditChoice(profile.id, choice.id)}
                 >
                   Edit
@@ -117,7 +119,7 @@ export function NativeRacialSpellControls({
                   variant="outline"
                   size="sm"
                   disabled={!choice.selected.length}
-                  aria-label={`Clear ${profile.label} spell choice ${index + 1}`}
+                  aria-label={`Clear ${label} spell choice ${index + 1}`}
                   onClick={() => onClearChoice(profile.id, choice.id, [])}
                 >
                   Clear

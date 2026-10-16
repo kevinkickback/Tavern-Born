@@ -14,10 +14,11 @@ import { makeSourceTag } from '@/lib/provenance'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useFeatsPageController } from '@/pages/feats/hooks/useFeatsPageController'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { Feat5e } from '@/types/5etools'
+import type { Feat5e, Race5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 
 const configurableFeat = {
   name: 'Skilled',
@@ -198,6 +199,31 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacterId: character.id,
       activeCharacter: character,
     })
+  })
+
+  test('displays contextual fixed-grant owners while retaining canonical row keys and character state', () => {
+    const child = { name: 'High', source: 'PHB', feats: [{ 'skilled|phb': true }] } as Race5e
+    const parent = { name: 'Elf', source: 'PHB', subraces: [child] } as Race5e
+    const character = characterPersistenceSchema.parse(makeNativeRacialCharacter(parent, child))
+    useCharacterStore.setState({
+      activeCharacter: character,
+      activeCharacterId: character.id,
+      isActiveCharacterDirty: false,
+    })
+    const before = JSON.stringify(character)
+    const { result, unmount } = renderHook(() => useFeatsPageController(), {
+      wrapper: MemoryRouter,
+    })
+    expect(result.current.racialFixedFeats[0]).toMatchObject({
+      sourceLabel: 'subrace: High',
+      sourceDisplayLabel: 'subrace: Elf (High)',
+    })
+    unmount()
+    renderPage('/feats?view=character')
+    expect(screen.getAllByText(/subrace: Elf \(High\)/).length).toBeGreaterThan(0)
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(JSON.stringify(character)).toBe(before)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
   })
 
   afterEach(() => {
