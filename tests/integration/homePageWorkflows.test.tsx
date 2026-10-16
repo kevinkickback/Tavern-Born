@@ -377,7 +377,16 @@ describe('home page integration workflows', () => {
   test('switches to the dense list view and remembers the choice', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
-      characters: [makeCharacterFixture({ id: 'c1', name: 'Alpha' })],
+      characters: [
+        makeCharacterFixture({
+          id: 'c1',
+          name: 'Alpha',
+          race: 'Dragonborn',
+          subrace: 'Dragonborn (Draconblood; Brass)',
+          subraceSource: 'EGW',
+          classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        }),
+      ],
       activeCharacterId: null,
       activeCharacter: null,
     })
@@ -387,6 +396,10 @@ describe('home page integration workflows', () => {
 
     expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')
     expect(screen.getByRole('button', { name: 'Actions for Alpha' })).toBeTruthy()
+    expect(screen.getByText('Dragonborn (Draconblood: Brass) · Fighter')).toBeTruthy()
+    expect(useCharacterStore.getState().characters[0].subrace).toBe(
+      'Dragonborn (Draconblood; Brass)',
+    )
   })
 
   test('keeps creation commands in the collection instead of the search toolbar', () => {

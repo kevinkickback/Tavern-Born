@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
@@ -493,7 +494,10 @@ export function AppSidebar() {
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium">{name}</span>
                             <span className="block truncate text-[11px] text-muted-foreground">
-                              {[character.race, `Level ${getTotalCharacterLevel(character)}`]
+                              {[
+                                getRaceDisplayName(character.race, character.subrace),
+                                `Level ${getTotalCharacterLevel(character)}`,
+                              ]
                                 .filter(Boolean)
                                 .join(' · ')}
                             </span>

@@ -214,11 +214,14 @@ describe('desktop workspace navigation', () => {
     const character = makeCharacterFixture({
       name: 'Aelar',
       race: 'Elf',
+      subrace: 'Elf (High; Moon)',
+      subraceSource: 'PHB',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
     })
     useCharacterStore.setState({ characters: [character] })
 
     renderSidebar('/')
+    expect(screen.getByText('Elf (High: Moon) · Level 3')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Open Aelar' }))
 
     expect(useCharacterStore.getState().activeCharacterId).toBe(character.id)

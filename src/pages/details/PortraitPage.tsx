@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
@@ -37,7 +38,7 @@ export function PortraitPage({ readinessFocus }: PortraitPageProps = {}) {
             transform={activeCharacter.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
             name={activeCharacter.name}
             level={getTotalCharacterLevel(activeCharacter)}
-            race={activeCharacter.race}
+            race={getRaceDisplayName(activeCharacter.race, activeCharacter.subrace)}
             characterClass={getCharacterClassEntries(activeCharacter)[0]?.name ?? ''}
             lastModified={activeCharacter.lastModified}
             onPortraitChange={(p) => updateActiveCharacter({ portrait: p ?? undefined })}

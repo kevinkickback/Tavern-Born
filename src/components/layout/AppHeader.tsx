@@ -36,6 +36,7 @@ import { AnchoredHint } from '@/components/workspace'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
@@ -110,7 +111,11 @@ export function AppHeader() {
     const classLabel = isCondensed ? `${classNames.length} classes` : classNames.join(' / ')
 
     return {
-      visible: [activeCharacter.race, `Level ${totalLevel}`, classLabel]
+      visible: [
+        getRaceDisplayName(activeCharacter.race, activeCharacter.subrace),
+        `Level ${totalLevel}`,
+        classLabel,
+      ]
         .filter(Boolean)
         .join(' · '),
       classBreakdown,

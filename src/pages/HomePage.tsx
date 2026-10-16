@@ -62,6 +62,7 @@ import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/wor
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
@@ -146,8 +147,9 @@ function CharacterListRow({
     useRouteFocusTarget<HTMLDivElement>(highlighted)
   const name = character.name || 'Unnamed Character'
   const summary =
-    [character.race, character.classProgression[0]?.name].filter(Boolean).join(' · ') ||
-    'Unspecified'
+    [getRaceDisplayName(character.race, character.subrace), character.classProgression[0]?.name]
+      .filter(Boolean)
+      .join(' · ') || 'Unspecified'
 
   return (
     <div
