@@ -27,6 +27,12 @@ import {
 import { buildGameDataLookups } from './lookups'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
+import {
+  associatePrimaryItemTypes,
+  getRawItemTypes,
+  mergePrimaryItemTypes,
+  resolvePrimaryItemTypes,
+} from './primaryItemTypes'
 import { getSubclassIntroEntries } from './subclassContent'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
@@ -358,6 +364,10 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const composed = {} as GameData
 
   for (const key of collectionKeys) {
+    if (key === 'itemTypes') {
+      composed.itemTypes = mergePrimaryItemTypes(layers.map(getRawItemTypes))
+      continue
+    }
     if (key === 'itemTypeAdditionalEntries') {
       composed.itemTypeAdditionalEntries = mergeItemTypeEntries(
         layers.map((layer) => layer.itemTypeAdditionalEntries ?? []),
@@ -429,8 +439,13 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const itemCount = composed.items.length
   retainRawItems(composed)
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
+  resolvePrimaryItemTypes(composed)
   const describedItems = associateItemTypeEntries(
-    expandItemEntries(items.records, composed.itemEntries ?? []),
+    associatePrimaryItemTypes(
+      expandItemEntries(items.records, composed.itemEntries ?? []),
+      composed.itemTypes,
+      composed.itemEntries ?? [],
+    ),
     composed.itemTypeAdditionalEntries ?? [],
     composed.itemEntries ?? [],
   )

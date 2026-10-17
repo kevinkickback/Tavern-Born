@@ -280,6 +280,7 @@ export interface ItemType5e {
   name: string
   source: string
   entries?: unknown[]
+  itemTypeDiagnostics?: ItemEntryDiagnostic[]
   [key: string]: unknown
 }
 
@@ -406,6 +407,9 @@ export interface Item5e {
   itemEntryDiagnostics?: ItemEntryDiagnostic[]
   /** Source-qualified optional category prose, projected at each display boundary. */
   itemTypeText?: ItemTypeText5e[]
+  /** Intrinsic rules of the exact primary type, independent of selected supplemental books. */
+  primaryItemTypeText?: ItemTypeText5e
+  primaryItemTypeDiagnostics?: ItemEntryDiagnostic[]
   weaponCategory?: string
   firearm?: boolean
   dmg1?: string
@@ -625,6 +629,7 @@ export interface GameData {
   itemProperties: ItemProperty5e[]
   /** Parsed from data/items-base.json → .itemType[]. */
   itemTypes: ItemType5e[]
+  itemTypeDiagnostics?: ItemEntryDiagnostic[]
   /** Parsed from data/items-base.json → .itemMastery[]. */
   itemMasteries?: ItemMastery5e[]
   classFeatures: ClassFeature[]

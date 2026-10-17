@@ -156,6 +156,13 @@ export function* iterateItemRulesEntries(
   if (!item) return
   if (Array.isArray(item.entries)) yield* item.entries
   if (Array.isArray(item.additionalEntries)) yield* item.additionalEntries
+  const primary = item.primaryItemTypeText
+  if (primary?.entries.length)
+    yield {
+      type: 'entries',
+      name: `${primary.name} (${primary.source.trim()})`,
+      entries: primary.entries,
+    }
   const allowed =
     context?.allowedSources === undefined
       ? undefined

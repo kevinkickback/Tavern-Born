@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
-import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTypeEntries'
+import { type ItemTextContext, iterateItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
@@ -96,9 +96,9 @@ function getItemDescription(
   itemTypeByAbbr: Readonly<Record<string, string>>,
   textContext?: ItemTextContext,
 ): string {
-  const entries = getItemRulesEntries(item, textContext)
-  if (entries.length > 0) {
-    const rendered = renderEntryCached(entries[0])
+  const first = iterateItemRulesEntries(item, textContext).next()
+  if (!first.done) {
+    const rendered = renderEntryCached(first.value)
     const plain = toPlainText(rendered)
     return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain
   }

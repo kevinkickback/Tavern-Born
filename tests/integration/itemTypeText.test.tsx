@@ -26,7 +26,18 @@ import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
-import { instrumentRules, loadItemTypeText, lute } from '../fixtures/itemTypeTextFixtures'
+import {
+  instrumentRules,
+  loadItemTypeText as loadCategoryText,
+  lute,
+  primaryInstrumentTypes,
+} from '../fixtures/itemTypeTextFixtures'
+
+const loadItemTypeText: typeof loadCategoryText = (
+  items,
+  support,
+  primary = primaryInstrumentTypes,
+) => loadCategoryText(items, support, primary)
 
 vi.unmock('@/lib/storage/idb-storage')
 
@@ -47,8 +58,11 @@ async function setupSpellPagePreview(allowedSources: string[]) {
     level: 0,
     entries: ['Use a {@item Lute|PHB}.'],
   })
-  const makeData = async (support: unknown = [instrumentRules]) => {
-    const data = await loadItemTypeText([{ ...lute, property: ['Q'] }], support)
+  const makeData = async (
+    support: unknown = [instrumentRules],
+    primary = primaryInstrumentTypes,
+  ) => {
+    const data = await loadItemTypeText([{ ...lute, property: ['Q'] }], support, primary)
     data.spells = [root]
     data.itemProperties = [
       { abbreviation: 'Q', source: 'PHB', name: 'Catalog property label', entries: [] },
@@ -111,6 +125,7 @@ describe('category-text display contexts and storage boundary', () => {
       await setupSpellPagePreview([])
     const disabled = await openItem()
     expect(disabled.textContent).not.toContain('Instrument category guidance.')
+    expect(disabled.textContent).toContain('Standard instrument rules.')
     expect(disabled.textContent).toContain('Catalog property label')
     await act(async () => {
       await useCharacterStore.getState().updateCharacter(character.id, { allowedSources: ['XGE'] })
@@ -127,6 +142,7 @@ describe('category-text display contexts and storage boundary', () => {
     closePreviews()
     const restored = await openItem()
     expect(restored.textContent).not.toContain('Instrument category guidance.')
+    expect(restored.textContent).toContain('Standard instrument rules.')
     expect(restored.textContent).toContain('Catalog property label')
     expectUnchangedSelections()
   })
@@ -137,7 +153,7 @@ describe('category-text display contexts and storage boundary', () => {
     const available = await openItem()
     expect(available.textContent).toContain('Instrument category guidance.')
     expect(available.textContent).toContain('Catalog property label')
-    const missing = await makeData([])
+    const missing = await makeData([], [])
     const incompatible = {
       ...data,
       sources: data.sources.map((book) =>
@@ -155,6 +171,7 @@ describe('category-text display contexts and storage boundary', () => {
       closePreviews()
       const item = await openItem()
       expect(item.textContent?.includes('Instrument category guidance.')).toBe(expected)
+      expect(item.textContent?.includes('Standard instrument rules.')).toBe(catalog !== missing)
       expect(item.textContent).toContain('Catalog property label')
     }
     expectUnchangedSelections()
@@ -208,14 +225,18 @@ describe('category-text display contexts and storage boundary', () => {
     expect(stored!.state.characters[0].equipment).toEqual(equipment)
     expect(JSON.stringify(stored)).not.toContain('itemTypeText')
     expect(JSON.stringify(stored)).not.toContain('Instrument category guidance.')
+    expect(JSON.stringify(stored)).not.toContain('primaryItemTypeText')
+    expect(JSON.stringify(stored)).not.toContain('Standard instrument rules.')
     show(<EquipmentPage />)
     expect(screen.getByText('Native additional guidance.')).toBeTruthy()
     expect(screen.getByText('Instrument category guidance.')).toBeTruthy()
+    expect(screen.getByText('Standard instrument rules.')).toBeTruthy()
     await act(async () => {
       useCharacterStore.getState().updateCharacter(added.id, { allowedSources: [] })
       await useCharacterStore.getState().saveActiveCharacter()
     })
     expect(screen.queryByText('Instrument category guidance.')).toBeNull()
+    expect(screen.getByText('Standard instrument rules.')).toBeTruthy()
     expect(screen.getByText('Native additional guidance.')).toBeTruthy()
     await act(async () => {
       useCharacterStore.getState().updateCharacter(added.id, { allowedSources: ['XGE'] })
@@ -227,12 +248,14 @@ describe('category-text display contexts and storage boundary', () => {
     fireEvent.click(screen.getByText('Equipment'))
     expect(screen.getAllByText('Native additional guidance.')).toHaveLength(2)
     expect(screen.getAllByText('Instrument category guidance.')).toHaveLength(2)
+    expect(screen.getAllByText('Standard instrument rules.')).toHaveLength(2)
     expect(screen.queryByText('Player notes.')).toBeNull()
     cleanup()
     useCharacterStore.getState().updateCharacter(added.id, { allowedSources: [] })
     const entry = buildCompendiumEntries(data).find((row) => row.name === horn.name)!
     show(<CompendiumEntryDetails selectedEntry={entry} />)
     expect(screen.getByText('Instrument category guidance.')).toBeTruthy()
+    expect(screen.getByText('Standard instrument rules.')).toBeTruthy()
     cleanup()
     const active = useCharacterStore.getState().activeCharacter!
     const pdfCharacter = { ...active, allowedSources: ['XGE'] }
@@ -243,6 +266,16 @@ describe('category-text display contexts and storage boundary', () => {
     expect(vm.magicItems[0].description).toBe('Player notes.')
     expect(vm.magicItems[1].description).toContain('Native additional guidance.')
     expect(vm.magicItems[1].description).toContain('Instrument category guidance.')
+    expect(vm.magicItems[1].description).toContain('Standard instrument rules.')
+    expect(
+      createCharacterSheetViewModel(
+        { ...pdfCharacter, allowedSources: [], originSystem: '2024' },
+        {
+          ...data.lookups!,
+          sourceCatalog: data.sources,
+        },
+      ).magicItems[1].description,
+    ).toContain('Standard instrument rules.')
     expect(
       createCharacterSheetViewModel(pdfCharacter, {
         ...data.lookups!,
@@ -254,16 +287,22 @@ describe('category-text display contexts and storage boundary', () => {
     const config = { type: 'local' as const, path: '/fixture', isValid: true }
     await writeGameDataCache(data, config)
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(34)
+    expect(cached?.cacheSchemaVersion).toBe(35)
     expect(cached?.data.items[0].itemTypeText).toEqual(data.items[0].itemTypeText)
+    expect(cached?.data.items[0].primaryItemTypeText).toEqual(data.items[0].primaryItemTypeText)
     for (const support of [[], [instrumentRules]]) {
-      const refreshed = await loadItemTypeText([horn], support)
+      const refreshed = await loadItemTypeText(
+        [horn],
+        support,
+        support.length ? primaryInstrumentTypes : [],
+      )
       useGameDataStore.setState({ gameData: refreshed })
       expect(useCharacterStore.getState().activeCharacter!.equipment).toEqual(equipment)
       expect(useCharacterStore.getState().activeCharacter!.provenance).toEqual(ledger)
       const description = createCharacterSheetViewModel(pdfCharacter, refreshed.lookups!)
         .magicItems[1].description
       expect(description?.includes('Instrument category guidance.')).toBe(support.length > 0)
+      expect(description?.includes('Standard instrument rules.')).toBe(support.length > 0)
     }
     await useCharacterStore.getState().saveActiveCharacter()
     useCharacterStore.getState().setActiveCharacter(null)
@@ -339,6 +378,8 @@ describe('category-text display contexts and storage boundary', () => {
     fireEvent.mouseMove(screen.getByRole('button', { name: 'musical instruments' }))
     const preview = await screen.findByRole('dialog', { name: 'Musical Instrument preview' })
     expect(preview.textContent).toContain('Instrument category guidance.')
+    expect(preview.textContent).toContain('Standard instrument rules.')
+    expect(preview.textContent).not.toContain('No description available')
     hook.rerender({ allowedSources: [] })
     view.rerender(
       <MemoryRouter>
@@ -375,6 +416,9 @@ describe('category-text display contexts and storage boundary', () => {
     expect(
       (await screen.findByRole('dialog', { name: 'Musical Instrument preview' })).textContent,
     ).not.toContain('Instrument category guidance.')
+    expect(
+      screen.getByRole('dialog', { name: 'Musical Instrument preview' }).textContent,
+    ).toContain('Standard instrument rules.')
     fireEvent.mouseMove(screen.getByRole('button', { name: 'Longsword' }))
     const weapon = await screen.findByRole('dialog', { name: 'Longsword preview' })
     expect(within(weapon).getByText('Damage')).toBeTruthy()
