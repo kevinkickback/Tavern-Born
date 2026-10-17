@@ -530,6 +530,7 @@ explicit empty settings enable only the implicit core book. Unspecified settings
 unfiltered meaning, with any supplied ruleset still enforcing compatibility. Global Compendium views
 remain unrestricted. Retained exact items can show eligible text without becoming new item choices.
 Already-open previews keep their spawning lookup snapshot; closing and reopening uses current settings.
+Spell-page preview descendants receive the same character book context and item-property catalog.
 
 Item previews share available value, weight, damage, range and property formatting with Equipment,
 including items without prose; inventory quantity stays specific to inventory. Rules projections

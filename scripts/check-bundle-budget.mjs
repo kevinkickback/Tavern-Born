@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Source-qualified category text and shared item facts measure 5,664,579 renderer
+  // Source-qualified category text and shared item facts measure 5,664,646 renderer
   // bytes; use the smallest independently reviewed whole-KiB allowance.
   rendererCode: 5532 * KIB,
   // The same measured artifact has 502,351 initial script bytes. Other limits and

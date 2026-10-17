@@ -8,6 +8,7 @@ import { ClassStep } from '@/components/character/wizard/steps/4-ClassStep'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   addManualEquipmentBatchCommand,
   removeManualEquipmentCommand,
@@ -18,18 +19,20 @@ import { readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
+import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { instrumentRules, loadItemTypeText, lute } from '../fixtures/itemTypeTextFixtures'
 
 vi.unmock('@/lib/storage/idb-storage')
 
-function show(element: ReactElement) {
+function show(element: ReactElement, route = '/build/review?section=overview') {
   return render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
+    <MemoryRouter initialEntries={[route]}>
       <TooltipProvider>
         <RulesPreviewManager>{element}</RulesPreviewManager>
       </TooltipProvider>
@@ -48,6 +51,91 @@ describe('category-text display contexts and storage boundary', () => {
   afterEach(() => {
     cleanup()
     useGameDataStore.setState({ gameData: null })
+  })
+
+  test('spell-page item descendants use current books, catalog properties and refreshed metadata', async () => {
+    const root = makeSpellFixture({
+      name: 'Root Spell',
+      source: 'PHB',
+      level: 0,
+      entries: ['Use a {@item Lute|PHB}.'],
+    })
+    const makeData = async (support: unknown = [instrumentRules]) => {
+      const data = await loadItemTypeText([{ ...lute, property: ['Q'] }], support)
+      data.spells = [root]
+      data.itemProperties = [
+        { abbreviation: 'Q', source: 'PHB', name: 'Catalog property label', entries: [] },
+      ]
+      data.lookups = buildGameDataLookups(data)
+      return data
+    }
+    const character = makeCharacterFixture({
+      race: '',
+      background: '',
+      classProgression: [],
+      allowedSources: [],
+    })
+    character.spells.spellProfiles = character.spells.spellProfiles
+      .filter((profile) => profile.type === 'special')
+      .map((profile) => ({ ...profile, cantrips: ['Root Spell|PHB'] }))
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacter: character,
+      activeCharacterId: character.id,
+    })
+    const before = structuredClone(character)
+    const data = await makeData()
+    useGameDataStore.setState({ gameData: data })
+    show(<SpellsPage />, '/spells')
+    const openItem = async () => {
+      fireEvent.mouseEnter(screen.getByRole('button', { name: 'Root Spell' }))
+      const spell = await screen.findByRole('dialog', { name: 'Root Spell preview' })
+      fireEvent.mouseMove(within(spell).getByRole('button', { name: 'Lute' }))
+      return screen.findByRole('dialog', { name: 'Lute preview' })
+    }
+    const closePreviews = () => {
+      fireEvent.keyDown(document, { key: 'Escape' })
+      fireEvent.keyDown(document, { key: 'Escape' })
+    }
+    const disabled = await openItem()
+    expect(disabled.textContent).not.toContain('Instrument category guidance.')
+    expect(disabled.textContent).toContain('Catalog property label')
+    await act(async () => {
+      await useCharacterStore.getState().updateCharacter(character.id, { allowedSources: ['XGE'] })
+    })
+    // The open chain keeps its snapshot; a new root on the same mounted page uses current books.
+    expect(disabled.textContent).not.toContain('Instrument category guidance.')
+    closePreviews()
+    expect((await openItem()).textContent).toContain('Instrument category guidance.')
+    const missing = await makeData([])
+    const incompatible = {
+      ...data,
+      sources: data.sources.map((book) =>
+        book.abbreviation === 'XGE' ? { ...book, minimumRuleset: '2024' as const } : book,
+      ),
+    }
+    for (const [catalog, expected] of [
+      [missing, false],
+      [incompatible, false],
+      [data, true],
+    ] as const) {
+      await act(async () => {
+        await useGameDataStore.setState({ gameData: catalog })
+      })
+      closePreviews()
+      const item = await openItem()
+      expect(item.textContent?.includes('Instrument category guidance.')).toBe(expected)
+      expect(item.textContent).toContain('Catalog property label')
+    }
+    await act(async () => {
+      await useCharacterStore.getState().updateCharacter(character.id, { allowedSources: [] })
+    })
+    closePreviews()
+    expect((await openItem()).textContent).not.toContain('Instrument category guidance.')
+    const after = useCharacterStore.getState().activeCharacter!
+    expect(after.equipment).toEqual(before.equipment)
+    expect(after.provenance).toEqual(before.provenance)
+    expect(after.spells).toEqual(before.spells)
   })
 
   test('live item screens, raw Compendium and exported-character PDF keep source context and preserve save/reopen/removal', async () => {
