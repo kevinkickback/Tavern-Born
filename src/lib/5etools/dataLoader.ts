@@ -22,6 +22,7 @@ import {
   parseItemTypeEntries,
 } from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
+import { appendMagicVariantReferences, parseMagicVariantTemplates } from './magicVariants'
 import {
   buildSourcesList,
   parseActions,
@@ -40,7 +41,6 @@ import {
   parseItemProperties,
   parseItems,
   parseLanguages,
-  parseMagicVariants,
   parseOptionalFeatures,
   parseOrganizations,
   parseRaceFluffSummaries,
@@ -182,7 +182,6 @@ export class FiveEToolsDataLoader {
     let bestiaryIndexData: unknown = null
     let raceData: unknown = null
     let spellSourceLookupData: unknown = null
-    let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
     let backgroundFluffEntriesByKey = new Map<string, unknown[]>()
     let loadedTopLevelResources = 0
@@ -295,8 +294,7 @@ export class FiveEToolsDataLoader {
             this.addItemSources(gameData.languages, sourcesSet)
             break
           case 'magicvariants':
-            magicVariants = parseMagicVariants(data)
-            this.addItemSources(magicVariants, sourcesSet)
+            gameData.magicVariants = parseMagicVariantTemplates(data)
             break
           case 'optionalfeatures':
             gameData.optionalfeatures = parseOptionalFeatures(data)
@@ -399,14 +397,18 @@ export class FiveEToolsDataLoader {
 
     throwIfAborted(options?.signal)
 
-    gameData.items.push(...magicVariants)
     retainRawItems(gameData)
-    const itemCount = gameData.items.length
+    const concreteItemCount = gameData.items.length
     const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
+    gameData.items = resolvedItems.records.slice(0, concreteItemCount)
+    gameData.itemsBase = resolvedItems.records.slice(concreteItemCount)
+    appendMagicVariantReferences(gameData)
+    this.addItemSources(gameData.items, sourcesSet)
+    const itemCount = gameData.items.length
     resolvePrimaryItemTypes(gameData)
     const describedItems = associateItemTypeEntries(
       associatePrimaryItemTypes(
-        expandItemEntries(resolvedItems.records, gameData.itemEntries ?? []),
+        expandItemEntries([...gameData.items, ...gameData.itemsBase], gameData.itemEntries ?? []),
         gameData.itemTypes,
         gameData.itemEntries ?? [],
       ),

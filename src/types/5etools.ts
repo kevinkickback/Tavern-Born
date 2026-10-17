@@ -391,6 +391,8 @@ export type ItemPropertyReference = string | { uid: string; note?: string }
 export interface Item5e {
   name: string
   source: string
+  /** Canonical template target behind a reference-only projection; never saved inventory. */
+  magicVariantReference?: { name: string; source: string }
   page?: number
   srd?: boolean | string
   srd52?: boolean | string
@@ -620,6 +622,9 @@ export interface GameData {
   feats: Feat5e[]
   items: Item5e[]
   itemsBase: Item5e[]
+  /** Canonical raw templates, retained separately for copy resolution and future generation. */
+  magicVariants?: unknown[]
+  magicVariantDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

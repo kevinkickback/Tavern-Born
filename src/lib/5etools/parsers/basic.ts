@@ -8,6 +8,7 @@ import type {
   Language5e,
 } from '@/types/5etools'
 import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
+import { parseMagicVariantTemplates, resolveMagicVariants } from '../magicVariants'
 import { parsePrimaryItemTypes } from '../primaryItemTypes'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
@@ -121,56 +122,7 @@ export function parseLanguages(data: unknown): Language5e[] {
 }
 
 export function parseMagicVariants(data: unknown): Item5e[] {
-  const obj = asObject(data)
-  const variants = obj.variant
-    ? asArray(obj.variant)
-    : obj.magicvariant
-      ? asArray(obj.magicvariant)
-      : Array.isArray(data)
-        ? data
-        : []
-  return variants.flatMap((value) => {
-    const variant = asObject(value)
-    const inherits = asObject(variant.inherits)
-    const name = typeof variant.name === 'string' ? variant.name.replace(/ \(\*\)$/, '') : ''
-    const source =
-      typeof inherits.source === 'string'
-        ? inherits.source
-        : typeof variant.source === 'string'
-          ? variant.source
-          : ''
-    if (!name || !source || typeof variant.type !== 'string') return []
-    const parsed: Record<string, unknown> = {
-      ...variant,
-      ...inherits,
-      name,
-      source,
-      type: variant.type,
-    }
-    // The variant's own entries describe the reference item. Inherited entries are templates
-    // for a concrete base item and should only be used when no reference text is supplied.
-    const entries = variant.entries ?? inherits.entries
-    if (entries !== undefined) parsed.entries = resolveMagicVariantEntries(entries, parsed)
-    return [parsed as unknown as Item5e]
-  })
-}
-
-function resolveMagicVariantEntries(value: unknown, fields: Record<string, unknown>): unknown {
-  if (typeof value === 'string') {
-    return value.replace(/\{=([^}]+)\}/g, (_token, field: string) => {
-      const replacement = fields[field]
-      return typeof replacement === 'string' || typeof replacement === 'number'
-        ? String(replacement)
-        : '[value unavailable]'
-    })
-  }
-  if (Array.isArray(value)) return value.map((entry) => resolveMagicVariantEntries(entry, fields))
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, resolveMagicVariantEntries(entry, fields)]),
-    )
-  }
-  return value
+  return resolveMagicVariants(parseMagicVariantTemplates(data)).references
 }
 
 export function parseOptionalFeatures(data: unknown): unknown[] {

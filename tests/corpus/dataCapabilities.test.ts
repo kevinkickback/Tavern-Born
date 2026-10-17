@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import {
   createClassChoiceCoverageMatrix,
@@ -8,7 +8,7 @@ import {
   getPrimaryClassSourceForEdition,
   getSrdClassCohort,
 } from '@/lib/5etools/classChoiceCoverage'
-import { findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { findLayerDependencyIssues, loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import {
@@ -51,6 +51,91 @@ function collection(payload: unknown, field: string): unknown[] {
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
+  it('loads the actual bundled and managed source stack while retaining only the two optional item-choice gaps', async () => {
+    const failures: string[] = []
+    vi.stubGlobal('electronAPI', {
+      readBundledJson: async (file: string) => readJson(resolve('resources/srd/core/data', file)),
+      readLocalJson: async (file: string) => readJson(file),
+    })
+    try {
+      const data = await loadGameDataSourceStack(
+        {
+          base: {
+            type: 'bundled',
+            path: 'srd/core',
+            packId: 'tavern-born-srd-core',
+            packVersion: 'test',
+            isValid: true,
+          },
+          additional: { type: 'local', path: DATA_ROOT, isValid: true },
+        },
+        {
+          onResourceFailure: (file) => {
+            failures.push(file)
+          },
+        },
+      )
+      expect(failures).toEqual([])
+      expect(findLayerDependencyIssues(data, data)).toEqual([
+        {
+          owner: 'Artificer|EFA',
+          path: 'normalizedRules.choices[0].options[9]',
+          reference: '+1 Shield|XDMG',
+          required: false,
+        },
+        {
+          owner: 'Artificer|EFA',
+          path: 'normalizedRules.choices[0].options[43]',
+          reference: '+2 Shield|XDMG',
+          required: false,
+        },
+      ])
+      expect(data.magicVariants).toHaveLength(230)
+      expect(data.items.some((item) => item.name === '+1 Shield' && item.source === 'XDMG')).toBe(
+        false,
+      )
+      expect(data.items.some((item) => item.name === '+2 Shield' && item.source === 'XDMG')).toBe(
+        false,
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+  it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
+    const files = ['items.json', 'items-base.json', 'magicvariants.json']
+    const raw = collection(readJson(resolve(DATA_ROOT, 'magicvariants.json')), 'magicvariant')
+    const before = structuredClone(raw)
+    const data = await new FiveEToolsDataLoader(
+      { type: 'local', path: DATA_ROOT, isValid: true, availableResources: files },
+      { type: 'local', readJson: async (file) => readJson(resolve(DATA_ROOT, file)) },
+    ).loadAllData()
+    expect(data.magicVariants).toEqual(before)
+    expect(data.magicVariants).toHaveLength(230)
+    expect(data.magicVariantDiagnostics).toEqual([])
+    expect(data.items.filter((item) => item.magicVariantReference)).toHaveLength(230)
+    for (const name of [
+      'All-Seeing Blade of the Guardian',
+      'Resistant Blade of the Guardian',
+      'Studious Blade of the Guardian',
+      'Regal Breastplate of the Tyrant (*)',
+      'Subjugating Breastplate of the Tyrant (*)',
+    ]) {
+      const item = data.items.find((row) => row.name === name && row.source === 'AU')!
+      expect(item).toBeDefined()
+      expect(item.type).toBe('GV|XDMG')
+      expect(item.propertyAdd).toContain('Evo|AU')
+      expect(item).not.toHaveProperty('_copy')
+      expect(item.magicVariantReference).toEqual({ name, source: 'AU' })
+      expect(renderEntriesToText(item.entries)).toMatch(
+        /Studious|Resistant|All-Seeing|Regal|Subjugating/,
+      )
+    }
+    const barding = data.items.find((item) => item.name === 'Barding')!
+    expect(barding.type).toBe('GV|DMG')
+    expect(
+      data.items.find((item) => item.name === '+1 Shield (*)' && item.source === 'XDMG'),
+    ).toBeDefined()
+  })
   it('projects actual instrument groups, legacy ships and both inherited AIR printings', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
     const raw = readJson(resolve(DATA_ROOT, 'items-base.json')) as {
@@ -240,8 +325,37 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.classes).toBeGreaterThan(0)
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
-    expect(report.issues).toEqual([])
-    expect(layerDependencyIssues).toEqual([])
+    // Finished shields remain unavailable until materialization; (*) templates are not aliases.
+    expect(report.issues).toEqual([
+      {
+        code: 'unresolved-reference',
+        collection: 'classes',
+        entity: 'Artificer|EFA',
+        path: 'normalizedRules.choices[0].options[43]',
+        message: 'The item option +2 Shield|XDMG was not found in the parsed catalog.',
+      },
+      {
+        code: 'unresolved-reference',
+        collection: 'classes',
+        entity: 'Artificer|EFA',
+        path: 'normalizedRules.choices[0].options[9]',
+        message: 'The item option +1 Shield|XDMG was not found in the parsed catalog.',
+      },
+    ])
+    expect(layerDependencyIssues).toEqual([
+      {
+        owner: 'Artificer|EFA',
+        path: 'normalizedRules.choices[0].options[9]',
+        reference: '+1 Shield|XDMG',
+        required: false,
+      },
+      {
+        owner: 'Artificer|EFA',
+        path: 'normalizedRules.choices[0].options[43]',
+        reference: '+2 Shield|XDMG',
+        required: false,
+      },
+    ])
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)

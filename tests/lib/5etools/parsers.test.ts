@@ -277,7 +277,7 @@ describe('5etools/parsers', () => {
     const [variant] = parseMagicVariants([
       { name: '+1 Shield (*)', type: 'GV|XDMG', inherits: { source: 'XDMG', rarity: 'uncommon' } },
     ])
-    expect(variant).toMatchObject({ name: '+1 Shield', source: 'XDMG', rarity: 'uncommon' })
+    expect(variant).toMatchObject({ name: '+1 Shield (*)', source: 'XDMG', rarity: 'uncommon' })
   })
 
   test('resolves structured magic-variant values in reference text', () => {

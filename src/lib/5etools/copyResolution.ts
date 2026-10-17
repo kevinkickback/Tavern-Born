@@ -27,7 +27,7 @@ import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
 import { getSkillAbility } from '@/lib/calculations/skills'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
-type CopyKind = 'item' | 'monster' | 'race' | 'subrace' | 'itemType'
+type CopyKind = 'item' | 'magicvariant' | 'monster' | 'race' | 'subrace' | 'itemType'
 
 export interface CopyResolutionDiagnostic {
   entity: string
@@ -133,9 +133,9 @@ function ownArray(record: Record<string, unknown>, field: string): unknown[] {
 }
 
 function key(value: Record<string, unknown>, kind?: CopyKind): string {
-  if (kind === 'itemType')
+  if (kind === 'itemType' || kind === 'magicvariant')
     return JSON.stringify(
-      ['abbreviation', 'source'].map((field) =>
+      [kind === 'itemType' ? 'abbreviation' : 'name', 'source'].map((field) =>
         String(ownValue(value, field) ?? '')
           .trim()
           .toLowerCase(),
@@ -469,11 +469,14 @@ function applyMod(target: Record5e, prop: string, raw: unknown): void {
     return
   }
   if (mode === 'setProp') {
-    setAt(
-      target,
-      prop === '_' || prop === '*' ? String(mod.prop) : `${prop}.${String(mod.prop)}`,
-      clone(mod.value),
-    )
+    // Upstream permits a complete outer path without a child `prop` (magicvariant copies).
+    if (mod.prop !== undefined && typeof mod.prop !== 'string')
+      throw new Error('invalid setProp child path')
+    const path = [prop === '_' || prop === '*' ? '' : prop, mod.prop]
+      .filter((part) => part !== undefined && part !== '')
+      .join('.')
+    if (!path) throw new Error('empty setProp path')
+    setAt(target, path, clone(mod.value))
     return
   }
   if (mode === 'addSkills') {
@@ -603,7 +606,11 @@ function materializeCopy(
   const rootProps = new Set(Object.keys(own))
   const preserve = directive(copy._preserve)
   const protectedProps =
-    kind === 'item' ? ITEM_PRESERVED : kind === 'monster' ? MONSTER_PRESERVED : new Set<string>()
+    kind === 'item' || kind === 'magicvariant'
+      ? ITEM_PRESERVED
+      : kind === 'monster'
+        ? MONSTER_PRESERVED
+        : new Set<string>()
   for (const [field, value] of Object.entries(inherited)) {
     if (ownValue(own, field) === null) {
       delete own[field]
@@ -672,7 +679,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       if (
         typeof copy[parentField] !== 'string' ||
         typeof copy.source !== 'string' ||
-        (kind === 'itemType' && (!(copy[parentField] as string).trim() || !copy.source.trim()))
+        ((kind === 'itemType' || kind === 'magicvariant') &&
+          (!(copy[parentField] as string).trim() || !copy.source.trim()))
       )
         throw new Error('invalid parent reference')
       const parent = byKey.get(key(copy, kind))

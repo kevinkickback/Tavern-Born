@@ -6,6 +6,85 @@ import { buildCreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import type { Creature5e } from '@/types/5etools'
 
 describe('5etools copy resolution', () => {
+  test('sets complete outer paths and explicit child paths, preserving wildcard scope', () => {
+    const rows = [
+      { name: 'Base', source: 'TEST', nested: { keep: 1 }, action: { keep: 2 } },
+      {
+        name: 'Copy',
+        source: 'TEST',
+        _copy: {
+          name: 'Base',
+          source: 'TEST',
+          _mod: {
+            'nested.direct': { mode: 'setProp', value: 'direct' },
+            'nested.empty': { mode: 'setProp', prop: '', value: 'empty' },
+            nested: { mode: 'setProp', prop: 'child.leaf', value: 'leaf' },
+            _: { mode: 'setProp', prop: 'undefined', value: 'literal field' },
+            '*': { mode: 'setProp', prop: 'scoped', value: 'entry only' },
+          },
+        },
+      },
+    ]
+    const before = structuredClone(rows)
+    const result = resolveCopiedRecords(rows, 'item')
+    expect(result.diagnostics).toEqual([])
+    expect(result.records[1]).toMatchObject({
+      nested: { keep: 1, direct: 'direct', empty: 'empty', child: { leaf: 'leaf' } },
+      action: { keep: 2, scoped: 'entry only' },
+      undefined: 'literal field',
+    })
+    expect(result.records[1]).not.toHaveProperty('scoped')
+    expect(rows).toEqual(before)
+  })
+
+  test.each([
+    undefined,
+    '',
+    null,
+    4,
+    [],
+    {},
+  ])('rejects invalid root child paths atomically: %j', (prop) => {
+    const rows = [
+      { name: 'Base', source: 'TEST', value: 1 },
+      {
+        name: 'Copy',
+        source: 'TEST',
+        _copy: {
+          name: 'Base',
+          source: 'TEST',
+          _mod: {
+            value: { mode: 'setProp', value: 2 },
+            _: { mode: 'setProp', prop, value: 3 },
+          },
+        },
+      },
+    ]
+    const before = structuredClone(rows)
+    const result = resolveCopiedRecords(rows, 'item')
+    expect(result.diagnostics).toHaveLength(1)
+    expect(result.records).toEqual(before)
+    expect(rows).toEqual(before)
+  })
+
+  test('rejects unsafe complete outer paths without a child prop', () => {
+    const rows = [
+      { name: 'Base', source: 'TEST' },
+      {
+        name: 'Copy',
+        source: 'TEST',
+        _copy: {
+          name: 'Base',
+          source: 'TEST',
+          _mod: {
+            '__proto__.magicTemplateMarker': { mode: 'setProp', value: 'unsafe' },
+          },
+        },
+      },
+    ]
+    expect(resolveCopiedRecords(rows, 'magicvariant').diagnostics).toHaveLength(1)
+    expect(Object.prototype).not.toHaveProperty('magicTemplateMarker')
+  })
   test.each([
     'item',
     'monster',

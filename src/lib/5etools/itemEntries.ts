@@ -16,7 +16,12 @@ export function retainRawItems(data: GameData): void {
 }
 
 export function getRawItems(data: GameData): Pick<GameData, 'items' | 'itemsBase'> {
-  return rawItems.get(data) ?? data
+  return (
+    rawItems.get(data) ?? {
+      items: data.items.filter((item) => !item.magicVariantReference),
+      itemsBase: data.itemsBase.filter((item) => !item.magicVariantReference),
+    }
+  )
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
