@@ -11,7 +11,7 @@ import {
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
-import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -516,77 +516,78 @@ export function deriveWeaponActions(
 ): CharacterAction[] {
   const effects = context.effects ?? []
   const effectContext = context.effectContext ?? {}
-  return character.equipment
+  const weapons = character.equipment
     .filter(isWeapon)
     .sort(
       (left, right) =>
         Number(right.equipped) - Number(left.equipped) || left.id.localeCompare(right.id),
     )
-    .map((item) => {
-      const properties = item.properties ?? []
-      const propertyKeys = properties.map((property) =>
-        getItemPropertyUid(property).split('|')[0].toUpperCase(),
-      )
-      const ability: AbilityName = propertyKeys.includes('F')
-        ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
-          ? 'dexterity'
-          : 'strength'
-        : item.type === 'R'
-          ? 'dexterity'
-          : 'strength'
-      const proficient = isProficientWithWeapon(character.proficiencies.weapons, item)
-      const baseAttackBonus =
-        context.abilityModifiers[ability] + (proficient ? context.proficiencyBonus : 0)
-      const attackBonus = Math.trunc(
-        resolveNumericEffect(
-          baseAttackBonus,
-          { kind: 'attack-roll', attackId: item.id },
-          effects,
-          effectContext,
-        ).value,
-      )
-      const damageBonus = Math.trunc(
-        resolveNumericEffect(
-          context.abilityModifiers[ability],
-          { kind: 'damage', attackId: item.id, damageType: item.dmgType },
-          effects,
-          effectContext,
-        ).value,
-      )
-      const itemData = resolveItemReference(item, context.itemLookup)
-      const mastery = isSelectedItemChoice(character, item)
-        ? (itemData?.mastery ?? []).flatMap((reference) => {
-            const parsed = parseMasteryReference(reference)
-            return parsed ? [parsed] : []
-          })
-        : []
-      const propertyLabels = [
-        ...new Set(
-          properties.map((property) => {
-            if (getItemPropertyUid(property).split('|')[0].toUpperCase() === 'V' && item.dmg2) {
-              return `Versatile ${item.dmg2}`
-            }
-            return getItemPropertyLabel(property, context.propertyLookup ?? {})
-          }),
-        ),
-      ]
-      if (item.dmg2 && !propertyKeys.includes('V')) propertyLabels.push(`Versatile ${item.dmg2}`)
+  const itemRules = resolveItemReferences(weapons, context.itemLookup)
+  return weapons.map((item, index) => {
+    const properties = item.properties ?? []
+    const propertyKeys = properties.map((property) =>
+      getItemPropertyUid(property).split('|')[0].toUpperCase(),
+    )
+    const ability: AbilityName = propertyKeys.includes('F')
+      ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
+        ? 'dexterity'
+        : 'strength'
+      : item.type === 'R'
+        ? 'dexterity'
+        : 'strength'
+    const proficient = isProficientWithWeapon(character.proficiencies.weapons, item)
+    const baseAttackBonus =
+      context.abilityModifiers[ability] + (proficient ? context.proficiencyBonus : 0)
+    const attackBonus = Math.trunc(
+      resolveNumericEffect(
+        baseAttackBonus,
+        { kind: 'attack-roll', attackId: item.id },
+        effects,
+        effectContext,
+      ).value,
+    )
+    const damageBonus = Math.trunc(
+      resolveNumericEffect(
+        context.abilityModifiers[ability],
+        { kind: 'damage', attackId: item.id, damageType: item.dmgType },
+        effects,
+        effectContext,
+      ).value,
+    )
+    const itemData = itemRules[index]
+    const mastery = isSelectedItemChoice(character, item)
+      ? (itemData?.mastery ?? []).flatMap((reference) => {
+          const parsed = parseMasteryReference(reference)
+          return parsed ? [parsed] : []
+        })
+      : []
+    const propertyLabels = [
+      ...new Set(
+        properties.map((property) => {
+          if (getItemPropertyUid(property).split('|')[0].toUpperCase() === 'V' && item.dmg2) {
+            return `Versatile ${item.dmg2}`
+          }
+          return getItemPropertyLabel(property, context.propertyLookup ?? {})
+        }),
+      ),
+    ]
+    if (item.dmg2 && !propertyKeys.includes('V')) propertyLabels.push(`Versatile ${item.dmg2}`)
 
-      return {
-        id: `weapon:${item.id}`,
-        name: item.name,
-        kind: 'attack',
-        description: item.description?.trim() ?? '',
-        source: { kind: 'item', name: item.name, source: item.source, entityId: item.id },
-        active: item.equipped,
-        inactiveReason: item.equipped ? undefined : 'Not equipped',
-        ability,
-        proficient,
-        attackBonus,
-        range: item.range,
-        damage: [{ dice: item.dmg1, bonus: damageBonus, damageType: item.dmgType }],
-        properties: propertyLabels,
-        mastery,
-      } satisfies CharacterAction
-    })
+    return {
+      id: `weapon:${item.id}`,
+      name: item.name,
+      kind: 'attack',
+      description: item.description?.trim() ?? '',
+      source: { kind: 'item', name: item.name, source: item.source, entityId: item.id },
+      active: item.equipped,
+      inactiveReason: item.equipped ? undefined : 'Not equipped',
+      ability,
+      proficient,
+      attackBonus,
+      range: item.range,
+      damage: [{ dice: item.dmg1, bonus: damageBonus, damageType: item.dmgType }],
+      properties: propertyLabels,
+      mastery,
+    } satisfies CharacterAction
+  })
 }

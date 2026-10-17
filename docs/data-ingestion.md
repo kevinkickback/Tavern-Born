@@ -470,6 +470,16 @@ diagnostic/no invented capacity.
 Item classification uses parsed `itemType` labels first; catalog codes are compatibility fallback.
 Unfamiliar items remain available in an Other group instead of being dropped.
 
+Saved equipment resolution trims requested name/source fields and compares the parsed fields
+literally, including case. An explicit source never substitutes another printing; source-less
+manual/legacy equipment retains the deterministic source-order fallback. Duplicate matching
+tuples keep the first value in lookup iteration order, independent of map keys. Calculations,
+weapon Actions, Review details and PDF item descriptions resolve their references in synchronous
+batches, scanning each supplied lookup at most once per batch. These transient results are
+discarded after the projection, so later map edits, cache-restored maps and catalog replacements
+are observed without a persistent index. Primary results still precede raw fallback;
+PDF descriptions retain their source requirement and prefer saved prose when present.
+
 Generic starting-equipment tokens become choice descriptors whose candidates come from parsed
 items. The character stores the selected concrete `name|source` separately from the package choice.
 `items-base.json` supplies base items and mastery definitions; mastery records are not ordinary

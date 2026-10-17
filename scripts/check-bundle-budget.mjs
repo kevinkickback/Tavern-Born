@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Compound rule preservation and kind-qualified previews measure 5,656,413 renderer
+  // Batched item-reference projections measure 5,657,112 renderer
   // bytes; use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5524 * KIB,
-  // The same measured artifact has 492,566 initial script bytes. Other limits and
+  rendererCode: 5525 * KIB,
+  // The same measured artifact has 493,123 initial script bytes. Other limits and
   // normal enforcement remain unchanged; retain exact rule kinds and printings.
   initialRendererScript: 482 * KIB,
   initialStylesheet: 185 * KIB,

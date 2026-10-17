@@ -9,7 +9,7 @@ import {
   resolveClassReference,
   resolveFeatReference,
 } from '@/lib/5etools/entityResolvers'
-import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
@@ -692,13 +692,15 @@ export function createCharacterSheetViewModel(
       feat.description?.trim() ||
       renderEntriesToText(resolveFeatReference(feat, rawLookups)?.entries),
   }))
-  const magicItems = character.equipment.filter(isMagicItem).map((item) => ({
+  const magicEquipment = character.equipment.filter(isMagicItem)
+  const needsDescription = magicEquipment.filter((item) => !item.description?.trim() && item.source)
+  const itemRules = resolveItemReferences(needsDescription, rawLookups.itemLookup)
+  const descriptions = new Map(
+    needsDescription.map((item, index) => [item, renderEntriesToText(itemRules[index]?.entries)]),
+  )
+  const magicItems = magicEquipment.map((item) => ({
     ...item,
-    description:
-      item.description?.trim() ||
-      (item.source
-        ? renderEntriesToText(resolveItemReference(item, rawLookups.itemLookup)?.entries)
-        : ''),
+    description: item.description?.trim() || descriptions.get(item) || '',
   }))
   const companions = (character.classChoiceSelections ?? [])
     .filter((choice) => choice.kind === 'creature' && !choice.inactive)
