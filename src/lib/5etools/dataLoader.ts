@@ -39,7 +39,6 @@ import {
   parseItemMasteries,
   parseItemProperties,
   parseItems,
-  parseItemTypes,
   parseLanguages,
   parseMagicVariants,
   parseOptionalFeatures,
@@ -53,6 +52,11 @@ import {
   parseTrapHazards,
   parseVariantRules,
 } from './parsers/index'
+import {
+  associatePrimaryItemTypes,
+  parsePrimaryItemTypes,
+  resolvePrimaryItemTypes,
+} from './primaryItemTypes'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import { CreatureDataSchema } from './schemas'
 
@@ -254,7 +258,11 @@ export class FiveEToolsDataLoader {
                 sourcesSet.add(source)
             }
             gameData.itemProperties = parseItemProperties(data)
-            gameData.itemTypes = parseItemTypes(data)
+            {
+              const primary = parsePrimaryItemTypes(data)
+              gameData.itemTypes = primary.records
+              gameData.itemTypeDiagnostics = primary.diagnostics
+            }
             gameData.itemMasteries = parseItemMasteries(data)
             this.addItemSources(gameData.itemsBase, sourcesSet)
             this.addItemSources(gameData.itemMasteries, sourcesSet)
@@ -395,8 +403,13 @@ export class FiveEToolsDataLoader {
     retainRawItems(gameData)
     const itemCount = gameData.items.length
     const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
+    resolvePrimaryItemTypes(gameData)
     const describedItems = associateItemTypeEntries(
-      expandItemEntries(resolvedItems.records, gameData.itemEntries ?? []),
+      associatePrimaryItemTypes(
+        expandItemEntries(resolvedItems.records, gameData.itemEntries ?? []),
+        gameData.itemTypes,
+        gameData.itemEntries ?? [],
+      ),
       gameData.itemTypeAdditionalEntries ?? [],
       gameData.itemEntries ?? [],
     )

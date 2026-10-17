@@ -4,11 +4,12 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { expandItemEntries } from '@/lib/5etools/itemEntries'
 import { associateItemTypeEntries } from '@/lib/5etools/itemTypeEntries'
+import { associatePrimaryItemTypes } from '@/lib/5etools/primaryItemTypes'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameDataLookups, Item5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { firePotion, resistanceFragments } from '../fixtures/itemEntryFixtures'
-import { instrumentRules, lute } from '../fixtures/itemTypeTextFixtures'
+import { instrumentRules, lute, primaryInstrumentTypes } from '../fixtures/itemTypeTextFixtures'
 
 vi.mock('@/components/modals/SelectionModal', () => ({
   SelectionModal: ({
@@ -47,6 +48,30 @@ const lookups: GameDataLookups = {
 }
 
 describe('ItemSelectionModal', () => {
+  test('primary summaries survive disabled books and keep first-entry truncation lazy', () => {
+    const [primary] = associatePrimaryItemTypes([lute], primaryInstrumentTypes, [])
+    const own = {
+      ...primary,
+      name: 'Own-first instrument',
+      entries: ['x'.repeat(200)],
+      get primaryItemTypeText(): never {
+        throw Error('Selection summary visited later primary rules')
+      },
+    }
+    const items = [primary, own]
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ items, lookups }) })
+    render(
+      <ItemSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        items={items}
+        onConfirm={vi.fn()}
+        textContext={{ allowedSources: [], originSystem: '2024' }}
+      />,
+    )
+    expect(screen.getByText(/Standard instrument rules\./)).toBeTruthy()
+    expect(screen.getByText(`${'x'.repeat(177)}...`)).toBeTruthy()
+  })
   test('category-only card descriptions follow the supplied character book context', () => {
     const items = associateItemTypeEntries([lute], [instrumentRules], [])
     useGameDataStore.setState({ gameData: makeGameDataFixture({ items, lookups }) })

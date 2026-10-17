@@ -506,6 +506,28 @@ Expanded text is derived catalog data and never writes a character's inventory o
 Older parsed caches rebuild incomplete descriptions. Concrete magic-template materialization
 remains a separate support boundary.
 
+Primary `itemType.entries` supply intrinsic rules of the exact declared type. Definitions use
+normalized abbreviation/source tuples, independently of display names and the concrete item's
+printing. Omitted/blank type sources default to PHB. Explicit source conflicts never borrow another
+printing, even when only one other definition remains. The supported legacy exception is omitted or
+blank-source `SHP`: it selects exact SHP|DMG only when no identifiable SHP|PHB winner exists. Explicit
+`SHP|PHB` does not use that alias; absent or ambiguous DMG cannot select XPHB. The original item type
+and saved references remain unchanged, and supplemental matching does not inherit this exception.
+
+Later layers replace primary definitions by abbreviation/source and retain winning duplicates as
+ambiguous. Empty/absent entries provide no prose; malformed identifiable winners suppress earlier
+text with bounded optional diagnostics. AIR|DMG and AIR|XPHB copies use the existing copy engine with
+exact abbreviation/source parents. Live layers retain raw definitions so a parent replacement,
+removal or restoration re-resolves inherited text. Unresolved copies and unsupported primary templates
+degrade optional prose without invalidating item mechanics. Supported shared item-entry includes
+expand in the concrete item's context. Source reload obtains fresh raw inputs; finalized caches
+preserve display-ready definitions and per-item metadata, not original copy directives.
+
+Primary sections retain their actual definition-source attribution whenever an exact item is shown,
+including retained items whose books are disabled or incompatible. This follows existing own-entry
+and equipment-fact display and preserves admitted DMG/XDMG SRD rules without enabling full books.
+It does not change new-item eligibility, choose revised printings or add source-book choices.
+
 `itemTypeAdditionalEntries` supplies optional rules for an equipment category. Records retain their
 owning book and declared `appliesTo` type UID separately from individual items. Layer identity is the
 normalized tuple of owning source, target abbreviation and target type-source; display names and
@@ -518,7 +540,8 @@ Empty entries suppress earlier prose. Malformed identifiable overlays remain una
 unidentifiable rows and malformed optional containers produce bounded capability diagnostics.
 Optional prose does not invalidate unrelated item mechanics or become a resource transport failure.
 Canonical rows and fresh source-qualified per-item support metadata remain separate from own entries.
-The shared display projection combines own `entries`, own `additionalEntries`, then eligible category
+The shared display projection combines own `entries`, own `additionalEntries`, exact primary rules,
+then eligible supplemental category
 sections with visible owning-book attribution. Supported item-entry includes reuse the bounded adapter.
 Compendium list summaries consume that projection lazily and retain their four-candidate limit;
 full detail and PDF-description projections retain the complete supported text.
@@ -536,7 +559,7 @@ Item previews share available value, weight, damage, range and property formatti
 including items without prose; inventory quantity stays specific to inventory. Rules projections
 preserve each consumer's existing saved-description precedence. PDF text uses the exported character's
 book settings and retains its existing magic-item description scope. Category prose never grants
-proficiencies/bonuses or writes player descriptions, equipment instances or provenance. Cache schema34
+proficiencies/bonuses or writes player descriptions, equipment instances or provenance. Cache schema35
 rebuilds catalogs missing this metadata; saved character format11 is unchanged.
 
 5etools `_copy` records for items and creatures are resolved by source-qualified parent identity

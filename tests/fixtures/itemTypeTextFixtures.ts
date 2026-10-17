@@ -3,6 +3,11 @@ import type { Item5e } from '@/types/5etools'
 import { itemTextTypes } from './itemEntryFixtures'
 
 export const lute: Item5e = { name: 'Lute', source: 'PHB', type: 'INS', weight: 2, value: 3500 }
+export const primaryInstrumentTypes = itemTextTypes.map((type) =>
+  type.abbreviation === 'INS'
+    ? { ...type, source: 'PHB', name: 'Instrument', entries: ['Standard instrument rules.'] }
+    : { ...type, source: 'PHB' },
+)
 export const instrumentRules = {
   name: 'Instrument',
   source: 'XGE',
@@ -16,12 +21,13 @@ export const instrumentRules = {
 export async function loadItemTypeText(
   items: Item5e[] = [lute],
   support: unknown = [instrumentRules],
+  primary: unknown = itemTextTypes,
 ) {
   const payloads: Record<string, unknown> = {
     'items.json': { item: items },
     'items-base.json': {
       baseitem: [],
-      itemType: itemTextTypes,
+      itemType: primary,
       itemTypeAdditionalEntries: support,
     },
   }

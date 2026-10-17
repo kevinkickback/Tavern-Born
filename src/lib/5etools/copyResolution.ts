@@ -27,7 +27,7 @@ import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
 import { getSkillAbility } from '@/lib/calculations/skills'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
-type CopyKind = 'item' | 'monster' | 'race' | 'subrace'
+type CopyKind = 'item' | 'monster' | 'race' | 'subrace' | 'itemType'
 
 export interface CopyResolutionDiagnostic {
   entity: string
@@ -133,6 +133,14 @@ function ownArray(record: Record<string, unknown>, field: string): unknown[] {
 }
 
 function key(value: Record<string, unknown>, kind?: CopyKind): string {
+  if (kind === 'itemType')
+    return JSON.stringify(
+      ['abbreviation', 'source'].map((field) =>
+        String(ownValue(value, field) ?? '')
+          .trim()
+          .toLowerCase(),
+      ),
+    )
   const fields =
     kind === 'subrace' ? ['name', 'source', 'raceName', 'raceSource'] : ['name', 'source']
   return fields
@@ -660,14 +668,19 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       const copy = directive(ownValue(own, '_copy'))
       if (active.has(identity)) throw new Error('copy cycle')
       active.add(identity)
-      if (typeof copy.name !== 'string' || typeof copy.source !== 'string')
+      const parentField = kind === 'itemType' ? 'abbreviation' : 'name'
+      if (
+        typeof copy[parentField] !== 'string' ||
+        typeof copy.source !== 'string' ||
+        (kind === 'itemType' && (!(copy[parentField] as string).trim() || !copy.source.trim()))
+      )
         throw new Error('invalid parent reference')
       const parent = byKey.get(key(copy, kind))
-      if (!parent) throw new Error(`missing parent ${copy.name}|${copy.source}`)
+      if (!parent) throw new Error(`missing parent ${copy[parentField]}|${copy.source}`)
       const inherited = clone(visit(parent)) as Record5e
       assertSafeData(inherited)
       if (ownValue(inherited, '_copy'))
-        throw new Error(`unresolved parent ${copy.name}|${copy.source}`)
+        throw new Error(`unresolved parent ${copy[parentField]}|${copy.source}`)
       materializeCopy(own, inherited, kind, templateByKey)
       resolved.set(identity, own as T)
       return own as T

@@ -25,6 +25,7 @@ interface CapabilityIssue {
     | 'choice-diagnostic'
     | 'item-entry-diagnostic'
     | 'item-type-entry-diagnostic'
+    | 'primary-item-type-diagnostic'
     | 'missing-normalized-rules'
     | 'unqualified-entity'
     | 'unqualified-reference'
@@ -294,6 +295,16 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     })
   }
   const fieldCounts = new Map<string, Record<string, number>>()
+  for (const diagnostic of [
+    ...(gameData.itemTypeDiagnostics ?? []),
+    ...gameData.itemTypes.flatMap((row) => row.itemTypeDiagnostics ?? []),
+  ])
+    issues.push({
+      code: 'primary-item-type-diagnostic',
+      collection: 'itemTypes',
+      entity: 'Primary item rules',
+      ...diagnostic,
+    })
   for (const collection of FIELD_COLLECTIONS) {
     for (const [index, entity] of (gameData[collection] ?? []).entries()) {
       const owner = displayEntity(entity, `${collection}[${index}]`)
@@ -309,6 +320,17 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
       const record = asRecord(entity)
       if (!record) continue
       if (collection === 'items' || collection === 'itemsBase') {
+        const item = entity as Item5e
+        for (const diagnostic of [
+          ...(item.primaryItemTypeDiagnostics ?? []),
+          ...(item.primaryItemTypeText?.diagnostics ?? []),
+        ])
+          issues.push({
+            code: 'primary-item-type-diagnostic',
+            collection,
+            entity: owner,
+            ...diagnostic,
+          })
         for (const diagnostic of (entity as Item5e).itemEntryDiagnostics ?? []) {
           issues.push({ code: 'item-entry-diagnostic', collection, entity: owner, ...diagnostic })
         }

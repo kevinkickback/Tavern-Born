@@ -9,6 +9,8 @@ import {
   getSrdClassCohort,
 } from '@/lib/5etools/classChoiceCoverage'
 import { findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import {
   parseBackgrounds,
   parseClasses,
@@ -24,6 +26,7 @@ import {
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
+import { renderEntriesToText } from '@/lib/entryText'
 import type {
   Background5e,
   Class5e,
@@ -48,6 +51,49 @@ function collection(payload: unknown, field: string): unknown[] {
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
+  it('projects actual instrument groups, legacy ships and both inherited AIR printings', async () => {
+    const files = ['items.json', 'items-base.json', 'magicvariants.json']
+    const raw = readJson(resolve(DATA_ROOT, 'items-base.json')) as {
+      itemType: Array<{ abbreviation: string; source: string; entries?: unknown[] }>
+    }
+    const data = await new FiveEToolsDataLoader(
+      { type: 'local', path: DATA_ROOT, isValid: true, availableResources: files },
+      { type: 'local', readJson: async (file) => readJson(resolve(DATA_ROOT, file)) },
+    ).loadAllData()
+    for (const source of ['PHB', 'XPHB']) {
+      const group = data.items.find(
+        (item) => item.name === 'Musical Instrument' && item.source === source,
+      )!
+      const definition = raw.itemType.find(
+        (type) => type.abbreviation === 'INS' && type.source === source,
+      )!
+      expect(group.primaryItemTypeText?.source).toBe(source)
+      expect(group.primaryItemTypeText?.entries).toEqual(definition.entries)
+      expect(
+        renderEntriesToText(
+          getItemRulesEntries(group, { allowedSources: [], originSystem: '2024' }),
+        ),
+      ).toContain('Instrument')
+    }
+    const galley = [...data.items, ...data.itemsBase].find(
+      (item) => item.name === 'Galley' && item.source === 'DMG',
+    )!
+    expect(galley.type).toBe('SHP')
+    expect(galley.primaryItemTypeText?.source).toBe('DMG')
+    for (const source of ['DMG', 'XPHB']) {
+      expect(
+        data.itemTypes.find((type) => type.abbreviation === 'AIR' && type.source === source)
+          ?.entries,
+      ).toEqual(
+        raw.itemType.find((type) => type.abbreviation === 'SHP' && type.source === source)?.entries,
+      )
+    }
+    expect(
+      createCorpusCapabilityReport(data).issues.filter(
+        (issue) => issue.code === 'primary-item-type-diagnostic',
+      ),
+    ).toEqual([])
+  })
   it('retains every declared compound reference collection without editing the input', () => {
     const rawConditions = readJson(resolve(DATA_ROOT, 'conditionsdiseases.json'))
     const rawTraps = readJson(resolve(DATA_ROOT, 'trapshazards.json'))
