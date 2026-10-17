@@ -1,6 +1,8 @@
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
@@ -282,9 +284,21 @@ export function validateFeatSetup(
   ]
 }
 
-export function validateEquipment(character: Character): CharacterReadinessIssue[] {
-  return character.equipment.flatMap((item) =>
-    item._unresolved
+export function validateEquipment(
+  character: Character,
+  calculation?: CharacterCalculationContext,
+): CharacterReadinessIssue[] {
+  const primary = resolveItemReferences(
+    character.equipment,
+    calculation?.lookups.primary.itemLookup,
+  )
+  const raw = calculation?.lookups.raw.itemLookup
+  const missing = character.equipment.filter((_, index) => !primary[index])
+  const fallback = resolveItemReferences(missing, raw)
+  let fallbackIndex = 0
+  return character.equipment.flatMap((item, index) => {
+    const resolved = primary[index] ?? fallback[fallbackIndex++]
+    return item._unresolved
       ? [
           readinessIssue(
             equipmentUnresolvedReadinessId(item.id),
@@ -294,6 +308,16 @@ export function validateEquipment(character: Character): CharacterReadinessIssue
             'This equipment choice could not be matched to a content record.',
           ),
         ]
-      : [],
-  )
+      : calculation?.lookups.rawItemsAuthoritative && item.source?.trim() && !resolved
+        ? [
+            readinessIssue(
+              `equipment:rules:${item.id}`,
+              'recommendation',
+              'equipment',
+              `Restore rules for ${item.name}`,
+              'The exact equipment rules are unavailable. Saved item values are retained; current rules bonuses may be missing.',
+            ),
+          ]
+        : []
+  })
 }

@@ -15,6 +15,7 @@ import {
   resolveCopiedRecords,
 } from './copyResolution'
 import { createEmptyGameData } from './emptyGameData'
+import { getFixedShieldBases } from './fixedBonusShields'
 import { expandItemEntries, parseItemEntries, retainRawItems } from './itemEntries'
 import {
   associateItemTypeEntries,
@@ -248,6 +249,7 @@ export class FiveEToolsDataLoader {
             break
           case 'itemsBase':
             gameData.itemsBase = parseItems(data) as GameData['itemsBase']
+            gameData.fixedShieldBases = getFixedShieldBases(gameData)
             gameData.itemEntries = parseItemEntries(data)
             {
               const supplemental = parseItemTypeEntries(data)

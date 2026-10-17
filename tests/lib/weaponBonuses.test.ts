@@ -69,7 +69,7 @@ describe('fixed intrinsic weapon bonuses', () => {
         additional: { type: 'local', path: 'external-rules', isValid: true },
       })
       const restored = (await readGameDataCache())!
-      expect(restored.cacheSchemaVersion).toBe(36)
+      expect(restored.cacheSchemaVersion).toBe(37)
       const lookups = buildGameDataLookups(restored.data)
       expect(totals(character, lookups.itemLookup)).toEqual([
         [6, 4],

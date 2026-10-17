@@ -601,14 +601,47 @@ their existing reference semantics; they do not create inventory.
 
 Inventory choices and both generic/exact starting-equipment creation exclude generic variants and
 item groups through the shared selectable-item policy. An exact non-equipment starting reference
-uses the existing unresolved placeholder, preserving its requested identity. This foundation does
-not generate concrete variants, rewrite saved equipment/provenance or add a template/base saved
-relation. Existing concrete weapons use the separately bounded
+uses the existing unresolved placeholder, preserving its requested identity. This foundation
+does not rewrite saved equipment/provenance or add a template/base saved relation. The bounded
+shield generator below is the first concrete materialization support. Existing concrete weapons use the separately bounded
 [fixed weapon bonus projection](state-management.md#fixed-weapon-bonuses).
-Cache schema36 rebuilds older catalogs; character format11 is unchanged.
+Cache schema37 rebuilds older catalogs; character format11 is unchanged.
 For example, the managed Artificer|EFA item-choice tables request `+1 Shield|XDMG` and `+2 Shield|XDMG`.
-Their canonical `(*)` templates are different records. Until concrete materialization is implemented,
-those two choices remain diagnosed as missing; no alias or different printing supplies their rules.
+Their canonical `(*)` templates are different records. The shield generator supplies these exact
+concrete targets when their supported inputs are loaded; reference choices do not grant inventory.
+
+### Fixed-bonus shields
+
+Only canonical `+1`, `+2` and `+3 Shield (*)|DMG` with direct public `Shield|PHB`, and their
+`XDMG`/`XPHB` counterparts, generate concrete `+N Shield|DMG`/`|XDMG` equipment. Bundled-only data
+contains no templates and generates none. General weapon, body-armor and other template generation,
+copied Shield bases, charges, attached spells and conditional mechanics remain unsupported.
+
+Serializable `fixedShieldBases` retains winning raw Shield inputs before normalized base-item
+merging collapses duplicates. Identifiable invalid or duplicate winners suppress earlier inputs
+for generation, including after cache restoration/recomposition. Supported canonical template copies
+use their existing resolver. Generation accepts the audited fixed-bonus shape and explicit inherited
+source equal to its canonical owner; unknown canonical-root or inherited mechanics, changed bonuses
+and unsupported injectors are diagnosed instead of guessed. Requirements are OR-of-AND; exclusions
+match any key, including upstream array/recursive semantics. Ordinary non-VTT edition matching prevents cross-edition bases.
+Recursive predicates inspect own data properties, including array/string indices and length;
+missing or null targets never match. Inherited prototype properties are not rules data.
+
+Generation runs after raw layers and ordinary copy handling, before shared text/type enrichment and
+lookups. It retains physical base AC/type/weight, removes mundane value and base-only source/public/
+reprint/fluff metadata, applies inherited metadata and prepends injected shield rules to base entries.
+Generic reference prose and template-namespace reprint edges do not become concrete rules/reprint
+declarations. Raw templates keep their metadata. No concrete reprint mapping is inferred.
+
+Explicit concrete tuples in either equipment collection win collisions. Ambiguous generated tuples
+are unavailable. Bounded `fixedShieldDiagnostics` join optional template capability diagnostics,
+separately from resource transport failures. Derived `magicVariantGenerated` lineage is catalog-only;
+raw-item retention excludes generated/reference projections even after cache restore, so they cannot
+become concrete copy parents or regenerate from stale derived outputs. Fresh raw inputs drive
+replacement, removal and exact restoration. No character inventory or provenance is rewritten.
+New choices use existing source/ruleset/public-core filtering; exact retained equipment still resolves
+against raw data. See [equipment state](state-management.md#proficiencies-and-equipment) for AC ownership
+and missing-rule recommendations.
 
 Public SRD items housed in DMG/XDMG are admitted by the shared player-item policy without enabling
 the full source. The Included SRD remains the base catalog when additional content is configured,

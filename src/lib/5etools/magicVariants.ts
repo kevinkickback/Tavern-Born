@@ -1,9 +1,10 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { resolveCopiedRecords } from './copyResolution'
+import { generateFixedBonusShields } from './fixedBonusShields'
 
 // Data-only reference adaptation of Renderer.item and SourceUtil at 5etools b9061583:
 // https://github.com/5etools-mirror-3/5etools-src/tree/b9061583536101068b3a59d27e886d1fa664e366/js
-// Raw templates remain a separate authority; this module does not generate equipment.
+// Raw templates remain separate from reference and concrete projections.
 type Definition = Record<string, unknown> & { name: string; source: string }
 const record = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -173,6 +174,9 @@ function isGenericType(value: unknown): value is string {
 /** References follow concrete copy resolution and can never replace an actual equipment tuple. */
 export function appendMagicVariantReferences(data: GameData): void {
   const result = resolveMagicVariants(data.magicVariants ?? [])
+  const generated = generateFixedBonusShields(data, result.definitions)
+  data.fixedShieldDiagnostics = generated.diagnostics
+  data.items = [...data.items, ...generated.items]
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )

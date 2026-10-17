@@ -41,7 +41,10 @@ export function getCharacterReadiness(
       ...validateSpells(character, calculation, context.spellsByKey),
     )
   }
-  issues.push(...validateFeatSetup(character, context.featsByKey), ...validateEquipment(character))
+  issues.push(
+    ...validateFeatSetup(character, context.featsByKey),
+    ...validateEquipment(character, calculation ?? undefined),
+  )
 
   if (!character.portrait) {
     issues.push(
