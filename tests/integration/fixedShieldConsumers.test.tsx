@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { clear, get } from 'idb-keyval'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -65,24 +65,29 @@ function show(element: React.ReactNode) {
   )
 }
 
-test('actual source-filtered selection/add/equip, details, Review, Compendium and PDF share concrete shield rules', async () => {
+test('actual source-filtered selection/add/equip, details and PDF share concrete shield rules', async () => {
   const data = await loadFixedShields(),
     c = fixture()
   useGameDataStore.setState({ gameData: data })
   useCharacterStore.setState({ characters: [c], activeCharacter: c, activeCharacterId: c.id })
   show(<EquipmentPage />)
-  fireEvent.click(screen.getAllByRole('button', { name: 'Add Item' })[0])
-  const choice = screen.getByRole('button', { name: /^\+2 Shield\b/ })
+  const inventoryHeader = screen.getByRole('heading', { name: 'Inventory' }).closest('header')!
+  fireEvent.click(within(inventoryHeader).getByRole('button', { name: 'Add Item' }))
+  const dialog = screen.getByRole('dialog', { name: 'Add Item' })
+  const list = dialog.querySelector<HTMLElement>('[data-selection-list-size]')!
+  const choice = within(list).getByRole('button', { name: /^\+2 Shield\b/ })
   fireEvent.click(choice)
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  const actions = within(dialog).getByText('Confirm', { selector: 'button' }).parentElement!
+  fireEvent.click(within(actions).getByRole('button', { name: 'Confirm' }))
   expect(useCharacterStore.getState().activeCharacter!.equipment[0]).toMatchObject({
     name: '+2 Shield',
     source: 'XDMG',
     ac: 2,
   })
-  fireEvent.click(screen.getByRole('switch', { name: 'Equip +2 Shield' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Increase +2 Shield quantity' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Inspect +2 Shield' }))
+  const inventoryRow = screen.getByLabelText('Inspect +2 Shield').parentElement!
+  fireEvent.click(within(inventoryRow).getByRole('switch', { name: 'Equip +2 Shield' }))
+  fireEvent.click(within(inventoryRow).getByRole('button', { name: 'Increase +2 Shield quantity' }))
+  fireEvent.click(within(inventoryRow).getByRole('button', { name: 'Inspect +2 Shield' }))
   expect(screen.getByText('While holding this shield, gain +2 AC.')).toBeTruthy()
   const current = useCharacterStore.getState().activeCharacter!
   expect(current.equipment[0].quantity).toBe(2)
@@ -96,7 +101,30 @@ test('actual source-filtered selection/add/equip, details, Review, Compendium an
       { ...data, creatures: [], optionalFeatures: [], subclassFeatures: [] },
     )?.name,
   ).toBe('+2 Shield')
-  cleanup()
+  expect(useCharacterStore.getState().activeCharacter!.equipment).toEqual(current.equipment)
+})
+
+test('command-produced equipped shields share Review and Compendium rules without saved mutation', async () => {
+  const data = await loadFixedShields(),
+    c = fixture()
+  const item = data.items.find((x) => x.name === '+2 Shield' && x.source === 'XDMG')!
+  const command = addManualEquipmentBatchCommand(c, c.provenance!, [item])
+  const current = {
+    ...c,
+    ...command.characterPatch,
+    equipment: command.characterPatch.equipment!.map((x) => ({
+      ...x,
+      equipped: true,
+      quantity: 2,
+    })),
+    provenance: command.provenanceUpdate,
+  }
+  useGameDataStore.setState({ gameData: data })
+  useCharacterStore.setState({
+    characters: [current],
+    activeCharacter: current,
+    activeCharacterId: current.id,
+  })
   show(<BuildReviewPage />)
   fireEvent.click(screen.getByText('Equipment'))
   expect(screen.getByText('While holding this shield, gain +2 AC.')).toBeTruthy()
