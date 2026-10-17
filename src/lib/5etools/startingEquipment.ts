@@ -1,5 +1,5 @@
 import { resolveArmorType } from '@/lib/calculations/armorClass'
-import { getItemTypeCodes } from '@/lib/calculations/itemClassification'
+import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 
@@ -78,6 +78,7 @@ function buildGenericEquipmentChoiceKey(
 }
 
 function isEquipmentTypeCandidate(token: string, item: Item5e): boolean {
+  if (!isSelectableEquipmentItem(item)) return false
   const normalizedToken = token.toLowerCase()
   const typeCodes = getItemTypeCodes(item.type)
   const weaponCategory = item.weaponCategory?.toLowerCase()
@@ -173,7 +174,7 @@ function resolveFromItemRef(
   const source = normalizeSource(parsed.source)
   const item = itemLookup.get(buildItemKey(parsed.name, source))
 
-  if (!item) {
+  if (!item || !isSelectableEquipmentItem(item)) {
     console.warn(
       `[startingEquipment] Item lookup failed for "${parsed.name}" (${source}); using generic placeholder.`,
     )

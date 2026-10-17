@@ -26,6 +26,7 @@ interface CapabilityIssue {
     | 'item-entry-diagnostic'
     | 'item-type-entry-diagnostic'
     | 'primary-item-type-diagnostic'
+    | 'magic-variant-diagnostic'
     | 'missing-normalized-rules'
     | 'unqualified-entity'
     | 'unqualified-reference'
@@ -295,6 +296,13 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     })
   }
   const fieldCounts = new Map<string, Record<string, number>>()
+  for (const diagnostic of gameData.magicVariantDiagnostics ?? [])
+    issues.push({
+      code: 'magic-variant-diagnostic',
+      collection: 'magicVariants',
+      entity: 'Magic item templates',
+      ...diagnostic,
+    })
   for (const diagnostic of [
     ...(gameData.itemTypeDiagnostics ?? []),
     ...gameData.itemTypes.flatMap((row) => row.itemTypeDiagnostics ?? []),

@@ -92,8 +92,12 @@ configuration and becomes the layer's loading contract. Unlisted families are in
 and fall back to the SRD. An inventoried family that later disappears is a required failure, and an
 indexed class or spell family still fails if one of its referenced files is missing. Adding a new
 top-level family requires reselecting/revalidating the source so the inventory change is explicit.
-An added class with unresolved class features, subclass features, or explicit choice records is
-rejected as an incomplete layer. The previously active catalog and cache remain unchanged.
+An added class with unresolved class/subclass features or mechanically consumed feat, creature or
+optional-feature choices is rejected as an incomplete layer. The previously active catalog and
+cache remain unchanged. Item choices currently retain source-qualified selections without creating
+inventory or applying item effects; missing item-choice metadata is an optional capability/dependency
+diagnostic instead. The exact option stays unavailable until its metadata is restored. These gaps
+are not resource failures and do not block an otherwise complete load or background refresh.
 
 Future standalone add-ons should use the published 5etools homebrew document shape and a separate
 document adapter, not imitate a full data tree.
@@ -192,7 +196,9 @@ modification. Reserved `__proto__`, `constructor`, and `prototype` keys or path 
 with a copy diagnostic, including nested spell groups and property selectors. Traversal reads only
 own properties; newly created path and directive dictionaries have no prototype. A failed copy
 keeps its original record and cannot change shared runtime prototypes. Loader/layer composition
-treats unresolved copies as required failures before publishing the catalog.
+treats unresolved concrete item/creature copies as required failures before publishing the catalog.
+Optional primary item-type and magic-template copy gaps use the bounded
+[item support diagnostics](#items-and-starting-equipment) instead.
 The cache schema is bumped when copy trust rules change so previously resolved catalogs are rebuilt.
 
 Race and subrace copies use this same data-only engine. Race parents use `name|source`; subrace
@@ -566,9 +572,38 @@ rebuilds catalogs missing this metadata; saved character format11 is unchanged.
 after their respective catalogs have loaded. Bestiary copies can also apply `bestiary/template.json`
 ancestry templates. The resolver reports missing parents, cycles, and unsupported transformations
 instead of inventing missing mechanics; layered composition retries copies against the completed
-base-plus-additional catalog before rebuilding lookups. Generic magic variants (`GV`) remain in
-the reference catalog, but inventory and filtered item choices exclude these templates because
-they lack a selected base item and its equipment properties.
+base-plus-additional catalog before rebuilding lookups.
+
+`magicVariants` retains the complete raw template collection separately from concrete equipment,
+including `_copy`, `requires`, `excludes`, and `inherits`, through cache restoration. Its canonical
+identity is the complete name (including `(*)`) and declared root source, otherwise the inherited
+source. There is no implicit source default for a template or its copy parent. Raw layers replace
+exact normalized name/source tuples; winning duplicates remain ambiguous and identifiable malformed
+winners suppress earlier definitions. Supported copies resolve only against unique valid templates
+after raw composition, using the existing bounded copy adapter and item-style protected fields.
+Missing parents, cycles, unsupported operations and malformed/ambiguous definitions produce bounded
+optional capability diagnostics, leaving unrelated concrete equipment available.
+
+Reference-only Item5e projections are appended after concrete item copies resolve. They preserve
+canonical names and root GV classification, even when inherited equipment type differs (Barding).
+The marker `magicVariantReference` retains the canonical template target separately from the
+projected source, which may follow a different explicitly inherited source. An explicit unusable
+inherited source cannot fall back to the raw owner. Duplicate projected tuples are unavailable;
+an exact concrete equipment tuple always wins a collision. No stripped-name alias is introduced.
+Raw item retention excludes these projections, including after cache restoration, so references
+cannot become equipment copy parents. Compendium and recursive previews consume surviving references
+through existing shared/primary/supplemental description enrichment and source filtering. Their own
+reference prose still precedes inherited template prose. Explicit class-choice item references retain
+their existing reference semantics; they do not create inventory.
+
+Inventory choices and both generic/exact starting-equipment creation exclude generic variants and
+item groups through the shared selectable-item policy. An exact non-equipment starting reference
+uses the existing unresolved placeholder, preserving its requested identity. This foundation does
+not generate concrete variants, apply weapon bonuses, rewrite saved equipment/provenance or add a
+template/base saved relation. Cache schema36 rebuilds older catalogs; character format11 is unchanged.
+For example, the managed Artificer|EFA item-choice tables request `+1 Shield|XDMG` and `+2 Shield|XDMG`.
+Their canonical `(*)` templates are different records. Until concrete materialization is implemented,
+those two choices remain diagnosed as missing; no alias or different printing supplies their rules.
 
 Public SRD items housed in DMG/XDMG are admitted by the shared player-item policy without enabling
 the full source. The Included SRD remains the base catalog when additional content is configured,

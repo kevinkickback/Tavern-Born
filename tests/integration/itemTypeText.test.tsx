@@ -287,7 +287,7 @@ describe('category-text display contexts and storage boundary', () => {
     const config = { type: 'local' as const, path: '/fixture', isValid: true }
     await writeGameDataCache(data, config)
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(35)
+    expect(cached?.cacheSchemaVersion).toBe(36)
     expect(cached?.data.items[0].itemTypeText).toEqual(data.items[0].itemTypeText)
     expect(cached?.data.items[0].primaryItemTypeText).toEqual(data.items[0].primaryItemTypeText)
     for (const support of [[], [instrumentRules]]) {

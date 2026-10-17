@@ -25,6 +25,7 @@ import {
   mergeItemTypeEntries,
 } from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
+import { appendMagicVariantReferences, mergeMagicVariants } from './magicVariants'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
 import {
@@ -231,6 +232,8 @@ export interface ContentLayerDependencyIssue {
   owner: string
   path: string
   reference: string
+  /** Item choices retain descriptive references without materializing inventory or effects. */
+  required?: boolean
 }
 
 export interface DataSourceStackLoaderOptions extends DataLoaderOptions {
@@ -311,6 +314,7 @@ export function findLayerDependencyIssues(
           owner,
           path: `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
           reference,
+          ...(option.entityType === 'item' ? { required: false } : {}),
         })
       }
     }
@@ -334,6 +338,7 @@ export function findLayerDependencyIssues(
             owner: `${owner}/${subclass.name}|${subclass.source}`,
             path: `subclasses[${subclassIndex}].normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
             reference,
+            ...(option.entityType === 'item' ? { required: false } : {}),
           })
         }
       }
@@ -364,6 +369,11 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const composed = {} as GameData
 
   for (const key of collectionKeys) {
+    if (key === 'magicVariants') {
+      composed.magicVariants = mergeMagicVariants(layers.map((layer) => layer.magicVariants ?? []))
+      continue
+    }
+    if (key === 'magicVariantDiagnostics') continue
     if (key === 'itemTypes') {
       composed.itemTypes = mergePrimaryItemTypes(layers.map(getRawItemTypes))
       continue
@@ -436,13 +446,36 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       collectRevisedSourceAbbreviations(composed),
     ),
   )
-  const itemCount = composed.items.length
+  const concreteItemCount = composed.items.length
   retainRawItems(composed)
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
+  composed.items = items.records.slice(0, concreteItemCount)
+  composed.itemsBase = items.records.slice(concreteItemCount)
+  appendMagicVariantReferences(composed)
+  const referenceSources = new Set(
+    composed.sources.map((source) => normalizeIdentityPart(source.abbreviation)),
+  )
+  const newReferenceSources = [
+    ...new Set(
+      composed.items
+        .filter((item) => item.magicVariantReference)
+        .map((item) => item.source)
+        .filter((source) => !referenceSources.has(normalizeIdentityPart(source))),
+    ),
+  ]
+  composed.sources.push(
+    ...buildSourcesList(
+      newReferenceSources,
+      undefined,
+      undefined,
+      collectRevisedSourceAbbreviations(composed),
+    ),
+  )
+  const itemCount = composed.items.length
   resolvePrimaryItemTypes(composed)
   const describedItems = associateItemTypeEntries(
     associatePrimaryItemTypes(
-      expandItemEntries(items.records, composed.itemEntries ?? []),
+      expandItemEntries([...composed.items, ...composed.itemsBase], composed.itemEntries ?? []),
       composed.itemTypes,
       composed.itemEntries ?? [],
     ),
@@ -510,7 +543,11 @@ export async function loadGameDataSourceStack(
     }
     throw error
   }
-  const dependencyIssues = findLayerDependencyIssues(composed, additional)
+  // Optional item-choice metadata stays diagnostic; reporting a transport failure would
+  // incorrectly hold every background refresh on the previous cache.
+  const dependencyIssues = findLayerDependencyIssues(composed, additional).filter(
+    (issue) => issue.required !== false,
+  )
   if (dependencyIssues.length > 0) {
     for (const issue of dependencyIssues) {
       options?.onResourceFailure?.(`Additional content: ${issue.reference}`, { required: true })
