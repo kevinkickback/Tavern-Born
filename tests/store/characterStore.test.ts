@@ -25,10 +25,120 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { nativeChoiceSpells } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
+import { makeRacialRefreshCharacter, racialRefreshRace } from '../fixtures/racialSpellRefresh'
 
 describe('characterStore', () => {
+  describe('acknowledged native racial refresh', () => {
+    const native = (c: ReturnType<typeof makeRacialRefreshCharacter>) =>
+      c.spells.spellProfiles.find((p) => p.type === 'racial')!
+    const install = (count = 2, pool = false) => {
+      const owner: Race5e = {
+        ...racialRefreshRace,
+        additionalSpells: [
+          {
+            ability: { choose: ['wis', 'cha'] },
+            known: {
+              1: [{ choose: pool ? { from: ['mage hand#c'] } : 'level=0|class=Wizard', count }],
+            },
+          },
+        ],
+      }
+      useGameDataStore
+        .getState()
+        .setGameData(makeGameDataFixture({ races: [owner], spells: nativeChoiceSpells }))
+    }
+    const start = async () => {
+      useGameDataStore.setState({ gameData: null })
+      const [original] = await useCharacterStore
+        .getState()
+        .importCharacters([makeRacialRefreshCharacter()])
+      useCharacterStore.getState().setActiveCharacter(original.id)
+      storageMocks.setItem.mockClear()
+      return original
+    }
+
+    test('a clean correction is acknowledged once, then equal rules preserve identity and timestamps', async () => {
+      await start()
+      install(1)
+      expect(native(useCharacterStore.getState().activeCharacter!).cantrips).toEqual(['Light|PHB'])
+      await useCharacterStore.getState().saveActiveCharacter()
+      const state = useCharacterStore.getState()
+      expect(state.hasUnsavedChanges()).toBe(false)
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+      storageMocks.setItem.mockClear()
+      const notify = vi.fn()
+      const unsubscribe = useCharacterStore.subscribe(notify)
+      install(1)
+      unsubscribe()
+      expect(useCharacterStore.getState()).toBe(state)
+      expect(notify).not.toHaveBeenCalled()
+      expect(storageMocks.setItem).not.toHaveBeenCalled()
+      useGameDataStore.setState({ gameData: null })
+    })
+
+    test('dirty corrections wait for Save, preserve later edits and rules, and cannot overwrite a switched selection', async () => {
+      const original = await start()
+      const neighbor = await useCharacterStore
+        .getState()
+        .createNewCharacter({ name: 'Other character' })
+      storageMocks.setItem.mockClear()
+      useCharacterStore.getState().updateCharacter(original.id, { name: 'Unsaved name' })
+      install(1)
+      expect(native(useCharacterStore.getState().activeCharacter!).cantrips).toEqual(['Light|PHB'])
+      expect(native(useCharacterStore.getState().characters[0]).cantrips).toEqual([
+        'Light|PHB',
+        'Mage Hand|PHB',
+      ])
+      expect(storageMocks.setItem).not.toHaveBeenCalled()
+      let finish = () => {}
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve
+          }),
+      )
+      const saved = useCharacterStore.getState().saveActiveCharacter()
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      useCharacterStore.getState().updateCharacter(original.id, { name: 'Later edit' })
+      install(2, true)
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe('Later edit')
+      expect(native(useCharacterStore.getState().activeCharacter!).cantrips).toEqual([])
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+      useCharacterStore.getState().setActiveCharacter(neighbor.id)
+      finish()
+      await saved
+      expect(useCharacterStore.getState().activeCharacter?.id).toBe(neighbor.id)
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe(neighbor.name)
+      expect(native(useCharacterStore.getState().characters[0]).cantrips).toEqual(['Light|PHB'])
+      expect(useCharacterStore.getState().characters[0].name).toBe('Unsaved name')
+      useGameDataStore.setState({ gameData: null })
+    })
+
+    test('a failed correction retains a dirty coherent draft until explicit acknowledged retry', async () => {
+      await start()
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        storageMocks.setItem.mockRejectedValueOnce(new Error('Native refresh write failed'))
+        install(1)
+        await vi.waitFor(() => expect(error).toHaveBeenCalled())
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+        expect(native(useCharacterStore.getState().characters[0]).cantrips).toHaveLength(2)
+        expect(native(useCharacterStore.getState().activeCharacter!).cantrips).toEqual([
+          'Light|PHB',
+        ])
+        await useCharacterStore.getState().saveActiveCharacter()
+        expect(storageMocks.setItem).toHaveBeenCalledTimes(2)
+        expect(native(useCharacterStore.getState().characters[0]).cantrips).toEqual(['Light|PHB'])
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+      } finally {
+        error.mockRestore()
+        useGameDataStore.setState({ gameData: null })
+      }
+    })
+  })
   describe('loaded special spell reconciliation', () => {
     const special = (character: ReturnType<typeof makeNonracialSourceCharacter>) =>
       character.spells.spellProfiles.find((profile) => profile.type === 'special')!

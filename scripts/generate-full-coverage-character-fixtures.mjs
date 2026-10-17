@@ -1105,7 +1105,14 @@ function buildFixture(seed, edition) {
     )
     fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
   } else {
-    const result = setRacialCastingAbility(fixture, fixture.provenance, profile.id, 'int')
+    const result = setRacialCastingAbility(
+      fixture,
+      fixture.provenance,
+      profile.id,
+      'int',
+      raceResolution,
+      nativeSpellLookup,
+    )
     fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
   }
   return JSON.parse(JSON.stringify(fixture))

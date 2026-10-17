@@ -36,6 +36,10 @@ export function useSpellProvenanceMutations() {
       const native = refreshNativeRacialSpellState(
         { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
         calculationContext?.raceResolution,
+        {
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+        },
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
@@ -67,6 +71,10 @@ export function useSpellProvenanceMutations() {
       const native = refreshNativeRacialSpellState(
         { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
         calculationContext?.raceResolution,
+        {
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+        },
       )
       updateCharacter(character.id, {
         ...result.characterPatch,

@@ -670,13 +670,14 @@ export function SpellsPage() {
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="mx-auto w-full max-w-6xl p-4">
-                  {(spellView === 'all' || spellView === 'racial') && racialProfiles.length > 0 ? (
+                  {spellView === 'racial' && racialProfiles.length > 0 ? (
                     <NativeRacialSpellControls
                       profiles={racialProfiles}
                       owners={racialOwners}
                       onSetSuite={setRacialSpellSuite}
                       onEditChoice={handleOpenRacialChoiceModal}
                       onClearChoice={setRacialSpellChoice}
+                      onSetAbility={setRacialCastingAbility}
                     />
                   ) : null}
                   <SpellProfileManager
@@ -721,7 +722,6 @@ export function SpellsPage() {
                     spellcastingDetails={spellcastingDetails}
                     racialProfiles={racialProfiles.filter((profile) => profile.racial?.suite)}
                     racialSpellcastingDetails={racialSpellcastingDetails}
-                    onSetRacialCastingAbility={setRacialCastingAbility}
                     hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
                     sharedSlots={sharedSlots}
                     pactSlots={pactSlots}

@@ -293,20 +293,35 @@ export function useSpellProfileMutations(
           profileId,
           suiteId,
           calculationContext?.raceResolution,
+          currentSpellLookup,
         ),
       )
     },
-    [commandCharacter, currentLedger, applySpellCommand, calculationContext],
+    [commandCharacter, currentLedger, applySpellCommand, calculationContext, currentSpellLookup],
   )
 
   const setRacialCastingAbility = useCallback(
     (profileId: string, ability: string) => {
       if (!character || !commandCharacter) return
       applySpellCommand(
-        setRacialCastingAbilityCommand(commandCharacter, currentLedger, profileId, ability),
+        setRacialCastingAbilityCommand(
+          commandCharacter,
+          currentLedger,
+          profileId,
+          ability,
+          calculationContext?.raceResolution,
+          currentSpellLookup,
+        ),
       )
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [
+      character,
+      commandCharacter,
+      currentLedger,
+      applySpellCommand,
+      calculationContext,
+      currentSpellLookup,
+    ],
   )
 
   return {

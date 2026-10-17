@@ -1,6 +1,8 @@
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
+import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -32,12 +34,23 @@ export function buildInitialCharacter(
   selections: InitialCharacterSelections,
   itemLookup: Map<string, Item5e>,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
+  spellLookups?: NativeSpellLookups,
 ): Character {
   let character = createEmptyCharacter({
     ...selections.initial,
     raceAsiChoices: selections.raceAsiChoices ?? selections.initial.raceAsiChoices,
   })
   let ledger = character.provenance ?? emptyProvenance()
+  const raceResolution = selections.race
+    ? {
+        parentRace: selections.race,
+        subraceData: selections.subrace,
+        mergedRace: selections.subrace
+          ? mergeRaceWithSubrace(selections.race, selections.subrace)
+          : selections.race,
+        subraceIsNested: false,
+      }
+    : undefined
 
   // Background is applied before race: under the 2024 origin system, the race and
   // background commands each independently re-validate the full origin invariant set
@@ -63,6 +76,7 @@ export function buildInitialCharacter(
       selections.subrace,
       selections.raceAsiBlockIndex ?? 0,
       resolveRaceChoiceOptions,
+      spellLookups,
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
@@ -90,6 +104,7 @@ export function buildInitialCharacter(
       selections.classEntity,
       undefined,
       itemLookup,
+      { ...spellLookups, raceResolution },
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
@@ -114,8 +129,7 @@ export function buildInitialCharacter(
 
   return refreshNativeRacialSpellState(
     { ...character, provenance: ledger },
-    selections.race
-      ? { parentRace: selections.race, subraceData: selections.subrace, subraceIsNested: false }
-      : undefined,
+    raceResolution,
+    spellLookups,
   )
 }

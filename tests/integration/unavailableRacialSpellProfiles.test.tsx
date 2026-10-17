@@ -49,7 +49,16 @@ const cleric = makeClassFixture({
     },
   ],
 })
-const shockingGrasp = makeSpellFixture({ name: 'Shocking Grasp', level: 0 })
+const shockingGrasp = makeSpellFixture({
+  name: 'Shocking Grasp',
+  level: 0,
+  classes: {
+    fromClassList: [
+      { name: 'Sorcerer', source: 'PHB' },
+      { name: 'Wizard', source: 'PHB' },
+    ],
+  },
+})
 
 function install(races: Race5e[], classes: Class5e[] = [cleric]) {
   const data = makeGameDataFixture({
@@ -116,7 +125,13 @@ function savedCharacter(withChild = true, previousChild = child): Character {
     nativeChoiceSpellLookup,
   )
   native = { ...native, ...selected.characterPatch, provenance: selected.provenanceUpdate }
-  const ability = setRacialCastingAbility(native, native.provenance, profile.id, 'wis')
+  const ability = setRacialCastingAbility(
+    native,
+    native.provenance,
+    profile.id,
+    'wis',
+    nativeRaceResolution(actualParent, actualChild),
+  )
   return { ...native, ...ability.characterPatch, provenance: ability.provenanceUpdate }
 }
 
@@ -265,7 +280,7 @@ test.each([
   expect(reopened.provenance!.spells['shocking grasp']).toBeUndefined()
 })
 
-test('restored changed native rules retract obsolete fixed spells and reset incompatible setup', () => {
+test('restored rules retract an obsolete fixed grant and retain compatible chosen setup', () => {
   install([])
   const character = savedCharacter(true, {
     ...child,
@@ -283,12 +298,23 @@ test('restored changed native rules retract obsolete fixed spells and reset inco
   expect(restored).toMatchObject({
     raceName: 'Child',
     raceSource: 'HB',
-    cantrips: [],
+    cantrips: ['Shocking Grasp|PHB'],
     spellsKnown: [],
-    choices: [expect.objectContaining({ selected: [] })],
+    choices: [expect.objectContaining({ selected: ['Shocking Grasp|PHB'] })],
   })
   expect(restored.fixedSpells).toEqual([])
-  expect(restored.castingAbility).toBeUndefined()
+  expect(restored.castingAbility).toBe('wis')
+  expect(result.current.slots.spellProvenance.spells['old spell']).toBeUndefined()
+  expect(result.current.slots.spellProvenance.spells['shocking grasp']).toContainEqual(
+    expect.objectContaining({
+      sourceType: 'subrace',
+      sourceName: 'Child',
+      sourceRef: 'HB',
+      grantType: 'choice',
+      grantSource: 'PHB',
+      grantVariant: restored.choices![0].id,
+    }),
+  )
 })
 
 test('clearing an unavailable selected child retracts racial ownership without reviving saved choices on return', () => {

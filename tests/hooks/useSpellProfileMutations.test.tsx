@@ -254,7 +254,7 @@ describe('useSpellProfileMutations', () => {
   test.each([
     'sync',
     'bonus edit',
-  ])('a changed native block resets its setup while preserving independent owners during %s', (operation) => {
+  ])('a removed native sibling preserves compatible setup and independent owners during %s', (operation) => {
     const race = {
       name: 'Refresh caster',
       source: 'OWNER',
@@ -338,9 +338,15 @@ describe('useSpellProfileMutations', () => {
     expect(reopened.spells.spellSlots[1]?.used).toBe(1)
     expect(
       reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')?.choices,
-    ).toEqual([expect.objectContaining({ selected: [] })])
+    ).toEqual([expect.objectContaining({ selected: ['Light|XPHB'] })])
     expect(reopened.provenance.spells.light.filter((tag) => tag.sourceType === 'race')).toEqual([
       expect.objectContaining({ grantType: 'fixed', grantSource: 'PHB' }),
+      expect.objectContaining({
+        grantType: 'choice',
+        grantSource: 'XPHB',
+        grantVariant: reopened.spells.spellProfiles.find((profile) => profile.type === 'racial')!
+          .choices![0].id,
+      }),
     ])
     expect(character).toEqual(original)
     unmount()

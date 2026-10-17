@@ -5,6 +5,7 @@ import {
   ensureOriginLanguageBaseline,
 } from '@/lib/calculations/languageOrigin'
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
+import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import {
   ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
@@ -35,9 +36,10 @@ import type { CharacterCommandResult } from './commandResult'
 import { reconcileRaceSpellProfileCommand } from './raceSpellProfileCommand'
 
 export type ResolveRaceChoiceOptions = (domain: 'armor' | 'weapons', fromFilter: string) => string[]
-export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subraceIsNested'> & {
-  previousSubrace?: Race5e
-}
+export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subraceIsNested'> &
+  NativeSpellLookups & {
+    previousSubrace?: Race5e
+  }
 
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)

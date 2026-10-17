@@ -1,5 +1,6 @@
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 /**
  * Class-domain command helpers.
@@ -121,7 +122,7 @@ function projectMaximumHitPoints(
   )
 }
 
-interface SelectSubclassOptions {
+interface SelectSubclassOptions extends NativeSpellLookups {
   raceResolution?: ResolvedRaceReference
   classProgression?: CharacterClassEntry[]
   viewingEntry?: CharacterClassEntry
@@ -402,6 +403,7 @@ export function applyClassProgressionUpdate(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
   raceResolution?: ResolvedRaceReference,
+  spellLookups?: NativeSpellLookups,
 ): ClassCommandResult {
   const previousProgression = character.classProgression
   const removedEntries = previousProgression.filter(
@@ -585,6 +587,7 @@ export function applyClassProgressionUpdate(
   const native = refreshNativeRacialSpellState(
     { ...character, ...characterPatch, provenance: provenanceUpdate },
     raceResolution,
+    spellLookups,
   )
   characterPatch.spells = native.spells
   provenanceUpdate = native.provenance
@@ -663,6 +666,10 @@ export function applyLevelUp(
     ledger,
     nextProgression,
     calculationContext.raceResolution,
+    {
+      spellsByKey: calculationContext.lookups.primary.spellsByKey,
+      rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
+    },
   )
   const gain: HitPointGain = { ...hpChoice, characterLevel }
   const hitPointGains = [
@@ -740,6 +747,10 @@ export function applyLevelDown(
     ledger,
     nextProgression,
     calculationContext.raceResolution,
+    {
+      spellsByKey: calculationContext.lookups.primary.spellsByKey,
+      rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
+    },
   )
   const projectedCharacter: Character = {
     ...character,
@@ -866,6 +877,7 @@ export function selectSubclass(
     ledger,
     nextProgression,
     options?.raceResolution,
+    options,
   )
 
   return {
@@ -931,6 +943,7 @@ export function applyClassSelectionCommand(
     effects.provenanceUpdate,
     nextProgression,
     options?.raceResolution,
+    options,
   )
   return reconcileExpertiseOwnership({
     classEntity: cls as Class5e,
@@ -952,6 +965,7 @@ export function updateCharacterLevel(
   ledger: ProvenanceLedger,
   newLevel: number,
   raceResolution?: ResolvedRaceReference,
+  spellLookups?: NativeSpellLookups,
 ): ClassCommandResult {
   if (newLevel < 1 || newLevel > 20) {
     throw new Error(`Invalid level: ${newLevel}. Level must be between 1 and 20.`)
@@ -972,7 +986,13 @@ export function updateCharacterLevel(
     return entry
   })
 
-  return applyClassProgressionUpdate(character, ledger, updatedProgression, raceResolution)
+  return applyClassProgressionUpdate(
+    character,
+    ledger,
+    updatedProgression,
+    raceResolution,
+    spellLookups,
+  )
 }
 
 /**
@@ -994,6 +1014,7 @@ export function addMulticlass(
   classSource: string = classEntity.source,
   startAtLevel: number = 1,
   raceResolution?: ResolvedRaceReference,
+  spellLookups?: NativeSpellLookups,
 ): ClassCommandResult {
   if (findClassReference({ name: className, source: classSource }, character.classProgression)) {
     throw new Error(
@@ -1065,6 +1086,7 @@ export function addMulticlass(
       provenance: applyMulticlassGrants({ ...classEntity, source: classSource }, ledger),
     },
     raceResolution,
+    spellLookups,
   )
   characterPatch.spells = native.spells
   const provenanceUpdate = native.provenance
@@ -1091,6 +1113,7 @@ export function removeMulticlass(
   className: string,
   classSource: string,
   raceResolution?: ResolvedRaceReference,
+  spellLookups?: NativeSpellLookups,
 ): ClassCommandResult {
   const matchesClass = (entry: CharacterClassEntry) =>
     entry.name === className && entry.source === classSource
@@ -1104,5 +1127,11 @@ export function removeMulticlass(
 
   const updatedProgression = character.classProgression.filter((entry) => !matchesClass(entry))
 
-  return applyClassProgressionUpdate(character, ledger, updatedProgression, raceResolution)
+  return applyClassProgressionUpdate(
+    character,
+    ledger,
+    updatedProgression,
+    raceResolution,
+    spellLookups,
+  )
 }

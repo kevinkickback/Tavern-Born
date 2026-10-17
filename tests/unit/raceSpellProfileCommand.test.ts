@@ -107,7 +107,13 @@ test('reselecting an exact version preserves setup on the actual child owner', (
   let character = select(makeNativeRacialCharacter(race, child), race, child)
   character = commit(
     character,
-    setRacialCastingAbility(character, character.provenance, racial(character)[0].id, 'wis'),
+    setRacialCastingAbility(
+      character,
+      character.provenance,
+      racial(character)[0].id,
+      'wis',
+      nativeRaceResolution(race, child),
+    ),
   )
   const result = commit(
     character,
@@ -144,7 +150,7 @@ test.each([
   expect(characterPersistenceSchema.safeParse(result).success).toBe(true)
 })
 
-test('changed descriptor count or filter resets incompatible setup and preserves independent exact ownership', () => {
+test('count changes retain compatible setup while an unproven changed filter resets only its ownership', () => {
   const character = select(makeNativeRacialCharacter(choiceRace), choiceRace)
   character.provenance = addSpellGrant(
     character.provenance,
@@ -166,14 +172,29 @@ test('changed descriptor count or filter resets incompatible setup and preserves
       character,
       applyRaceSelectionCommand(character, character.provenance, updated, undefined, 0, () => []),
     )
+    const retained = descriptor.choose === 'level=0|class=Wizard'
     expect(racial(result)[0]).toMatchObject({
       castingAbility: 'cha',
-      cantrips: [],
-      choices: [expect.objectContaining({ selected: [] })],
+      cantrips: retained ? ['Light|PHB'] : [],
+      choices: [expect.objectContaining({ selected: retained ? ['Light|PHB'] : [] })],
     })
-    expect(result.provenance.spells.light).toEqual([
+    expect(result.provenance.spells.light.filter((tag) => tag.sourceType === 'manual')).toEqual([
       expect.objectContaining({ sourceType: 'manual' }),
     ])
+    expect(result.provenance.spells.light.filter((tag) => tag.sourceType === 'race')).toEqual(
+      retained
+        ? [
+            expect.objectContaining({
+              sourceType: 'race',
+              sourceName: 'Caster',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              grantSource: 'PHB',
+              grantVariant: racial(result)[0].choices![0].id,
+            }),
+          ]
+        : [],
+    )
     expect(characterPersistenceSchema.safeParse(result).success).toBe(true)
   }
 })

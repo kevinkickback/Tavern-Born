@@ -212,6 +212,8 @@ and blocks explicitly removed by it. Traditional subrace spell blocks remain add
 parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
 from the unfiltered catalog.
 
+### Native racial spells
+
 Native racial spells use one profile per actual granting parent or child, scoped to the complete
 selected context. One native block is mandatory and automatically active; multiple blocks are
 alternatives and start unselected. Alternative Select/Replace activates all currently eligible
@@ -241,8 +243,28 @@ New filter-backed targets additionally require available exact-printing metadata
 descriptor's level and class list. Retaining or removing an established target can use its saved
 snapshot without that metadata. Unselected alternatives retain setup controls but contribute no
 active casting summary or racial PDF page.
-Restoration evaluates rules at the current level; compatible setup survives, ineligible descriptors
-leave, and incompatible structural identities reset atomically. No dormant choices are resurrected.
+Restoration evaluates rules at the current level. Within the same exact owner/context, an exact
+selected suite survives; a sole mandatory suite can correspond to its previous mandatory suite.
+Changed alternative suite identities require explicit reselection, including uniquely named suites.
+Within corresponding suites, unique unchanged descriptor semantics match first. Remaining descriptors
+correspond only when exactly one old and one new descriptor share eligibility level, native grant
+kind, usage, daily limit and cantrip kind. Neither ordinal position nor uniqueness overrides a conflict.
+This transient correspondence uses typed applied fields; structural IDs stay unchanged and never
+supply missing rules. Current IDs and their inverse ownership are committed together.
+
+Compatible casting abilities survive in the current options; a fixed ability applies immediately.
+Current counts bound retained targets in order, and pools retain exact members. Filter selections,
+including existing targets, reject available exact spell metadata conflicting with level/class rules.
+Missing exact target metadata preserves an unchanged filter predicate, including count-only changes;
+a changed predicate needs exact compatibility proof. Pool membership and native token kind remain
+authoritative without the spell catalog. No special-profile kind rule is applied to native pools or
+fixed grants. Removed choices never return merely because a count/pool expands or a source returns.
+
+Direct edits use the same correspondence. A stale descriptor Clear cannot clear an unrelated new
+descriptor; a removed descriptor is already retracted. Invalid new selections remain whole no-ops.
+The store acknowledges active native corrections independently of the visible page, preserving dirty
+drafts until Save and retaining the corrected snapshot through later absence. Inactive library entries
+project current rules without bulk writes and correct when activated.
 Independent class/special preparation and shared/Pact usage remain unchanged by racial transitions.
 Available class and subclass data still derive current grants at the
 character's level. Each unavailable exact class or selected subclass retains its own saved profile

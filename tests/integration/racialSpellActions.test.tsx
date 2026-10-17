@@ -17,6 +17,7 @@ import {
 } from '@/lib/character/commands/spellCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
+import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -49,6 +50,12 @@ const shockingGrasp = {
   name: 'Shocking Grasp',
   source: 'PHB',
   level: 0,
+  classes: {
+    fromClassList: [
+      { name: 'Sorcerer', source: 'PHB' },
+      { name: 'Wizard', source: 'PHB' },
+    ],
+  },
   school: 'V',
   time: [{ number: 1, unit: 'action' }],
   range: { type: 'point', distance: { type: 'touch' } },
@@ -74,6 +81,47 @@ beforeEach(() => {
   }
 })
 afterEach(cleanup)
+
+test.each([
+  'level',
+  'class',
+] as const)('exact racial filter %s conflict is pending across shared calculation, readiness, Actions and immutable PDF', (field) => {
+  const child: Race5e = { name: 'Child', source: 'HB', additionalSpells: [choiceBlock] }
+  const parent: Race5e = { name: 'Parent', source: 'PHB', subraces: [child] }
+  const character = savedChoice(parent, child)
+  const before = structuredClone(character)
+  install([parent])
+  const exact =
+    field === 'level'
+      ? { ...shockingGrasp, level: 1 }
+      : { ...shockingGrasp, classes: { fromClassList: [{ name: 'Druid', source: 'PHB' }] } }
+  catalog.lookups.spellsByKey = buildSpellLookup([exact, otherPrinting])
+  const calculation = createCharacterCalculationContext(character, catalog.lookups)
+  expect(
+    calculation.character.spells.spellProfiles.find((p) => p.type === 'racial')!.cantrips,
+  ).toEqual([])
+  const readiness = getCharacterReadiness(character, {
+    calculation,
+    spellsByKey: catalog.lookups.spellsByKey,
+  })
+  expect(readiness.blockingIssues).toContainEqual(
+    expect.objectContaining({ section: 'spells', title: 'Finish Parent (Child) spell choices' }),
+  )
+  const { result } = renderHook(() => useCharacterActions(character))
+  expect(
+    result.current.some(
+      (action) => action.source.kind === 'spell' && action.name === 'Shocking Grasp',
+    ),
+  ).toBe(false)
+  const pdf = createCharacterSheetViewModel(character, catalog.lookups)
+  expect(pdf.spellRows.some((row) => row.name.toLowerCase() === 'shocking grasp')).toBe(false)
+  expect(
+    pdf.actions.some(
+      (action) => action.source.kind === 'spell' && action.name === 'Shocking Grasp',
+    ),
+  ).toBe(false)
+  expect(character).toEqual(before)
+})
 
 function install(races: Race5e[], filtered = races) {
   catalog.filtered = filtered
@@ -110,7 +158,13 @@ function savedChoice(parent: Race5e, child: Race5e): Character {
     nativeChoiceSpellLookup,
   )
   character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
-  const ability = setRacialCastingAbility(character, character.provenance, profile.id, 'wis')
+  const ability = setRacialCastingAbility(
+    character,
+    character.provenance,
+    profile.id,
+    'wis',
+    nativeRaceResolution(previousParent, previousChild),
+  )
   return { ...character, ...ability.characterPatch, provenance: ability.provenanceUpdate }
 }
 

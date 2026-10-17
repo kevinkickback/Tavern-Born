@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { type PersistStorage, persist } from 'zustand/middleware'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import {
   duplicateCharacter,
   getDuplicateCharacterName,
@@ -618,10 +619,13 @@ function reconcileActiveRuleState() {
     resolution.parentRace,
     resolution.subraceData,
   )
-  const refreshed = refreshSpecialSpellKinds(
+  const special = refreshSpecialSpellKinds(
     abilities,
     useGameDataStore.getState().gameData?.lookups?.spellsByKey,
   )
+  const refreshed = refreshNativeRacialSpellState(special, resolution, {
+    spellsByKey: useGameDataStore.getState().gameData?.lookups?.spellsByKey,
+  })
   if (refreshed === activeCharacter) return
   const saved = reconcileCharacter(activeCharacter.id, {
     raceAsiChoices: refreshed.raceAsiChoices,

@@ -7,6 +7,12 @@ import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, RacialSpellContext, SpellProfile } from '@/types/character'
+import {
+  matchNativeRacialChoices,
+  type NativeSpellLookups,
+  nativeSpellDataKey,
+  retainNativeSpellChoices,
+} from './nativeRacialSpellChoices'
 import { deriveRaceSpellSelection } from './raceSpellSelection'
 import { getSpellNameKey, getSpellReferenceKey } from './spellIdentity'
 
@@ -165,6 +171,7 @@ export function deriveNativeRacialSpellProfiles(
   character: Character,
   resolution?: RaceResolution,
   suiteSelections?: ReadonlyMap<string, string | undefined>,
+  lookups?: NativeSpellLookups,
 ): SpellProfile[] {
   const owners = getNativeRacialSpellOwners(character, resolution)
   if (owners === null)
@@ -183,32 +190,22 @@ export function deriveNativeRacialSpellProfiles(
         ? owner.suites[0]
         : owner.suites.find((candidate) => candidate.id === requested)
     const block = suite?.block
-    const choices = (block?.choices ?? [])
+    const descriptors = (block?.choices ?? [])
       .filter((choice) => choice.level <= totalLevel)
-      .map((choice) => {
-        const id = encodeRaceSpellIdentity('racial-choice', [owner.id, suite?.id, choice.id])
-        const previousChoice = previous?.choices?.find((candidate) => candidate.id === id)
-        const pool = choice.pool
-          ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
-          : undefined
-        const seen = new Set<string>()
-        const selected = (previousChoice?.selected ?? [])
-          .filter((reference) => {
-            const key = getSpellNameKey(reference)
-            if (seen.has(key) || (pool && !pool.has(getSpellReferenceKey(reference)))) return false
-            seen.add(key)
-            return true
-          })
-          .slice(0, choice.count)
-        return {
-          ...choice,
-          id,
-          selected,
-          ...(choice.filter
-            ? { filter: { ...choice.filter, classes: [...choice.filter.classes] } }
-            : {}),
-        }
-      })
+      .map((choice) => ({ ...choice, selected: [] }))
+    const correspondence = matchNativeRacialChoices(previous, mode, suite?.id, descriptors)
+    const choices = descriptors.map((choice) => {
+      const id = encodeRaceSpellIdentity('racial-choice', [owner.id, suite?.id, choice.id])
+      const selected = retainNativeSpellChoices(correspondence.get(choice.id), choice, lookups)
+      return {
+        ...choice,
+        id,
+        selected,
+        ...(choice.filter
+          ? { filter: { ...choice.filter, classes: [...choice.filter.classes] } }
+          : {}),
+      }
+    })
     const fixed = (block?.grants ?? [])
       .filter((grant) => grant.level <= totalLevel)
       .map((grant) => ({
@@ -219,7 +216,8 @@ export function deriveNativeRacialSpellProfiles(
     const abilityOptions = block?.abilityOptions ? [...block.abilityOptions] : undefined
     const castingAbility =
       block?.ability ??
-      (previous?.racial?.suite?.id === suite?.id &&
+      ((previous?.racial?.suite?.id === suite?.id ||
+        (previous?.racial?.mode === 'mandatory' && mode === 'mandatory')) &&
       previous?.castingAbility &&
       abilityOptions?.includes(previous.castingAbility)
         ? previous.castingAbility
@@ -303,15 +301,23 @@ export function reconcileNativeRacialSpellLedger(
 export function refreshNativeRacialSpellState(
   character: Character,
   resolution?: RaceResolution,
+  lookups?: NativeSpellLookups,
 ): Character {
+  if (getNativeRacialSpellOwners(character, resolution) === null) return character
   const profiles = [
     ...character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
-    ...deriveNativeRacialSpellProfiles(character, resolution),
+    ...deriveNativeRacialSpellProfiles(character, resolution, undefined, lookups),
   ]
+  const provenance = reconcileNativeRacialSpellLedger(character.provenance, profiles)
+  if (
+    nativeSpellDataKey(profiles) === nativeSpellDataKey(character.spells.spellProfiles) &&
+    nativeSpellDataKey(provenance.spells) === nativeSpellDataKey(character.provenance.spells)
+  )
+    return character
   return {
     ...character,
     spells: { ...character.spells, spellProfiles: profiles },
-    provenance: reconcileNativeRacialSpellLedger(character.provenance, profiles),
+    provenance,
   }
 }
 

@@ -1,4 +1,5 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   buildSpellNameKeySet,
@@ -95,6 +96,10 @@ export function validateSpells(
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): CharacterReadinessIssue[] {
   character = refreshSpecialSpellKinds(character, spellsByKey, calculation.lookups.raw.spellsByKey)
+  character = refreshNativeRacialSpellState(character, calculation.raceResolution, {
+    spellsByKey,
+    rawSpellsByKey: calculation.lookups.raw.spellsByKey,
+  })
   const classMap = new Map(
     calculation.classes.map((classData) => [
       toClassProfileId(classData.name, classData.source),

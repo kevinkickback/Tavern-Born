@@ -104,8 +104,9 @@ beforeEach(() => {
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
 })
-afterEach(() => {
+afterEach(async () => {
   cleanup()
+  await useCharacterStore.getState().saveActiveCharacter()
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
   localStorage.clear()
@@ -115,7 +116,7 @@ test.each(
   (['2014', '2024'] as const).flatMap((edition) =>
     (['printing', 'add', 'remove'] as const).map((transition) => ({ edition, transition })),
   ),
-)('actual Sources follows restored $transition rules before writes ($edition)', ({
+)('actual Sources follows acknowledged restored $transition rules ($edition)', async ({
   edition,
   transition,
 }) => {
@@ -161,6 +162,21 @@ test.each(
   act(() => {
     install([refreshed])
   })
+  const corrected = useCharacterStore.getState().activeCharacter!
+  expect(
+    corrected.spells.spellProfiles
+      .filter((profile) => profile.type === 'racial')
+      .flatMap((profile) => profile.fixedSpells ?? []),
+  ).toEqual(
+    transition === 'remove'
+      ? []
+      : transition === 'printing'
+        ? ['light|TCE']
+        : ['light|PHB', 'mage hand|PHB'],
+  )
+  expect(corrected.provenance.spells.light.filter((tag) => tag.sourceType !== 'race')).toEqual(
+    original.provenance.spells.light.filter((tag) => tag.sourceType !== 'race'),
+  )
   const trigger = screen.getByRole('button', { name: /Sources/ })
   fireEvent.click(trigger)
   const panel = document.getElementById(trigger.getAttribute('aria-controls')!)!
@@ -174,7 +190,13 @@ test.each(
     expect(panel.textContent).not.toContain('Light (PHB)')
     expect(panel.textContent).not.toContain('Mage Hand (PHB)')
   }
-  expect(useCharacterStore.getState().activeCharacter).toEqual(original)
+  expect(useCharacterStore.getState().activeCharacter).toBe(corrected)
+  expect(character).toEqual(original)
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  expect(reopenedActive().spells).toEqual(corrected.spells)
+  expect(reopenedActive().provenance).toEqual(corrected.provenance)
 })
 
 test.each([
@@ -274,7 +296,7 @@ test.each([
   { operation: 'unrelated', childGrants: false },
   { operation: 'sync', childGrants: true },
   { operation: 'unrelated', childGrants: true },
-])('restored changed printing refreshes profile and Sources on $operation (child: $childGrants)', ({
+])('restored changed printing refreshes profile and Sources on $operation (child: $childGrants)', async ({
   operation,
   childGrants,
 }) => {
@@ -329,6 +351,9 @@ test.each([
   act(() => {
     data = install([refreshedParent])
   })
+  const corrected = useCharacterStore.getState().activeCharacter!
+  expect(racial(corrected.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
+  expect(corrected.provenance).toEqual(result.current.slots.spellProvenance)
   expect(racial(result.current.slots.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(getSpellRows(result.current.slots.spellProvenance)).toEqual(
     expect.arrayContaining([
@@ -349,7 +374,7 @@ test.each([
         .map((action) => action.source?.source)
         .sort(),
     ).toEqual(['PHB', 'TCE'])
-  expect(useCharacterStore.getState().activeCharacter).toEqual(before)
+  expect(useCharacterStore.getState().activeCharacter).toBe(corrected)
   act(() => {
     if (operation === 'sync') result.current.mutations.syncProfiles()
     else
@@ -376,6 +401,11 @@ test.each([
   expect(reopened.spells.spellSlots[1]).toEqual({ max: 3, used: 2 })
   expect(reopened.spells.pactSpellSlots?.[1]).toEqual({ max: 2, used: 1 })
   expect(character.spells.spellProfiles).toEqual(originalProfiles)
+  await act(async () => {
+    await useCharacterStore.getState().saveActiveCharacter()
+  })
+  expect(reopenedActive().spells).toEqual(reopened.spells)
+  expect(reopenedActive().provenance).toEqual(reopened.provenance)
 })
 
 test('PDF racial refresh preserves independent saved class and special preparation state', () => {

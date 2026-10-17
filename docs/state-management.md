@@ -252,10 +252,21 @@ quota violations reject. Independent fixed, descriptor, class/feat/manual overla
 Structural IDs validate scope; they never supply missing game rules.
 
 Available-rule refresh and intentional edits commit materialization and provenance atomically.
+The native [compatibility rules](provenance.md#native-racial-spells) preserve proven compatible setup
+within exact owner contexts and rebuild current structural IDs and their inverse tags together.
 Missing either exact context reference retains the whole snapshot, including through level changes;
-restoration evaluates the current live rules and resets incompatible structural setup. Alternative
+restoration evaluates the current live rules. Alternative
 suite and descriptor Clear work from saved membership without missing-data inference. Shared/Pact
 usage and independent preparation remain mutable and retain their existing shapes.
+
+Native rule corrections use the central acknowledged active-character queue. Unchanged semantic
+state preserves references, timestamps and save state after strict admission; dirty corrections wait
+for explicit Save, while clean corrections become durable only after acknowledgment. Immutable views
+and PDF do not write inactive library entries. New native suite/ability/target setup needs complete
+live owner rules; established missing targets and offline Clear retain the saved-snapshot contract.
+The Spells page keeps suite, casting-ability and target controls in its Racial view, including before
+any target is selected. Fixed suites without setup choices have no extra status-only card. The right
+casting summary remains read-only; opening or switching views never mutates the character.
 
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
 supported. Schema 2–9 characters must be recreated; merely relabeling a version cannot establish

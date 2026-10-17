@@ -35,6 +35,7 @@ import {
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
+import { refreshNativeRacialSpellState } from './nativeRacialSpells'
 import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
@@ -290,6 +291,10 @@ export function createCharacterCalculationContext(
     primaryLookups.spellsByKey,
     rawLookups.spellsByKey,
   )
+  character = refreshNativeRacialSpellState(character, raceResolution, {
+    spellsByKey: primaryLookups.spellsByKey,
+    rawSpellsByKey: rawLookups.spellsByKey,
+  })
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },
     primaryLookups,

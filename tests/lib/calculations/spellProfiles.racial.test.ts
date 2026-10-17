@@ -203,7 +203,7 @@ describe('current native racial profiles', () => {
     )
     character = apply(
       character,
-      setRacialCastingAbility(character, character.provenance, profile.id, 'wis'),
+      setRacialCastingAbility(character, character.provenance, profile.id, 'wis', resolution),
     )
     const reordered = {
       ...race,

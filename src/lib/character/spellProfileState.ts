@@ -1,6 +1,8 @@
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
-import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { syncSpellProfiles } from './commands/spellCommands'
 import { refreshSpecialSpellKinds } from './specialSpellState'
@@ -11,12 +13,12 @@ export function deriveSpellProfileState(
   classesById: Map<string, Class5e>,
   raceData?: Pick<Race5e, 'name' | 'source' | 'additionalSpells'>,
   raceResolution?: ResolvedRaceReference,
-  options?: {
+  options?: NativeSpellLookups & {
     preserveNonracialProfiles?: boolean
-    spellsByKey?: Readonly<Record<string, Spell5e>>
   },
 ): Character {
-  character = refreshSpecialSpellKinds(character, options?.spellsByKey)
+  character = refreshSpecialSpellKinds(character, options?.spellsByKey, options?.rawSpellsByKey)
+  character = refreshNativeRacialSpellState(character, raceResolution, options)
   const derivedProfiles = ensureSpellProfiles(
     character,
     options?.preserveNonracialProfiles ? undefined : classesById,
