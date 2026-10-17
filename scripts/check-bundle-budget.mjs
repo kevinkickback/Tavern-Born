@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared special-spell kind projection, strict admission and acknowledged correction
-  // measure 5,649,294 renderer bytes; use the smallest reviewed whole-KiB allowance.
-  rendererCode: 5517 * KIB,
-  // The same measured artifact has 486,700 initial script bytes. Other limits and
-  // normal enforcement remain unchanged; avoid catalog guessing or an async Save gap.
-  initialRendererScript: 476 * KIB,
+  // Shared native racial refresh, command authority and acknowledged correction
+  // measure 5,652,615 renderer bytes; use the smallest reviewed whole-KiB allowance.
+  rendererCode: 5521 * KIB,
+  // The same measured artifact has 489,124 initial script bytes. Other limits and
+  // normal enforcement remain unchanged; retain exact targets and independent ownership.
+  initialRendererScript: 478 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

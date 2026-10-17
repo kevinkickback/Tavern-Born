@@ -1,12 +1,5 @@
 import { MagicWand } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatModifier, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import type { RacialSpellcastingDetail } from '@/lib/calculations/spellProfiles.casting'
@@ -45,7 +38,6 @@ interface SpellcastingDetailsCardProps {
   spellcastingDetails: SpellcastingDetailLike[]
   racialProfiles?: RacialProfileLike[]
   racialSpellcastingDetails?: RacialSpellcastingDetail[]
-  onSetRacialCastingAbility?: (profileId: string, ability: string) => void
   hasMultipleSpellcastingClasses: boolean
   sharedSlots: SharedSlotLike[]
   pactSlots: PactSlotLike[]
@@ -75,7 +67,6 @@ export function SpellcastingDetailsCard({
   spellcastingDetails,
   racialProfiles = [],
   racialSpellcastingDetails = [],
-  onSetRacialCastingAbility,
   hasMultipleSpellcastingClasses,
   sharedSlots,
   pactSlots,
@@ -149,7 +140,6 @@ export function SpellcastingDetailsCard({
             })}
 
             {racialProfiles.map((profile) => {
-              const hasMultipleAbilityOptions = (profile.castingAbilityOptions?.length ?? 0) > 0
               const ability = profile.castingAbility
               const normalizedAbility = ability ? normalizeAbilityName(ability) : null
               const detail = racialSpellcastingDetails.find(
@@ -175,30 +165,7 @@ export function SpellcastingDetailsCard({
                         Racial Spellcasting
                       </p>
                     </div>
-                    {hasMultipleAbilityOptions ? (
-                      <Select
-                        value={profile.castingAbility ?? ''}
-                        onValueChange={(value) => onSetRacialCastingAbility?.(profile.id, value)}
-                      >
-                        <SelectTrigger
-                          aria-label={`${getSpellProfileDisplayLabel(profile)} casting ability`}
-                          className="h-8 w-auto min-w-24 max-w-36 cursor-pointer text-xs"
-                        >
-                          <SelectValue placeholder="Choose..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {profile.castingAbilityOptions?.map((opt) => (
-                            <SelectItem
-                              key={opt}
-                              value={opt}
-                              className="cursor-pointer text-xs uppercase"
-                            >
-                              {normalizeAbilityName(opt) ?? opt}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : ability ? (
+                    {ability ? (
                       <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
                         {normalizedAbility ?? ability}
                       </Badge>

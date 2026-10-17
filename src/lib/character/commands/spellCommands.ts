@@ -6,7 +6,6 @@
  */
 
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
-import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import {
   getClassChoiceSpellTag,
   getClassSpellRuleContext,
@@ -18,10 +17,15 @@ import {
   UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
 } from '@/lib/calculations/classSpellChoiceRules'
 import {
+  matchesNativeSpellFilter,
+  matchNativeRacialChoices,
+} from '@/lib/calculations/nativeRacialSpellChoices'
+import {
   deriveNativeRacialSpellProfiles,
   getNativeRacialSpellOwners,
   materializeNativeRacialProfile,
   reconcileNativeRacialSpellLedger,
+  refreshNativeRacialSpellState,
 } from '@/lib/calculations/nativeRacialSpells'
 import {
   buildSpellNameKeySet,
@@ -37,7 +41,6 @@ import {
   buildClassProfileLabel,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
-import { isSpellOnClassList } from '@/lib/calculations/spellUtils'
 import {
   getSpecialSpellKind,
   refreshSpecialSpellKinds,
@@ -874,63 +877,72 @@ export function setRacialSpellChoice(
   const unchanged = { characterPatch: {}, provenanceUpdate: ledger }
   if (profile?.type !== 'racial' || !profile.racial?.suite || !choice) return unchanged
   const keys = selectedSpells.map(getSpellNameKey)
-  const pool = choice.pool
-    ? new Set(choice.pool.map((reference) => getSpellReferenceKey(reference)))
-    : undefined
   if (
-    keys.length > choice.count ||
     new Set(keys).size !== keys.length ||
     selectedSpells.some((reference) => {
-      const parsed = parseSpellReference(reference)
-      return !parsed.name || !parsed.source || (pool && !pool.has(getSpellReferenceKey(reference)))
+      const parts = reference.split('|')
+      return parts.length !== 2 || parts.some((part) => !part.trim() || /[#{}]/.test(part))
     })
   )
     return unchanged
   const previous = new Set(choice.selected.map((reference) => getSpellReferenceKey(reference)))
-  // Deletion can use the saved snapshot. New targets require complete live owner rules.
-  if (selectedSpells.some((reference) => !previous.has(getSpellReferenceKey(reference)))) {
-    const live = deriveNativeRacialSpellProfiles(character, raceResolution)
-    const descriptor = live
-      .find((entry) => entry.id === profileId)
-      ?.choices?.find((entry) => entry.id === choiceId)
-    if (getNativeRacialSpellOwners(character, raceResolution) === null || !descriptor)
+  const current = refreshNativeRacialSpellState(
+    { ...character, provenance: ledger },
+    raceResolution,
+    { spellsByKey },
+  )
+  const live = current.spells.spellProfiles.find((entry) => entry.id === profileId)
+  const correspondence = matchNativeRacialChoices(
+    profile,
+    live?.racial?.mode ?? 'alternative',
+    live?.racial?.suite?.id,
+    live?.choices ?? [],
+  )
+  const descriptor = live?.choices?.find((entry) => correspondence.get(entry.id)?.id === choiceId)
+  if (selectedSpells.length > (descriptor?.count ?? choice.count)) return unchanged
+  const added = selectedSpells.filter((reference) => !previous.has(getSpellReferenceKey(reference)))
+  if (added.length) {
+    if (!descriptor || getNativeRacialSpellOwners(character, raceResolution) === null)
       return unchanged
-    const filter = descriptor.filter
     if (
-      filter &&
-      selectedSpells.some((reference) => {
-        if (previous.has(getSpellReferenceKey(reference))) return false
-        const spell = spellsByKey && resolveSpellReference(reference, spellsByKey)
-        return (
-          !spell ||
-          getSpellReferenceKey(`${spell.name}|${spell.source}`) !==
-            getSpellReferenceKey(reference) ||
-          spell.level !== filter.level ||
-          (filter.classes.length > 0 &&
-            !filter.classes.some((className) => isSpellOnClassList(spell, className)))
-        )
-      })
+      added.some(
+        (reference) =>
+          (descriptor.pool &&
+            !descriptor.pool.some(
+              (value) => getSpellReferenceKey(value) === getSpellReferenceKey(reference),
+            )) ||
+          (descriptor.filter &&
+            matchesNativeSpellFilter(reference, descriptor.filter, { spellsByKey }) !== true),
+      )
     )
       return unchanged
   }
-  const profiles = character.spells.spellProfiles.map((entry) =>
+  // A removed/unassociated old descriptor is already gone. Never clear a new one by position.
+  if (!descriptor)
+    return { characterPatch: { spells: current.spells }, provenanceUpdate: current.provenance }
+  const retained = new Set(descriptor.selected.map((reference) => getSpellReferenceKey(reference)))
+  const selected = selectedSpells.filter((reference) => {
+    const key = getSpellReferenceKey(reference)
+    return !previous.has(key) || retained.has(key)
+  })
+  const profiles = current.spells.spellProfiles.map((entry) =>
     entry.id === profileId
       ? materializeNativeRacialProfile({
           ...entry,
-          choices: entry.choices?.map((descriptor) =>
-            descriptor.id === choiceId
+          choices: entry.choices?.map((candidate) =>
+            candidate.id === descriptor.id
               ? {
-                  ...descriptor,
-                  selected: selectedSpells.map((reference) => formatSpellReference(reference)),
+                  ...candidate,
+                  selected: selected.map((reference) => formatSpellReference(reference)),
                 }
-              : descriptor,
+              : candidate,
           ),
         })
       : entry,
   )
   return {
     characterPatch: createSpellProfilePatch(character, profiles),
-    provenanceUpdate: reconcileNativeRacialSpellLedger(ledger, profiles),
+    provenanceUpdate: reconcileNativeRacialSpellLedger(current.provenance, profiles),
   }
 }
 
@@ -941,6 +953,7 @@ export function setRacialSpellSuite(
   profileId: string,
   suiteId: string | undefined,
   raceResolution?: ResolvedRaceReference,
+  spellsByKey?: Readonly<Record<string, Spell5e>>,
 ): SpellCommandResult {
   const profile = character.spells.spellProfiles.find((entry) => entry.id === profileId)
   const unchanged = { characterPatch: {}, provenanceUpdate: ledger }
@@ -957,12 +970,14 @@ export function setRacialSpellSuite(
       character,
       raceResolution,
       new Map([[profileId, suiteId]]),
+      { spellsByKey },
     )
   } else if (owners !== null) {
     native = deriveNativeRacialSpellProfiles(
       character,
       raceResolution,
       new Map([[profileId, undefined]]),
+      { spellsByKey },
     )
   } else {
     native = character.spells.spellProfiles
@@ -1017,18 +1032,34 @@ export function setRacialCastingAbility(
   ledger: ProvenanceLedger,
   profileId: string,
   ability: string,
+  raceResolution?: ResolvedRaceReference,
+  spellsByKey?: Readonly<Record<string, Spell5e>>,
 ): SpellCommandResult {
   const profile = character.spells.spellProfiles.find((entry) => entry.id === profileId)
   const normalized = ability.trim().toLowerCase()
   if (
     profile?.type !== 'racial' ||
     !profile.racial?.suite ||
-    !profile.castingAbilityOptions ||
-    (normalized && !profile.castingAbilityOptions.includes(normalized))
+    (normalized && !/^(str|dex|con|int|wis|cha)$/.test(normalized))
   )
     return { characterPatch: {}, provenanceUpdate: ledger }
-  const profiles = character.spells.spellProfiles.map((entry) =>
+  if (normalized && getNativeRacialSpellOwners(character, raceResolution) === null)
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const current = refreshNativeRacialSpellState(
+    { ...character, provenance: ledger },
+    raceResolution,
+    { spellsByKey },
+  )
+  const live = current.spells.spellProfiles.find((entry) => entry.id === profileId)
+  if (normalized && !live?.castingAbilityOptions?.includes(normalized))
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  if (!live?.castingAbilityOptions)
+    return { characterPatch: { spells: current.spells }, provenanceUpdate: current.provenance }
+  const profiles = current.spells.spellProfiles.map((entry) =>
     entry.id === profileId ? { ...entry, castingAbility: normalized || undefined } : entry,
   )
-  return { characterPatch: createSpellProfilePatch(character, profiles), provenanceUpdate: ledger }
+  return {
+    characterPatch: createSpellProfilePatch(current, profiles),
+    provenanceUpdate: current.provenance,
+  }
 }

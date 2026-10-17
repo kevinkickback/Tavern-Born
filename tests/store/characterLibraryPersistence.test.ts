@@ -18,10 +18,15 @@ import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
-import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import {
+  nativeChoiceSpellLookup,
+  nativeChoiceSpells,
+  nativeRaceResolution,
+} from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
+import { makeRacialRefreshCharacter, racialRefreshRace } from '../fixtures/racialSpellRefresh'
 
 vi.unmock('@/lib/storage/idb-storage')
 
@@ -29,6 +34,58 @@ const reader = createIdbStorage<{ characters: Character[]; unsupportedCharacters
 const readCharacters = async () => (await reader.getItem('character-storage'))?.state.characters
 
 describe('acknowledged character library in IndexedDB', () => {
+  test('native refresh without a mounted page survives immediate Save, absence and actual durable reopen', async () => {
+    useGameDataStore.setState({ gameData: null })
+    const [original] = await useCharacterStore
+      .getState()
+      .importCharacters([makeRacialRefreshCharacter()])
+    const neighbor = await useCharacterStore
+      .getState()
+      .createNewCharacter({ name: 'Inactive neighbor' })
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const owner: Race5e = {
+      ...racialRefreshRace,
+      additionalSpells: [
+        {
+          ability: { choose: ['wis', 'cha'] },
+          known: { 1: [{ choose: 'level=0|class=Wizard', count: 1 }] },
+        },
+      ],
+    }
+    useGameDataStore
+      .getState()
+      .setGameData(makeGameDataFixture({ races: [owner], spells: nativeChoiceSpells }))
+    const saved = useCharacterStore.getState().saveActiveCharacter()
+    useGameDataStore.setState({ gameData: null })
+    await saved
+    useCharacterStore.getState().setActiveCharacter(null)
+    await useCharacterStore.persist.rehydrate()
+    useCharacterStore.getState().setActiveCharacter(original.id)
+    const reopened = useCharacterStore.getState().activeCharacter!
+    const profile = reopened.spells.spellProfiles.find((p) => p.type === 'racial')!
+    expect(profile.cantrips).toEqual(['Light|PHB'])
+    expect(profile.castingAbility).toBe('wis')
+    expect(profile.choices![0].count).toBe(1)
+    expect(reopened.provenance.spells.light).toHaveLength(2)
+    expect(reopened.provenance.spells['mage hand']).toBeUndefined()
+    expect(reopened.spells.spellSlots[1]?.used).toBe(2)
+    expect(reopened.spells.pactSpellSlots?.[2]?.used).toBe(1)
+    expect(useCharacterStore.getState().characters.find((c) => c.id === neighbor.id)).toEqual(
+      neighbor,
+    )
+    expect(await readCharacters()).toEqual(useCharacterStore.getState().characters)
+    useGameDataStore
+      .getState()
+      .setGameData(makeGameDataFixture({ races: [racialRefreshRace], spells: nativeChoiceSpells }))
+    await useCharacterStore.getState().saveActiveCharacter()
+    expect(
+      useCharacterStore
+        .getState()
+        .activeCharacter!.spells.spellProfiles.find((p) => p.type === 'racial')!.cantrips,
+    ).toEqual(['Light|PHB'])
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    useGameDataStore.setState({ gameData: null })
+  })
   test.each(
     [0, 1].flatMap((level) => [false, true].map((indexed) => ({ level, indexed }))),
   )('passive special spell refresh $level, indexed=$indexed survives absence and strict durable reopen', async ({

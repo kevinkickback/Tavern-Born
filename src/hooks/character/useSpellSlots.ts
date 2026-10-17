@@ -65,6 +65,10 @@ export function useSpellSlots(): SpellSlotsState {
       classesById,
       undefined,
       calculationContext?.raceResolution,
+      {
+        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+      },
     )
   }, [character, classesById, calculationContext])
   const spellProfiles = spellState?.spells.spellProfiles ?? []

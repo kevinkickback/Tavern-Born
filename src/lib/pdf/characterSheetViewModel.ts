@@ -701,7 +701,7 @@ export function createCharacterSheetViewModel(
     classesById,
     undefined,
     calculationContext.raceResolution,
-    { preserveNonracialProfiles: true },
+    { preserveNonracialProfiles: true, spellsByKey: rawLookups.spellsByKey },
   )
   const feats = getSelectedFeats(character).map((feat) => ({
     ...feat,

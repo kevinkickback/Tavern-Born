@@ -116,6 +116,7 @@ test('the racial page selects another enabled printing while retaining independe
       </MemoryRouter>
     </TooltipProvider>,
   )
+  fireEvent.click(screen.getByRole('tab', { name: /^Racial/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Edit Caster spell choice 1' }))
   const dialog = within(screen.getByRole('dialog'))
   await waitFor(() => expect(dialog.getAllByText('Light')).toHaveLength(2))

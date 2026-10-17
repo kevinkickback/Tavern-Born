@@ -1,3 +1,4 @@
+import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import {
   deriveNativeRacialSpellProfiles,
   reconcileNativeRacialSpellLedger,
@@ -13,7 +14,7 @@ export function reconcileRaceSpellProfileCommand(
   ledger: ProvenanceLedger,
   race: Race5e,
   subrace: Race5e | undefined,
-  options?: Pick<RaceSpellSelectionOptions, 'subraceIsNested'>,
+  options?: Pick<RaceSpellSelectionOptions, 'subraceIsNested'> & NativeSpellLookups,
 ) {
   const projected = {
     ...character,
@@ -22,11 +23,16 @@ export function reconcileRaceSpellProfileCommand(
     subrace: subrace?.name,
     subraceSource: subrace?.source,
   }
-  const native = deriveNativeRacialSpellProfiles(projected, {
-    parentRace: race,
-    subraceData: subrace,
-    subraceIsNested: options?.subraceIsNested ?? false,
-  })
+  const native = deriveNativeRacialSpellProfiles(
+    projected,
+    {
+      parentRace: race,
+      subraceData: subrace,
+      subraceIsNested: options?.subraceIsNested ?? false,
+    },
+    undefined,
+    options,
+  )
   const profiles = [
     ...character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
     ...native,

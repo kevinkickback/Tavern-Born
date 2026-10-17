@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useRaceLookup } from '@/hooks/data/useGameData'
 import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import {
@@ -53,6 +54,7 @@ export function useRaceProvenanceMutations() {
   const items = gameData?.items ?? EMPTY_ITEMS
   const itemsBase = gameData?.itemsBase ?? EMPTY_ITEMS
   const racesByKey = useRaceLookup()
+  const calculationContext = useCharacterCalculationContext(character)
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
     [character],
@@ -76,14 +78,18 @@ export function useRaceProvenanceMutations() {
         subrace,
         raceAsiBlockIndex,
         resolveRaceChoiceOptions,
-        getSpellSelectionContext(race, subrace, racesByKey, character),
+        {
+          ...getSpellSelectionContext(race, subrace, racesByKey, character),
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+        },
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey],
+    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey, calculationContext],
   )
   const applySubraceChange = useCallback(
     (race: Race5e, subrace?: Race5e) => {
@@ -94,14 +100,18 @@ export function useRaceProvenanceMutations() {
         race,
         subrace,
         resolveRaceChoiceOptions,
-        getSpellSelectionContext(race, subrace, racesByKey, character),
+        {
+          ...getSpellSelectionContext(race, subrace, racesByKey, character),
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+        },
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey],
+    [character, ledger, resolveRaceChoiceOptions, updateCharacter, racesByKey, calculationContext],
   )
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {

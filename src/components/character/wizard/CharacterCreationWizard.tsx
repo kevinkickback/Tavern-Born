@@ -156,6 +156,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
               itemsBase: wizardData.itemsBase,
               allowedSources: characterData.allowedSources,
             }),
+          wizardData.spellLookups,
         )
         const saved = await addCharacter(character)
         setActiveCharacter(saved.id)

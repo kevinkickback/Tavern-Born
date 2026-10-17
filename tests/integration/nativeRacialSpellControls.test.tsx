@@ -105,6 +105,30 @@ function reopened() {
   )
 }
 
+test('a fixed Tiefling suite has rows without a status-only setup card, and opening or switching views preserves the clean character', () => {
+  const race: Race5e = {
+    name: 'Tiefling',
+    source: 'PHB',
+    additionalSpells: [{ ability: 'cha', innate: { 1: ['thaumaturgy#c'] } }],
+  }
+  install([race])
+  setActiveCharacter(makeNativeRacialCharacter(race))
+  useCharacterStore.setState({ isActiveCharacterDirty: false })
+  const before = useCharacterStore.getState().activeCharacter
+  const notify = vi.fn()
+  const unsubscribe = useCharacterStore.subscribe(notify)
+  page()
+  for (const name of [/^Racial/, /^Bonus/, /^All/, /^Racial/])
+    fireEvent.click(screen.getByRole('tab', { name }))
+  expect(screen.queryByRole('region', { name: 'Tiefling spell setup' })).toBeNull()
+  expect(screen.queryByText(/Granted spell suite/)).toBeNull()
+  expect(screen.getAllByText(/thaumaturgy/i).length).toBeGreaterThan(0)
+  expect(useCharacterStore.getState().activeCharacter).toBe(before)
+  expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  expect(notify).not.toHaveBeenCalled()
+  unsubscribe()
+})
+
 test('actual revised Tiefling selects all four native members, replaces the suite, clears offline, and stays clear after reopen and restoration', async () => {
   const race = {
     name: 'Tiefling',
@@ -137,6 +161,8 @@ test('actual revised Tiefling selects all four native members, replaces the suit
   })
   page()
   const user = userEvent.setup()
+  expect(screen.queryByRole('region', { name: 'Tiefling spell setup' })).toBeNull()
+  await user.click(screen.getByRole('tab', { name: /^Racial/ }))
   const setup = within(screen.getByRole('region', { name: 'Tiefling spell setup' }))
   expect(reopened().provenance.spells).toEqual({})
   expect(screen.queryByText('Racial Spellcasting')).toBeNull()
@@ -201,7 +227,14 @@ test('choose-only High Elf exposes Edit and Clear after its descriptor is full, 
     allowedSources: ['XPHB'],
   })
   page()
+  fireEvent.click(screen.getByRole('tab', { name: /^Racial/ }))
   const setup = within(screen.getByRole('region', { name: 'Elf spell setup' }))
+  const user = userEvent.setup()
+  await user.click(setup.getByRole('combobox', { name: 'Elf casting ability' }))
+  await user.click(screen.getByRole('option', { name: /wisdom/i }))
+  expect(
+    reopened().spells.spellProfiles.find((profile) => profile.type === 'racial')!.castingAbility,
+  ).toBe('wis')
   expect(setup.queryByRole('button', { name: 'Clear Elf spell suite' })).toBeNull()
   fireEvent.click(setup.getByRole('button', { name: 'Edit Elf spell choice 1' }))
   let dialog = within(screen.getByRole('dialog'))
@@ -221,6 +254,9 @@ test('choose-only High Elf exposes Edit and Clear after its descriptor is full, 
   ).toEqual(['mage hand|XPHB'])
   act(() => install([]))
   expect(
+    (setup.getByRole('combobox', { name: 'Elf casting ability' }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+  expect(
     (setup.getByRole('button', { name: 'Edit Elf spell choice 1' }) as HTMLButtonElement).disabled,
   ).toBe(true)
   fireEvent.click(setup.getByRole('button', { name: 'Clear Elf spell choice 1' }))
@@ -234,6 +270,17 @@ test('choose-only High Elf exposes Edit and Clear after its descriptor is full, 
     reopened().spells.spellProfiles.find((profile) => profile.type === 'racial')!.choices![0]
       .selected,
   ).toEqual([])
+  const refreshed: Race5e = {
+    ...race,
+    additionalSpells: [{ ability: 'cha', known: { 1: [{ choose: 'level=1|class=Wizard' }] } }],
+  }
+  act(() => install([refreshed]))
+  expect(setup.queryByRole('combobox', { name: 'Elf casting ability' })).toBeNull()
+  expect(setup.getByText('Choice 1 · 0/1 spells')).toBeTruthy()
+  expect(setup.getByRole('button', { name: 'Edit Elf spell choice 1' })).toBeTruthy()
+  expect(
+    reopened().spells.spellProfiles.find((profile) => profile.type === 'racial')!.castingAbility,
+  ).toBe('cha')
 }, 10_000)
 
 test('actual class spell editing commits restored racial level grants together without changing slot usage', () => {

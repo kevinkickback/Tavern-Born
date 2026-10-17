@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import type { NativeRacialSpellOwner } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
@@ -17,6 +18,7 @@ interface Props {
   onSetSuite: (profileId: string, suiteId: string | undefined) => void
   onEditChoice: (profileId: string, choiceId: string) => void
   onClearChoice: (profileId: string, choiceId: string, selected: string[]) => void
+  onSetAbility: (profileId: string, ability: string) => void
 }
 
 /** Setup controls exist independently of granted rows, including empty native suites. */
@@ -26,6 +28,7 @@ export function NativeRacialSpellControls({
   onSetSuite,
   onEditChoice,
   onClearChoice,
+  onSetAbility,
 }: Props) {
   return (
     <div className="mb-4 space-y-3">
@@ -34,6 +37,9 @@ export function NativeRacialSpellControls({
         if (!state) return null
         const label = getSpellProfileDisplayLabel(profile)
         const live = owners?.find((owner) => owner.id === profile.id)
+        const hasAbilityChoice = !!state.suite && !!profile.castingAbilityOptions?.length
+        if (live && state.mode === 'mandatory' && !profile.choices?.length && !hasAbilityChoice)
+          return null
         return (
           <section
             key={profile.id}
@@ -79,11 +85,25 @@ export function NativeRacialSpellControls({
                   Clear
                 </Button>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {state.suite?.name ?? 'Granted spell suite'} · Active
-              </p>
-            )}
+            ) : null}
+            {hasAbilityChoice ? (
+              <Select
+                value={profile.castingAbility ?? ''}
+                disabled={!live}
+                onValueChange={(value) => onSetAbility(profile.id, value)}
+              >
+                <SelectTrigger aria-label={`${label} casting ability`}>
+                  <SelectValue placeholder="Choose casting ability" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profile.castingAbilityOptions?.map((ability) => (
+                    <SelectItem key={ability} value={ability}>
+                      {normalizeAbilityName(ability) ?? ability}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
             {!live ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 Restore the race and lineage sources to select new spells. Existing choices can

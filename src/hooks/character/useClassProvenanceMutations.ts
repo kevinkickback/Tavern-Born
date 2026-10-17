@@ -44,6 +44,8 @@ export function useClassProvenanceMutations() {
       if (!character) return
       const result = applyClassSelectionCommand(character, ledger, cls, subclass, itemLookup, {
         raceResolution: calculationContext?.raceResolution,
+        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
       })
       updateCharacter(character.id, {
         ...result.characterPatch,

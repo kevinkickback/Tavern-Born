@@ -33,6 +33,8 @@ export function useUnifiedClassSelection() {
       const ledger = character.provenance ?? emptyProvenance()
       const result = applyClassSelectionCommand(character, ledger, cls, undefined, itemLookup, {
         raceResolution: calculationContext?.raceResolution,
+        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
       })
 
       updateCharacter(character.id, {
@@ -68,6 +70,8 @@ export function useUnifiedClassSelection() {
           classProgression,
           viewingEntry,
           raceResolution: calculationContext?.raceResolution,
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
         },
       )
 
@@ -76,7 +80,7 @@ export function useUnifiedClassSelection() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter, itemLookup, calculationContext?.raceResolution],
+    [character, updateCharacter, itemLookup, calculationContext],
   )
 
   return { selectClass, selectSubclass }

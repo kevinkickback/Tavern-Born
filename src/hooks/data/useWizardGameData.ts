@@ -6,13 +6,18 @@ import {
   resolveClassReference,
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
-import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
+import {
+  buildBackgroundLookup,
+  buildClassLookup,
+  buildRaceLookup,
+  buildSpellLookup,
+} from '@/lib/5etools/lookups'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { XPHB_LEGACY_RACE_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useFilteredGameDataParams } from './useFilteredGameData'
-import { useBackgroundLookup, useClassLookup, useRaceLookup } from './useGameData'
+import { useBackgroundLookup, useClassLookup, useRaceLookup, useSpellLookup } from './useGameData'
 
 interface WizardGameDataParams {
   allowedSources?: string[]
@@ -37,6 +42,7 @@ export function useWizardGameData({
   const rawClassLookup = useClassLookup()
   const rawRaceLookup = useRaceLookup()
   const rawBackgroundLookup = useBackgroundLookup()
+  const rawSpellLookup = useSpellLookup()
 
   const races = useMemo(() => {
     if (!effectiveSources || effectiveSources.length === 0) return filteredData.races
@@ -97,12 +103,17 @@ export function useWizardGameData({
       resolveBackgroundReference(reference, filteredLookups, rawLookups),
     [filteredLookups, rawLookups],
   )
+  const spellLookups = useMemo(
+    () => ({ spellsByKey: buildSpellLookup(filteredData.spells), rawSpellsByKey: rawSpellLookup }),
+    [filteredData.spells, rawSpellLookup],
+  )
 
   return {
     ...filteredData,
     races,
     classes,
     itemLookup,
+    spellLookups,
     resolveRace,
     resolveClass,
     resolveBackground,
