@@ -66,7 +66,8 @@ describe('5etools/validator', () => {
   test.each([
     ['conditionsdiseases.json', { status: {} }],
     ['trapshazards.json', { hazard: [{ source: 'DMG' }] }],
-  ])('reports malformed compound rules in %s', async (file, invalid) => {
+    ['items-base.json', { itemEntry: [{ name: 'Broken', source: 'DMG' }] }],
+  ])('reports malformed supported collections in %s', async (file, invalid) => {
     globalThis.fetch = vi.fn((input: string | URL | Request) => {
       const match = Object.entries(payloadByFile).find(([name]) =>
         String(input).endsWith(`/data/${name}`),

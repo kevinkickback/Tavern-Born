@@ -14,6 +14,7 @@ export function createEmptyGameData(): GameData & {
     feats: [],
     items: [],
     itemsBase: [],
+    itemEntries: [],
     itemProperties: [],
     itemTypes: [],
     itemMasteries: [],

@@ -1,6 +1,6 @@
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
 import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
-import type { Class5e, GameData, Race5e } from '@/types/5etools'
+import type { Class5e, GameData, Item5e, Race5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 
@@ -11,6 +11,7 @@ const FIELD_COLLECTIONS = [
   'feats',
   'items',
   'itemsBase',
+  'itemEntries',
   'creatures',
   'optionalfeatures',
 ] as const
@@ -21,6 +22,7 @@ type FieldShape = 'array' | 'boolean' | 'null' | 'number' | 'object' | 'string' 
 interface CapabilityIssue {
   code:
     | 'choice-diagnostic'
+    | 'item-entry-diagnostic'
     | 'missing-normalized-rules'
     | 'unqualified-entity'
     | 'unqualified-reference'
@@ -293,6 +295,11 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
       }
       const record = asRecord(entity)
       if (!record) continue
+      if (collection === 'items' || collection === 'itemsBase') {
+        for (const diagnostic of (entity as Item5e).itemEntryDiagnostics ?? []) {
+          issues.push({ code: 'item-entry-diagnostic', collection, entity: owner, ...diagnostic })
+        }
+      }
       for (const [field, value] of Object.entries(record)) {
         const key = `${collection}\u0000${field}`
         const shapes = fieldCounts.get(key) ?? {}

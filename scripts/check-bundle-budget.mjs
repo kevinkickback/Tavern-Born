@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Batched item-reference projections measure 5,657,112 renderer
+  // Shared item-entry normalization measures 5,660,544 renderer
   // bytes; use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5525 * KIB,
-  // The same measured artifact has 493,123 initial script bytes. Other limits and
+  rendererCode: 5528 * KIB,
+  // The same measured artifact has 496,555 initial script bytes. Other limits and
   // normal enforcement remain unchanged; retain exact rule kinds and printings.
-  initialRendererScript: 482 * KIB,
+  initialRendererScript: 485 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

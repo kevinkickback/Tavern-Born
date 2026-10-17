@@ -15,6 +15,7 @@ import {
   resolveCopiedRecords,
 } from './copyResolution'
 import { createEmptyGameData } from './emptyGameData'
+import { expandItemEntries, parseItemEntries, retainRawItems } from './itemEntries'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -239,6 +240,7 @@ export class FiveEToolsDataLoader {
             break
           case 'itemsBase':
             gameData.itemsBase = parseItems(data) as GameData['itemsBase']
+            gameData.itemEntries = parseItemEntries(data)
             gameData.itemProperties = parseItemProperties(data)
             gameData.itemTypes = parseItemTypes(data)
             gameData.itemMasteries = parseItemMasteries(data)
@@ -378,10 +380,12 @@ export class FiveEToolsDataLoader {
     throwIfAborted(options?.signal)
 
     gameData.items.push(...magicVariants)
+    retainRawItems(gameData)
     const itemCount = gameData.items.length
     const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
-    gameData.items = resolvedItems.records.slice(0, itemCount)
-    gameData.itemsBase = resolvedItems.records.slice(itemCount)
+    const describedItems = expandItemEntries(resolvedItems.records, gameData.itemEntries ?? [])
+    gameData.items = describedItems.slice(0, itemCount)
+    gameData.itemsBase = describedItems.slice(itemCount)
     if (resolvedItems.diagnostics.length && import.meta.env.DEV) {
       console.warn('Unresolved copied items:', resolvedItems.diagnostics)
     }
