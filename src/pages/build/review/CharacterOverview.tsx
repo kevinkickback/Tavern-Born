@@ -15,7 +15,7 @@ import {
   useRetainedCharacterDetails,
   useSpellLookup,
 } from '@/hooks/data/useGameData'
-import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import {
@@ -219,6 +219,7 @@ export function CharacterOverview({
   const spellcasting = useSpellSlots()
   const spellLookup = useSpellLookup()
   const itemLookup = useItemLookup()
+  const equipmentRules = resolveItemReferences(calculation.equipment.all, itemLookup)
   const [failedOrganizationImage, setFailedOrganizationImage] = useState('')
   const filteredData = useFilteredGameData()
   const { featureEntriesByKey, choiceDetailsById } = useRetainedCharacterDetails(
@@ -733,8 +734,8 @@ export function CharacterOverview({
           <OverviewSection title="Equipment" count={calculation.equipment.all.length}>
             {calculation.equipment.all.length ? (
               <ul className="space-y-2">
-                {calculation.equipment.all.map((item) => {
-                  const resolved = resolveItemReference(item, itemLookup)
+                {calculation.equipment.all.map((item, index) => {
+                  const resolved = equipmentRules[index]
                   return (
                     <DetailEntry
                       key={item.id}

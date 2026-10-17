@@ -106,6 +106,66 @@ describe('BuildReviewPage', () => {
     vi.clearAllMocks()
   })
 
+  test('keeps equipment details source-qualified across catalog removal and restoration', async () => {
+    const user = userEvent.setup()
+    const base = useGameDataStore.getState().gameData!
+    const first = {
+      name: 'Review Relic',
+      source: 'TEST',
+      type: 'WO',
+      entries: ['Exact review rules.'],
+    }
+    const other = { ...first, source: 'OTHER', entries: ['Other printing rules.'] }
+    const publish = (includeExact: boolean) => {
+      const data = { ...base, items: includeExact ? [first, other] : [other] }
+      data.lookups = buildGameDataLookups(data)
+      useGameDataStore.setState({ gameData: data })
+    }
+    publish(true)
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      equipment: [
+        {
+          id: 'exact-relic',
+          name: first.name,
+          source: first.source,
+          type: 'WO',
+          quantity: 1,
+          equipped: true,
+          description: 'Saved review fallback.',
+        },
+        {
+          id: 'missing-relic',
+          name: first.name,
+          source: 'MISSING',
+          type: 'WO',
+          quantity: 1,
+          equipped: false,
+          description: 'Unavailable saved rules.',
+        },
+      ],
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+    const unchanged = JSON.stringify(character)
+    render(
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByText('Equipment'))
+    expect(screen.getByText('Exact review rules.')).toBeTruthy()
+    expect(screen.getByText('Unavailable saved rules.')).toBeTruthy()
+    expect(screen.queryByText('Other printing rules.')).toBeNull()
+    await act(() => publish(false))
+    expect(screen.queryByText('Exact review rules.')).toBeNull()
+    expect(screen.getByText('Saved review fallback.')).toBeTruthy()
+    expect(screen.queryByText('Other printing rules.')).toBeNull()
+    await act(() => publish(true))
+    expect(screen.getByText('Exact review rules.')).toBeTruthy()
+    expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(unchanged)
+  })
+
   test('separates attention items from the character overview and preserves issue links', async () => {
     const user = userEvent.setup()
     render(

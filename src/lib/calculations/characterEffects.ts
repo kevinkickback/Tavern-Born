@@ -1,4 +1,4 @@
-import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import type { Feat5e, Item5e, Race5e } from '@/types/5etools'
 import type {
   ArmorClassAdjustment,
@@ -151,9 +151,12 @@ export function deriveStructuredItemEffects(
   fallbackItemLookup?: ReadonlyMap<string, Item5e>,
 ): CharacterEffect[] {
   const effects: CharacterEffect[] = []
-  for (const item of equipment) {
-    const data =
-      resolveItemReference(item, itemLookup) ?? resolveItemReference(item, fallbackItemLookup)
+  const primary = resolveItemReferences(equipment, itemLookup)
+  const unresolved = equipment.filter((_, index) => !primary[index])
+  const fallback = resolveItemReferences(unresolved, fallbackItemLookup)
+  let fallbackIndex = 0
+  for (const [index, item] of equipment.entries()) {
+    const data = primary[index] ?? fallback[fallbackIndex++]
     if (!data) continue
     const source = {
       kind: 'item' as const,
