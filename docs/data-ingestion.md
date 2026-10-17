@@ -602,8 +602,10 @@ their existing reference semantics; they do not create inventory.
 Inventory choices and both generic/exact starting-equipment creation exclude generic variants and
 item groups through the shared selectable-item policy. An exact non-equipment starting reference
 uses the existing unresolved placeholder, preserving its requested identity. This foundation does
-not generate concrete variants, apply weapon bonuses, rewrite saved equipment/provenance or add a
-template/base saved relation. Cache schema36 rebuilds older catalogs; character format11 is unchanged.
+not generate concrete variants, rewrite saved equipment/provenance or add a template/base saved
+relation. Existing concrete weapons use the separately bounded
+[fixed weapon bonus projection](state-management.md#fixed-weapon-bonuses).
+Cache schema36 rebuilds older catalogs; character format11 is unchanged.
 For example, the managed Artificer|EFA item-choice tables request `+1 Shield|XDMG` and `+2 Shield|XDMG`.
 Their canonical `(*)` templates are different records. Until concrete materialization is implemented,
 those two choices remain diagnosed as missing; no alias or different printing supplies their rules.

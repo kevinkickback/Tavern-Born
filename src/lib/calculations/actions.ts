@@ -47,11 +47,16 @@ import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getFeatureActionGroupId } from './featureActionGroups'
+import { getItemTypeCodes } from './itemClassification'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 
 function isWeapon(item: Equipment): boolean {
-  return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
+  return (
+    !!item.dmg1 ||
+    !!item.weaponCategory ||
+    getItemTypeCodes(item.type).some((code) => code === 'M' || code === 'R')
+  )
 }
 
 function parseMasteryReference(reference: string): { name: string; source?: string } | null {
@@ -532,7 +537,7 @@ export function deriveWeaponActions(
       ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
         ? 'dexterity'
         : 'strength'
-      : item.type === 'R'
+      : getItemTypeCodes(item.type).includes('R')
         ? 'dexterity'
         : 'strength'
     const proficient = isProficientWithWeapon(character.proficiencies.weapons, item)

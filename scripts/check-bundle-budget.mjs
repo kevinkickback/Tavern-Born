@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Canonical magic-template references measure 5,671,794 renderer bytes.
+  // Fixed weapon bonuses measure 5,674,496 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5539 * KIB,
-  // The same measured artifact has 509,483 initial script bytes.
+  rendererCode: 5542 * KIB,
+  // The same measured artifact has 512,160 initial script bytes.
   // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 498 * KIB,
+  initialRendererScript: 501 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
