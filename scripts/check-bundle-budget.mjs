@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Exact owned racial defenses and acknowledged correction measure 5,655,550 renderer
+  // Compound rule preservation and kind-qualified previews measure 5,656,413 renderer
   // bytes; use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5523 * KIB,
-  // The same measured artifact has 491,963 initial script bytes. Other limits and
-  // normal enforcement remain unchanged; retain exact targets and independent ownership.
-  initialRendererScript: 481 * KIB,
+  rendererCode: 5524 * KIB,
+  // The same measured artifact has 492,566 initial script bytes. Other limits and
+  // normal enforcement remain unchanged; retain exact rule kinds and printings.
+  initialRendererScript: 482 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -459,6 +459,12 @@ describe('5etools/dataLoader', () => {
       'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
       'conditionsdiseases.json': {
         condition: [{ name: 'Blinded', source: 'PHB' }],
+        disease: [{ name: 'Sight Rot', source: 'DMG' }],
+        status: [{ name: 'Concentration', source: 'XPHB' }],
+      },
+      'trapshazards.json': {
+        trap: [{ name: 'Pit', source: 'DMG' }],
+        hazard: [{ name: 'Storm', source: 'TCE' }],
       },
       'deities.json': { deity: [{ name: 'Pelor', source: 'PHB' }] },
       'skills.json': { skill: [{ name: 'Arcana', source: 'PHB' }] },
@@ -486,6 +492,17 @@ describe('5etools/dataLoader', () => {
     const gameData = await loader.loadAllData({ onResourceFailure })
 
     expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Wrong Source Class'])
+    expect(gameData.conditions).toEqual([
+      { name: 'Blinded', source: 'PHB', _sourceType: 'condition' },
+      { name: 'Sight Rot', source: 'DMG', _sourceType: 'disease' },
+      { name: 'Concentration', source: 'XPHB', _sourceType: 'status' },
+    ])
+    expect(gameData.trapHazards).toEqual([
+      { name: 'Pit', source: 'DMG', _sourceType: 'trap' },
+      { name: 'Storm', source: 'TCE', _sourceType: 'hazard' },
+    ])
+    expect(gameData.sources.map((source) => source.abbreviation)).toContain('TCE')
+    expect(gameData.lookups?.conditionNames).toEqual(['Blinded'])
     expect(
       gameData.backgrounds.find((background) => background.source === 'PHB')?.fluffEntries,
     ).toBe(undefined)

@@ -551,7 +551,7 @@ export interface Condition5e {
   source: string
   page?: number
   entries?: unknown[]
-  _sourceType?: 'condition' | 'disease'
+  _sourceType?: 'condition' | 'disease' | 'status'
   [key: string]: unknown
 }
 

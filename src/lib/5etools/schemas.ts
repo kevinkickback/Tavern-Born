@@ -105,7 +105,7 @@ export const ActionDataSchema = z
   })
   .passthrough()
 
-const ConditionSchema = z
+const RuleEntrySchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -115,8 +115,16 @@ const ConditionSchema = z
 
 export const ConditionDataSchema = z
   .object({
-    condition: z.array(ConditionSchema).optional(),
-    disease: z.array(ConditionSchema).optional(),
+    condition: z.array(RuleEntrySchema).optional(),
+    disease: z.array(RuleEntrySchema).optional(),
+    status: z.array(RuleEntrySchema).optional(),
+  })
+  .passthrough()
+
+export const TrapHazardDataSchema = z
+  .object({
+    trap: z.array(RuleEntrySchema).optional(),
+    hazard: z.array(RuleEntrySchema).optional(),
   })
   .passthrough()
 

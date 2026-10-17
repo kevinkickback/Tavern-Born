@@ -5,6 +5,7 @@ import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import {
   useBackgroundLookup,
   useClassFeatureLookup,
+  useConditions,
   useFeatLookup,
   useItemLookup,
   useItemPropertyLookup,
@@ -22,6 +23,22 @@ import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 describe('named game data lookup hooks', () => {
   afterEach(() => {
     useGameDataStore.setState({ gameData: null })
+  })
+
+  test('condition controls exclude status and disease records while retaining untagged rules', () => {
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        conditions: [
+          { name: 'Prone', source: 'PHB', _sourceType: 'condition' },
+          { name: 'Concentration', source: 'PHB', _sourceType: 'status' },
+          { name: 'Sight Rot', source: 'DMG', _sourceType: 'disease' },
+          { name: 'Direct condition', source: 'PHB' },
+          null,
+        ],
+      }),
+    })
+    const { result } = renderHook(() => useConditions())
+    expect(result.current.map((row) => row.name)).toEqual(['Prone', 'Direct condition'])
   })
 
   test('returns stable empty defaults while data is unavailable', () => {

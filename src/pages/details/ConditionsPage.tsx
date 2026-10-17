@@ -75,7 +75,7 @@ export function getExhaustionMaximum(entries: unknown[] | undefined): number | n
 function selectRulesetConditions(records: readonly Condition5e[], source: string) {
   const byName = new Map<string, Condition5e>()
   for (const record of records) {
-    if (record._sourceType === 'disease') continue
+    if (record._sourceType === 'disease' || record._sourceType === 'status') continue
     const existing = byName.get(record.name)
     if (!existing || (record.source === source && existing.source !== source)) {
       byName.set(record.name, record)

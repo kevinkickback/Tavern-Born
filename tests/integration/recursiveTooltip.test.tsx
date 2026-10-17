@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { GameContent } from '@/components/editor/GameContent'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
+import { parseConditions, parseTrapHazards } from '@/lib/5etools/parsers'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -19,6 +20,32 @@ describe('rules previews', () => {
     cleanup()
     vi.useRealTimers()
     useGameDataStore.setState({ gameData: null })
+  })
+
+  test('opens a loaded hazard and its exact disease reference through shared content', async () => {
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        trapHazards: parseTrapHazards({
+          hazard: [
+            {
+              name: 'Bile Lichen',
+              source: 'FRAiF',
+              entries: ['See {@disease Lichen Plague|FRAiF}.'],
+            },
+          ],
+        }),
+        conditions: parseConditions({
+          disease: [{ name: 'Lichen Plague', source: 'FRAiF', entries: ['Exact disease rules.'] }],
+        }),
+      }),
+    })
+    renderWithManager(<GameContent entry="Inspect {@hazard Bile Lichen|FRAiF}." />)
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Bile Lichen' }))
+    const hazard = await screen.findByRole('dialog', { name: 'Bile Lichen preview' })
+    fireEvent.mouseMove(within(hazard).getByRole('button', { name: 'Lichen Plague' }))
+    const disease = await screen.findByRole('dialog', { name: 'Lichen Plague preview' })
+    expect(disease.textContent).toContain('Exact disease rules.')
+    expect(disease.textContent).toContain('Disease')
   })
 
   test('uses the app game-data lookup through the canonical content component', () => {
