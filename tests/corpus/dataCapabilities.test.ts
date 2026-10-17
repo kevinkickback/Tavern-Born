@@ -12,12 +12,14 @@ import { findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import {
   parseBackgrounds,
   parseClasses,
+  parseConditions,
   parseCreatures,
   parseFeats,
   parseItems,
   parseMagicVariants,
   parseOptionalFeatures,
   parseRaces,
+  parseTrapHazards,
 } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
@@ -46,6 +48,24 @@ function collection(payload: unknown, field: string): unknown[] {
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
+  it('retains every declared compound reference collection without editing the input', () => {
+    const rawConditions = readJson(resolve(DATA_ROOT, 'conditionsdiseases.json'))
+    const rawTraps = readJson(resolve(DATA_ROOT, 'trapshazards.json'))
+    const before = structuredClone([rawConditions, rawTraps])
+    const conditions = parseConditions(rawConditions)
+    const traps = parseTrapHazards(rawTraps)
+    expect(conditions).toEqual(
+      ['condition', 'disease', 'status'].flatMap((kind) =>
+        collection(rawConditions, kind).map((row) => ({ ...(row as object), _sourceType: kind })),
+      ),
+    )
+    expect(traps).toEqual(
+      ['trap', 'hazard'].flatMap((kind) =>
+        collection(rawTraps, kind).map((row) => ({ ...(row as object), _sourceType: kind })),
+      ),
+    )
+    expect([rawConditions, rawTraps]).toEqual(before)
+  })
   it('reports parsed capabilities and every observable gap', () => {
     const classIndex = readJson(resolve(DATA_ROOT, 'class', 'index.json')) as Record<string, string>
     const classPayloads = Object.values(classIndex).map((fileName) =>

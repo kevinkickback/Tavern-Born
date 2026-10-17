@@ -44,6 +44,8 @@ const ENTRY_TYPES = [
   'Sense',
   'Action',
   'Condition',
+  'Disease',
+  'Status',
   'Language',
   'Deity',
   'Organization',

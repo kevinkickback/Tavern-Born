@@ -217,6 +217,13 @@ function renderTags(text: string): string {
       'Condition',
     ),
     renderEntityTag(
+      'disease',
+      'DMG',
+      'text-destructive font-medium italic cursor-help',
+      'disease',
+      'Disease',
+    ),
+    renderEntityTag(
       'sense',
       'PHB',
       'text-primary font-medium italic cursor-help',

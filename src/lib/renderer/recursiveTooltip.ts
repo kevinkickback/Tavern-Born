@@ -6,6 +6,7 @@ interface TooltipEntityLike {
   shortName?: string
   source?: string
   page?: number
+  _sourceType?: string
   entries?: unknown[]
   className?: string
   classSource?: string
@@ -39,12 +40,15 @@ export interface RecursiveLookup {
   optionalfeatures: Map<string, TooltipEntityLike>
   actions: Map<string, TooltipEntityLike>
   conditions: Map<string, TooltipEntityLike>
+  diseases: Map<string, TooltipEntityLike>
+  statuses: Map<string, TooltipEntityLike>
   deities: Map<string, TooltipEntityLike>
   skills: Map<string, TooltipEntityLike>
   senses: Map<string, TooltipEntityLike>
   variantrules: Map<string, TooltipEntityLike>
   languages: Map<string, TooltipEntityLike>
-  trapHazards: Map<string, TooltipEntityLike>
+  traps: Map<string, TooltipEntityLike>
+  hazards: Map<string, TooltipEntityLike>
   rewards: Map<string, TooltipEntityLike>
   creatures: Map<string, Creature5e>
   classFeatures: Map<string, TooltipEntityLike>
@@ -129,6 +133,15 @@ function buildNameMap<T extends TooltipEntityLike>(items: readonly T[] = []): Ma
 function asTooltipEntities(collection: readonly unknown[] | undefined): TooltipEntityLike[] {
   return (collection ?? []).filter(
     (entity): entity is TooltipEntityLike => typeof entity === 'object' && entity !== null,
+  )
+}
+
+function buildRuleMap(records: readonly TooltipEntityLike[], kind: string) {
+  return buildNameMap(
+    records.filter(
+      (record) =>
+        record._sourceType === kind || (record._sourceType === undefined && kind !== 'disease'),
+    ),
   )
 }
 
@@ -222,6 +235,8 @@ function getNestedClassEntities(classes: readonly TooltipEntityLike[]): {
 export function buildRecursiveLookup(collections: RecursiveTooltipCollections): RecursiveLookup {
   const classes = asTooltipEntities(collections.classes)
   const nestedClassEntities = getNestedClassEntities(classes)
+  const conditions = asTooltipEntities(collections.conditions)
+  const trapHazards = asTooltipEntities(collections.trapHazards)
   return {
     spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
     items: buildNameMap([
@@ -234,13 +249,16 @@ export function buildRecursiveLookup(collections: RecursiveTooltipCollections): 
     backgrounds: buildNameMap(asTooltipEntities(collections.backgrounds)),
     optionalfeatures: buildNameMap(asTooltipEntities(collections.optionalfeatures)),
     actions: buildNameMap(asTooltipEntities(collections.actions)),
-    conditions: buildNameMap(asTooltipEntities(collections.conditions)),
+    conditions: buildRuleMap(conditions, 'condition'),
+    diseases: buildRuleMap(conditions, 'disease'),
+    statuses: buildRuleMap(conditions, 'status'),
     deities: buildNameMap(asTooltipEntities(collections.deities)),
     skills: buildNameMap(asTooltipEntities(collections.skills)),
     senses: buildNameMap(asTooltipEntities(collections.senses)),
     variantrules: buildNameMap(asTooltipEntities(collections.variantrules)),
     languages: buildNameMap(asTooltipEntities(collections.languages)),
-    trapHazards: buildNameMap(asTooltipEntities(collections.trapHazards)),
+    traps: buildRuleMap(trapHazards, 'trap'),
+    hazards: buildRuleMap(trapHazards, 'hazard'),
     rewards: buildNameMap(asTooltipEntities(collections.rewards)),
     creatures: buildNameMap(asTooltipEntities(collections.creatures) as Creature5e[]),
     classFeatures: buildScopedFeatureMap(asTooltipEntities(collections.classFeatures), false),
@@ -290,7 +308,8 @@ export function normalizeKind(kind: string): string {
   const normalized = kind.trim().toLowerCase()
   const aliases: Record<string, string> = {
     condition: 'conditions',
-    status: 'conditions',
+    disease: 'diseases',
+    status: 'statuses',
     action: 'actions',
     deity: 'deities',
     skill: 'skills',
@@ -304,8 +323,8 @@ export function normalizeKind(kind: string): string {
     background: 'backgrounds',
     optionalfeature: 'optionalfeatures',
     optfeature: 'optionalfeatures',
-    trap: 'trapHazards',
-    hazard: 'trapHazards',
+    trap: 'traps',
+    hazard: 'hazards',
     reward: 'rewards',
     creature: 'creatures',
     classfeature: 'classFeatures',
@@ -411,12 +430,15 @@ export function getRecursiveTooltipData(
     optionalfeatures: lookup.optionalfeatures,
     actions: lookup.actions,
     conditions: lookup.conditions,
+    diseases: lookup.diseases,
+    statuses: lookup.statuses,
     deities: lookup.deities,
     skills: lookup.skills,
     senses: lookup.senses,
     variantrules: lookup.variantrules,
     languages: lookup.languages,
-    trapHazards: lookup.trapHazards,
+    traps: lookup.traps,
+    hazards: lookup.hazards,
     rewards: lookup.rewards,
     creatures: lookup.creatures,
   }
@@ -441,12 +463,15 @@ export function getRecursiveTooltipData(
     optionalfeatures: 'Optional Feature',
     actions: 'Action',
     conditions: 'Condition',
+    diseases: 'Disease',
+    statuses: 'Status',
     deities: 'Deity',
     skills: 'Skill',
     senses: 'Sense',
     variantrules: 'Variant Rule',
     languages: 'Language',
-    trapHazards: 'Trap or Hazard',
+    traps: 'Trap',
+    hazards: 'Hazard',
     rewards: 'Reward',
     creatures: 'Creature',
   }

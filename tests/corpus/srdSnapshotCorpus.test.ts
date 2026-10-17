@@ -73,6 +73,17 @@ describe('committed bundled SRD corpus', () => {
     })
 
     expect(failures).toEqual([])
+    const rawConditions = await readJson(resolve(DATA_ROOT, 'conditionsdiseases.json'))
+    expect(gameData.conditions).toHaveLength(
+      rawConditions.condition.length + rawConditions.disease.length + rawConditions.status.length,
+    )
+    expect(
+      gameData.conditions.filter(
+        (row) => (row as { _sourceType: string })._sourceType === 'status',
+      ),
+    ).toEqual(rawConditions.status.map((row: object) => ({ ...row, _sourceType: 'status' })))
+    const rawTraps = await readJson(resolve(DATA_ROOT, 'trapshazards.json'))
+    expect(gameData.trapHazards).toHaveLength(rawTraps.trap.length + rawTraps.hazard.length)
     expect(createCorpusCapabilityReport(gameData).issues).toEqual([])
     expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{8}$/)
     expect(gameData.classes.some((entry) => entry.source === 'PHB')).toBe(true)

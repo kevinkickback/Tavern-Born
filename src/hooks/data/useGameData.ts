@@ -125,7 +125,7 @@ export function useSpellLookup() {
   return useMemo(() => gameData?.lookups?.spellsByKey ?? {}, [gameData?.lookups?.spellsByKey])
 }
 
-/** Returns parsed condition rule records, excluding disease records and malformed entries. */
+/** Returns condition rules, excluding diseases, statuses and malformed entries. */
 export function useConditions(): readonly Condition5e[] {
   const conditions = useGameDataStore((state) => state.gameData?.conditions)
 
@@ -136,6 +136,7 @@ export function useConditions(): readonly Condition5e[] {
       const condition = entry as Record<string, unknown>
       return (
         condition._sourceType !== 'disease' &&
+        condition._sourceType !== 'status' &&
         typeof condition.name === 'string' &&
         typeof condition.source === 'string'
       )

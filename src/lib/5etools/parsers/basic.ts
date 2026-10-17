@@ -75,7 +75,7 @@ export function parseActions(data: unknown): unknown[] {
 export function parseConditions(data: unknown): unknown[] {
   const obj = asObject(data)
   const results: unknown[] = []
-  const tag = (entries: unknown[], sourceType: 'condition' | 'disease') => {
+  const tag = (entries: unknown[], sourceType: 'condition' | 'disease' | 'status') => {
     for (const entry of entries) {
       results.push(
         entry && typeof entry === 'object'
@@ -86,6 +86,7 @@ export function parseConditions(data: unknown): unknown[] {
   }
   if (obj.condition) tag(asArray(obj.condition), 'condition')
   if (obj.disease) tag(asArray(obj.disease), 'disease')
+  if (obj.status) tag(asArray(obj.status), 'status')
   if (Array.isArray(data)) results.push(...data)
   return results
 }
@@ -187,9 +188,12 @@ export function parseVariantRules(data: unknown): unknown[] {
 
 export function parseTrapHazards(data: unknown): unknown[] {
   const obj = asObject(data)
-  if (obj.trap) return asArray(obj.trap)
   if (Array.isArray(data)) return data
-  return []
+  return (['trap', 'hazard'] as const).flatMap((kind) =>
+    asArray(obj[kind]).map((entry) =>
+      entry && typeof entry === 'object' ? { ...entry, _sourceType: kind } : entry,
+    ),
+  )
 }
 
 export function parseRewards(data: unknown): unknown[] {

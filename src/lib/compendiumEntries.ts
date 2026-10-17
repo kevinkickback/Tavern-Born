@@ -28,6 +28,8 @@ type UntypedEntryType =
   | 'Sense'
   | 'Action'
   | 'Condition'
+  | 'Disease'
+  | 'Status'
   | 'Language'
   | 'Deity'
   | 'Organization'
@@ -582,7 +584,11 @@ export function buildCompendiumEntries(
       entries.push(
         buildEntry(
           String(conditionObj.name ?? ''),
-          'Condition',
+          conditionObj._sourceType === 'disease'
+            ? 'Disease'
+            : conditionObj._sourceType === 'status'
+              ? 'Status'
+              : 'Condition',
           String(conditionObj.source ?? 'Unknown'),
           description,
           conditionObj,
@@ -687,6 +693,12 @@ export function buildCompendiumEntries(
           String(trapObj.source ?? 'Unknown'),
           description,
           trapObj,
+          trapObj._sourceType === 'trap' || trapObj._sourceType === 'hazard'
+            ? {
+                identity: trapObj._sourceType,
+                context: trapObj._sourceType === 'hazard' ? 'Hazard' : 'Trap',
+              }
+            : undefined,
         ),
       )
     })

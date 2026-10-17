@@ -28,6 +28,13 @@ vi.mock('@/hooks/character/useClassResources', () => ({
 
 vi.mock('@/hooks/data/useGameData', () => ({
   useConditions: () => [
+    { name: 'Reference status', source: 'PHB', _sourceType: 'status', entries: ['Status rules.'] },
+    {
+      name: 'Reference disease',
+      source: 'DMG',
+      _sourceType: 'disease',
+      entries: ['Disease rules.'],
+    },
     {
       name: 'Blinded',
       source: 'PHB',
@@ -87,6 +94,13 @@ function renderPage(initialEntry = '/details/conditions') {
 }
 
 describe('ConditionsPage', () => {
+  test('never offers statuses or diseases as condition controls', async () => {
+    renderPage()
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Conditions' }))
+    expect(screen.queryByText('Reference status')).toBeNull()
+    expect(screen.queryByText('Reference disease')).toBeNull()
+    expect(screen.getAllByText('Blinded').length).toBeGreaterThan(0)
+  })
   beforeEach(() => {
     const character = makeCharacterFixture({
       originSystem: '2014',

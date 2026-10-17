@@ -13,6 +13,7 @@ import {
   LanguageDataSchema,
   OptionalFeatureDataSchema,
   RaceDataSchema,
+  TrapHazardDataSchema,
 } from './schemas'
 import { findCorrectBranch, parseRemoteDataSourceUrl } from './urlUtils'
 
@@ -52,7 +53,7 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
   { name: 'magicvariants.json', schema: GenericDataSchema },
   { name: 'optionalfeatures.json', schema: OptionalFeatureDataSchema },
   { name: 'variantrules.json', schema: GenericDataSchema },
-  { name: 'trapshazards.json', schema: GenericDataSchema },
+  { name: 'trapshazards.json', schema: TrapHazardDataSchema },
   { name: 'rewards.json', schema: GenericDataSchema },
   { name: 'cultsboons.json', schema: GenericDataSchema },
 ]

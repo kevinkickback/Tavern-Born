@@ -23,7 +23,11 @@ const payloadByFile: Record<string, unknown> = {
   'items.json': { item: [{ name: 'Rope', source: 'PHB' }] },
   'items-base.json': { item: [{ name: 'Longsword', source: 'PHB' }] },
   'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
-  'conditionsdiseases.json': { condition: [{ name: 'Blinded', source: 'PHB' }] },
+  'conditionsdiseases.json': {
+    condition: [{ name: 'Blinded', source: 'PHB' }],
+    disease: [{ name: 'Sight Rot', source: 'DMG' }],
+    status: [{ name: 'Concentration', source: 'PHB' }],
+  },
   'deities.json': { deity: [{}] },
   'skills.json': { skill: [{}] },
   'senses.json': { sense: [{}] },
@@ -31,7 +35,7 @@ const payloadByFile: Record<string, unknown> = {
   'magicvariants.json': { variant: [{}] },
   'optionalfeatures.json': { optionalfeature: [{ name: 'Feature', source: 'PHB' }] },
   'variantrules.json': { variantrule: [{}] },
-  'trapshazards.json': { trap: [], hazard: [] },
+  'trapshazards.json': { trap: [], hazard: [{ name: 'Cold', source: 'DMG' }] },
   'rewards.json': { reward: [] },
   'cultsboons.json': { cult: [], boon: [] },
 }
@@ -57,6 +61,27 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(false)
     expect(result.error).toContain('Path cannot be empty')
+  })
+
+  test.each([
+    ['conditionsdiseases.json', { status: {} }],
+    ['trapshazards.json', { hazard: [{ source: 'DMG' }] }],
+  ])('reports malformed compound rules in %s', async (file, invalid) => {
+    globalThis.fetch = vi.fn((input: string | URL | Request) => {
+      const match = Object.entries(payloadByFile).find(([name]) =>
+        String(input).endsWith(`/data/${name}`),
+      )
+      return match
+        ? makeJsonResponse(match[0] === file ? invalid : match[1])
+        : makeJsonResponse({}, false)
+    }) as unknown as typeof fetch
+    const result = await validateDataSource({
+      type: 'remote',
+      path: 'https://example.com',
+      isValid: false,
+    })
+    expect(result.isValid).toBe(false)
+    expect(result.error).toContain(`Invalid file: ${file}`)
   })
 
   test('rejects non-http remote URL protocol', async () => {
