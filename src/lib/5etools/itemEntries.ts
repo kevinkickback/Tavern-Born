@@ -18,8 +18,12 @@ export function retainRawItems(data: GameData): void {
 export function getRawItems(data: GameData): Pick<GameData, 'items' | 'itemsBase'> {
   return (
     rawItems.get(data) ?? {
-      items: data.items.filter((item) => !item.magicVariantReference),
-      itemsBase: data.itemsBase.filter((item) => !item.magicVariantReference),
+      items: data.items.filter(
+        (item) => !item.magicVariantReference && !item.magicVariantGenerated,
+      ),
+      itemsBase: data.itemsBase.filter(
+        (item) => !item.magicVariantReference && !item.magicVariantGenerated,
+      ),
     }
   )
 }

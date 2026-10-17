@@ -296,7 +296,10 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     })
   }
   const fieldCounts = new Map<string, Record<string, number>>()
-  for (const diagnostic of gameData.magicVariantDiagnostics ?? [])
+  for (const diagnostic of [
+    ...(gameData.magicVariantDiagnostics ?? []),
+    ...(gameData.fixedShieldDiagnostics ?? []),
+  ])
     issues.push({
       code: 'magic-variant-diagnostic',
       collection: 'magicVariants',

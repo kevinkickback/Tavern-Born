@@ -5,6 +5,7 @@ import { resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import {
   type ArmorCategory,
+  getArmorEquipmentSlots,
   getNormalizedItemTraits,
   validateItemTypeFallbacks,
 } from './itemClassification'
@@ -58,13 +59,7 @@ export function getArmorClassBaseBreakdown(
   equipment: readonly Equipment[],
   dexModifier: number,
 ): ArmorClassBaseBreakdown {
-  const equipped = equipment.filter((e) => e.equipped)
-
-  const bodyArmor = equipped.find((e) => {
-    const cat = getArmorCategory(e)
-    return cat === 'light' || cat === 'medium' || cat === 'heavy'
-  })
-  const shield = equipped.find((e) => getArmorCategory(e) === 'shield')
+  const { bodyArmor, shield } = getArmorEquipmentSlots(equipment)
   const shieldBonus = shield ? (shield.ac ?? 2) : 0
 
   if (!bodyArmor) {

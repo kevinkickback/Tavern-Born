@@ -51,7 +51,7 @@ function collection(payload: unknown, field: string): unknown[] {
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
-  it('loads the actual bundled and managed source stack while retaining only the two optional item-choice gaps', async () => {
+  it('loads the actual bundled and managed source stack with concrete shield item-choice targets', async () => {
     const failures: string[] = []
     vi.stubGlobal('electronAPI', {
       readBundledJson: async (file: string) => readJson(resolve('resources/srd/core/data', file)),
@@ -76,27 +76,21 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         },
       )
       expect(failures).toEqual([])
-      expect(findLayerDependencyIssues(data, data)).toEqual([
-        {
-          owner: 'Artificer|EFA',
-          path: 'normalizedRules.choices[0].options[9]',
-          reference: '+1 Shield|XDMG',
-          required: false,
-        },
-        {
-          owner: 'Artificer|EFA',
-          path: 'normalizedRules.choices[0].options[43]',
-          reference: '+2 Shield|XDMG',
-          required: false,
-        },
-      ])
+      expect(findLayerDependencyIssues(data, data)).toEqual([])
       expect(data.magicVariants).toHaveLength(230)
-      expect(data.items.some((item) => item.name === '+1 Shield' && item.source === 'XDMG')).toBe(
-        false,
-      )
-      expect(data.items.some((item) => item.name === '+2 Shield' && item.source === 'XDMG')).toBe(
-        false,
-      )
+      expect(
+        data.items
+          .filter((item) => item.magicVariantGenerated)
+          .map((item) => `${item.name}|${item.source}`)
+          .sort(),
+      ).toEqual([
+        '+1 Shield|DMG',
+        '+1 Shield|XDMG',
+        '+2 Shield|DMG',
+        '+2 Shield|XDMG',
+        '+3 Shield|DMG',
+        '+3 Shield|XDMG',
+      ])
     } finally {
       vi.unstubAllGlobals()
     }

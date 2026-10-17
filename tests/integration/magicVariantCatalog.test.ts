@@ -257,7 +257,7 @@ describe('raw template cache and concrete character persistence', () => {
     const loaded = await loadMagicTemplates([shieldTemplate, child], [concrete])
     await writeGameDataCache(loaded, { type: 'local', path: '/fixture', isValid: true })
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(36)
+    expect(cached?.cacheSchemaVersion).toBe(37)
     expect(cached?.data.magicVariants).toEqual([shieldTemplate, child])
     const replaced = await loadMagicTemplates([
       { ...shieldTemplate, entries: ['Replacement rules.'] },

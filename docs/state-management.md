@@ -185,6 +185,23 @@ and equipment provenance change through the same equipment command. Derived AC a
 equipped state; they are not copied into equipment records.
 Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
 restrictions from either page applies the rule and unequips invalid armor in one character patch.
+Base AC and intrinsic armor/shield `bonusAc` effects share the first equipped body-armor and shield
+owners, selected from saved equipment classification/order. Other equipped armor/shields contribute
+no intrinsic AC bonus, including when equipment restrictions are ignored. Missing catalog rules,
+suppression or attunement failure do not promote another equipped owner. Unequipping, removing or
+reordering the selected owner changes the slot. Nonarmor AC items, manual effects/adjustments and
+explicit overrides retain their existing behavior; quantity does not multiply bonuses.
+
+Source-qualified equipment without an exact current rules record gets a nonblocking readiness
+recommendation after primary-then-raw resolution. An authoritative raw lookup must be supplied:
+undefined/loading data is unknown, while an explicit empty map establishes absence. A filtered primary
+view with an exact raw match produces no warning; another printing cannot substitute. Source-less
+custom entries remain outside this check, and existing unresolved starting placeholders keep their
+separate blocking issue. Review and PDF preflight consume the same readiness result. Missing rules
+remove only live catalog contributions; exact restoration recomputes them and clears the recommendation.
+Saved physical fields, player prose, inventory IDs/runtime state and provenance remain intact.
+Catalog physical-field refresh changes catalog records and future adds without silently overwriting
+existing inventory snapshots. Concrete generated shields need no saved template/base relation.
 
 Inventory weapon properties preserve 5etools references as abbreviations or source-qualified
 `{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;
@@ -205,7 +222,7 @@ supported. A malformed present field or combined-plus-split coexistence yields n
 weapon bonus and a manual-review note. Separate attack/damage fields remain separate channels.
 Exact primary item resolution wins over raw fallback, even when its bonus fields are absent or
 unsupported. Missing exact data removes only the derived contribution; restoration recomputes it.
-No saved equipment, prose, provenance or manual values change; character format11/cache36 remain.
+No saved equipment, prose, provenance or manual values change; character format11/cache37 remain.
 
 Eligibility requires an existing physical weapon in both inventory and selected item data.
 Shared classification excludes ammunition, armor, consumables, groups and generic/reference

@@ -393,6 +393,11 @@ export interface Item5e {
   source: string
   /** Canonical template target behind a reference-only projection; never saved inventory. */
   magicVariantReference?: { name: string; source: string }
+  /** Derived catalog lineage; never saved inventory or raw copy authority. */
+  magicVariantGenerated?: {
+    base: { name: string; source: string }
+    template: { name: string; source: string }
+  }
   page?: number
   srd?: boolean | string
   srd52?: boolean | string
@@ -629,6 +634,9 @@ export interface GameData {
   /** Canonical raw templates, retained separately for copy resolution and future generation. */
   magicVariants?: unknown[]
   magicVariantDiagnostics?: ItemEntryDiagnostic[]
+  /** Winning raw Shield bases, retaining malformed and duplicate generation inputs. */
+  fixedShieldBases?: unknown[]
+  fixedShieldDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

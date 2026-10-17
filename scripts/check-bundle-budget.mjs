@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Fixed weapon bonuses measure 5,674,496 renderer bytes.
+  // Fixed-bonus shield generation and shared AC/readiness measure 5,679,715 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5542 * KIB,
-  // The same measured artifact has 512,160 initial script bytes.
+  rendererCode: 5547 * KIB,
+  // The same measured artifact has 516,947 initial script bytes.
   // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 501 * KIB,
+  initialRendererScript: 505 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

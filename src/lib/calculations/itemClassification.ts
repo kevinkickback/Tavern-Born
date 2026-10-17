@@ -21,6 +21,20 @@ export interface ClassifiableItem {
   reqAttune?: unknown
 }
 
+/** Base AC and intrinsic armor bonuses share the same saved equipped slot owners. */
+export function getArmorEquipmentSlots<T extends ClassifiableItem & { equipped: boolean }>(
+  equipment: readonly T[],
+): { bodyArmor: T | undefined; shield: T | undefined } {
+  let bodyArmor: T | undefined, shield: T | undefined
+  for (const item of equipment) {
+    if (!item.equipped) continue
+    const category = getNormalizedItemTraits(item).armorCategory
+    if (category === 'shield') shield ??= item
+    else if (category !== 'none') bodyArmor ??= item
+  }
+  return { bodyArmor, shield }
+}
+
 export interface NormalizedItemTraits {
   typeCodes: readonly string[]
   armorCategory: ArmorCategory

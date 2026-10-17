@@ -10,6 +10,7 @@ import type {
 import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_NAMES } from './abilityScores'
 import type { EffectResolutionContext } from './effects'
+import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
 import { getWeaponBonuses } from './weaponBonuses'
 
 type EffectSettingsCharacter = Partial<
@@ -153,6 +154,7 @@ export function deriveStructuredItemEffects(
 ): CharacterEffect[] {
   const effects: CharacterEffect[] = []
   const primary = resolveItemReferences(equipment, itemLookup)
+  const slots = getArmorEquipmentSlots(equipment)
   const unresolved = equipment.filter((_, index) => !primary[index])
   const fallback = resolveItemReferences(unresolved, fallbackItemLookup)
   let fallbackIndex = 0
@@ -209,7 +211,12 @@ export function deriveStructuredItemEffects(
         requirements: [{ kind: 'equipment', itemId: item.id, state: 'equipped' }],
       })
     }
-    addNumeric('armor-class', `${data.name} armor class`, { kind: 'armor-class' }, data.bonusAc)
+    if (
+      getNormalizedItemTraits(item).armorCategory === 'none' ||
+      item === slots.bodyArmor ||
+      item === slots.shield
+    )
+      addNumeric('armor-class', `${data.name} armor class`, { kind: 'armor-class' }, data.bonusAc)
     addNumeric(
       'spell-attack',
       `${data.name} spell attack`,

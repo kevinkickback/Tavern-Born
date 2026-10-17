@@ -18,6 +18,7 @@ import {
   loadDataFromSource,
   setLoadedRaceData,
 } from './dataLoader'
+import { mergeFixedShieldBases } from './fixedBonusShields'
 import { expandItemEntries, getItemEntryIdentity, getRawItems, retainRawItems } from './itemEntries'
 import {
   associateItemTypeEntries,
@@ -373,7 +374,12 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       composed.magicVariants = mergeMagicVariants(layers.map((layer) => layer.magicVariants ?? []))
       continue
     }
-    if (key === 'magicVariantDiagnostics') continue
+    if (
+      key === 'magicVariantDiagnostics' ||
+      key === 'fixedShieldBases' ||
+      key === 'fixedShieldDiagnostics'
+    )
+      continue
     if (key === 'itemTypes') {
       composed.itemTypes = mergePrimaryItemTypes(layers.map(getRawItemTypes))
       continue
@@ -446,6 +452,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       collectRevisedSourceAbbreviations(composed),
     ),
   )
+  composed.fixedShieldBases = mergeFixedShieldBases(layers)
   const concreteItemCount = composed.items.length
   retainRawItems(composed)
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
