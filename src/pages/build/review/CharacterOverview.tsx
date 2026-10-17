@@ -24,6 +24,7 @@ import {
   formatModifier,
 } from '@/lib/calculations/abilityScores'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   getRaceDisplayName,
@@ -285,6 +286,10 @@ export function CharacterOverview({
   ]
   const conditionalNotes = calculation.effects.declarations.filter(
     (effect) => effect.operation.kind === 'conditional-note',
+  )
+  const defenses = getEffectiveDefensiveTraits(
+    calculation.effects.declarations,
+    calculation.effects.resolutionContext,
   )
   const spells = useMemo(() => {
     const seen = new Set<string>()
@@ -829,22 +834,16 @@ export function CharacterOverview({
                     {character.deathSaves.failures} failures
                   </p>
                 )}
-              {(character.damageResistances?.length ?? 0) > 0 && (
-                <ProficiencyList
-                  label="Damage resistances"
-                  values={character.damageResistances ?? []}
-                />
+              {defenses.damageResistances.length > 0 && (
+                <ProficiencyList label="Damage resistances" values={defenses.damageResistances} />
               )}
-              {(character.damageImmunities?.length ?? 0) > 0 && (
-                <ProficiencyList
-                  label="Damage immunities"
-                  values={character.damageImmunities ?? []}
-                />
+              {defenses.damageImmunities.length > 0 && (
+                <ProficiencyList label="Damage immunities" values={defenses.damageImmunities} />
               )}
-              {(character.conditionImmunities?.length ?? 0) > 0 && (
+              {defenses.conditionImmunities.length > 0 && (
                 <ProficiencyList
                   label="Condition immunities"
-                  values={character.conditionImmunities ?? []}
+                  values={defenses.conditionImmunities}
                 />
               )}
             </div>

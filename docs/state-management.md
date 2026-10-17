@@ -85,6 +85,10 @@ Persist values the player or play session can change:
 - character narrative/details and manual actions/effects;
 - provenance needed to reverse grants.
 
+The exact-context `racialDefenses` snapshot retains current fixed grants and their field owners for
+unavailable rules. It contains no dormant parent rules or independent grants. Effective defenses
+compose typed effects using the [racial defense contract](provenance.md#racial-defenses).
+
 Derive values that follow deterministically from current state and game data:
 
 - effective scores/modifiers, proficiency bonus, skills, saves, passives;
@@ -269,7 +273,7 @@ any target is selected. Fixed suites without setup choices have no extra status-
 casting summary remains read-only; opening or switching views never mutates the character.
 
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
-supported. Schema 2–9 characters must be recreated; merely relabeling a version cannot establish
+supported. Schema 2–10 characters must be recreated; merely relabeling a version cannot establish
 native ownership. Incompatible originals remain untouched in durable quarantine and exportable
 through hydration, rejected imports in either order, retry and later successful library writes.
 There are no prerelease converters, flattened-profile adapters or age-based rejection.
@@ -278,6 +282,14 @@ Schema 10 rejects duplicate special targets within or across kind lists and mism
 membership/nonmanual special grants without loading catalogs. It adds no per-owner historical kind
 or conversion. Format 9 originals remain untouched and exportable through the same quarantine and
 recovery paths; changing their version alone cannot legalize contradictory memberships.
+
+Format 11 requires an exact selected-context racial defense snapshot whenever a race is selected,
+including empty fixed-grant arrays with explicit parent/child field ownership. Empty unselected
+drafts carry no snapshot. Strict admission rejects foreign/orphan contexts, malformed or duplicate
+targets, duplicate manual effect IDs, and manual IDs in the reserved racial-defense namespace.
+The old unowned `damageResistances`, `damageImmunities` and `conditionImmunities` fields are rejected,
+including after version relabeling. Format 10 originals remain untouched and exportable through the
+existing quarantine/recovery flow; there is no migration or historical ownership inference.
 
 For a breaking change, update together:
 

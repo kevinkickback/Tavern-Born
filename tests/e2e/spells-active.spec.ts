@@ -16,6 +16,12 @@ test('@focused active-character spell workflow: profile switch, add/remove, prep
     originSystem: '2014',
     race: 'Human',
     raceSource: 'PHB',
+    racialDefenses: {
+      context: { parent: { name: 'Human', source: 'PHB' } },
+      resist: { ownerType: 'race', values: [] },
+      immune: { ownerType: 'race', values: [] },
+      conditionImmune: { ownerType: 'race', values: [] },
+    },
     background: 'Sage',
     backgroundSource: 'PHB',
     experiencePoints: 0,

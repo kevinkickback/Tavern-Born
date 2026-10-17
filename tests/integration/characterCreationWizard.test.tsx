@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
@@ -134,34 +135,44 @@ describe('character creation and proficiencies validation', () => {
       isLoading: false,
     })
 
-    // Simulate what the wizard does: create character with proficiencies extracted from class
+    // Use the Wizard's producer so selected identity and owned mechanics are complete together.
     const createNewCharacter = useCharacterStore.getState().createNewCharacter
 
-    const character = await createNewCharacter({
-      name: 'Haldir',
-      race: 'Elf',
-      raceSource: 'PHB',
-      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-      background: 'Soldier',
-      backgroundSource: 'PHB',
-      proficiencies: {
-        armor: ['light armor', 'medium armor', 'heavy armor', 'shields'],
-        weapons: ['simple melee weapons', 'martial melee weapons'],
-        tools: [],
-        skills: [],
-        expertise: [],
-        languages: ['Common'],
-        savingThrows: [],
+    const initial = buildInitialCharacter(
+      {
+        initial: {
+          name: 'Haldir',
+          race: 'Elf',
+          raceSource: 'PHB',
+          classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+          background: 'Soldier',
+          backgroundSource: 'PHB',
+          proficiencies: {
+            armor: ['light armor', 'medium armor', 'heavy armor', 'shields'],
+            weapons: ['simple melee weapons', 'martial melee weapons'],
+            tools: [],
+            skills: [],
+            expertise: [],
+            languages: ['Common'],
+            savingThrows: [],
+          },
+          abilityScores: {
+            strength: 15,
+            dexterity: 14,
+            constitution: 13,
+            intelligence: 12,
+            wisdom: 10,
+            charisma: 8,
+          },
+        },
+        race: testRace,
+        classEntity: testClass,
+        background: testBackground,
       },
-      abilityScores: {
-        strength: 15,
-        dexterity: 14,
-        constitution: 13,
-        intelligence: 12,
-        wisdom: 10,
-        charisma: 8,
-      },
-    })
+      new Map(),
+      () => [],
+    )
+    const character = await createNewCharacter(initial)
 
     // Verify character was created
     expect(character).toBeTruthy()
@@ -174,6 +185,8 @@ describe('character creation and proficiencies validation', () => {
     expect(Array.isArray(character.proficiencies.armor)).toBe(true)
     expect(Array.isArray(character.proficiencies.weapons)).toBe(true)
     expect(Array.isArray(character.proficiencies.languages)).toBe(true)
+    expect(character.proficiencies.armor.length).toBeGreaterThan(0)
+    expect(character.proficiencies.weapons.length).toBeGreaterThan(0)
 
     // Verify armor proficiencies are strings (the bug would put objects here)
     character.proficiencies.armor.forEach((armor) => {

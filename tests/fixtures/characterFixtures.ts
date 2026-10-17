@@ -1,4 +1,5 @@
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { buildRacialDefenseState } from '@/lib/character/racialDefenseState'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 
@@ -29,7 +30,7 @@ export function makePrereqCharacterSnapshotFixture(
 export function makeCharacterFixture(overrides: Partial<Character> = {}): Character {
   const now = '2026-01-01T00:00:00.000Z'
 
-  return {
+  const character: Character = {
     id: 'character-1',
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: 'Fixture Character',
@@ -139,4 +140,17 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
     lastModified: now,
     ...overrides,
   }
+  // Authored empty-mechanics fixture; tests with racial grants use the selection producer.
+  if (
+    Object.getOwnPropertyDescriptor(overrides, 'racialDefenses') === undefined &&
+    character.race
+  ) {
+    character.racialDefenses = buildRacialDefenseState(
+      { name: character.race, source: character.raceSource ?? '' },
+      character.subrace
+        ? { name: character.subrace, source: character.subraceSource ?? '' }
+        : undefined,
+    )
+  }
+  return character
 }

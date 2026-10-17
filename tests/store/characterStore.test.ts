@@ -23,14 +23,107 @@ import {
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpells } from '../fixtures/nativeRacialCharacter'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
+import { defenseSelection, manualFire } from '../fixtures/racialDefenseCharacter'
 import { makeRacialRefreshCharacter, racialRefreshRace } from '../fixtures/racialSpellRefresh'
 
 describe('characterStore', () => {
+  describe('acknowledged racial defense refresh', () => {
+    const { race, child } = defenseSelection()
+    const install = (resist: string[]) => {
+      const data = makeGameDataFixture({ races: [{ ...race, subraces: [{ ...child, resist }] }] })
+      data.lookups = buildGameDataLookups(data)
+      useGameDataStore.setState({ gameData: data })
+    }
+    const start = async () => {
+      useGameDataStore.setState({ gameData: null })
+      const [character] = await useCharacterStore
+        .getState()
+        .importCharacters([manualFire(defenseSelection().character)])
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      storageMocks.setItem.mockClear()
+      return character
+    }
+    test('immediate Save acknowledges the coherent snapshot; repeat/missing rules preserve identity', async () => {
+      await start()
+      install([])
+      expect(useCharacterStore.getState().activeCharacter?.racialDefenses?.resist.values).toEqual(
+        [],
+      )
+      await useCharacterStore.getState().saveActiveCharacter()
+      expect(storageMocks.setItem).toHaveBeenCalledTimes(1)
+      const state = useCharacterStore.getState()
+      const reopened = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify(state.characters[0])),
+      )
+      expect(reopened.racialDefenses?.resist.values).toEqual([])
+      expect(reopened.manualEffects).toHaveLength(1)
+      install([])
+      expect(useCharacterStore.getState()).toBe(state)
+      useGameDataStore.setState({ gameData: null })
+      expect(useCharacterStore.getState()).toBe(state)
+      expect(state.hasUnsavedChanges()).toBe(false)
+    })
+    test('older acknowledgments cannot overwrite newer defense rules or dirty edits', async () => {
+      const original = await start()
+      let finish = () => {}
+      storageMocks.setItem.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve
+          }),
+      )
+      install([])
+      await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalledTimes(1))
+      useCharacterStore.getState().updateCharacter(original.id, { name: 'Newer edit' })
+      install(['cold'])
+      finish()
+      await vi.waitFor(() =>
+        expect(useCharacterStore.getState().characters[0].racialDefenses?.resist.values).toEqual(
+          [],
+        ),
+      )
+      expect(useCharacterStore.getState().activeCharacter?.racialDefenses?.resist.values).toEqual([
+        'cold',
+      ])
+      expect(useCharacterStore.getState().activeCharacter?.name).toBe('Newer edit')
+      expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+      await useCharacterStore.getState().saveActiveCharacter()
+      expect(useCharacterStore.getState().characters[0].racialDefenses?.resist.values).toEqual([
+        'cold',
+      ])
+      useGameDataStore.setState({ gameData: null })
+    })
+    test('failed correction leaves recoverable coherent draft and unchanged saved library until retry', async () => {
+      await start()
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        storageMocks.setItem.mockRejectedValueOnce(new Error('Defense correction write failed'))
+        install([])
+        await vi.waitFor(() =>
+          expect(log).toHaveBeenCalledWith('Rule reconciliation failed:', expect.any(Error)),
+        )
+        expect(useCharacterStore.getState().characters[0].racialDefenses?.resist.values).toEqual([
+          'fire',
+        ])
+        expect(useCharacterStore.getState().activeCharacter?.racialDefenses?.resist.values).toEqual(
+          [],
+        )
+        expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+        useGameDataStore.setState({ gameData: null })
+        await useCharacterStore.getState().saveActiveCharacter()
+        expect(useCharacterStore.getState().characters[0].racialDefenses?.resist.values).toEqual([])
+      } finally {
+        log.mockRestore()
+        useGameDataStore.setState({ gameData: null })
+      }
+    })
+  })
   describe('acknowledged native racial refresh', () => {
     const native = (c: ReturnType<typeof makeRacialRefreshCharacter>) =>
       c.spells.spellProfiles.find((p) => p.type === 'racial')!
@@ -753,7 +846,11 @@ describe('characterStore', () => {
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
     const provenance = structuredClone(saved.provenance)
     provenance.proficiencies.skills.arcana[0].sourceRef = 'OTHER'
-    useCharacterStore.getState().updateActiveCharacter({ raceSource: 'OTHER', provenance })
+    useCharacterStore.getState().updateActiveCharacter({
+      raceSource: 'OTHER',
+      provenance,
+      racialDefenses: makeCharacterFixture({ raceSource: 'OTHER' }).racialDefenses,
+    })
     expect(useCharacterStore.getState().activeCharacter?.raceSource).toBe('OTHER')
     expect(
       useCharacterStore.getState().activeCharacter?.provenance.proficiencies.skills.arcana[0]

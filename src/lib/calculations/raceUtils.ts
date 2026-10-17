@@ -6,6 +6,7 @@ import {
   getRaceAbilityData,
 } from '@/lib/calculations/abilityScores'
 import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
+import { getRaceDefenseField, RACE_DEFENSE_FIELDS } from '@/lib/calculations/raceDefenseFields'
 import type { Race5e } from '@/types/5etools'
 
 type RaceTraitEntry = {
@@ -20,7 +21,7 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   if (isVersion) return subrace
   const replacesAbility =
     (subrace as Race5e & { overwrite?: { ability?: boolean } }).overwrite?.ability === true
-  return {
+  const merged = {
     ...parent,
     ...subrace,
     ability: replacesAbility
@@ -42,12 +43,13 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
         ...((subrace.traitTags as string[]) ?? []),
       ]),
     ],
-    resist: [...new Set([...(parent.resist ?? []), ...(subrace.resist ?? [])])],
-    immune: [...new Set([...(parent.immune ?? []), ...(subrace.immune ?? [])])],
-    conditionImmune: [
-      ...new Set([...(parent.conditionImmune ?? []), ...(subrace.conditionImmune ?? [])]),
-    ],
   } as Race5e
+  for (const field of RACE_DEFENSE_FIELDS) {
+    const { value } = getRaceDefenseField(parent, subrace, field)
+    if (value == null) delete merged[field]
+    else merged[field] = value
+  }
+  return merged
 }
 
 export function getAvailableSubraces(race?: Race5e): Race5e[] {

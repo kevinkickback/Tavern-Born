@@ -242,9 +242,6 @@
   ],
   "hitPointAdjustments": [],
   "armorClassAdjustments": [],
-  "damageResistances": [],
-  "damageImmunities": [],
-  "conditionImmunities": [],
   "details": {
     "playerName": "Fixture Runner",
     "faction": "The Harpers",
@@ -599,7 +596,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -670,6 +667,30 @@
   "suppressedEffectIds": [],
   "effectFlags": {},
   "manualActions": [],
+  "racialDefenses": {
+    "context": {
+      "parent": {
+        "name": "Elf",
+        "source": "XPHB"
+      },
+      "child": {
+        "name": "Drow Lineage",
+        "source": "XPHB"
+      }
+    },
+    "resist": {
+      "ownerType": "subrace",
+      "values": []
+    },
+    "immune": {
+      "ownerType": "subrace",
+      "values": []
+    },
+    "conditionImmune": {
+      "ownerType": "subrace",
+      "values": []
+    }
+  },
   "backgroundAsiBlockIndex": 0,
   "backgroundAsiChoices": [
     "dexterity",

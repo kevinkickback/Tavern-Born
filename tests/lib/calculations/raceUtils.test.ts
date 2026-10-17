@@ -297,11 +297,13 @@ describe('mergeRaceWithSubrace', () => {
     expect(merged.speed).toBe(25)
   })
 
-  test('unions resist arrays and deduplicates', () => {
+  test('ordinary child resistance replaces the parent field without mutating either input', () => {
     const parent = makeRace({ resist: ['fire', 'cold'] })
     const subrace = makeRace({ resist: ['fire', 'poison'] })
     const merged = mergeRaceWithSubrace(parent, subrace)
-    expect(merged.resist).toEqual(['fire', 'cold', 'poison'])
+    expect(merged.resist).toEqual(['fire', 'poison'])
+    expect(parent.resist).toEqual(['fire', 'cold'])
+    expect(subrace.resist).toEqual(['fire', 'poison'])
   })
 
   test('uses version entries directly instead of concatenating when _isVersion is true', () => {

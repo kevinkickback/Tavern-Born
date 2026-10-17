@@ -205,7 +205,9 @@ Tavern Born supplies source-qualified identity and its nested lineage presentati
 Resolved versions carry `_isVersion` and complete mechanics. Existing top-level versions retain
 their saved short selection labels for compatibility. Selecting a version uses its complete record,
 so parent abilities are not doubled and removed traits stay absent.
-Traditional subraces retain their existing additive merge behavior. Normalized records contain no
+Traditional subraces retain their existing domain merge behavior. The three defense fields follow
+the pinned upstream overwrite/null-removal rule; see [racial defenses](provenance.md#racial-defenses).
+Normalized records contain no
 unapplied `_copy`, `_mod`, or `_versions` directives from this race pipeline. Named race templates
 are currently unsupported and reported as missing rather than silently skipped.
 

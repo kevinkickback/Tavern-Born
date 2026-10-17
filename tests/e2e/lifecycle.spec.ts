@@ -22,6 +22,12 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
     originSystem: '2014',
     race: 'Human',
     raceSource: 'PHB',
+    racialDefenses: {
+      context: { parent: { name: 'Human', source: 'PHB' } },
+      resist: { ownerType: 'race', values: [] },
+      immune: { ownerType: 'race', values: [] },
+      conditionImmune: { ownerType: 'race', values: [] },
+    },
     background: 'Soldier',
     backgroundSource: 'PHB',
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },

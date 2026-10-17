@@ -1,6 +1,6 @@
 {
   "id": "equipment-e2e-char",
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "name": "Equipment E2E Hero",
   "originSystem": "2014",
   "race": "Human",
@@ -58,15 +58,42 @@
       }
     ],
     "spellSlots": {
-      "1": { "max": 0, "used": 0 },
-      "2": { "max": 0, "used": 0 },
-      "3": { "max": 0, "used": 0 },
-      "4": { "max": 0, "used": 0 },
-      "5": { "max": 0, "used": 0 },
-      "6": { "max": 0, "used": 0 },
-      "7": { "max": 0, "used": 0 },
-      "8": { "max": 0, "used": 0 },
-      "9": { "max": 0, "used": 0 }
+      "1": {
+        "max": 0,
+        "used": 0
+      },
+      "2": {
+        "max": 0,
+        "used": 0
+      },
+      "3": {
+        "max": 0,
+        "used": 0
+      },
+      "4": {
+        "max": 0,
+        "used": 0
+      },
+      "5": {
+        "max": 0,
+        "used": 0
+      },
+      "6": {
+        "max": 0,
+        "used": 0
+      },
+      "7": {
+        "max": 0,
+        "used": 0
+      },
+      "8": {
+        "max": 0,
+        "used": 0
+      },
+      "9": {
+        "max": 0,
+        "used": 0
+      }
     }
   },
   "equipment": [
@@ -87,8 +114,13 @@
     "temporary": 0
   },
   "movement": {
-    "speeds": { "walk": 30 },
-    "source": { "kind": "manual", "name": "E2E fixture" }
+    "speeds": {
+      "walk": 30
+    },
+    "source": {
+      "kind": "manual",
+      "name": "E2E fixture"
+    }
   },
   "details": {},
   "provenance": {
@@ -108,5 +140,25 @@
     "choices": []
   },
   "createdAt": "2026-01-01T00:00:00.000Z",
-  "lastModified": "2026-01-01T00:00:00.000Z"
+  "lastModified": "2026-01-01T00:00:00.000Z",
+  "racialDefenses": {
+    "context": {
+      "parent": {
+        "name": "Human",
+        "source": "PHB"
+      }
+    },
+    "resist": {
+      "ownerType": "race",
+      "values": []
+    },
+    "immune": {
+      "ownerType": "race",
+      "values": []
+    },
+    "conditionImmune": {
+      "ownerType": "race",
+      "values": []
+    }
+  }
 }

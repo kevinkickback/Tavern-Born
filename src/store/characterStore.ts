@@ -10,6 +10,7 @@ import {
 } from '@/lib/character/characterTransfer'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
+import { refreshRacialDefenseState } from '@/lib/character/racialDefenseState'
 import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
@@ -620,7 +621,7 @@ function reconcileActiveRuleState() {
     resolution.subraceData,
   )
   const special = refreshSpecialSpellKinds(
-    abilities,
+    refreshRacialDefenseState(abilities, resolution.parentRace, resolution.subraceData),
     useGameDataStore.getState().gameData?.lookups?.spellsByKey,
   )
   const refreshed = refreshNativeRacialSpellState(special, resolution, {
@@ -631,6 +632,7 @@ function reconcileActiveRuleState() {
     raceAsiChoices: refreshed.raceAsiChoices,
     provenance: refreshed.provenance,
     spells: refreshed.spells,
+    racialDefenses: refreshed.racialDefenses,
   })
   void saved?.catch((error) => console.error('Rule reconciliation failed:', error))
 }

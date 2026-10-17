@@ -168,14 +168,8 @@ export interface Character {
   /** Exact hover override applied after the base movement profile. */
   movementHoverOverride?: boolean
 
-  /** Damage resistances granted by race or other sources. */
-  damageResistances?: string[]
-
-  /** Damage immunities granted by race or other sources. */
-  damageImmunities?: string[]
-
-  /** Condition immunities granted by race or other sources. */
-  conditionImmunities?: string[]
+  /** Current fixed racial defenses and their exact owners; independent grants are typed effects. */
+  racialDefenses?: RacialDefenseState
 
   details: CharacterDetails
   portrait?: string
@@ -361,6 +355,13 @@ export interface RaceSpellChoice {
 export interface RacialSpellContext {
   parent: { name: string; source: string }
   child?: { name: string; source: string }
+}
+
+export interface RacialDefenseState {
+  context: RacialSpellContext
+  resist: { ownerType: 'race' | 'subrace'; values: string[] }
+  immune: { ownerType: 'race' | 'subrace'; values: string[] }
+  conditionImmune: { ownerType: 'race' | 'subrace'; values: string[] }
 }
 
 /** Only the currently applied suite is saved; alternative catalogs and future schedules stay live. */
