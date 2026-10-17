@@ -19,6 +19,11 @@ import {
   setLoadedRaceData,
 } from './dataLoader'
 import { expandItemEntries, getItemEntryIdentity, getRawItems, retainRawItems } from './itemEntries'
+import {
+  associateItemTypeEntries,
+  getItemTypeEntrySources,
+  mergeItemTypeEntries,
+} from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
@@ -353,6 +358,12 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const composed = {} as GameData
 
   for (const key of collectionKeys) {
+    if (key === 'itemTypeAdditionalEntries') {
+      composed.itemTypeAdditionalEntries = mergeItemTypeEntries(
+        layers.map((layer) => layer.itemTypeAdditionalEntries ?? []),
+      )
+      continue
+    }
     if (key === 'itemEntries') {
       // A later layer replaces an identity, but duplicates within that winning layer
       // remain ambiguous; do not erase an optional-text diagnostic by picking one.
@@ -398,17 +409,18 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const knownSources = new Set(
     composed.sources.map((source) => normalizeIdentityPart(source.abbreviation)),
   )
-  const addedRaceSources = [
+  const addedSources = [
     ...new Set(
       composed.races
         .flatMap((race) => [race, ...(race.subraces ?? [])])
         .map((race) => race.source)
+        .concat(getItemTypeEntrySources(composed.itemTypeAdditionalEntries ?? []))
         .filter((source) => source && !knownSources.has(normalizeIdentityPart(source))),
     ),
   ]
   composed.sources.push(
     ...buildSourcesList(
-      addedRaceSources,
+      addedSources,
       undefined,
       undefined,
       collectRevisedSourceAbbreviations(composed),
@@ -417,7 +429,11 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const itemCount = composed.items.length
   retainRawItems(composed)
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
-  const describedItems = expandItemEntries(items.records, composed.itemEntries ?? [])
+  const describedItems = associateItemTypeEntries(
+    expandItemEntries(items.records, composed.itemEntries ?? []),
+    composed.itemTypeAdditionalEntries ?? [],
+    composed.itemEntries ?? [],
+  )
   composed.items = describedItems.slice(0, itemCount)
   composed.itemsBase = describedItems.slice(itemCount)
   const templates = layers.flatMap(getLoadedCreatureTemplates)

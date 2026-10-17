@@ -10,6 +10,7 @@ import {
   resolveFeatReference,
 } from '@/lib/5etools/entityResolvers'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
+import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
@@ -63,6 +64,7 @@ import type {
   Creature5e,
   Organization5e,
   Race5e,
+  SourceBook,
   Spell5e,
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
@@ -72,6 +74,7 @@ import type { CharacterEffect } from '@/types/effects'
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
+  sourceCatalog?: readonly SourceBook[]
   /** Complete filtered choice targets; raw lookups remain available for retained details. */
   classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   creaturesByKey?: Readonly<Record<string, Creature5e>>
@@ -696,7 +699,16 @@ export function createCharacterSheetViewModel(
   const needsDescription = magicEquipment.filter((item) => !item.description?.trim() && item.source)
   const itemRules = resolveItemReferences(needsDescription, rawLookups.itemLookup)
   const descriptions = new Map(
-    needsDescription.map((item, index) => [item, renderEntriesToText(itemRules[index]?.entries)]),
+    needsDescription.map((item, index) => [
+      item,
+      renderEntriesToText(
+        getItemRulesEntries(itemRules[index], {
+          allowedSources: character.allowedSources,
+          originSystem: character.originSystem,
+          sourceCatalog: rawLookups.sourceCatalog,
+        }),
+      ),
+    ]),
   )
   const magicItems = magicEquipment.map((item) => ({
     ...item,

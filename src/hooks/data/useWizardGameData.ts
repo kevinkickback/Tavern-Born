@@ -15,6 +15,7 @@ import {
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { XPHB_LEGACY_RACE_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
+import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useFilteredGameDataParams } from './useFilteredGameData'
 import { useBackgroundLookup, useClassLookup, useRaceLookup, useSpellLookup } from './useGameData'
@@ -108,7 +109,20 @@ export function useWizardGameData({
     [filteredData.spells, rawSpellLookup],
   )
 
+  const recursiveLookup = useMemo(
+    () =>
+      buildRecursiveLookup(
+        { ...filteredData, races, classes },
+        {
+          allowedSources,
+          originSystem: originSystem || '2014',
+          sourceCatalog: filteredData.sources,
+        },
+      ),
+    [filteredData, races, classes, allowedSources, originSystem],
+  )
   return {
+    recursiveLookup,
     ...filteredData,
     races,
     classes,

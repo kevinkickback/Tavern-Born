@@ -96,6 +96,31 @@ describe('5etools/validator', () => {
     expect(result.error).toContain('HTTPS')
   })
 
+  test.each([
+    {},
+    [{ source: 'XGE', appliesTo: 'INS|PHB', entries: 'broken' }],
+  ])('keeps malformed optional category prose from invalidating the item resource: %j', async (optional) => {
+    globalThis.fetch = vi.fn((input: string | URL | Request) => {
+      const match = Object.entries(payloadByFile).find(([name]) =>
+        String(input).endsWith(`/data/${name}`),
+      )
+      return match
+        ? makeJsonResponse(
+            match[0] === 'items-base.json'
+              ? { ...(match[1] as object), itemTypeAdditionalEntries: optional }
+              : match[1],
+          )
+        : makeJsonResponse({}, false)
+    }) as unknown as typeof fetch
+    const result = await validateDataSource({
+      type: 'remote',
+      path: 'https://example.com',
+      isValid: false,
+    })
+    expect(result.isValid).toBe(true)
+    expect(result.foundResources).toContain('items-base.json')
+  })
+
   test('returns invalid when no required resources are found', async () => {
     globalThis.fetch = vi.fn(async () => makeJsonResponse({}, false)) as unknown as typeof fetch
 

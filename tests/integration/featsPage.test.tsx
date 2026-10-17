@@ -55,7 +55,8 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
   }),
 }))
 
-vi.mock('@/hooks/data/useGameData', () => ({
+vi.mock('@/hooks/data/useGameData', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/data/useGameData')>()),
   useClassLookup: () => new Map(),
   useFeatLookup: () => rawFeatLookup,
   useSpellLookup: () => ({}),

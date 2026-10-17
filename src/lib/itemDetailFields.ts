@@ -1,5 +1,4 @@
 import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
-import { getArmorCategory } from '@/lib/calculations/armorClass'
 import { formatCopperValue } from '@/lib/calculations/currency'
 import {
   getArmorCategoryLabel,
@@ -22,6 +21,20 @@ export interface ItemDetailField {
   label: string
   value: string | number
 }
+
+type ItemFactValues = Pick<
+  Equipment,
+  | 'type'
+  | 'armorType'
+  | 'weight'
+  | 'value'
+  | 'ac'
+  | 'dmg1'
+  | 'dmg2'
+  | 'dmgType'
+  | 'range'
+  | 'properties'
+>
 
 function getItemCategoryFromTraits(traits: NormalizedItemTraits): Exclude<ItemCategory, 'All'> {
   if (traits.isWeapon) return 'Weapons'
@@ -64,7 +77,7 @@ function toTitleCase(value: string): string {
     .join(' ')
 }
 
-export function getDamageSummary(item: Equipment, itemData?: Item5e): string | null {
+export function getDamageSummary(item: ItemFactValues, itemData?: Item5e): string | null {
   const primaryDamage = item.dmg1 ?? itemData?.dmg1
   if (!primaryDamage) return null
 
@@ -76,7 +89,7 @@ export function getDamageSummary(item: Equipment, itemData?: Item5e): string | n
 }
 
 export function getPropertySummary(
-  item: Equipment,
+  item: ItemFactValues,
   propertyByAbbr: Record<string, string>,
   itemData?: Item5e,
 ): string | null {
@@ -85,8 +98,8 @@ export function getPropertySummary(
   return properties.map((property) => getItemPropertyLabel(property, propertyByAbbr)).join(', ')
 }
 
-function getArmorTypeLabel(item: Equipment): string | null {
-  const armorType = getArmorCategory(item)
+function getArmorTypeLabel(item: ItemFactValues): string | null {
+  const armorType = getNormalizedItemTraits(item).armorCategory
   if (armorType === 'none') return null
   if (armorType === 'shield') return 'Shield'
   return `${toTitleCase(armorType)} Armor`
@@ -97,8 +110,26 @@ export function buildItemDetailFields(
   itemData: Item5e | undefined,
   propertyByAbbr: Record<string, string>,
 ): ItemDetailField[] {
-  const category = getItemCategory(item)
-  const fields: ItemDetailField[] = [{ label: 'Quantity', value: item.quantity }]
+  return [
+    { label: 'Quantity', value: item.quantity },
+    ...buildItemFactFields(item, itemData, propertyByAbbr),
+  ]
+}
+
+export function buildCatalogItemDetailFields(
+  item: Item5e,
+  propertyByAbbr: Record<string, string>,
+): ItemDetailField[] {
+  return buildItemFactFields({ type: item.type }, item, propertyByAbbr)
+}
+
+function buildItemFactFields(
+  item: ItemFactValues,
+  itemData: Item5e | undefined,
+  propertyByAbbr: Record<string, string>,
+): ItemDetailField[] {
+  const category = getItemCategoryFromTraits(getNormalizedItemTraits(item))
+  const fields: ItemDetailField[] = []
   const weight = item.weight ?? itemData?.weight
   const value = item.value ?? itemData?.value
   const armorClass = item.ac ?? itemData?.ac

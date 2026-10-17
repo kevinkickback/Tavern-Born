@@ -3,10 +3,12 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { expandItemEntries } from '@/lib/5etools/itemEntries'
+import { associateItemTypeEntries } from '@/lib/5etools/itemTypeEntries'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameDataLookups, Item5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { firePotion, resistanceFragments } from '../fixtures/itemEntryFixtures'
+import { instrumentRules, lute } from '../fixtures/itemTypeTextFixtures'
 
 vi.mock('@/components/modals/SelectionModal', () => ({
   SelectionModal: ({
@@ -45,6 +47,30 @@ const lookups: GameDataLookups = {
 }
 
 describe('ItemSelectionModal', () => {
+  test('category-only card descriptions follow the supplied character book context', () => {
+    const items = associateItemTypeEntries([lute], [instrumentRules], [])
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ items, lookups }) })
+    const view = render(
+      <ItemSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        items={items}
+        onConfirm={vi.fn()}
+        textContext={{ allowedSources: [], originSystem: '2014' }}
+      />,
+    )
+    expect(screen.queryByText(/Instrument category guidance/)).toBeNull()
+    view.rerender(
+      <ItemSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        items={items}
+        onConfirm={vi.fn()}
+        textContext={{ allowedSources: ['XGE'], originSystem: '2014' }}
+      />,
+    )
+    expect(screen.getByText(/Instrument category guidance/)).toBeTruthy()
+  })
   test('renders expanded shared rules text in the existing item card', () => {
     const items = expandItemEntries([firePotion], resistanceFragments)
     useGameDataStore.setState({ gameData: makeGameDataFixture({ items, lookups }) })

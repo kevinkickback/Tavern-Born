@@ -3,6 +3,7 @@ import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity
 import type { Class5e, GameData, Item5e, Race5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { getItemTypeEntryDiagnostics } from './itemTypeEntries'
 
 const FIELD_COLLECTIONS = [
   'races',
@@ -23,6 +24,7 @@ interface CapabilityIssue {
   code:
     | 'choice-diagnostic'
     | 'item-entry-diagnostic'
+    | 'item-type-entry-diagnostic'
     | 'missing-normalized-rules'
     | 'unqualified-entity'
     | 'unqualified-reference'
@@ -280,6 +282,17 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     issues,
   }
 
+  for (const diagnostic of [
+    ...(gameData.itemTypeEntryDiagnostics ?? []),
+    ...getItemTypeEntryDiagnostics(gameData.itemTypeAdditionalEntries ?? []),
+  ]) {
+    issues.push({
+      code: 'item-type-entry-diagnostic',
+      collection: 'itemTypeAdditionalEntries',
+      entity: 'Supplemental item rules',
+      ...diagnostic,
+    })
+  }
   const fieldCounts = new Map<string, Record<string, number>>()
   for (const collection of FIELD_COLLECTIONS) {
     for (const [index, entity] of (gameData[collection] ?? []).entries()) {
@@ -298,6 +311,15 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
       if (collection === 'items' || collection === 'itemsBase') {
         for (const diagnostic of (entity as Item5e).itemEntryDiagnostics ?? []) {
           issues.push({ code: 'item-entry-diagnostic', collection, entity: owner, ...diagnostic })
+        }
+        for (const block of (entity as Item5e).itemTypeText ?? []) {
+          for (const diagnostic of block.diagnostics ?? [])
+            issues.push({
+              code: 'item-type-entry-diagnostic',
+              collection,
+              entity: owner,
+              ...diagnostic,
+            })
         }
       }
       for (const [field, value] of Object.entries(record)) {

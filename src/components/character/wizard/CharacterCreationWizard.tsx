@@ -268,6 +268,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
               )}
               {currentStep === 4 && (
                 <ClassStep
+                  recursiveLookup={wizardData.recursiveLookup}
                   data={characterData}
                   onChange={updateCharacterData}
                   classes={wizardData.classes}

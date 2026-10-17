@@ -36,20 +36,16 @@ import {
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
+import { useItemLookup, useItemPropertyLookup, useItemTextContext } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { RARITY_COLORS } from '@/lib/5etools/constants'
+import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
-import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
-import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
-import { cn } from '@/lib/utils'
-import { useCharacterStore } from '@/store/characterStore'
-import { NoCharCard } from '../_shared'
 import {
   buildItemDetailFields,
   getDamageSummary,
@@ -57,7 +53,12 @@ import {
   getPropertySummary,
   type ItemCategory,
   itemMatchesFilter,
-} from './itemDetailFields'
+} from '@/lib/itemDetailFields'
+import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
+import { NoCharCard } from '../_shared'
 
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
@@ -192,7 +193,8 @@ export function EquipmentPage() {
         `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
       )
     : undefined
-  const selectedItemEntries = selectedItemData?.entries ?? []
+  const itemTextContext = useItemTextContext()
+  const selectedItemEntries = getItemRulesEntries(selectedItemData, itemTextContext)
   const selectedItemDetailFields = selectedItem
     ? buildItemDetailFields(selectedItem, selectedItemData, itemPropertyByAbbr)
     : []
@@ -743,6 +745,7 @@ export function EquipmentPage() {
       </WorkspaceBody>
 
       <ItemSelectionModal
+        textContext={itemTextContext}
         open={addItemOpen}
         onOpenChange={setAddItemOpen}
         items={equipmentItems}

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTypeEntries'
 import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
 
 export interface ItemSelectionModalProps {
+  textContext?: ItemTextContext
   open: boolean
   onOpenChange: (open: boolean) => void
   title?: string
@@ -92,8 +94,9 @@ function getArmorStatSummary(
 function getItemDescription(
   item: Item5e,
   itemTypeByAbbr: Readonly<Record<string, string>>,
+  textContext?: ItemTextContext,
 ): string {
-  const entries = Array.isArray(item.entries) ? item.entries : []
+  const entries = getItemRulesEntries(item, textContext)
   if (entries.length > 0) {
     const rendered = renderEntryCached(entries[0])
     const plain = toPlainText(rendered)
@@ -209,14 +212,15 @@ function matchItem(
 }
 
 interface ItemCardProps {
+  textContext?: ItemTextContext
   item: Item5e
   isSelected: boolean
 }
 
-const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
+const ItemCard = memo(function ItemCard({ item, isSelected, textContext }: ItemCardProps) {
   const properties = item.property ?? []
   const itemTypeByAbbr = useItemTypeLookup()
-  const description = getItemDescription(item, itemTypeByAbbr)
+  const description = getItemDescription(item, itemTypeByAbbr, textContext)
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? RARITY_COLORS.unknown
@@ -299,6 +303,7 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
 })
 
 export function ItemSelectionModal({
+  textContext,
   open,
   onOpenChange,
   title = 'Add Item',
@@ -371,7 +376,9 @@ export function ItemSelectionModal({
       title={title}
       items={filteredItems}
       getItemId={(item) => `${item.name}|${item.source ?? ''}`}
-      renderCard={(item, isSelected) => <ItemCard item={item} isSelected={isSelected} />}
+      renderCard={(item, isSelected) => (
+        <ItemCard item={item} isSelected={isSelected} textContext={textContext} />
+      )}
       matchItem={(item, search, activeFilters) =>
         matchItem(item, search, activeFilters, itemTypeByAbbr)
       }

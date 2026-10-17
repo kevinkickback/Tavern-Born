@@ -16,6 +16,7 @@ import {
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
 import { getClassSummary } from '@/lib/calculations/entrySummary'
+import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import { DetailHtmlSection, DetailSection } from '../../DetailCards'
@@ -24,9 +25,10 @@ import type { StepProps } from '../types'
 
 interface ClassStepProps extends StepProps {
   classes: Class5e[]
+  recursiveLookup: RecursiveLookup
 }
 
-export function ClassStep({ data, onChange, classes }: ClassStepProps) {
+export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassStepProps) {
   const [search, setSearch] = useState('')
   const filteredClasses = classes
   const searchFilteredClasses = useMemo(() => {
@@ -193,9 +195,24 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <DetailHtmlSection icon={Shield} label="Armor Proficiencies" html={armorHtml} />
-                <DetailHtmlSection icon={Sword} label="Weapon Proficiencies" html={weaponsHtml} />
-                <DetailHtmlSection icon={Toolbox} label="Tool Proficiencies" html={toolsHtml} />
+                <DetailHtmlSection
+                  icon={Shield}
+                  label="Armor Proficiencies"
+                  html={armorHtml}
+                  recursiveLookup={recursiveLookup}
+                />
+                <DetailHtmlSection
+                  icon={Sword}
+                  label="Weapon Proficiencies"
+                  html={weaponsHtml}
+                  recursiveLookup={recursiveLookup}
+                />
+                <DetailHtmlSection
+                  icon={Toolbox}
+                  label="Tool Proficiencies"
+                  html={toolsHtml}
+                  recursiveLookup={recursiveLookup}
+                />
               </div>
 
               {classFeatures.length > 0 && (
