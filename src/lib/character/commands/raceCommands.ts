@@ -21,6 +21,7 @@ import {
   rebuildRaceAbilityGrants,
   refreshRaceAbilityState,
 } from '@/lib/character/raceAbilityState'
+import { buildRacialDefenseState } from '@/lib/character/racialDefenseState'
 import {
   applyRaceGrants,
   reconcileRaceChange,
@@ -40,11 +41,6 @@ export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subra
   NativeSpellLookups & {
     previousSubrace?: Race5e
   }
-
-function dedupeValues(values: string[]): string[] | undefined {
-  const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
-  return deduped.length > 0 ? deduped : undefined
-}
 
 function removeSourceProficiencies(
   character: Character,
@@ -75,10 +71,8 @@ function buildRaceMaterializedPatch(
   retainedLedger: ProvenanceLedger,
   race: Race5e,
   subrace: Race5e | undefined,
-): Pick<
-  Character,
-  'proficiencies' | 'visions' | 'damageResistances' | 'damageImmunities' | 'conditionImmunities'
-> {
+): Pick<Character, 'proficiencies' | 'visions' | 'racialDefenses'> {
+  const racialDefenses = buildRacialDefenseState(race, subrace)
   race = getRaceSelectionParent(race, subrace)
   let proficiencies = removeSourceProficiencies(character, ledger, retainedLedger)
   const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
@@ -140,12 +134,7 @@ function buildRaceMaterializedPatch(
   return {
     proficiencies: reconcileSkillExpertise(proficiencies),
     visions: visions.length > 0 ? visions : undefined,
-    damageResistances: dedupeValues([...(race.resist ?? []), ...(subrace?.resist ?? [])]),
-    damageImmunities: dedupeValues([...(race.immune ?? []), ...(subrace?.immune ?? [])]),
-    conditionImmunities: dedupeValues([
-      ...(race.conditionImmune ?? []),
-      ...(subrace?.conditionImmune ?? []),
-    ]),
+    racialDefenses,
   }
 }
 

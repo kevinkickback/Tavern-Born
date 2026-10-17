@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'vitest'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   deriveStructuredFeatEffects,
   deriveStructuredItemEffects,
-  deriveStructuredRaceEffects,
   getCharacterEffectResolutionContext,
   getCharacterEffects,
 } from '@/lib/calculations/characterEffects'
 import { resolveGrantedTrait, resolveNumericEffect } from '@/lib/calculations/effects'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import type { Feat5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -22,7 +24,14 @@ describe('character effect projection', () => {
       entries: ['Unstructured prose is not an effect source.'],
     } as Race5e
 
-    const effects = deriveStructuredRaceEffects(race)
+    const character = buildInitialCharacter(
+      { initial: { name: 'Structured ancestry' }, race },
+      new Map(),
+      () => [],
+    )
+    const effects = createCharacterCalculationContext(character, {
+      racesByKey: buildRaceLookup([race]),
+    }).effects.sourceDeclarations
 
     expect(effects.map((effect) => effect.target)).toEqual([
       { kind: 'sense', sense: 'darkvision' },

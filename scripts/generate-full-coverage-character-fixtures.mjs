@@ -1063,7 +1063,26 @@ function buildFixture(seed, edition) {
     provenance,
     movementAdjustments: seed.movementAdjustments ?? [],
     movementOverrides: seed.movementOverrides ?? {},
-    manualEffects: seed.manualEffects ?? [],
+    // Explicit authored PDF overflow data uses independent manual declarations.
+    manualEffects: [
+      ...(seed.manualEffects ?? []).filter((effect) => !effect.id.startsWith('fixture-defense:')),
+      ...[
+        ['damage-resistance', ['Fire', 'Cold', 'Lightning', 'Necrotic', 'Radiant', 'Psychic']],
+        ['damage-immunity', ['Poison', 'Acid', 'Thunder']],
+        ['condition-immunity', ['Charmed', 'Frightened', 'Poisoned', 'Paralyzed']],
+      ].flatMap(([kind, values]) =>
+        values.map((value) => ({
+          id: `fixture-defense:${kind}:${value.toLowerCase()}`,
+          label: `Fixture ${value}`,
+          source: { kind: 'manual', name: 'PDF overflow fixture' },
+          target:
+            kind === 'condition-immunity'
+              ? { kind, condition: value }
+              : { kind, damageType: value },
+          operation: { kind: 'grant' },
+        })),
+      ),
+    ],
     suppressedEffectIds: seed.suppressedEffectIds ?? [],
     effectFlags: seed.effectFlags ?? {},
     manualActions: seed.manualActions ?? [],
@@ -1115,6 +1134,11 @@ function buildFixture(seed, edition) {
     )
     fixture = { ...fixture, ...result.characterPatch, provenance: result.provenanceUpdate }
   }
+  fixture = refreshRacialDefenseState(
+    fixture,
+    raceResolution.parentRace,
+    raceResolution.subraceData,
+  )
   return JSON.parse(JSON.stringify(fixture))
 }
 
@@ -1385,9 +1409,6 @@ function buildCompanionFixture(baseFixture, edition) {
       hitPointAdjustments: [],
       maxHitPointsOverride: undefined,
       armorClassAdjustments: [],
-      damageResistances: [],
-      damageImmunities: [],
-      conditionImmunities: [],
       hitDiceUsed: {},
       inspiration: false,
       deathSaves: { successes: 0, failures: 0 },
@@ -1438,7 +1459,12 @@ function buildCompanionFixture(baseFixture, edition) {
       manualActions: [],
     }),
   )
-  return refreshNativeRacialSpellState(fixture, getNativeFixtureResolution(fixture))
+  const resolution = getNativeFixtureResolution(fixture)
+  return refreshRacialDefenseState(
+    refreshNativeRacialSpellState(fixture, resolution),
+    resolution.parentRace,
+    resolution.subraceData,
+  )
 }
 
 // Load the same pure TypeScript producers through the existing Vite alias boundary.
@@ -1457,6 +1483,7 @@ let parseRaces,
   deriveNativeRacialSpellProfiles,
   reconcileNativeRacialSpellLedger,
   refreshNativeRacialSpellState,
+  refreshRacialDefenseState,
   setRacialSpellChoice,
   setRacialCastingAbility,
   applyFeatGrant,
@@ -1465,6 +1492,9 @@ let parseRaces,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
+  ;({ refreshRacialDefenseState } = await runtime.ssrLoadModule(
+    '/src/lib/character/racialDefenseState.ts',
+  ))
   ;({ parseSpells } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/spells.ts'))
   ;({ buildSpellLookup } = await runtime.ssrLoadModule('/src/lib/5etools/lookups.ts'))
   ;({

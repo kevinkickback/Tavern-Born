@@ -66,7 +66,10 @@ describe('race commands', () => {
     })
     expect(changed.characterPatch.proficiencies?.skills).not.toContain('perception')
     expect(changed.characterPatch.visions).toBeUndefined()
-    expect(changed.characterPatch.damageResistances).toBeUndefined()
+    expect(changed.characterPatch.racialDefenses?.resist).toEqual({
+      ownerType: 'subrace',
+      values: [],
+    })
     expect(changed.provenanceUpdate.abilityBonuses).toEqual([
       expect.objectContaining({
         ability: 'dexterity',
@@ -88,7 +91,10 @@ describe('race commands', () => {
     )
     expect(restored.characterPatch.proficiencies?.skills).toContain('perception')
     expect(restored.characterPatch.visions).toEqual([{ type: 'darkvision', range: 60 }])
-    expect(restored.characterPatch.damageResistances).toEqual(['fire'])
+    expect(restored.characterPatch.racialDefenses?.resist).toEqual({
+      ownerType: 'race',
+      values: ['fire'],
+    })
     expect(restored.provenanceUpdate.abilityBonuses).toEqual([
       expect.objectContaining({
         ability: 'dexterity',
@@ -124,7 +130,10 @@ describe('race commands', () => {
     expect(result.characterPatch.proficiencies?.skills).toContain('perception')
     expect(result.characterPatch.proficiencies?.languages).toContain('elvish')
     expect(result.characterPatch.visions).toContainEqual({ type: 'darkvision', range: 60 })
-    expect(result.characterPatch.damageResistances).toEqual(['fire'])
+    expect(result.characterPatch.racialDefenses?.resist).toEqual({
+      ownerType: 'race',
+      values: ['fire'],
+    })
     expect(result.characterPatch.movement).toEqual({
       speeds: { walk: 35 },
       source: { kind: 'race', name: 'Elf', source: 'PHB' },

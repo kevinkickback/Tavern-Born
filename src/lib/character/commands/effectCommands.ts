@@ -1,3 +1,4 @@
+import { isReservedRacialDefenseId } from '@/lib/provenance/racialDefenseValidation'
 import type { Character } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 
@@ -5,6 +6,8 @@ function normalizeManualEffect(effect: CharacterEffect): CharacterEffect {
   const id = effect.id.trim()
   const label = effect.label.trim()
   if (!id) throw new Error('A manual effect requires a stable ID.')
+  if (isReservedRacialDefenseId(id))
+    throw new Error('That effect ID is reserved for racial defenses.')
   if (!label) throw new Error('A manual effect requires a label.')
   return {
     ...effect,
@@ -26,10 +29,13 @@ export function upsertManualEffectCommand(
 ): Pick<Character, 'manualEffects'> {
   const normalized = normalizeManualEffect(effect)
   const current = character.manualEffects ?? []
-  const existingIndex = current.findIndex((entry) => entry.id === normalized.id)
+  const existingIndex = current.findIndex((entry) => entry.id.trim() === normalized.id)
   if (existingIndex < 0) return { manualEffects: [...current, normalized] }
   return {
-    manualEffects: current.map((entry, index) => (index === existingIndex ? normalized : entry)),
+    // Keep an admitted literal ID stable so editing cannot detach its suppression marker.
+    manualEffects: current.map((entry, index) =>
+      index === existingIndex ? { ...normalized, id: entry.id } : entry,
+    ),
   }
 }
 

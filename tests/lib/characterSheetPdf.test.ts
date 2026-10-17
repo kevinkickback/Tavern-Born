@@ -1295,9 +1295,29 @@ describe('characterSheetPdf', () => {
           weight: 6,
         },
       ],
-      damageResistances: ['Fire'],
-      damageImmunities: ['Poison'],
-      conditionImmunities: ['Charmed'],
+      manualEffects: [
+        {
+          id: 'manual-fire',
+          label: 'Fire',
+          source: { kind: 'manual', name: 'Manual defense' },
+          target: { kind: 'damage-resistance', damageType: 'Fire' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'manual-poison',
+          label: 'Poison',
+          source: { kind: 'manual', name: 'Manual defense' },
+          target: { kind: 'damage-immunity', damageType: 'Poison' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'manual-charmed',
+          label: 'Charmed',
+          source: { kind: 'manual', name: 'Manual defense' },
+          target: { kind: 'condition-immunity', condition: 'Charmed' },
+          operation: { kind: 'grant' },
+        },
+      ],
       details: {
         faith: 'Torm',
         lifestyle: 'Comfortable',
@@ -1338,10 +1358,16 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Background_FactionRank.Text']).toBe('Watcher')
   })
 
-  test('projects active typed defensive effects without duplicating persisted traits', () => {
+  test('projects active typed defensive effects without duplicating independent grants', () => {
     const character = makeCharacterFixture({
-      damageResistances: ['test damage'],
       manualEffects: [
+        {
+          id: 'effect-independent',
+          label: 'Independent defense',
+          source: { kind: 'manual', name: 'Independent adjustment' },
+          target: { kind: 'damage-resistance', damageType: 'test damage' },
+          operation: { kind: 'grant' },
+        },
         {
           id: 'effect-active-duplicate',
           label: 'Duplicate defense',

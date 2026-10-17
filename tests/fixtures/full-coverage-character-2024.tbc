@@ -1999,25 +1999,6 @@
       "createdAt": "2026-09-11T12:00:00.000Z"
     }
   ],
-  "damageResistances": [
-    "Fire",
-    "Cold",
-    "Lightning",
-    "Necrotic",
-    "Radiant",
-    "Psychic"
-  ],
-  "damageImmunities": [
-    "Poison",
-    "Acid",
-    "Thunder"
-  ],
-  "conditionImmunities": [
-    "Charmed",
-    "Frightened",
-    "Poisoned",
-    "Paralyzed"
-  ],
   "details": {
     "playerName": "PDF Regression Tester",
     "gender": "Woman",
@@ -4325,7 +4306,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "hitPoints": {
     "current": 121,
     "temporary": 17
@@ -4433,10 +4414,230 @@
   "classEquipmentItemChoices": {},
   "movementAdjustments": [],
   "movementOverrides": {},
-  "manualEffects": [],
+  "manualEffects": [
+    {
+      "id": "fixture-defense:damage-resistance:fire",
+      "label": "Fixture Fire",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Fire"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-resistance:cold",
+      "label": "Fixture Cold",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Cold"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-resistance:lightning",
+      "label": "Fixture Lightning",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Lightning"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-resistance:necrotic",
+      "label": "Fixture Necrotic",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Necrotic"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-resistance:radiant",
+      "label": "Fixture Radiant",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Radiant"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-resistance:psychic",
+      "label": "Fixture Psychic",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-resistance",
+        "damageType": "Psychic"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-immunity:poison",
+      "label": "Fixture Poison",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-immunity",
+        "damageType": "Poison"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-immunity:acid",
+      "label": "Fixture Acid",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-immunity",
+        "damageType": "Acid"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:damage-immunity:thunder",
+      "label": "Fixture Thunder",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "damage-immunity",
+        "damageType": "Thunder"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:condition-immunity:charmed",
+      "label": "Fixture Charmed",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "condition-immunity",
+        "condition": "Charmed"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:condition-immunity:frightened",
+      "label": "Fixture Frightened",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "condition-immunity",
+        "condition": "Frightened"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:condition-immunity:poisoned",
+      "label": "Fixture Poisoned",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "condition-immunity",
+        "condition": "Poisoned"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    },
+    {
+      "id": "fixture-defense:condition-immunity:paralyzed",
+      "label": "Fixture Paralyzed",
+      "source": {
+        "kind": "manual",
+        "name": "PDF overflow fixture"
+      },
+      "target": {
+        "kind": "condition-immunity",
+        "condition": "Paralyzed"
+      },
+      "operation": {
+        "kind": "grant"
+      }
+    }
+  ],
   "suppressedEffectIds": [],
   "effectFlags": {},
   "manualActions": [],
+  "racialDefenses": {
+    "context": {
+      "parent": {
+        "name": "Elf",
+        "source": "XPHB"
+      },
+      "child": {
+        "name": "Drow Lineage",
+        "source": "XPHB"
+      }
+    },
+    "resist": {
+      "ownerType": "subrace",
+      "values": []
+    },
+    "immune": {
+      "ownerType": "subrace",
+      "values": []
+    },
+    "conditionImmune": {
+      "ownerType": "subrace",
+      "values": []
+    }
+  },
   "backgroundAsiBlockIndex": 0,
   "backgroundAsiChoices": [
     "dexterity",

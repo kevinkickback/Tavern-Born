@@ -282,7 +282,7 @@ export function deriveStructuredItemEffects(
   return effects
 }
 
-/** Projects only reliable structured race fields; arbitrary entries text is never interpreted. */
+/** Senses stay live; fixed racial defenses use the exact owned applied snapshot. */
 export function deriveStructuredRaceEffects(race: Race5e | undefined): CharacterEffect[] {
   if (!race) return []
   const source = { kind: 'race' as const, name: race.name, source: race.source }
@@ -295,39 +295,6 @@ export function deriveStructuredRaceEffects(race: Race5e | undefined): Character
       operation: { kind: 'base', value: Math.max(0, race.darkvision) },
       source,
     })
-  }
-  const grants: Array<{
-    values: readonly string[] | undefined
-    target: (value: string) => CharacterEffect['target']
-    suffix: string
-  }> = [
-    {
-      values: race.resist,
-      target: (damageType) => ({ kind: 'damage-resistance', damageType }),
-      suffix: 'resistance',
-    },
-    {
-      values: race.immune,
-      target: (damageType) => ({ kind: 'damage-immunity', damageType }),
-      suffix: 'immunity',
-    },
-    {
-      values: race.conditionImmune,
-      target: (condition) => ({ kind: 'condition-immunity', condition }),
-      suffix: 'condition-immunity',
-    },
-  ]
-  for (const grant of grants) {
-    for (const value of grant.values ?? []) {
-      if (typeof value !== 'string' || !value.trim()) continue
-      effects.push({
-        id: entityEffectId('race', race, `${grant.suffix}:${encodeURIComponent(value)}`),
-        label: value,
-        target: grant.target(value),
-        operation: { kind: 'grant' },
-        source,
-      } as CharacterEffect)
-    }
   }
   return effects
 }

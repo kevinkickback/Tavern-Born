@@ -241,9 +241,6 @@
   ],
   "hitPointAdjustments": [],
   "armorClassAdjustments": [],
-  "damageResistances": [],
-  "damageImmunities": [],
-  "conditionImmunities": [],
   "details": {
     "playerName": "Fixture Runner",
     "faction": "The Harpers",
@@ -556,7 +553,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -623,5 +620,29 @@
   "manualEffects": [],
   "suppressedEffectIds": [],
   "effectFlags": {},
-  "manualActions": []
+  "manualActions": [],
+  "racialDefenses": {
+    "context": {
+      "parent": {
+        "name": "Elf",
+        "source": "PHB"
+      },
+      "child": {
+        "name": "High",
+        "source": "PHB"
+      }
+    },
+    "resist": {
+      "ownerType": "race",
+      "values": []
+    },
+    "immune": {
+      "ownerType": "race",
+      "values": []
+    },
+    "conditionImmune": {
+      "ownerType": "race",
+      "values": []
+    }
+  }
 }

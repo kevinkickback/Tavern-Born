@@ -11,6 +11,10 @@ import {
   getUnselectedRaceOwnerPaths,
   hasRaceAbilityOriginGrants,
 } from '@/lib/provenance/raceOwnership'
+import {
+  hasValidRacialDefenseContext,
+  isReservedRacialDefenseId,
+} from '@/lib/provenance/racialDefenseValidation'
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { getInvalidSpecialSpellPaths } from '@/lib/provenance/specialSpellValidation'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -771,6 +775,38 @@ const asiChoiceSchema = z.object({
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
+const racialDefenseOwnerSchema = z
+  .object({
+    name: z.string().refine((value) => !!value.trim()),
+    source: z.string().refine((value) => !!value.trim()),
+  })
+  .strict()
+const racialDefenseFieldSchema = z
+  .object({
+    ownerType: z.enum(['race', 'subrace']),
+    values: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .refine((value) => value === value.trim()),
+      )
+      .refine(
+        (values) => new Set(values.map((value) => value.toLowerCase())).size === values.length,
+      ),
+  })
+  .strict()
+const racialDefenseStateSchema = z
+  .object({
+    context: z
+      .object({ parent: racialDefenseOwnerSchema, child: racialDefenseOwnerSchema.optional() })
+      .strict(),
+    resist: racialDefenseFieldSchema,
+    immune: racialDefenseFieldSchema,
+    conditionImmune: racialDefenseFieldSchema,
+  })
+  .strict()
+
 export const characterSchema = z
   .object({
     id: z.string().min(1),
@@ -828,9 +864,7 @@ export const characterSchema = z
     movementAdjustments: z.array(movementAdjustmentSchema).optional(),
     movementOverrides: z.record(z.number().int().nonnegative()).optional(),
     movementHoverOverride: z.boolean().optional(),
-    damageResistances: z.array(z.string()).optional(),
-    damageImmunities: z.array(z.string()).optional(),
-    conditionImmunities: z.array(z.string()).optional(),
+    racialDefenses: racialDefenseStateSchema.optional(),
     details: characterDetailsSchema,
     portrait: z.string().optional(),
     portraitTransform: portraitTransformSchema.optional(),
@@ -861,6 +895,26 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    if (!hasValidRacialDefenseContext(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['racialDefenses'],
+        message:
+          'Racial defenses require the complete selected race context and explicit field owners.',
+      })
+    }
+    const manualIds = new Set<string>()
+    char.manualEffects?.forEach((effect, index) => {
+      const id = effect.id.trim()
+      if (!id || isReservedRacialDefenseId(id) || manualIds.has(id))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['manualEffects', index, 'id'],
+          message:
+            'Manual effect IDs must be nonblank, unique and outside the racial defense namespace.',
+        })
+      manualIds.add(id)
+    })
     for (const path of getInvalidSpecialSpellPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

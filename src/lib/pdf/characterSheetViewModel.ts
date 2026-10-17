@@ -18,7 +18,8 @@ import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorCla
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
-import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
+import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
+import type { EffectResolutionContext } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
 import {
@@ -638,33 +639,15 @@ function buildClassResourceRows(
 }
 
 function buildDefensiveTraits(
-  character: Character,
   effects: readonly CharacterEffect[],
   effectContext: EffectResolutionContext,
 ): string[] {
-  const traits = [
-    ...(character.damageResistances ?? []).map((value) => `${value} resistance`),
-    ...(character.damageImmunities ?? []).map((value) => `${value} immunity`),
-    ...(character.conditionImmunities ?? []).map((value) => `${value} condition immunity`),
+  const traits = getEffectiveDefensiveTraits(effects, effectContext)
+  return [
+    ...traits.damageResistances.map((value) => `${value} resistance`),
+    ...traits.damageImmunities.map((value) => `${value} immunity`),
+    ...traits.conditionImmunities.map((value) => `${value} condition immunity`),
   ]
-  for (const effect of effects) {
-    if (effect.operation.kind !== 'grant' || !isCharacterEffectActive(effect, effectContext))
-      continue
-    if (effect.target.kind === 'damage-resistance') {
-      traits.push(`${effect.target.damageType} resistance`)
-    } else if (effect.target.kind === 'damage-immunity') {
-      traits.push(`${effect.target.damageType} immunity`)
-    } else if (effect.target.kind === 'condition-immunity') {
-      traits.push(`${effect.target.condition} condition immunity`)
-    }
-  }
-  const seen = new Set<string>()
-  return traits.filter((trait) => {
-    const key = trait.trim().toLocaleLowerCase()
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }
 
 function getSelectedFeats(character: Character): Feat[] {
@@ -910,7 +893,6 @@ export function createCharacterSheetViewModel(
     organizationDetailsSummary: buildOrganizationDetailsSummary(character),
     organizationImage: resolveOrganizationImage(character, rawLookups.organizations ?? []),
     defensiveTraits: buildDefensiveTraits(
-      character,
       calculationContext.effects.declarations,
       calculationContext.effects.resolutionContext,
     ),

@@ -18,6 +18,12 @@ const MULTICLASS_CHARACTER = {
   originSystem: '2014' as const,
   race: 'Human',
   raceSource: 'PHB',
+  racialDefenses: {
+    context: { parent: { name: 'Human', source: 'PHB' } },
+    resist: { ownerType: 'race', values: [] },
+    immune: { ownerType: 'race', values: [] },
+    conditionImmune: { ownerType: 'race', values: [] },
+  },
   background: 'Soldier',
   backgroundSource: 'PHB',
   experiencePoints: 0,

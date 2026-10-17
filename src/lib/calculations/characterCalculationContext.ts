@@ -8,6 +8,10 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
+import {
+  deriveRacialDefenseEffects,
+  refreshRacialDefenseState,
+} from '@/lib/character/racialDefenseState'
 import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
@@ -286,6 +290,11 @@ export function createCharacterCalculationContext(
     raceResolution.parentRace,
     raceResolution.subraceData,
   )
+  character = refreshRacialDefenseState(
+    character,
+    raceResolution.parentRace,
+    raceResolution.subraceData,
+  )
   character = refreshSpecialSpellKinds(
     character,
     primaryLookups.spellsByKey,
@@ -317,6 +326,7 @@ export function createCharacterCalculationContext(
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
   const sourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
+    ...deriveRacialDefenseEffects(character.racialDefenses),
     ...deriveStructuredFeatEffects(resolvedFeats),
     ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]

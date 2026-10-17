@@ -162,8 +162,9 @@ must not render raw 5etools syntax or build independent tooltip systems.
 ## Character format compatibility
 
 Import and hydration require the exact current character version and validate before exposing a
-record. Current schema 10 also requires explicit ordinary/bonus feat setup ownership and one current
-kind per special spell target; complete racial spell targets and separate owner/target printings remain required. Schema 2–9 and other unsupported
+record. Current schema 11 requires exact-context racial defense ownership alongside explicit
+ordinary/bonus feat setup ownership and one current kind per special spell target; complete racial
+spell targets and separate owner/target printings remain required. Schema 2–10 and other unsupported
 versions are rejected without conversion. Saved-library rejected originals
 remain in durable, exportable quarantine until acknowledged. The version and cutoff policy lives
 in [State Management](state-management.md#schema-compatibility).

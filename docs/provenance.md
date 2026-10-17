@@ -182,7 +182,7 @@ Materialized race versions own their complete mechanics under the selected subra
 parent contributes selection identity and origin-policy flags, without reapplying parent grants.
 Switching to or from a version rebuilds both race and subrace ownership in one command so explicitly
 removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
-changes retain the existing additive ownership behavior.
+changes retain existing domain ownership behavior; defensive fields use the overwrite contract below.
 
 Ordinary child replacement or clearing preserves the unchanged parent's nonability selections when
 the previous child resolves exactly as ordinary. If its metadata is unavailable or its kind cannot
@@ -211,6 +211,34 @@ spell blocks for a materialized version, including inherited blocks already pres
 and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named
 parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
 from the unfiltered catalog.
+
+### Racial defenses
+
+`racialDefenses` stores the current fixed grants and their actual field owners, bound to the exact
+selected parent/child name and source. For each of `resist`, `immune` and `conditionImmune`, an ordinary
+child's absent key inherits the parent, null removes the field, an empty array grants nothing, and a
+nonempty array replaces the whole parent array. This follows the pinned
+[`Renderer.race._getMergedSubrace`](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/render.js).
+Inherited fields belong to the parent; explicit replacements belong to the child. Complete versions
+own all three fields and never restore absent parent defenses. Only direct string values become
+automatic grants; choices, nested conditions and prose remain available for manual interpretation.
+
+Creation and race/subrace commands commit selection and this snapshot together. Exact live context
+refreshes it through the shared pure projection and acknowledged active-character correction queue.
+Missing either selected reference preserves the entire snapshot; exact restoration applies current
+rules. Source filtering retains ancestry through raw exact lookup. Clearing a child with current
+parent rules restores the parent, including when old child rules are unavailable; no parent rules
+means Clear cannot infer replaced parent benefits. No dormant parent catalog is saved.
+
+Typed effects combine these racial declarations with independently owned manual, feat and equipment
+grants. Stable racial IDs encode the actual parent owner, or child plus its parent context, family
+and target. Suppressing one source retains another active source's equal-valued grant. The
+`racial-defense:` namespace is reserved, and manual declaration IDs must be unique. Review and PDF
+use one effective active union; attribution retains separate owners. Adjustments exposes the same
+declarations and activation rules. The custom 2014 PDF prints the mechanical defense list; other
+templates retain their existing racial/feature prose projection. Source prose can still mention a
+removed structured defense; it is not interpreted or rewritten. The format 11 cutoff removes the
+ambiguous flat defense arrays without conversion; see [schema compatibility](state-management.md#schema-compatibility).
 
 ### Native racial spells
 
