@@ -195,6 +195,8 @@ explicit overrides retain their existing behavior; quantity does not multiply bo
 Source-qualified equipment without an exact current rules record gets a nonblocking readiness
 recommendation after primary-then-raw resolution. An authoritative raw lookup must be supplied:
 undefined/loading data is unknown, while an explicit empty map establishes absence. A filtered primary
+lookup supplied alone retains calculation fallback but cannot establish raw-rule absence; callers
+must explicitly supply the authoritative raw item map for this recommendation. A filtered primary
 view with an exact raw match produces no warning; another printing cannot substitute. Source-less
 custom entries remain outside this check, and existing unresolved starting placeholders keep their
 separate blocking issue. Review and PDF preflight consume the same readiness result. Missing rules

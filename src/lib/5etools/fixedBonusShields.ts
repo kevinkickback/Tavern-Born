@@ -50,6 +50,16 @@ const BASE_FIELDS = new Set([
   'hasFluff',
   'hasFluffImages',
 ])
+const TEMPLATE_FIELDS = new Set([
+  'name',
+  'source',
+  'type',
+  'edition',
+  'requires',
+  'excludes',
+  'entries',
+  'inherits',
+])
 const INHERITED_FIELDS = new Set([
   'namePrefix',
   'source',
@@ -148,6 +158,7 @@ export function generateFixedBonusShields(
       requires = definition.requires
     if (
       !inherited ||
+      !Object.keys(definition).every((key) => TEMPLATE_FIELDS.has(key)) ||
       !validMetadata(inherited) ||
       definition.type !== `GV|${source}` ||
       inherited.source !== source ||

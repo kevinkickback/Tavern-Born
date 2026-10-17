@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Fixed-bonus shield generation and shared AC/readiness measure 5,679,715 renderer bytes.
+  // Fixed-bonus shield generation and shared AC/readiness measure 5,679,923 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
   rendererCode: 5547 * KIB,
-  // The same measured artifact has 516,947 initial script bytes.
+  // The same measured artifact has 517,133 initial script bytes.
   // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 505 * KIB,
+  initialRendererScript: 506 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

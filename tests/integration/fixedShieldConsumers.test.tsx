@@ -149,7 +149,11 @@ test('durable schema11 reopen, cache recomposition and exact missing/restored ru
   ] as const) {
     await act(() => useGameDataStore.setState({ gameData: catalog }))
     const current = useCharacterStore.getState().activeCharacter!
-    const calculation = createCharacterCalculationContext(current, catalog.lookups!)
+    const calculation = createCharacterCalculationContext(
+      current,
+      catalog.lookups!,
+      catalog.lookups!,
+    )
     const readiness = getCharacterReadiness(current, { calculation })
     expect(
       computeEffectiveCharacterArmorClass(

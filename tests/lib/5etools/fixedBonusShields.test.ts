@@ -40,6 +40,19 @@ test('six literal concrete identities retain physical AC, own prose and source n
 })
 
 test.each([
+  { charges: 3 },
+  { reqAttune: true },
+])('unsupported canonical root mechanic fails closed: %j', async (change) => {
+  const data = await loadFixedShields([{ ...fixedShieldTemplates[0], ...change }])
+  expect(data.items.filter((x) => x.magicVariantGenerated)).toEqual([])
+  expect(
+    data.fixedShieldDiagnostics?.some((x) =>
+      /Unsupported fixed-shield template shape/.test(x.message),
+    ),
+  ).toBe(true)
+})
+
+test.each([
   { bonusAc: '+9' },
   { source: 'XDMG' },
   { source: '' },
@@ -134,11 +147,27 @@ test('copied bases remain outside generation while concrete copy handling remain
   expect(data.fixedShieldDiagnostics?.some((x) => /unsupported direct/.test(x.message))).toBe(true)
 })
 
+test('a supported canonical template copy still generates its exact fixed shield', async () => {
+  const data = await loadFixedShields([
+    { ...fixedShieldTemplates[0], name: 'Shield template parent' },
+    {
+      name: '+1 Shield (*)',
+      source: 'DMG',
+      _copy: { name: 'Shield template parent', source: 'DMG' },
+    },
+  ])
+  expect(data.items.filter((x) => x.magicVariantGenerated)).toMatchObject([
+    { name: '+1 Shield', source: 'DMG', bonusAc: '+1', ac: 2 },
+  ])
+  expect(data.fixedShieldDiagnostics).toEqual([])
+})
+
 test('winning template duplicates and invalid overrides suppress derived output until exact restoration', async () => {
   const initial = await loadFixedShields(),
     template = fixedShieldTemplates[0]
   for (const templates of [
     [template, template],
+    [{ ...template, charges: 3 }],
     [{ ...template, inherits: { ...template.inherits, charges: 3 } }],
   ]) {
     const overlay = makeGameDataFixture({ magicVariants: templates })

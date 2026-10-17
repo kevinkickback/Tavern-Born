@@ -72,7 +72,12 @@ interface CharacterEquipmentCalculationState {
 
 export interface CharacterCalculationContext {
   character: Character
-  lookups: { primary: EntityLookupSet; raw: EntityLookupSet }
+  lookups: {
+    primary: EntityLookupSet
+    raw: EntityLookupSet
+    /** Readiness requires an explicitly supplied raw item map to establish absence. */
+    rawItemsAuthoritative: boolean
+  }
   rules: CoreRulesMetadata
   raceResolution: ResolvedRaceReference
   background: Background5e | undefined
@@ -273,8 +278,10 @@ export function deriveEffectiveAbilityScores(
 export function createCharacterCalculationContext(
   character: Character,
   primaryLookups: EntityLookupSet,
-  rawLookups: EntityLookupSet = primaryLookups,
+  rawLookups?: EntityLookupSet,
 ): CharacterCalculationContext {
+  const rawItemsAuthoritative = rawLookups?.itemLookup !== undefined
+  rawLookups ??= primaryLookups
   const raceResolution = resolveRaceReference(
     {
       name: character.race,
@@ -341,7 +348,7 @@ export function createCharacterCalculationContext(
 
   return {
     character,
-    lookups: { primary: primaryLookups, raw: rawLookups },
+    lookups: { primary: primaryLookups, raw: rawLookups, rawItemsAuthoritative },
     rules: {
       originSystem: character.originSystem,
       ...CORE_RULES_METADATA[character.originSystem],

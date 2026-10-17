@@ -87,6 +87,7 @@ test.each([
   ['both absent', [], [], 1],
   ['wrong printing', [], [{ ...shield, source: 'DMG' }], 1],
   ['case conflict', [], [{ ...shield, source: 'xdmg' }], 1],
+  ['exact primary with absent raw rules', [shield], [], 0],
   ['exact restored', [shield], [shield], 0],
 ] as const)('exact equipment rules recommendation: %s', (_name, primary, raw, count) => {
   const c = setup([shield])
@@ -107,13 +108,21 @@ test.each([
 
 test('loading raw data, source-less customs and existing blocking placeholders remain distinct', () => {
   const c = setup([shield])
-  const unknown = createCharacterCalculationContext(c, { itemLookup: new Map() }, {})
-  expect(
-    getCharacterReadiness(c, { calculation: unknown }).issues.filter(
-      (x) => x.section === 'equipment',
-    ),
-  ).toEqual([])
-  const missing = createCharacterCalculationContext(c, { itemLookup: new Map() })
+  const primary = { itemLookup: new Map() }
+  for (const unknown of [
+    createCharacterCalculationContext(c, primary),
+    createCharacterCalculationContext(c, primary, undefined),
+    createCharacterCalculationContext(c, primary, {}),
+    createCharacterCalculationContext(c, primary, { itemLookup: undefined }),
+  ]) {
+    expect(
+      getCharacterReadiness(c, { calculation: unknown }).issues.filter(
+        (x) => x.section === 'equipment',
+      ),
+    ).toEqual([])
+  }
+  expect(total(c, [shield])).toBe(14) // Sole primary data still supplies live calculation rules.
+  const missing = createCharacterCalculationContext(c, primary, { itemLookup: new Map() })
   c.equipment[0].source = ''
   expect(
     getCharacterReadiness(c, { calculation: missing }).issues.filter(

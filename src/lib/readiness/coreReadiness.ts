@@ -308,7 +308,7 @@ export function validateEquipment(
             'This equipment choice could not be matched to a content record.',
           ),
         ]
-      : raw !== undefined && item.source?.trim() && !resolved
+      : calculation?.lookups.rawItemsAuthoritative && item.source?.trim() && !resolved
         ? [
             readinessIssue(
               `equipment:rules:${item.id}`,

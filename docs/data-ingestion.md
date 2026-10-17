@@ -621,9 +621,9 @@ Serializable `fixedShieldBases` retains winning raw Shield inputs before normali
 merging collapses duplicates. Identifiable invalid or duplicate winners suppress earlier inputs
 for generation, including after cache restoration/recomposition. Supported canonical template copies
 use their existing resolver. Generation accepts the audited fixed-bonus shape and explicit inherited
-source equal to its canonical owner; unknown mechanics, changed bonuses and unsupported injectors
-are diagnosed instead of guessed. Requirements are OR-of-AND; exclusions match any key, including
-upstream array/recursive semantics. Ordinary non-VTT edition matching prevents cross-edition bases.
+source equal to its canonical owner; unknown canonical-root or inherited mechanics, changed bonuses
+and unsupported injectors are diagnosed instead of guessed. Requirements are OR-of-AND; exclusions
+match any key, including upstream array/recursive semantics. Ordinary non-VTT edition matching prevents cross-edition bases.
 
 Generation runs after raw layers and ordinary copy handling, before shared text/type enrichment and
 lookups. It retains physical base AC/type/weight, removes mundane value and base-only source/public/
