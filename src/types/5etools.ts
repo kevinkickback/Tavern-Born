@@ -404,6 +404,8 @@ export interface Item5e {
   entries?: unknown[]
   /** Missing optional shared rules text; structured item mechanics remain usable. */
   itemEntryDiagnostics?: ItemEntryDiagnostic[]
+  /** Source-qualified optional category prose, projected at each display boundary. */
+  itemTypeText?: ItemTypeText5e[]
   weaponCategory?: string
   firearm?: boolean
   dmg1?: string
@@ -455,6 +457,13 @@ export interface ItemEntry5e {
 export interface ItemEntryDiagnostic {
   path: string
   message: string
+}
+
+export interface ItemTypeText5e {
+  source: string
+  name: string
+  entries: unknown[]
+  diagnostics?: ItemEntryDiagnostic[]
 }
 
 type AbilityBonus = {
@@ -609,6 +618,9 @@ export interface GameData {
   itemsBase: Item5e[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
+  /** Raw optional support rows retain malformed overlays for bounded diagnostics. */
+  itemTypeAdditionalEntries?: unknown[]
+  itemTypeEntryDiagnostics?: ItemEntryDiagnostic[]
   /** Parsed from data/items-base.json → .itemProperty[]. */
   itemProperties: ItemProperty5e[]
   /** Parsed from data/items-base.json → .itemType[]. */

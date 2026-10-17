@@ -16,6 +16,7 @@ import {
   useSpellLookup,
 } from '@/hooks/data/useGameData'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
+import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import {
@@ -736,6 +737,11 @@ export function CharacterOverview({
               <ul className="space-y-2">
                 {calculation.equipment.all.map((item, index) => {
                   const resolved = equipmentRules[index]
+                  const rulesEntries = getItemRulesEntries(resolved, {
+                    allowedSources: character.allowedSources,
+                    originSystem: character.originSystem,
+                    sourceCatalog: filteredData.sources,
+                  })
                   return (
                     <DetailEntry
                       key={item.id}
@@ -760,8 +766,8 @@ export function CharacterOverview({
                     >
                       <div className="space-y-1">
                         {item.rarity && <p>{item.rarity}</p>}
-                        {resolved?.entries?.length ? (
-                          <GameContent entry={resolved.entries} />
+                        {rulesEntries.length ? (
+                          <GameContent entry={rulesEntries} />
                         ) : (
                           item.description && <GameContent entry={item.description} />
                         )}

@@ -26,7 +26,8 @@ vi.mock('@/hooks/character/useClassResources', () => ({
   }),
 }))
 
-vi.mock('@/hooks/data/useGameData', () => ({
+vi.mock('@/hooks/data/useGameData', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/data/useGameData')>()),
   useConditions: () => [
     { name: 'Reference status', source: 'PHB', _sourceType: 'status', entries: ['Status rules.'] },
     {

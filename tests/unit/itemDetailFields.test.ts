@@ -5,7 +5,7 @@ import {
   getInventoryItemTypeLabel,
   getItemCategory,
   itemMatchesFilter,
-} from '@/pages/equipment/itemDetailFields'
+} from '@/lib/itemDetailFields'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 

@@ -2,9 +2,10 @@ import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useRawRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
+import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import type { CompendiumEntry } from '@/lib/compendiumEntries'
 import { CreatureStatBlock } from '@/pages/compendium/CreatureStatBlock'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Item5e } from '@/types/5etools'
 
 interface CompendiumEntryDetailsProps {
   selectedEntry: CompendiumEntry
@@ -163,6 +164,8 @@ function getClassRenderableEntries(data: Class5e): unknown[] {
 }
 
 function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
+  if (selectedEntry.type === 'Item')
+    return getItemRulesEntries(selectedEntry.data as unknown as Item5e)
   const entryList = asArray(selectedEntry.data.entries as unknown)
   if (entryList.length) return entryList
 

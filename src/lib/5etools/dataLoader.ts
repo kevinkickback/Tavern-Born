@@ -16,6 +16,11 @@ import {
 } from './copyResolution'
 import { createEmptyGameData } from './emptyGameData'
 import { expandItemEntries, parseItemEntries, retainRawItems } from './itemEntries'
+import {
+  associateItemTypeEntries,
+  getItemTypeEntrySources,
+  parseItemTypeEntries,
+} from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
 import {
   buildSourcesList,
@@ -241,6 +246,13 @@ export class FiveEToolsDataLoader {
           case 'itemsBase':
             gameData.itemsBase = parseItems(data) as GameData['itemsBase']
             gameData.itemEntries = parseItemEntries(data)
+            {
+              const supplemental = parseItemTypeEntries(data)
+              gameData.itemTypeAdditionalEntries = supplemental.records
+              gameData.itemTypeEntryDiagnostics = supplemental.diagnostics
+              for (const source of getItemTypeEntrySources(supplemental.records))
+                sourcesSet.add(source)
+            }
             gameData.itemProperties = parseItemProperties(data)
             gameData.itemTypes = parseItemTypes(data)
             gameData.itemMasteries = parseItemMasteries(data)
@@ -383,7 +395,11 @@ export class FiveEToolsDataLoader {
     retainRawItems(gameData)
     const itemCount = gameData.items.length
     const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
-    const describedItems = expandItemEntries(resolvedItems.records, gameData.itemEntries ?? [])
+    const describedItems = associateItemTypeEntries(
+      expandItemEntries(resolvedItems.records, gameData.itemEntries ?? []),
+      gameData.itemTypeAdditionalEntries ?? [],
+      gameData.itemEntries ?? [],
+    )
     gameData.items = describedItems.slice(0, itemCount)
     gameData.itemsBase = describedItems.slice(itemCount)
     if (resolvedItems.diagnostics.length && import.meta.env.DEV) {

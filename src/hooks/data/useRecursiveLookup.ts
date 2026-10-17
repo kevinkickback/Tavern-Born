@@ -4,6 +4,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData } from '@/types/5etools'
 import { useFilteredGameData } from './useFilteredGameData'
+import { useItemTextContext } from './useGameData'
 
 const EMPTY_RECURSIVE_LOOKUP = buildRecursiveLookup({})
 const recursiveLookupCache = new WeakMap<GameData, RecursiveLookup>()
@@ -21,6 +22,7 @@ function getRawRecursiveLookup(gameData: GameData | null): RecursiveLookup {
 }
 
 export function useRecursiveLookup(): RecursiveLookup {
+  const itemTextContext = useItemTextContext()
   const filteredGameData = useFilteredGameData()
   const gameData = useGameDataStore((state) => state.gameData)
   const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
@@ -45,10 +47,10 @@ export function useRecursiveLookup(): RecursiveLookup {
     const cached = cacheByFilter.get(filterKey)
     if (cached) return cached
 
-    const lookup = buildRecursiveLookup(filteredGameData)
+    const lookup = buildRecursiveLookup(filteredGameData, itemTextContext)
     cacheByFilter.set(filterKey, lookup)
     return lookup
-  }, [filteredGameData, filterKey, gameData])
+  }, [filteredGameData, filterKey, gameData, itemTextContext])
 }
 
 export function useRawRecursiveLookup(): RecursiveLookup {

@@ -168,7 +168,7 @@ describe('shared item text consumers and persistence', () => {
     const cacheConfig = { type: 'local' as const, path: '/fixture', isValid: true }
     await writeGameDataCache(data, cacheConfig)
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(33)
+    expect(cached?.cacheSchemaVersion).toBe(34)
     expect(cached?.data.items[0].entries).toEqual(data.items[0].entries)
     useGameDataStore.setState({ gameData: cached!.data })
     const empty: ItemEntry5e[] = []

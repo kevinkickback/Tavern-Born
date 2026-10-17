@@ -1,3 +1,4 @@
+import { iterateItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { collectSubclassFeatures as collectParsedSubclassFeatures } from '@/lib/character/classChoiceOptions'
 import type {
   Background5e,
@@ -137,8 +138,12 @@ function collectPreviewText(value: unknown, output: string[], depth = 0): void {
     return
   }
 
-  if (Array.isArray(value)) {
-    for (const item of value) {
+  if (
+    typeof value === 'object' &&
+    Symbol.iterator in value &&
+    typeof value[Symbol.iterator] === 'function'
+  ) {
+    for (const item of value as Iterable<unknown>) {
       collectPreviewText(item, output, depth + 1)
       if (output.length >= 4) return
     }
@@ -427,8 +432,7 @@ export function buildCompendiumEntries(
     if (!item.name || seenItems.has(identity)) return
     seenItems.add(identity)
     const description =
-      getPreviewDescription(item.entries ?? item.additionalEntries ?? []) ||
-      getItemTypeName(item, itemTypeNames)
+      getPreviewDescription(iterateItemRulesEntries(item)) || getItemTypeName(item, itemTypeNames)
     entries.push(
       buildEntry(
         item.name,

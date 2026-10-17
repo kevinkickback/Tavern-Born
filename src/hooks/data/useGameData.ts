@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { type ClassFilters, DataFilter, searchByName, sortByName } from '@/lib/5etools'
+import type { ItemTextContext } from '@/lib/5etools/itemTypeEntries'
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
@@ -96,6 +98,16 @@ export function useOrganizations(): readonly Organization5e[] {
 
 export function useItemLookup() {
   return useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+}
+
+export function useItemTextContext(): ItemTextContext {
+  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
+  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
+  const sourceCatalog = useGameDataStore((state) => state.gameData?.sources)
+  return useMemo(
+    () => ({ allowedSources, originSystem, sourceCatalog }),
+    [allowedSources, originSystem, sourceCatalog],
+  )
 }
 
 export function useItemPropertyLookup(): Readonly<Record<string, string>> {

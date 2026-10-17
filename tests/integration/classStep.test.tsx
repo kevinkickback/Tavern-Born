@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ClassStep } from '@/components/character/wizard/steps/4-ClassStep'
+import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Class5e } from '@/types/5etools'
 
 vi.mock('@/components/character/TraitTooltip', () => ({
@@ -50,6 +51,7 @@ describe('ClassStep', () => {
 
     const { getByText } = render(
       <ClassStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           class: 'Wizard',
@@ -81,6 +83,7 @@ describe('ClassStep', () => {
 
     const { getByRole } = render(
       <ClassStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           class: '',
@@ -108,6 +111,7 @@ describe('ClassStep', () => {
 
     render(
       <ClassStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           class: '',
@@ -136,6 +140,7 @@ describe('ClassStep', () => {
 
     const { getAllByText, queryByText } = render(
       <ClassStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           class: 'Fighter',

@@ -1,5 +1,8 @@
+import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTypeEntries'
+import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
+import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { renderEntry } from '@/lib/renderer'
-import type { Creature5e, Spell5e } from '@/types/5etools'
+import type { Creature5e, Item5e, ItemProperty5e, Spell5e } from '@/types/5etools'
 
 interface TooltipEntityLike {
   name?: string
@@ -31,6 +34,8 @@ export interface RecursiveTooltipData {
 }
 
 export interface RecursiveLookup {
+  itemTextContext?: ItemTextContext
+  itemPropertyByAbbr?: Record<string, string>
   spells: Map<string, Spell5e>
   items: Map<string, TooltipEntityLike>
   feats: Map<string, TooltipEntityLike>
@@ -57,6 +62,7 @@ export interface RecursiveLookup {
 }
 
 export interface RecursiveTooltipCollections {
+  itemProperties?: readonly ItemProperty5e[]
   spells?: readonly unknown[]
   items?: readonly unknown[]
   itemsBase?: readonly unknown[]
@@ -232,12 +238,17 @@ function getNestedClassEntities(classes: readonly TooltipEntityLike[]): {
   return { subclasses, subclassFeatures }
 }
 
-export function buildRecursiveLookup(collections: RecursiveTooltipCollections): RecursiveLookup {
+export function buildRecursiveLookup(
+  collections: RecursiveTooltipCollections,
+  itemTextContext?: ItemTextContext,
+): RecursiveLookup {
   const classes = asTooltipEntities(collections.classes)
   const nestedClassEntities = getNestedClassEntities(classes)
   const conditions = asTooltipEntities(collections.conditions)
   const trapHazards = asTooltipEntities(collections.trapHazards)
   return {
+    itemTextContext,
+    itemPropertyByAbbr: buildItemPropertyLookup([...(collections.itemProperties ?? [])]),
     spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
     items: buildNameMap([
       ...asTooltipEntities(collections.items),
@@ -452,7 +463,9 @@ export function getRecursiveTooltipData(
   const previewEntries =
     normalizedKind === 'creatures'
       ? getCreaturePreviewEntries(entity as Creature5e)
-      : entity.entries
+      : normalizedKind === 'items'
+        ? getItemPreviewEntries(entity as Item5e, lookup)
+        : entity.entries
 
   const kindLabels: Record<string, string> = {
     items: 'Item',
@@ -479,8 +492,27 @@ export function getRecursiveTooltipData(
   return {
     title: entity.name ?? reference.name,
     subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
-    html: getPreviewHtml(previewEntries),
+    html:
+      normalizedKind === 'items' && previewEntries?.length
+        ? previewEntries.map(getEntryWithHoverTitles).join('')
+        : getPreviewHtml(previewEntries),
   }
+}
+
+function getItemPreviewEntries(item: Item5e, lookup: RecursiveLookup): unknown[] {
+  const fields = buildCatalogItemDetailFields(item, lookup.itemPropertyByAbbr ?? {})
+  return [
+    ...(fields.length
+      ? [
+          {
+            type: 'table',
+            colLabels: ['Detail', 'Value'],
+            rows: fields.map((field) => [field.label, String(field.value)]),
+          },
+        ]
+      : []),
+    ...getItemRulesEntries(item, lookup.itemTextContext),
+  ]
 }
 
 export function markRecursiveTooltipReferences(html: string): string {

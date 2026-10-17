@@ -17,6 +17,7 @@ import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useItemTextContext } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -77,6 +78,7 @@ export function SpellsPage() {
     spells,
     items,
     itemsBase,
+    itemProperties,
     feats,
     races,
     classes,
@@ -146,28 +148,33 @@ export function SpellsPage() {
   }, [focusedProfile])
 
   const allSpells = spells as Spell5e[]
+  const itemTextContext = useItemTextContext()
   const recursiveLookup = useMemo<RecursiveLookup>(
     () =>
-      buildRecursiveLookup({
-        spells: allSpells,
-        items,
-        itemsBase,
-        feats,
-        races,
-        classes,
-        backgrounds,
-        optionalfeatures,
-        actions,
-        conditions,
-        deities,
-        skills,
-        senses,
-        variantrules,
-        languages,
-        classFeatures,
-        trapHazards,
-        rewards,
-      }),
+      buildRecursiveLookup(
+        {
+          spells: allSpells,
+          items,
+          itemsBase,
+          itemProperties,
+          feats,
+          races,
+          classes,
+          backgrounds,
+          optionalfeatures,
+          actions,
+          conditions,
+          deities,
+          skills,
+          senses,
+          variantrules,
+          languages,
+          classFeatures,
+          trapHazards,
+          rewards,
+        },
+        itemTextContext,
+      ),
     [
       backgrounds,
       classes,
@@ -181,6 +188,8 @@ export function SpellsPage() {
       variantrules,
       items,
       itemsBase,
+      itemProperties,
+      itemTextContext,
       optionalfeatures,
       races,
       classFeatures,

@@ -503,8 +503,41 @@ cycles/limits produce visible missing-text information and item-local capability
 They do not become resource transport failures or invent mechanics. Shared renderers and PDF text
 projections consume the expanded entries with their existing saved-description precedence.
 Expanded text is derived catalog data and never writes a character's inventory or player prose.
-Cache schema33 rebuilds older incomplete descriptions. Supplemental `itemTypeAdditionalEntries`
-and concrete magic-template materialization remain separate support boundaries.
+Older parsed caches rebuild incomplete descriptions. Concrete magic-template materialization
+remains a separate support boundary.
+
+`itemTypeAdditionalEntries` supplies optional rules for an equipment category. Records retain their
+owning book and declared `appliesTo` type UID separately from individual items. Layer identity is the
+normalized tuple of owning source, target abbreviation and target type-source; display names and
+incidental metadata do not change it. A missing/blank type-source defaults to PHB, independently of
+the concrete item's printing. Thus `INS` on a DMG item can receive `INS|PHB` guidance, while an explicit
+`INS|XPHB` type cannot. Matching does not require a separately loaded type-label definition.
+
+Later layers replace an exact owner/target identity; winning-layer duplicates remain ambiguous.
+Empty entries suppress earlier prose. Malformed identifiable overlays remain unavailable winners;
+unidentifiable rows and malformed optional containers produce bounded capability diagnostics.
+Optional prose does not invalidate unrelated item mechanics or become a resource transport failure.
+Canonical rows and fresh source-qualified per-item support metadata remain separate from own entries.
+The shared display projection combines own `entries`, own `additionalEntries`, then eligible category
+sections with visible owning-book attribution. Supported item-entry includes reuse the bounded adapter.
+Compendium list summaries consume that projection lazily and retain their four-candidate limit;
+full detail and PDF-description projections retain the complete supported text.
+
+Supplemental owning books enter the existing source catalog so category-only books can be selected;
+target type-sources do not create source-book choices. Existing compatibility and bundled selectable-
+source restrictions still apply. Character and wizard views use their respective source settings;
+explicit empty settings enable only the implicit core book. Unspecified settings retain the existing
+unfiltered meaning, with any supplied ruleset still enforcing compatibility. Global Compendium views
+remain unrestricted. Retained exact items can show eligible text without becoming new item choices.
+Already-open previews keep their spawning lookup snapshot; closing and reopening uses current settings.
+Spell-page preview descendants receive the same character book context and item-property catalog.
+
+Item previews share available value, weight, damage, range and property formatting with Equipment,
+including items without prose; inventory quantity stays specific to inventory. Rules projections
+preserve each consumer's existing saved-description precedence. PDF text uses the exported character's
+book settings and retains its existing magic-item description scope. Category prose never grants
+proficiencies/bonuses or writes player descriptions, equipment instances or provenance. Cache schema34
+rebuilds catalogs missing this metadata; saved character format11 is unchanged.
 
 5etools `_copy` records for items and creatures are resolved by source-qualified parent identity
 after their respective catalogs have loaded. Bestiary copies can also apply `bestiary/template.json`
