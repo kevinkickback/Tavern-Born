@@ -34,8 +34,10 @@ vi.mock('@/lib/storage/dataCache', () => ({
   computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
+import { expandItemEntries } from '@/lib/5etools/itemEntries'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { useGameDataStore } from '@/store/gameDataStore'
+import { firePotion } from '../fixtures/itemEntryFixtures'
 
 function makeGameDataFixture(): GameData {
   return {
@@ -235,6 +237,30 @@ describe('gameDataStore', () => {
     expect(state.isBackgroundRefreshing).toBe(false)
     expect(state.isLoading).toBe(false)
     expect(state.loadProgress).toBeNull()
+  })
+
+  test('background refresh publishes bounded missing item text and permits exact text restoration', async () => {
+    const data = makeGameDataFixture()
+    data.items = expandItemEntries([firePotion], [])
+    loadDataFromSourceMock.mockResolvedValue(data)
+    expect(await useGameDataStore.getState().loadGameData(config, true)).toBe(true)
+    expect(useGameDataStore.getState().gameData?.items[0].entries).toEqual([
+      '[Item rules text unavailable]',
+    ])
+    expect(useGameDataStore.getState().error).toBeNull()
+    expect(writeGameDataCacheMock).toHaveBeenCalled()
+    const restored = makeGameDataFixture()
+    restored.items = [{ ...firePotion, entries: ['Restored description.'] }]
+    loadDataFromSourceMock.mockResolvedValue(restored)
+    writeGameDataCacheMock.mockResolvedValueOnce({
+      lastDataChangedAt: '2026-01-02T00:00:00.000Z',
+      contentFingerprint: 'restored',
+    })
+    expect(await useGameDataStore.getState().loadGameData(config, true)).toBe(true)
+    expect(useGameDataStore.getState().gameData?.items[0].entries).toEqual([
+      'Restored description.',
+    ])
+    expect(useGameDataStore.getState().gameData?.items[0].itemEntryDiagnostics).toBeUndefined()
   })
 
   test('loadGameData reports resource progress during a background refresh', async () => {

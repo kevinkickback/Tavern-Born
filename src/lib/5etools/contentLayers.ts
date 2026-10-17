@@ -1,6 +1,12 @@
 import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
-import type { Class5e, GameData, GameDataSourceStack, SubclassFeature } from '@/types/5etools'
+import type {
+  Class5e,
+  GameData,
+  GameDataSourceStack,
+  ItemEntry5e,
+  SubclassFeature,
+} from '@/types/5etools'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { normalizeClassRules } from './classRuleNormalization'
@@ -12,6 +18,7 @@ import {
   loadDataFromSource,
   setLoadedRaceData,
 } from './dataLoader'
+import { expandItemEntries, getItemEntryIdentity, getRawItems, retainRawItems } from './itemEntries'
 import { buildGameDataLookups } from './lookups'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
@@ -346,12 +353,30 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   const composed = {} as GameData
 
   for (const key of collectionKeys) {
+    if (key === 'itemEntries') {
+      // A later layer replaces an identity, but duplicates within that winning layer
+      // remain ambiguous; do not erase an optional-text diagnostic by picking one.
+      composed.itemEntries = layers.reduce<ItemEntry5e[]>((merged, layer) => {
+        const entries = layer.itemEntries ?? []
+        const replaced = new Set(
+          entries.map((entry) => getItemEntryIdentity(entry.name, entry.source)),
+        )
+        return [
+          ...merged.filter(
+            (entry) => !replaced.has(getItemEntryIdentity(entry.name, entry.source)),
+          ),
+          ...entries,
+        ]
+      }, [])
+      continue
+    }
     const getIdentity = COLLECTION_IDENTITIES[key] ?? recordIdentity
     const values = layers.reduce<unknown[]>(
       (merged, layer) =>
         mergeCollection(
           merged,
-          (layer[key] ?? []) as unknown[],
+          ((key === 'items' || key === 'itemsBase' ? getRawItems(layer)[key] : layer[key]) ??
+            []) as unknown[],
           getIdentity as (value: unknown) => string,
         ),
       [],
@@ -390,9 +415,11 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     ),
   )
   const itemCount = composed.items.length
+  retainRawItems(composed)
   const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
-  composed.items = items.records.slice(0, itemCount)
-  composed.itemsBase = items.records.slice(itemCount)
+  const describedItems = expandItemEntries(items.records, composed.itemEntries ?? [])
+  composed.items = describedItems.slice(0, itemCount)
+  composed.itemsBase = describedItems.slice(itemCount)
   const templates = layers.flatMap(getLoadedCreatureTemplates)
   const creatures = resolveCopiedRecords(composed.creatures ?? [], 'monster', templates)
   composed.creatures = creatures.records

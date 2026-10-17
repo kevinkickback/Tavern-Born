@@ -402,6 +402,8 @@ export interface Item5e {
   weight?: number
   value?: number
   entries?: unknown[]
+  /** Missing optional shared rules text; structured item mechanics remain usable. */
+  itemEntryDiagnostics?: ItemEntryDiagnostic[]
   weaponCategory?: string
   firearm?: boolean
   dmg1?: string
@@ -442,6 +444,17 @@ export interface ItemMastery5e {
   name: string
   source: string
   entries?: unknown[]
+}
+
+export interface ItemEntry5e {
+  name: string
+  source: string
+  entriesTemplate: unknown[]
+}
+
+export interface ItemEntryDiagnostic {
+  path: string
+  message: string
 }
 
 type AbilityBonus = {
@@ -594,6 +607,8 @@ export interface GameData {
   feats: Feat5e[]
   items: Item5e[]
   itemsBase: Item5e[]
+  /** Shared descriptive fragments from items-base.json; never inventory records. */
+  itemEntries?: ItemEntry5e[]
   /** Parsed from data/items-base.json → .itemProperty[]. */
   itemProperties: ItemProperty5e[]
   /** Parsed from data/items-base.json → .itemType[]. */

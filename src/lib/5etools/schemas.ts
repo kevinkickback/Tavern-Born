@@ -72,6 +72,17 @@ export const ItemDataSchema = z
     item: z.array(ItemSchema).optional(),
     itemGroup: z.array(ItemSchema).optional(),
     baseitem: z.array(ItemSchema).optional(),
+    itemEntry: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1),
+            source: z.string().trim().min(1),
+            entriesTemplate: z.array(z.any()),
+          })
+          .passthrough(),
+      )
+      .optional(),
   })
   .passthrough()
 

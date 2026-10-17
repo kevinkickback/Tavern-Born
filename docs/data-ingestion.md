@@ -43,7 +43,12 @@ SRD identity omitted by the external source remains available. Race data is reta
 during loading: race identities and parent-qualified subrace identities are overlaid before copy
 resolution, version expansion, and presentation normalization. This also rebuilds copies that resolved
 within an earlier layer when a later layer replaces their parent. The loader retains these inputs
-outside serializable `GameData`; only completed normalized catalogs enter the cache. Other families
+outside serializable `GameData`; only completed normalized catalogs enter the cache. Item rows are
+also retained before copy/text expansion: winning raw items and shared item-entry fragments are
+composed before copies resolve and descriptions expand. This lets a later parent or fragment
+replacement rebuild already-resolved children without stale prose. Retained raw inputs belong to
+live loader/composer objects; finalized cache data is display-ready, and source reload reads fresh
+layers. Other families
 currently compose their normalized collections. Unresolved class-feature references are re-linked against the completed catalog and
 their normalized class rules are rebuilt before the final lookups are constructed. Subclass-feature
 references are re-linked the same way, their level groupings are rebuilt, and their source-owned
@@ -484,6 +489,22 @@ Generic starting-equipment tokens become choice descriptors whose candidates com
 items. The character stores the selected concrete `name|source` separately from the package choice.
 `items-base.json` supplies base items and mastery definitions; mastery records are not ordinary
 inventory entries.
+
+It also supplies `itemEntry` definitions, retained separately as source-qualified `itemEntries`
+support metadata. They never become equipment choices or selectable books. After item copies and
+content layers resolve, `{#itemEntry Name|Source}` and typed `refItemEntry` array slots expand into
+ordinary structured entries in the consuming item's context. An omitted/blank fragment source
+defaults to DMG, independently of the item's source; an explicit printing never borrows another.
+Nested/repeated includes preserve their entries and tags. The bounded adapter supports own scalar
+fields/scalar arrays such as `item.resist`, `item.detail1`, `item.detail2`, and simple string arrays
+with `getFullImmRes`; arbitrary expressions and complex resistance objects are unsupported.
+Missing/ambiguous references, unsupported templates, malformed embedded includes and expansion
+cycles/limits produce visible missing-text information and item-local capability diagnostics.
+They do not become resource transport failures or invent mechanics. Shared renderers and PDF text
+projections consume the expanded entries with their existing saved-description precedence.
+Expanded text is derived catalog data and never writes a character's inventory or player prose.
+Cache schema33 rebuilds older incomplete descriptions. Supplemental `itemTypeAdditionalEntries`
+and concrete magic-template materialization remain separate support boundaries.
 
 5etools `_copy` records for items and creatures are resolved by source-qualified parent identity
 after their respective catalogs have loaded. Bestiary copies can also apply `bestiary/template.json`

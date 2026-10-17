@@ -2,9 +2,11 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
+import { expandItemEntries } from '@/lib/5etools/itemEntries'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameDataLookups, Item5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { firePotion, resistanceFragments } from '../fixtures/itemEntryFixtures'
 
 vi.mock('@/components/modals/SelectionModal', () => ({
   SelectionModal: ({
@@ -43,6 +45,16 @@ const lookups: GameDataLookups = {
 }
 
 describe('ItemSelectionModal', () => {
+  test('renders expanded shared rules text in the existing item card', () => {
+    const items = expandItemEntries([firePotion], resistanceFragments)
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ items, lookups }) })
+    render(<ItemSelectionModal open onOpenChange={vi.fn()} items={items} onConfirm={vi.fn()} />)
+    expect(
+      screen.getByText(
+        'When you drink this potion, you gain resistance to fire damage for 1 hour.',
+      ),
+    ).toBeTruthy()
+  })
   afterEach(() => {
     cleanup()
     useGameDataStore.setState({ gameData: null })
