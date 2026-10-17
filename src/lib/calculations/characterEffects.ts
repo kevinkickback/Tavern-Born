@@ -10,6 +10,7 @@ import type {
 import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_NAMES } from './abilityScores'
 import type { EffectResolutionContext } from './effects'
+import { getWeaponBonuses } from './weaponBonuses'
 
 type EffectSettingsCharacter = Partial<
   Pick<
@@ -183,6 +184,31 @@ export function deriveStructuredItemEffects(
       } as CharacterEffect)
     }
 
+    const weapon = getWeaponBonuses(item, data)
+    addNumeric(
+      'weapon-attack',
+      `${data.name} weapon attack`,
+      { kind: 'attack-roll', attackId: item.id },
+      weapon.attack,
+    )
+    addNumeric(
+      'weapon-damage',
+      `${data.name} weapon damage`,
+      { kind: 'damage', attackId: item.id },
+      weapon.damage,
+    )
+    if (weapon.note) {
+      effects.push({
+        id: itemEffectId(item, 'weapon-note'),
+        label: `${data.name} weapon bonus`,
+        target: { kind: 'attack-roll', attackId: item.id },
+        operation: { kind: 'conditional-note', note: weapon.note },
+        source,
+        // A manual-handling note must also explain exceptions to root attunement
+        // (Hazirawn); it never grants a numeric benefit.
+        requirements: [{ kind: 'equipment', itemId: item.id, state: 'equipped' }],
+      })
+    }
     addNumeric('armor-class', `${data.name} armor class`, { kind: 'armor-class' }, data.bonusAc)
     addNumeric(
       'spell-attack',

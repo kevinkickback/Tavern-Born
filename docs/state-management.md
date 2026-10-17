@@ -190,6 +190,50 @@ Inventory weapon properties preserve 5etools references as abbreviations or sour
 `{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;
 the structured form retains item-specific notes without changing existing saved abbreviations.
 
+## Fixed weapon bonuses
+
+`deriveStructuredItemEffects` projects supported fixed `bonusWeapon` (attack and damage),
+`bonusWeaponAttack` and `bonusWeaponDamage` tags through `weaponBonuses.ts`. Each additive
+effect targets the inventory instance ID used by its existing weapon attack. Quantity does
+not multiply a bonus. Equipped state and the saved-or-current attunement requirement gate
+numeric benefits; other feature/manual effects, suppression and manual-action precedence remain
+independent. `deriveWeaponActions` consumes an explicit calculation context; calling it without
+effects does not implicitly project catalog bonuses. Actions, Review and PDF use the shared context.
+
+Only finite safe signed integers (numbers or trimmed signed digit strings, including zero) are
+supported. A malformed present field or combined-plus-split coexistence yields no intrinsic
+weapon bonus and a manual-review note. Separate attack/damage fields remain separate channels.
+Exact primary item resolution wins over raw fallback, even when its bonus fields are absent or
+unsupported. Missing exact data removes only the derived contribution; restoration recomputes it.
+No saved equipment, prose, provenance or manual values change; character format11/cache36 remain.
+
+Eligibility requires an existing physical weapon in both inventory and selected item data.
+Shared classification excludes ammunition, armor, consumables, groups and generic/reference
+templates. Physical staff/rod/wand weapons with damage or weapon-category fields remain eligible.
+Source-qualified ranged types such as `R|XPHB` use Dexterity under the existing ability policy.
+No attack is synthesized from a template, base-item reference, transformation or prose.
+
+Tags are prose-converter output, not unconditional mechanics. The audited producer boundary is
+5etools `b9061583536101068b3a59d27e886d1fa664e366`, `BonusTag` in
+`js/converter/converterutils-item.js` and item filter/render consumers. These exact special
+weapons retain manual notes instead of automatic weapon bonuses: Blood Spear|CoS,
+Bloodrage Greataxe|BMT, Duskcrusher|EGW, Hammer of Runic Focus|BMT, Hazirawn|HotDQ,
+Niko's Mace|UtHftLH, Needle of Mending|EGW, True-Ice Shards (Rapier)|CoA, Dawnbringer|OotA,
+Sun Blade|DMG/XDMG, Sunsword|CoS and Baba Yaga's Pestle|TCE. Their bearer, HP, charges, attunement exception,
+spell attack, defensive transfer or deployed/form state is not modeled by these numeric tags.
+Mace of Smiting|DMG/XDMG, Dragontooth Dagger|RoT and Moonblade|DMG retain their fixed +1
+baseline with notes for target/rune increases. Hammer of Thunderbolts|DMG has no root attunement
+requirement for its +1 baseline; its optional Giant's Bane remains manual.
+
+Notes use the existing source-effects/Review displays and active PDF preflight warnings; they
+do not overwrite player descriptions or add an attack-row note channel. Notes require equipped
+state so exceptions such as Hazirawn remain explained even when unattuned. Review can also list
+inactive declarations. Details retain the exact item's complete available prose. This does not
+automate every item rule: extra dice, critical/charge effects, ammunition stacking, unarmed grants,
+temporary/area effects, ability substitution and form controls remain outside this projection.
+Later concrete generation must reassess its producers, especially Bloodshed Blade's Constitution
+modifier minimum and Repeating Shot's ranged-only condition, rather than blindly copying tags.
+
 ## Character transfers
 
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved

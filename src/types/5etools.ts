@@ -432,6 +432,10 @@ export interface Item5e {
   /** Whether the item requires attunement; may be a class restriction string. */
   reqAttune?: boolean | string
   bonusAc?: string | number
+  /** Structured tags; only supported fixed own-weapon bonuses are projected. */
+  bonusWeapon?: string | number
+  bonusWeaponAttack?: string | number
+  bonusWeaponDamage?: string | number
   bonusSpellAttack?: string | number
   bonusSpellSaveDc?: string | number
   bonusSavingThrow?: string | number
