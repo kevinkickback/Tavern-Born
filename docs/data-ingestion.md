@@ -624,6 +624,8 @@ use their existing resolver. Generation accepts the audited fixed-bonus shape an
 source equal to its canonical owner; unknown canonical-root or inherited mechanics, changed bonuses
 and unsupported injectors are diagnosed instead of guessed. Requirements are OR-of-AND; exclusions
 match any key, including upstream array/recursive semantics. Ordinary non-VTT edition matching prevents cross-edition bases.
+Recursive predicates inspect own data properties, including array/string indices and length;
+missing or null targets never match. Inherited prototype properties are not rules data.
 
 Generation runs after raw layers and ordinary copy handling, before shared text/type enrichment and
 lookups. It retains physical base AC/type/weight, removes mundane value and base-only source/public/

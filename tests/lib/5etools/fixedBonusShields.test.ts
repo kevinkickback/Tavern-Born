@@ -82,6 +82,87 @@ test.each([
   expect(data.items.filter((x) => x.magicVariantGenerated)).toHaveLength(count)
 })
 
+// Literal expectations from pinned Renderer.item: nested required keys use AND,
+// while excluded keys use OR. Empty nested objects therefore differ by mode.
+test.each([
+  [{ referenceSources: { '0': 'BGDIA' } }, 1, 0],
+  [{ referenceSources: { length: 1 } }, 1, 0],
+  [{ referenceSources: { '0': 'Other' } }, 0, 1],
+  [{ name: { '0': 'S', '1': 'x' } }, 0, 0],
+  [{ name: { length: 6 } }, 1, 0],
+  [{ weight: {} }, 1, 1],
+  [{ srd: {} }, 1, 1],
+  [{ entries: { '1': {} } }, 0, 1],
+  [{ name: { constructor: {} } }, 0, 1],
+  [JSON.parse('{"referenceSources":{"__proto__":{}}}'), 0, 1],
+  [{ referenceSources: ['Other', 'BGDIA'] }, 1, 0],
+  [{ referenceSources: [] }, 0, 1],
+])('recursive own-field predicates preserve both matching modes: %j', async (predicate, required, excluded) => {
+  const base = { ...shieldBases[0], referenceSources: ['BGDIA'] }
+  for (const [change, expected] of [
+    [{ requires: [predicate] }, required],
+    [{ excludes: predicate }, excluded],
+  ] as const) {
+    const data = await loadFixedShields([{ ...fixedShieldTemplates[0], ...change }], [base])
+    expect(data.items.filter((x) => x.magicVariantGenerated)).toHaveLength(expected)
+    expect(data.fixedShieldDiagnostics).toEqual([])
+  }
+})
+
+test('null recursive targets cannot satisfy an empty requirement', async () => {
+  const data = await loadFixedShields(
+    [{ ...fixedShieldTemplates[0], requires: [{ entries: { '0': {} } }] }],
+    [{ ...shieldBases[0], entries: [null] }],
+  )
+  expect(data.items.filter((x) => x.magicVariantGenerated)).toEqual([])
+  expect(data.fixedShieldDiagnostics).toEqual([])
+})
+
+test.each([
+  { requires: 'S' },
+  { requires: [null] },
+  { excludes: [] },
+  { excludes: null },
+])('malformed outer predicates remain diagnosed: %j', async (change) => {
+  const data = await loadFixedShields([{ ...fixedShieldTemplates[0], ...change }])
+  expect(data.items.filter((x) => x.magicVariantGenerated)).toEqual([])
+  expect(
+    (data.fixedShieldDiagnostics?.length ?? 0) + (data.magicVariantDiagnostics?.length ?? 0),
+  ).toBeGreaterThan(0)
+})
+
+test('winning recursive exclusions and requirements survive cache and exact restoration', async () => {
+  const base = { ...shieldBases[0], referenceSources: ['BGDIA'] }
+  const initial = await loadFixedShields([fixedShieldTemplates[0]], [base])
+  const exclusion = {
+    ...fixedShieldTemplates[0],
+    excludes: { referenceSources: { '0': 'BGDIA' } },
+  }
+  const removed = composeGameDataLayers([
+    initial,
+    makeGameDataFixture({ magicVariants: [exclusion] }),
+  ])
+  for (const data of [removed, composeGameDataLayers([structuredClone(removed)])]) {
+    expect(data.items.filter((x) => x.magicVariantGenerated)).toEqual([])
+    expect(data.fixedShieldDiagnostics).toEqual([])
+    expect(data.fixedShieldBases).toEqual([base])
+    expect(getRawItems(data).items).toEqual([])
+  }
+  const restored = composeGameDataLayers([
+    structuredClone(removed),
+    makeGameDataFixture({
+      magicVariants: [
+        { ...fixedShieldTemplates[0], requires: [{ referenceSources: { '0': 'BGDIA' } }] },
+      ],
+    }),
+  ])
+  expect(restored.items.filter((x) => x.magicVariantGenerated)).toMatchObject([
+    { name: '+1 Shield', source: 'DMG', ac: 2, bonusAc: '+1' },
+  ])
+  expect(restored.fixedShieldDiagnostics).toEqual([])
+  expect(getRawItems(restored).items).toEqual([])
+})
+
 test.each([
   { srd: false },
   { source: 'XPHB' },

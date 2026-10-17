@@ -26,7 +26,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 import { characterSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { loadFixedShields } from '../fixtures/fixedShieldFixtures'
+import { fixedShieldTemplates, loadFixedShields } from '../fixtures/fixedShieldFixtures'
 
 vi.unmock('@/lib/storage/idb-storage')
 beforeEach(async () => {
@@ -173,6 +173,16 @@ test('durable schema11 reopen, cache recomposition and exact missing/restored ru
   fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
   for (const [catalog, expected] of [
     [await loadFixedShields([]), 12],
+    [data, 13],
+    [
+      await loadFixedShields(
+        fixedShieldTemplates.map((template) => ({
+          ...template,
+          excludes: { name: { '0': 'S' } },
+        })),
+      ),
+      12,
+    ],
     [data, 13],
   ] as const) {
     await act(() => useGameDataStore.setState({ gameData: catalog }))

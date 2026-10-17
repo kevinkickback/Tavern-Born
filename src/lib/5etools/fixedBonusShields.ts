@@ -79,10 +79,9 @@ const INHERITED_FIELDS = new Set([
 
 /** Upstream OR-of-AND requirements and any-key exclusions use own fields. */
 function matches(candidate: unknown, requirements: Row, every: boolean): boolean {
-  const row = record(candidate)
-  if (!row) return false
+  if (candidate == null) return false
   return Object.entries(requirements)[every ? 'every' : 'some'](([key, requirement]) => {
-    const value = Object.getOwnPropertyDescriptor(row, key)?.value
+    const value = Object.getOwnPropertyDescriptor(candidate, key)?.value
     if (Array.isArray(requirement))
       return Array.isArray(value)
         ? value.some((x) => requirement.includes(x))
