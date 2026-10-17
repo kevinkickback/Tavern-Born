@@ -577,7 +577,10 @@ base-plus-additional catalog before rebuilding lookups.
 `magicVariants` retains the complete raw template collection separately from concrete equipment,
 including `_copy`, `requires`, `excludes`, and `inherits`, through cache restoration. Its canonical
 identity is the complete name (including `(*)`) and declared root source, otherwise the inherited
-source. There is no implicit source default for a template or its copy parent. Raw layers replace
+source. Source selection precedes trim/case normalization: only an absent or exact-empty root source
+may use the inherited source. A whitespace-only root is unusable, stays diagnosed without a canonical
+tuple and cannot replace an earlier inherited-owner definition. There is no implicit source default
+for a template or its copy parent. Raw layers replace
 exact normalized name/source tuples; winning duplicates remain ambiguous and identifiable malformed
 winners suppress earlier definitions. Supported copies resolve only against unique valid templates
 after raw composition, using the existing bounded copy adapter and item-style protected fields.

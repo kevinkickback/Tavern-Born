@@ -67,6 +67,83 @@ describe('canonical magic template authority', () => {
     expect(result.diagnostics.length).toBeGreaterThan(0)
   })
 
+  test('selects the declared source before normalizing identity whitespace', () => {
+    for (const [source, expected] of [
+      [undefined, 'REF'],
+      ['', 'REF'],
+      [' RAW ', 'RAW'],
+    ]) {
+      const row = { ...shieldTemplate, source, inherits: { source: 'REF' } }
+      const result = resolveMagicVariants([row])
+      expect(result.diagnostics).toEqual([])
+      expect(result.references[0]).toMatchObject({
+        source: 'REF',
+        magicVariantReference: { name: '+1 Shield (*)', source: expected },
+      })
+    }
+    for (const source of [' ', '\t\r\n']) {
+      const row = { ...shieldTemplate, source, inherits: { source: 'REF' } }
+      expect(magicVariantIdentity(row)).toBeUndefined()
+      expect(resolveMagicVariants([row])).toEqual({
+        definitions: [],
+        references: [],
+        diagnostics: [
+          { path: 'magicVariants[0]', message: 'Invalid canonical template identity.' },
+        ],
+      })
+      const copied = resolveMagicVariants([
+        { ...shieldTemplate, source: 'RAW' },
+        { ...row, name: 'Child', _copy: { name: '+1 Shield (*)', source: 'RAW' } },
+      ])
+      expect(copied.references.map((reference) => reference.magicVariantReference)).toEqual([
+        { name: '+1 Shield (*)', source: 'RAW' },
+      ])
+      expect(copied.diagnostics).toHaveLength(1)
+    }
+  })
+
+  test('retains earlier authority for unidentifiable whitespace overlays through cache and restoration', async () => {
+    const child = { name: 'Child', source: 'AU', _copy: { name: '+1 Shield (*)', source: 'DMG' } }
+    const base = await loadMagicTemplates([shieldTemplate, child])
+    const whitespace = { ...shieldTemplate, source: '   ', entries: ['Must not replace DMG.'] }
+    const layered = composeGameDataLayers([base, await loadMagicTemplates([whitespace])])
+    expect(layered.magicVariants).toEqual([shieldTemplate, child, whitespace])
+    expect(layered.items.map((row) => row.entries)).toEqual([
+      ['Reference shield rules.'],
+      ['Reference shield rules.'],
+    ])
+    expect(layered.magicVariantDiagnostics).toContainEqual({
+      path: 'magicVariants[2]',
+      message: 'Invalid canonical template identity.',
+    })
+    expect(composeGameDataLayers([structuredClone(layered)])).toEqual(layered)
+
+    const identifiedInvalid = { ...shieldTemplate, source: '', type: 'BAD' }
+    const unavailable = composeGameDataLayers([
+      structuredClone(layered),
+      await loadMagicTemplates([identifiedInvalid]),
+    ])
+    expect(unavailable.items).toEqual([])
+    expect(unavailable.magicVariants).toEqual([child, whitespace, identifiedInvalid])
+    const restored = composeGameDataLayers([
+      structuredClone(unavailable),
+      await loadMagicTemplates([shieldTemplate]),
+    ])
+    expect(restored.items).toEqual(expect.arrayContaining(base.items))
+    expect(restored.items).toHaveLength(base.items.length)
+    expect(restored.magicVariants).toEqual([child, whitespace, shieldTemplate])
+    const correctedLayer = await loadMagicTemplates([
+      { ...shieldTemplate, entries: ['Corrected rules.'] },
+    ])
+    const reloaded = composeGameDataLayers([base, correctedLayer])
+    expect(reloaded.magicVariantDiagnostics).toEqual([])
+    expect(reloaded.items.map((row) => row.entries)).toEqual([
+      ['Corrected rules.'],
+      ['Corrected rules.'],
+    ])
+    expect(composeGameDataLayers([structuredClone(reloaded)])).toEqual(reloaded)
+  })
+
   test.each([
     null,
     '',

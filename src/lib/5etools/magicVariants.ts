@@ -18,7 +18,7 @@ export function magicVariantIdentity(value: unknown): string | undefined {
   const row = record(value)
   if (!row || (row.source !== undefined && typeof row.source !== 'string')) return undefined
   const name = text(row.name)
-  const source = text(row.source) || text(record(row.inherits)?.source)
+  const source = text(row.source || record(row.inherits)?.source)
   return name && source ? tuple(name, source) : undefined
 }
 
@@ -82,7 +82,7 @@ export function resolveMagicVariants(rows: readonly unknown[]): {
       diagnose(`magicVariants[${index}]`, 'Invalid canonical template identity.')
       continue
     }
-    const source = text(row.source) || text(record(row.inherits)?.source)
+    const source = text(row.source || record(row.inherits)?.source)
     const normalized = { ...row, name: text(row.name), source }
     groups.set(identity, [...(groups.get(identity) ?? []), normalized])
   }
