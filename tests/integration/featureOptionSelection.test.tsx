@@ -47,25 +47,38 @@ function mount(
   )
 }
 const active = () => useCharacterStore.getState().activeCharacter!
-const card = () => screen.getByRole('group', { name: 'Dragon Ancestor' })
+const card = () =>
+  screen.queryByRole('group', { name: 'Dragon Ancestor' }) ??
+  screen.getByRole('group', { name: 'Sorcerous Origin' })
 const dialog = () => within(screen.getByRole('dialog'))
 async function showCard() {
-  if (!screen.queryByRole('group', { name: 'Dragon Ancestor' })) {
+  if (
+    !screen.queryByRole('group', { name: 'Dragon Ancestor' }) &&
+    !screen.queryByRole('group', { name: 'Sorcerous Origin' })
+  ) {
     const level = await screen.findByRole('button', { name: /Level 1 Features/ })
     if (level.getAttribute('data-state') === 'closed') fireEvent.click(level)
   }
-  return screen.findByRole('group', { name: 'Dragon Ancestor' })
+  return card()
 }
 async function open(label = 'Edit') {
   await showCard()
-  fireEvent.click(within(card()).getByRole('button', { name: label }))
+  const parent = card()
+  fireEvent.click(
+    within(parent).getByRole('button', {
+      name:
+        parent.getAttribute('aria-label') === 'Sorcerous Origin'
+          ? `${label} Dragon Ancestor`
+          : label,
+    }),
+  )
   await screen.findByRole('dialog')
 }
 async function row(name: string) {
   fireEvent.change(dialog().getByPlaceholderText('Search available options'), {
     target: { value: name },
   })
-  return dialog().findByRole('button', { name: new RegExp('^' + name + '\\b') })
+  return dialog().findByRole('button', { name: new RegExp(`^${name}\\b`) })
 }
 async function confirm() {
   fireEvent.click(dialog().getByRole('button', { name: 'Confirm' }))
@@ -158,6 +171,9 @@ test('fully pruned source routes to shared removal-only recovery; unchanged and 
   await confirm()
   expect(JSON.stringify(active())).toBe(bytes)
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
+  expect(screen.getByRole('group', { name: 'Sorcerous Origin' }).className).toContain(
+    'border-warning',
+  )
   await open('Review saved choice')
   fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
   expect(JSON.stringify(active())).toBe(bytes)
@@ -165,7 +181,10 @@ test('fully pruned source routes to shared removal-only recovery; unchanged and 
     await useGameDataStore.setState({ gameData: fixture.data })
   })
   await showCard()
-  expect(within(card()).getByRole('button', { name: 'Edit' })).toBeTruthy()
+  expect(within(card()).getByRole('button', { name: 'Edit Dragon Ancestor' })).toBeTruthy()
+  expect(screen.getByRole('group', { name: 'Sorcerous Origin' }).className).toContain(
+    'border-success',
+  )
   expect(JSON.stringify(active())).toBe(bytes)
   await act(async () => {
     await useGameDataStore.setState({ gameData: missing.data })

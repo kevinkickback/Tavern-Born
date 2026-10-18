@@ -70,6 +70,8 @@ export interface SelectionModalProps<T> {
   countUnavailableSelections?: boolean
   getConfirmationError?: (selectedIds: ReadonlySet<string>) => string | undefined
   initialFilters?: ActiveFilters
+  /** Controllers with multi-step setup own successful confirmation and closing. */
+  closeOnConfirm?: boolean
   onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
 
@@ -109,6 +111,7 @@ function SelectionModalInner<T>({
   getConfirmationError,
   initialFilters,
   onConfirm,
+  closeOnConfirm = true,
   onClose,
 }: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange'> & {
   onClose: () => void
@@ -247,7 +250,7 @@ function SelectionModalInner<T>({
   const handleConfirm = () => {
     if (confirmationError) return
     onConfirm([...selectedIds], selectedItems)
-    onClose()
+    if (closeOnConfirm) onClose()
   }
 
   const allAccordionKeys = filterSections.map((s) => s.key)

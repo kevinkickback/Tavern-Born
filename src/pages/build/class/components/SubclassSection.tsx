@@ -1,14 +1,22 @@
 import { CaretRight, Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import {
+  type ClassChoiceOptionView,
+  getClassChoiceOptionKey,
+  isClassChoiceOptionEligible,
+} from '@/lib/character/classChoiceOptions'
 import { cn } from '@/lib/utils'
 import {
   type ClassDetailsSelection,
   createSubclassDetailsSelection,
 } from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
+import { BuildClassChosenItemBadge } from './ProgressionChoiceCard'
 
 interface BuildClassSubclassSectionProps {
   level: number
@@ -22,6 +30,11 @@ interface BuildClassSubclassSectionProps {
   onSelectFeature: (feature: ClassDetailsSelection) => void
   onExpandDetails: () => void
   onOpenSubclassPicker: () => void
+  hasUnavailableConfiguration: boolean
+  configurations: NormalizedCharacterChoice[]
+  classLevel: number
+  selectedViewsByChoiceId: ReadonlyMap<string, ClassChoiceOptionView[]>
+  onConfigure: (choice: NormalizedCharacterChoice) => void
   highlighted?: boolean
 }
 
@@ -37,10 +50,15 @@ export function BuildClassSubclassSection({
   onSelectFeature,
   onExpandDetails,
   onOpenSubclassPicker,
+  configurations,
+  hasUnavailableConfiguration,
+  classLevel,
+  selectedViewsByChoiceId,
+  onConfigure,
   highlighted = false,
 }: BuildClassSubclassSectionProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(highlighted)
+    useRouteFocusTarget<HTMLFieldSetElement>(highlighted)
   const subclassFeature = subclassFeatureName
     ? (featuresByLevel.get(level) ?? []).find((feature) => feature.name === subclassFeatureName)
     : undefined
@@ -52,16 +70,26 @@ export function BuildClassSubclassSection({
     }
   }
 
+  const complete =
+    !!viewingSubclass &&
+    !!viewingSubclassData &&
+    !hasUnavailableConfiguration &&
+    configurations.every(
+      (choice) =>
+        (selectedViewsByChoiceId.get(choice.id) ?? []).filter(isClassChoiceOptionEligible).length >=
+        getRequiredChoiceSelectionCount(choice, classLevel),
+    )
   return (
-    <div
+    <fieldset
+      aria-label={title}
       ref={routeFocusRef}
       className={cn(
         'rounded-lg border overflow-hidden',
-        viewingSubclass ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5',
+        complete ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5',
         routeFocusHighlighted && 'animate-route-focus',
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
         <button
           type="button"
           className={cn(
@@ -85,7 +113,7 @@ export function BuildClassSubclassSection({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
               {title}
-              {viewingSubclass && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
+              {complete && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
             </div>
             {!viewingSubclass && <div className="text-xs text-muted-foreground">None selected</div>}
           </div>
@@ -93,14 +121,28 @@ export function BuildClassSubclassSection({
             <CaretRight className="h-3 w-3 text-muted-foreground group-hover:text-accent flex-shrink-0" />
           )}
         </button>
-        <Button
-          variant={viewingSubclass ? 'outline' : 'default'}
-          size="sm"
-          className="flex-shrink-0 ml-2 h-7 text-xs"
-          onClick={onOpenSubclassPicker}
-        >
-          {viewingSubclass ? 'Change' : 'Choose'}
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {configurations.map((choice) => (
+            <Button
+              key={choice.id}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onConfigure(choice)}
+            >
+              {(selectedViewsByChoiceId.get(choice.id)?.length ?? 0) > 0 ? 'Edit' : 'Choose'}{' '}
+              {choice.label}
+            </Button>
+          ))}
+          <Button
+            variant={viewingSubclass ? 'outline' : 'default'}
+            size="sm"
+            className="flex-shrink-0 ml-2 h-7 text-xs"
+            onClick={onOpenSubclassPicker}
+          >
+            {viewingSubclass ? 'Change' : 'Choose'}
+          </Button>
+        </div>
       </div>
       {viewingSubclass && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
@@ -115,8 +157,25 @@ export function BuildClassSubclassSection({
           >
             <span className="font-medium">{viewingSubclass}</span>
           </button>
+          {configurations.flatMap((choice) =>
+            (selectedViewsByChoiceId.get(choice.id) ?? []).map((view) => (
+              <BuildClassChosenItemBadge
+                key={`${choice.id}|${getClassChoiceOptionKey(view.reference)}`}
+                item={{
+                  name: view.reference.name,
+                  source: view.reference.source,
+                  entries: view.entries,
+                  masteries: view.masteries,
+                  unavailable: !isClassChoiceOptionEligible(view),
+                }}
+                detailCollapsed={detailCollapsed}
+                onSelectFeature={onSelectFeature}
+                onExpandDetails={onExpandDetails}
+              />
+            )),
+          )}
         </div>
       )}
-    </div>
+    </fieldset>
   )
 }

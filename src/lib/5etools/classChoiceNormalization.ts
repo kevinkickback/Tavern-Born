@@ -318,7 +318,7 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
   const searchableText = toSearchableText(text)
   if (
     /finish (?:a|the) long rest/i.test(searchableText) &&
-    /\b(?:change|replace)\b/i.test(searchableText)
+    /\b(?:change|replace|summon (?:a )?different)\b/i.test(searchableText)
   ) {
     return {
       cadence: 'long-rest',

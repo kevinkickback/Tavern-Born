@@ -475,7 +475,14 @@ describe('class page controllers', () => {
       minimumSelections: 1,
       maximumSelections: 1,
       selectionCountByLevel: Array(20).fill(1),
-      options: [{ entityType: 'classFeature' as const, name: 'Practical Study', source: 'PHB' }],
+      options: [
+        {
+          entityType: 'classFeature' as const,
+          name: 'Practical Study',
+          source: 'PHB',
+          ref: 'Practical Study|Wizard|PHB|1|PHB',
+        },
+      ],
       repeatable: false,
       replacement: { cadence: 'never' as const },
       source: { kind: 'class-feature-options' as const, field: 'fixture' },
@@ -491,7 +498,14 @@ describe('class page controllers', () => {
     })
     const catalogs = {
       classFeatures: [
-        { name: 'Practical Study', source: 'PHB', entries: ['Choose practical training.'] },
+        {
+          name: 'Practical Study',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          level: 1,
+          entries: ['Choose practical training.'],
+        },
       ],
       subclassFeatures: [],
       creatures: [],

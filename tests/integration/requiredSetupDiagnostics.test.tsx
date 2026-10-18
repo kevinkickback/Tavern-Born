@@ -105,7 +105,7 @@ test('Review navigates to the offered shared ancestry selector at the earned lev
   expect(screen.queryByText(/could not safely determine its options or count/)).toBeNull()
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  const card = screen.getByRole('group', { name: 'Dragon Ancestor' })
+  const card = screen.getByRole('group', { name: 'Subclass' })
   await waitFor(() => expect(card.className).toContain('animate-route-focus'))
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(saved)
 })

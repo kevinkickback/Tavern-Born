@@ -113,7 +113,7 @@ selection; opening, Cancel and unchanged confirmation preserve its saved spellin
 dirty state. Confirmation rechecks current source options. Clear/subclass removal/level rollback
 retract only this owner's intent and preserve independently owned benefits.
 
-This additive category uses character format11 and parsed cache42. Strict admission validates
+This additive category uses character format11 and parsed cache43. Strict admission validates
 the saved tuple/category/owner/slot relation without a catalog; live rules still govern entitlement.
 Natural Explorer uses the separate literal-group boundary below; general passive automation remains outside these adapters.
 
@@ -215,5 +215,5 @@ or action is granted; other conditional Ranger prose retains its source presenta
 The shared selector handles Choose/Edit, unchanged confirmation, Cancel, per-gain Replace/Clear
 and removal-only recovery after source/class loss. Confirmation validates current source authority
 and distinctness against the latest character. Other earned gains and independent/manual grants
-survive replacement/removal. Character format 11 stays additive; parsed cache 42 rebuilds the new
+survive replacement/removal. Character format 11 stays additive; parsed cache 43 rebuilds the new
 normalization and source audits. Complete Ranger automation and legal levels 1–20 remain unqualified.

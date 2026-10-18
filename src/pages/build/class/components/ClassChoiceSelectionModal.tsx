@@ -558,6 +558,7 @@ export function ClassChoiceSelectionModal({
 
   return (
     <SelectionModal
+      closeOnConfirm={false}
       open
       onOpenChange={(open) => {
         if (!open) onClose()
@@ -580,23 +581,18 @@ export function ClassChoiceSelectionModal({
           ? 'Keep or remove saved choices. Restore the source to choose a replacement.'
           : undefined
       }
-      getConfirmationError={
-        removalOnly ||
-        choice.id?.startsWith('subclass-options:') ||
-        options.some((option) => option.reference.entityType === 'featureOption')
-          ? (ids) =>
-              [...ids].some(
-                (id) =>
-                  !options.some(
-                    (option) =>
-                      getClassChoiceOptionKey(option.reference) === id &&
-                      (removalOnly ||
-                        initialSelectedIds.includes(id) ||
-                        isClassChoiceOptionEligible(option)),
-                  ),
-              )
-                ? 'Source rules changed. Close and review this choice before confirming.'
-                : undefined
+      getConfirmationError={(ids) =>
+        [...ids].some(
+          (id) =>
+            !options.some(
+              (option) =>
+                getClassChoiceOptionKey(option.reference) === id &&
+                (removalOnly ||
+                  initialSelectedIds.includes(id) ||
+                  isClassChoiceOptionEligible(option)),
+            ),
+        )
+          ? 'Source rules changed. Close and review this choice before confirming.'
           : undefined
       }
       canSelect={canSelect}
