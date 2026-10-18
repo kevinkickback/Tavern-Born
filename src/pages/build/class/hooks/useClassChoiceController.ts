@@ -4,6 +4,7 @@ import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanc
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
@@ -18,12 +19,13 @@ import {
   getFeatureOptionSelectionStates,
 } from '@/lib/character/featureOptionSelections'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 interface ClassChoiceControllerParams {
   character: Character | null
   viewingClassData?: Class5e
+  viewingClassEntry?: CharacterClassEntry
   viewingSubclassData?: Subclass5e
   viewingClassLevel: number
   includeClassFeatureVariants?: boolean
@@ -34,11 +36,14 @@ interface ClassChoiceControllerParams {
   onFeatOptionsRequired?: (feat: ClassChoiceCatalogs['feats'][number], choiceId: string) => void
 }
 
+import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
+
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
 export function useClassChoiceController({
   character,
   viewingClassData,
+  viewingClassEntry,
   viewingSubclassData,
   viewingClassLevel,
   includeClassFeatureVariants = false,
@@ -77,19 +82,29 @@ export function useClassChoiceController({
   )
   const featureOptionStates = useMemo(
     () =>
-      character && viewingClassData
-        ? getFeatureOptionSelectionStates(character, [viewingClassData], resolvedCatalogs)
+      character
+        ? getFeatureOptionSelectionStates(
+            character,
+            viewingClassData ? [viewingClassData] : [],
+            resolvedCatalogs,
+          )
         : [],
     [character, viewingClassData, resolvedCatalogs],
   )
-  const recoveries = useMemo(
-    () =>
-      featureOptionStates.filter(
-        (state) =>
-          state.recovery && state.classData && (!state.selection.subclassName || state.subclass),
-      ),
-    [featureOptionStates],
-  )
+  const recoveries = useMemo(() => {
+    const viewed = viewingClassEntry ?? viewingClassData
+    return featureOptionStates.filter((state) => {
+      if (!state.recovery) return false
+      if (state.storm)
+        return (
+          !!state.owner &&
+          !!viewed &&
+          getFeatureOwnerKey(state.selection.className, state.selection.classSource) ===
+            getFeatureOwnerKey(viewed.name, viewed.source)
+        )
+      return !!state.classData && (!state.selection.subclassName || !!state.subclass)
+    })
+  }, [featureOptionStates, viewingClassEntry, viewingClassData])
   const visibleChoices = useMemo(
     () =>
       choices.filter(
@@ -151,7 +166,7 @@ export function useClassChoiceController({
   const activeId = activeRecoveryId ?? activeChoice?.id
   const activeSaved = featureOptionStates.find((state) => state.selection.choiceId === activeId)
   const resolvedActiveChoice =
-    activeChoice?.kind === 'feature-option'
+    activeChoice && (activeChoice.kind === 'feature-option' || isStormAuraChoiceId(activeChoice.id))
       ? choices.find((choice) => choice.id === activeChoice.id)
       : (activeChoice ?? (activeRecoveryId ? activeSaved?.choice : undefined))
   const activeRemovalOnly = activeSaved?.recovery ?? false
@@ -160,7 +175,7 @@ export function useClassChoiceController({
       ? {
           id: activeSaved.selection.choiceId,
           label: activeSaved.selection.label,
-          kind: 'feature-option' as const,
+          kind: activeSaved.selection.kind,
           optionFilter: undefined,
         }
       : resolvedActiveChoice
@@ -205,11 +220,20 @@ export function useClassChoiceController({
     }
     const current = resolvedActiveChoice
     if (!current) return
-    if (current.kind === 'feature-option') {
+    if (current.kind === 'feature-option' || isStormAuraChoiceId(current.id)) {
       const currentViews = new Map(
         activeOptionViews.map((view) => [getClassChoiceOptionKey(view.reference), view]),
       )
-      if (selected.some((view) => !currentViews.has(getClassChoiceOptionKey(view.reference)))) {
+      const previous = new Set(
+        (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
+      )
+      if (
+        selected.some((view) => {
+          const key = getClassChoiceOptionKey(view.reference)
+          const live = currentViews.get(key)
+          return !live || (!isClassChoiceOptionEligible(live) && !previous.has(key))
+        })
+      ) {
         toast.error('Source rules changed. Review the available choices before confirming.')
         return
       }

@@ -13,6 +13,9 @@ import {
   getFeatureOptionChoiceId,
   normalizeFeatureOptionPart,
 } from './featureOptionIdentity'
+import { featureOptionRulesSignature } from './featureRulesSignature'
+import { STORM_TARGETS } from './stormAuraIdentity'
+import { isAuditedStormFeature } from './stormAuraSource'
 import type { UnconditionalFeatureReference } from './unconditionalFeatureReferences'
 
 export const DRAGON_ANCESTOR_REF = 'Dragon Ancestor|Sorcerer|PHB|Draconic|PHB|1|PHB'
@@ -47,34 +50,20 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-/** Source bodies, rather than attached enrichment or object key order, distinguish producers. */
-export function featureOptionRulesSignature(entries: unknown[]): string | undefined {
-  try {
-    return JSON.stringify(entries, (key, value: unknown) => {
-      if (key === 'feature' || key === 'featureOptionSourceConflict') return undefined
-      const object = record(value)
-      return object
-        ? Object.fromEntries(
-            Object.keys(object)
-              .sort()
-              .map((name) => [name, object[name]]),
-          )
-        : value
-    })
-  } catch {
-    return undefined
-  }
-}
+export { featureOptionRulesSignature } from './featureRulesSignature'
 
 /** Audit materialized source records before first-match enrichment can hide a conflicting producer. */
 export function auditFeatureOptionSources(
   records: Record<string, unknown>[],
 ): Record<string, unknown>[] {
   const signatures = new Map<string, Set<string | undefined>>()
-  const audited = new Set([DRAGON_TARGET, AFFINITY_TARGET])
+  const audited = new Set([DRAGON_TARGET, AFFINITY_TARGET, ...STORM_TARGETS])
+  const unverified = new Set<string>()
   const cleaned = records.map((source) => {
     const { featureOptionSourceConflict: _derived, ...feature } = source
     const target = getSubclassFeatureIdentity(feature)
+    if (target && STORM_TARGETS.has(target) && !isAuditedStormFeature(feature))
+      unverified.add(target)
     if (target && audited.has(target)) {
       const values = signatures.get(target) ?? new Set<string | undefined>()
       values.add(
@@ -87,7 +76,8 @@ export function auditFeatureOptionSources(
   return cleaned.map((feature) => {
     const target = getSubclassFeatureIdentity(feature)
     const values = target ? signatures.get(target) : undefined
-    return values && (values.has(undefined) || values.size > 1)
+    return values &&
+      (values.has(undefined) || values.size > 1 || (target !== undefined && unverified.has(target)))
       ? { ...feature, featureOptionSourceConflict: true }
       : feature
   })

@@ -67,6 +67,18 @@ export function validateClassChoices(
     calculation.classes,
     catalogs,
   )
+  for (const state of featureOptionStates.filter((row) => row.storm && row.owner && row.recovery)) {
+    issues.push(
+      readinessIssue(
+        classChoiceReadinessId(state.selection.choiceId),
+        'blocking',
+        'class',
+        'Restore or remove ' + state.selection.label,
+        'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
+        classChoiceTarget(state.owner!, state.selection.classLevel, state.selection.choiceId),
+      ),
+    )
+  }
   const availableSubclassTargets = new Set(
     (catalogs?.subclassFeatures ?? []).flatMap(
       (feature) => getSubclassFeatureIdentity(feature) ?? [],
@@ -129,7 +141,6 @@ export function validateClassChoices(
       includeClassFeatureVariants,
     )) {
       if (
-        choice.kind === 'feature-option' &&
         featureOptionStates.some(
           (state) => state.recovery && state.selection.choiceId === choice.id,
         )
@@ -197,6 +208,7 @@ export function validateClassChoices(
         (state.selection.subclassName && !state.subclass)
       )
         continue
+      if (state.storm && state.recovery) continue
       if (state.recovery) {
         issues.push(
           readinessIssue(
@@ -204,8 +216,22 @@ export function validateClassChoices(
             'blocking',
             'class',
             `Restore or remove ${state.selection.label}`,
-            'The saved ancestry cannot be matched to a current earned source declaration. Restore its source or remove the saved choice.',
+            'The saved choice cannot be matched to a current earned source declaration. Restore its source or remove the saved choice.',
             classChoiceTarget(entry, state.selection.classLevel, state.selection.choiceId),
+          ),
+        )
+      } else if (state.storm?.stages.some((stage) => !stage.available)) {
+        issues.push(
+          readinessIssue(
+            `class-choice-storm:${state.selection.choiceId}`,
+            'blocking',
+            'class',
+            'Restore Storm Aura dependent rules',
+            state.storm.stages
+              .filter((stage) => !stage.available)
+              .map((stage) => `${stage.name} rules unavailable.`)
+              .join(' '),
+            classChoiceTarget(entry, state.choice?.level, state.selection.choiceId),
           ),
         )
       } else if (state.affinity && !state.affinity.available) {

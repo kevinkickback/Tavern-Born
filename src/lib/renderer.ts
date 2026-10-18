@@ -425,10 +425,11 @@ function renderTags(text: string): string {
     '<span class="text-sm text-muted-foreground italic">($1)</span>',
   )
   result = result.replace(/{@chance ([^}]+)}/g, '<span class="font-mono text-sm">$1%</span>')
-  result = result.replace(
-    /{@quickref ([^|]+)\|([^|]+)(?:\|[^}]+)?}/g,
-    '<span class="text-primary font-medium cursor-help underline decoration-dotted" title="Quick Reference">$1</span>',
-  )
+  // 5etools b9061583 DataUtil.quickreference: field five is display text, defaulting to name.
+  result = result.replace(/{@quickref ([^{}]+)}/g, (_, content: string) => {
+    const [name, , , , display] = content.split('|').map((part) => part.trim())
+    return `<span class="text-primary font-medium cursor-help underline decoration-dotted" title="Quick Reference">${display || name}</span>`
+  })
   result = result.replace(
     /{@filter ([^|}]+)(?:\|[^}]*)?}/g,
     '<span class="text-muted-foreground">$1</span>',

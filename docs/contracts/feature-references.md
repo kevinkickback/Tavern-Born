@@ -113,15 +113,16 @@ selection; opening, Cancel and unchanged confirmation preserve its saved spellin
 dirty state. Confirmation rechecks current source options. Clear/subclass removal/level rollback
 retract only this owner's intent and preserve independently owned benefits.
 
-This additive category uses character format11 and parsed cache40. Strict admission validates
+This additive category uses character format11 and parsed cache41. Strict admission validates
 the saved tuple/category/owner/slot relation without a catalog; live rules still govern entitlement.
 Other literal choice families and general passive automation remain outside this adapter.
 
 ## Required setup diagnostics
 
-Normalization reports a bounded set of source-audited mandatory setup gaps: Storm Aura,
-PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny and Mystic Psionics.
-These are unsupported setup, not synthesized selectors or guessed option counts. A retained known
+Normalization reports a bounded set of source-audited mandatory setup gaps: unavailable or
+unverified Storm Aura declarations, PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny
+and Mystic Psionics. Unsupported families remain diagnostic; unavailable Storm rules stay unverified.
+Diagnostics never synthesize selectors or guess option counts. A retained known
 UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
 identity remains separate from the selected owner; nested diagnostics begin at the earliest reachable
 grant after all enclosing levels are met. Unselected options are not earned declarations.
@@ -137,3 +138,40 @@ all normalized gaps independently of a character's optional-feature toggle.
 This detector covers retained, unconditionally reachable declarations. Fully pruned declarations or
 unavailable enclosing features are not reconstructed. Other prose-only requirements and complete
 choice coverage remain unqualified; zero diagnostics is not a completeness certificate.
+
+## Storm Aura environment
+
+The exact XGE Storm Aura declaration supplies one environment choice using real Desert, Sea or
+Tundra subclass-feature UIDs at level 3. This bounded adapter derives its count from the audited
+choose-one declaration; other countless options groups remain presentation. PHB and copied XPHB
+Barbarian owners retain the original PHB targets. Both the declared intro-to-Aura path and its
+current owner-scoped source parents must qualify before any option is eligible. A structured
+`subclass-options:` ID binds the
+actual owner, exact Aura target, environment group and earned gain. Strict admission checks this
+new saved relation without requiring live catalogs; character format 11 stays additive.
+
+One choice governs earned Storm Soul, Shielding Storm and Raging Storm. Shared filtered source
+resolution supplies Builder, readiness, retained details, calculations, Actions and both PDF
+families. Raw duplicate conflicts are audited before first-match enrichment.
+The finite adapter qualifies all 14 source bodies with audited canonical SHA-256 fingerprints
+and a top-level shape guard, including every duplicate producer before enrichment. Ordered source
+rules and references are preserved; attached enrichment and recomputed audit metadata are ignored.
+Unknown text, extra rule fields or a new source revision remain unverified until explicit re-audit,
+even when some familiar phrases remain. The digest table distributes no source rules prose. Absent, empty,
+changed or ambiguous rules preserve intent while retracting affected benefits and reporting an
+unverified stage. The existing shared modal handles unchanged Edit, Cancel, replacement, Clear
+and removal-only recovery even after the declaration is pruned. Confirmation rechecks availability.
+
+Verified Storm Soul derives the selected resistance and Sea swimming speed through existing
+character effects; independent faster movement, overrides and other grants retain their ownership.
+Underwater breathing and extreme-temperature protection stay selected source context. Shielding
+Storm describes chosen allies' conditional resistance in the aura. Aura supplies its bonus action;
+Desert/Tundra Soul supply actions, Desert/Sea Raging supply reactions, and Tundra Raging augments
+Aura's activation context. No future or alternative environment benefit is granted.
+
+Action IDs use actual owner, selected real target and genuine source structure. Aura combines
+parent and selected child source rules; later display context and character level do not change
+its ID. Exact manual overrides and PDF action preferences remain bound through source loss and
+restoration. Combat activation, damage, temporary hit points, target/ally state and duration
+application remain player-managed. This adapter does not certify complete class automation or
+complete legal progression coverage.

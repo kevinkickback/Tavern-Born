@@ -459,6 +459,16 @@ describe('source-confirmed required setup', () => {
             { kind: 'feature-option', label: featureName, level },
           ])
           expect(rules!.choices[0].options).toHaveLength(10)
+        } else if (featureName === 'Storm Aura') {
+          expect(rules!.choiceDiagnostics).toEqual([])
+          expect(rules!.choices).toMatchObject([
+            { kind: 'subclass-feature', label: 'Storm Aura', level: 3 },
+          ])
+          expect(rules!.choices[0].options.map((option) => option.ref)).toEqual([
+            'Desert|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+            'Sea|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+            'Tundra|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+          ])
         } else {
           expect(rules!.choiceDiagnostics.filter((d) => d.requiredChoice)).toMatchObject([
             { code: 'unsupported-required-choice', featureName, level },

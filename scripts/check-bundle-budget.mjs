@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Source-backed feature options measure 5,702,512 renderer bytes.
+  // Audited Storm source rules and shared recovery measure 5,715,120 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5569 * KIB,
-  // Shared startup consumers absorb existing lazy chunks; initial script: 558,750 bytes.
+  rendererCode: 5582 * KIB,
+  // Source qualification shares SHA-256 in startup; initial script: 574,797 bytes.
   // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 546 * KIB,
+  initialRendererScript: 562 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

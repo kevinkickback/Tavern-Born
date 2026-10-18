@@ -823,6 +823,7 @@ export function createCharacterSheetViewModel(
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,
+    availableClasses: calculationContext.classChoices.classes,
     classChoiceFeatureCatalogs: rawLookups.classChoiceFeatureCatalogs,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
@@ -831,7 +832,7 @@ export function createCharacterSheetViewModel(
 
   const featureOptionSummaries = getFeatureOptionSelectionStates(
     character,
-    resolvedClasses,
+    calculationContext.classChoices.classes,
     rawLookups.classChoiceFeatureCatalogs,
   ).map((state) => ({
     text: summarizeFeatureOptionSelection(state),

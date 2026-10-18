@@ -7,12 +7,17 @@ import {
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import {
   deriveRacialDefenseEffects,
   refreshRacialDefenseState,
 } from '@/lib/character/racialDefenseState'
 import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
+import {
+  deriveStormAuraEffects,
+  getStormAuraSelectionStates,
+} from '@/lib/character/stormAuraSelections'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
@@ -82,6 +87,7 @@ export interface CharacterCalculationContext {
   raceResolution: ResolvedRaceReference
   background: Background5e | undefined
   classes: readonly Class5e[]
+  classChoices: { classes: readonly Class5e[]; catalogs?: ClassChoiceFeatureCatalogs }
   feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
   initiativeModifier: number
@@ -330,11 +336,18 @@ export function createCharacterCalculationContext(
     const resolved = resolveFeatReference(feat, primaryLookups, rawLookups)
     return resolved ? [resolved] : []
   })
+  const choiceClasses =
+    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {})
+  const choiceCatalogs = primaryLookups.classChoiceFeatureCatalogs
+  const classChoices = { classes: choiceClasses, catalogs: choiceCatalogs }
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
   const sourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
     ...deriveRacialDefenseEffects(character.racialDefenses),
     ...deriveStructuredFeatEffects(resolvedFeats),
+    ...deriveStormAuraEffects(
+      getStormAuraSelectionStates(character, choiceClasses, choiceCatalogs),
+    ),
     ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
@@ -356,6 +369,7 @@ export function createCharacterCalculationContext(
     raceResolution,
     background,
     classes,
+    classChoices,
     feats: resolvedFeats,
     abilityScores,
     initiativeModifier: Math.trunc(

@@ -27,6 +27,7 @@ export function useCharacterActions(character: Character | null | undefined) {
       race: calculation.raceResolution.mergedRace,
       raceResolution: calculation.raceResolution,
       classes: calculation.classes,
+      availableClasses: calculation.classChoices.classes,
       classChoiceFeatureCatalogs,
       feats: calculation.feats,
       classFeaturesByKey: lookups?.classFeaturesByKey,

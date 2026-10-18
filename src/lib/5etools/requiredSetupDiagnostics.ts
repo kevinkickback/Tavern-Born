@@ -102,7 +102,7 @@ function sourceText(entries: unknown): string {
 function confirmed(rule: RequiredSetupRule, feature: FeatureReference['feature']): boolean {
   if (!feature || identity(feature, rule.kind) !== identity(decode(rule.ref, rule.kind), rule.kind))
     return false
-  if (!Array.isArray(feature.entries)) return false
+  if (feature.featureOptionSourceConflict || !Array.isArray(feature.entries)) return false
   const text = sourceText(feature.entries)
   if (!rule.markers.every((marker) => text.includes(marker))) return false
   if (

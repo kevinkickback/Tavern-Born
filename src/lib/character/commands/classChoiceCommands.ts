@@ -1,5 +1,6 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
@@ -8,6 +9,7 @@ import {
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type {
   Character,
   CharacterClassChoiceOption,
@@ -31,7 +33,7 @@ function sameSelectionKeys(left: readonly string[], right: readonly string[]): b
   )
 }
 
-/** Removes only established literal intent when its live declaration cannot be restored. */
+/** Keeps or removes established source-backed intent without reconstructing missing rules. */
 export function retainSavedFeatureOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
@@ -41,10 +43,13 @@ export function retainSavedFeatureOptionsCommand(
   const selection = character.classChoiceSelections?.find((row) => row.choiceId === choiceId)
   if (!selection) return { characterPatch: {}, provenanceUpdate: ledger }
   if (
-    selection.kind !== 'feature-option' ||
-    selection.selected.some((option) => option.entityType !== 'featureOption')
+    !isValidStormAuraSelection(selection) &&
+    (selection.kind !== 'feature-option' ||
+      selection.selected.some((option) => option.entityType !== 'featureOption'))
   ) {
-    throw new RangeError('Only a saved feature-option choice supports this recovery operation.')
+    throw new RangeError(
+      'Only a saved source-backed feature choice supports this recovery operation.',
+    )
   }
   const originalKeys = selection.selected.map(getClassChoiceOptionKey)
   const remaining = new Set(remainingKeys)
@@ -133,7 +138,7 @@ export function applyClassChoiceSelectionCommand(
   )
   validateSelectedOptions(choice, selected, existingSelection?.selected)
   if (
-    choice.kind === 'feature-option' &&
+    (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
     sameSelectionKeys(
       (existingSelection?.selected ?? []).map(getClassChoiceOptionKey),
       selected.map(getClassChoiceOptionKey),
@@ -301,7 +306,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
 ): CharacterCommandResult {
   const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected)
   if (
-    choice.kind === 'feature-option' &&
+    (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
     selectionPatch.classChoiceSelections === character.classChoiceSelections
   ) {
     return { characterPatch: {}, provenanceUpdate: ledger }

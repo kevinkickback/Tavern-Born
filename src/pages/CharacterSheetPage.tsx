@@ -156,6 +156,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       character
         ? createCharacterSheetViewModel(character, {
             sourceCatalog: filteredData.sources,
+            classChoiceClasses: filteredData.classes,
             classChoiceFeatureCatalogs,
             classesByKey,
             classFeaturesByKey,
@@ -175,6 +176,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       character,
       classFeaturesByKey,
       classChoiceFeatureCatalogs,
+      filteredData.classes,
       classesByKey,
       creaturesByKey,
       featsByKey,

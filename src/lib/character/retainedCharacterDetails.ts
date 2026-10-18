@@ -123,7 +123,11 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
-        if (option.entityType === 'featureOption') return
+        if (
+          option.entityType === 'featureOption' ||
+          choice.choiceId.startsWith('subclass-options:')
+        )
+          return
         if (details[index]?.availability === 'available') return
         const entity =
           option.source?.trim() || getClassChoiceFeatureTarget(option)
