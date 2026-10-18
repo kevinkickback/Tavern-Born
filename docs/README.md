@@ -24,7 +24,7 @@ when placement or a new boundary is unclear. No task requires preloading every t
 
 Source and tests determine implemented behavior. These guides describe stable contracts and
 explicit limits; an architecture rule is not proof that every existing caller complies. Current
-character admission is format 11, and parsed cache schema is 39; see [their separate boundaries](state-management.md#schema-compatibility).
+character admission is format 11, and parsed cache schema is 40; see [their separate boundaries](state-management.md#schema-compatibility).
 
 The v1.0 goal is complete required choices through levels 1–20 for all offered classes/subclasses,
 with explicit content limits, shared implementations, measured responsiveness and continued security.

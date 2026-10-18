@@ -1,4 +1,12 @@
-import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
+import {
+  buildClassChoiceFeatureCatalogs,
+  resolveFeatureOptionEntity,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type {
   Class5e,
@@ -252,6 +260,7 @@ export function findLayerDependencyIssues(
 ): ContentLayerDependencyIssue[] {
   const layerClasses = new Set(layer.classes.map((value) => entityKey(value.name, value.source)))
   const issues: ContentLayerDependencyIssue[] = []
+  const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
   const optionCatalogs = {
     classFeature: new Set(gameData.classFeatures.map(getClassFeatureIdentity)),
     subclassFeature: new Set(
@@ -305,9 +314,24 @@ export function findLayerDependencyIssues(
           ? getClassChoiceFeatureTarget(option)
           : entityKey(option.name, option.source)
         if (
-          (featureOption || option.source?.trim()) &&
-          key &&
-          optionCatalogs[option.entityType].has(key)
+          option.entityType === 'featureOption'
+            ? resolveFeatureOptionEntity(
+                option,
+                scopeClassChoiceFeatureCatalogs(
+                  featureCatalogs,
+                  choice.owner.type === 'subclass'
+                    ? getFeatureOwnerKey(
+                        choice.owner.name,
+                        choice.owner.source,
+                        choice.owner.subclassName,
+                        choice.owner.subclassSource,
+                      )
+                    : undefined,
+                ),
+              )
+            : (featureOption || option.source?.trim()) &&
+              key &&
+              optionCatalogs[option.entityType].has(key)
         ) {
           continue
         }
@@ -329,9 +353,24 @@ export function findLayerDependencyIssues(
             ? getClassChoiceFeatureTarget(option)
             : entityKey(option.name, option.source)
           if (
-            (featureOption || option.source?.trim()) &&
-            key &&
-            optionCatalogs[option.entityType].has(key)
+            option.entityType === 'featureOption'
+              ? resolveFeatureOptionEntity(
+                  option,
+                  scopeClassChoiceFeatureCatalogs(
+                    featureCatalogs,
+                    choice.owner.type === 'subclass'
+                      ? getFeatureOwnerKey(
+                          choice.owner.name,
+                          choice.owner.source,
+                          choice.owner.subclassName,
+                          choice.owner.subclassSource,
+                        )
+                      : undefined,
+                  ),
+                )
+              : (featureOption || option.source?.trim()) &&
+                key &&
+                optionCatalogs[option.entityType].has(key)
           ) {
             continue
           }

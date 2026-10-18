@@ -25,6 +25,7 @@ import type {
   Race5e,
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 
 export interface RetainedChoiceDetails {
   availability: 'available' | 'source-unavailable' | 'missing'
@@ -92,6 +93,17 @@ export function buildRetainedCharacterDetails(
         subclassFor(entry.name, entry.source, entry.subclass, entry.subclassSource),
       ).forEach(addFeature)
     }
+    for (const state of getFeatureOptionSelectionStates(character, data.classes, featureCatalogs)) {
+      const details = choiceDetailsById.get(state.selection.choiceId) ?? []
+      state.details.forEach((row, index) => {
+        if (details[index]?.availability === 'available') return
+        details[index] = {
+          availability: row.available ? availability : 'missing',
+          entries: row.entries,
+        }
+      })
+      choiceDetailsById.set(state.selection.choiceId, details)
+    }
     for (const choice of character.classChoiceSelections ?? []) {
       const catalogs = {
         ...data,
@@ -111,6 +123,7 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
+        if (option.entityType === 'featureOption') return
         if (details[index]?.availability === 'available') return
         const entity =
           option.source?.trim() || getClassChoiceFeatureTarget(option)

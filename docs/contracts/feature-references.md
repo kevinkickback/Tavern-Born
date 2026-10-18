@@ -84,10 +84,43 @@ A parsed-cache rebuild restores previously empty copied bodies; saved character 
 Restored text and nested declarations flow into the existing catalogs, Actions and PDF projections.
 Materialization does not itself implement prose-only choices or qualify complete character journeys.
 
+## Source-backed feature options
+
+The exact PHB Dragon Ancestor target supplies a choose-one Draconic Ancestry selector through
+the existing class-choice modal and shared SelectionModal. Rows and damage types come from the
+resolved source table, including supported tagged damage cells. A saved `feature-option` selection
+uses `featureOption` references: a JSON tuple of parent kind, complete canonical parent UID,
+table and row. The actual selected subclass owner and earned level belong to the choice ID;
+a copied owner never changes the encoded PHB target.
+
+Only the current earned declaration and authoritative filtered owner catalog can verify a row.
+Equivalent producer copies agree; conflicting, malformed, missing or filtered source data cannot
+borrow an embedded/raw fallback. Audited source uncertainty is computed after copy materialization
+and before first-match enrichment. Derived uncertainty metadata is excluded from action rule identity.
+
+Builder, readiness, retained Overview details and both PDF summaries share this resolution.
+They display the selected damage type and, once earned and source-verified, Elemental Affinity's
+conditional Charisma bonus to one damage roll and optional one-sorcery-point, one-hour resistance.
+Description-off summaries retain the selected name and verified damage type; unavailable rows
+contribute no related context. They omit conditional rule prose.
+They do not materialize an action, permanent resistance or a universal spell bonus. Fixed language,
+interaction and Draconic Resilience rules retain their existing source presentation.
+
+Missing source rules retain saved intent. Even a wholly pruned declaration produces a routed
+restore-or-remove state for an existing saved selection. The same modal permits keeping/removing
+saved rows without inventing a quota or replacement pool. Exact restoration verifies the original
+selection; opening, Cancel and unchanged confirmation preserve its saved spelling, timestamps and
+dirty state. Confirmation rechecks current source options. Clear/subclass removal/level rollback
+retract only this owner's intent and preserve independently owned benefits.
+
+This additive category uses character format11 and parsed cache40. Strict admission validates
+the saved tuple/category/owner/slot relation without a catalog; live rules still govern entitlement.
+Other literal choice families and general passive automation remain outside this adapter.
+
 ## Required setup diagnostics
 
-Normalization reports a bounded set of source-audited mandatory setup gaps: Storm Aura, Dragon
-Ancestor, PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny and Mystic Psionics.
+Normalization reports a bounded set of source-audited mandatory setup gaps: Storm Aura,
+PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny and Mystic Psionics.
 These are unsupported setup, not synthesized selectors or guessed option counts. A retained known
 UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
 identity remains separate from the selected owner; nested diagnostics begin at the earliest reachable

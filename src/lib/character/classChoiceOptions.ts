@@ -8,6 +8,12 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
+import {
+  type FeatureTableDefinition,
+  type FeatureTableOption,
+  resolveFeatureTableOption,
+} from '@/lib/5etools/featureTableOptions'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
@@ -53,6 +59,7 @@ export interface ClassChoiceOptionView {
   prerequisite?: Raw5ePrereq[]
   presentation?: ClassChoiceOptionPresentation
   searchText?: string
+  featureOption?: { damageType: string }
 }
 
 type ClassChoiceOptionPresentation =
@@ -80,6 +87,8 @@ export interface ClassChoiceFeatureCatalogs {
   /** Retain multiplicity for required-setup audits before the lookup projection. */
   ambiguousClassFeatureTargets?: ReadonlySet<string>
   subclassFeatures: readonly SubclassFeature[]
+  /** Complete producers for literal options, preserved before the generic lookup projection. */
+  subclassFeatureCandidates?: ReadonlyMap<string, readonly SubclassFeature[]>
   /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
   subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
 }
@@ -103,6 +112,7 @@ type ChoiceCatalogEntity =
   | Feat5e
   | Item5e
   | OptionalFeatureLike
+  | FeatureTableOption
 
 function normalized(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? ''
@@ -121,8 +131,10 @@ function getCatalog(
     | 'items'
     | 'itemsBase'
     | 'optionalFeatures'
-  >,
+  > &
+    Pick<ClassChoiceFeatureCatalogs, 'subclassFeatureCandidates'>,
 ): readonly ChoiceCatalogEntity[] {
+  if (entityType === 'featureOption') return []
   if (entityType === 'classFeature') return catalogs.classFeatures
   if (entityType === 'subclassFeature') return catalogs.subclassFeatures
   if (entityType === 'creature') return catalogs.creatures
@@ -559,10 +571,30 @@ function toView(
   }
 }
 
+/** Literal rows resolve only through complete candidates retained in the filtered owner bundle. */
+export function resolveFeatureOptionEntity(
+  option: NormalizedChoiceOptionReference,
+  catalogs: Pick<ClassChoiceFeatureCatalogs, 'subclassFeatures' | 'subclassFeatureCandidates'>,
+  cache?: Map<string, FeatureTableDefinition | undefined>,
+): FeatureTableOption | undefined {
+  const target = decodeFeatureOptionReference(option)
+  if (!target || target.kind !== 'subclassFeature') return undefined
+  const candidates =
+    catalogs.subclassFeatureCandidates !== undefined
+      ? (catalogs.subclassFeatureCandidates.get(target.parentIdentity) ?? [])
+      : catalogs.subclassFeatures.filter(
+          (feature) => getSubclassFeatureIdentity(feature) === target.parentIdentity,
+        )
+  return resolveFeatureTableOption(option, candidates, cache)
+}
+
 export function resolveClassChoiceOptionEntity(
   option: NormalizedChoiceOptionReference,
   catalogs: Parameters<typeof getCatalog>[1],
+  cache?: Map<string, FeatureTableDefinition | undefined>,
 ): ChoiceCatalogEntity | undefined {
+  if (option.entityType === 'featureOption')
+    return resolveFeatureOptionEntity(option, catalogs, cache)
   if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
     return resolveClassChoiceFeatureEntity(option, catalogs)
   }
@@ -593,12 +625,22 @@ export function resolveClassChoiceFeatureEntity(
 export function scopeClassChoiceFeatureCatalogs(
   catalogs: ClassChoiceFeatureCatalogs,
   subclassOwner?: string,
-): Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'> {
+): Pick<
+  ClassChoiceFeatureCatalogs,
+  'classFeatures' | 'subclassFeatures' | 'subclassFeatureCandidates'
+> {
   if (!catalogs.subclassTargets) return catalogs
   const targets = subclassOwner
     ? catalogs.subclassTargets.byOwner.get(subclassOwner)
     : catalogs.subclassTargets.unique
-  return { classFeatures: catalogs.classFeatures, subclassFeatures: [...(targets?.values() ?? [])] }
+  const candidates = subclassOwner
+    ? catalogs.subclassTargets.candidatesByOwner.get(subclassOwner)
+    : catalogs.subclassTargets.uniqueCandidates
+  return {
+    classFeatures: catalogs.classFeatures,
+    subclassFeatures: [...(targets?.values() ?? [])],
+    subclassFeatureCandidates: candidates ?? new Map(),
+  }
 }
 
 /** Build all qualified targets together from one authoritative, complete filtered data view. */
@@ -617,6 +659,7 @@ export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' |
     classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
     subclassFeatures: [...subclassTargets.unique.values()],
     subclassTargets,
+    subclassFeatureCandidates: subclassTargets.uniqueCandidates,
   }
 }
 
@@ -624,8 +667,19 @@ function resolveExplicitOption(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceCatalogs,
   availability: ClassChoiceOptionView['availability'] = 'eligible',
+  cache?: Map<string, FeatureTableDefinition | undefined>,
 ): ClassChoiceOptionView {
-  const match = resolveClassChoiceOptionEntity(option, catalogs)
+  const match = resolveClassChoiceOptionEntity(option, catalogs, cache)
+  if (option.entityType === 'featureOption' && match) {
+    return {
+      availability,
+      reference: option,
+      entries: match.entries ?? [],
+      presentation: { kind: 'feature', featureTypeLabels: ['Dragon ancestry'] },
+      featureOption: { damageType: (match as FeatureTableOption).damageType },
+      searchText: `${option.name} ${'damageType' in match ? match.damageType : ''}`,
+    }
+  }
   return match
     ? toView(option.entityType, match, catalogs, availability)
     : {
@@ -660,12 +714,13 @@ export function resolveClassChoiceOptions(
     catalogs = { ...catalogs, ...scopeClassChoiceFeatureCatalogs(catalogs, owner) }
   }
   const filter = choice.optionFilter
+  const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
   if (choice.options.length > 0) {
     resolved.push(
       ...choice.options
         .filter((option) => (option.minimumClassLevel ?? 1) <= classLevel)
-        .map((option) => resolveExplicitOption(option, catalogs)),
+        .map((option) => resolveExplicitOption(option, catalogs, 'eligible', tableDefinitions)),
     )
   }
   if (filter) {
@@ -691,7 +746,7 @@ export function resolveClassChoiceOptions(
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
     if (!byKey.has(key)) {
-      byKey.set(key, resolveExplicitOption(option, catalogs, 'retained'))
+      byKey.set(key, resolveExplicitOption(option, catalogs, 'retained', tableDefinitions))
     }
   }
   return [...byKey.values()].sort(
@@ -853,6 +908,7 @@ export function collectSubclassFeatures(subclass: Subclass5e | undefined): Subcl
 /** Catalog copies of one target remain unique within their actual full owner. */
 export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
   const byOwner = new Map<string, Map<string, SubclassFeature>>()
+  const candidatesByOwner = new Map<string, Map<string, SubclassFeature[]>>()
   for (const classData of classes) {
     for (const subclass of classData.subclasses ?? []) {
       const owner = getFeatureOwnerKey(
@@ -862,11 +918,18 @@ export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
         subclass.source,
       )
       const targets = byOwner.get(owner) ?? new Map<string, SubclassFeature>()
+      const candidates = candidatesByOwner.get(owner) ?? new Map<string, SubclassFeature[]>()
       for (const feature of collectSubclassFeatures(subclass)) {
         const target = getSubclassFeatureIdentity(feature)
-        if (target) targets.set(target, feature)
+        if (target) {
+          targets.set(target, feature)
+          const producers = candidates.get(target) ?? []
+          if (!producers.includes(feature)) producers.push(feature)
+          candidates.set(target, producers)
+        }
       }
       byOwner.set(owner, targets)
+      candidatesByOwner.set(owner, candidates)
     }
   }
   const unique = new Map<string, SubclassFeature>()
@@ -879,5 +942,11 @@ export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
       } else if (!ambiguous.has(target)) unique.set(target, feature)
     }
   }
-  return { byOwner, unique }
+  const uniqueCandidates = new Map<string, readonly SubclassFeature[]>()
+  for (const candidates of candidatesByOwner.values()) {
+    for (const [target, producers] of candidates) {
+      if (unique.has(target)) uniqueCandidates.set(target, producers)
+    }
+  }
+  return { byOwner, unique, candidatesByOwner, uniqueCandidates }
 }

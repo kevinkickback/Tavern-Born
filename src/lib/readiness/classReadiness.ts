@@ -13,6 +13,7 @@ import {
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   classAsiReadinessId,
@@ -60,6 +61,11 @@ export function validateClassChoices(
     (character.classChoiceSelections ?? [])
       .filter((selection) => !selection.inactive)
       .map((selection) => [selection.choiceId, selection]),
+  )
+  const featureOptionStates = getFeatureOptionSelectionStates(
+    character,
+    calculation.classes,
+    catalogs,
   )
   const availableSubclassTargets = new Set(
     (catalogs?.subclassFeatures ?? []).flatMap(
@@ -122,6 +128,13 @@ export function validateClassChoices(
       subclassData,
       includeClassFeatureVariants,
     )) {
+      if (
+        choice.kind === 'feature-option' &&
+        featureOptionStates.some(
+          (state) => state.recovery && state.selection.choiceId === choice.id,
+        )
+      )
+        continue
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
       const storedSelection = selections.get(choice.id)?.selected ?? []
@@ -173,6 +186,40 @@ export function validateClassChoices(
           classChoiceTarget(entry, diagnostic.level ?? 1),
         ),
       )
+    }
+
+    for (const state of featureOptionStates) {
+      if (
+        !state.owner ||
+        state.owner.name !== entry.name ||
+        state.owner.source !== entry.source ||
+        !state.classData ||
+        (state.selection.subclassName && !state.subclass)
+      )
+        continue
+      if (state.recovery) {
+        issues.push(
+          readinessIssue(
+            classChoiceReadinessId(state.selection.choiceId),
+            'blocking',
+            'class',
+            `Restore or remove ${state.selection.label}`,
+            'The saved ancestry cannot be matched to a current earned source declaration. Restore its source or remove the saved choice.',
+            classChoiceTarget(entry, state.selection.classLevel, state.selection.choiceId),
+          ),
+        )
+      } else if (state.affinity && !state.affinity.available) {
+        issues.push(
+          readinessIssue(
+            `class-choice-affinity:${state.selection.choiceId}`,
+            'blocking',
+            'class',
+            'Restore Elemental Affinity rules',
+            'The selected ancestry is retained, but the exact earned PHB Elemental Affinity rule cannot be verified.',
+            classChoiceTarget(entry, state.choice?.level, state.selection.choiceId),
+          ),
+        )
+      }
     }
 
     for (const level of classData.normalizedRules?.asiLevels ?? []) {

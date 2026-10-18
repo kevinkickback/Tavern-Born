@@ -1,3 +1,4 @@
+import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import {
   XPHB_LEGACY_FEAT_KEYS,
   XPHB_LEGACY_RACE_KEYS,
@@ -88,7 +89,13 @@ export function detectSourceConflicts(
   }
   for (const choice of character.classChoiceSelections ?? []) {
     if (choice.inactive) continue
-    for (const option of choice.selected) flag(option.name, option.source)
+    for (const option of choice.selected)
+      flag(
+        option.name,
+        option.entityType === 'featureOption'
+          ? option.source?.trim() || decodeFeatureOptionReference(option)?.source.toUpperCase()
+          : option.source,
+      )
   }
 
   return Array.from(bySource.entries()).map(([source, items]) => ({ source, items }))

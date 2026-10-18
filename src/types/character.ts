@@ -96,9 +96,17 @@ type CharacterClassChoiceKind =
   | 'item'
   | 'optional-feature'
   | 'creature'
+  | 'feature-option'
 
 export interface CharacterClassChoiceOption {
-  entityType: 'classFeature' | 'subclassFeature' | 'feat' | 'item' | 'optionalFeature' | 'creature'
+  entityType:
+    | 'classFeature'
+    | 'subclassFeature'
+    | 'feat'
+    | 'item'
+    | 'optionalFeature'
+    | 'creature'
+    | 'featureOption'
   name: string
   source?: string
   /** Exact class/subclass feature target; an unresolved intent never borrows named rules. */

@@ -76,7 +76,7 @@ function dragonContext(level = 3, revisedOwner = true) {
   return { classes, data, character }
 }
 
-test('Review navigates to one offered required-setup warning at the earned level without changing the save', async () => {
+test('Review navigates to the offered shared ancestry selector at the earned level without changing the save', async () => {
   const { data, character } = dragonContext(1, false)
   useGameDataStore.setState({ gameData: data })
   setActiveCharacter(character)
@@ -90,21 +90,18 @@ test('Review navigates to one offered required-setup warning at the earned level
       </Routes>
     </MemoryRouter>,
   )
-  const issue = screen.getByText('Review unresolved Dragon Ancestor choice').closest('button')!
+  const issue = screen.getByText('Finish Dragon Ancestor').closest('button')!
   expect(issue).toBeTruthy()
-  expect(within(issue).getByText(/requires a dragon ancestry choice/)).toBeTruthy()
   fireEvent.click(issue)
   const route = screen.getByLabelText('Current route').textContent!
-  expect(route).toContain('class=Sorcerer%7CPHB')
-  expect(route).toContain('level=1')
-  expect(route).toContain('attention=')
-  expect(await screen.findByText(/requires a dragon ancestry choice/)).toBeTruthy()
-  expect(screen.getAllByText(/requires a dragon ancestry choice/)).toHaveLength(1)
+  expect(route).toContain('/build/class')
+  expect(await screen.findByRole('heading', { name: 'Choose Dragon Ancestor' })).toBeTruthy()
+  expect(screen.queryByText(/requires a dragon ancestry choice/)).toBeNull()
   expect(screen.queryByText(/could not safely determine its options or count/)).toBeNull()
-  const warning = screen
-    .getByText(/requires a dragon ancestry choice/)
-    .closest('.border-warning\\/30')!
-  await waitFor(() => expect(warning.closest('.animate-route-focus')).toBeTruthy())
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  const card = screen.getByRole('group', { name: 'Dragon Ancestor' })
+  await waitFor(() => expect(card.className).toContain('animate-route-focus'))
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(saved)
 })
 
@@ -127,13 +124,14 @@ test('readiness and the class controller agree across level, subclass removal, r
     validateClassChoices(
       current,
       createCharacterCalculationContext(current, { classesByKey: { 'Sorcerer|XPHB': classes[0] } }),
-    ).filter((issue) => issue.id.includes('Dragon Ancestor'))
+    ).filter((issue) => issue.title === 'Finish Dragon Ancestor')
   const leveled = characterPersistenceSchema.parse({
     ...character,
     classProgression: [{ ...character.classProgression[0], levels: 3 }],
   })
   rerender({ current: leveled })
-  expect(result.current.diagnostics).toHaveLength(1)
+  expect(result.current.diagnostics).toHaveLength(0)
+  expect(result.current.choices).toMatchObject([{ label: 'Dragon Ancestor', level: 3 }])
   expect(check(leveled)).toHaveLength(1)
   const removed = characterPersistenceSchema.parse({
     ...leveled,

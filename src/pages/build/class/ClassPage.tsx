@@ -253,8 +253,12 @@ export function BuildClassPage() {
     const requestedChoice = classChoiceController.choices.find(
       (choice) => choice.id === requestedChoiceId,
     )
-    if (!requestedChoice) return
-    classChoiceController.open(requestedChoice)
+    const requestedRecovery = classChoiceController.recoveries.find(
+      (state) => state.selection.choiceId === requestedChoiceId,
+    )
+    if (!requestedChoice && !requestedRecovery) return
+    if (requestedChoice) classChoiceController.open(requestedChoice)
+    else if (requestedRecovery) classChoiceController.openRecovery(requestedRecovery)
     const next = new URLSearchParams(searchParams)
     next.delete('choice')
     next.delete('class')
@@ -263,6 +267,8 @@ export function BuildClassPage() {
   }, [
     classChoiceController.choices,
     classChoiceController.open,
+    classChoiceController.recoveries,
+    classChoiceController.openRecovery,
     requestedChoiceId,
     requestedClassKey,
     searchParams,
@@ -417,6 +423,8 @@ export function BuildClassPage() {
               usedASI={usedASI}
               totalASIAcrossClasses={totalASIAcrossClasses}
               classChoices={classChoiceController.choices}
+              classChoiceRecoveries={classChoiceController.recoveries}
+              onRecoverClassChoice={classChoiceController.openRecovery}
               classChoiceDiagnostics={classChoiceController.diagnostics}
               selectedClassChoiceViewsById={classChoiceController.selectedViewsByChoiceId}
               onOpenClassPicker={() => setClassPickerOpen(true)}
@@ -508,7 +516,13 @@ export function BuildClassPage() {
 
       {classChoiceController.activeChoice && (
         <ClassChoiceSelectionModal
+          key={
+            classChoiceController.activeChoice.id +
+            ':' +
+            String(classChoiceController.activeRemovalOnly)
+          }
           choice={classChoiceController.activeChoice}
+          removalOnly={classChoiceController.activeRemovalOnly}
           options={classChoiceController.activeOptionViews}
           maximumSelections={classChoiceController.activeRequiredCount}
           initialSelectedIds={classChoiceController.activeInitialSelectedIds}

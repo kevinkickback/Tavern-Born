@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared required-setup diagnostics measure 5,687,248 renderer bytes.
+  // Source-backed feature options measure 5,702,512 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5554 * KIB,
-  // The same measured artifact has 524,092 initial script bytes.
+  rendererCode: 5569 * KIB,
+  // Shared startup consumers absorb existing lazy chunks; initial script: 558,750 bytes.
   // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 512 * KIB,
+  initialRendererScript: 546 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

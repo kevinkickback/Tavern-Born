@@ -7,6 +7,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { CopyResolutionError, resolveCopiedRecords } from '@/lib/5etools/copyResolution'
+import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
@@ -432,14 +433,18 @@ function parsePreparedClassFeatures(data: unknown): unknown[] {
 function prepareClassDocument(data: unknown): unknown {
   const obj = asObject(data)
   const records = asArray(obj.subclassFeature).map(asObject)
-  if (!records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) return data
-  const resolved = resolveCopiedRecords(
-    records as Array<ParsedObject & { name: string; source: string }>,
-    'subclassFeature',
-  )
-  if (resolved.diagnostics.length)
-    throw new CopyResolutionError(resolved.diagnostics, 'in subclass features')
-  return { ...obj, subclassFeature: resolved.records }
+  if (!records.length) return data
+  let materialized = records
+  if (records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) {
+    const resolved = resolveCopiedRecords(
+      records as Array<ParsedObject & { name: string; source: string }>,
+      'subclassFeature',
+    )
+    if (resolved.diagnostics.length)
+      throw new CopyResolutionError(resolved.diagnostics, 'in subclass features')
+    materialized = resolved.records
+  }
+  return { ...obj, subclassFeature: auditFeatureOptionSources(materialized) }
 }
 
 /** The loader prepares once for both projections of a class document. */

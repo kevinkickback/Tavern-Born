@@ -21,7 +21,9 @@ import {
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
+import { normalizeFeatureTableChoices } from './featureTableOptions'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
+import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 interface ParsedFilterTag {
   label: string
@@ -387,6 +389,7 @@ function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedChar
   if (entityType === 'classFeature') return 'class-feature'
   if (entityType === 'subclassFeature') return 'subclass-feature'
   if (entityType === 'optionalFeature') return 'optional-feature'
+  if (entityType === 'featureOption') return 'feature-option'
   return entityType
 }
 
@@ -998,6 +1001,8 @@ export function normalizeClassChoices(
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const owner = classChoiceOwner(classData)
+  const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
+  const tables = normalizeFeatureTableChoices(owner, declarations)
   const direct = normalizeFeatureOptionChoices(
     classData,
     refs,
@@ -1011,7 +1016,7 @@ export function normalizeClassChoices(
     owner,
   )
   const tableBacked = normalizeTableBackedFilterChoices(classData, refs)
-  const accumulated = [...direct.choices, ...progression, ...tableBacked]
+  const accumulated = [...direct.choices, ...progression, ...tableBacked, ...tables.choices]
   const singleFilters = normalizeSingleFilterChoices(refs, accumulated, owner)
   const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
@@ -1021,7 +1026,8 @@ export function normalizeClassChoices(
     diagnostics: [
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
-      ...normalizeRequiredSetupDiagnostics(owner, refs, 'classFeature'),
+      ...normalizeRequiredSetupDiagnostics(owner, declarations),
+      ...tables.diagnostics,
     ],
   }
 }
@@ -1033,6 +1039,8 @@ export function normalizeSubclassRules(
   refs: readonly SubclassFeatureReference[],
 ): import('@/types/classRules').NormalizedClassRules {
   const owner = subclassChoiceOwner(classData, subclass)
+  const declarations = collectUnconditionalFeatureReferences(refs, 'subclassFeature')
+  const tables = normalizeFeatureTableChoices(owner, declarations)
   const expandedRefs = collectSubclassChoiceFeatureRefs(refs)
   const optionalFeatureProgressions = subclass.optionalfeatureProgression ?? []
   const featProgressions = subclass.featProgression ?? []
@@ -1062,7 +1070,7 @@ export function normalizeSubclassRules(
       ),
   )
   const creatureTags = normalizeCreatureTagChoices(expandedRefs, directChoices, owner)
-  const accumulated = [...progression, ...directChoices, ...creatureTags]
+  const accumulated = [...progression, ...directChoices, ...creatureTags, ...tables.choices]
   const singleFilters = normalizeSingleFilterChoices(expandedRefs, accumulated, owner)
   return {
     resources: [],
@@ -1074,7 +1082,8 @@ export function normalizeSubclassRules(
     choiceDiagnostics: [
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
-      ...normalizeRequiredSetupDiagnostics(owner, refs, 'subclassFeature'),
+      ...normalizeRequiredSetupDiagnostics(owner, declarations),
+      ...tables.diagnostics,
     ],
   }
 }

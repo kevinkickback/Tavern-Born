@@ -61,24 +61,26 @@ function names(ranger: Class5e, includeVariants: boolean, features?: readonly Cl
 describe('source-confirmed required setup', () => {
   test('keeps copied target level and selected owner distinct, at the enclosing earned level', () => {
     const parsed = parseClasses(dragonSetupDocument())[0] as Class5e
-    const diagnostic = parsed.subclasses![0].normalizedRules!.choiceDiagnostics[0]
-    expect(diagnostic).toMatchObject({
-      code: 'unsupported-required-choice',
-      className: 'Sorcerer',
-      classSource: 'XPHB',
-      subclassName: 'Draconic Bloodline',
-      subclassSource: 'PHB',
-      featureName: 'Dragon Ancestor',
-      level: 3,
-      requiredChoice: {
-        target: {
-          ref: 'Dragon Ancestor|Sorcerer||Draconic||1',
-          entityType: 'subclassFeature',
-          source: 'PHB',
-        },
+    const rules = parsed.subclasses![0].normalizedRules!
+    expect(rules.choiceDiagnostics).toEqual([])
+    expect(rules.choices[0]).toMatchObject({
+      kind: 'feature-option',
+      owner: {
+        name: 'Sorcerer',
+        source: 'XPHB',
+        subclassName: 'Draconic Bloodline',
+        subclassSource: 'PHB',
       },
+      label: 'Dragon Ancestor',
+      level: 3,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      options: [
+        { entityType: 'featureOption', name: 'Black', source: 'PHB' },
+        { entityType: 'featureOption', name: 'Red', source: 'PHB' },
+      ],
     })
-    expect(parsed.subclasses![0].normalizedRules!.choices).toEqual([])
+    expect(rules.choices).toHaveLength(1)
   })
 
   test.each([
@@ -96,8 +98,10 @@ describe('source-confirmed required setup', () => {
       { type: 'refSubclassFeature', subclassFeature: roots[0].ref, feature: roots[0].feature },
     ]
     if (reverse) roots.reverse()
-    expect(subclassDiagnostics(roots)).toMatchObject([
-      { level: 3, featureName: 'Dragon Ancestor', code: 'unsupported-required-choice' },
+    const rules = normalizeSubclassRules(owner, subclass, roots)
+    expect(rules.choiceDiagnostics).toEqual([])
+    expect(rules.choices).toMatchObject([
+      { level: 3, label: 'Dragon Ancestor', kind: 'feature-option' },
     ])
   })
 
@@ -153,11 +157,13 @@ describe('source-confirmed required setup', () => {
       ' dragon ancestor | sorcerer || draconic || 1 | | Display',
       dragonEntries,
     )
-    expect(subclassDiagnostics([ref])).toMatchObject([
-      {
-        code: 'unsupported-required-choice',
-        requiredChoice: { target: { ref: ref.ref, source: 'PHB' } },
-      },
+    const rules = normalizeSubclassRules(owner, subclass, [ref])
+    expect(rules.choiceDiagnostics).toEqual([])
+    expect(JSON.parse(rules.choices[0].options[0].ref!)).toEqual([
+      'subclassFeature',
+      'dragon ancestor|sorcerer|phb|draconic|phb|1|phb',
+      'draconic ancestry',
+      'black',
     ])
   })
 
@@ -172,7 +178,8 @@ describe('source-confirmed required setup', () => {
         { ...ref, feature: { ...ref.feature!, entries: [dragonEntries[0]] } },
       ])[0].code,
     ).toBe('unverified-required-choice')
-    expect(subclassDiagnostics([ref])[0].code).toBe('unsupported-required-choice')
+    expect(subclassDiagnostics([ref])).toEqual([])
+    expect(normalizeSubclassRules(owner, subclass, [ref]).choices[0].kind).toBe('feature-option')
     expect(ref).toEqual(before)
     const storm = subclassSetupRef('Storm Aura|Barbarian||Storm Herald|XGE|3', stormEntries)
     expect(subclassDiagnostics([storm])[0].code).toBe('unsupported-required-choice')
@@ -446,9 +453,17 @@ describe('source-confirmed required setup', () => {
           ? cls.subclasses!.find((s) => s.name === subName && s.source === subSource)!
               .normalizedRules
           : cls.normalizedRules
-        expect(rules!.choiceDiagnostics.filter((d) => d.requiredChoice)).toMatchObject([
-          { code: 'unsupported-required-choice', featureName, level },
-        ])
+        if (featureName === 'Dragon Ancestor') {
+          expect(rules!.choiceDiagnostics).toEqual([])
+          expect(rules!.choices).toMatchObject([
+            { kind: 'feature-option', label: featureName, level },
+          ])
+          expect(rules!.choices[0].options).toHaveLength(10)
+        } else {
+          expect(rules!.choiceDiagnostics.filter((d) => d.requiredChoice)).toMatchObject([
+            { code: 'unsupported-required-choice', featureName, level },
+          ])
+        }
         if (source === 'XPHB' && name === 'Sorcerer')
           expect(
             cls.subclasses!.find((s) => s.source === 'XPHB' && s.name === 'Draconic Sorcery')!

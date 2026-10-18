@@ -18,6 +18,7 @@ import {
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { getInvalidSpecialSpellPaths } from '@/lib/provenance/specialSpellValidation'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
+import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
 import type { Character } from './character'
 
 export const MAX_CHARACTER_NAME_LENGTH = 100
@@ -307,6 +308,7 @@ const characterClassChoiceSelectionSchema = z.object({
     'item',
     'optional-feature',
     'creature',
+    'feature-option',
   ]),
   inactive: z.boolean().optional(),
   className: z.string().min(1),
@@ -323,6 +325,7 @@ const characterClassChoiceSelectionSchema = z.object({
         'item',
         'optionalFeature',
         'creature',
+        'featureOption',
       ]),
       name: z.string().min(1),
       source: z.string().optional(),
@@ -895,6 +898,14 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const path of getInvalidFeatureOptionSelectionPaths(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message:
+          'Feature options require a complete matching table-row reference and saved owner relation.',
+      })
+    }
     if (!hasValidRacialDefenseContext(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

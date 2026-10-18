@@ -28,6 +28,7 @@ const ENTITY_LABELS = {
   item: 'Item',
   optionalFeature: 'Optional feature',
   creature: 'Creature',
+  featureOption: 'Feature option',
 } as const
 
 function masteryKey(mastery: { name: string; source?: string }): string {
@@ -190,10 +191,12 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
   option,
   selected,
   prerequisite,
+  removalOnly = false,
 }: {
   option: ClassChoiceOptionView
   selected: boolean
   prerequisite: { met: boolean; reasons: string[] }
+  removalOnly?: boolean
 }) {
   return (
     <div className="p-3.5">
@@ -229,7 +232,9 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
         <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
           <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
           <div className="text-xs leading-snug text-warning-foreground">
-            This saved option is no longer eligible. Choose an available replacement to continue.
+            {removalOnly
+              ? 'Source rules are unavailable. Keep or remove this saved choice, or restore its source.'
+              : 'This saved option is no longer eligible. Choose an available replacement to continue.'}
           </div>
         </div>
       )}
@@ -274,7 +279,8 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
 })
 
 interface ClassChoiceSelectionModalProps {
-  choice: NormalizedCharacterChoice
+  choice: Pick<NormalizedCharacterChoice, 'label'> & Partial<NormalizedCharacterChoice>
+  removalOnly?: boolean
   options: ClassChoiceOptionView[]
   maximumSelections: number
   initialSelectedIds: string[]
@@ -287,6 +293,7 @@ interface ClassChoiceSelectionModalProps {
 
 export function ClassChoiceSelectionModal({
   choice,
+  removalOnly = false,
   options,
   maximumSelections,
   initialSelectedIds,
@@ -297,15 +304,18 @@ export function ClassChoiceSelectionModal({
   onConfirm,
 }: ClassChoiceSelectionModalProps) {
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
-    () => [
-      {
-        key: 'all',
-        label: 'selections',
-        max: maximumSelections,
-        test: isClassChoiceOptionEligible,
-      },
-    ],
-    [maximumSelections],
+    () =>
+      removalOnly
+        ? []
+        : [
+            {
+              key: 'all',
+              label: 'selections',
+              max: maximumSelections,
+              test: isClassChoiceOptionEligible,
+            },
+          ],
+    [maximumSelections, removalOnly],
   )
   const { prerequisiteByOptionKey, hasUnmetPrerequisites } = useMemo(() => {
     const results = new Map<string, { met: boolean; reasons: string[] }>()
@@ -514,6 +524,7 @@ export function ClassChoiceSelectionModal({
       <ChoiceOptionCard
         option={option}
         selected={selected}
+        removalOnly={removalOnly}
         prerequisite={
           prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference)) ?? {
             met: true,
@@ -522,7 +533,7 @@ export function ClassChoiceSelectionModal({
         }
       />
     ),
-    [prerequisiteByOptionKey],
+    [prerequisiteByOptionKey, removalOnly],
   )
   const canSelect = useCallback(
     (
@@ -531,6 +542,7 @@ export function ClassChoiceSelectionModal({
       allOptions: ClassChoiceOptionView[],
     ) => {
       const key = getClassChoiceOptionKey(option.reference)
+      if (removalOnly) return initialSelectedIds.includes(key)
       if (!isClassChoiceOptionEligible(option)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
@@ -541,7 +553,7 @@ export function ClassChoiceSelectionModal({
       ).length
       return eligibleSelectionCount < maximumSelections
     },
-    [maximumSelections, prerequisiteByOptionKey],
+    [maximumSelections, prerequisiteByOptionKey, removalOnly, initialSelectedIds],
   )
 
   return (
@@ -551,9 +563,11 @@ export function ClassChoiceSelectionModal({
         if (!open) onClose()
       }}
       title={
-        choice.optionFilter?.requiresMastery
-          ? `Choose weapons for ${choice.label}`
-          : `Choose ${choice.label}`
+        removalOnly
+          ? `Review saved ${choice.label}`
+          : choice.optionFilter?.requiresMastery
+            ? `Choose weapons for ${choice.label}`
+            : `Choose ${choice.label}`
       }
       items={options}
       getItemId={(option) => getClassChoiceOptionKey(option.reference)}
@@ -561,6 +575,21 @@ export function ClassChoiceSelectionModal({
       matchItem={matchItem}
       filterSections={filterSections}
       categories={limits}
+      selectionHint={
+        removalOnly
+          ? 'Keep or remove saved choices. Restore the source to choose a replacement.'
+          : undefined
+      }
+      getConfirmationError={
+        removalOnly || options.some((option) => option.reference.entityType === 'featureOption')
+          ? (ids) =>
+              [...ids].some(
+                (id) => !options.some((option) => getClassChoiceOptionKey(option.reference) === id),
+              )
+                ? 'Source rules changed. Close and review this choice before confirming.'
+                : undefined
+          : undefined
+      }
       canSelect={canSelect}
       initialSelectedIds={initialSelectedIds}
       onConfirm={(_ids, selected) => onConfirm(selected)}
