@@ -97,8 +97,9 @@ export function BuildClassChoicesSection({
                 </Badge>
               </div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                This choice is present in the source data, but Tavern Born could not safely
-                determine its options or count. No rule was guessed.
+                {diagnostic.requiredChoice
+                  ? diagnostic.message
+                  : 'This choice is present in the source data, but Tavern Born could not safely determine its options or count. No rule was guessed.'}
               </p>
             </div>
           </div>

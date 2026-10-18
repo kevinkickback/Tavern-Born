@@ -164,8 +164,10 @@ entry for ancestry reference text; this display policy does not discard source d
 cache migration.
 
 Choice normalizers preserve class/subclass owner, level, capacity, replacement rule, source filters,
-and diagnostic provenance. Unknown choice blocks remain visible as diagnostics instead of becoming
-invented options. Optional-feature and feat progression remain the count owners when feature prose
+and diagnostic provenance. Unsupported counted choice blocks remain visible as diagnostics instead of
+becoming invented options. Countless presentation groups do not imply a choice; known mandatory setup
+has [source-confirmed diagnostics](contracts/feature-references.md#required-setup-diagnostics).
+Optional-feature and feat progression remain the count owners when feature prose
 repeats the same choice. Feature variants retain replacement metadata so the character's optional
 class-feature setting can swap the original and replacement choice without showing both.
 
@@ -191,7 +193,7 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **38**, owned by [dataCache](../src/lib/storage/dataCache.ts);
+The current parsed cache schema is **39**, owned by [dataCache](../src/lib/storage/dataCache.ts);
 use that constant when changing code. Old increment numbers are not the current version.
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized

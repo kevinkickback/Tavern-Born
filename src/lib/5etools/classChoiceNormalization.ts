@@ -21,6 +21,7 @@ import {
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
+import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 
 interface ParsedFilterTag {
   label: string
@@ -1015,7 +1016,14 @@ export function normalizeClassChoices(
   const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
   )
-  return { choices, diagnostics: [...direct.diagnostics, ...singleFilters.diagnostics] }
+  return {
+    choices,
+    diagnostics: [
+      ...direct.diagnostics,
+      ...singleFilters.diagnostics,
+      ...normalizeRequiredSetupDiagnostics(owner, refs, 'classFeature'),
+    ],
+  }
 }
 
 /** Normalizes selected-subclass feature choices, including nested referenced features. */
@@ -1063,7 +1071,11 @@ export function normalizeSubclassRules(
     choices: [...accumulated, ...singleFilters.choices].sort(
       (left, right) => left.level - right.level || left.id.localeCompare(right.id),
     ),
-    choiceDiagnostics: [...direct.diagnostics, ...singleFilters.diagnostics],
+    choiceDiagnostics: [
+      ...direct.diagnostics,
+      ...singleFilters.diagnostics,
+      ...normalizeRequiredSetupDiagnostics(owner, refs, 'subclassFeature'),
+    ],
   }
 }
 

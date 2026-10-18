@@ -10,6 +10,7 @@ import {
 } from '@/lib/5etools/creatureStatBlock'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
+import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
@@ -76,6 +77,8 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
 
 export interface ClassChoiceFeatureCatalogs {
   classFeatures: readonly ClassFeature[]
+  /** Retain multiplicity for required-setup audits before the lookup projection. */
+  ambiguousClassFeatureTargets?: ReadonlySet<string>
   subclassFeatures: readonly SubclassFeature[]
   /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
   subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
@@ -601,7 +604,16 @@ export function scopeClassChoiceFeatureCatalogs(
 /** Build all qualified targets together from one authoritative, complete filtered data view. */
 export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' | 'classFeatures'>) {
   const subclassTargets = indexSubclassFeatureTargets(data.classes)
+  const seenClassTargets = new Set<string>()
+  const ambiguousClassFeatureTargets = new Set<string>()
+  for (const feature of data.classFeatures) {
+    const target = getClassFeatureIdentity(feature)
+    if (!target) continue
+    if (seenClassTargets.has(target)) ambiguousClassFeatureTargets.add(target)
+    seenClassTargets.add(target)
+  }
   return {
+    ambiguousClassFeatureTargets,
     classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
     subclassFeatures: [...subclassTargets.unique.values()],
     subclassTargets,
@@ -766,15 +778,30 @@ export function getCharacterClassChoices(
 
 export function getCharacterClassChoiceDiagnostics(
   classData: {
+    classFeatureRefs?: Class5e['classFeatureRefs']
     normalizedRules?: { choiceDiagnostics: import('@/types/classRules').ClassChoiceDiagnostic[] }
   },
   subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
   includeVariants: boolean,
+  catalogs?: Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'ambiguousClassFeatureTargets'>,
 ): import('@/types/classRules').ClassChoiceDiagnostic[] {
+  const known = new Set(
+    getActiveRequiredSetupDiagnostics(
+      [
+        ...(classData.normalizedRules?.choiceDiagnostics ?? []),
+        ...(subclass?.normalizedRules?.choiceDiagnostics ?? []),
+      ],
+      classData,
+      includeVariants,
+      catalogs?.classFeatures,
+      catalogs?.ambiguousClassFeatureTargets,
+    ),
+  )
   const includeDiagnostic = (
     diagnostic: import('@/types/classRules').ClassChoiceDiagnostic,
     diagnostics: readonly import('@/types/classRules').ClassChoiceDiagnostic[],
   ) => {
+    if (diagnostic.requiredChoice) return known.has(diagnostic)
     if (diagnostic.featureVariant) return includeVariants
     if (!includeVariants) return true
     const featureName = normalized(diagnostic.featureName)

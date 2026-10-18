@@ -151,6 +151,7 @@ export function useClassChoiceController({
           viewingClassData,
           viewingSubclassData,
           includeClassFeatureVariants,
+          catalogs,
         ).filter(
           (diagnostic) => diagnostic.level === undefined || diagnostic.level <= viewingClassLevel,
         )

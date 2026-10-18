@@ -659,9 +659,25 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       featsByKey: lookups.featsByKey,
       spellsByKey: lookups.spellsByKey,
     })
+    // The companion is eligible; unsupported Canny setup still blocks the 2014 character.
+    expect(readiness.status).toBe(edition === '2014' ? 'incomplete' : 'ready')
     expect(
       readiness.blockingIssues,
       readiness.blockingIssues.map((issue) => `${issue.title}: ${issue.explanation}`).join('\n'),
-    ).toEqual([])
+    ).toEqual(
+      edition === '2014'
+        ? [
+            {
+              id: 'class-choice-diagnostic:Ranger|PHB:Deft Explorer:unsupported-required-choice',
+              severity: 'blocking',
+              section: 'class',
+              title: 'Review unresolved Deft Explorer choice',
+              explanation:
+                'Deft Explorer requires Canny expertise and language choices. Tavern Born does not yet support this setup.',
+              navigationTarget: '/build/class?class=Ranger%7CPHB&level=1',
+            },
+          ]
+        : [],
+    )
   })
 })

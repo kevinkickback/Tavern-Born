@@ -320,7 +320,23 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
     // Finished shields remain unavailable until materialization; (*) templates are not aliases.
-    expect(report.issues).toEqual([
+    const setupIssues = report.issues.filter((issue) => issue.code === 'choice-diagnostic')
+    expect(
+      setupIssues.map(({ entity, message }) => ({ entity, feature: message.split(':')[0] })),
+    ).toEqual([
+      { entity: 'Barbarian|PHB / Path of the Storm Herald|XGE', feature: 'Storm Aura' },
+      { entity: 'Barbarian|XPHB / Path of the Storm Herald|XGE', feature: 'Storm Aura' },
+      { entity: 'Mystic|UATheMysticClass', feature: 'Psionics' },
+      { entity: 'Ranger|PHB', feature: 'Deft Explorer' },
+      { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
+      { entity: 'Ranger|PHB', feature: 'Natural Explorer' },
+      { entity: 'Sorcerer|PHB / Draconic Bloodline|PHB', feature: 'Dragon Ancestor' },
+      { entity: 'Sorcerer|XPHB / Draconic Bloodline|PHB', feature: 'Dragon Ancestor' },
+    ])
+    expect(
+      setupIssues.every((issue) => issue.message.includes(': unsupported-required-choice: ')),
+    ).toBe(true)
+    expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual([
       {
         code: 'unresolved-reference',
         collection: 'classes',
@@ -353,7 +369,20 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
-    expect(choiceCoverageGaps).toEqual([])
+    expect(choiceCoverageGaps).toEqual([
+      {
+        owner: { name: 'Barbarian', source: 'XPHB' },
+        level: 3,
+        message:
+          'Path of the Storm Herald|XGE: Storm Aura requires an environment choice. Tavern Born does not yet support this setup or its dependent benefits.',
+      },
+      {
+        owner: { name: 'Sorcerer', source: 'XPHB' },
+        level: 3,
+        message:
+          'Draconic Bloodline|PHB: Dragon Ancestor requires a dragon ancestry choice. Tavern Born does not yet support this setup or its dependent benefits.',
+      },
+    ])
     expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)
     expect(copiedArcaneArcher?.subclassFeatureRefs?.length).toBeGreaterThan(0)
     expect(

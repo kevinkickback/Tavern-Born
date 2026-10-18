@@ -156,6 +156,7 @@ export function validateClassChoices(
       classData,
       subclassData,
       includeClassFeatureVariants,
+      catalogs,
     )) {
       if ((diagnostic.level ?? 1) > entry.levels) continue
       issues.push(

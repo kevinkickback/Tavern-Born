@@ -80,6 +80,27 @@ Feature wildcard/template transformations are unsupported and fail explicitly. E
 shared copy operations retain their supported semantics. External cross-file feature-copy dependencies
 and class-feature copies are outside this adapter's scope.
 
-Parsed cache schema38 rebuilds previously empty copied bodies; saved character format11 is unchanged.
+A parsed-cache rebuild restores previously empty copied bodies; saved character format11 is unchanged.
 Restored text and nested declarations flow into the existing catalogs, Actions and PDF projections.
 Materialization does not itself implement prose-only choices or qualify complete character journeys.
+
+## Required setup diagnostics
+
+Normalization reports a bounded set of source-audited mandatory setup gaps: Storm Aura, Dragon
+Ancestor, PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny and Mystic Psionics.
+These are unsupported setup, not synthesized selectors or guessed option counts. A retained known
+UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
+identity remains separate from the selected owner; nested diagnostics begin at the earliest reachable
+grant after all enclosing levels are met. Unselected options are not earned declarations.
+
+Builder and Review/readiness share active diagnostics and the filtered feature catalog. A known
+Ranger base warning yields only to its exact declared, resolved, source-confirmed optional replacement;
+missing, empty or ambiguous catalogs cannot waive it. The shared catalog retains repeated complete
+class-feature identities for this audit before its lookup projection. Active Deft Explorer retains its
+own Canny
+warning. These checks do not change selections, benefits or character saves. Capability reports retain
+all normalized gaps independently of a character's optional-feature toggle.
+
+This detector covers retained, unconditionally reachable declarations. Fully pruned declarations or
+unavailable enclosing features are not reconstructed. Other prose-only requirements and complete
+choice coverage remain unqualified; zero diagnostics is not a completeness certificate.
