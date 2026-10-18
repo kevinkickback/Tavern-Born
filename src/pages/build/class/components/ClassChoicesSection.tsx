@@ -108,7 +108,7 @@ export function BuildClassChoicesSection({
 
       {diagnostics.map((diagnostic) => (
         <div
-          key={`${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`}
+          key={`${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.requiredChoice?.target.ref ?? ''}|${diagnostic.message}`}
           className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5"
         >
           <div className="flex items-start gap-2">

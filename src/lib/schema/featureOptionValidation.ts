@@ -2,15 +2,27 @@ import {
   decodeFeatureOptionReference,
   getFeatureOptionChoiceId,
   getFeatureOptionKey,
+  isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
 import type { Character } from '@/types/character'
+import { getInvalidNaturalExplorerSelectionIds } from './naturalExplorerValidation'
 
 /** New literal relations validate structurally even while their rules are unavailable. */
 export function getInvalidFeatureOptionSelectionPaths(
   character: Pick<Character, 'classChoiceSelections'>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
+  const invalidGroups = getInvalidNaturalExplorerSelectionIds(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
+    if (
+      isFeatureLiteralChoiceId(selection.choiceId) ||
+      selection.selected.some(
+        (option) => decodeFeatureOptionReference(option)?.format === 'source-group',
+      )
+    ) {
+      if (invalidGroups.has(selection.choiceId)) paths.push(['classChoiceSelections', index])
+      continue
+    }
     const literal = selection.kind === 'feature-option'
     if (!literal && !selection.selected.some((option) => option.entityType === 'featureOption'))
       continue
@@ -32,6 +44,7 @@ export function getInvalidFeatureOptionSelectionPaths(
       const key = getFeatureOptionKey(option)
       if (
         !target ||
+        target.format === 'source-group' ||
         !key ||
         seen.has(key) ||
         option.slotLevel < selection.classLevel ||

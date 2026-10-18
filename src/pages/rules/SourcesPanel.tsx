@@ -5,9 +5,12 @@ import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
+import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { isSourceReadinessFocus } from '@/lib/navigation/readinessFocus'
 import {
   getSourceCompatibility,
@@ -49,6 +52,8 @@ const ALLOWED_SOURCES_HEADER_SELECTOR = '[data-allowed-sources-header]'
 
 export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | null } = {}) {
   const preferNewerId = useId()
+  const filteredData = useFilteredGameData()
+  const classChoiceFeatureCatalogs = useClassChoiceFeatureCatalogs()
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
@@ -110,8 +115,19 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   )
 
   const conflicts = useMemo(
-    () => (character ? detectSourceConflicts(character, effectiveSources) : []),
-    [character, effectiveSources],
+    () =>
+      character
+        ? detectSourceConflicts(
+            character,
+            effectiveSources,
+            getEffectiveClassChoiceSelections(
+              character,
+              filteredData.classes,
+              classChoiceFeatureCatalogs,
+            ),
+          )
+        : [],
+    [character, effectiveSources, filteredData.classes, classChoiceFeatureCatalogs],
   )
 
   const presetSourceAbbreviations = new Set(SOURCE_PRESETS.flatMap((p) => p.abbreviations))

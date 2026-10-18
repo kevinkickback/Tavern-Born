@@ -51,7 +51,7 @@ import {
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import {
   getFeatureOptionSelectionStates,
-  summarizeFeatureOptionSelection,
+  summarizeFeatureOptionSelectionGroups,
 } from '@/lib/character/featureOptionSelections'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
@@ -830,14 +830,13 @@ export function createCharacterSheetViewModel(
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
   })
 
-  const featureOptionSummaries = getFeatureOptionSelectionStates(
-    character,
-    calculationContext.classChoices.classes,
-    rawLookups.classChoiceFeatureCatalogs,
-  ).map((state) => ({
-    text: summarizeFeatureOptionSelection(state),
-    compactText: summarizeFeatureOptionSelection(state, false),
-  }))
+  const featureOptionSummaries = summarizeFeatureOptionSelectionGroups(
+    getFeatureOptionSelectionStates(
+      character,
+      calculationContext.classChoices.classes,
+      rawLookups.classChoiceFeatureCatalogs,
+    ),
+  )
 
   return {
     character,

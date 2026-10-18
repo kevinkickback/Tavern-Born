@@ -2,7 +2,7 @@
 
 Current admission is implemented in [the version constant](../../src/lib/schema/characterSchemaVersion.ts),
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
-The current character format is **11**; parsed catalog cache schema **41** is independent.
+The current character format is **11**; parsed catalog cache schema **42** is independent.
 
 The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
 are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
@@ -13,6 +13,10 @@ row identity without loaded data; see [source-backed feature options](feature-re
 for current entitlement, retained recovery and derived rules.
 Storm Aura uses the existing subclass-feature category with a structurally checked `subclass-options:`
 owner/target/slot relation; see [its source and recovery boundary](feature-references.md#storm-aura-environment).
+
+Natural Explorer uses the same feature-option category with a five-field source-group tuple and
+`feature-literals:` owner/pool/group/grant/earned-level ID. Each earned terrain remains distinct,
+including dormant intent; see [favored terrain](feature-references.md#natural-explorer-favored-terrain).
 
 Variant rules accept only the current settings: optional class features, average hit points,
 ability-score method, any-race subclasses, newer-printing preference, and equipment restrictions.

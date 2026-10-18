@@ -4,6 +4,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   ELEMENTAL_AFFINITY_REF,
   featureOptionRulesSignature,
@@ -19,15 +20,16 @@ import type {
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import {
-  type ClassChoiceCatalogs,
   type ClassChoiceFeatureCatalogs,
   type ClassChoiceOptionView,
   getCharacterClassChoices,
   getClassChoiceOptionKey,
   isClassChoiceOptionEligible,
+  createClassChoiceCatalogs as literalCatalogs,
   resolveClassChoiceOptions,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceOptions'
+import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
 
@@ -46,23 +48,7 @@ export interface FeatureOptionSelectionState {
   details: Array<{ name: string; damageType?: string; entries: unknown[]; available: boolean }>
   affinity?: { available: boolean; entries: unknown[] }
   storm?: StormAuraRules
-}
-
-function literalCatalogs(catalogs: ClassChoiceFeatureCatalogs | undefined): ClassChoiceCatalogs {
-  return {
-    creatures: [],
-    feats: [],
-    items: [],
-    itemsBase: [],
-    itemMasteries: [],
-    optionalFeatures: [],
-    itemPropertyByAbbr: {},
-    itemTypeByAbbr: {},
-    weaponProficiencies: [],
-    classFeatures: [],
-    subclassFeatures: [],
-    ...catalogs,
-  }
+  literalGroup?: { family: string; group: string; gain: number }
 }
 
 function affinityRules(
@@ -126,7 +112,12 @@ export function getFeatureOptionSelectionStates(
   catalogs?: ClassChoiceFeatureCatalogs,
 ): FeatureOptionSelectionState[] {
   const literal = (character.classChoiceSelections ?? [])
-    .filter((selection) => selection.kind === 'feature-option' && !selection.inactive)
+    .filter(
+      (selection) =>
+        selection.kind === 'feature-option' &&
+        !selection.inactive &&
+        !isFeatureLiteralChoiceId(selection.choiceId),
+    )
     .map((selection) => {
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
@@ -187,7 +178,7 @@ export function getFeatureOptionSelectionStates(
         )
         const available =
           !recovery && !!option && isClassChoiceOptionEligible(option) && !!option.featureOption
-        const damageType = available ? option.featureOption!.damageType : undefined
+        const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
           : [
@@ -206,7 +197,11 @@ export function getFeatureOptionSelectionStates(
       })
       return { selection, owner, classData, subclass, choice, options, recovery, details, affinity }
     })
-  return [...literal, ...getStormAuraSelectionStates(character, classes, catalogs)]
+  return [
+    ...literal,
+    ...getStormAuraSelectionStates(character, classes, catalogs),
+    ...getNaturalExplorerSelectionStates(character, classes, catalogs),
+  ]
 }
 
 /** View-only text shared by both sheet families and their description-off projections. */
@@ -218,10 +213,16 @@ export function summarizeFeatureOptionSelection(
     .map(
       (row) =>
         row.name +
-        (row.available ? (row.damageType ? ` — ${row.damageType}` : '') : ' (rules unavailable)'),
+        (state.selection.inactive
+          ? ' (Inactive)'
+          : row.available
+            ? row.damageType
+              ? ` — ${row.damageType}`
+              : ''
+            : ' (rules unavailable)'),
     )
     .join(', ')
-  const title = `${state.selection.label}: ${selected}`
+  const title = `${state.selection.label}${state.literalGroup ? ` (level ${state.literalGroup.gain})` : ''}: ${selected}`
   if (!descriptions) {
     return (
       title +
@@ -247,4 +248,41 @@ export function summarizeFeatureOptionSelection(
   }
   const entries = state.details.flatMap((row) => row.entries)
   return title + (entries.length ? `\n${renderEntriesToText(entries)}` : '')
+}
+
+/** A literal family prints its selected gains together, retaining conditional context only once. */
+export function summarizeFeatureOptionSelectionGroups(
+  states: readonly FeatureOptionSelectionState[],
+): Array<{ text: string; compactText: string }> {
+  const summaries: Array<{ text: string; compactText: string }> = []
+  const seen = new Set<string>()
+  for (const state of states) {
+    if (!state.literalGroup) {
+      summaries.push({
+        text: summarizeFeatureOptionSelection(state),
+        compactText: summarizeFeatureOptionSelection(state, false),
+      })
+      continue
+    }
+    if (seen.has(state.literalGroup.family)) continue
+    seen.add(state.literalGroup.family)
+    const group = states.filter((row) => row.literalGroup?.family === state.literalGroup?.family)
+    const selected = group
+      .flatMap((row) =>
+        row.details.map(
+          (detail) =>
+            `${detail.name} (level ${row.selection.classLevel}${row.selection.inactive ? '; Inactive' : detail.available ? '' : '; rules unavailable'})`,
+        ),
+      )
+      .join('; ')
+    const compactText = `Natural Explorer favored terrains: ${selected}`
+    const entries = group.flatMap((row) =>
+      row.details.filter((detail) => detail.available).flatMap((detail) => detail.entries),
+    )
+    summaries.push({
+      compactText,
+      text: compactText + (entries.length ? `\n${renderEntriesToText(entries)}` : ''),
+    })
+  }
+  return summaries
 }

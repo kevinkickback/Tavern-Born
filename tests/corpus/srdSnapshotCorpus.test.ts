@@ -5,6 +5,12 @@ import { describe, expect, test } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
+import {
+  buildClassChoiceFeatureCatalogs,
+  createClassChoiceCatalogs,
+  getCharacterClassChoices,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
 
 const RESOURCE_ROOT = resolve(process.cwd(), 'resources', 'srd', 'core')
@@ -93,15 +99,31 @@ describe('committed bundled SRD corpus', () => {
         message:
           'Favored Enemy: unsupported-required-choice: Favored Enemy requires enemy and associated language choices. Tavern Born does not yet support this setup.',
       },
-      {
-        code: 'choice-diagnostic',
-        collection: 'classes',
-        entity: 'Ranger|PHB',
-        path: 'normalizedRules.choiceDiagnostics[1]',
-        message:
-          'Natural Explorer: unsupported-required-choice: Natural Explorer requires favored terrain choices. Tavern Born does not yet support this setup.',
-      },
     ])
+    const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(gameData))
+    const ranger = gameData.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
+    const terrain = getCharacterClassChoices(ranger, undefined, false, catalogs).filter(
+      (row) => row.label === 'Natural Explorer',
+    )
+    expect(terrain.map((row) => row.level)).toEqual([1, 6, 10])
+    for (const choice of terrain) {
+      expect(choice.minimumSelections).toBe(1)
+      expect(choice.maximumSelections).toBe(1)
+      expect(
+        resolveClassChoiceOptions(choice, catalogs)
+          .filter((row) => row.availability === 'eligible')
+          .map((row) => row.reference.name),
+      ).toEqual([
+        'Arctic',
+        'Coast',
+        'Desert',
+        'Forest',
+        'Grassland',
+        'Mountain',
+        'Swamp',
+        'Underdark',
+      ])
+    }
     expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{8}$/)
     expect(gameData.classes.some((entry) => entry.source === 'PHB')).toBe(true)
     expect(gameData.classes.some((entry) => entry.source === 'XPHB')).toBe(true)

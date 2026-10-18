@@ -1,4 +1,7 @@
-import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
+import {
+  decodeFeatureOptionReference,
+  isFeatureLiteralChoiceId,
+} from '@/lib/5etools/featureOptionIdentity'
 import {
   XPHB_LEGACY_FEAT_KEYS,
   XPHB_LEGACY_RACE_KEYS,
@@ -11,7 +14,7 @@ import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
-import type { Character, SpellProfile } from '@/types/character'
+import type { Character, CharacterClassChoiceSelection, SpellProfile } from '@/types/character'
 
 export interface SourceConflict {
   source: string
@@ -21,6 +24,7 @@ export interface SourceConflict {
 export function detectSourceConflicts(
   character: Character,
   allowedSources: string[],
+  effectiveSelections?: readonly CharacterClassChoiceSelection[],
 ): SourceConflict[] {
   const allowed = new Set(allowedSources.map((source) => source.toUpperCase()))
   const bySource = new Map<string, string[]>()
@@ -87,8 +91,9 @@ export function detectSourceConflicts(
       )
     }
   }
-  for (const choice of character.classChoiceSelections ?? []) {
-    if (choice.inactive) continue
+  for (const choice of effectiveSelections ?? character.classChoiceSelections ?? []) {
+    if (choice.inactive && (effectiveSelections || !isFeatureLiteralChoiceId(choice.choiceId)))
+      continue
     for (const option of choice.selected)
       flag(
         option.name,

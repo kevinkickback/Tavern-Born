@@ -223,10 +223,8 @@ export function CharacterOverview({
   const equipmentRules = resolveItemReferences(calculation.equipment.all, itemLookup)
   const [failedOrganizationImage, setFailedOrganizationImage] = useState('')
   const filteredData = useFilteredGameData()
-  const { featureEntriesByKey, choiceDetailsById } = useRetainedCharacterDetails(
-    character,
-    calculation.raceResolution.mergedRace,
-  )
+  const { featureEntriesByKey, choiceDetailsById, effectiveClassChoiceSelections } =
+    useRetainedCharacterDetails(character, calculation.raceResolution.mergedRace)
   const availableSpellKeys = useMemo(
     () =>
       new Set(filteredData.spells.map((spell) => getSpellReferenceKey(spell.name, spell.source))),
@@ -556,7 +554,7 @@ export function CharacterOverview({
                     Feature choices
                   </h3>
                   <ul className="space-y-2">
-                    {character.classChoiceSelections?.map((choice) => (
+                    {effectiveClassChoiceSelections.map((choice) => (
                       <DetailEntry
                         key={choice.choiceId}
                         name={choice.label}

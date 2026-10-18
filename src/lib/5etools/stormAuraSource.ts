@@ -1,8 +1,6 @@
-import { sha256 } from '@noble/hashes/sha2.js'
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
 import type { ClassFeature } from '@/types/5etools'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
-import { featureOptionRulesSignature } from './featureRulesSignature'
+import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
 
 // Audited data/class/class-barbarian.json SHA25615b090c2ede1cc5a522817bf41d83a890aa194f3d7827f98787e1b05d057f319.
 // Genuine ordered entries only; future source revisions require an explicit rules re-audit.
@@ -52,14 +50,13 @@ const SOURCE_FIELDS = new Set([
   'featureOptionSourceConflict',
 ])
 export function hasStormSourceShape(feature: ClassFeature | Record<string, unknown>): boolean {
-  return Object.keys(feature).every((key) => SOURCE_FIELDS.has(key))
+  return hasFeatureSourceShape(feature, SOURCE_FIELDS)
 }
 export function getAuditedStormSourceDigest(target: string): string | undefined {
   return AUDITED_DIGESTS.get(target)
 }
 export function getStormRulesDigest(entries: unknown[]): string | undefined {
-  const signature = featureOptionRulesSignature(entries)
-  return signature === undefined ? undefined : bytesToHex(sha256(utf8ToBytes(signature)))
+  return getFeatureSourceDigest(entries)
 }
 /** A body is trusted for one complete target only; metadata cannot hide extra conditions. */
 export function isAuditedStormFeature(

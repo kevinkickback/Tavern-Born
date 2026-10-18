@@ -1,4 +1,5 @@
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import {
@@ -11,8 +12,10 @@ import {
   resolveFeatureOptionEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
-import type { GameData } from '@/types/5etools'
+import type { Class5e, GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
+import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
+import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 
 export interface GameDataAvailabilityIndex {
   backgrounds: ReadonlySet<string>
@@ -27,6 +30,7 @@ export interface GameDataAvailabilityIndex {
   subclasses: ReadonlySet<string>
   subclassFeatures: ReadonlySet<string>
   featureOptions?: ClassChoiceFeatureCatalogs
+  choiceClasses?: readonly Class5e[]
   subclassFeaturesByOwner: ReadonlyMap<string, ReadonlySet<string>>
 }
 
@@ -77,6 +81,7 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
 
   return {
     featureOptions: featureCatalogs,
+    choiceClasses: gameData.classes,
     backgrounds: entityKeys(gameData.backgrounds),
     classes: entityKeys(gameData.classes),
     classFeatures,
@@ -196,24 +201,37 @@ export function characterUsesContentOutsideCatalog(
   ) {
     return true
   }
+  const literalStates = new Map(
+    getNaturalExplorerSelectionStates(
+      character,
+      index.choiceClasses ?? [],
+      index.featureOptions,
+    ).map((state) => [state.selection.choiceId, state]),
+  )
   if (
-    (character.classChoiceSelections ?? []).some(
+    getEffectiveClassChoiceSelections(
+      character,
+      index.choiceClasses ?? [],
+      index.featureOptions,
+    ).some(
       (selection) =>
         !selection.inactive &&
-        selection.selected.some((choice) =>
-          choiceIsMissing(
-            choice,
-            index,
-            selection.subclassName
-              ? getFeatureOwnerKey(
-                  selection.className,
-                  selection.classSource,
-                  selection.subclassName,
-                  selection.subclassSource,
-                )
-              : undefined,
-          ),
-        ),
+        (isFeatureLiteralChoiceId(selection.choiceId)
+          ? literalStates.get(selection.choiceId)?.recovery !== false
+          : selection.selected.some((choice) =>
+              choiceIsMissing(
+                choice,
+                index,
+                selection.subclassName
+                  ? getFeatureOwnerKey(
+                      selection.className,
+                      selection.classSource,
+                      selection.subclassName,
+                      selection.subclassSource,
+                    )
+                  : undefined,
+              ),
+            )),
     )
   ) {
     return true

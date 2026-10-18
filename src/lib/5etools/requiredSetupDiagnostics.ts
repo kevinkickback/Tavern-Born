@@ -11,6 +11,8 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from './classFeatureIdentity'
+import { isNaturalExplorerReplaced } from './naturalExplorerChoices'
+import { DEFT_EXPLORER_REF } from './naturalExplorerIdentity'
 import type { UnconditionalFeatureReference } from './unconditionalFeatureReferences'
 
 type FeatureKind = 'classFeature' | 'subclassFeature'
@@ -206,6 +208,7 @@ export function getActiveRequiredSetupDiagnostics(
   includeVariants: boolean,
   features: readonly ClassFeature[] | undefined,
   ambiguousTargets?: ReadonlySet<string>,
+  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>,
 ): ClassChoiceDiagnostic[] {
   const known = diagnostics.filter((diagnostic) => diagnostic.requiredChoice)
   if (known.length === 0) return []
@@ -216,6 +219,16 @@ export function getActiveRequiredSetupDiagnostics(
       const target = decodeClassFeatureReference(rule.replacedBy)
       const key = getClassFeatureIdentity(target)
       if (!key || ambiguousTargets?.has(key)) continue
+      if (rule.replacedBy === DEFT_EXPLORER_REF) {
+        if (
+          isNaturalExplorerReplaced(classData, includeVariants, {
+            classFeatures: features,
+            classFeatureCandidates,
+          })
+        )
+          activeReplacements.add(rule.replacedBy)
+        continue
+      }
       const marker = `which replaces the ${decodeClassFeatureReference(rule.ref).name.toLowerCase()} feature`
       const declared = classData.classFeatureRefs?.some(
         (ref) =>

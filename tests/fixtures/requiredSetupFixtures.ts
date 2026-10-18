@@ -86,7 +86,10 @@ export function rangerSetupDocument() {
         classFeatures: refs.map((ref) => ref.ref),
       },
     ],
-    classFeature: refs.map((ref) => ref.feature),
+    classFeature: refs.map((ref) => {
+      const { ref: _uid, ...feature } = ref.feature!
+      return feature
+    }),
   }
 }
 export function dragonSetupDocument(revisedOwner = true) {

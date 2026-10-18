@@ -19,8 +19,10 @@ export function classChoiceDiagnosticReadinessId(
   classKey: string,
   featureName: string,
   code: string,
+  grant?: { ref: string; level: number },
 ): string {
-  return `class-choice-diagnostic:${classKey}:${featureName}:${code}`
+  const base = `class-choice-diagnostic:${classKey}:${featureName}:${code}`
+  return grant ? `${base}:${encodeURIComponent(JSON.stringify([grant.ref, grant.level]))}` : base
 }
 
 export function classSubclassReadinessId(classKey: string): string {

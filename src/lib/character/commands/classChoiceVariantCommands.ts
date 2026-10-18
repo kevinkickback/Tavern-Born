@@ -1,6 +1,9 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import {
+  type ClassChoiceFeatureCatalogs,
   getCharacterClassChoices,
   getCharacterClassFeatureVariantChoices,
 } from '@/lib/character/classChoiceOptions'
@@ -30,6 +33,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
   catalogs: {
     availableClasses: readonly Class5e[]
     allClasses: readonly Class5e[]
+    classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   },
   includeVariants: boolean,
 ): CharacterCommandResult {
@@ -50,6 +54,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
       availableClassData,
       availableSubclass,
       includeVariants,
+      catalogs.classChoiceFeatureCatalogs,
     )) {
       activeChoiceIds.add(choice.id)
     }
@@ -57,9 +62,19 @@ export function reconcileOptionalClassFeatureChoicesCommand(
 
   const scopedChoices = uniqueChoices(allChoices)
   const scopedChoiceIds = new Set(scopedChoices.map((choice) => choice.id))
+  const effective = new Map(
+    getEffectiveClassChoiceSelections(
+      character,
+      catalogs.availableClasses,
+      catalogs.classChoiceFeatureCatalogs,
+      includeVariants,
+    ).map((selection) => [selection.choiceId, selection]),
+  )
   const classChoiceSelections: CharacterClassChoiceSelection[] = (
     character.classChoiceSelections ?? []
   ).map((selection) => {
+    if (isFeatureLiteralChoiceId(selection.choiceId))
+      return effective.get(selection.choiceId) ?? selection
     if (!scopedChoiceIds.has(selection.choiceId)) return selection
     if (!activeChoiceIds.has(selection.choiceId)) return { ...selection, inactive: true }
     const { inactive: _inactive, ...activeSelection } = selection

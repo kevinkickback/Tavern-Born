@@ -207,7 +207,14 @@ export function BuildClassLevelsPanel({
   ].find((choice) => readinessFocus === classChoiceReadinessId(choice.id))?.id
   const isDiagnosticFocused = (diagnostic: ClassChoiceDiagnostic) =>
     readinessFocus ===
-    classChoiceDiagnosticReadinessId(viewingClassKey, diagnostic.featureName, diagnostic.code)
+    classChoiceDiagnosticReadinessId(
+      viewingClassKey,
+      diagnostic.featureName,
+      diagnostic.code,
+      diagnostic.featureName === 'Natural Explorer' && diagnostic.requiredChoice?.target.ref
+        ? { ref: diagnostic.requiredChoice.target.ref, level: diagnostic.level ?? 1 }
+        : undefined,
+    )
   const focusedEquipmentChoice =
     focusedViewingClassChoice?.domain === 'equipment' ? focusedViewingClassChoice : undefined
   const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
