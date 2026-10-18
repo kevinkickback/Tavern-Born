@@ -1,8 +1,12 @@
 /** Source bodies, rather than attached enrichment or object key order, distinguish producers. */
-export function featureOptionRulesSignature(entries: unknown[]): string | undefined {
+export function featureOptionRulesSignature(
+  entries: unknown[],
+  stripEnrichment = true,
+): string | undefined {
   try {
     return JSON.stringify(entries, (key, value: unknown) => {
-      if (key === 'feature' || key === 'featureOptionSourceConflict') return undefined
+      if (stripEnrichment && (key === 'feature' || key === 'featureOptionSourceConflict'))
+        return undefined
       const object =
         value && typeof value === 'object' && !Array.isArray(value)
           ? (value as Record<string, unknown>)

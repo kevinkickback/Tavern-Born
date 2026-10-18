@@ -1,5 +1,5 @@
 import { DiceFive, SlidersHorizontal, Sparkle, Sword, Warning } from '@phosphor-icons/react'
-import { type ReactNode, useId } from 'react'
+import { type ReactNode, useId, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -12,6 +12,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
 import { cn } from '@/lib/utils'
@@ -120,6 +121,10 @@ export function RulesPage() {
   const activePanel = getActivePanel(searchParams.get('section'))
   const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
   const allClasses = useClasses()
+  const classChoiceFeatureCatalogs = useMemo(
+    () => buildClassChoiceFeatureCatalogs({ classes, classFeatures }),
+    [classes, classFeatures],
+  )
   const contentAvailability = getVariantRuleContentAvailability({
     classes,
     classFeatures,
@@ -170,7 +175,7 @@ export function RulesPage() {
       const result = reconcileOptionalClassFeatureChoicesCommand(
         character,
         character.provenance,
-        { availableClasses: classes, allClasses },
+        { availableClasses: classes, allClasses, classChoiceFeatureCatalogs },
         checked,
       )
       updateCharacter(character.id, {

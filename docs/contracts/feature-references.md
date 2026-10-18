@@ -113,14 +113,14 @@ selection; opening, Cancel and unchanged confirmation preserve its saved spellin
 dirty state. Confirmation rechecks current source options. Clear/subclass removal/level rollback
 retract only this owner's intent and preserve independently owned benefits.
 
-This additive category uses character format11 and parsed cache41. Strict admission validates
+This additive category uses character format11 and parsed cache42. Strict admission validates
 the saved tuple/category/owner/slot relation without a catalog; live rules still govern entitlement.
-Other literal choice families and general passive automation remain outside this adapter.
+Natural Explorer uses the separate literal-group boundary below; general passive automation remains outside these adapters.
 
 ## Required setup diagnostics
 
 Normalization reports a bounded set of source-audited mandatory setup gaps: unavailable or
-unverified Storm Aura declarations, PHB Ranger Favored Enemy/Natural Explorer, TCE Deft Explorer/Canny
+unverified Storm Aura/Natural Explorer declarations, PHB Ranger Favored Enemy, TCE Deft Explorer/Canny
 and Mystic Psionics. Unsupported families remain diagnostic; unavailable Storm rules stay unverified.
 Diagnostics never synthesize selectors or guess option counts. A retained known
 UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
@@ -175,3 +175,45 @@ its ID. Exact manual overrides and PDF action preferences remain bound through s
 restoration. Combat activation, damage, temporary hit points, target/ally state and duration
 application remain player-managed. This adapter does not certify complete class automation or
 complete legal progression coverage.
+
+## Natural Explorer favored terrain
+
+The exact PHB Ranger Natural Explorer pool supplies eight source literals, without fake terrain
+entities or a table. Its level 1 grant and exact level 6 and 10 improvement declarations each earn
+one independent choice. A `feature-literals:` ID binds actual owner, complete pool target, group,
+complete grant target and earned level. The `featureOption` reference is the JSON tuple
+`["source-group","classFeature",completePoolUid,"favored-terrain",canonicalTerrain]`.
+Existing table-option and Storm identities remain unchanged. Offline admission validates the full
+relation, exact slot, one pick and distinct gains/terrains within the same owner's pool and group,
+including dormant records; current declarations still determine entitlement.
+
+Four bounded source bodies (pool, both improvements and TCE Deft Explorer) qualify through full
+ordered fingerprints and top-level shape guards. Every raw class-feature producer is audited
+before first-match enrichment, including documents without subclasses. Unknown semantic fields,
+nested changes or conflicting duplicates remain unverified. Equivalent audited pool/grant copies
+may agree; the optional replacement must be singular. Current explicit empty catalogs remain
+absent. A missing base invalidates the family; a missing later improvement affects that gain only.
+
+Optional class features suppress terrain only when the actual owner currently declares the exact,
+singular audited level 1 TCE Deft Explorer target in the filtered catalog. A shared effective
+selection view derives activity for this family; saved inactivity is a hint. Source loss re-exposes
+saved terrain and exact restoration suppresses it again, without writes during reads. Authorized
+toggle/changed-edit commands reconcile persisted hints; unchanged confirmation preserves saved bytes.
+Dormant intent retains names and gains marked
+Inactive, with no eligible options, conditional facts, quota or recovery demand.
+
+Builder, readiness, Overview, source/availability checks and both PDF families use these boundaries.
+Unavailable grant warnings keep complete target and earned-level identity in navigation and list keys,
+including explicit enclosing declarations that earn distinct targets at the same level. A saved
+recovery replaces only its matching owner/grant/earned warning; unsaved gains remain unresolved.
+Selected summaries keep conditional Intelligence/Wisdom proficiency and the full hour-or-more
+travel qualifiers once per owner family, omitting alternative terrain names and future instructions.
+Compact exports retain selected terrain names, gains and activity. The gain 6 Favored Enemy/language
+paragraph does not become a terrain benefit. No global expertise, movement, resistance, travel state
+or action is granted; other conditional Ranger prose retains its source presentation.
+
+The shared selector handles Choose/Edit, unchanged confirmation, Cancel, per-gain Replace/Clear
+and removal-only recovery after source/class loss. Confirmation validates current source authority
+and distinctness against the latest character. Other earned gains and independent/manual grants
+survive replacement/removal. Character format 11 stays additive; parsed cache 42 rebuilds the new
+normalization and source audits. Complete Ranger automation and legal levels 1–20 remain unqualified.

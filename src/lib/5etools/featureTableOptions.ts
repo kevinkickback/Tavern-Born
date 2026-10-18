@@ -123,10 +123,7 @@ export function getFeatureTableDefinition(
   )
     return undefined
   const signature = featureOptionRulesSignature(feature.entries)
-  if (
-    !signature ||
-    !signature.toLowerCase().includes('you choose one type of dragon as your ancestor')
-  )
+  if (!signature?.toLowerCase().includes('you choose one type of dragon as your ancestor'))
     return undefined
   const tables = feature.entries.filter((entry) => {
     const table = record(entry)
@@ -202,7 +199,12 @@ export function resolveFeatureTableOption(
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): FeatureTableOption | undefined {
   const target = decodeFeatureOptionReference(option)
-  if (!target || target.kind !== 'subclassFeature' || target.parentIdentity !== DRAGON_TARGET)
+  if (
+    !target ||
+    target.format === 'source-group' ||
+    target.kind !== 'subclassFeature' ||
+    target.parentIdentity !== DRAGON_TARGET
+  )
     return undefined
   const definition = cache?.has(target.parentIdentity)
     ? cache.get(target.parentIdentity)

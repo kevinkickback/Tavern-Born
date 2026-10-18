@@ -1,4 +1,5 @@
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   buildGameDataLookups,
   getEntityLookupKey,
@@ -25,6 +26,7 @@ import type {
   Race5e,
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 
 export interface RetainedChoiceDetails {
@@ -52,6 +54,28 @@ export function buildRetainedCharacterDetails(
 ) {
   const featureEntriesByKey = new Map<string, unknown[]>()
   const choiceDetailsById = new Map<string, RetainedChoiceDetails[]>()
+  const primaryCatalogs = buildClassChoiceFeatureCatalogs(primary)
+  const effectiveClassChoiceSelections = getEffectiveClassChoiceSelections(
+    character,
+    primary.classes,
+    primaryCatalogs,
+  )
+  const inactiveLiterals = new Set(
+    effectiveClassChoiceSelections
+      .filter((selection) => selection.inactive && isFeatureLiteralChoiceId(selection.choiceId))
+      .map((selection) => selection.choiceId),
+  )
+  for (const selection of effectiveClassChoiceSelections)
+    if (inactiveLiterals.has(selection.choiceId))
+      choiceDetailsById.set(
+        selection.choiceId,
+        selection.selected.map(() => ({
+          availability: 'available',
+          entries: [
+            'Saved favored-terrain intent is inactive while Deft Explorer replaces Natural Explorer.',
+          ],
+        })),
+      )
   const addFeature = (feature: { name: string; source?: string; entries?: unknown[] }) => {
     if (!feature.source) return
     const key = getEntityLookupKey(feature.name, feature.source)
@@ -68,7 +92,8 @@ export function buildRetainedCharacterDetails(
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
     const lookups = buildGameDataLookups(data)
-    const featureCatalogs = buildClassChoiceFeatureCatalogs(data)
+    const featureCatalogs =
+      data === primary ? primaryCatalogs : buildClassChoiceFeatureCatalogs(data)
     for (const feature of [
       ...data.classFeatures,
       ...(data.optionalfeatures as OptionalFeatureLike[]),
@@ -94,6 +119,7 @@ export function buildRetainedCharacterDetails(
       ).forEach(addFeature)
     }
     for (const state of getFeatureOptionSelectionStates(character, data.classes, featureCatalogs)) {
+      if (inactiveLiterals.has(state.selection.choiceId)) continue
       const details = choiceDetailsById.get(state.selection.choiceId) ?? []
       state.details.forEach((row, index) => {
         if (details[index]?.availability === 'available') return
@@ -152,5 +178,5 @@ export function buildRetainedCharacterDetails(
       if (!featureEntriesByKey.has(key)) featureEntriesByKey.set(key, trait.entries)
     }
   }
-  return { featureEntriesByKey, choiceDetailsById }
+  return { featureEntriesByKey, choiceDetailsById, effectiveClassChoiceSelections }
 }

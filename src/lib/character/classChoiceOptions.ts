@@ -8,7 +8,10 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
-import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
+import {
+  decodeFeatureOptionReference,
+  isFeatureLiteralChoiceId,
+} from '@/lib/5etools/featureOptionIdentity'
 import {
   type FeatureTableDefinition,
   type FeatureTableOption,
@@ -16,6 +19,17 @@ import {
 } from '@/lib/5etools/featureTableOptions'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
+import {
+  hasNaturalExplorerGrant,
+  isNaturalExplorerReplaced,
+  resolveNaturalExplorerOption,
+  type SourceGroupOption,
+} from '@/lib/5etools/naturalExplorerChoices'
+import {
+  decodeNaturalExplorerChoiceId,
+  NATURAL_EXPLORER_TARGET,
+} from '@/lib/5etools/naturalExplorerIdentity'
+import { getNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
 import { resolveStormFeature } from '@/lib/5etools/stormAuraChoices'
 import {
@@ -23,6 +37,7 @@ import {
   STORM_TARGETS,
   stormFeatureRef,
 } from '@/lib/5etools/stormAuraIdentity'
+import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
@@ -66,6 +81,7 @@ export interface ClassChoiceOptionView {
   presentation?: ClassChoiceOptionPresentation
   searchText?: string
   featureOption?: { damageType: string }
+  sourceGroup?: { group: string }
 }
 
 type ClassChoiceOptionPresentation =
@@ -90,6 +106,7 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
 
 export interface ClassChoiceFeatureCatalogs {
   classFeatures: readonly ClassFeature[]
+  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
   /** Retain multiplicity for required-setup audits before the lookup projection. */
   ambiguousClassFeatureTargets?: ReadonlySet<string>
   subclassFeatures: readonly SubclassFeature[]
@@ -111,6 +128,26 @@ export interface ClassChoiceCatalogs extends ClassChoiceFeatureCatalogs {
   weaponProficiencies: readonly string[]
 }
 
+/** Minimal explicit feature authority shared by literal command, state and picker paths. */
+export function createClassChoiceCatalogs(
+  catalogs?: ClassChoiceFeatureCatalogs,
+): ClassChoiceCatalogs {
+  return {
+    creatures: [],
+    feats: [],
+    items: [],
+    itemsBase: [],
+    itemMasteries: [],
+    optionalFeatures: [],
+    itemPropertyByAbbr: {},
+    itemTypeByAbbr: {},
+    weaponProficiencies: [],
+    classFeatures: [],
+    subclassFeatures: [],
+    ...catalogs,
+  }
+}
+
 type ChoiceCatalogEntity =
   | ClassFeature
   | SubclassFeature
@@ -119,6 +156,7 @@ type ChoiceCatalogEntity =
   | Item5e
   | OptionalFeatureLike
   | FeatureTableOption
+  | SourceGroupOption
 
 function normalized(value: string | undefined): string {
   return value?.trim().toLowerCase() ?? ''
@@ -580,10 +618,14 @@ function toView(
 /** Literal rows resolve only through complete candidates retained in the filtered owner bundle. */
 export function resolveFeatureOptionEntity(
   option: NormalizedChoiceOptionReference,
-  catalogs: Pick<ClassChoiceFeatureCatalogs, 'subclassFeatures' | 'subclassFeatureCandidates'>,
+  catalogs: Pick<
+    ClassChoiceFeatureCatalogs,
+    'classFeatures' | 'classFeatureCandidates' | 'subclassFeatures' | 'subclassFeatureCandidates'
+  >,
   cache?: Map<string, FeatureTableDefinition | undefined>,
-): FeatureTableOption | undefined {
+): FeatureTableOption | SourceGroupOption | undefined {
   const target = decodeFeatureOptionReference(option)
+  if (target?.format === 'source-group') return resolveNaturalExplorerOption(option, catalogs)
   if (!target || target.kind !== 'subclassFeature') return undefined
   const candidates =
     catalogs.subclassFeatureCandidates !== undefined
@@ -645,7 +687,7 @@ export function scopeClassChoiceFeatureCatalogs(
   subclassOwner?: string,
 ): Pick<
   ClassChoiceFeatureCatalogs,
-  'classFeatures' | 'subclassFeatures' | 'subclassFeatureCandidates'
+  'classFeatures' | 'classFeatureCandidates' | 'subclassFeatures' | 'subclassFeatureCandidates'
 > {
   if (!catalogs.subclassTargets) return catalogs
   const targets = subclassOwner
@@ -656,6 +698,7 @@ export function scopeClassChoiceFeatureCatalogs(
     : catalogs.subclassTargets.uniqueCandidates
   return {
     classFeatures: catalogs.classFeatures,
+    classFeatureCandidates: catalogs.classFeatureCandidates,
     subclassFeatures: [...(targets?.values() ?? [])],
     subclassFeatureCandidates: candidates ?? new Map(),
   }
@@ -665,14 +708,17 @@ export function scopeClassChoiceFeatureCatalogs(
 export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' | 'classFeatures'>) {
   const subclassTargets = indexSubclassFeatureTargets(data.classes)
   const seenClassTargets = new Set<string>()
+  const classFeatureCandidates = new Map<string, ClassFeature[]>()
   const ambiguousClassFeatureTargets = new Set<string>()
   for (const feature of data.classFeatures) {
     const target = getClassFeatureIdentity(feature)
     if (!target) continue
+    classFeatureCandidates.set(target, [...(classFeatureCandidates.get(target) ?? []), feature])
     if (seenClassTargets.has(target)) ambiguousClassFeatureTargets.add(target)
     seenClassTargets.add(target)
   }
   return {
+    classFeatureCandidates,
     ambiguousClassFeatureTargets,
     classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
     subclassFeatures: [...subclassTargets.unique.values()],
@@ -693,8 +739,13 @@ function resolveExplicitOption(
       availability,
       reference: option,
       entries: match.entries ?? [],
-      presentation: { kind: 'feature', featureTypeLabels: ['Dragon ancestry'] },
-      featureOption: { damageType: (match as FeatureTableOption).damageType },
+      presentation: {
+        kind: 'feature',
+        featureTypeLabels: ['group' in match ? 'Favored terrain' : 'Dragon ancestry'],
+      },
+      ...('group' in match
+        ? { sourceGroup: { group: String(match.group) } }
+        : { featureOption: { damageType: (match as FeatureTableOption).damageType } }),
       searchText: `${option.name} ${'damageType' in match ? match.damageType : ''}`,
     }
   }
@@ -739,6 +790,20 @@ export function resolveClassChoiceOptions(
         catalogs,
       ),
     )
+  ) {
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((reference) => [
+          getClassChoiceOptionKey(reference),
+          { reference, availability: 'retained' as const, entries: [] },
+        ]),
+      ).values(),
+    ]
+  }
+  const literal = decodeNaturalExplorerChoiceId(choice.id)
+  if (
+    isFeatureLiteralChoiceId(choice.id) &&
+    (!literal || !getNaturalExplorerSources(catalogs).get(literal.grant))
   ) {
     return [
       ...new Map(
@@ -852,19 +917,42 @@ function includeFeatureVariantChoice(
 }
 
 export function getCharacterClassChoices(
-  classData: { normalizedRules?: { choices: NormalizedCharacterChoice[] } },
+  classData: {
+    name?: string
+    source?: string
+    classFeatureRefs?: Class5e['classFeatureRefs']
+    normalizedRules?: { choices: NormalizedCharacterChoice[] }
+  },
   subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
   includeVariants: boolean,
+  catalogs?: ClassChoiceFeatureCatalogs,
 ): NormalizedCharacterChoice[] {
   const classChoices = getStandaloneClassChoices(classData)
   const subclassChoices = subclass?.normalizedRules?.choices ?? []
-  return getAllCharacterClassChoices(classData, subclass).filter((choice) =>
-    includeFeatureVariantChoice(
+  const declarations = collectUnconditionalFeatureReferences(
+    classData.classFeatureRefs ?? [],
+    'classFeature',
+  )
+  return getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+    if (isFeatureLiteralChoiceId(choice.id)) {
+      const relation = decodeNaturalExplorerChoiceId(choice.id)
+      const grants = declarations.filter((row) => row.target === relation?.grant)
+      return (
+        !!relation &&
+        normalized(classData.name) === normalized(choice.owner.name) &&
+        normalized(classData.source) === normalized(choice.owner.source) &&
+        hasNaturalExplorerGrant(declarations, NATURAL_EXPLORER_TARGET) &&
+        hasNaturalExplorerGrant(declarations, relation.grant) &&
+        Math.min(...grants.map((row) => row.level)) === choice.level &&
+        !isNaturalExplorerReplaced(classData, includeVariants, catalogs)
+      )
+    }
+    return includeFeatureVariantChoice(
       choice,
       choice.owner.type === 'subclass' ? subclassChoices : classChoices,
       includeVariants,
-    ),
-  )
+    )
+  })
 }
 
 export function getCharacterClassChoiceDiagnostics(
@@ -874,7 +962,10 @@ export function getCharacterClassChoiceDiagnostics(
   },
   subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
   includeVariants: boolean,
-  catalogs?: Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'ambiguousClassFeatureTargets'>,
+  catalogs?: Pick<
+    ClassChoiceFeatureCatalogs,
+    'classFeatures' | 'classFeatureCandidates' | 'ambiguousClassFeatureTargets'
+  >,
 ): import('@/types/classRules').ClassChoiceDiagnostic[] {
   const known = new Set(
     getActiveRequiredSetupDiagnostics(
@@ -886,6 +977,7 @@ export function getCharacterClassChoiceDiagnostics(
       includeVariants,
       catalogs?.classFeatures,
       catalogs?.ambiguousClassFeatureTargets,
+      catalogs?.classFeatureCandidates,
     ),
   )
   const includeDiagnostic = (

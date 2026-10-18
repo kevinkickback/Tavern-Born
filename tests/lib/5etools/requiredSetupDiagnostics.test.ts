@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import {
   createClassChoiceCoverageMatrix,
@@ -21,6 +21,7 @@ import type {
   ClassFeatureReference,
   SubclassFeatureReference,
 } from '@/types/5etools'
+import { installDeftDiagnosticSourceDouble } from '../../fixtures/deftDiagnosticSourceDouble'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 import {
   classSetupRef,
@@ -32,6 +33,9 @@ import {
   stormEntries,
   subclassSetupRef,
 } from '../../fixtures/requiredSetupFixtures'
+
+beforeEach(installDeftDiagnosticSourceDouble)
+afterEach(() => vi.restoreAllMocks())
 
 const owner = { name: 'Sorcerer', source: 'XPHB' }
 const subclass = { name: 'Draconic Bloodline', source: 'PHB' }
@@ -332,12 +336,14 @@ describe('source-confirmed required setup', () => {
         .map((d) => d.featureName)
         .sort(),
     ).toEqual(name === 'Favored Foe' ? ['Deft Explorer', 'Favored Enemy'] : ['Natural Explorer'])
+    const restoredDocument = rangerSetupDocument()
+    const restoredRanger = parseClasses(restoredDocument)[0] as Class5e
     const restored = buildClassChoiceFeatureCatalogs({
-      classes: [ranger],
-      classFeatures: features.slice(0, -1),
+      classes: [restoredRanger],
+      classFeatures: parseClassFeatures(restoredDocument) as ClassFeature[],
     })
     expect(
-      getCharacterClassChoiceDiagnostics(ranger, undefined, true, restored).map(
+      getCharacterClassChoiceDiagnostics(restoredRanger, undefined, true, restored).map(
         (d) => d.featureName,
       ),
     ).toEqual(['Deft Explorer'])
@@ -345,6 +351,7 @@ describe('source-confirmed required setup', () => {
       getCharacterClassChoiceDiagnostics(ranger, undefined, true, {
         ...catalogs,
         classFeatures: [],
+        classFeatureCandidates: new Map(),
       })
         .map((d) => d.featureName)
         .sort(),
@@ -366,7 +373,7 @@ describe('source-confirmed required setup', () => {
     ).toEqual(['Deft Explorer'])
   })
 
-  test('changed Canny declarations remain unverified after a valid replacement relation', () => {
+  test('changed Canny declarations cannot waive the original terrain setup', () => {
     const { ranger, features } = rangerData()
     const ref = ranger.classFeatureRefs!.find((ref) => ref.name === 'Deft Explorer')!
     ref.feature!.entries = [deftEntries[0]]
@@ -379,7 +386,7 @@ describe('source-confirmed required setup', () => {
     }
     expect(
       getCharacterClassChoiceDiagnostics(ranger, undefined, true, { classFeatures: features }),
-    ).toMatchObject([{ featureName: 'Deft Explorer', code: 'unverified-required-choice' }])
+    ).toMatchObject([{ featureName: 'Natural Explorer', code: 'unverified-required-choice' }])
   })
 
   test.each([
@@ -488,7 +495,7 @@ describe('source-confirmed required setup', () => {
           .find((c) => c.source === 'PHB')!
           .normalizedRules!.choiceDiagnostics.map((d) => d.featureName)
           .sort(),
-      ).toEqual(['Deft Explorer', 'Favored Enemy', 'Natural Explorer'])
+      ).toEqual(['Deft Explorer', 'Favored Enemy'])
       expect(classes.find((c) => c.source === 'XPHB')!.normalizedRules!.choiceDiagnostics).toEqual(
         [],
       )

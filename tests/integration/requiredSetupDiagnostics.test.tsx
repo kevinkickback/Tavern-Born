@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { afterEach, beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
@@ -25,12 +25,17 @@ import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
+import { installDeftDiagnosticSourceDouble } from '../fixtures/deftDiagnosticSourceDouble'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { dragonSetupDocument, rangerSetupDocument } from '../fixtures/requiredSetupFixtures'
 
-beforeEach(resetCharacterStore)
+beforeEach(() => {
+  resetCharacterStore()
+  installDeftDiagnosticSourceDouble()
+})
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
 })
@@ -217,7 +222,7 @@ test('class controller, Builder and readiness share filtered optional replacemen
   expect(filteredProbe.result.current.classFeatures).toEqual([])
   expect(screen.queryByText(/requires Canny expertise/)).toBeNull()
   expect(screen.getByText(/requires enemy and associated language/)).toBeTruthy()
-  expect(screen.getByText(/requires favored terrain/)).toBeTruthy()
+  expect(screen.getByText(/favored-terrain rules/)).toBeTruthy()
   await act(async () => useGameDataStore.setState({ gameData: data }))
   expect(screen.getAllByText(/requires Canny expertise/)).toHaveLength(1)
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(saved)
@@ -269,7 +274,7 @@ test.each([
   const saved = JSON.stringify(useCharacterStore.getState().activeCharacter)
   const base = name === 'Favored Foe' ? 'Favored Enemy' : 'Natural Explorer'
   const body =
-    name === 'Favored Foe' ? /requires enemy and associated language/ : /requires favored terrain/
+    name === 'Favored Foe' ? /requires enemy and associated language/ : /favored-terrain rules/
   render(
     <MemoryRouter initialEntries={['/build/review']}>
       <Routes>

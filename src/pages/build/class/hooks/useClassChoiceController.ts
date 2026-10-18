@@ -4,6 +4,7 @@ import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanc
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceCatalogs,
@@ -18,6 +19,10 @@ import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
 } from '@/lib/character/featureOptionSelections'
+import {
+  hasNaturalExplorerRecovery,
+  scopeNaturalExplorerOptions,
+} from '@/lib/character/naturalExplorerSelections'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -63,18 +68,32 @@ export function useClassChoiceController({
             viewingClassData,
             viewingSubclassData,
             includeClassFeatureVariants,
+            catalogs,
           ).filter((choice) => choice.level <= viewingClassLevel)
         : [],
-    [includeClassFeatureVariants, viewingClassData, viewingClassLevel, viewingSubclassData],
+    [
+      includeClassFeatureVariants,
+      viewingClassData,
+      viewingClassLevel,
+      viewingSubclassData,
+      catalogs,
+    ],
   )
   const persistedSelectionByChoiceId = useMemo(
     () =>
       new Map(
-        (character?.classChoiceSelections ?? [])
+        (character
+          ? getEffectiveClassChoiceSelections(
+              character,
+              viewingClassData ? [viewingClassData] : [],
+              catalogs,
+            )
+          : []
+        )
           .filter((entry) => !entry.inactive)
           .map((entry) => [entry.choiceId, entry]),
       ),
-    [character?.classChoiceSelections],
+    [character, viewingClassData, catalogs],
   )
   const resolvedCatalogs = useMemo<ClassChoiceCatalogs>(
     () => ({ ...catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies }),
@@ -95,7 +114,7 @@ export function useClassChoiceController({
     const viewed = viewingClassEntry ?? viewingClassData
     return featureOptionStates.filter((state) => {
       if (!state.recovery) return false
-      if (state.storm)
+      if (state.storm || state.literalGroup)
         return (
           !!state.owner &&
           !!viewed &&
@@ -120,7 +139,11 @@ export function useClassChoiceController({
           const state = featureOptionStates.find((entry) => entry.selection.choiceId === choice.id)
           const views =
             state?.options ??
-            resolveClassChoiceOptions(choice, resolvedCatalogs, selected, viewingClassLevel)
+            scopeNaturalExplorerOptions(
+              choice,
+              resolveClassChoiceOptions(choice, resolvedCatalogs, selected, viewingClassLevel),
+              character?.classChoiceSelections ?? [],
+            )
           return [
             choice.id,
             state
@@ -143,6 +166,7 @@ export function useClassChoiceController({
       resolvedCatalogs,
       viewingClassLevel,
       featureOptionStates,
+      character?.classChoiceSelections,
     ],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
@@ -248,10 +272,19 @@ export function useClassChoiceController({
     const previousKeys = new Set(
       (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
     )
-    applyClassChoiceSelection(
-      current,
-      confirmedSelections.map((option) => option.reference),
-    )
+    try {
+      applyClassChoiceSelection(
+        current,
+        confirmedSelections.map((option) => option.reference),
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'This choice could not be verified. Review the current source rules.',
+      )
+      return
+    }
     if (current.kind === 'feat' && onFeatOptionsRequired) {
       const newlyAdded = confirmedSelections.find(
         (option) => !previousKeys.has(getClassChoiceOptionKey(option.reference)),
@@ -278,7 +311,9 @@ export function useClassChoiceController({
           includeClassFeatureVariants,
           catalogs,
         ).filter(
-          (diagnostic) => diagnostic.level === undefined || diagnostic.level <= viewingClassLevel,
+          (diagnostic) =>
+            (diagnostic.level === undefined || diagnostic.level <= viewingClassLevel) &&
+            !hasNaturalExplorerRecovery(diagnostic, featureOptionStates),
         )
       : [],
     selectionByChoiceId,

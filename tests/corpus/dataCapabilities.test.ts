@@ -327,7 +327,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       { entity: 'Mystic|UATheMysticClass', feature: 'Psionics' },
       { entity: 'Ranger|PHB', feature: 'Deft Explorer' },
       { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
-      { entity: 'Ranger|PHB', feature: 'Natural Explorer' },
     ])
     expect(
       setupIssues.every((issue) => issue.message.includes(': unsupported-required-choice: ')),
@@ -362,6 +361,19 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         required: false,
       },
     ])
+    const terrain = classes
+      .find((row) => row.name === 'Ranger' && row.source === 'PHB')!
+      .normalizedRules!.choices.filter((row) => row.label === 'Natural Explorer')
+    expect(terrain.map((row) => row.level)).toEqual([1, 6, 10])
+    expect(
+      terrain.every(
+        (row) =>
+          row.kind === 'feature-option' &&
+          row.minimumSelections === 1 &&
+          row.maximumSelections === 1 &&
+          row.options.length === 8,
+      ),
+    ).toBe(true)
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)

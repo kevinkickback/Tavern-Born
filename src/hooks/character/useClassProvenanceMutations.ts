@@ -90,14 +90,20 @@ export function useClassProvenanceMutations() {
   const applyClassChoiceSelection = useCallback(
     (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
       if (!character) return
-      const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, choice, selected)
+      const result = applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        ledger,
+        choice,
+        selected,
+        calculationContext?.classChoices,
+      )
       if (Object.keys(result.characterPatch).length === 0) return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, calculationContext],
   )
 
   const retainSavedFeatureOptions = useCallback(

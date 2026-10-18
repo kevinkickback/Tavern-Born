@@ -4,6 +4,7 @@ import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import {
   type ClassChoiceCatalogs,
   collectSubclassFeatures,
@@ -14,6 +15,7 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
+import { hasNaturalExplorerRecovery } from '@/lib/character/naturalExplorerSelections'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   classAsiReadinessId,
@@ -58,22 +60,24 @@ export function validateClassChoices(
   const issues: CharacterReadinessIssue[] = []
   const entries = getCharacterClassEntries(character)
   const selections = new Map(
-    (character.classChoiceSelections ?? [])
+    getEffectiveClassChoiceSelections(character, calculation.classChoices.classes, catalogs)
       .filter((selection) => !selection.inactive)
       .map((selection) => [selection.choiceId, selection]),
   )
   const featureOptionStates = getFeatureOptionSelectionStates(
     character,
-    calculation.classes,
+    calculation.classChoices.classes,
     catalogs,
   )
-  for (const state of featureOptionStates.filter((row) => row.storm && row.owner && row.recovery)) {
+  for (const state of featureOptionStates.filter(
+    (row) => (row.storm || row.literalGroup) && row.owner && row.recovery,
+  )) {
     issues.push(
       readinessIssue(
         classChoiceReadinessId(state.selection.choiceId),
         'blocking',
         'class',
-        'Restore or remove ' + state.selection.label,
+        `Restore or remove ${state.selection.label}`,
         'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
         classChoiceTarget(state.owner!, state.selection.classLevel, state.selection.choiceId),
       ),
@@ -139,6 +143,7 @@ export function validateClassChoices(
       classData,
       subclassData,
       includeClassFeatureVariants,
+      catalogs,
     )) {
       if (
         featureOptionStates.some(
@@ -182,13 +187,20 @@ export function validateClassChoices(
       includeClassFeatureVariants,
       catalogs,
     )) {
-      if ((diagnostic.level ?? 1) > entry.levels) continue
+      if (
+        (diagnostic.level ?? 1) > entry.levels ||
+        hasNaturalExplorerRecovery(diagnostic, featureOptionStates)
+      )
+        continue
       issues.push(
         readinessIssue(
           classChoiceDiagnosticReadinessId(
             readinessClassKey(entry),
             diagnostic.featureName,
             diagnostic.code,
+            diagnostic.featureName === 'Natural Explorer' && diagnostic.requiredChoice?.target.ref
+              ? { ref: diagnostic.requiredChoice.target.ref, level: diagnostic.level ?? 1 }
+              : undefined,
           ),
           'blocking',
           'class',
@@ -200,6 +212,7 @@ export function validateClassChoices(
     }
 
     for (const state of featureOptionStates) {
+      if (state.selection.inactive) continue
       if (
         !state.owner ||
         state.owner.name !== entry.name ||
@@ -208,7 +221,7 @@ export function validateClassChoices(
         (state.selection.subclassName && !state.subclass)
       )
         continue
-      if (state.storm && state.recovery) continue
+      if ((state.storm || state.literalGroup) && state.recovery) continue
       if (state.recovery) {
         issues.push(
           readinessIssue(

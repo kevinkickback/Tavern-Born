@@ -22,6 +22,7 @@ import {
   getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
+import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 import { normalizeStormAuraChoices } from './stormAuraChoices'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
@@ -1004,6 +1005,7 @@ export function normalizeClassChoices(
   const owner = classChoiceOwner(classData)
   const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
+  const terrain = normalizeNaturalExplorerChoices(owner, declarations)
   const direct = normalizeFeatureOptionChoices(
     classData,
     refs,
@@ -1017,7 +1019,13 @@ export function normalizeClassChoices(
     owner,
   )
   const tableBacked = normalizeTableBackedFilterChoices(classData, refs)
-  const accumulated = [...direct.choices, ...progression, ...tableBacked, ...tables.choices]
+  const accumulated = [
+    ...direct.choices,
+    ...progression,
+    ...tableBacked,
+    ...tables.choices,
+    ...terrain.choices,
+  ]
   const singleFilters = normalizeSingleFilterChoices(refs, accumulated, owner)
   const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
@@ -1027,7 +1035,10 @@ export function normalizeClassChoices(
     diagnostics: [
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
-      ...normalizeRequiredSetupDiagnostics(owner, declarations),
+      ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
+        (diagnostic) => diagnostic.featureName !== 'Natural Explorer',
+      ),
+      ...terrain.diagnostics,
       ...tables.diagnostics,
     ],
   }

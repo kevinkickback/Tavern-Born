@@ -571,7 +571,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(character.movement.speeds.walk).toBeGreaterThan(0)
     const subclassData = getSelectedSubclassData(classData, character.classProgression[0])
     const catalogs = buildClassChoiceCatalogs(character)
-    const choices = getCharacterClassChoices(classData, subclassData, edition === '2014')
+    const choices = getCharacterClassChoices(classData, subclassData, edition === '2014', catalogs)
     for (const choice of choices) {
       const required = getRequiredChoiceSelectionCount(choice, 3)
       if (required === 0) continue

@@ -1,15 +1,24 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
   getClassChoiceOptionKey,
 } from '@/lib/character/classChoiceIdentity'
+import {
+  type ClassChoiceFeatureCatalogs,
+  createClassChoiceCatalogs,
+  getCharacterClassChoices,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { getInvalidNaturalExplorerSelectionIds } from '@/lib/schema/naturalExplorerValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
+import type { Class5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassChoiceOption,
@@ -21,6 +30,48 @@ import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from 
 import type { CharacterCommandResult } from './commandResult'
 import { replaceClassFeatSelectionsCommand } from './featCommands'
 import { assignProgressionSlotLevels } from './progressionSlotOwnership'
+
+export interface ClassChoiceAuthority {
+  classes: readonly Class5e[]
+  catalogs?: ClassChoiceFeatureCatalogs
+}
+
+function currentLiteralChoice(
+  character: Character,
+  choice: NormalizedCharacterChoice,
+  selected: readonly NormalizedChoiceOptionReference[],
+  authority: ClassChoiceAuthority | undefined,
+): NormalizedCharacterChoice {
+  if (!isFeatureLiteralChoiceId(choice.id)) return choice
+  const classData = authority && findClassReference(choice.owner, authority.classes)
+  const current =
+    classData &&
+    getCharacterClassChoices(
+      classData,
+      undefined,
+      character.variantRules?.optionalClassFeatures ?? false,
+      authority?.catalogs,
+    ).find((candidate) => candidate.id === choice.id)
+  if (!current || !authority?.catalogs)
+    throw new RangeError(
+      'Current source rules cannot verify this favored-terrain choice. Restore the source or review the saved choice.',
+    )
+  const eligible = new Set(
+    resolveClassChoiceOptions(
+      current,
+      createClassChoiceCatalogs(authority.catalogs),
+      [],
+      findOwner(character, current)?.levels ?? 0,
+    )
+      .filter((option) => option.availability === 'eligible')
+      .map((option) => getClassChoiceOptionKey(option.reference)),
+  )
+  if (selected.some((option) => !eligible.has(getClassChoiceOptionKey(option))))
+    throw new RangeError(
+      'Source rules changed. Review the available favored terrains before confirming.',
+    )
+  return current
+}
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
 
@@ -115,7 +166,9 @@ export function applyClassChoiceSelectionCommand(
   character: Character,
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
+  authority?: ClassChoiceAuthority,
 ): Pick<Character, 'classChoiceSelections'> {
+  choice = currentLiteralChoice(character, choice, selected, authority)
   const owner = findOwner(character, choice)
   const classLevel = owner?.levels ?? 0
   if (!owner || classLevel < choice.level) {
@@ -137,6 +190,26 @@ export function applyClassChoiceSelectionCommand(
     (existing) => existing.choiceId === choice.id,
   )
   validateSelectedOptions(choice, selected, existingSelection?.selected)
+  if (isFeatureLiteralChoiceId(choice.id) && selected.length) {
+    const proposed = {
+      ...existingSelection,
+      choiceId: choice.id,
+      label: choice.label,
+      kind: choice.kind,
+      className: owner.name,
+      classSource: owner.source,
+      classLevel: choice.level,
+      selected: selected.map((option) => ({ ...option, slotLevel: choice.level })),
+    } as CharacterClassChoiceSelection
+    const next = [
+      ...(character.classChoiceSelections ?? []).filter((row) => row.choiceId !== choice.id),
+      proposed,
+    ]
+    if (getInvalidNaturalExplorerSelectionIds(next).has(choice.id))
+      throw new RangeError(
+        'Choose a different favored terrain for each earned Natural Explorer choice.',
+      )
+  }
   if (
     (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
     sameSelectionKeys(
@@ -303,8 +376,9 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   ledger: ProvenanceLedger,
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
+  authority?: ClassChoiceAuthority,
 ): CharacterCommandResult {
-  const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected)
+  const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected, authority)
   if (
     (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
     selectionPatch.classChoiceSelections === character.classChoiceSelections
