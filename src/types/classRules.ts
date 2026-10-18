@@ -78,12 +78,21 @@ export interface NormalizedCharacterChoice {
 }
 
 export interface ClassChoiceDiagnostic {
-  code: 'invalid-count' | 'unresolved-options'
+  code:
+    | 'invalid-count'
+    | 'unresolved-options'
+    | 'unsupported-required-choice'
+    | 'unverified-required-choice'
   className: string
   classSource: string
   subclassName?: string
   subclassSource?: string
   featureName: string
+  requiredChoice?: {
+    target: NormalizedChoiceOptionReference
+    replacedBy?: string
+    replaces?: string
+  }
   level?: number
   message: string
   featureVariant?: {

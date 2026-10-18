@@ -51,7 +51,7 @@ supported. A malformed present field or combined-plus-split coexistence yields n
 weapon bonus and a manual-review note. Separate attack/damage fields remain separate channels.
 Exact primary item resolution wins over raw fallback, even when its bonus fields are absent or
 unsupported. Missing exact data removes only the derived contribution; restoration recomputes it.
-No saved equipment, prose, provenance or manual values change; character format11/cache37 remain.
+The projection preserves saved equipment, prose, provenance and manual values without changing the character format.
 
 Eligibility requires an existing physical weapon in both inventory and selected item data.
 Shared classification excludes ammunition, armor, consumables, groups and generic/reference

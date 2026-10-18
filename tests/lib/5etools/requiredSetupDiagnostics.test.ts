@@ -1,0 +1,472 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { describe, expect, test } from 'vitest'
+import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
+import {
+  createClassChoiceCoverageMatrix,
+  findClassChoiceCoverageGaps,
+} from '@/lib/5etools/classChoiceCoverage'
+import {
+  normalizeClassChoices,
+  normalizeSubclassRules,
+} from '@/lib/5etools/classChoiceNormalization'
+import { DataFilter } from '@/lib/5etools/filters'
+import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import {
+  buildClassChoiceFeatureCatalogs,
+  getCharacterClassChoiceDiagnostics,
+} from '@/lib/character/classChoiceOptions'
+import type {
+  Class5e,
+  ClassFeature,
+  ClassFeatureReference,
+  SubclassFeatureReference,
+} from '@/types/5etools'
+import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
+import {
+  classSetupRef,
+  deftEntries,
+  dragonEntries,
+  dragonSetupDocument,
+  enemyEntries,
+  rangerSetupDocument,
+  stormEntries,
+  subclassSetupRef,
+} from '../../fixtures/requiredSetupFixtures'
+
+const owner = { name: 'Sorcerer', source: 'XPHB' }
+const subclass = { name: 'Draconic Bloodline', source: 'PHB' }
+function subclassDiagnostics(refs: SubclassFeatureReference[]) {
+  return normalizeSubclassRules(owner, subclass, refs).choiceDiagnostics.filter(
+    (d) => d.requiredChoice,
+  )
+}
+function rangerData() {
+  const doc = rangerSetupDocument()
+  return {
+    ranger: parseClasses(doc)[0] as Class5e,
+    features: parseClassFeatures(doc) as ClassFeature[],
+  }
+}
+function names(ranger: Class5e, includeVariants: boolean, features?: readonly ClassFeature[]) {
+  return getCharacterClassChoiceDiagnostics(
+    ranger,
+    undefined,
+    includeVariants,
+    features ? { classFeatures: features } : undefined,
+  )
+    .map((d) => d.featureName)
+    .sort()
+}
+
+describe('source-confirmed required setup', () => {
+  test('keeps copied target level and selected owner distinct, at the enclosing earned level', () => {
+    const parsed = parseClasses(dragonSetupDocument())[0] as Class5e
+    const diagnostic = parsed.subclasses![0].normalizedRules!.choiceDiagnostics[0]
+    expect(diagnostic).toMatchObject({
+      code: 'unsupported-required-choice',
+      className: 'Sorcerer',
+      classSource: 'XPHB',
+      subclassName: 'Draconic Bloodline',
+      subclassSource: 'PHB',
+      featureName: 'Dragon Ancestor',
+      level: 3,
+      requiredChoice: {
+        target: {
+          ref: 'Dragon Ancestor|Sorcerer||Draconic||1',
+          entityType: 'subclassFeature',
+          source: 'PHB',
+        },
+      },
+    })
+    expect(parsed.subclasses![0].normalizedRules!.choices).toEqual([])
+  })
+
+  test.each([
+    false,
+    true,
+  ])('earliest grant is independent of duplicate path order and cycles: %s', (reverse) => {
+    const dragon = subclassSetupRef('Dragon Ancestor|Sorcerer||Draconic||1', dragonEntries)
+    const roots = [6, 3].map((level) =>
+      subclassSetupRef(`Root ${level}|Sorcerer|XPHB|Draconic|PHB|${level}|PHB`, [
+        { type: 'refSubclassFeature', subclassFeature: dragon.ref, feature: dragon.feature },
+      ]),
+    )
+    dragon.feature!.entries = [
+      ...dragonEntries,
+      { type: 'refSubclassFeature', subclassFeature: roots[0].ref, feature: roots[0].feature },
+    ]
+    if (reverse) roots.reverse()
+    expect(subclassDiagnostics(roots)).toMatchObject([
+      { level: 3, featureName: 'Dragon Ancestor', code: 'unsupported-required-choice' },
+    ])
+  })
+
+  test.each([
+    'name',
+    'className',
+    'classSource',
+    'subclassShortName',
+    'subclassSource',
+    'level',
+    'source',
+  ] as const)('a conflicting resolved subclass %s cannot confirm the known target', (field) => {
+    const ref = subclassSetupRef('Dragon Ancestor|Sorcerer||Draconic||1', dragonEntries)
+    Object.assign(ref.feature!, { [field]: field === 'level' ? 2 : 'Other' })
+    expect(subclassDiagnostics([ref])).toMatchObject([
+      { code: 'unverified-required-choice', level: 1 },
+    ])
+    // A different requested target is outside this known registry; it cannot borrow PHB rules.
+    const parts = ref.ref!.split('|')
+    const index = {
+      name: 0,
+      className: 1,
+      classSource: 2,
+      subclassShortName: 3,
+      subclassSource: 4,
+      level: 5,
+      source: 6,
+    }[field]
+    while (parts.length <= index) parts.push('')
+    parts[index] = field === 'level' ? '2' : 'Other'
+    ref.ref = parts.join('|')
+    expect(subclassDiagnostics([ref])).toEqual([])
+  })
+
+  test.each([
+    'name',
+    'className',
+    'classSource',
+    'level',
+    'source',
+  ] as const)('a conflicting resolved class %s cannot confirm the known target', (field) => {
+    const ref = classSetupRef('Favored Enemy|Ranger||1', enemyEntries)
+    Object.assign(ref.feature!, { [field]: field === 'level' ? 2 : 'Other' })
+    expect(
+      normalizeClassChoices({ name: 'Ranger', source: 'PHB' }, [ref]).diagnostics.filter(
+        (d) => d.requiredChoice,
+      ),
+    ).toMatchObject([{ code: 'unverified-required-choice' }])
+  })
+
+  test('accepts UID defaults/case while retaining the original source-qualified reference', () => {
+    const ref = subclassSetupRef(
+      ' dragon ancestor | sorcerer || draconic || 1 | | Display',
+      dragonEntries,
+    )
+    expect(subclassDiagnostics([ref])).toMatchObject([
+      {
+        code: 'unsupported-required-choice',
+        requiredChoice: { target: { ref: ref.ref, source: 'PHB' } },
+      },
+    ])
+  })
+
+  test('missing, changed and exactly restored source bodies never silently qualify known setup', () => {
+    const ref = subclassSetupRef('Dragon Ancestor|Sorcerer||Draconic||1', dragonEntries)
+    const before = structuredClone(ref)
+    expect(subclassDiagnostics([{ ...ref, feature: undefined }])[0].code).toBe(
+      'unverified-required-choice',
+    )
+    expect(
+      subclassDiagnostics([
+        { ...ref, feature: { ...ref.feature!, entries: [dragonEntries[0]] } },
+      ])[0].code,
+    ).toBe('unverified-required-choice')
+    expect(subclassDiagnostics([ref])[0].code).toBe('unsupported-required-choice')
+    expect(ref).toEqual(before)
+    const storm = subclassSetupRef('Storm Aura|Barbarian||Storm Herald|XGE|3', stormEntries)
+    expect(subclassDiagnostics([storm])[0].code).toBe('unsupported-required-choice')
+    const broken = structuredClone(storm)
+    ;(broken.feature!.entries![1] as { entries: unknown[] }).entries.pop()
+    expect(subclassDiagnostics([broken])[0].code).toBe('unverified-required-choice')
+  })
+
+  test('malformed non-array source bodies remain unverified rather than throwing or confirming', () => {
+    const dragon = subclassSetupRef('Dragon Ancestor|Sorcerer||Draconic||1', dragonEntries)
+    dragon.feature!.entries = JSON.stringify(dragonEntries) as unknown as unknown[]
+    expect(subclassDiagnostics([dragon])[0].code).toBe('unverified-required-choice')
+    const enemy = classSetupRef('Favored Enemy|Ranger||1', enemyEntries)
+    enemy.feature!.entries = JSON.stringify(enemyEntries) as unknown as unknown[]
+    expect(
+      normalizeClassChoices({ name: 'Ranger', source: 'PHB' }, [enemy]).diagnostics.filter(
+        (d) => d.requiredChoice,
+      )[0].code,
+    ).toBe('unverified-required-choice')
+  })
+
+  test('preserves presentation-only options and does not earn unselected alternatives', () => {
+    const dragon = subclassSetupRef('Dragon Ancestor|Sorcerer||Draconic||1', dragonEntries)
+    const rules = normalizeSubclassRules(owner, subclass, [
+      subclassSetupRef('Presentation|Sorcerer|XPHB|Draconic|PHB|3|PHB', [
+        {
+          type: 'options',
+          entries: [
+            { type: 'refSubclassFeature', subclassFeature: dragon.ref, feature: dragon.feature },
+          ],
+        },
+      ]),
+    ])
+    expect(rules.choices).toEqual([])
+    expect(rules.choiceDiagnostics).toEqual([])
+  })
+
+  test('Ranger variants use exact active source targets and retain genuine Canny setup', () => {
+    const { ranger, features } = rangerData()
+    expect(names(ranger, false, features)).toEqual(['Favored Enemy', 'Natural Explorer'])
+    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+    expect(names(ranger, true, [])).toEqual(['Favored Enemy', 'Natural Explorer'])
+    expect(names(ranger, true)).toEqual(['Favored Enemy', 'Natural Explorer'])
+    expect(
+      names(
+        ranger,
+        true,
+        features.filter((f) => f.name === 'Favored Foe'),
+      ),
+    ).toEqual(['Natural Explorer'])
+    expect(
+      names(
+        ranger,
+        true,
+        features.filter((f) => f.name === 'Deft Explorer'),
+      ),
+    ).toEqual(['Deft Explorer', 'Favored Enemy'])
+    expect(
+      names(
+        {
+          ...ranger,
+          classFeatureRefs: ranger.classFeatureRefs!.filter((ref) => ref.name !== 'Deft Explorer'),
+        },
+        true,
+        features,
+      ),
+    ).toEqual(['Natural Explorer'])
+    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+  })
+
+  test.each([
+    'name',
+    'className',
+    'classSource',
+    'level',
+    'source',
+    'isClassFeatureVariant',
+    'entries',
+  ] as const)('Ranger replacement with conflicting %s cannot waive base setup', (field) => {
+    const { ranger, features } = rangerData()
+    const foe = features.find((f) => f.name === 'Favored Foe')!
+    Object.assign(foe, {
+      [field]:
+        field === 'level'
+          ? 2
+          : field === 'isClassFeatureVariant'
+            ? false
+            : field === 'entries'
+              ? ['Unrelated prose.']
+              : 'Other',
+    })
+    expect(names(ranger, true, features)).toEqual(['Deft Explorer', 'Favored Enemy'])
+  })
+
+  test('duplicate exact replacements and generic name-only warnings cannot waive known setup', () => {
+    const { ranger, features } = rangerData()
+    const foe = features.find((f) => f.name === 'Favored Foe')!
+    expect(names(ranger, true, [...features, { ...foe }])).toEqual([
+      'Deft Explorer',
+      'Favored Enemy',
+    ])
+    ranger.normalizedRules!.choiceDiagnostics.push({
+      code: 'unresolved-options',
+      className: 'Ranger',
+      classSource: 'PHB',
+      featureName: 'Unrelated replacement',
+      message: 'Unresolved.',
+      featureVariant: { replacesFeatureName: 'Favored Enemy' },
+    })
+    expect(names(ranger, true, [])).toEqual([
+      'Favored Enemy',
+      'Natural Explorer',
+      'Unrelated replacement',
+    ])
+    const missing = {
+      ...ranger,
+      classFeatureRefs: ranger.classFeatureRefs!.map((ref) =>
+        ref.name === 'Favored Foe' ? { ...ref, feature: undefined } : ref,
+      ),
+    }
+    expect(names(missing, true, features)).toEqual([
+      'Deft Explorer',
+      'Favored Enemy',
+      'Unrelated replacement',
+    ])
+  })
+
+  test.each([
+    'Favored Foe',
+    'Deft Explorer',
+  ])('production catalog retains %s ambiguity and exact restoration', (name) => {
+    const doc = rangerSetupDocument()
+    const original = doc.classFeature.find((feature) => feature!.name === name)!
+    doc.classFeature.push({
+      ...original,
+      name: original.name.toUpperCase(),
+      className: ' RANGER ',
+      classSource: '',
+      source: ' tce ',
+      entries: ['Conflicting replacement body.'],
+    })
+    const ranger = parseClasses(doc)[0] as Class5e
+    const features = DataFilter.filterClassFeatures(parseClassFeatures(doc) as ClassFeature[], {
+      sources: ['PHB', 'TCE'],
+    })
+    const catalogs = buildClassChoiceFeatureCatalogs({ classes: [ranger], classFeatures: features })
+    expect(catalogs.ambiguousClassFeatureTargets.size).toBe(1)
+    expect(
+      getCharacterClassChoiceDiagnostics(ranger, undefined, true, catalogs)
+        .map((d) => d.featureName)
+        .sort(),
+    ).toEqual(name === 'Favored Foe' ? ['Deft Explorer', 'Favored Enemy'] : ['Natural Explorer'])
+    const restored = buildClassChoiceFeatureCatalogs({
+      classes: [ranger],
+      classFeatures: features.slice(0, -1),
+    })
+    expect(
+      getCharacterClassChoiceDiagnostics(ranger, undefined, true, restored).map(
+        (d) => d.featureName,
+      ),
+    ).toEqual(['Deft Explorer'])
+    expect(
+      getCharacterClassChoiceDiagnostics(ranger, undefined, true, {
+        ...catalogs,
+        classFeatures: [],
+      })
+        .map((d) => d.featureName)
+        .sort(),
+    ).toEqual(['Favored Enemy', 'Natural Explorer'])
+  })
+
+  test('a different complete target does not mark the valid replacement ambiguous', () => {
+    const { ranger, features } = rangerData()
+    const foe = features.find((feature) => feature.name === 'Favored Foe')!
+    const catalogs = buildClassChoiceFeatureCatalogs({
+      classes: [ranger],
+      classFeatures: [...features, { ...foe, source: 'OTHER' }],
+    })
+    expect(catalogs.ambiguousClassFeatureTargets.size).toBe(0)
+    expect(
+      getCharacterClassChoiceDiagnostics(ranger, undefined, true, catalogs).map(
+        (d) => d.featureName,
+      ),
+    ).toEqual(['Deft Explorer'])
+  })
+
+  test('changed Canny declarations remain unverified after a valid replacement relation', () => {
+    const { ranger, features } = rangerData()
+    const ref = ranger.classFeatureRefs!.find((ref) => ref.name === 'Deft Explorer')!
+    ref.feature!.entries = [deftEntries[0]]
+    ranger.normalizedRules = {
+      ...ranger.normalizedRules!,
+      ...{
+        choices: normalizeClassChoices(ranger, ranger.classFeatureRefs!).choices,
+        choiceDiagnostics: normalizeClassChoices(ranger, ranger.classFeatureRefs!).diagnostics,
+      },
+    }
+    expect(
+      getCharacterClassChoiceDiagnostics(ranger, undefined, true, { classFeatures: features }),
+    ).toMatchObject([{ featureName: 'Deft Explorer', code: 'unverified-required-choice' }])
+  })
+
+  test.each([
+    null,
+    8,
+    {},
+  ])('rejects non-string UIDs without borrowing known metadata or crashing on a neighbor: %s', (uid) => {
+    const malformed = {
+      ...classSetupRef('Favored Enemy|Ranger||1', enemyEntries),
+      ref: uid,
+    } as unknown as ClassFeatureReference
+    expect(normalizeClassChoices({ name: 'Ranger', source: 'PHB' }, [malformed])).toEqual({
+      choices: [],
+      diagnostics: [],
+    })
+    const { ranger, features } = rangerData()
+    ranger.classFeatureRefs = [malformed, ...ranger.classFeatureRefs!]
+    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+  })
+
+  test('malformed scalar replacement bodies cannot waive setup on either catalog boundary', () => {
+    const { ranger, features } = rangerData()
+    const foe = features.find((feature) => feature.name === 'Favored Foe')!
+    const scalar = JSON.stringify(foe.entries) as unknown as unknown[]
+    const malformedCatalog = features.map((feature) =>
+      feature === foe ? { ...feature, entries: scalar } : feature,
+    )
+    expect(names(ranger, true, malformedCatalog)).toEqual(['Deft Explorer', 'Favored Enemy'])
+    const malformedOwner = {
+      ...ranger,
+      classFeatureRefs: ranger.classFeatureRefs!.map((ref) =>
+        ref.name === 'Favored Foe'
+          ? { ...ref, feature: { ...ref.feature!, entries: scalar } }
+          : ref,
+      ),
+    }
+    expect(names(malformedOwner, true, features)).toEqual(['Deft Explorer', 'Favored Enemy'])
+    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+  })
+
+  test('capability and coverage audits report setup gaps rather than fabricated choices', () => {
+    const { ranger, features } = rangerData()
+    const report = createCorpusCapabilityReport(
+      makeGameDataFixture({ classes: [ranger], classFeatures: features }),
+    )
+    expect(report.classChoices.diagnostics).toBe(3)
+    expect(report.issues.filter((i) => i.code === 'choice-diagnostic')).toHaveLength(3)
+    const matrix = createClassChoiceCoverageMatrix([ranger], 20)
+    expect(matrix[0].levels[0]).toMatchObject({ requiredSelections: 0, choices: [] })
+    expect(findClassChoiceCoverageGaps([ranger], matrix, 20).map((gap) => gap.level)).toEqual([
+      1, 1, 1,
+    ])
+  })
+
+  test.runIf(existsSync('data/class/class-mystic.json'))(
+    'actual configured source recognizes known gaps without borrowing revised printings',
+    () => {
+      const expectations = [
+        ['barbarian', 'Barbarian', 'PHB', 'Path of the Storm Herald', 'XGE', 'Storm Aura', 3],
+        ['barbarian', 'Barbarian', 'XPHB', 'Path of the Storm Herald', 'XGE', 'Storm Aura', 3],
+        ['sorcerer', 'Sorcerer', 'PHB', 'Draconic Bloodline', 'PHB', 'Dragon Ancestor', 1],
+        ['sorcerer', 'Sorcerer', 'XPHB', 'Draconic Bloodline', 'PHB', 'Dragon Ancestor', 3],
+        ['mystic', 'Mystic', 'UATheMysticClass', undefined, undefined, 'Psionics', 1],
+      ] as const
+      for (const [file, name, source, subName, subSource, featureName, level] of expectations) {
+        const classes = parseClasses(
+          JSON.parse(readFileSync(`data/class/class-${file}.json`, 'utf8')),
+        ) as Class5e[]
+        const cls = classes.find((c) => c.name === name && c.source === source)!
+        const rules = subName
+          ? cls.subclasses!.find((s) => s.name === subName && s.source === subSource)!
+              .normalizedRules
+          : cls.normalizedRules
+        expect(rules!.choiceDiagnostics.filter((d) => d.requiredChoice)).toMatchObject([
+          { code: 'unsupported-required-choice', featureName, level },
+        ])
+        if (source === 'XPHB' && name === 'Sorcerer')
+          expect(
+            cls.subclasses!.find((s) => s.source === 'XPHB' && s.name === 'Draconic Sorcery')!
+              .normalizedRules!.choiceDiagnostics,
+          ).toEqual([])
+      }
+      const classes = parseClasses(
+        JSON.parse(readFileSync('data/class/class-ranger.json', 'utf8')),
+      ) as Class5e[]
+      expect(
+        classes
+          .find((c) => c.source === 'PHB')!
+          .normalizedRules!.choiceDiagnostics.map((d) => d.featureName)
+          .sort(),
+      ).toEqual(['Deft Explorer', 'Favored Enemy', 'Natural Explorer'])
+      expect(classes.find((c) => c.source === 'XPHB')!.normalizedRules!.choiceDiagnostics).toEqual(
+        [],
+      )
+    },
+  )
+})
