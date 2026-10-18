@@ -1,188 +1,106 @@
-# Data Flow
+# Data flow
 
-This document describes application-wide sequences. Domain details belong in the linked topic
-guides and code, not duplicated here.
+This guide owns sequence and lifecycle. Follow the linked owner for domain edge cases.
 
 ## Startup and game data
 
-Entry points: `src/main.tsx`, `useDataInit`, `gameDataStore`, `dataLoader`, `dataCache`.
+Entry points: useDataInit, gameDataStore, dataLoader and dataCache.
 
-1. Persisted preferences and lightweight game-data configuration hydrate from IndexedDB. The
-   immutable bundled SRD is the base source; an authorized local directory or remote HTTPS root can
-   be configured as one additional-content source.
-2. Theme bootstrap data is applied from local storage before React paints, then reconciled with
-   hydrated preferences.
-3. `useDataInit` waits for hydration and chooses cache, foreground load, or source configuration.
-4. A usable cache supplies the initial catalog immediately. When a startup refresh is required, the
-   startup overlay remains active until that refresh succeeds or fails so character editing cannot
-   begin against a catalog that may be replaced. The overlay distinguishes settings hydration,
-   cache inspection, source connection, and per-resource loading or update progress. Once this
-   one-time startup gate closes, later settings-initiated refreshes remain modeless and report
-   through Settings and the status bar.
-5. Each configured source is fetched, validated, parsed, and normalized independently. Parsed
-   collections are composed by canonical identity and lookups are rebuilt from the result.
-6. A successful complete composition replaces memory/cache atomically. Failed or superseded loads
-   do not.
+1. IndexedDB hydrates preferences and lightweight source configuration. Theme bootstrap applies
+   local-storage colors before React paints and reconciles them after hydration.
+2. The immutable Included SRD is always the base. One authorized local folder or HTTPS root may
+   supply additional content. First successful bundled load offers a one-time welcome; continuing
+   needs no external setup. Add/Change Additional Content opens the existing chooser, whose Back
+   action returns to the introduction without acknowledging it.
+3. A usable parsed cache supplies initial data. Required startup refresh keeps the startup overlay
+   active until success/failure; editing cannot begin against a catalog awaiting replacement.
+   Hydration, cache, connection and resource progress remain distinct. Later Settings refreshes are modeless.
+4. Each source loads independently. Composition overlays exact identities, rebuilds retained raw
+   families and lookup indexes, then publishes memory/cache atomically. Superseded work cannot commit.
+5. Required failures preserve the prior complete catalog/cache. Remove Additional Content admits
+   and loads the bundled catalog before removing external configuration; failure preserves both.
 
-Cached parsed data without optional lookup indexes receives the standard indexes once when it
-enters memory. Input arrays remain unchanged; supplied indexes, including empty maps, are retained.
-Spell edits use available exact filtered metadata first, then the raw exact catalog.
+A changed installed pack invalidates bundled-only caches even with external auto-refresh disabled.
+Layered identity includes the pack and external source; per-layer fingerprints/counts identify changes.
+lastUpdateCheckAt advances after a successful check, while lastDataChangedAt requires a changed
+content fingerprint. Missing optional lookup indexes are built once; supplied empty maps remain authoritative.
 
-The bundled manifest is read through a fixed Electron capability. Development and packaged builds
-require the committed `tavern-born-srd-core` identity; packaged builds also require
-`approved-for-distribution` and read the reviewed files from `process.resourcesPath`. Unpackaged
-development may load a review-status snapshot without weakening the release boundary. Bundled
-cache entries are immutable for their pack version and are never background-refreshed. “Remove
-Additional Content” loads and validates the admitted bundled catalog before removing the saved
-external connection; failure keeps the existing data, cache, and external configuration while
-exposing a diagnostic. The rebuild is atomic and never makes the application content-free.
+The external configurator loads on demand. In development, Electron disables persistent HTTP disk
+cache before Chromium startup to avoid stale Vite chunks, and Vite excludes .tmp from watching.
+Packaged apps retain normal HTTP caching. Source/assets/Electron watching remains active.
 
-Startup compares bundled-only caches with the installed manifest's current pack version, so an
-app upgrade reloads changed SRD data even when automatic external-data refresh is disabled.
-The external data configurator loads on demand when opened, keeping it out of the startup bundle.
-
-After the first successful bundled load, a one-time welcome confirms that SRD 5.1 and 5.2.1 are
-available offline. Continuing requires no source setup; “Add Additional Content” opens the existing
-external-source controls and explains that user-supplied content expands the bundled catalog. A Back
-action returns to the Included SRD introduction without dismissing or acknowledging it. When
-external content is active, “Change Additional Content” opens the same chooser and offers “Remove
-Additional Content” alongside online and local options; the action is not shown as a separate
-active-state action. The Included SRD summary shows its SRD document versions, supported character
-rules, and offline availability rather than internal pack or cache status.
-
-Bundled transport and version-aware cache identity use the approved committed pack in every
-environment. A fresh packaged or development startup therefore has the same Included SRD base.
-In development only, Electron disables its persistent HTTP disk cache before Chromium starts so
-Vite cannot reuse an optimized dependency response after the corresponding shared chunks have been
-regenerated. Packaged applications retain normal HTTP caching. Vite's development server excludes
-`.tmp` artifacts from its file watcher so accumulated temporary copies do not delay startup;
-renderer source, assets, and Electron entry-point watching remain active.
-
-`lastUpdateCheckAt` advances after a successful check. `lastDataChangedAt` advances only when the
-composed content fingerprint changes. Layered cache identity includes both the bundled pack and the
-external source, so either source changing invalidates the effective catalog. The cache records a
-separate normalized-content fingerprint and entity count for each successfully loaded layer.
-Background refreshes never replace a more complete catalog with partial or empty data, and an added
-class with unresolved required feature or choice references is rejected before cache replacement.
+See [Ingestion](data-ingestion.md) for transport capabilities, required/optional resources, layering
+and cache admission. The Included SRD summary presents SRD document versions, rules and offline
+availability; internal cache/pack metadata stays out of that user flow.
 
 ## Character draft and save
 
-Entry point: `src/store/characterStore.ts`.
+Entry point: [characterStore](../src/store/characterStore.ts).
 
-1. Startup has no active character.
-2. Selecting a character copies its saved snapshot into `activeCharacter`.
-3. Hooks derive current UI values from the draft and parsed game data.
-4. User edits call a store mutation and mark the draft dirty.
-5. `saveActiveCharacter()` captures the requested draft revision and queues its IndexedDB write.
-6. Success publishes the saved snapshot and clears dirty state only if that draft is still current.
-   Failure leaves the prior saved snapshot unchanged and keeps the draft available for retry.
+1. Startup has no active character; selection copies a saved record into the active draft.
+2. Hooks derive UI values. User edits update the draft and dirty state through store APIs.
+3. Save captures the requested revision and queues a durable IndexedDB transaction.
+4. Success publishes the saved record and clears dirty state only if that same draft is current.
+   Later edits remain dirty; rejection preserves the prior save and enables retry.
+5. Create/import/duplicate/inactive changes/deletion use the same ordered library boundary. UI
+   waits for acknowledgement before closing or announcing success. Rejected creation/deletion
+   retains form input/selection. Pending forms cannot dismiss.
+6. Clean system corrections share the acknowledged queue; dirty corrections wait for explicit Save.
+   Draft edits and character selection do not rewrite the saved library.
 
-Edits made while a save is pending remain dirty. Electron receives the unsaved-state signal and
-confirms before closing. Preferences and layout state do not participate in character dirty state.
+Electron receives unsaved state and requests confirmation before close. Preferences/layout do not
+contribute to character dirty state. The preload close callback still forwards the Electron event;
+stripping it with correct listener cleanup remains queued work, not a delivered security claim.
 
-Create, duplicate, import, inactive update, replacement, and batch deletion use the same ordered
-library transaction boundary. Each computes against the latest committed library, writes once,
-then publishes its result. Queued operations wait for character hydration, and a failed read
-rejects mutations without replacing storage. A failed transaction does not block later queued work.
-Draft-only edits and selection changes do not trigger library persistence. Clean system
-corrections share this boundary without persisting unrelated player edits.
+See [State Management](state-management.md#saved-library-transactions) for hydration, overlapping
+saves, reload ordering, failure/retry and quarantine acknowledgement. Unfinished-input dismissal
+before creation is a separate open requirement from protection during a pending write.
 
-The creation wizard retains its completed input and shows an error when storage rejects creation.
-It selects the returned saved ID and closes only after acknowledgement. The library keeps deletion
-confirmation and selected records available for retry after failure; bulk deletion waits for one
-transaction. Pending creation/deletion cannot dismiss its form, and success notifications follow
-the durable write rather than the initial click.
-The compatibility dialog also awaits durable acknowledgment before discarding quarantined originals.
-A failed acknowledgment retains the backups, export action, and Continue retry.
-An explicit character reload waits for an executing library transaction before reading storage,
-so it cannot merge an older snapshot over an acknowledged write. Pending actions waiting for
-hydration do not block the read.
+## Domain mutation and derived values
 
-## Domain mutation
+A controller gathers exact choices and parsed dependencies; a pure command returns the full patch
+and provenance; a hook commits both once. Initial creation uses the same commands. No intermediate
+materialized/ledger pair becomes visible or durable.
 
-Race, class, background, feat, spell, and equipment changes follow one pattern:
-
-1. A page/controller gathers the chosen values and source-qualified game entities.
-2. A pure command reconciles the previous owner and returns a character patch plus provenance.
-3. The hook commits both in one character-store update.
-4. Derived views recompute from the updated draft.
-
-Initial character creation uses the same commands through `buildInitialCharacter`. Materialized
-grants and attribution must never be written as separate user-visible steps.
-
-## Derived character values
-
-`CharacterCalculationContext` resolves exact saved entity identities and composes effective values
-in the order defined by [State Management](state-management.md#calculation-context).
-
-HP reads class/level/Constitution, recorded raw hit-die gains, adjustments/effects, and an optional
-override. AC reads equipped armor/Dexterity, adjustments/effects, and an optional override. PDF,
-header, Builder, prerequisites, and readiness consume the same calculation boundary.
+CharacterCalculationContext resolves effective ability scores, HP/AC, effects and equipment.
+Builder, Review, readiness, Actions and immutable PDF use this shared boundary. Persist allocated
+choices and runtime values, derive calculations. See [State Management](state-management.md#calculation-context)
+and [Provenance](provenance.md).
 
 ## Rules and source settings
 
-Character Rules owns ruleset metadata and a combined Character Options view for creation,
-advancement, and restriction settings. Additional Content owns allowed source books and the
-newer-printing preference. Its stable route remains `/sources`.
+Character Rules owns ruleset and character options. Additional Content owns allowed books and
+newer-printing preference at /sources. Creation uses useWizardGameData; editing uses
+useFilteredGameData or named hooks. Selection lists remain filtered while retained exact references
+may use raw fallback according to their domain contract. Source removal atomically prunes affected
+intentional spell choices and their ownership without retracting independent/fixed grants.
 
-- The character's PHB/XPHB rules source is implicit.
-- Filtering affects selection catalogs; exact raw fallback keeps existing saved references
-  explainable.
-- Removing sources commits the source setting, affected spell selections, materialization and
-  ownership together. Racial pruning uses the saved descriptor's exact target/printing removal
-  command, including when its rules are unavailable; another owner or printing does not retain the
-  removed descriptor's tag. Nonracial pruning removes the exact target's choice tags for the
-  affected class/subclass or special-profile owners in the same command. A fixed declaration
-  protects only its exact saved reference; another printing cannot shield a disabled choice.
-  Mandatory fixed grants and independent selections remain intact, as do unaffected preparation
-  and slot usage. Current name-only references retain their catalog-based source policy without
-  inferring a target printing or converting old characters.
-  Other source conflicts are reported for review rather than silently rewritten.
-- Core player potions and scrolls may be admitted from ruleset DMG records without enabling that
-  entire book.
-- Bundled SRD provenance sources such as DMG, MM, XDMG, and XMM are not selectable books. Public
-  SRD items matching the character's ruleset remain available without enabling those sources.
-- Source-selection surfaces explain that the bundled SRD has no additional sourcebooks to enable
-  and direct users to Settings → Game Data when they want to add compatible 5etools data. Their
-  selected-source count is hidden because the bundled provenance sources are not user choices.
-
-The creation wizard uses `useWizardGameData`; edit pages use `useFilteredGameData`. Neither reads
-raw game-data collections directly.
+Core PHB/XPHB is implicit. Bundled public items stay available under the shared player-item policy;
+DMG/MM/XDMG/XMM provenance does not enable those full books or create selectable sourcebook choices.
+Bundled-only selection surfaces hide source counts and direct additional-content setup to Settings.
+See [Ruleset compatibility](contracts/reference-resolution.md#ruleset-compatibility),
+[Source removal](contracts/reference-resolution.md#source-removal) and [Native racial spells](contracts/racial-ownership.md#native-racial-spells)
+for exact source/printing removal, owner-specific pruning and restoration behavior. Other source
+conflicts are reported rather than silently rewritten.
 
 ## Rules content and previews
 
-1. `GameContent` receives a structured 5etools entry.
-2. The renderer converts supported tags/content to sanitized interactive markup.
-3. A shared cached recursive lookup resolves source-aware references.
-4. `RulesPreviewManager` owns one preview chain, including pinned and transient cards.
-
-Static exports and compact summaries may use `renderEntry`/`renderEntryCached`. Interactive pages
-must not render raw 5etools syntax or build independent tooltip systems.
+GameContent renders supported structured entries as sanitized interactive content with source-aware
+recursive lookup. RulesPreviewManager owns its shared pinned/transient chain. Creator TraitTooltip
+wrappers still own a separate outer tooltip; [shared preview integration](contracts/rules-previews.md)
+remains required work. Static PDF/compact projections may use the lower-level renderer explicitly.
 
 ## Character format compatibility
 
-Import and hydration require the exact current character version and validate before exposing a
-record. Current schema 11 requires exact-context racial defense ownership alongside explicit
-ordinary/bonus feat setup ownership and one current kind per special spell target; complete racial
-spell targets and separate owner/target printings remain required. Schema 2–10 and other unsupported
-versions are rejected without conversion. Saved-library rejected originals
-remain in durable, exportable quarantine until acknowledged. The version and cutoff policy lives
-in [State Management](state-management.md#schema-compatibility).
+Import/hydration validates the exact current format before exposing a record. Unsupported originals
+stay in durable exportable quarantine until acknowledged; there is no pre-release conversion.
+See [Schema compatibility](state-management.md#schema-compatibility) for current admission and the
+separate promise to preserve released v1.x characters.
 
 ## Auto-update
 
-`electron/updateManager.ts` owns checks, download, cancellation, and install IPC. Automatic checks
-run after startup and on the configured interval when enabled. Renderer notifications offer the
-download; completed installers use the update modal before relaunch. Portable builds do not
-auto-install. Scheduled failures remain quiet, while manual checks report connection errors.
-
-Release creation remains a manual workflow; see [CI/CD Workflow](cicd-workflow.md).
-
-## Invariants
-
-- Cache replacement, domain mutations, and saves are atomic at their defined boundary.
-- Superseded async work cannot commit stale state or progress.
-- Mutable runtime state is persisted; pure projections are recomputed.
-- Exact source identity is preserved through filtering and persistence.
-- UI layers consume shared commands, calculations, renderers, and data hooks instead of parallel
-  implementations.
+[updateManager](../electron/updateManager.ts) owns check/download/cancel/install IPC. Automatic
+checks run after startup and at the configured interval when enabled. Notifications offer download;
+completed installers require the update modal before relaunch. Portable builds do not auto-install.
+Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
+separately authorized [release procedure](releasing.md).

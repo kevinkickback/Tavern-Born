@@ -96,67 +96,8 @@ Only suppress the Biome exhaustive-deps rule when the pattern is intentional and
 
 ## Content Page Layout
 
-Builder Review's spellcasting overview consumes both class and active racial casting details from
-`useSpellSlots`. Display each actual owner's shared effect-aware ability, save DC and attack bonus,
-including explicit unknown values. Class preparation limits and shared/Pact slots retain their
-class-only APIs; unselected racial alternatives have no active casting summary.
-
-Class spell selection and replacement apply exact class/subclass membership and source-qualified
-expanded references as the default visibility filter. The Ignore class restrictions switch can
-bypass that filter; level, school, known-spell locks and quotas still apply. Expanded references
-offer only their exact printing and do not grant it automatically. Native racial target pools
-remain hard limits independent of that switch. Bonus spells block already-known logical names
-across every profile and printing, including known unprepared spells; showing known spells does
-not make them selectable.
-
-Workbench-style pages use `WorkspacePage` as the flat parent surface. If a page has functional tabs or controls, place them in a full-width `WorkspacePaneHeader`, then put the scrolling content in `WorkspaceBody` with a centered max-width inner container.
-
-List/detail workspaces use the shared `SplitPane`. Give both compact panes concise, page-specific
-labels. Below the shared container breakpoint, `SplitPane` shows one full-width pane at a time;
-selection handlers that reveal details should control `compactPane` and select the right pane without
-changing the desktop `leftCollapsed` or `rightCollapsed` preferences. Toolbars inside a pane should
-respond to their own container width rather than the application viewport.
-On desktop, a collapsed pane must be removed from flex sizing (`flex-none` at zero width), allowing
-the visible pane to fill the workspace rather than leaving an invisible reserved column.
-
-Character Rules and Conditions are the reference tabbed pages. Their parent remains flat while each
-meaningful section may use its own bordered card. The Additional Content page is the reference for
-a flat configuration panel with controls placed directly inside its constrained content area. Avoid
-wrapping the entire content area in a second card unless the page intentionally uses the
-dual-pane/workbench pattern.
-
-Hand-built page tab bars use `handleTabListKeyDown` for arrow, Home, and End navigation. Only the
-selected tab has `tabIndex=0`; each tab's `aria-controls` and the active panel's `aria-labelledby`
-must refer to each other.
-
-Use the shared `Button` `accentOutline` variant for compact edit/configure affordances that lead to
-an existing setup workflow. It provides an accent border and text without a filled resting state.
-Incomplete or destructive actions retain their warning/destructive semantic variants instead of
-using `accentOutline`.
-
-Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
-The About panel keeps the Settings width and normal text sizes. Compact metadata, two-column PDF
-credits, and paired Built With/Links sections reduce its height on desktop; narrow windows stack
-these groups and retain normal scrolling. Attribution categories start collapsed and expand on demand.
-Links from PDF pages open the relevant credits automatically; complete attribution text and creator
-links remain available inside the sections.
-
-Portrait pan values use the character card's 360 x 240 logical coordinate space. Convert those
-values to card-relative percentages in the shared frame renderer so the portrait editor preview
-and finished card retain the same crop at different responsive widths. Do not apply persisted pan
-values directly as viewport pixels. Keep slider drag values local to the portrait editor and write
-the completed transform to the character store on commit; validating the full character on every
-pointer movement makes large uploaded portraits visibly stall. The expandable preview renders the
-entire card in that logical coordinate space and scales its canvas uniformly; text, icons, actions,
-padding, and portrait framing must enlarge together while editor controls outside the card retain
-their normal application size. In the portrait editor, contain that canvas within the space above
-the controls so expanding the preview pane never pushes those controls out of view. Keep the stacked
-image controls centered and constrained to the rendered card width rather than stretching them
-across an expanded pane. With both portrait panes open, keep the width-driven preview at the top
-with its controls immediately below it and allow that pane to scroll only when its height requires
-it. Use the height-constrained, no-scroll arrangement when the portrait library is collapsed.
-
----
+Use [Workspace layouts](contracts/workspaces.md) for shared panes, responsive behavior, tabs and
+portrait coordinates. Keep canonical rules out of layout components.
 
 ## Feature Controller Hooks
 
@@ -176,35 +117,14 @@ Class-choice option cards consume the resolver's type-specific presentation proj
 interpreting raw 5etools entities in React. Creature facts share the Compendium's 5etools formatter;
 feature, feat, and item summaries remain data-driven and preserve source-qualified identity.
 
----
-
 ## Rules Preview Manager
 
-All rules-entry and spell-name previews are owned by the single `RulesPreviewManager` mounted at the
-application root. Triggers resolve an immutable content descriptor and send it to the manager; pages,
-cards, virtualized rows, and individual rendered text blocks never own preview state or portals.
+Interactive 5etools content uses GameContent and the shared manager. The full chain, pin, portal,
+hover/keyboard and scrolling contracts live in [Rules previews](contracts/rules-previews.md).
+Creator race/class TraitTooltip wrappers still need qualification/consolidation; this architecture
+rule is not evidence that every current path complies.
 
-The manager keeps a rolling chain of at most two unpinned previews. Opening a reference from the
-newest preview preserves that spawning surface, retires the oldest unpinned ancestor, and reuses
-the retired ancestor's physical slot for the new child. Neither visible shell moves or swaps under
-the pointer while its content changes. A pinned preview remains immutable and may coexist with both
-transient levels, for a bounded maximum of three windows. Opening roots or recursive references can
-only change transient slots; only an explicit pin action may transfer the single global pin. Escape
-closes the newest transient, then its transient parent, then the pin.
+## Spell presentation
 
-Pinned descriptors contain all content needed to render and have no lifecycle dependency on their
-source element. A pinned preview therefore survives route content changes and virtualized-row
-unmounts without retaining hidden rows or increasing overscan. The visible pinned title is the
-pointer and keyboard drag handle through `useDraggablePreview`.
-
-`RulesPreviewManager` creates one portal at `document.body`. Floating UI owns measured anchoring,
-flipping, and viewport shifting; the manager supplies a synchronous collision-safe fallback so an
-overlay never flashes at the viewport origin. Transient placement also reserves the bounds of the
-pin and earlier transient ancestors, trying every side of the spawning shell so deeper content
-cannot cover the context that opened it. Recursive hover uses a short intent delay, while
-invisible collision-aware corridors bridge physical gaps between parent and child shells. Delayed
-dismissal and a document-level outside-chain fallback prevent size changes, pin transfers, or
-unpinning beneath a stationary pointer from stranding or prematurely closing the chain. Preview
-entry uses a fade only; never animate position or dimensions beneath the pointer. Interactive
-content uses `RenderedHtml`, and the shared shell contains wheel events so a portaled preview scrolls
-independently of an underlying modal or virtual list.
+See [Spell selection](contracts/spell-selection.md) for class/racial casting displays, class-list
+restrictions and known-spell picker behavior. State writes follow [State Management](state-management.md#spell-state).
