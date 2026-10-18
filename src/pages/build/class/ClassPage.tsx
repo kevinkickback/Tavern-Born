@@ -233,6 +233,7 @@ export function BuildClassPage() {
     viewingClassLevel,
     includeClassFeatureVariants,
     catalogs: classChoiceCatalogs,
+    configurationPaused: !!optionsPendingFeat,
     onFeatOptionsRequired: (feat, choiceId) =>
       setOptionsPendingFeat({ ...feat, classFeatChoiceId: choiceId }),
   })
@@ -494,7 +495,10 @@ export function BuildClassPage() {
         subclasses={subclasses}
         viewingSubclass={viewingSubclass}
         viewingSubclassSource={viewingEntry?.subclassSource}
-        onSubclassConfirm={handleSubclassSelect}
+        onSubclassConfirm={(subclass) => {
+          handleSubclassSelect(subclass)
+          classChoiceController.configureSubclass(subclass)
+        }}
         characterSnapshot={characterSnapshot}
         asiPickerLevel={asiPickerLevel}
         onAsiPickerLevelChange={setAsiPickerLevel}

@@ -66,3 +66,30 @@ describe('SelectionModal', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(['499'], [items[499]]))
   })
 })
+
+test.each([
+  false,
+  true,
+])('confirmation close is controlled explicitly while Cancel still dismisses (controller=%s)', (controlled) => {
+  const calls: string[] = []
+  render(
+    <SelectionModal
+      open
+      onOpenChange={(open) => {
+        if (!open) calls.push('close')
+      }}
+      title="Choose setup"
+      items={[]}
+      getItemId={(item: TestItem) => item.id}
+      renderCard={(item) => <span>{item.name}</span>}
+      matchItem={() => true}
+      closeOnConfirm={controlled ? false : undefined}
+      onConfirm={() => calls.push('confirm')}
+    />,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  expect(calls).toEqual(controlled ? ['confirm'] : ['confirm', 'close'])
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(calls).toEqual(controlled ? ['confirm', 'close'] : ['confirm', 'close', 'close'])
+})

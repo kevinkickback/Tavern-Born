@@ -102,45 +102,66 @@ export function BuildClassProgressionChoiceCard({
       {chosenItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
           {chosenItems.map((item) => (
-            <button
+            <BuildClassChosenItemBadge
               key={`${id}|${item.name}|${item.source ?? ''}`}
-              type="button"
-              onMouseEnter={() => {
-                onSelectFeature({
-                  name: item.name,
-                  source: item.source,
-                  entries: item.entries ?? [],
-                })
-                if (detailCollapsed) onExpandDetails()
-              }}
-              onClick={() => {
-                onSelectFeature({
-                  name: item.name,
-                  source: item.source,
-                  entries: item.entries ?? [],
-                })
-                if (detailCollapsed) onExpandDetails()
-              }}
-              className={cn(
-                'inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-foreground transition-colors',
-                item.unavailable
-                  ? 'border-warning/30 bg-warning/5 hover:border-warning/50 hover:bg-warning/15'
-                  : 'border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15',
-              )}
-              data-availability={item.unavailable ? 'unavailable' : 'eligible'}
-            >
-              {item.unavailable && <Warning className="size-3 text-warning" weight="fill" />}
-              <span className="font-medium">{item.name}</span>
-              {(item.masteries?.length ?? 0) > 0 && (
-                <span className="text-muted-foreground">
-                  · {item.masteries?.map((mastery) => mastery.name).join(', ')}
-                </span>
-              )}
-              {item.unavailable && <span className="text-warning-foreground">· Unavailable</span>}
-            </button>
+              item={item}
+              detailCollapsed={detailCollapsed}
+              onSelectFeature={onSelectFeature}
+              onExpandDetails={onExpandDetails}
+            />
           ))}
         </div>
       )}
     </fieldset>
+  )
+}
+
+export function BuildClassChosenItemBadge({
+  item,
+  detailCollapsed,
+  onSelectFeature,
+  onExpandDetails,
+}: {
+  item: ChosenItem
+  detailCollapsed: boolean
+  onSelectFeature: ProgressionChoiceCardProps['onSelectFeature']
+  onExpandDetails: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onMouseEnter={() => {
+        onSelectFeature({
+          name: item.name,
+          source: item.source,
+          entries: item.entries ?? [],
+        })
+        if (detailCollapsed) onExpandDetails()
+      }}
+      onClick={() => {
+        onSelectFeature({
+          name: item.name,
+          source: item.source,
+          entries: item.entries ?? [],
+        })
+        if (detailCollapsed) onExpandDetails()
+      }}
+      className={cn(
+        'inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-foreground transition-colors',
+        item.unavailable
+          ? 'border-warning/30 bg-warning/5 hover:border-warning/50 hover:bg-warning/15'
+          : 'border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15',
+      )}
+      data-availability={item.unavailable ? 'unavailable' : 'eligible'}
+    >
+      {item.unavailable && <Warning className="size-3 text-warning" weight="fill" />}
+      <span className="font-medium">{item.name}</span>
+      {(item.masteries?.length ?? 0) > 0 && (
+        <span className="text-muted-foreground">
+          · {item.masteries?.map((mastery) => mastery.name).join(', ')}
+        </span>
+      )}
+      {item.unavailable && <span className="text-warning-foreground">· Unavailable</span>}
+    </button>
   )
 }

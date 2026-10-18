@@ -30,6 +30,10 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import {
+  getSubclassConfigurations,
+  hasUnavailableSubclassConfiguration,
+} from '@/lib/character/subclassConfigurations'
+import {
   classAsiReadinessId,
   classChoiceDiagnosticReadinessId,
   classChoiceReadinessId,
@@ -186,6 +190,12 @@ export function BuildClassLevelsPanel({
   readinessFocus,
 }: BuildClassLevelsPanelProps) {
   const [openSections, setOpenSections] = useState<string[]>([])
+  const configurations = getSubclassConfigurations(
+    classChoices,
+    viewingClassData,
+    viewingSubclassData,
+  ).filter((choice) => choice.level === subclassLevel && levelsToShow.includes(choice.level))
+  const configurationIds = new Set(configurations.map((choice) => choice.id))
   const { ref: classPickerRef, highlighted: classPickerHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:class')
   const focusedClassChoice = findFocusedProvenanceChoice(
@@ -448,7 +458,7 @@ export function BuildClassLevelsPanel({
                   ),
                 )
                 const unmatchedChoices = levelClassChoices.filter(
-                  (choice) => !matchedChoiceIds.has(choice.id),
+                  (choice) => !matchedChoiceIds.has(choice.id) && !configurationIds.has(choice.id),
                 )
                 const unmatchedDiagnostics = levelDiagnostics.filter(
                   (diagnostic) =>
@@ -502,8 +512,20 @@ export function BuildClassLevelsPanel({
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             onOpenSubclassPicker={onOpenSubclassPicker}
+                            configurations={configurations}
+                            hasUnavailableConfiguration={hasUnavailableSubclassConfiguration(
+                              classChoiceRecoveries,
+                              viewingClassData,
+                              viewingSubclassData,
+                            )}
+                            classLevel={viewingClassLevel}
+                            selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                            onConfigure={onOpenClassChoice}
                             highlighted={
-                              readinessFocus === classSubclassReadinessId(viewingClassKey)
+                              readinessFocus === classSubclassReadinessId(viewingClassKey) ||
+                              configurations.some(
+                                (choice) => choice.id === focusedNormalizedChoiceId,
+                              )
                             }
                           />
                         )}
@@ -561,8 +583,10 @@ export function BuildClassLevelsPanel({
                           onSelectFeature={onSelectFeature}
                           onExpandDetails={onExpandDetails}
                           renderFeature={(feature) => {
-                            const featureChoices = levelClassChoices.filter((choice) =>
-                              featureOwnsChoice(feature, choice),
+                            const featureChoices = levelClassChoices.filter(
+                              (choice) =>
+                                featureOwnsChoice(feature, choice) &&
+                                !configurationIds.has(choice.id),
                             )
                             if (featureChoices.length === 0) return undefined
                             const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>
@@ -585,8 +609,10 @@ export function BuildClassLevelsPanel({
                             )
                           }}
                           renderAfterFeature={(feature) => {
-                            const featureChoices = levelClassChoices.filter((choice) =>
-                              featureOwnsChoice(feature, choice),
+                            const featureChoices = levelClassChoices.filter(
+                              (choice) =>
+                                featureOwnsChoice(feature, choice) &&
+                                !configurationIds.has(choice.id),
                             )
                             if (featureChoices.length > 0) return null
                             const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>

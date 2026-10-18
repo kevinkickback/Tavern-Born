@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
@@ -23,6 +23,7 @@ import {
   hasNaturalExplorerRecovery,
   scopeNaturalExplorerOptions,
 } from '@/lib/character/naturalExplorerSelections'
+import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -38,10 +39,9 @@ interface ClassChoiceControllerParams {
     ClassChoiceCatalogs,
     'itemPropertyByAbbr' | 'itemTypeByAbbr' | 'weaponProficiencies'
   >
+  configurationPaused?: boolean
   onFeatOptionsRequired?: (feat: ClassChoiceCatalogs['feats'][number], choiceId: string) => void
 }
-
-import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
@@ -54,13 +54,34 @@ export function useClassChoiceController({
   includeClassFeatureVariants = false,
   catalogs,
   onFeatOptionsRequired,
+  configurationPaused = false,
 }: ClassChoiceControllerParams) {
   const { applyClassChoiceSelection, retainSavedFeatureOptions } = useClassProvenanceMutations()
   const itemTypeByAbbr = useItemTypeLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const weaponProficiencies = character?.proficiencies.weapons ?? EMPTY_WEAPON_PROFICIENCIES
-  const [activeChoice, setActiveChoice] = useState<NormalizedCharacterChoice | null>(null)
-  const [activeRecoveryId, setActiveRecoveryId] = useState<string | null>(null)
+  const ownerContext = (subclassName?: string, subclassSource?: string) =>
+    JSON.stringify([
+      character?.id,
+      getFeatureOwnerKey(
+        viewingClassEntry?.name ?? viewingClassData?.name ?? '',
+        viewingClassEntry?.source ?? viewingClassData?.source,
+        subclassName,
+        subclassSource,
+      ),
+      viewingClassLevel,
+      includeClassFeatureVariants,
+    ])
+  const contextKey = ownerContext(
+    viewingClassEntry?.subclass ?? viewingSubclassData?.name,
+    viewingClassEntry?.subclassSource ?? viewingSubclassData?.source,
+  )
+  const [request, setRequest] = useState<{ id: string; contextKey: string } | null>(null)
+  const [queue, setQueue] = useState<{
+    ids: string[]
+    contextKey: string
+    catalogs: typeof catalogs
+  } | null>(null)
   const choices = useMemo(
     () =>
       viewingClassData
@@ -187,12 +208,33 @@ export function useClassChoiceController({
       ),
     [choices, optionViewsByChoiceId, selectionByChoiceId],
   )
-  const activeId = activeRecoveryId ?? activeChoice?.id
+  const configurations = useMemo(
+    () => getSubclassConfigurations(visibleChoices, viewingClassData, viewingSubclassData),
+    [visibleChoices, viewingClassData, viewingSubclassData],
+  )
+  const queuedChoice =
+    queue?.contextKey === contextKey && queue.catalogs === catalogs
+      ? queue.ids
+          .map((id) => configurations.find((choice) => choice.id === id))
+          .find(
+            (choice) =>
+              choice &&
+              (selectedViewsByChoiceId.get(choice.id) ?? []).filter(isClassChoiceOptionEligible)
+                .length < getRequiredChoiceSelectionCount(choice, viewingClassLevel),
+          )
+      : undefined
+  useEffect(() => {
+    if (queue && !queuedChoice) setQueue(null)
+    if (request && request.contextKey !== contextKey) setRequest(null)
+  }, [queue, queuedChoice, request, contextKey])
+  const activeId =
+    request?.contextKey === contextKey
+      ? request.id
+      : configurationPaused
+        ? undefined
+        : queuedChoice?.id
   const activeSaved = featureOptionStates.find((state) => state.selection.choiceId === activeId)
-  const resolvedActiveChoice =
-    activeChoice && (activeChoice.kind === 'feature-option' || isStormAuraChoiceId(activeChoice.id))
-      ? choices.find((choice) => choice.id === activeChoice.id)
-      : (activeChoice ?? (activeRecoveryId ? activeSaved?.choice : undefined))
+  const resolvedActiveChoice = choices.find((choice) => choice.id === activeId)
   const activeRemovalOnly = activeSaved?.recovery ?? false
   const activeDisplayChoice =
     activeRemovalOnly && activeSaved
@@ -226,8 +268,8 @@ export function useClassChoiceController({
       ? getRequiredChoiceSelectionCount(resolvedActiveChoice, viewingClassLevel)
       : 0
   const close = () => {
-    setActiveChoice(null)
-    setActiveRecoveryId(null)
+    setRequest(null)
+    setQueue(null)
   }
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeDisplayChoice) return
@@ -244,7 +286,7 @@ export function useClassChoiceController({
     }
     const current = resolvedActiveChoice
     if (!current) return
-    if (current.kind === 'feature-option' || isStormAuraChoiceId(current.id)) {
+    {
       const currentViews = new Map(
         activeOptionViews.map((view) => [getClassChoiceOptionKey(view.reference), view]),
       )
@@ -261,7 +303,10 @@ export function useClassChoiceController({
         toast.error('Source rules changed. Review the available choices before confirming.')
         return
       }
-      selected = selected.map((view) => currentViews.get(getClassChoiceOptionKey(view.reference))!)
+      selected = selected.flatMap((view) => {
+        const live = currentViews.get(getClassChoiceOptionKey(view.reference))
+        return live ? [live] : []
+      })
     }
     const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
     const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
@@ -273,10 +318,17 @@ export function useClassChoiceController({
       (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
     )
     try {
-      applyClassChoiceSelection(
-        current,
-        confirmedSelections.map((option) => option.reference),
-      )
+      const unchanged =
+        previousKeys.size === confirmedSelections.length &&
+        confirmedSelections.every((option) =>
+          previousKeys.has(getClassChoiceOptionKey(option.reference)),
+        )
+      if (!unchanged) {
+        applyClassChoiceSelection(
+          current,
+          confirmedSelections.map((option) => option.reference),
+        )
+      }
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -298,11 +350,29 @@ export function useClassChoiceController({
         : undefined
       if (feat && hasFeatOptions(feat)) onFeatOptionsRequired(feat, current.id)
     }
-    close()
+    setRequest(null)
+    setQueue((pending) =>
+      pending ? { ...pending, ids: pending.ids.filter((id) => id !== current.id) } : null,
+    )
   }
 
   return {
     choices: visibleChoices,
+    configurations,
+    configureSubclass: (subclass: Subclass5e) => {
+      if (!viewingClassData || !character) return
+      const candidates = getSubclassConfigurations(
+        getCharacterClassChoices(viewingClassData, subclass, includeClassFeatureVariants, catalogs),
+        viewingClassData,
+        subclass,
+      ).filter((choice) => choice.level <= viewingClassLevel)
+      setRequest(null)
+      setQueue({
+        ids: candidates.map((choice) => choice.id),
+        contextKey: ownerContext(subclass.name, subclass.source),
+        catalogs,
+      })
+    },
     recoveries,
     diagnostics: viewingClassData
       ? getCharacterClassChoiceDiagnostics(
@@ -324,12 +394,20 @@ export function useClassChoiceController({
     activeInitialSelectedIds,
     activeRequiredCount,
     open: (choice: NormalizedCharacterChoice) => {
-      setActiveRecoveryId(null)
-      setActiveChoice(choice)
+      setQueue(null)
+      setRequest((previous) =>
+        previous?.id === choice.id && previous.contextKey === contextKey
+          ? previous
+          : { id: choice.id, contextKey },
+      )
     },
     openRecovery: (state: FeatureOptionSelectionState) => {
-      setActiveChoice(null)
-      setActiveRecoveryId(state.selection.choiceId)
+      setQueue(null)
+      setRequest((previous) =>
+        previous?.id === state.selection.choiceId && previous.contextKey === contextKey
+          ? previous
+          : { id: state.selection.choiceId, contextKey },
+      )
     },
     close,
     confirm,

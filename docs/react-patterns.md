@@ -117,6 +117,27 @@ Class-choice option cards consume the resolver's type-specific presentation proj
 interpreting raw 5etools entities in React. Creature facts share the Compendium's 5etools formatter;
 feature, feat, and item summaries remain data-driven and preserve source-qualified identity.
 
+### Subclass configuration
+
+Stable initial subclass choices appear inside the subclass-grant feature beside the selected
+subclass badge, with their own Choose/Edit buttons. Grouping uses the current variant-filtered,
+source-qualified owner and earned subclass level, a fixed complete selection-count schedule, and
+never-replaced, nonrepeatable choices. Later, cumulative or regularly changing choices retain
+independent controls. Classic Ranger's Companion is initial setup; Primal Companion changes after
+a long rest, and Storm Aura changes at class levels.
+
+Explicit subclass confirmation opens missing setup through the existing shared class-choice modal,
+one configuration at a time. The class-choice controller owns confirmation and advancement; the
+shared modal keeps automatic confirmation closing as the default for its other consumers. Nested
+feat configuration finishes or dismisses before the next setup picker opens.
+Cancel leaves the subclass selected and the required choice reachable;
+Confirm advances once, even when cleared. Configured reselect, page mount and refresh do not start
+setup. Character, owner, level, variant or source-catalog changes end a pending setup sequence.
+Grouping preserves exact choice readiness links and completeness. Completion requires the selected
+subclass to resolve in current source data; catalog loss leaves the parent incomplete without
+changing its saved selection. Source-unavailable saved choices
+keep their independent recovery controls. No saved parent/child mirror or identity migration is added.
+
 ## Rules Preview Manager
 
 Interactive 5etools content uses GameContent and the shared manager. The full chain, pin, portal,

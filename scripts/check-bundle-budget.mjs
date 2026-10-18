@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Audited terrain choices and shared activity/recovery measure 5,728,076 renderer bytes.
+  // Shared subclass configuration and live choice guards measure 5,731,041 renderer bytes.
   // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5594 * KIB,
-  // Shared source qualification and saved-relation checks: initial script 586,041 bytes.
+  rendererCode: 5597 * KIB,
+  // Shared source qualification and saved-relation checks: initial script 586,074 bytes.
   // Other limits and normal enforcement remain unchanged.
   initialRendererScript: 573 * KIB,
   initialStylesheet: 185 * KIB,
