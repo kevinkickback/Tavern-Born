@@ -228,6 +228,7 @@ export function BuildClassPage() {
   const classChoiceController = useClassChoiceController({
     character,
     viewingClassData,
+    viewingClassEntry: viewingEntry,
     viewingSubclassData: viewingSubclassSpellcastingData,
     viewingClassLevel,
     includeClassFeatureVariants,

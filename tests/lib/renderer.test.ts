@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { renderEntriesToText } from '@/lib/entryText'
 import { renderEntry } from '@/lib/renderer'
 
 describe('renderEntry', () => {
@@ -92,5 +93,40 @@ describe('renderEntry', () => {
     expect(renderEntry(null)).toBe('')
     expect(renderEntry(undefined)).toBe('')
     expect(renderEntry({})).toBe('')
+  })
+})
+
+// Same five-field display contract as pinned DataUtil.quickreference/TagQuickref.
+describe('quick reference display text', () => {
+  test.each([
+    ['Cover||3||total cover', 'total cover'],
+    [' Cover | PHB | 3 | 2 | total cover ', 'total cover'],
+    ['Cover|PHB|3|2|', 'Cover'],
+    ['Cover||3', 'Cover'],
+    ['Cover', 'Cover'],
+  ])('renders %s as %s without losing inline styling', (uid, label) => {
+    const html = renderEntry(`{@quickref ${uid}}`)
+    expect(html).toContain(`>${label}</span>`)
+    expect(html).toContain('title="Quick Reference"')
+    expect(html).toContain('decoration-dotted')
+    expect(renderEntriesToText([`{@quickref ${uid}}`])).toBe(label)
+  })
+  test.each([
+    '{@quickref Cover||3||<img src=x onerror=alert(1)>total cover<script>alert(2)</script>}',
+    '{@quickref <img src=x onerror=alert(1)>Cover<script>alert(2)</script>}',
+  ])('sanitizes display and fallback labels: %s', (text) => {
+    const html = renderEntry(text)
+    expect(html).not.toContain('onerror')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('alert(')
+  })
+  test('leaves neighboring typed references intact', () => {
+    const html = renderEntry('Use {@quickref Cover||3||total cover} while {@condition prone}.')
+    expect(html).toContain('total cover')
+    expect(html).toContain('data-hover-type="condition"')
+    expect(
+      renderEntriesToText(['Use {@quickref Cover||3||total cover} while {@condition prone}.']),
+    ).toBe('Use total cover while prone .')
   })
 })

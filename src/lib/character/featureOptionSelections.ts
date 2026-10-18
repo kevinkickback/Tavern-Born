@@ -29,6 +29,8 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceOptions'
 
+import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
+
 const AFFINITY_TARGET = getSubclassFeatureIdentity(
   decodeSubclassFeatureReference(ELEMENTAL_AFFINITY_REF),
 )!
@@ -43,6 +45,7 @@ export interface FeatureOptionSelectionState {
   recovery: boolean
   details: Array<{ name: string; damageType?: string; entries: unknown[]; available: boolean }>
   affinity?: { available: boolean; entries: unknown[] }
+  storm?: StormAuraRules
 }
 
 function literalCatalogs(catalogs: ClassChoiceFeatureCatalogs | undefined): ClassChoiceCatalogs {
@@ -122,7 +125,7 @@ export function getFeatureOptionSelectionStates(
   classes: readonly Class5e[],
   catalogs?: ClassChoiceFeatureCatalogs,
 ): FeatureOptionSelectionState[] {
-  return (character.classChoiceSelections ?? [])
+  const literal = (character.classChoiceSelections ?? [])
     .filter((selection) => selection.kind === 'feature-option' && !selection.inactive)
     .map((selection) => {
       const owner = findClassReference(
@@ -203,6 +206,7 @@ export function getFeatureOptionSelectionStates(
       })
       return { selection, owner, classData, subclass, choice, options, recovery, details, affinity }
     })
+  return [...literal, ...getStormAuraSelectionStates(character, classes, catalogs)]
 }
 
 /** View-only text shared by both sheet families and their description-off projections. */
@@ -211,12 +215,25 @@ export function summarizeFeatureOptionSelection(
   descriptions = true,
 ): string {
   const selected = state.details
-    .map((row) => row.name + (row.available ? ` — ${row.damageType}` : ' (rules unavailable)'))
+    .map(
+      (row) =>
+        row.name +
+        (row.available ? (row.damageType ? ` — ${row.damageType}` : '') : ' (rules unavailable)'),
+    )
     .join(', ')
   const title = `${state.selection.label}: ${selected}`
   if (!descriptions) {
     return (
       title +
+      (state.storm
+        ? '; ' +
+          state.storm.stages
+            .map(
+              (stage) =>
+                `${stage.name}${stage.available ? (stage.name === 'Storm Soul' && state.storm?.fixedBenefits ? ` — ${state.storm.fixedBenefits.damageType} resistance${state.storm.fixedBenefits.swimSpeed !== undefined ? `; swim ${state.storm.fixedBenefits.swimSpeed} ft.` : ''}` : '') : ' (rules unavailable)'}`,
+            )
+            .join('; ')
+        : '') +
       (state.affinity && state.details.some((row) => row.available)
         ? state.affinity.available
           ? '; Elemental Affinity — ' +

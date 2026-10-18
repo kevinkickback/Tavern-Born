@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
@@ -19,6 +20,7 @@ import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiCh
 import { getInvalidSpecialSpellPaths } from '@/lib/provenance/specialSpellValidation'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
+import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Character } from './character'
 
 export const MAX_CHARACTER_NAME_LENGTH = 100
@@ -898,6 +900,14 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const [index, selection] of (char.classChoiceSelections ?? []).entries()) {
+      if (isStormAuraChoiceId(selection.choiceId) && !isValidStormAuraSelection(selection))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['classChoiceSelections', index],
+          message: 'Invalid Storm Aura selection relation.',
+        })
+    }
     for (const path of getInvalidFeatureOptionSelectionPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

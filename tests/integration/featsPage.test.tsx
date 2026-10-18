@@ -52,6 +52,7 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
     feats: [configurableFeat, configurableFeat2024, magicInitiate],
     spells: [],
     classes: [],
+    classFeatures: [],
   }),
 }))
 

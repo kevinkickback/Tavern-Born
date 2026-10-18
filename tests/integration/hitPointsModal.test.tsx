@@ -8,6 +8,7 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
     classes: [{ name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } }],
+    classFeatures: [],
   }),
 }))
 

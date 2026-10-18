@@ -12,6 +12,7 @@ import {
   type CharacterCalculationContext,
   createCharacterCalculationContext,
 } from '@/lib/calculations/characterCalculationContext'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
@@ -33,6 +34,8 @@ export function useCharacterCalculationContext(
     if (cached && cached.rawLookups === rawLookupSet) return cached.result
 
     const primaryLookups = {
+      classChoiceClasses: filteredData.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(filteredData),
       backgroundsByKey: buildBackgroundLookup(filteredData.backgrounds ?? []),
       classesByKey: buildClassLookup(filteredData.classes ?? []),
       featsByKey: buildFeatLookup(filteredData.feats ?? []),

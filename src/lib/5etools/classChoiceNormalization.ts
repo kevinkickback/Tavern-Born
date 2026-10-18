@@ -23,6 +23,7 @@ import {
 } from './classFeatureIdentity'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
+import { normalizeStormAuraChoices } from './stormAuraChoices'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 interface ParsedFilterTag {
@@ -1041,6 +1042,7 @@ export function normalizeSubclassRules(
   const owner = subclassChoiceOwner(classData, subclass)
   const declarations = collectUnconditionalFeatureReferences(refs, 'subclassFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
+  const storm = normalizeStormAuraChoices(owner, declarations)
   const expandedRefs = collectSubclassChoiceFeatureRefs(refs)
   const optionalFeatureProgressions = subclass.optionalfeatureProgression ?? []
   const featProgressions = subclass.featProgression ?? []
@@ -1070,7 +1072,13 @@ export function normalizeSubclassRules(
       ),
   )
   const creatureTags = normalizeCreatureTagChoices(expandedRefs, directChoices, owner)
-  const accumulated = [...progression, ...directChoices, ...creatureTags, ...tables.choices]
+  const accumulated = [
+    ...progression,
+    ...directChoices,
+    ...creatureTags,
+    ...tables.choices,
+    ...storm,
+  ]
   const singleFilters = normalizeSingleFilterChoices(expandedRefs, accumulated, owner)
   return {
     resources: [],
@@ -1082,7 +1090,9 @@ export function normalizeSubclassRules(
     choiceDiagnostics: [
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
-      ...normalizeRequiredSetupDiagnostics(owner, declarations),
+      ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
+        (diagnostic) => !(storm.length && diagnostic.featureName === 'Storm Aura'),
+      ),
       ...tables.diagnostics,
     ],
   }

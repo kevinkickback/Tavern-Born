@@ -17,6 +17,12 @@ import {
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
+import { resolveStormFeature } from '@/lib/5etools/stormAuraChoices'
+import {
+  isStormAuraChoiceId,
+  STORM_TARGETS,
+  stormFeatureRef,
+} from '@/lib/5etools/stormAuraIdentity'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
@@ -608,7 +614,10 @@ export function resolveClassChoiceOptionEntity(
 /** Feature choices resolve only within their explicitly supplied target catalog. */
 export function resolveClassChoiceFeatureEntity(
   option: NormalizedChoiceOptionReference,
-  catalogs: Pick<ClassChoiceFeatureCatalogs, 'classFeatures' | 'subclassFeatures'>,
+  catalogs: Pick<
+    ClassChoiceFeatureCatalogs,
+    'classFeatures' | 'subclassFeatures' | 'subclassFeatureCandidates'
+  >,
 ): ClassFeature | SubclassFeature | undefined {
   const target = getClassChoiceFeatureTarget(option)
   if (!target) return undefined
@@ -616,6 +625,15 @@ export function resolveClassChoiceFeatureEntity(
     return catalogs.classFeatures.find((feature) => getClassFeatureIdentity(feature) === target)
   }
   if (option.entityType !== 'subclassFeature') return undefined
+  if (STORM_TARGETS.has(target)) {
+    const candidates =
+      catalogs.subclassFeatureCandidates !== undefined
+        ? (catalogs.subclassFeatureCandidates.get(target) ?? [])
+        : catalogs.subclassFeatures.filter(
+            (feature) => getSubclassFeatureIdentity(feature) === target,
+          )
+    return resolveStormFeature(target, candidates)
+  }
   const matches = catalogs.subclassFeatures.filter(
     (feature) => getSubclassFeatureIdentity(feature) === target,
   )
@@ -712,6 +730,24 @@ export function resolveClassChoiceOptions(
           )
         : undefined
     catalogs = { ...catalogs, ...scopeClassChoiceFeatureCatalogs(catalogs, owner) }
+  }
+  if (
+    isStormAuraChoiceId(choice.id) &&
+    !['Path of the Storm Herald', 'Storm Aura'].every((name) =>
+      resolveClassChoiceFeatureEntity(
+        { entityType: 'subclassFeature', name, source: 'XGE', ref: stormFeatureRef(name, 3) },
+        catalogs,
+      ),
+    )
+  ) {
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((reference) => [
+          getClassChoiceOptionKey(reference),
+          { reference, availability: 'retained' as const, entries: [] },
+        ]),
+      ).values(),
+    ]
   }
   const filter = choice.optionFilter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()

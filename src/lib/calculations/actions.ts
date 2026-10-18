@@ -14,6 +14,7 @@ import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProp
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
+import { isStormAuraChoiceId, STORM_TARGETS } from '@/lib/5etools/stormAuraIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
@@ -50,6 +51,7 @@ import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
+import { deriveStormAuraActions } from './stormAuraActions'
 
 function isWeapon(item: Equipment): boolean {
   return (
@@ -93,6 +95,7 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   race?: Race5e
   raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
+  availableClasses?: readonly Class5e[]
   /** Explicit available choice targets; raw text lookups never replenish this catalog. */
   classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
@@ -228,6 +231,7 @@ export function deriveSpellActions(
 type RulesTextActionContext = Pick<
   CharacterActionProjectionContext,
   | 'classes'
+  | 'availableClasses'
   | 'classChoiceFeatureCatalogs'
   | 'feats'
   | 'classFeaturesByKey'
@@ -362,7 +366,7 @@ function deriveClassFeatureActions(
     const identity = subclass
       ? getSubclassFeatureIdentity(decoded)
       : getClassFeatureIdentity(decoded)
-    if (!identity) return
+    if (!identity || STORM_TARGETS.has(identity)) return
     const inheritedSource = subclass
       ? 'subclassSource' in decoded
         ? decoded.subclassSource
@@ -394,7 +398,7 @@ function deriveClassFeatureActions(
     }
   }
   for (const selection of character.classChoiceSelections ?? []) {
-    if (selection.inactive) continue
+    if (selection.inactive || isStormAuraChoiceId(selection.choiceId)) continue
     const entry = getCharacterClassEntries(character).find(
       (candidate) =>
         getFeatureOwnerKey(
@@ -454,6 +458,12 @@ function deriveClassFeatureActions(
       }
     }
   }
+  for (const action of deriveStormAuraActions(
+    character,
+    context.availableClasses ?? context.classes ?? [],
+    context.classChoiceFeatureCatalogs,
+  ))
+    actions.set(action.id, action)
   return [...actions.values()]
 }
 

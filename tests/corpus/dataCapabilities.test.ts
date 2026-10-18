@@ -324,8 +324,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(
       setupIssues.map(({ entity, message }) => ({ entity, feature: message.split(':')[0] })),
     ).toEqual([
-      { entity: 'Barbarian|PHB / Path of the Storm Herald|XGE', feature: 'Storm Aura' },
-      { entity: 'Barbarian|XPHB / Path of the Storm Herald|XGE', feature: 'Storm Aura' },
       { entity: 'Mystic|UATheMysticClass', feature: 'Psionics' },
       { entity: 'Ranger|PHB', feature: 'Deft Explorer' },
       { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
@@ -367,14 +365,30 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
     expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
-    expect(choiceCoverageGaps).toEqual([
-      {
-        owner: { name: 'Barbarian', source: 'XPHB' },
-        level: 3,
-        message:
-          'Path of the Storm Herald|XGE: Storm Aura requires an environment choice. Tavern Born does not yet support this setup or its dependent benefits.',
-      },
-    ])
+    // Normalized setup gaps are bounded evidence, not complete legal 1–20 qualification.
+    expect(choiceCoverageGaps).toEqual([])
+    for (const source of ['PHB', 'XPHB']) {
+      const stormRules = classes
+        .find((classData) => classData.name === 'Barbarian' && classData.source === source)
+        ?.subclasses?.find(
+          (subclass) => subclass.name === 'Path of the Storm Herald' && subclass.source === 'XGE',
+        )?.normalizedRules
+      expect(stormRules?.choiceDiagnostics).toEqual([])
+      expect(stormRules?.choices).toMatchObject([
+        {
+          label: 'Storm Aura',
+          kind: 'subclass-feature',
+          level: 3,
+          minimumSelections: 1,
+          maximumSelections: 1,
+        },
+      ])
+      expect(stormRules!.choices[0].options.map((option) => option.ref)).toEqual([
+        'Desert|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+        'Sea|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+        'Tundra|Barbarian|PHB|Storm Herald|XGE|3|XGE',
+      ])
+    }
     expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)
     expect(copiedArcaneArcher?.subclassFeatureRefs?.length).toBeGreaterThan(0)
     expect(

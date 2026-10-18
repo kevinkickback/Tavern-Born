@@ -8,7 +8,12 @@ export interface EntityReference {
   source?: string
 }
 
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+
 export interface EntityLookupSet {
+  /** Explicit current choice authority; empty inputs remain authoritative. */
+  classChoiceClasses?: readonly Class5e[]
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   classesByKey?: Readonly<Record<string, Class5e>>
   racesByKey?: Readonly<Record<string, Race5e>>
   backgroundsByKey?: Readonly<Record<string, Background5e>>
