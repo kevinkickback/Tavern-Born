@@ -23,11 +23,19 @@
  *
  * Source: https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js
  */
+import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
 import { getSkillAbility } from '@/lib/calculations/skills'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
-type CopyKind = 'item' | 'magicvariant' | 'monster' | 'race' | 'subrace' | 'itemType'
+type CopyKind =
+  | 'item'
+  | 'magicvariant'
+  | 'monster'
+  | 'race'
+  | 'subrace'
+  | 'itemType'
+  | 'subclassFeature'
 
 export interface CopyResolutionDiagnostic {
   entity: string
@@ -133,6 +141,35 @@ function ownArray(record: Record<string, unknown>, field: string): unknown[] {
 }
 
 function key(value: Record<string, unknown>, kind?: CopyKind): string {
+  if (kind === 'subclassFeature') {
+    const own = Object.fromEntries(
+      [
+        'name',
+        'className',
+        'classSource',
+        'subclassShortName',
+        'subclassSource',
+        'level',
+        'source',
+      ].map((field) => [field, ownValue(value, field)]),
+    )
+    if (!getSubclassFeatureIdentity(own)) return ''
+    const field = (name: string, fallback = '') =>
+      String(own[name] ?? '')
+        .trim()
+        .toLowerCase() || fallback
+    const subclassSource = field('subclassSource', 'phb')
+    // Raw copy lookup uses structural fields, not a delimiter-joined UID.
+    return JSON.stringify([
+      field('name'),
+      field('className'),
+      field('classSource', 'phb'),
+      field('subclassShortName'),
+      subclassSource,
+      own.level,
+      field('source', subclassSource),
+    ])
+  }
   if (kind === 'itemType' || kind === 'magicvariant')
     return JSON.stringify(
       [kind === 'itemType' ? 'abbreviation' : 'name', 'source'].map((field) =>
@@ -657,45 +694,75 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
   kind: CopyKind,
   templates: readonly Record5e[] = [],
 ): { records: T[]; diagnostics: CopyResolutionDiagnostic[] } {
-  const byKey = new Map(records.map((record) => [key(record, kind), record]))
+  const byKey = new Map<string, T>()
+  const ambiguous = new Set<string>()
+  for (const record of records) {
+    const identity = key(record, kind)
+    if (kind === 'subclassFeature' && !identity) continue
+    if (kind === 'subclassFeature' && byKey.has(identity)) ambiguous.add(identity)
+    byKey.set(identity, record)
+  }
   const resolvedTemplates = templates.length ? resolveCopiedRecords(templates, kind).records : []
   const templateByKey = new Map(resolvedTemplates.map((template) => [key(template), template]))
-  const resolved = new Map<string, T>()
+  const resolved = new Map<string | T, T>()
   const diagnostics: CopyResolutionDiagnostic[] = []
   const active = new Set<string>()
 
   const visit = (record: T): T => {
     const identity = key(record, kind)
-    if (resolved.has(identity)) return resolved.get(identity) as T
+    const memoKey = kind === 'subclassFeature' ? record : identity
+    if (resolved.has(memoKey)) return resolved.get(memoKey) as T
     if (!Object.getOwnPropertyDescriptor(record, '_copy')) return record
     try {
       // Validate the whole directive before any operation, including later failing operations.
       assertSafeData(record)
       const own = clone(record) as Record5e
       const copy = directive(ownValue(own, '_copy'))
+      if (kind === 'subclassFeature') {
+        if (!identity) throw new Error('invalid subclass-feature identity')
+        if (ambiguous.has(identity)) throw new Error('ambiguous subclass-feature identity')
+        if (
+          copy._templates !== undefined ||
+          Object.getOwnPropertyDescriptor(object(copy._mod), '*')
+        )
+          throw new Error('unsupported subclass-feature wildcard or template transformation')
+      }
       if (active.has(identity)) throw new Error('copy cycle')
       active.add(identity)
       const parentField = kind === 'itemType' ? 'abbreviation' : 'name'
       if (
         typeof copy[parentField] !== 'string' ||
         typeof copy.source !== 'string' ||
-        ((kind === 'itemType' || kind === 'magicvariant') &&
+        ((kind === 'itemType' || kind === 'magicvariant' || kind === 'subclassFeature') &&
           (!(copy[parentField] as string).trim() || !copy.source.trim()))
       )
         throw new Error('invalid parent reference')
-      const parent = byKey.get(key(copy, kind))
-      if (!parent) throw new Error(`missing parent ${copy[parentField]}|${copy.source}`)
+      const parentKey = key(copy, kind)
+      if (kind === 'subclassFeature' && !parentKey) throw new Error('invalid parent identity')
+      if (kind === 'subclassFeature' && ambiguous.has(parentKey))
+        throw new Error('ambiguous subclass-feature parent')
+      const parent = byKey.get(parentKey)
+      if (!parent)
+        throw new Error(
+          `missing parent ${kind === 'subclassFeature' ? parentKey : `${copy[parentField]}|${copy.source}`}`,
+        )
       const inherited = clone(visit(parent)) as Record5e
       assertSafeData(inherited)
       if (ownValue(inherited, '_copy'))
         throw new Error(`unresolved parent ${copy[parentField]}|${copy.source}`)
       materializeCopy(own, inherited, kind, templateByKey)
-      resolved.set(identity, own as T)
+      resolved.set(memoKey, own as T)
       return own as T
     } catch (error) {
-      if (!resolved.has(identity))
-        diagnostics.push({ entity: `${record.name}|${record.source}`, reason: String(error) })
-      resolved.set(identity, record)
+      if (!resolved.has(memoKey))
+        diagnostics.push({
+          entity:
+            kind === 'subclassFeature'
+              ? identity || `${record.name}|${record.source}`
+              : `${record.name}|${record.source}`,
+          reason: String(error),
+        })
+      resolved.set(memoKey, record)
       return record
     } finally {
       active.delete(identity)

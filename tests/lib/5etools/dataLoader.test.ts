@@ -612,6 +612,48 @@ describe('5etools/dataLoader', () => {
     ])
   })
 
+  test('reports an unresolved subclass-feature copy as a required class-file failure', async () => {
+    const onResourceFailure = vi.fn()
+    const payloads: Record<string, unknown> = {
+      'class/index.json': { cleric: 'class-cleric.json' },
+      'class/class-cleric.json': {
+        class: [{ name: 'Cleric', source: 'XPHB' }],
+        subclassFeature: [
+          {
+            name: 'Copied',
+            source: 'PHB',
+            className: 'Cleric',
+            classSource: 'XPHB',
+            subclassShortName: 'Nature',
+            subclassSource: 'PHB',
+            level: 3,
+            _copy: {
+              name: 'Absent',
+              source: 'PHB',
+              className: 'Cleric',
+              classSource: 'PHB',
+              subclassShortName: 'Nature',
+              subclassSource: 'PHB',
+              level: 1,
+            },
+          },
+        ],
+      },
+    }
+    const reader: JsonResourceReader = {
+      type: 'local',
+      readJson: (file) => Promise.resolve(payloads[file] ?? {}),
+    }
+    const loader = new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:/data', isValid: true },
+      reader,
+    )
+    const data = await loader.loadAllData({ onResourceFailure })
+    expect(data.classes).toEqual([])
+    expect(data.classFeatures).toEqual([])
+    expect(onResourceFailure).toHaveBeenCalledWith('class/class-cleric.json', { required: true })
+  })
+
   test('continues ingestion when an indexed class file is missing', async () => {
     const payloadByFile: Record<string, unknown> = {
       'books.json': {

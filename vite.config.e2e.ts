@@ -7,6 +7,10 @@ const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    // Match development: private build/review trees must not delay browser-test startup.
+    watch: { ignored: ['**/.tmp/**'] },
+  },
   resolve: {
     alias: {
       '@': resolve(projectRoot, 'src'),

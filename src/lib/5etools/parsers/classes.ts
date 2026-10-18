@@ -6,6 +6,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { CopyResolutionError, resolveCopiedRecords } from '@/lib/5etools/copyResolution'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
@@ -182,7 +183,7 @@ function materializeSubclassCopies(subclasses: unknown[]): ParsedObject[] {
   })
 }
 
-export function parseClasses(data: unknown): unknown[] {
+function parsePreparedClasses(data: unknown): unknown[] {
   const obj = asObject(data)
   const classes: unknown[] = obj.class
     ? [...asArray(obj.class)]
@@ -412,7 +413,7 @@ function enrichEntriesSubclassRefs(
   })
 }
 
-export function parseClassFeatures(data: unknown): unknown[] {
+function parsePreparedClassFeatures(data: unknown): unknown[] {
   const obj = asObject(data)
   const subclassFeatureRecords = asArray(obj.subclassFeature)
   const features = asArray(obj.classFeature)
@@ -425,4 +426,38 @@ export function parseClassFeatures(data: unknown): unknown[] {
       entries: enrichEntriesSubclassRefs(f.entries, subclassFeatureRecords),
     }
   })
+}
+
+/** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
+function prepareClassDocument(data: unknown): unknown {
+  const obj = asObject(data)
+  const records = asArray(obj.subclassFeature).map(asObject)
+  if (!records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) return data
+  const resolved = resolveCopiedRecords(
+    records as Array<ParsedObject & { name: string; source: string }>,
+    'subclassFeature',
+  )
+  if (resolved.diagnostics.length)
+    throw new CopyResolutionError(resolved.diagnostics, 'in subclass features')
+  return { ...obj, subclassFeature: resolved.records }
+}
+
+/** The loader prepares once for both projections of a class document. */
+export function parseClassDocument(data: unknown): {
+  classes: unknown[]
+  classFeatures: unknown[]
+} {
+  const prepared = prepareClassDocument(data)
+  return {
+    classes: parsePreparedClasses(prepared),
+    classFeatures: parsePreparedClassFeatures(prepared),
+  }
+}
+
+export function parseClasses(data: unknown): unknown[] {
+  return parsePreparedClasses(prepareClassDocument(data))
+}
+
+export function parseClassFeatures(data: unknown): unknown[] {
+  return parsePreparedClassFeatures(prepareClassDocument(data))
 }
