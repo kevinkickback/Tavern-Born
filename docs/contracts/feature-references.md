@@ -64,3 +64,22 @@ renders expanded intro references once within their level group; an exact target
 level feature is excluded from nested expansion. Different gains and printings remain distinct,
 and the authoritative features retain their mechanical choices and Actions.
 Changes to target identity/intro projections require a parsed-cache rebuild.
+
+## Internal subclass-feature copies
+
+Class documents materialize internal subclass-feature copies through the shared data-only copy
+resolver before reference expansion and rule normalization. Production loading prepares the document
+once for its class and class-feature projections; direct parser entry points use the same boundary.
+Copy parents match all seven identity fields, with established source defaults and case/whitespace
+normalization. Structural keys keep literal delimiters distinct; multiple exact parents are ambiguous.
+The copied feature retains its own owner/gain while inherited nested references keep their original
+targets. Local overrides, null removal and explicit upstream preservation rules apply without mutating
+source data. Missing, invalid, ambiguous, cyclic or unsafe copies fail the required class resource;
+foreground loads and background refreshes cannot replace complete memory/cache with that partial result.
+Feature wildcard/template transformations are unsupported and fail explicitly. Existing explicit
+shared copy operations retain their supported semantics. External cross-file feature-copy dependencies
+and class-feature copies are outside this adapter's scope.
+
+Parsed cache schema38 rebuilds previously empty copied bodies; saved character format11 is unchanged.
+Restored text and nested declarations flow into the existing catalogs, Actions and PDF projections.
+Materialization does not itself implement prose-only choices or qualify complete character journeys.

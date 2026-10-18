@@ -319,6 +319,67 @@ describe('gameDataStore', () => {
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
+  test.each([
+    false,
+    true,
+  ])('actual copied-feature parser failure preserves prior complete memory/cache (background=%s)', async (background) => {
+    const { FiveEToolsDataLoader } = await import('@/lib/5etools/dataLoader')
+    const raw = {
+      class: [{ name: 'Cleric', source: 'XPHB' }],
+      subclassFeature: [
+        {
+          name: 'Copy',
+          source: 'PHB',
+          className: 'Cleric',
+          classSource: 'XPHB',
+          subclassShortName: 'Nature',
+          subclassSource: 'PHB',
+          level: 3,
+          _copy: {
+            name: 'Missing',
+            source: 'PHB',
+            className: 'Cleric',
+            classSource: 'PHB',
+            subclassShortName: 'Nature',
+            subclassSource: 'PHB',
+            level: 1,
+          },
+        },
+      ],
+    }
+    const loader = new FiveEToolsDataLoader(config, {
+      type: 'remote',
+      readJson: (file) =>
+        Promise.resolve(
+          file === 'class/index.json'
+            ? { cleric: 'class-cleric.json' }
+            : file === 'class/class-cleric.json'
+              ? raw
+              : {},
+        ),
+    })
+    loadDataFromSourceMock.mockImplementation((_config, options) => loader.loadAllData(options))
+    const existing = makeGameDataFixture(),
+      lastDataChangedAt = '2026-01-01T00:00:00.000Z',
+      lastUpdateCheckAt = '2026-01-02T00:00:00.000Z'
+    useGameDataStore.setState({
+      gameData: existing,
+      dataSourceConfig: config,
+      lastDataChangedAt,
+      lastUpdateCheckAt,
+      cacheStatus: 'fresh',
+    })
+    expect(await useGameDataStore.getState().loadGameData(config, background)).toBe(false)
+    const state = useGameDataStore.getState()
+    expect(state.gameData).toBe(existing)
+    expect(state.lastDataChangedAt).toBe(lastDataChangedAt)
+    expect(state.lastUpdateCheckAt).toBe(lastUpdateCheckAt)
+    expect(state.error).toMatch(
+      background ? /Background refresh incomplete/ : /Data load incomplete/,
+    )
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
   test('foreground load rejects required resource failures before updating cache', async () => {
     loadDataFromSourceMock.mockImplementation((_config, options) => {
       options?.onResourceFailure?.('class/class-wizard.json', { required: true })

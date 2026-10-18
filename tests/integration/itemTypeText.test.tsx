@@ -15,7 +15,11 @@ import {
 } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries } from '@/lib/compendiumEntries'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
@@ -287,7 +291,7 @@ describe('category-text display contexts and storage boundary', () => {
     const config = { type: 'local' as const, path: '/fixture', isValid: true }
     await writeGameDataCache(data, config)
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(37)
+    expect(cached?.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
     expect(cached?.data.items[0].itemTypeText).toEqual(data.items[0].itemTypeText)
     expect(cached?.data.items[0].primaryItemTypeText).toEqual(data.items[0].primaryItemTypeText)
     for (const support of [[], [instrumentRules]]) {

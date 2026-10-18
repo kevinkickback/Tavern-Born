@@ -29,8 +29,7 @@ import {
   parseActions,
   parseBackgroundFluff,
   parseBackgrounds,
-  parseClasses,
-  parseClassFeatures,
+  parseClassDocument,
   parseClassFluff,
   parseClassFluffSummaries,
   parseConditions,
@@ -524,8 +523,9 @@ export class FiveEToolsDataLoader {
             richFluff.map((item) => [`${item.name}|${item.source}`, item]),
           )
 
+          const parsedDocument = parseClassDocument(classData)
           const parsedClasses = this.filterByIndexedSource(
-            parseClasses(classData) as GameData['classes'],
+            parsedDocument.classes as GameData['classes'],
             classFile.source,
           ).map((item) => {
             const summary = fluffSummaryByKey.get(`${item.name}|${item.source}`)
@@ -539,7 +539,7 @@ export class FiveEToolsDataLoader {
             }
           })
           const parsedFeatures = this.filterByIndexedSource(
-            parseClassFeatures(classData) as GameData['classFeatures'],
+            parsedDocument.classFeatures as GameData['classFeatures'],
             classFile.source,
           )
 

@@ -17,7 +17,11 @@ import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
-import { readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
@@ -165,7 +169,7 @@ test('durable schema11 reopen, cache recomposition and exact missing/restored ru
   useCharacterStore.getState().setActiveCharacter(added.id)
   await writeGameDataCache(data, { type: 'local', path: '/shield-test', isValid: true })
   const cached = await readGameDataCache()
-  expect(cached?.cacheSchemaVersion).toBe(37)
+  expect(cached?.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
   expect(
     composeGameDataLayers([cached!.data]).items.filter((x) => x.magicVariantGenerated),
   ).toHaveLength(6)

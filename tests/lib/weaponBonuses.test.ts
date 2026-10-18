@@ -8,7 +8,12 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { deriveStructuredItemEffects } from '@/lib/calculations/characterEffects'
 import { resolveNumericEffect } from '@/lib/calculations/effects'
 import { removeManualEquipmentCommand } from '@/lib/character/commands/equipmentCommands'
-import { clearGameDataCache, readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  clearGameDataCache,
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import type { Item5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -69,7 +74,7 @@ describe('fixed intrinsic weapon bonuses', () => {
         additional: { type: 'local', path: 'external-rules', isValid: true },
       })
       const restored = (await readGameDataCache())!
-      expect(restored.cacheSchemaVersion).toBe(37)
+      expect(restored.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
       const lookups = buildGameDataLookups(restored.data)
       expect(totals(character, lookups.itemLookup)).toEqual([
         [6, 4],

@@ -12,7 +12,11 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { addManualEquipmentBatchCommand } from '@/lib/character/commands/equipmentCommands'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
@@ -257,7 +261,7 @@ describe('raw template cache and concrete character persistence', () => {
     const loaded = await loadMagicTemplates([shieldTemplate, child], [concrete])
     await writeGameDataCache(loaded, { type: 'local', path: '/fixture', isValid: true })
     const cached = await readGameDataCache()
-    expect(cached?.cacheSchemaVersion).toBe(37)
+    expect(cached?.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
     expect(cached?.data.magicVariants).toEqual([shieldTemplate, child])
     const replaced = await loadMagicTemplates([
       { ...shieldTemplate, entries: ['Replacement rules.'] },
