@@ -88,7 +88,7 @@ describe('writeGameDataCache', () => {
   })
 
   test.each([
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 31, 32, 33, 34, 35, 37, 38,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 31, 32, 33, 34, 35, 37, 38, 39,
   ])('rejects catalogs predating current normalization: %s', async (schema) => {
     idbGetMock.mockResolvedValue({
       data: makeGameData(),

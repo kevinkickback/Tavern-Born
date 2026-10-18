@@ -5,7 +5,12 @@ import {
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
-import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import {
+  buildClassChoiceFeatureCatalogs,
+  type ClassChoiceFeatureCatalogs,
+  resolveFeatureOptionEntity,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import type { GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 
@@ -21,6 +26,7 @@ export interface GameDataAvailabilityIndex {
   spells: ReadonlySet<string>
   subclasses: ReadonlySet<string>
   subclassFeatures: ReadonlySet<string>
+  featureOptions?: ClassChoiceFeatureCatalogs
   subclassFeaturesByOwner: ReadonlyMap<string, ReadonlySet<string>>
 }
 
@@ -70,6 +76,7 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
   }
 
   return {
+    featureOptions: featureCatalogs,
     backgrounds: entityKeys(gameData.backgrounds),
     classes: entityKeys(gameData.classes),
     classFeatures,
@@ -109,6 +116,15 @@ function choiceIsMissing(
   index: GameDataAvailabilityIndex,
   subclassOwner?: string,
 ): boolean {
+  if (choice.entityType === 'featureOption') {
+    return (
+      !index.featureOptions ||
+      !resolveFeatureOptionEntity(
+        choice,
+        scopeClassChoiceFeatureCatalogs(index.featureOptions, subclassOwner),
+      )
+    )
+  }
   if (choice.entityType === 'classFeature' || choice.entityType === 'subclassFeature') {
     const target = getClassChoiceFeatureTarget(choice)
     const available =
@@ -119,7 +135,10 @@ function choiceIsMissing(
           : index.subclassFeatures
     return !target || !available?.has(target)
   }
-  const catalogs: Record<CharacterClassChoiceOption['entityType'], ReadonlySet<string>> = {
+  const catalogs: Record<
+    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption'>,
+    ReadonlySet<string>
+  > = {
     classFeature: index.classFeatures,
     creature: index.creatures,
     feat: index.feats,

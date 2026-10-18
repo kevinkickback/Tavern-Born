@@ -330,8 +330,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       { entity: 'Ranger|PHB', feature: 'Deft Explorer' },
       { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
       { entity: 'Ranger|PHB', feature: 'Natural Explorer' },
-      { entity: 'Sorcerer|PHB / Draconic Bloodline|PHB', feature: 'Dragon Ancestor' },
-      { entity: 'Sorcerer|XPHB / Draconic Bloodline|PHB', feature: 'Dragon Ancestor' },
     ])
     expect(
       setupIssues.every((issue) => issue.message.includes(': unsupported-required-choice: ')),
@@ -375,12 +373,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         level: 3,
         message:
           'Path of the Storm Herald|XGE: Storm Aura requires an environment choice. Tavern Born does not yet support this setup or its dependent benefits.',
-      },
-      {
-        owner: { name: 'Sorcerer', source: 'XPHB' },
-        level: 3,
-        message:
-          'Draconic Bloodline|PHB: Dragon Ancestor requires a dragon ancestry choice. Tavern Born does not yet support this setup or its dependent benefits.',
       },
     ])
     expect(copiedArcaneArcher?.entries?.length).toBeGreaterThan(0)

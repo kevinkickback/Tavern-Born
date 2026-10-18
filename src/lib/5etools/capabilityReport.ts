@@ -1,5 +1,13 @@
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
-import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
+import {
+  buildClassChoiceFeatureCatalogs,
+  resolveFeatureOptionEntity,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import type { Class5e, GameData, Item5e, Race5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -105,7 +113,7 @@ function increment(target: Record<string, number>, key: string): void {
 
 function optionCatalogs(
   gameData: GameData,
-): Record<NormalizedChoiceOptionReference['entityType'], Set<string>> {
+): Record<Exclude<NormalizedChoiceOptionReference['entityType'], 'featureOption'>, Set<string>> {
   const embeddedClassFeatures = gameData.classes.flatMap((classData) =>
     (classData.classFeatureRefs ?? []).flatMap((reference) =>
       reference.feature ? [reference.feature] : [],
@@ -167,7 +175,22 @@ function inspectReference(
   path: string,
   catalogs: ReturnType<typeof optionCatalogs>,
   issues: CapabilityIssue[],
+  literalCatalog?: Parameters<typeof resolveFeatureOptionEntity>[1],
 ): void {
+  if (option.entityType === 'featureOption') {
+    if (literalCatalog && resolveFeatureOptionEntity(option, literalCatalog)) return
+    issues.push({
+      code: 'unresolved-reference',
+      collection: 'classes',
+      entity: owner,
+      path,
+      message:
+        'The featureOption option ' +
+        (option.ref ?? option.name) +
+        ' was not found in the exact source table.',
+    })
+    return
+  }
   const featureOption =
     option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
   if (!featureOption && !option.source?.trim()) {
@@ -266,6 +289,7 @@ function inspectMovement(
 export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabilityReport {
   const issues: CapabilityIssue[] = []
   const catalogs = optionCatalogs(gameData)
+  const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
   const report: CorpusCapabilityReport = {
     entities: Object.fromEntries(
       FIELD_COLLECTIONS.map((collection) => [collection, (gameData[collection] ?? []).length]),
@@ -392,6 +416,20 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
         maximumSelections: choice.maximumSelections,
         sourceField: choice.source.field,
       })
+      const literalCatalog =
+        choice.kind === 'feature-option'
+          ? scopeClassChoiceFeatureCatalogs(
+              featureCatalogs,
+              choice.owner.type === 'subclass'
+                ? getFeatureOwnerKey(
+                    choice.owner.name,
+                    choice.owner.source,
+                    choice.owner.subclassName,
+                    choice.owner.subclassSource,
+                  )
+                : undefined,
+            )
+          : undefined
       for (const [optionIndex, option] of choice.options.entries()) {
         inspectReference(
           option,
@@ -399,6 +437,7 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
           `${pathPrefix}.choices[${choiceIndex}].options[${optionIndex}]`,
           catalogs,
           issues,
+          literalCatalog,
         )
       }
     }

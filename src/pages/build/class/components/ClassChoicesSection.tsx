@@ -6,6 +6,7 @@ import {
   type ClassChoiceOptionView,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
+import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import { cn } from '@/lib/utils'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
@@ -13,6 +14,8 @@ import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 
 interface ClassChoicesSectionProps {
   choices: NormalizedCharacterChoice[]
+  recoverySelections?: readonly FeatureOptionSelectionState[]
+  onRecover?: (state: FeatureOptionSelectionState) => void
   diagnostics: ClassChoiceDiagnostic[]
   classLevel: number
   selectedViewsByChoiceId: ReadonlyMap<string, ClassChoiceOptionView[]>
@@ -28,6 +31,8 @@ interface ClassChoicesSectionProps {
 
 export function BuildClassChoicesSection({
   choices,
+  recoverySelections = [],
+  onRecover,
   diagnostics,
   classLevel,
   selectedViewsByChoiceId,
@@ -51,6 +56,27 @@ export function BuildClassChoicesSection({
         className,
       )}
     >
+      {recoverySelections.map((state) => (
+        <BuildClassProgressionChoiceCard
+          key={state.selection.choiceId}
+          id={state.selection.choiceId}
+          label={state.selection.label}
+          recovery
+          selectedCount={state.selection.selected.length}
+          isFull={false}
+          chosenItems={state.selection.selected.map((row, index) => ({
+            name: row.name,
+            source: row.source,
+            entries: state.details[index]?.entries,
+            unavailable: true,
+          }))}
+          detailCollapsed={detailCollapsed}
+          onChoose={() => onRecover?.(state)}
+          onSelectFeature={onSelectFeature}
+          onExpandDetails={onExpandDetails}
+          highlighted={focusedChoiceId === state.selection.choiceId}
+        />
+      ))}
       {choices.map((choice) => {
         const required = getRequiredChoiceSelectionCount(choice, classLevel)
         const views = selectedViewsByChoiceId.get(choice.id) ?? []

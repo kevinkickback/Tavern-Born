@@ -22,6 +22,55 @@ import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
 
+function sameSelectionKeys(left: readonly string[], right: readonly string[]): boolean {
+  const sortedLeft = [...left].sort()
+  const sortedRight = [...right].sort()
+  return (
+    sortedLeft.length === sortedRight.length &&
+    sortedLeft.every((key, index) => key === sortedRight[index])
+  )
+}
+
+/** Removes only established literal intent when its live declaration cannot be restored. */
+export function retainSavedFeatureOptionsCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  choiceId: string,
+  remainingKeys: readonly string[],
+): CharacterCommandResult {
+  const selection = character.classChoiceSelections?.find((row) => row.choiceId === choiceId)
+  if (!selection) return { characterPatch: {}, provenanceUpdate: ledger }
+  if (
+    selection.kind !== 'feature-option' ||
+    selection.selected.some((option) => option.entityType !== 'featureOption')
+  ) {
+    throw new RangeError('Only a saved feature-option choice supports this recovery operation.')
+  }
+  const originalKeys = selection.selected.map(getClassChoiceOptionKey)
+  const remaining = new Set(remainingKeys)
+  if (
+    remaining.size !== remainingKeys.length ||
+    remainingKeys.some((key) => !originalKeys.includes(key))
+  ) {
+    throw new RangeError(
+      'Unavailable feature options can only retain or remove existing selections.',
+    )
+  }
+  if (sameSelectionKeys(originalKeys, remainingKeys))
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const selected = selection.selected.filter((option) =>
+    remaining.has(getClassChoiceOptionKey(option)),
+  )
+  const next = (character.classChoiceSelections ?? []).flatMap((row) =>
+    row.choiceId !== choiceId ? [row] : selected.length ? [{ ...row, selected }] : [],
+  )
+  const grants = reconcileClassChoiceSelectionGrants(character, ledger, next)
+  return {
+    characterPatch: { classChoiceSelections: next, features: grants.features },
+    provenanceUpdate: grants.provenanceUpdate,
+  }
+}
+
 function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
   const levels: number[] = []
   let previousCount = 0
@@ -83,6 +132,15 @@ export function applyClassChoiceSelectionCommand(
     (existing) => existing.choiceId === choice.id,
   )
   validateSelectedOptions(choice, selected, existingSelection?.selected)
+  if (
+    choice.kind === 'feature-option' &&
+    sameSelectionKeys(
+      (existingSelection?.selected ?? []).map(getClassChoiceOptionKey),
+      selected.map(getClassChoiceOptionKey),
+    )
+  ) {
+    return { classChoiceSelections: character.classChoiceSelections }
+  }
   const slotLevels = assignProgressionSlotLevels(
     (existingSelection?.selected ?? []).map((option) => ({
       key: getClassChoiceOptionKey(option),
@@ -242,6 +300,12 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   selected: readonly NormalizedChoiceOptionReference[],
 ): CharacterCommandResult {
   const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected)
+  if (
+    choice.kind === 'feature-option' &&
+    selectionPatch.classChoiceSelections === character.classChoiceSelections
+  ) {
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
   const classChoiceSelections = selectionPatch.classChoiceSelections ?? []
   const grants = reconcileClassChoiceSelectionGrants(character, ledger, classChoiceSelections)
   const withSelections: Character = {

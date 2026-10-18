@@ -28,6 +28,7 @@ import {
   type ClassChoiceOptionView,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
+import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import {
   classAsiReadinessId,
   classChoiceDiagnosticReadinessId,
@@ -87,6 +88,8 @@ interface BuildClassLevelsPanelProps {
   usedASI: number
   totalASIAcrossClasses: number
   classChoices: NormalizedCharacterChoice[]
+  classChoiceRecoveries?: readonly FeatureOptionSelectionState[]
+  onRecoverClassChoice?: (state: FeatureOptionSelectionState) => void
   classChoiceDiagnostics: ClassChoiceDiagnostic[]
   selectedClassChoiceViewsById: ReadonlyMap<string, ClassChoiceOptionView[]>
   onOpenClassPicker: () => void
@@ -160,6 +163,8 @@ export function BuildClassLevelsPanel({
   usedASI,
   totalASIAcrossClasses,
   classChoices,
+  classChoiceRecoveries = [],
+  onRecoverClassChoice,
   classChoiceDiagnostics,
   selectedClassChoiceViewsById,
   onOpenClassPicker,
@@ -196,9 +201,10 @@ export function BuildClassLevelsPanel({
     name: viewingClass,
     source: viewingClassSource ?? viewingClassData?.source ?? '',
   })
-  const focusedNormalizedChoiceId = classChoices.find(
-    (choice) => readinessFocus === classChoiceReadinessId(choice.id),
-  )?.id
+  const focusedNormalizedChoiceId = [
+    ...classChoices,
+    ...classChoiceRecoveries.map((state) => ({ id: state.selection.choiceId })),
+  ].find((choice) => readinessFocus === classChoiceReadinessId(choice.id))?.id
   const isDiagnosticFocused = (diagnostic: ClassChoiceDiagnostic) =>
     readinessFocus ===
     classChoiceDiagnosticReadinessId(viewingClassKey, diagnostic.featureName, diagnostic.code)
@@ -304,6 +310,22 @@ export function BuildClassLevelsPanel({
 
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">
+          {classChoiceRecoveries.length > 0 && (
+            <BuildClassChoicesSection
+              choices={[]}
+              diagnostics={[]}
+              recoverySelections={classChoiceRecoveries}
+              onRecover={onRecoverClassChoice}
+              classLevel={viewingClassLevel}
+              selectedViewsByChoiceId={selectedClassChoiceViewsById}
+              detailCollapsed={detailCollapsed}
+              onChoose={onOpenClassChoice}
+              onSelectFeature={onSelectFeature}
+              onExpandDetails={onExpandDetails}
+              focusedChoiceId={focusedNormalizedChoiceId}
+              className="mb-3"
+            />
+          )}
           {character.classProgression.length === 0 ? (
             <div
               ref={classPickerRef}

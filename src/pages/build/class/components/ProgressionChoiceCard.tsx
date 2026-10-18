@@ -17,7 +17,8 @@ interface ProgressionChoiceCardProps {
   label?: string
   feature?: ClassFeatureDisplay
   selectedCount: number
-  totalAllowed: number
+  totalAllowed?: number
+  recovery?: boolean
   isFull: boolean
   chosenItems: ChosenItem[]
   detailCollapsed: boolean
@@ -33,6 +34,7 @@ export function BuildClassProgressionChoiceCard({
   feature,
   selectedCount,
   totalAllowed,
+  recovery = false,
   isFull,
   chosenItems,
   detailCollapsed,
@@ -42,9 +44,10 @@ export function BuildClassProgressionChoiceCard({
   highlighted = false,
 }: ProgressionChoiceCardProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(highlighted)
+    useRouteFocusTarget<HTMLFieldSetElement>(highlighted)
   return (
-    <div
+    <fieldset
+      aria-label={label ?? feature?.name}
       ref={routeFocusRef}
       className={cn(
         'rounded-lg border overflow-hidden',
@@ -77,7 +80,9 @@ export function BuildClassProgressionChoiceCard({
             )}
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {!label && isFull && <Check className="h-3.5 w-3.5 shrink-0 text-success" />}
-              {selectedCount} / {totalAllowed} chosen
+              {recovery
+                ? 'Saved choice — source rules unavailable'
+                : `${selectedCount} / ${totalAllowed} chosen`}
             </div>
           </div>
           {feature && (feature.entries ?? []).length > 0 && (
@@ -90,7 +95,7 @@ export function BuildClassProgressionChoiceCard({
           className="flex-shrink-0 ml-2 h-7 text-xs"
           onClick={onChoose}
         >
-          {selectedCount > 0 ? 'Edit' : 'Choose'}
+          {recovery ? 'Review saved choice' : selectedCount > 0 ? 'Edit' : 'Choose'}
         </Button>
       </div>
 
@@ -136,6 +141,6 @@ export function BuildClassProgressionChoiceCard({
           ))}
         </div>
       )}
-    </div>
+    </fieldset>
   )
 }

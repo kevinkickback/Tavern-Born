@@ -5,6 +5,7 @@ export type NormalizedCharacterChoiceKind =
   | 'item'
   | 'optional-feature'
   | 'creature'
+  | 'feature-option'
 
 export type ChoiceOptionEntityType =
   | 'classFeature'
@@ -13,6 +14,7 @@ export type ChoiceOptionEntityType =
   | 'item'
   | 'optionalFeature'
   | 'creature'
+  | 'featureOption'
 
 export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType

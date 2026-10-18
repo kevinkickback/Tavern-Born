@@ -4,6 +4,7 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
+import { getFeatureOptionKey } from '@/lib/5etools/featureOptionIdentity'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import type { CharacterClassChoiceSelection } from '@/types/character'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -43,6 +44,8 @@ export function getClassChoiceFeatureTarget(
 }
 
 export function getClassChoiceOptionKey(option: NormalizedChoiceOptionReference): string {
+  if (option.entityType === 'featureOption')
+    return getFeatureOptionKey(option) ?? `invalid-feature-option:${JSON.stringify(option)}`
   return (
     getClassChoiceFeatureTarget(option) ??
     `${option.entityType}|${getEntityLookupKey(option.name, option.source).toLowerCase()}${option.ref ? `|unresolved:${option.ref}` : ''}`

@@ -102,6 +102,8 @@ export interface ClassFeature {
   entries?: unknown[]
   className?: string
   classSource?: string
+  /** Derived uncertainty for audited literal choices; excluded from source/action identity. */
+  featureOptionSourceConflict?: true
   [key: string]: unknown
 }
 
@@ -201,6 +203,8 @@ export interface SubclassFeature {
   classSource?: string
   subclassShortName?: string
   subclassSource?: string
+  /** Derived uncertainty for audited literal choices; excluded from source/action identity. */
+  featureOptionSourceConflict?: true
   [key: string]: unknown
 }
 

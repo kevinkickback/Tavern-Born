@@ -101,14 +101,6 @@ describe('committed bundled SRD corpus', () => {
         message:
           'Natural Explorer: unsupported-required-choice: Natural Explorer requires favored terrain choices. Tavern Born does not yet support this setup.',
       },
-      {
-        code: 'choice-diagnostic',
-        collection: 'classes',
-        entity: 'Sorcerer|PHB / Draconic Bloodline|PHB',
-        path: 'subclasses[0].normalizedRules.choiceDiagnostics[0]',
-        message:
-          'Dragon Ancestor: unsupported-required-choice: Dragon Ancestor requires a dragon ancestry choice. Tavern Born does not yet support this setup or its dependent benefits.',
-      },
     ])
     expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{8}$/)
     expect(gameData.classes.some((entry) => entry.source === 'PHB')).toBe(true)

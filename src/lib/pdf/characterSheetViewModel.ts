@@ -49,6 +49,10 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import {
+  getFeatureOptionSelectionStates,
+  summarizeFeatureOptionSelection,
+} from '@/lib/character/featureOptionSelections'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
@@ -185,6 +189,7 @@ export interface CharacterSheetViewModel {
   backgroundFeature: { name: string; description: string }
   classFeaturesSummary2014: string
   featuresSummary: string
+  featureOptionSummaries?: Array<{ text: string; compactText: string }>
   equipmentSummary: string
   proficienciesSummary: string
   languagesSummary: string
@@ -356,13 +361,36 @@ function buildClassFeaturesSummary(character: Character, descriptions = true): s
     .join('\n\n')
 }
 
+function withFeatureOptionSummaries(
+  summary: string,
+  selections: CharacterSheetViewModel['featureOptionSummaries'],
+  descriptions: boolean,
+): string {
+  return [
+    summary,
+    ...(selections ?? []).map((selection) =>
+      descriptions ? selection.text : selection.compactText,
+    ),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
 /** Print-only projection: preserve names and combat numbers without changing source rules. */
 export function withoutSheetDescriptions(vm: CharacterSheetViewModel): CharacterSheetViewModel {
   return {
     ...vm,
     racialTraitsSummary: buildRacialTraitsSummary(vm.character, vm.mergedRace, false),
-    classFeaturesSummary2014: buildClassFeaturesSummary(vm.character, false),
-    featuresSummary: buildFeaturesSummary(vm.character, false),
+    classFeaturesSummary2014: withFeatureOptionSummaries(
+      buildClassFeaturesSummary(vm.character, false),
+      vm.featureOptionSummaries,
+      false,
+    ),
+    featuresSummary: withFeatureOptionSummaries(
+      buildFeaturesSummary(vm.character, false),
+      vm.featureOptionSummaries,
+      false,
+    ),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
     magicItems: vm.magicItems.map((item) => ({ ...item, description: '' })),
@@ -801,10 +829,20 @@ export function createCharacterSheetViewModel(
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
   })
 
+  const featureOptionSummaries = getFeatureOptionSelectionStates(
+    character,
+    resolvedClasses,
+    rawLookups.classChoiceFeatureCatalogs,
+  ).map((state) => ({
+    text: summarizeFeatureOptionSelection(state),
+    compactText: summarizeFeatureOptionSelection(state, false),
+  }))
+
   return {
     character,
     feats,
     level,
+    featureOptionSummaries,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
     classLevelSummary: getClassLevelSummary(character),
@@ -869,8 +907,16 @@ export function createCharacterSheetViewModel(
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),
-    classFeaturesSummary2014: buildClassFeaturesSummary(character),
-    featuresSummary: buildFeaturesSummary(character),
+    classFeaturesSummary2014: withFeatureOptionSummaries(
+      buildClassFeaturesSummary(character),
+      featureOptionSummaries,
+      true,
+    ),
+    featuresSummary: withFeatureOptionSummaries(
+      buildFeaturesSummary(character),
+      featureOptionSummaries,
+      true,
+    ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
       .join('\n'),

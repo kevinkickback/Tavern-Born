@@ -11,6 +11,7 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from './classFeatureIdentity'
+import type { UnconditionalFeatureReference } from './unconditionalFeatureReferences'
 
 type FeatureKind = 'classFeature' | 'subclassFeature'
 type FeatureReference = ClassFeatureReference | SubclassFeatureReference
@@ -33,13 +34,6 @@ const RULES: readonly RequiredSetupRule[] = [
     markers: ['choose desert, sea, or tundra'],
     message:
       'Storm Aura requires an environment choice. Tavern Born does not yet support this setup or its dependent benefits.',
-  },
-  {
-    kind: 'subclassFeature',
-    ref: 'Dragon Ancestor|Sorcerer|PHB|Draconic|PHB|1|PHB',
-    markers: ['you choose one type of dragon as your ancestor'],
-    message:
-      'Dragon Ancestor requires a dragon ancestry choice. Tavern Born does not yet support this setup or its dependent benefits.',
   },
   {
     kind: 'classFeature',
@@ -119,18 +113,6 @@ function confirmed(rule: RequiredSetupRule, feature: FeatureReference['feature']
       ))
   )
     return false
-  if (rule.ref.startsWith('Dragon Ancestor|')) {
-    return (feature.entries ?? []).some((entry) => {
-      if (!entry || typeof entry !== 'object') return false
-      const table = entry as Record<string, unknown>
-      return (
-        table.type === 'table' &&
-        table.caption === 'Draconic Ancestry' &&
-        Array.isArray(table.rows) &&
-        table.rows.length > 0
-      )
-    })
-  }
   if (rule.ref.startsWith('Storm Aura|')) {
     const options = (feature.entries ?? []).find(
       (entry) =>
@@ -162,89 +144,48 @@ function confirmed(rule: RequiredSetupRule, feature: FeatureReference['feature']
 /** Reports only known, retained, unconditionally reachable declarations; never invents choices. */
 export function normalizeRequiredSetupDiagnostics(
   owner: NormalizedCharacterChoice['owner'],
-  refs: readonly FeatureReference[],
-  kind: FeatureKind,
+  declarations: readonly UnconditionalFeatureReference[],
 ): ClassChoiceDiagnostic[] {
   const found = new Map<string, ClassChoiceDiagnostic>()
-  const bestLevel = new Map<object, number>()
-  const visit = (ref: FeatureReference, refKind: FeatureKind, enclosingLevel: number) => {
-    if (typeof ref.ref !== 'string' || !ref.ref.trim()) return
-    const target = decode(ref.ref, refKind)
-    const key = identity(target, refKind)
-    if (!key || target.level === undefined) return
-    const level = Math.max(enclosingLevel, target.level)
+  for (const { reference: ref, kind, target: key, level } of declarations) {
+    const target = decode(ref.ref!, kind)
     const rule = RULE_BY_TARGET.get(key)
-    if (rule) {
-      const isConfirmed = confirmed(rule, ref.feature)
-      const diagnostic: ClassChoiceDiagnostic = {
-        code: isConfirmed ? 'unsupported-required-choice' : 'unverified-required-choice',
-        className: owner.name,
-        classSource: owner.source,
-        ...(owner.subclassName
-          ? { subclassName: owner.subclassName, subclassSource: owner.subclassSource }
+    if (!rule) continue
+    const isConfirmed = confirmed(rule, ref.feature)
+    const diagnostic: ClassChoiceDiagnostic = {
+      code: isConfirmed ? 'unsupported-required-choice' : 'unverified-required-choice',
+      className: owner.name,
+      classSource: owner.source,
+      ...(owner.subclassName
+        ? { subclassName: owner.subclassName, subclassSource: owner.subclassSource }
+        : {}),
+      featureName: target.name,
+      level,
+      message: isConfirmed
+        ? rule.message
+        : target.name +
+          ' has known required setup, but its exact source declaration is unavailable or changed. Restore or verify the source; this setup cannot be confirmed.',
+      requiredChoice: {
+        target: { entityType: kind, ref: ref.ref, name: target.name, source: target.source },
+        ...(rule.replacedBy ? { replacedBy: rule.replacedBy } : {}),
+        ...(rule.replaces ? { replaces: rule.replaces } : {}),
+      },
+    }
+    const prior = found.get(key)
+    if (
+      !prior ||
+      level < (prior.level ?? Infinity) ||
+      diagnostic.code === 'unverified-required-choice'
+    ) {
+      found.set(key, {
+        ...diagnostic,
+        level: Math.min(level, prior?.level ?? Infinity),
+        ...(prior?.code === 'unverified-required-choice'
+          ? { code: prior.code, message: prior.message }
           : {}),
-        featureName: target.name,
-        level,
-        message: isConfirmed
-          ? rule.message
-          : `${target.name} has known required setup, but its exact source declaration is unavailable or changed. Restore or verify the source; this setup cannot be confirmed.`,
-        requiredChoice: {
-          target: { entityType: refKind, ref: ref.ref, name: target.name, source: target.source },
-          ...(rule.replacedBy ? { replacedBy: rule.replacedBy } : {}),
-          ...(rule.replaces ? { replaces: rule.replaces } : {}),
-        },
-      }
-      const prior = found.get(key)
-      if (
-        !prior ||
-        level < (prior.level ?? Infinity) ||
-        diagnostic.code === 'unverified-required-choice'
-      ) {
-        found.set(key, {
-          ...diagnostic,
-          level: Math.min(level, prior?.level ?? Infinity),
-          ...(prior?.code === 'unverified-required-choice'
-            ? { code: prior.code, message: prior.message }
-            : {}),
-        })
-      }
+      })
     }
-    const feature = ref.feature
-    if (!feature || identity(feature, refKind) !== key) return
-    const previousLevel = bestLevel.get(feature)
-    if (previousLevel !== undefined && previousLevel <= level) return
-    bestLevel.set(feature, level)
-    const scan = (value: unknown, seen: Set<object>) => {
-      if (!value || typeof value !== 'object' || seen.has(value)) return
-      seen.add(value)
-      if (Array.isArray(value)) {
-        for (const entry of value) scan(entry, seen)
-        return
-      }
-      const record = value as Record<string, unknown>
-      if (record.type === 'options') return
-      const nestedKind =
-        record.type === 'refSubclassFeature'
-          ? 'subclassFeature'
-          : record.type === 'refClassFeature'
-            ? 'classFeature'
-            : undefined
-      if (nestedKind && typeof record[nestedKind] === 'string') {
-        visit(
-          {
-            ...decode(record[nestedKind], nestedKind),
-            feature: record.feature as FeatureReference['feature'],
-          },
-          nestedKind,
-          level,
-        )
-        return
-      }
-      scan(record.entries, seen)
-    }
-    scan(feature.entries, new Set())
   }
-  for (const ref of refs) visit(ref, kind, 0)
   return [...found.values()].sort(
     (a, b) => (a.level ?? 0) - (b.level ?? 0) || a.featureName.localeCompare(b.featureName),
   )

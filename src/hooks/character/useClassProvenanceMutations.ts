@@ -1,7 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useItemLookup } from '@/hooks/data/useGameData'
-import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import {
+  applyClassChoiceSelectionWithGrantsCommand,
+  retainSavedFeatureOptionsCommand,
+} from '@/lib/character/commands/classChoiceCommands'
 import {
   applyClassEquipmentChoiceCommand,
   applyClassSelectionCommand,
@@ -88,6 +91,7 @@ export function useClassProvenanceMutations() {
     (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
       if (!character) return
       const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, choice, selected)
+      if (Object.keys(result.characterPatch).length === 0) return
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
@@ -96,5 +100,23 @@ export function useClassProvenanceMutations() {
     [character, ledger, updateCharacter],
   )
 
-  return { applyClassSelection, applyClassEquipmentChoice, applyClassChoiceSelection }
+  const retainSavedFeatureOptions = useCallback(
+    (choiceId: string, keys: readonly string[]) => {
+      if (!character) return
+      const result = retainSavedFeatureOptionsCommand(character, ledger, choiceId, keys)
+      if (Object.keys(result.characterPatch).length === 0) return
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  return {
+    applyClassSelection,
+    applyClassEquipmentChoice,
+    applyClassChoiceSelection,
+    retainSavedFeatureOptions,
+  }
 }
