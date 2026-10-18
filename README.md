@@ -96,8 +96,15 @@ npm run dev
 
 > **⚠️ Important:** Tavern Born only includes content from the 2014/2024 D&D 5e System Reference Documents (SRDs), which offer a limited selection of rules and character options.
 
-For options beyond the SRD, you must provide your own compatible 5etools JSON files from a local folder or remote URL (HTTPS only).
+For options beyond the SRD, provide compatible 5etools JSON files from a local folder or remote URL (HTTPS only). Support is bounded: some mechanics still require manual handling, and a loaded option is not proof that all of its required choices are implemented.
+
 Unsure where to begin? The [5etools community wiki](https://wiki.tercept.net/en/5eTools/InstallGuide#step-1-downloading-the-site) might know a thing or two about finding compatible files.
+
+Before v1.0, saved characters may require recreation after a format change. The app retains incompatible originals for export; see [character compatibility](docs/state-management.md#schema-compatibility).
+
+## Development documentation
+
+Use the [task-based documentation index](docs/README.md) to find the relevant guide. [Release notes](docs/changelog.md) describe historical versions; the [v1.0 tracker](https://github.com/kevinkickback/Tavern-Born/issues/53) tracks outstanding release work.
 
 ## 📄 License
 

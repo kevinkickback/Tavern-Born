@@ -70,372 +70,39 @@ Fixed feat option edits opt into normalized name/reference and fixed-variant mat
 with saved option keys. Choice/class owner keys still match exactly; another printing or distinct
 variant retains its benefits. Other `removeGrantsBySourceRef` callers retain exact comparison.
 
+## Domain contracts
+
+| Change | Read |
+| --- | --- |
+| Feat setup, ordinary/bonus/fixed owners, special spell kinds or expertise | [Feat ownership](contracts/feat-ownership.md) |
+| Race/subrace/version transitions, origin abilities, native spells or defenses | [Racial ownership](contracts/racial-ownership.md) |
+| Class gains, feature actions, target catalogs or action IDs | [Class ownership](contracts/class-ownership.md) |
+| Equipment grants and AC ownership | [Equipment state](contracts/equipment-state.md) |
+| Strict save admission | [Character format](contracts/character-format.md) |
+
 ## Feat setup ownership
 
-Ordinary and bonus setup commands require an explicit `selectionKind` and exactly one active record
-with the complete normalized name/source pair in that collection. Their benefit tags retain that
-printing and distinct `selection:ordinary` / `selection:bonus` owner keys. Each collection permits
-one copy of a printing; the same repeatable printing may belong to both. Fixed, class-choice and
-racial/background-choice keys remain independent.
-
-Commit/Finish replaces the addressed owner's saved setup atomically. Edit, Clear and removal read
-its active saved choices for retraction across selected, fixed, class and provenance-choice owners;
-stale dialog options cannot leave old materialized benefits behind. Class setup requires exactly
-one class choice and one complete qualified feat reference before any setup command changes state.
-Missing, conflicting or inactive selected owners reject without changing the draft. Clear leaves an
-empty configured record and works without game data; removal deletes only the requested selection.
-Configured records retain Edit recovery when the whole feat catalog is missing. Unchanged picker
-confirmation retains unavailable saved selections; deselecting a saved entry explicitly removes it.
-Shared benefits remain until their final owner is removed. Separate complete owner fields normalize
-case and surrounding whitespace; literal pipes cannot collapse different name/source pairs.
-
-Racial/background choice removal requires exactly one matching saved reference. An omitted source
-can remove a unique complete name; absent or ambiguous targets leave the draft intact. Removing a
-choice or class progression record retains its owner's aggregate feat marker while another selected
-printing or literal name shares that ledger bucket. Racial/background reconciliation considers all
-remaining feat choices with the same source owner, including distinct choice IDs. Class level-down
-compares complete feat references rather than opaque issued IDs; new class feat IDs encode their fields without delimiter
-collisions. Cards and Edit use the same normalized complete reference after catalog casing refresh.
-
-Name-only unconfigured choice records remain visible and removable without catalog inference. They
-require explicit printing reselection before setup. Commit/Edit must match exactly one qualified
-saved choice reference; configured name-only references reject at admission. Choice setup benefit
-tags require the exact choice ID and one matching qualified reference with saved options. A matching
-unconfigured reference cannot legalize orphan setup benefits. This cutoff adds no converter.
-
-Strict admission validates selected setup ownership and benefits in both directions, without loaded
-rules. Every selected record, including an unconfigured record, requires exactly one manual feat
-ownership marker for its copy and printing. Repeated normalized choices within a skill, language,
-tool or spell array reject at admission and before setup commands change the draft. Distinct spell
-printings remain separate choices; display aliases for the same printing do not count twice.
-Spell targets require exactly two nonempty plain name/source fields or a valid source-qualified
-5etools spell tag; trailing plain fields reject before parsing or mutation. Selected ownership uses
-canonical ledger map keys, including name-only spell keys with their printing in `grantSource`.
-Admission rejects aliases in those keys rather than normalizing them into a benefit that removal
-cannot find. Readable saved references and separate owner fields still support case and whitespace.
-The [current schema cutoff](state-management.md#schema-compatibility) rejects ambiguous earlier
-formats without conversion. Whole-source callers retain their existing all-variant removal behavior.
-
-Race, subrace and background commands reconcile fixed feat setup after the complete replacement
-ledger is built. A matching fixed grant from a retained or new owner keeps its setup. Only the
-final matching grant's removal retracts saved fixed options and their benefits; independently
-configured feat choices and other printings/variants retain their own ownership. Strict persistence
-requires separate target metadata on fixed feat tags. Pre-release grants with overloaded identity
-are rejected with their character format rather than guessed or converted.
-
-Option commits and edit dialogs use the requested feat owner. Fixed, class and racial/background
-choice setups update their own records, including when a separately selected copy has the same
-name and printing. They do not overwrite or borrow that independent copy's saved selections.
-
-Feat-selected spells retain the exact target printing in the special profile, fixed list and
-`grantSource`; the granting feat's printing remains in `sourceRef`. Retraction considers only
-remaining owners in the special profile, so class or racial ownership cannot leave an orphan
-special selection or fixed lock. Independent special owners and other printings remain intact.
-Spells-page locks use that same exact target identity. The bonus picker still prevents selecting
-an already-known logical spell; later independent feat grants can share its target.
-Bonus additions and special-profile bulk writes retain established printings and fixed targets;
-logical-name picker restrictions never deduplicate previously applied independent grants.
-
-New feat spell selections require exact spell metadata. An established selection can retain its
-saved cantrip/leveled kind without metadata when the same feat owner still owns that exact target.
-Edits resolve all targets before retracting anything; an unavailable new target rejects the whole
-command without dirtying the draft. Clear and removal use saved ownership, including while offline.
-This does not infer missing target printings or convert earlier character formats.
-
-All owners of one exact special-profile spell share its current cantrip/leveled classification.
-Exact live metadata reclassifies that target atomically without changing its manual or feat owners,
-fixed status, other printings or independent class/racial profiles. Clear retains the current kind
-while a special owner remains; it never restores an inferred predecessor kind. Pure projections and
-acknowledged active-character catalog corrections use the same rule, including durable reopen and
-later metadata absence. No per-owner kind history is stored.
-
-An explicit manual add creates its independent ownership, retaining an established target's kind
-when metadata is unavailable. Bulk replacement preserves fixed targets in their established kind
-without inventing a manual owner, and rejects contradictory input grouping atomically. Omitting or
-removing a manual contribution retains the exact feat-owned target and lock. Manual-only kind edits
-remain supported; exact available metadata takes precedence. Bare-name manual API values remain
-unresolved, distinct from qualified targets, and excluded from exact-metadata reclassification.
-The [format 10 cutoff](state-management.md#schema-compatibility) rejects ambiguous special kinds
-and inconsistent fixed membership while preserving original-file recovery.
-
-New feat expertise and manual expertise selections use optional `proficiencies.expertise` ledger
-ownership, separate from skill proficiency. Retraction preserves expertise from another owner.
-Untracked expertise is retained while its proficiency remains, and a pre-existing untracked selection
-is preserved as manual when a new feat grants the same expertise. Removing proficiency still prunes expertise. This ownership
-rule does not reconstruct the origin of untracked expertise. Complete proficiency
-removal commands also expire expertise ownership when its materialized selection is pruned, so
-later proficiency grants cannot revive a historical expertise owner.
+See [Feat ownership](contracts/feat-ownership.md).
 
 ## Origin ability scores
 
-Origin rules depend on `character.originSystem`:
-
-- 2014: race/subrace owns origin ability bonuses and racial feat choices.
-- 2024: background owns origin ability assignment and origin feat grants.
-
-`resolveRaceAsiChoices()` and the background normalization/command path validate selections against
-parsed blocks. Unresolved choices remain explicit readiness issues; commands do not invent defaults.
-Allocated base scores are never modified by origin or feat contributions. Effective scores consume
-the ledger through `CharacterCalculationContext`.
-
-Materialized race versions own their complete mechanics under the selected subrace identity. Their
-parent contributes selection identity and origin-policy flags, without reapplying parent grants.
-Switching to or from a version rebuilds both race and subrace ownership in one command so explicitly
-removed proficiencies, spells, feats, and abilities are not restored or doubled. Traditional subrace
-changes retain existing domain ownership behavior; defensive fields use the overwrite contract below.
-
-Ordinary child replacement or clearing preserves the unchanged parent's nonability selections when
-the previous child resolves exactly as ordinary. If its metadata is unavailable or its kind cannot
-be established, rebuild the whole selection: the old child may have been a complete version.
-Do not guess its kind or treat another printing as the previous child. Parent replacement always
-rebuilds the racial set, even when the child reference stays the same. Native spell identities include
-both context printings, so changing either resets intentional spell setup.
-
-Child versions retain upstream revised-parent metadata as `_baseFreeRules2024`. Origin normalization
-recognizes that marker on complete versions so 2014 characters do not gain inherited revised racial
-feats when saved selections are resolved from the raw catalog.
-
-Complete versions also derive the legacy language fallback from their own string-valued lineage
-when explicit language blocks are absent. Explicit arrays, including an empty array, suppress that
-fallback for both parents and versions. The version owns both the fixed language and its choice;
-traditional subraces do not synthesize a second parent fallback. The 2024 origin policy suppresses
-racial language grants and retains its independent baseline.
-
-Race commands compare proficiency ownership before removal with the ledger after all replaced
-owners are removed, then apply the new grants. A value shared only by the old race and subrace
-leaves with their final owner. Values still owned by a manual or unrelated source, and untracked
-manual values, remain. Skill expertise is pruned with any proficiency that becomes unavailable.
-
-Spell-profile adapters use the same complete-version boundary: the shared selection adapter omits parent
-spell blocks for a materialized version, including inherited blocks already present on that version
-and blocks explicitly removed by it. Traditional subrace spell blocks remain additive, with named
-parent blocks filtered to the selected subrace. Saved selections use the same rule when resolved
-from the unfiltered catalog.
+See [Origin ability scores](contracts/racial-ownership.md#origin-ability-scores).
 
 ### Racial defenses
 
-`racialDefenses` stores the current fixed grants and their actual field owners, bound to the exact
-selected parent/child name and source. For each of `resist`, `immune` and `conditionImmune`, an ordinary
-child's absent key inherits the parent, null removes the field, an empty array grants nothing, and a
-nonempty array replaces the whole parent array. This follows the pinned
-[`Renderer.race._getMergedSubrace`](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/render.js).
-Inherited fields belong to the parent; explicit replacements belong to the child. Complete versions
-own all three fields and never restore absent parent defenses. Only direct string values become
-automatic grants; choices, nested conditions and prose remain available for manual interpretation.
-
-Creation and race/subrace commands commit selection and this snapshot together. Exact live context
-refreshes it through the shared pure projection and acknowledged active-character correction queue.
-Missing either selected reference preserves the entire snapshot; exact restoration applies current
-rules. Source filtering retains ancestry through raw exact lookup. Clearing a child with current
-parent rules restores the parent, including when old child rules are unavailable; no parent rules
-means Clear cannot infer replaced parent benefits. No dormant parent catalog is saved.
-
-Typed effects combine these racial declarations with independently owned manual, feat and equipment
-grants. Stable racial IDs encode the actual parent owner, or child plus its parent context, family
-and target. Suppressing one source retains another active source's equal-valued grant. The
-`racial-defense:` namespace is reserved, and manual declaration IDs must be unique. Review and PDF
-use one effective active union; attribution retains separate owners. Adjustments exposes the same
-declarations and activation rules. The custom 2014 PDF prints the mechanical defense list; other
-templates retain their existing racial/feature prose projection. Source prose can still mention a
-removed structured defense; it is not interpreted or rewritten. The format 11 cutoff removes the
-ambiguous flat defense arrays without conversion; see [schema compatibility](state-management.md#schema-compatibility).
+See [Racial defenses](contracts/racial-ownership.md#racial-defenses).
 
 ### Native racial spells
 
-Native racial spells use one profile per actual granting parent or child, scoped to the complete
-selected context. One native block is mandatory and automatically active; multiple blocks are
-alternatives and start unselected. Alternative Select/Replace activates all currently eligible
-members of one whole suite. Clear leaves the owner unselected, including after source re-enable.
-Internal descriptors retain independent quotas and exact target selections; descriptor Clear retains
-fixed suite members. Structural identities include the complete context and block semantics, with
-no historical ordinal aliases or owner inference.
-
-`nativeRacialSpells.ts` evaluates live eligibility at total class level, materializes the typed applied
-fixed/choice snapshot, and reconciles its exact inverse in spell provenance. Fixed tags identify the
-selected suite; choice tags identify the full descriptor. Owner `sourceRef` and target `grantSource`
-remain separate. Removing one descriptor/owner preserves other descriptors, fixed grants and
-class/feat/manual ownership of the same exact target. Logical duplicates consume only one descriptor
-quota, while different applied printings retain separate identities.
-
-Race/child replacement, final Wizard Finish, class/progression changes and every Spells edit commit
-profiles and provenance together. Source-setting pruning removes disallowed intentional exact targets
-and their descriptor ownership; fixed members and independent allowed owners remain. Source re-enable
-cannot recreate an erased choice. Expanded native targets extend live class-list eligibility without
-automatically learning a spell or adding racial slot pools.
-
-Spells, Sources, Actions, readiness and immutable PDF use the same projected relation. Either missing
-exact context member freezes the whole established snapshot; an available parent cannot partially
-refresh a missing child. Saved alternative/descriptor Clear remains possible, while new suite/target
-selection requires complete rules. Level changes during absence retain the applied snapshot.
-New filter-backed targets additionally require available exact-printing metadata matching the live
-descriptor's level and class list. Retaining or removing an established target can use its saved
-snapshot without that metadata. Unselected alternatives retain setup controls but contribute no
-active casting summary or racial PDF page.
-Restoration evaluates rules at the current level. Within the same exact owner/context, an exact
-selected suite survives; a sole mandatory suite can correspond to its previous mandatory suite.
-Changed alternative suite identities require explicit reselection, including uniquely named suites.
-Within corresponding suites, unique unchanged descriptor semantics match first. Remaining descriptors
-correspond only when exactly one old and one new descriptor share eligibility level, native grant
-kind, usage, daily limit and cantrip kind. Neither ordinal position nor uniqueness overrides a conflict.
-This transient correspondence uses typed applied fields; structural IDs stay unchanged and never
-supply missing rules. Current IDs and their inverse ownership are committed together.
-
-Compatible casting abilities survive in the current options; a fixed ability applies immediately.
-Current counts bound retained targets in order, and pools retain exact members. Filter selections,
-including existing targets, reject available exact spell metadata conflicting with level/class rules.
-Missing exact target metadata preserves an unchanged filter predicate, including count-only changes;
-a changed predicate needs exact compatibility proof. Pool membership and native token kind remain
-authoritative without the spell catalog. No special-profile kind rule is applied to native pools or
-fixed grants. Removed choices never return merely because a count/pool expands or a source returns.
-
-Direct edits use the same correspondence. A stale descriptor Clear cannot clear an unrelated new
-descriptor; a removed descriptor is already retracted. Invalid new selections remain whole no-ops.
-The store acknowledges active native corrections independently of the visible page, preserving dirty
-drafts until Save and retaining the corrected snapshot through later absence. Inactive library entries
-project current rules without bulk writes and correct when activated.
-Independent class/special preparation and shared/Pact usage remain unchanged by racial transitions.
-Available class and subclass data still derive current grants at the
-character's level. Each unavailable exact class or selected subclass retains its own saved profile
-even when another class resolves. This unavailable-class policy also applies to the Spells projection.
-This fallback derives available subclass grants with their explicit spell source qualifiers, including
-new level grants, so a competing printing cannot replace the requested spell. The shared spell-token
-adapter accepts source-preserving decoding; existing callers retain their legacy decoding contract.
-The same fallback uses spell-reference identity for class grant merging and preparation. Action
-aggregation always uses resolved spell-reference identity, including after exact race data returns.
-A newly granted printing cannot prepare or hide an independently saved printing.
-Source-less legacy fixed metadata still retracts its prior name-based grants; action aggregation
-resolves legacy references before deduplication so equivalent references do not duplicate actions.
-Only a resolved race selection can establish which racial spell blocks apply or were removed.
-Mutation hooks resolve both current and previous subrace metadata from the unfiltered catalog.
-Commands can therefore rebuild full race ownership when leaving a version hidden by source filters.
-If the previous saved child is unavailable even in that catalog, its mechanics cannot establish an
-additive transition. The command rebuilds the complete race selection and resets racial choices
-against the newly selected data, preserving manual and unrelated ownership.
-
-Racial ability grants and calculations use the same parsed fixed bonuses and choice blocks.
-Explicit ability rules take precedence over flexible lineage defaults; fixed bonuses coexist with
-choices. The three-ability distribution is one choice with a count of three. Parent choices precede
-ordinary child choices, and an ability overwrite excludes only the exact parent printing's grants.
-Selections are bounded by each pool and count, with duplicates excluded across racial blocks.
-Choice IDs encode the complete normalized granting name and printing plus a numeric block ordinal.
-Current saves require unique dense ordinals within each represented owner, explicit integer amounts
-and bounded selections/status consistent with the player's slots. Parent blocks precede child blocks;
-each owner's blocks follow numeric ordinals regardless of ledger array order. Updates retain the
-ledger's array order and target the selected record objects. Unrelated domains and manual/class choices
-may share IDs without consuming racial ability slots; opaque racial ability IDs are rejected.
-Commands retain the player's slot layout while committing validated selections to provenance.
-Ordinary child changes rebuild the selected parent's ability ownership with the cleared slots,
-including restoring parent bonuses after an overwrite ends. Complete versions own synthesized
-origin bonuses under the child identity. Wizard Review shares the bounded calculator, and the
-Builder distribution control commits the new shape and ownership in one command update.
-Changing only the distribution replaces ability records and retains every non-ability racial choice
-and benefit. Ability values and choice amounts must be integers to match persistence validation.
-When exact race data is unavailable, current-format saved fixed and chosen racial bonuses remain
-available to calculation; revised origin rules suppress those racial bonuses.
-Race summaries use the same bounded choices and selected distribution as calculation, preserving
-the separate parent and child rules rather than deriving ability rules from a merged display record.
-Missing exact parent or child metadata hides racial choice editing until that selection resolves;
-an available parent alone cannot establish the missing child's layout. Rejected ability commands
-leave the draft, modification timestamp and unsaved-change state untouched.
-Selecting the already active distribution is also a no-op and retains assigned bonuses.
-Direct ability-choice calls without a matching current racial block leave the complete draft and
-save state untouched. Known matching records remain usable by pure commands without catalog inputs.
-When exact loaded ability rules change, the shared ability refresh replaces only the selected
-parent/child ability relation. An unchanged owner layout retains its slots. Changed layouts retain
-unique matches by normalized pool membership, count and amount, then compatible selections from a
-sole remaining old/new block within that owner. Ambiguous matches start empty; owner ordinals do not
-identify blocks across a refresh. Rejected or out-of-count choices are discarded, so restoration
-cannot resurrect them. Fixed bonuses follow the current parsed rules without resetting unchanged
-choice blocks. Missing either exact context member freezes the complete saved ability snapshot.
-Calculation, Sources, readiness and PDF project that same refreshed relation. The character store
-acknowledges active-character corrections independently of page navigation; dirty drafts retain the
-correction until explicit Save. Builder choice edits reconcile current rules and intentional slots
-in one command. Repeating coherent refresh preserves references, timestamps and save state.
-Opening the race page or refreshing its catalog does not clear or substitute a saved child.
-Saved selection details resolve the exact current reference even when catalog filters hide it;
-new race and child options remain restricted to the filtered catalog. Child option values retain
-the separate complete name and source, without interpreting a joined label as an identity.
-Nested child resolution compares both complete fields with case and surrounding whitespace
-normalized; a different printing, truncated name or absent source cannot supply that child.
-Explicit race selection chooses its initial child; explicit child selection owns later changes.
+See [Native racial spells](contracts/racial-ownership.md#native-racial-spells).
 
 ## Class ownership
 
-Class tags include source-qualified class identity and, where needed, the granting level/choice.
-This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
+See [Class ownership](contracts/class-ownership.md#class-ownership).
 
 ### Automatic feature actions
 
-Actions and PDF use one pure projection. Class/subclass references retain the complete encoded
-feature UID and the actual selected owner, including the full selected subclass name and printing.
-UID source defaults, casing and display aliases identify
-one feature; subclass UIDs use their separate field order. A positive integer encoded gain level
-is authoritative; malformed nonempty UIDs never borrow materialized metadata. Rows without a UID
-require valid materialized levels and complete feature ownership. Absent reference fields retain
-the materialized target's identity fields; explicit reference values remain authoritative.
-
-Distinct owners, printings and different gain-level rules remain separate. Repeated gains share
-one action only when their parsed entries are structurally identical within the same owner/feature
-family. Object field order is immaterial; array order, all field values and embedded qualified
-targets remain significant even when rendered text matches.
-Passive references do not consume an action identity. Standalone saved feature rows permanently
-retain their own IDs. Unique catalog enrichment may supply their text, but cannot establish an owner,
-replace their ID or suppress an independently earned action.
-
-Action group IDs encode the actual owner, canonical target family/printing and a SHA-256 signature
-of canonicalized parsed entries. Only the gain level is excluded from the family. No available
-member supplies the group's identity, so an earlier identical gain returning cannot change it.
-Its ID remains stable through UID enrichment, canonical spelling refresh and owner competition. Manual overrides
-and PDF selections match the exact current ID. Different manual IDs remain independent player rows.
-An unavailable or ineligible source leaves its manual action explicit; restoring the same target
-reunites it by exact ID, and removing an override reveals the still-earned action.
-
-Class-choice normalization, option views and persistence retain the full feature UID. Choices resolve
-only that complete target; a matching label cannot supply another owner, gain or printing. An omitted
-or empty duplicate source uses the source encoded or defaulted by the UID; an explicit conflicting
-source rejects resolution. Materialized features retain that source so new selections remain saveable.
-Feature IDs use actual owner plus exact target, independent of the granting choice's order or ID.
-Removing one choice retains the same feature when another choice of that owner still grants it.
-Different owners retain separate materialized rows and action groups.
-Subclass-owned choices and readiness resolve within the full selected subclass, so a shared short name cannot
-supply another owner's rules. Missing-content indicators and retained choice details use the same
-complete target identity; a class choice may explicitly target another class's feature.
-Composed subclass catalogs retain complete owner indexes. Repeated catalog copies within one
-owner do not make a target ambiguous. A class-owned subclass target requires one exact owner;
-competing owners leave the option unresolved in the picker, readiness, details and action projection.
-Actions and PDF receive the complete target catalog separately from selected classes: an explicit
-target may belong to an unselected class, whose unrelated features are not thereby earned.
-Production choice targets use the same filtered catalog as picker/readiness; unavailable competing
-owners cannot suppress a resolved choice. One explicit feature-choice bundle contains the authoritative
-filtered class-feature catalog and complete subclass owner index; missing or empty inputs cannot be
-replenished from selected classes, embedded class references or raw dictionaries. Picker, readiness,
-availability, retained-details availability, Actions and PDF share its builder and exact resolver.
-Raw lookups still supply standalone saved-feature text and separately labelled source-unavailable
-retained details. Filtering uses the encoded or canonical current target printing, including upstream
-blank-source defaults, independently of the actual enclosing or granting owner.
-
-Qualified choice actions require the exact target's parsed rules. Missing or incomplete targets
-remain saved intents without emitting or enriching an opaque action. Their materialized feature rows
-are excluded from standalone action projection. Exact manual overrides remain explicit during
-absence, and stored PDF preferences can select the same group when unchanged rules return.
-No action/rules snapshot or derived mirror is added to the saved character.
-
-Version 1.0 does not support earlier action-ID forms. No raw-UID/name-source compatibility aliases,
-opaque saved-row handoff aliases, historical ownership inference or character conversion are added.
-Wholly stale PDF selections follow the usual automatic fallback. Upstream UID defaults and complete
-materialized current feature metadata still determine canonical data identity; they are not saved
-character compatibility adapters.
-
-Class-page spell choices and replacements use pure spell commands. `useSpellProvenanceMutations`
-exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes
-use `useSpellProfileMutations`, which already commits profile and provenance changes together.
-
-The bonus picker blocks spell targets already known through any profile. Existing overlapping
-owners remain independent when later class or origin changes grant an already selected bonus spell.
-Bonus spell selection records manual ownership with the selected spell printing. Replacing the
-bonus list retracts only its removed manual targets. Removing a bonus copy preserves racial,
-class and feat ownership of the same target, including independently prepared class spells.
-Qualified removals never assign an unknown-source grant to the requested printing.
+See [Automatic feature actions](contracts/class-ownership.md#automatic-feature-actions).
 
 ## Equipment ownership
 

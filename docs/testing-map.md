@@ -81,8 +81,9 @@ Maintain coverage for:
 - CI/release policy.
 
 The golden browser journeys cover deterministic 2014 Variant Human/Arcane Trickster and 2024
-Human/Eldritch Knight creation through level 20. The fast progression matrix covers every supported
-core class and level. Guarded corpus tests verify that the external catalog still satisfies the
+Human/Eldritch Knight creation through level 20. The controlled progression matrix exercises core
+class/level and HP transitions; it does not qualify every offered class/subclass's required choices
+or actual creator UI. Guarded corpus tests verify that the external catalog still satisfies the
 fixtures' assumptions and that normalized class/subclass choice tracks have resolvable
 source-qualified dependencies without diagnostics.
 
@@ -105,8 +106,10 @@ only fixture writes, comparing all four outputs with the committed records.
 
 ## Commands
 
-During development, run the narrowest relevant Vitest/Playwright files first. Before pushing a
-branch for review, run `npm run check:pr`. It covers the PR checks below in one local command,
+During functional development, run the narrowest relevant Vitest/Playwright files first. Before
+pushing functional work for review, run `npm run check:pr`. Documentation-only changes use exact
+text, links/anchors, diff, whitespace and scope/exclusion checks plus independent review; all PRs
+still require the two GitHub checks. The check:pr command covers the PR checks below in one run,
 except Electron smoke. The build includes type checking. Electron smoke needs a display on Linux
 and remains required in CI.
 
@@ -178,6 +181,6 @@ test counts or line quotas. Preserve meaningful assertions and the normal valida
 
 - New/changed behavior has appropriate unit and/or E2E coverage.
 - Relevant focused tests pass.
-- Full coverage, static checks, build, and health checks pass before merge.
+- Functional changes pass the complete gate; documentation-only work passes its text/link/scope gate. Required GitHub checks pass before merge.
 - Release checks pass before publishing.
 - Stable architecture/test conventions changed by the work are documented here.

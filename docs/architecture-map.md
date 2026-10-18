@@ -79,16 +79,19 @@ corrections and must preserve dirty-draft behavior.
 
 ### Parsed game data
 
-All canonical values originate from parsed entities. Exact references use `name|source`; filtered
-resolution may fall back to the exact raw entity so saved choices survive filter changes, but must
-never guess an unqualified printing.
+Canonical values originate from parsed entities. Simple entity references use complete name/source
+fields; class/subclass features also require owner and gain fields. Filtered resolution may retain
+exact raw fallback where the domain allows it. Never generalize one domain's legacy source-less
+exception into another resolver. See [Reference resolution](contracts/reference-resolution.md).
 
 ### Rules content
 
 User-facing 5etools content goes through `GameContent`, which provides sanitization and source-aware
 recursive previews. PDFs and compact noninteractive projections may use the lower-level string
-renderer explicitly. Preview positioning and the single pinned/transient chain are owned by
-`RulesPreviewManager` and Floating UI helpers, not page components.
+renderer explicitly. Preview positioning and the shared pinned/transient chain belong to
+RulesPreviewManager and
+Floating UI helpers. Creator TraitTooltip wrappers still provide an independent outer shell;
+[shared integration](contracts/rules-previews.md) is required and not yet qualified across all paths.
 
 ### Assets and responsive workspaces
 
