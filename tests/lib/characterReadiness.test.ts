@@ -1,11 +1,18 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { makeSourceTag } from '@/lib/provenance'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 
 describe('getCharacterReadiness', () => {
   test('treats a selected subclass companion as a required class-page choice', () => {
@@ -714,92 +721,42 @@ describe('getCharacterReadiness', () => {
     )
   })
 
-  test('validates data-driven spell profile quotas and selected spell references', () => {
-    const testRace = { name: 'Test Race', source: 'TEST' } as Race5e
-    const testClass = {
-      name: 'Test Class',
-      source: 'TEST',
-      hd: { faces: 8 },
-      spellcastingAbility: 'int',
-      casterProgression: 'full',
-      cantripProgression: [2],
-      spellsKnownProgression: [1],
-      normalizedRules: {
-        resources: [],
-        asiLevels: [],
-        ritualCasting: false,
-        choices: [],
-        choiceDiagnostics: [],
-      },
-    } as Class5e
-    const character = makeCharacterFixture({
-      name: 'Test Character',
-      race: testRace.name,
-      raceSource: testRace.source,
-      classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
-      background: 'Test Background',
-      backgroundSource: 'TEST',
-      variantRules: { abilityScoreMethod: 'standard-array' },
-      abilityScores: {
-        strength: 15,
-        dexterity: 14,
-        constitution: 13,
-        intelligence: 12,
-        wisdom: 10,
-        charisma: 8,
-      },
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: `class:${testClass.name}|${testClass.source}`,
-            type: 'class',
-            label: testClass.name,
-            className: testClass.name,
-            classSource: testClass.source,
-            cantrips: ['Missing Cantrip'],
-            spellsKnown: [],
-            preparedSpells: [],
-          },
-        ],
-      },
+  test('reports finite earned choices and an exact unavailable saved target', () => {
+    const fixture = makeManagedClassSpellFixtures()
+    const initial = makeCharacterFixture({
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 1 }],
     })
-    const calculation = createCharacterCalculationContext(character, {
-      racesByKey: { [`${testRace.name}|${testRace.source}`]: testRace },
-      classesByKey: { [`${testClass.name}|${testClass.source}`]: testClass },
-      backgroundsByKey: { 'Test Background|TEST': { name: 'Test Background', source: 'TEST' } },
-    })
-
+    const character = authorManagedClassSpellFixture(initial, fixture, [
+      {
+        owner: initial.classProgression[0],
+        domain: 'class-cantrip',
+        gain: 1,
+        targets: [{ name: 'Light', source: 'PHB' }],
+      },
+    ])
+    const primary = { ...fixture.lookups, spellsByKey: {} }
+    const calculation = createCharacterCalculationContext(character, primary, fixture.lookups)
     const result = getCharacterReadiness(character, { calculation, spellsByKey: {} })
-
-    expect(result.blockingIssues.map((entry) => entry.id)).toEqual(
-      expect.arrayContaining([
-        'spells:cantrips:class:Test Class|TEST',
-        'spells:known:class:Test Class|TEST',
-        'source:spell:Missing Cantrip',
-      ]),
-    )
+    const slots = getManagedClassSpellSlots(character.classProgression[0])
+    const cantrip = slots.find((slot) => slot[1] === 'class-cantrip')!
+    const known = slots.find((slot) => slot[1] === 'class-known')!
+    expect(
+      result.blockingIssues.filter((issue) => issue.section === 'spells').map((issue) => issue.id),
+    ).toEqual([
+      'spells:managed:' + managedClassSpellId(cantrip),
+      'spells:managed:' + managedClassSpellId(known),
+    ])
+    expect(
+      result.blockingIssues.find(
+        (issue) => issue.id === 'spells:managed:' + managedClassSpellId(cantrip),
+      )?.explanation,
+    ).toContain('Light (PHB): Restore the exact selected spell printing.')
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    expect(character.managedClassSpellChoices).toHaveLength(1)
   })
 
   test('derives the missing class profile for a 2014 Arcane Trickster', () => {
-    const arcaneTrickster = {
-      name: 'Arcane Trickster',
-      shortName: 'Arcane Trickster',
-      source: 'PHB',
-      className: 'Rogue',
-      classSource: 'PHB',
-      spellcastingAbility: 'int',
-      casterProgression: '1/3',
-      cantripProgression: [0, 0, 2],
-      spellsKnownProgression: [0, 0, 3],
-      additionalSpells: [{ known: { '3': ['mage hand#c'] } }],
-    }
-    const rogue = {
-      name: 'Rogue',
-      source: 'PHB',
-      hd: { faces: 8 },
-      subclasses: [arcaneTrickster],
-    } as Class5e
+    const fixture = makeManagedClassSpellFixtures()
     const character = makeCharacterFixture({
       classProgression: [
         {
@@ -810,33 +767,26 @@ describe('getCharacterReadiness', () => {
           subclassSource: 'PHB',
         },
       ],
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [],
-      },
     })
-    const calculation = createCharacterCalculationContext(character, {
-      classesByKey: { 'Rogue|PHB': rogue },
-    })
-
+    const calculation = createCharacterCalculationContext(character, fixture.lookups)
     const result = getCharacterReadiness(character, { calculation })
-    const spellIssues = result.blockingIssues.filter((issue) => issue.section === 'spells')
-
-    expect(spellIssues.map((issue) => issue.id)).toEqual([
-      'spells:cantrips:class:Rogue|PHB',
-      'spells:known:class:Rogue|PHB',
+    const issues = result.blockingIssues.filter((issue) => issue.section === 'spells')
+    const slots = getManagedClassSpellSlots(character.classProgression[0])
+    expect(issues.map((issue) => issue.id)).toEqual([
+      'spells:managed:' + managedClassSpellId(slots.find((slot) => slot[1] === 'class-cantrip')!),
+      'spells:managed:' + managedClassSpellId(slots.find((slot) => slot[1] === 'class-known')!),
     ])
-    expect(spellIssues.map((issue) => issue.explanation)).toEqual([
-      '2 cantrip choices are available; 0 chosen.',
-      '3 spell choices are available; 0 chosen.',
+    expect(issues.map((issue) => issue.explanation)).toEqual([
+      '2 choices are earned here; 0 are active.',
+      '3 choices are earned here; 0 are active.',
     ])
-    for (const issue of spellIssues) {
+    for (const issue of issues) {
       const target = new URL(issue.navigationTarget, 'https://tavern-born.test')
       expect(target.pathname).toBe('/build/class')
       expect(target.searchParams.get('class')).toBe('Rogue|PHB')
       expect(target.searchParams.get('level')).toBe('3')
     }
-    expect(spellIssues.some((issue) => issue.id === 'spells:profile:class:Rogue|PHB')).toBe(false)
+    expect(issues.some((issue) => issue.id === 'spells:profile:class:Rogue|PHB')).toBe(false)
   })
 
   test('blocks readiness when the selected subclass printing cannot be resolved', () => {
@@ -918,76 +868,64 @@ describe('getCharacterReadiness', () => {
     )
   })
 
-  test('validates Wizard spellbook, cantrip, and prepared limits independently', () => {
-    const wizard = {
-      name: 'Wizard',
-      source: 'PHB',
-      hd: { faces: 6 },
-      spellcastingAbility: 'int',
-      casterProgression: 'full',
-      cantripProgression: [3],
-      spellsKnownProgressionFixed: [6],
-      preparedSpells: '<$level$> + <$int_mod$>',
-      normalizedRules: {
-        resources: [],
-        asiLevels: [],
-        ritualCasting: false,
-        choices: [],
-        choiceDiagnostics: [],
-      },
-    } as Class5e
-    const character = makeCharacterFixture({
+  test('validates Wizard earned choices and current preparation capacity independently', () => {
+    const fixture = makeManagedClassSpellFixtures()
+    const initial = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
-      abilityScores: {
-        ...makeCharacterFixture().abilityScores,
-        intelligence: 16,
-      },
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 1)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt', 'Mage Hand', 'Ray of Frost', 'Light'],
-            spellsKnown: [
-              'Burning Hands',
-              'Charm Person',
-              'Find Familiar',
-              'Mage Armor',
-              'Magic Missile',
-              'Sleep',
-              'Detect Magic',
-              'Shield',
-            ],
-            preparedSpells: ['Burning Hands', 'Mage Armor', 'Magic Missile', 'Sleep', 'Shield'],
-            fixedSpells: ['Light', 'Detect Magic', 'Shield'],
-            alwaysPreparedSpells: ['Shield'],
-            alwaysPrepared: false,
-          },
-        ],
-      },
+      abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16 },
     })
-    const calculation = createCharacterCalculationContext(character, {
-      classesByKey: { 'Wizard|PHB': wizard },
+    const owner = initial.classProgression[0]
+    const cantrips = {
+      owner,
+      domain: 'class-cantrip' as const,
+      gain: 1,
+      targets: ['Fire Bolt', 'Mage Hand', 'Ray of Frost'].map((name) => ({ name, source: 'PHB' })),
+    }
+    const names = [
+      'Burning Hands',
+      'Mage Armor',
+      'Magic Missile',
+      'Sleep',
+      'Detect Magic',
+      'Shield',
+    ]
+    const book = (count: number) => ({
+      owner,
+      domain: 'class-spellbook' as const,
+      gain: 1,
+      targets: names.map((name, index) => ({
+        name,
+        source: 'PHB',
+        ...(index < count ? { prepare: true as const } : {}),
+      })),
     })
-
-    const result = getCharacterReadiness(character, { calculation })
-
-    expect(result.blockingIssues.filter((issue) => issue.id.startsWith('spells:'))).toEqual([])
-    const overPrepared = structuredClone(character)
-    overPrepared.spells.spellProfiles[0].preparedSpells.push('Detect Magic')
-    const overPreparedResult = getCharacterReadiness(overPrepared, {
-      calculation: createCharacterCalculationContext(overPrepared, {
-        classesByKey: { 'Wizard|PHB': wizard },
-      }),
-    })
+    const character = authorManagedClassSpellFixture(initial, fixture, [cantrips, book(4)])
+    const calculation = createCharacterCalculationContext(character, fixture.lookups)
     expect(
-      overPreparedResult.blockingIssues
-        .filter((issue) => issue.id.startsWith('spells:'))
-        .map((issue) => issue.id),
-    ).toEqual(['spells:prepared-over-limit:class:Wizard|PHB'])
+      getCharacterReadiness(character, { calculation }).blockingIssues.filter(
+        (issue) => issue.section === 'spells',
+      ),
+    ).toEqual([])
+    expect(
+      calculation.character.spells.spellProfiles.find((profile) => profile.className === 'Wizard')
+        ?.preparedSpells,
+    ).toHaveLength(4)
+    expect(() => authorManagedClassSpellFixture(initial, fixture, [cantrips, book(5)])).toThrow(
+      /preparation|prepared|capacity/i,
+    )
+    const lowerAbility = {
+      ...character,
+      abilityScores: { ...character.abilityScores, intelligence: 12 },
+    }
+    const reduced = createCharacterCalculationContext(lowerAbility, fixture.lookups)
+    expect(
+      reduced.character.spells.spellProfiles.find((profile) => profile.className === 'Wizard')
+        ?.preparedSpells,
+    ).toHaveLength(2)
+    expect(lowerAbility.managedClassSpellChoices?.filter((choice) => choice.prepare)).toHaveLength(
+      4,
+    )
+    expect(reduced.managedClassSpellStatuses.filter((row) => row.active)).toHaveLength(9)
+    expect(characterPersistenceSchema.safeParse(lowerAbility).success).toBe(true)
   })
 })

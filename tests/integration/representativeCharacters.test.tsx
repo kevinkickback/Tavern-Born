@@ -18,7 +18,7 @@ import {
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import {
   buildCharacterSheetFieldMap,
-  createCharacterSheetViewModel,
+  type createCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
@@ -26,6 +26,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { AbilityName, Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import {
   REPRESENTATIVE_CHARACTER_FIXTURES,
   type RepresentativeCharacterFixture,
@@ -181,7 +182,7 @@ describe('representative character consumers', () => {
       classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(fixture.gameData),
     }
     const calculation = createCharacterCalculationContext(fixture.character, lookups)
-    const viewModel = createCharacterSheetViewModel(fixture.character, lookups)
+    const viewModel = createCurrentCharacterSheetViewModel(fixture.character, lookups)
     const prerequisiteSnapshot = buildPrerequisiteSnapshot({
       character: fixture.character,
       effectiveAbilityScores: calculation.abilityScores.total,
@@ -206,6 +207,7 @@ describe('representative character consumers', () => {
     ).toBe(true)
     expect(readiness.blockingIssues).toEqual([])
     expect(readiness.status).toBe('ready')
+    expect(snapshot.readiness?.blockingIssues).toEqual(readiness.blockingIssues)
     expect(snapshot.readiness?.status).toBe(readiness.status)
 
     for (const [ability, expected] of Object.entries(fixture.expected.abilityScores)) {
@@ -296,7 +298,7 @@ describe('representative character consumers', () => {
       classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(fixture.gameData),
     }
     const calculation = createCharacterCalculationContext(changed, lookups)
-    const viewModel = createCharacterSheetViewModel(changed, lookups)
+    const viewModel = createCurrentCharacterSheetViewModel(changed, lookups)
     const slots = calculateCharacterSpellSlots(
       changed,
       new Map(

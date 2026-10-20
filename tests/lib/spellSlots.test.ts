@@ -6,6 +6,7 @@ import {
   getEffectiveSpellcastingAbility,
   getMaxSpellLevelForClassLevel,
   getSpellSlotsFromClassData,
+  getStandardSpellSlotProvider,
   getStandardSpellSlotsFromClassData,
   mergeSpellSlots,
   validateParsedSpellSlotProgressions,
@@ -13,6 +14,41 @@ import {
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 describe('spellSlots', () => {
+  test('standard provider selection preserves Wizard priority, source, fallback order and input', () => {
+    const cleric = makeClassFixture({
+      name: 'Cleric',
+      source: 'PHB',
+      classTableGroups: [{ rowsSpellProgression: [[2]] }],
+    })
+    const druid = { ...cleric, name: 'Druid' }
+    const wizard = { ...cleric, name: ' WIZARD ' }
+    const revisedWizard = { ...wizard, source: 'XPHB' }
+    const classes = [druid, cleric, revisedWizard, wizard]
+    const before = JSON.stringify(classes)
+    expect(getStandardSpellSlotProvider(classes, 1, '2014')?.classData).toBe(wizard)
+    expect(getStandardSpellSlotProvider(classes, 1, '2024')?.classData).toBe(revisedWizard)
+    expect(getStandardSpellSlotProvider([druid, cleric], 1, '2014')?.classData).toBe(druid)
+    const missing = { ...wizard, classTableGroups: [] }
+    expect(getStandardSpellSlotProvider([missing, cleric], 1, '2014')?.classData).toBe(cleric)
+    expect(getStandardSpellSlotProvider([revisedWizard], 1, '2014')).toBeNull()
+    expect(JSON.stringify(classes)).toBe(before)
+  })
+
+  test('an available empty table is authoritative and retains the selected provider', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      classTableGroups: [{ rowsSpellProgression: [[]] }],
+    })
+    const cleric = makeClassFixture({
+      name: 'Cleric',
+      classTableGroups: [{ rowsSpellProgression: [[2]] }],
+    })
+    const selected = getStandardSpellSlotProvider([cleric, wizard], 1, '2014')
+    expect(selected?.classData).toBe(wizard)
+    expect(selected?.slots).toEqual({})
+    expect(getStandardSpellSlotsFromClassData([cleric, wizard], 1, '2014')).toEqual({})
+  })
+
   test.each([
     false,
     true,

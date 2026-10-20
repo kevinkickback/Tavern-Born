@@ -17,12 +17,12 @@ import {
   setProfileSpells,
 } from '@/lib/character/commands/spellCommands'
 import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getSpellRows } from '@/lib/provenance'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const reference = 'Toll the Dead|XPHB'
 const profileId = 'special:unrestricted'
@@ -282,7 +282,7 @@ test('shared projection, Actions, Sources and PDF agree without mutating the sav
   expect(deriveSpellActions(original, lookup)).toEqual([
     expect.objectContaining({ id: `spell:${encodeURIComponent(reference)}` }),
   ])
-  const vm = createCharacterSheetViewModel(original, { spellsByKey: lookup })
+  const vm = createCurrentCharacterSheetViewModel(original, { spellsByKey: lookup })
   expect(vm.spellRows.filter((row) => row.id === 'toll the dead|xphb')).toEqual([
     expect.objectContaining({ level: '1' }),
   ])

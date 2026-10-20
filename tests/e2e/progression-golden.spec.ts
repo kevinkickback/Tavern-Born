@@ -1,102 +1,104 @@
 import { expect, type Page, test } from '@playwright/test'
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import type { Class5e, GameData } from '@/types/5etools'
-import { MINIMAL_GAME_DATA, seedAppState, selectCharacterFromHome } from './helpers/startup'
+import type { Class5e, ClassFeatureReference, GameData } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeManagedClassSpellBrowserFixtures } from '../fixtures/managedClassSpellBrowserFixtures'
+import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from './helpers/startup'
 
 const LEVEL_SEQUENCE = Array.from({ length: 19 }, (_, index) => index + 2)
 
-const ZERO_PROGRESSION = Array(20).fill(0)
+const castingFixture = makeManagedClassSpellBrowserFixtures()
 
-function makeClassRules(
-  choices: NonNullable<Class5e['normalizedRules']>['choices'] = [],
-  asiLevels: number[] = [],
-) {
-  return {
-    resources: [],
-    asiLevels,
-    ritualCasting: false,
-    choices,
-    choiceDiagnostics: [],
+// These journeys keep controlled noncasting choices, including the original level19 ASI.
+// Casting fields, raw tables, subclass declarations and source proofs stay native and intact.
+function progressionClass(name: string, source: string, subclass: string): Class5e {
+  const parent = castingFixture.data.classes.find(
+    (row) => row.name === name && row.source === source,
+  )!
+  const refs = parent.classFeatureRefs!.filter(
+    (row) => row.gainSubclassFeature || row.name === 'Ability Score Improvement',
+  )
+  if (name === 'Fighter') {
+    refs.push({
+      ref: 'Ability Score Improvement|Fighter|XPHB|19',
+      name: 'Ability Score Improvement',
+      className: name,
+      classSource: source,
+      source,
+      level: 19,
+    })
+    const mastery = parent.classFeatureRefs!.find((row) => row.name === 'Weapon Mastery')!
+    refs.push({
+      ...mastery,
+      feature: {
+        name: mastery.name,
+        className: name,
+        classSource: source,
+        source,
+        level: 1,
+        entries: [
+          'Choose three kinds of {@filter weapons|items|type=simple weapon;martial weapon} whose Weapon Mastery properties you can use.',
+        ],
+      },
+    } as ClassFeatureReference)
   }
+  const current = {
+    ...parent,
+    classFeatures: [],
+    classFeatureRefs: refs,
+    startingEquipment: undefined,
+    startingProficiencies: { ...parent.startingProficiencies, skills: [] },
+    subclasses: parent.subclasses!.filter((row) => row.name === subclass && row.source === source),
+  }
+  return { ...current, normalizedRules: normalizeClassRules(current, refs) }
 }
+const rogue = progressionClass('Rogue', 'PHB', 'Arcane Trickster')
+const fighter = progressionClass('Fighter', 'XPHB', 'Eldritch Knight')
 
-const rogue: Class5e = {
-  name: 'Rogue',
-  source: 'PHB',
-  hd: { faces: 8, number: 1 },
-  proficiency: ['dex', 'int'],
-  startingProficiencies: { armor: ['light armor'], weapons: ['simple weapons'], skills: [] },
-  classFeatures: [],
-  classFeatureRefs: [],
-  normalizedRules: makeClassRules([], [4, 8, 10, 12, 16, 19]),
-  subclassTitle: 'Roguish Archetype',
-  subclasses: [
-    {
-      name: 'Arcane Trickster',
-      shortName: 'Arcane Trickster',
-      source: 'PHB',
-      className: 'Rogue',
-      classSource: 'PHB',
-      casterProgression: '1/3',
-      spellcastingAbility: 'int',
-      cantripProgression: ZERO_PROGRESSION,
-      spellsKnownProgression: ZERO_PROGRESSION,
-      entries: ['Arcane Tricksters combine stealth with carefully studied magic.'],
-    },
-  ],
+interface SpellGainPlan {
+  level: number
+  cantrips?: string[]
+  spells: string[]
 }
-
-const masteryChoice = {
-  id: 'class:fighter|xphb|choice:weapon-mastery|1',
-  label: 'Weapon Mastery',
-  kind: 'item' as const,
-  owner: { type: 'class' as const, name: 'Fighter', source: 'XPHB' },
-  level: 1,
-  minimumSelections: 1,
-  maximumSelections: 1,
-  selectionCountByLevel: Array(20).fill(1),
-  options: [
-    { entityType: 'item' as const, name: 'Longsword', source: 'XPHB' },
-    { entityType: 'item' as const, name: 'Longbow', source: 'XPHB' },
-  ],
-  repeatable: false,
-  replacement: { cadence: 'long-rest' as const, maximumPerEvent: 'all' as const },
-  source: { kind: 'class-table' as const, field: 'Weapon Mastery' },
-}
-
-const fighter: Class5e = {
-  name: 'Fighter',
-  source: 'XPHB',
-  edition: 'one',
-  hd: { faces: 10, number: 1 },
-  proficiency: ['str', 'con'],
-  startingProficiencies: {
-    armor: ['light armor', 'medium armor', 'heavy armor', 'shields'],
-    weapons: ['simple weapons', 'martial weapons'],
-    skills: [],
+const TRICKSTER_SPELLS: SpellGainPlan[] = [
+  {
+    level: 3,
+    cantrips: ['Light', 'Ray of Frost'],
+    spells: ['Magic Missile', 'Charm Person', 'Silent Image'],
   },
-  classFeatures: [],
-  classFeatureRefs: [],
-  normalizedRules: makeClassRules([masteryChoice], [4, 6, 8, 12, 14, 16, 19]),
-  subclassTitle: 'Fighter Subclass',
-  subclasses: [
-    {
-      name: 'Eldritch Knight',
-      shortName: 'Eldritch Knight',
-      source: 'XPHB',
-      className: 'Fighter',
-      classSource: 'XPHB',
-      casterProgression: '1/3',
-      spellcastingAbility: 'int',
-      cantripProgression: ZERO_PROGRESSION,
-      preparedSpellsProgression: ZERO_PROGRESSION,
-      entries: ['Eldritch Knights reinforce martial training with arcane study.'],
-    },
-  ],
-}
+  { level: 4, spells: ['Disguise Self'] },
+  { level: 7, spells: ['Invisibility'] },
+  { level: 8, spells: ['Misty Step'] },
+  { level: 10, cantrips: ['Minor Illusion'], spells: ['Mirror Image'] },
+  { level: 11, spells: ['Hold Person'] },
+  { level: 13, spells: ['Hypnotic Pattern'] },
+  { level: 14, spells: ['Fireball'] },
+  { level: 16, spells: ['Major Image'] },
+  { level: 19, spells: ['Confusion'] },
+  { level: 20, spells: ['Dimension Door'] },
+]
+const KNIGHT_SPELLS: SpellGainPlan[] = [
+  {
+    level: 3,
+    cantrips: ['Fire Bolt', 'Mage Hand'],
+    spells: ['Magic Missile', 'Shield', 'Burning Hands'],
+  },
+  { level: 4, spells: ['Thunderwave'] },
+  { level: 7, spells: ['Scorching Ray'] },
+  { level: 8, spells: ['Shatter'] },
+  { level: 10, cantrips: ['Light'], spells: ['Misty Step'] },
+  { level: 11, spells: ['Mirror Image'] },
+  { level: 13, spells: ['Counterspell'] },
+  { level: 14, spells: ['Fireball'] },
+  { level: 16, spells: ['Lightning Bolt'] },
+  { level: 19, spells: ['Ice Storm'] },
+  { level: 20, spells: ['Dimension Door'] },
+]
+const MASTERY_WEAPONS = ['Longsword', 'Longbow', 'Greataxe', 'Battleaxe', 'Dagger', 'Spear']
 
 const PROGRESSION_GAME_DATA_BASE: GameData = {
-  ...MINIMAL_GAME_DATA,
+  ...castingFixture.gameData,
   races: [
     {
       name: 'Human',
@@ -127,7 +129,13 @@ const PROGRESSION_GAME_DATA_BASE: GameData = {
       entries: ['Humans are resourceful, skillful, and versatile.'],
     },
   ],
-  classes: [rogue, fighter],
+  classes: [
+    rogue,
+    fighter,
+    ...castingFixture.data.classes.filter(
+      (row) => row.name === 'Wizard' && ['PHB', 'XPHB'].includes(row.source),
+    ),
+  ],
   backgrounds: [
     { name: 'Criminal', source: 'PHB', entries: ['You have experience outside the law.'] },
     {
@@ -158,7 +166,7 @@ const PROGRESSION_GAME_DATA_BASE: GameData = {
       entries: ['Once per turn, roll weapon damage twice and use either roll.'],
     },
   ],
-  items: [
+  itemsBase: [
     {
       name: 'Longsword',
       source: 'XPHB',
@@ -175,10 +183,23 @@ const PROGRESSION_GAME_DATA_BASE: GameData = {
       mastery: ['Slow|XPHB'],
       entries: ['A martial ranged weapon.'],
     },
+    ...[
+      ['Greataxe', 'martial', 'Cleave'],
+      ['Battleaxe', 'martial', 'Topple'],
+      ['Dagger', 'simple', 'Nick'],
+      ['Spear', 'simple', 'Sap'],
+    ].map(([name, weaponCategory, mastery]) => ({
+      name,
+      source: 'XPHB',
+      type: 'M',
+      weaponCategory,
+      mastery: [mastery + '|XPHB'],
+    })),
   ],
   itemMasteries: [
     { name: 'Sap', source: 'XPHB', entries: ['The target has disadvantage on its next attack.'] },
     { name: 'Slow', source: 'XPHB', entries: ['Reduce the target speed until your next turn.'] },
+    ...['Cleave', 'Topple', 'Nick'].map((name) => ({ name, source: 'XPHB', entries: [] })),
   ],
   skills: [
     { name: 'Acrobatics', ability: 'dex' },
@@ -289,15 +310,21 @@ async function chooseBackgroundBonuses(page: Page) {
   await page.getByRole('option', { name: 'CON', exact: true }).click()
 }
 
-async function chooseWeaponMastery(page: Page) {
+async function chooseWeaponMastery(page: Page, count = 3, previous = 0) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  await page.getByRole('button', { name: /Level 1\b/ }).click()
+  const trigger = page.getByRole('button', { name: /Level 1\b/ })
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
   await page
     .getByRole('region', { name: /Level 1\b/ })
-    .getByRole('button', { name: 'Choose' })
+    .getByRole('button', { name: /^(Choose|Edit)$/ })
     .click()
-  const modal = page.getByRole('dialog', { name: 'Choose Weapon Mastery' })
-  await modal.getByRole('button').filter({ hasText: 'Longsword' }).click()
+  const modal = page.getByRole('dialog', { name: 'Choose weapons for Weapon Mastery' })
+  for (const name of MASTERY_WEAPONS.slice(previous, count)) {
+    await modal
+      .getByRole('button')
+      .filter({ has: page.getByText(name, { exact: true }) })
+      .click()
+  }
   await modal.getByRole('button', { name: 'Confirm' }).click()
   await expect(page.getByText('Longsword', { exact: true })).toBeVisible()
 }
@@ -318,6 +345,7 @@ async function levelClassTo(
   page: Page,
   targetLevel: number,
   checkpointLevels: ReadonlySet<number> = new Set(),
+  onLevel?: (level: number) => Promise<void>,
 ) {
   const currentLevelText = await page
     .getByRole('banner')
@@ -346,6 +374,7 @@ async function levelClassTo(
     if (checkpointLevels.has(level)) {
       await assertCurrentHpMatchesMaximum(page, maximum)
     }
+    await onLevel?.(level)
   }
   await expect(page.getByRole('banner').getByText(`Level ${targetLevel}`)).toBeVisible()
 }
@@ -378,8 +407,97 @@ async function resolveAbilityScoreImprovements(page: Page, levels: number[]) {
   }
 }
 
-async function saveReloadAndAssertReady(page: Page, characterName: string) {
+async function chooseSpellGain(
+  page: Page,
+  className: string,
+  source: string,
+  plan: SpellGainPlan | undefined,
+) {
+  if (!plan) return
+  await page.getByRole('link', { name: 'Class', exact: true }).click()
+  const trigger = page.getByRole('button', { name: new RegExp('^Level ' + plan.level + ',') })
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  const section = page
+    .getByRole('region', { name: new RegExp('^Level ' + plan.level + '\\b') })
+    .getByText('Spell Selection', { exact: true })
+    .locator('xpath=../..')
+    .locator('..')
+  await section.getByRole('button', { name: /^(Choose|Edit)$/ }).click()
+  const draft = page.getByRole('dialog', { name: className + ' spells at level ' + plan.level })
+  for (const [kind, names] of [
+    ['Cantrip', plan.cantrips ?? []],
+    ['Spell', plan.spells],
+  ] as const) {
+    for (const [ordinal, name] of names.entries()) {
+      await draft
+        .getByRole('group', { name: kind + ' ' + (ordinal + 1), exact: true })
+        .getByRole('button', { name: 'Choose', exact: true })
+        .click()
+      const picker = page.getByRole('dialog', {
+        name: 'Choose ' + kind.toLowerCase() + ' ' + (ordinal + 1),
+        exact: true,
+      })
+      await picker.getByRole('textbox', { name: /Search/ }).fill(name)
+      await picker
+        .getByRole('button')
+        .filter({ has: page.getByText(name, { exact: true }) })
+        .filter({ has: page.getByText(source, { exact: true }) })
+        .click()
+      await picker.getByRole('button', { name: 'Confirm', exact: true }).click()
+    }
+  }
+  await draft.getByRole('button', { name: 'Finish', exact: true }).click()
+  await expect(draft).toBeHidden()
+}
+
+async function saveReloadAndAssertReady(
+  page: Page,
+  characterName: string,
+  plans: SpellGainPlan[],
+  className: string,
+  source: string,
+  subclass: string,
+) {
   await page.getByRole('banner').getByRole('button', { name: 'Save character' }).click()
+  const readSaved = async () =>
+    (await readPersistedCharacters(page))
+      .map((row) => characterPersistenceSchema.parse(row))
+      .find((row) => row.name === characterName)!
+  await expect.poll(async () => (await readSaved())?.managedClassSpellChoices?.length).toBe(16)
+  const saved = await readSaved()
+  const owner = [
+    'subclass',
+    className.toLowerCase(),
+    source.toLowerCase(),
+    subclass.toLowerCase(),
+    source.toLowerCase(),
+  ]
+  const declaration = [
+    'subclass-feature',
+    'spellcasting',
+    ...owner.slice(1),
+    3,
+    source.toLowerCase(),
+  ].join('|')
+  const expected = plans.flatMap((plan) => [
+    ...(plan.cantrips ?? []).map((name, ordinal) => ({
+      slot: [owner, 'class-cantrip', declaration, plan.level, ordinal],
+      target: { name, source },
+      policy: 'default',
+    })),
+    ...plan.spells.map((name, ordinal) => ({
+      slot: [owner, 'class-known', declaration, plan.level, ordinal],
+      target: { name, source },
+      policy: 'default',
+    })),
+  ])
+  expect(
+    saved
+      .managedClassSpellChoices!.map(({ slot, target, policy }) =>
+        JSON.stringify({ slot, target, policy }),
+      )
+      .sort(),
+  ).toEqual(expected.map((row) => JSON.stringify(row)).sort())
   await page.getByRole('link', { name: /^Review/ }).click()
   await expect(page.getByRole('heading', { name: 'Character is ready' })).toBeVisible()
 
@@ -388,6 +506,9 @@ async function saveReloadAndAssertReady(page: Page, characterName: string) {
   await selectCharacterFromHome(page, characterName)
   await page.getByRole('link', { name: /^Review/ }).click()
   await expect(page.getByRole('heading', { name: 'Character is ready' })).toBeVisible()
+  const reopened = await readSaved()
+  expect(reopened.managedClassSpellChoices).toEqual(saved.managedClassSpellChoices)
+  expect(reopened.managedClassSpellRevision).toBe(saved.managedClassSpellRevision)
 }
 
 test.use({ viewport: { width: 1440, height: 900 } })
@@ -421,12 +542,27 @@ test('@golden 2014 Variant Human Arcane Trickster progresses from creation throu
 
   await levelClassTo(page, 3, new Set([3]))
   await chooseSubclass(page, 3, 'Arcane Trickster', 'Choose Roguish Archetype')
-  await levelClassTo(page, 20, new Set([20]))
+  await chooseSpellGain(page, 'Rogue', 'PHB', TRICKSTER_SPELLS[0])
+  await levelClassTo(page, 20, new Set([20]), (level) =>
+    chooseSpellGain(
+      page,
+      'Rogue',
+      'PHB',
+      TRICKSTER_SPELLS.find((row) => row.level === level),
+    ),
+  )
   await resolveAbilityScoreImprovements(page, [4, 8, 10, 12, 16, 19])
 
   await page.getByRole('link', { name: 'Spells', exact: true }).click()
   await expect(page.getByText('Rogue', { exact: true }).first()).toBeVisible()
-  await saveReloadAndAssertReady(page, 'Golden Arcane Trickster')
+  await saveReloadAndAssertReady(
+    page,
+    'Golden Arcane Trickster',
+    TRICKSTER_SPELLS,
+    'Rogue',
+    'PHB',
+    'Arcane Trickster',
+  )
 })
 
 test('@golden 2024 Human Eldritch Knight progresses from creation through level 20', async ({
@@ -461,10 +597,28 @@ test('@golden 2024 Human Eldritch Knight progresses from creation through level 
 
   await levelClassTo(page, 3, new Set([3]))
   await chooseSubclass(page, 3, 'Eldritch Knight', 'Choose Fighter Subclass')
-  await levelClassTo(page, 20, new Set([20]))
+  await chooseSpellGain(page, 'Fighter', 'XPHB', KNIGHT_SPELLS[0])
+  await levelClassTo(page, 20, new Set([20]), async (level) => {
+    await chooseSpellGain(
+      page,
+      'Fighter',
+      'XPHB',
+      KNIGHT_SPELLS.find((row) => row.level === level),
+    )
+    if (level === 4) await chooseWeaponMastery(page, 4, 3)
+    if (level === 10) await chooseWeaponMastery(page, 5, 4)
+    if (level === 16) await chooseWeaponMastery(page, 6, 5)
+  })
   await resolveAbilityScoreImprovements(page, [4, 6, 8, 12, 14, 16, 19])
 
   await page.getByRole('link', { name: 'Spells', exact: true }).click()
   await expect(page.getByText('Fighter', { exact: true }).first()).toBeVisible()
-  await saveReloadAndAssertReady(page, 'Golden Eldritch Knight')
+  await saveReloadAndAssertReady(
+    page,
+    'Golden Eldritch Knight',
+    KNIGHT_SPELLS,
+    'Fighter',
+    'XPHB',
+    'Eldritch Knight',
+  )
 })

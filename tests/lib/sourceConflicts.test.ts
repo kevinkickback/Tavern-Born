@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { addSpellToCharacter, setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import {
   countRemovedSpells,
   detectSourceConflicts,
@@ -9,6 +9,10 @@ import {
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { makeRacialSourceCharacter } from '../fixtures/racialSourceCharacter'
 
@@ -24,6 +28,26 @@ function makeSpell(name: string, source: string): Spell5e {
     range: { type: 'point', distance: { type: 'feet', amount: 30 } },
     duration: [],
   }
+}
+
+function makeBonusCharacter(cantrips: string[], known: string[], additional: string[] = []) {
+  let character = makeCharacterFixture()
+  for (const [kind, references] of [
+    ['cantrip', cantrips],
+    ['spell', [...known, ...additional]],
+  ] as const) {
+    for (const reference of references) {
+      const result = addSpellToCharacter(
+        character,
+        character.provenance,
+        reference,
+        kind,
+        'special:unrestricted',
+      )
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+  }
+  return characterPersistenceSchema.parse(character)
 }
 
 // ── detectSourceConflicts ────────────────────────────────────────────────────
@@ -196,17 +220,15 @@ describe('pruneSpellsForDisabledSources', () => {
   test('retracts only the removed racial descriptor printing while independent ownership remains', () => {
     const character = makeRacialSourceCharacter()
     character.classProgression.push({ name: 'Wizard', source: 'XPHB', levels: 1 })
-    character.spells.spellProfiles.push({
-      id: 'class:Wizard|XPHB',
-      type: 'class',
-      label: 'Wizard',
-      className: 'Wizard',
-      classSource: 'XPHB',
-      cantrips: [],
-      spellsKnown: ['Shield|XPHB'],
-      preparedSpells: ['Shield|XPHB'],
-      alwaysPrepared: false,
-    })
+    const owned = authorManagedClassSpellFixture(character, makeManagedClassSpellFixtures(), [
+      {
+        owner: character.classProgression[character.classProgression.length - 1],
+        domain: 'class-spellbook',
+        gain: 1,
+        targets: [{ name: 'Shield', source: 'XPHB', prepare: true }],
+      },
+    ])
+    Object.assign(character, owned)
     const before = structuredClone(character)
     expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
 
@@ -313,147 +335,53 @@ describe('pruneSpellsForDisabledSources', () => {
   })
 
   test('returns null when all selected spells are still in allowed sources', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Fireball'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Fireball'])
     // Fireball is in PHB, which is still allowed
     expect(pruneSpellsForDisabledSources(char, ['PHB'], allSpells)).toBeNull()
   })
 
   test('removes a spell when its only source is disabled', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Silvery Barbs'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Silvery Barbs'])
     // Silvery Barbs is only in SCAG; removing SCAG → remove spell
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
     expect(result).not.toBeNull()
-    expect(result!.spells.spellProfiles[0].spellsKnown).toEqual([])
+    expect(
+      result!.spells.spellProfiles.find((profile) => profile.type === 'special')!.spellsKnown,
+    ).toEqual([])
   })
 
   test('keeps a spell that exists in another still-allowed source (reprint)', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Fireball'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Fireball'])
     // PHB is removed but XPHB is now the implicit source — Fireball stays
     expect(pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)).toBeNull()
   })
 
   test('removes a source-qualified spell when its exact printing is disabled', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Fireball|PHB'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Fireball|PHB'])
 
     const result = pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)
 
-    expect(result?.spells.spellProfiles[0].spellsKnown).toEqual([])
+    expect(
+      result!.spells.spellProfiles.find((profile) => profile.type === 'special')!.spellsKnown,
+    ).toEqual([])
   })
 
   test('keeps a source-qualified spell when its exact printing remains enabled', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Fireball|PHB'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Fireball|PHB'])
 
     expect(pruneSpellsForDisabledSources(char, ['PHB'], allSpells)).toBeNull()
   })
 
-  test('removes from cantrips and preparedSpells as well', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Druid|PHB',
-            type: 'class',
-            label: 'Druid',
-            className: 'Druid',
-            classSource: 'PHB',
-            cantrips: ['Control Flames'],
-            spellsKnown: [],
-            preparedSpells: ['Frostbite'],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+  test('removes Bonus cantrips and known spells together', () => {
+    const char = makeBonusCharacter(['Control Flames'], [], ['Frostbite'])
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
     expect(result).not.toBeNull()
-    expect(result!.spells.spellProfiles[0].cantrips).toEqual([])
-    expect(result!.spells.spellProfiles[0].preparedSpells).toEqual([])
+    expect(
+      result!.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
+    ).toEqual([])
+    expect(
+      result!.spells.spellProfiles.find((profile) => profile.type === 'special')!.spellsKnown,
+    ).toEqual([])
   })
 
   test('prunes only disabled members of a supported count-two racial descriptor', () => {
@@ -495,113 +423,38 @@ describe('pruneSpellsForDisabledSources', () => {
     expect(characterPersistenceSchema.safeParse({ ...character, ...result }).success).toBe(true)
   })
 
-  test('preserves fixedSpells even if source is disabled', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Cleric|PHB',
-            type: 'class',
-            label: 'Cleric',
-            className: 'Cleric',
-            classSource: 'PHB',
-            cantrips: ['Control Flames'],
-            spellsKnown: ['Frostbite'],
-            preparedSpells: ['Frostbite'],
-            fixedSpells: ['Control Flames', 'Frostbite'],
-            alwaysPrepared: false,
-          },
-        ],
+  test('preserves actual mandatory racial grants when the target source is disabled', () => {
+    const character = buildInitialCharacter(
+      {
+        initial: { name: 'Mandatory grants', originSystem: '2014' },
+        race: {
+          name: 'Mandatory Caster',
+          source: 'OWNER',
+          additionalSpells: [{ known: { _: ['control flames|XGE#c', 'frostbite|XGE#c'] } }],
+        } as Race5e,
       },
-    })
-    const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
-    expect(result).toBeNull()
+      new Map(),
+      () => [],
+    )
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    expect(pruneSpellsForDisabledSources(character, ['PHB'], allSpells)).toBeNull()
   })
 
   test('keeps unknown spells (not in any game-data source)', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'special:unrestricted',
-            type: 'special',
-            label: 'Special',
-            cantrips: [],
-            spellsKnown: ['Homebrew Bolt'],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-      },
-    })
+    const char = makeBonusCharacter([], ['Homebrew Bolt'])
     // 'Homebrew Bolt' is not in allSpells → treated as unknown → kept
     expect(pruneSpellsForDisabledSources(char, ['PHB'], allSpells)).toBeNull()
   })
 
   test('cleans matching provenance entries', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Silvery Barbs'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-      provenance: {
-        ...makeCharacterFixture().provenance!,
-        spells: {
-          'silvery barbs': [
-            { sourceType: 'class', sourceName: 'Wizard', grantType: 'choice', label: 'Wizard' },
-          ],
-        },
-      },
-    })
+    const char = makeBonusCharacter([], ['Silvery Barbs'])
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
     expect(result).not.toBeNull()
     expect(result!.provenance?.spells).not.toHaveProperty('silvery barbs')
   })
 
   test('leaves provenance entries for spells that remain', () => {
-    const char = makeCharacterFixture({
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Fireball', 'Silvery Barbs'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-      provenance: {
-        ...makeCharacterFixture().provenance!,
-        spells: {
-          fireball: [
-            { sourceType: 'class', sourceName: 'Wizard', grantType: 'choice', label: 'Wizard' },
-          ],
-          'silvery barbs': [
-            { sourceType: 'class', sourceName: 'Wizard', grantType: 'choice', label: 'Wizard' },
-          ],
-        },
-      },
-    })
+    const char = makeBonusCharacter([], ['Fireball', 'Silvery Barbs'])
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
     expect(result!.provenance?.spells).toHaveProperty('fireball')
     expect(result!.provenance?.spells).not.toHaveProperty('silvery barbs')

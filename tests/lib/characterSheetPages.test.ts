@@ -10,16 +10,18 @@ import {
   PDF_2014_ASSETS,
 } from '@/lib/pdf/characterSheetAssets'
 import { getOptionalCharacterSheetPages } from '@/lib/pdf/characterSheetPages'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetPdf'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterSheetPageOptions, CharacterSheetTemplateId } from '@/lib/pdf/types'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 const blank = () =>
-  createCharacterSheetViewModel(createEmptyCharacter({ name: 'Optional Pages' }), {})
+  createCurrentCharacterSheetViewModel(createEmptyCharacter({ name: 'Optional Pages' }), {})
 
 async function generate(
   id: CharacterSheetTemplateId,
@@ -129,14 +131,14 @@ describe('optional PDF pages', () => {
     }
     expect(
       getOptionalCharacterSheetPages(
-        createCharacterSheetViewModel(character, lookups),
+        createCurrentCharacterSheetViewModel(character, lookups),
         '2014-official',
       )[0].included,
     ).toBe(false)
     character.classProgression[0].levels = 2
     expect(
       getOptionalCharacterSheetPages(
-        createCharacterSheetViewModel(character, lookups),
+        createCurrentCharacterSheetViewModel(character, lookups),
         '2014-official',
       )[0].included,
     ).toBe(true)
@@ -165,9 +167,12 @@ describe('optional PDF pages', () => {
       () => [],
     )
     characterPersistenceSchema.parse(caster)
-    const racial = createCharacterSheetViewModel(caster, {})
+    const racial = createCurrentCharacterSheetViewModel(caster, {})
     expect(getOptionalCharacterSheetPages(racial, '2014-official')[0].included).toBe(true)
-    const unresolved = createEmptyCharacter({ name: 'Unresolved caster' })
+    const unresolved = createEmptyCharacter({
+      name: 'Unresolved caster',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    })
     unresolved.spells.spellProfiles.push({
       id: 'class:Wizard|PHB',
       type: 'class',
@@ -181,7 +186,7 @@ describe('optional PDF pages', () => {
     characterPersistenceSchema.parse(unresolved)
     expect(
       getOptionalCharacterSheetPages(
-        createCharacterSheetViewModel(unresolved, {}),
+        createCurrentCharacterSheetViewModel(unresolved, {}),
         '2014-official',
       )[0].included,
     ).toBe(true)

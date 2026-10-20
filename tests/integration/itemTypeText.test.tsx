@@ -14,7 +14,7 @@ import {
   removeManualEquipmentCommand,
 } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries } from '@/lib/compendiumEntries'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
   readGameDataCache,
@@ -36,6 +36,7 @@ import {
   lute,
   primaryInstrumentTypes,
 } from '../fixtures/itemTypeTextFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const loadItemTypeText: typeof loadCategoryText = (
   items,
@@ -263,7 +264,7 @@ describe('category-text display contexts and storage boundary', () => {
     cleanup()
     const active = useCharacterStore.getState().activeCharacter!
     const pdfCharacter = { ...active, allowedSources: ['XGE'] }
-    const vm = createCharacterSheetViewModel(pdfCharacter, {
+    const vm = createCurrentCharacterSheetViewModel(pdfCharacter, {
       ...data.lookups!,
       sourceCatalog: data.sources,
     })
@@ -272,7 +273,7 @@ describe('category-text display contexts and storage boundary', () => {
     expect(vm.magicItems[1].description).toContain('Instrument category guidance.')
     expect(vm.magicItems[1].description).toContain('Standard instrument rules.')
     expect(
-      createCharacterSheetViewModel(
+      createCurrentCharacterSheetViewModel(
         { ...pdfCharacter, allowedSources: [], originSystem: '2024' },
         {
           ...data.lookups!,
@@ -281,7 +282,7 @@ describe('category-text display contexts and storage boundary', () => {
       ).magicItems[1].description,
     ).toContain('Standard instrument rules.')
     expect(
-      createCharacterSheetViewModel(pdfCharacter, {
+      createCurrentCharacterSheetViewModel(pdfCharacter, {
         ...data.lookups!,
         sourceCatalog: data.sources.map((book) =>
           book.abbreviation === 'XGE' ? { ...book, minimumRuleset: '2024' as const } : book,
@@ -303,7 +304,7 @@ describe('category-text display contexts and storage boundary', () => {
       useGameDataStore.setState({ gameData: refreshed })
       expect(useCharacterStore.getState().activeCharacter!.equipment).toEqual(equipment)
       expect(useCharacterStore.getState().activeCharacter!.provenance).toEqual(ledger)
-      const description = createCharacterSheetViewModel(pdfCharacter, refreshed.lookups!)
+      const description = createCurrentCharacterSheetViewModel(pdfCharacter, refreshed.lookups!)
         .magicItems[1].description
       expect(description?.includes('Instrument category guidance.')).toBe(support.length > 0)
       expect(description?.includes('Standard instrument rules.')).toBe(support.length > 0)
@@ -326,7 +327,7 @@ describe('category-text display contexts and storage boundary', () => {
     const final = useCharacterStore.getState().activeCharacter!
     expect(final.equipment).toEqual([equipment[1]])
     expect(Object.values(final.provenance!.equipment).flat()).not.toHaveLength(0)
-    expect(final.schemaVersion).toBe(11)
+    expect(final.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
   })
 
   test('creator proficiency previews use draft books, retain opened snapshots and refresh after closing/reopening', async () => {

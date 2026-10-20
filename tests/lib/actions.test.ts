@@ -177,7 +177,9 @@ describe('character action projection', () => {
       },
     })
 
-    const actions = deriveSpellActions(character, buildSpellLookup([reactionSpell, bonusSpell]))
+    const actions = deriveSpellActions(character, buildSpellLookup([reactionSpell, bonusSpell]), {
+      effectiveSpellProfiles: character.spells.spellProfiles,
+    })
 
     expect(actions).toEqual([
       expect.objectContaining({
@@ -233,7 +235,10 @@ describe('character action projection', () => {
     })
 
     expect(
-      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [warlock] }),
+      deriveSpellActions(character, buildSpellLookup([spell]), {
+        classes: [warlock],
+        effectiveSpellProfiles: character.spells.spellProfiles,
+      }),
     ).toEqual([
       expect.objectContaining({
         name: spell.name,
@@ -243,7 +248,7 @@ describe('character action projection', () => {
     ])
   })
 
-  test('still marks an unprepared spell inactive for a daily prepared caster', () => {
+  test('context-free Actions cannot turn an unowned daily known row into a spell action', () => {
     const spell = {
       name: 'Test Prepared Spell',
       source: 'TEST',
@@ -280,9 +285,9 @@ describe('character action projection', () => {
       },
     })
 
-    expect(
-      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [cleric] })[0],
-    ).toMatchObject({ active: false, inactiveReason: 'Not prepared' })
+    expect(deriveSpellActions(character, buildSpellLookup([spell]), { classes: [cleric] })).toEqual(
+      [],
+    )
   })
 
   test('classifies explicit action grants while excluding passive feature prose', () => {

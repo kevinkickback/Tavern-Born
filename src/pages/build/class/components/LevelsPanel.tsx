@@ -19,17 +19,14 @@ import {
 import { WorkspacePaneHeader } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import { getReplaceableClassSpellNames } from '@/lib/calculations/classSpellChoiceRules'
-import {
-  buildClassSpellSelectionsByLevel,
-  ensureSpellProfiles,
-} from '@/lib/calculations/spellProfiles'
+import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
 import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
+import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import type { OptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import {
@@ -68,6 +65,7 @@ import { BuildClassSpellSection } from './SpellSection'
 import { BuildClassSubclassSection } from './SubclassSection'
 
 interface BuildClassLevelsPanelProps {
+  managedSpellStatuses?: readonly ManagedClassSpellStatus[]
   optionalClassActivity?: OptionalClassFeatureActivity
   classProgression: CharacterClassEntry[]
   selectedClassTab: string
@@ -112,7 +110,6 @@ interface BuildClassLevelsPanelProps {
   onOpenClassPicker: () => void
   onOpenSubclassPicker: () => void
   onOpenSpellPicker: (level: number) => void
-  onOpenSpellSwap: (level: number) => void
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
   onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
@@ -176,6 +173,7 @@ function featureOwnsDiagnostic(
 }
 
 export function BuildClassLevelsPanel({
+  managedSpellStatuses = [],
   optionalClassActivity,
   classProgression,
   selectedClassTab,
@@ -212,7 +210,6 @@ export function BuildClassLevelsPanel({
   onOpenClassPicker,
   onOpenSubclassPicker,
   onOpenSpellPicker,
-  onOpenSpellSwap,
   onOpenFeatPicker,
   onOpenAsiPicker,
   onOpenClassChoice,
@@ -292,16 +289,6 @@ export function BuildClassLevelsPanel({
     classSource: viewingClassSource,
   })
 
-  const classProfileId = `class:${viewingClass}|${viewingClassSource ?? ''}`
-  const classProfile = ensureSpellProfiles(character).find((p) => p.id === classProfileId)
-  const hasExistingKnown =
-    getReplaceableClassSpellNames(
-      classProfile,
-      character.provenance,
-      viewingClass,
-      viewingClassSource,
-    ).length > 0
-  const swapsByLevel = classProfile?.spellSwaps ?? {}
   const classIcon = getClassIconUrl(viewingClass)
 
   return (
@@ -487,7 +474,13 @@ export function BuildClassLevelsPanel({
                   appliedAsiChoicesForClass.some((choice) => choice.level === lv) ||
                   classAsiFeats.some((feat) => feat.classLevel === lv)
                 const subclassChoiceComplete = !isSubclassLevel || !!viewingSubclass
-                const selectedSpellCount = spellSelectionsByLevel.get(lv)?.length ?? 0
+                const selectedSpellCount = managedSpellStatuses.filter(
+                  (row) =>
+                    row.active &&
+                    row.choice.slot[0][1] === viewingClass.trim().toLowerCase() &&
+                    row.choice.slot[0][2] === viewingClassSource?.trim().toLowerCase() &&
+                    row.choice.slot[3] === lv,
+                ).length
                 const spellChoiceComplete =
                   !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
                 const normalizedPendingCount =
@@ -829,13 +822,12 @@ export function BuildClassLevelsPanel({
                             level={lv}
                             spellGain={spellGain}
                             chosenNames={spellSelectionsByLevel.get(lv) ?? []}
+                            unavailableCount={
+                              (spellSelectionsByLevel.get(lv)?.length ?? 0) - selectedSpellCount
+                            }
                             spellByReference={spellByReference}
                             detailCollapsed={detailCollapsed}
-                            hasExistingKnown={hasExistingKnown}
-                            requiredSelectionsComplete={spellChoiceComplete}
-                            swapDoneAtLevel={!!swapsByLevel[lv]}
                             onOpenSpellPicker={onOpenSpellPicker}
-                            onOpenSpellSwap={onOpenSpellSwap}
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             getOrdinalForm={getOrdinalForm}

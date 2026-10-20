@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
+import { Button } from '@/components/ui/button'
 import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -19,19 +20,13 @@ import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemTextContext } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
-import { findClassReference } from '@/lib/5etools/classReference'
-import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
-import {
-  getNativeExpandedSpellReferences,
-  getNativeRacialSpellOwners,
-} from '@/lib/calculations/nativeRacialSpells'
+import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
+import { getNativeRacialSpellOwners } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
-  parseSpellReference,
   resolveSpellReferenceFromMap,
 } from '@/lib/calculations/spellIdentity'
 import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
@@ -42,13 +37,14 @@ import {
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
+import { hasCurrentClassSpellListRoute } from '@/lib/character/classSpellAuthority'
+import { getDailyClassSpellAccess } from '@/lib/character/dailyClassSpells'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   findFocusedProvenanceChoice,
   getReadinessFocus,
   isSpellProfileReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
-import type { SourceRow } from '@/lib/provenance/types'
 import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -108,6 +104,7 @@ export function SpellsPage() {
   const { getSourcesRowsBySection } = useProvenanceRows({ ledger, selection: character })
   const {
     removeSpellFromProfile,
+    clearClassSpellChoice,
     setProfileSpells,
     togglePrepared,
     setRacialSpellChoice,
@@ -207,56 +204,20 @@ export function SpellsPage() {
 
   const subclassSpellSources = useMemo(() => {
     const sourceMap = new Map<string, string>()
-    const rows: SourceRow[] = []
-    if (!character) return { sourceMap, rows }
-
-    const classesById = new Map(
-      (calculationContext?.classes ?? []).map((classData) => [
-        toClassProfileId(classData.name, classData.source),
-        classData,
-      ]),
-    )
+    if (!character) return sourceMap
 
     for (const entry of getCharacterClassEntries(character)) {
       if (!entry.subclass) continue
       const profileId = toClassProfileId(entry.name, entry.source)
-      const subclassData = getSelectedSubclassData(
-        findClassReference(entry, classesById.values()),
-        entry,
-      )
-      const grants = parseSubclassSpells(subclassData?.additionalSpells, entry.levels).filter(
-        (grant) => grant.mode !== 'expanded',
-      )
-
-      for (const grant of grants) {
+      const grants = spellProfiles.find((profile) => profile.id === profileId)?.fixedSpells ?? []
+      for (const reference of grants) {
         const attribution = `Subclass: ${entry.subclass}`
-        sourceMap.set(`${profileId}|${grant.spellName}`, attribution)
-        const spell = resolveSpellReferenceFromMap(grant.spellName, spellByName)
-        rows.push({
-          itemName: formatSpellDisplayName(grant.spellName, spell?.name),
-          itemSource: parseSpellReference(grant.spellName).source,
-          category: 'Spells',
-          attribution,
-          sourceTypes: ['subclass'],
-          isPending: false,
-        })
+        sourceMap.set(`${profileId}|${reference}`, attribution)
       }
     }
 
-    return { sourceMap, rows }
-  }, [character, calculationContext?.classes, spellByName])
-
-  const expandedSpellKeys = useMemo(
-    () =>
-      new Set(
-        character
-          ? [
-              ...getNativeExpandedSpellReferences(character, calculationContext?.raceResolution),
-            ].map((reference) => getSpellReferenceKey(reference))
-          : [],
-      ),
-    [character, calculationContext],
-  )
+    return sourceMap
+  }, [character, spellProfiles])
 
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
@@ -268,14 +229,36 @@ export function SpellsPage() {
       const preparedSet = new Set((profile.preparedSpells ?? []).map(getSpellNameKey))
       const fixedSet = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
       const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
+      const entry = character?.classProgression.find(
+        (row) => toClassProfileId(row.name, row.source) === profile.id,
+      )
+      if (!entry || !calculationContext) continue
+      const mode = getClassSpellProfilePolicy(entry).mode
+      const context = calculationContext.classChoices.spellContext
+      const daily =
+        mode === 'daily'
+          ? getDailyClassSpellAccess(calculationContext.character, profile, context)
+          : undefined
+      const learned = new Set(profile.spellsKnown.map((row) => getSpellReferenceKey(row)))
 
       const available = allSpells.filter(
         (spell) =>
           spell.level > 0 &&
-          spell.level <= detail.maxSpellLevel &&
-          (isSpellOnClassList(spell, profile.className, profile.classSource) ||
-            fixedSet.has(getSpellNameKey(spell.name)) ||
-            expandedSpellKeys.has(getSpellReferenceKey(spell.name, spell.source))),
+          (mode === 'spellbook'
+            ? learned.has(getSpellReferenceKey(spell.name, spell.source))
+            : !!daily &&
+              spell.level <= daily.maxSpellLevel &&
+              (profile.fixedSpells?.some(
+                (row) =>
+                  getSpellReferenceKey(row) === getSpellReferenceKey(spell.name, spell.source),
+              ) ||
+                hasCurrentClassSpellListRoute(
+                  calculationContext.character,
+                  entry,
+                  spell,
+                  context ?? {},
+                  { allowOptional: false },
+                ))),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
       map.set(
@@ -303,7 +286,7 @@ export function SpellsPage() {
       )
     }
     return map
-  }, [allSpells, spellcastingDetails, spellProfiles, expandedSpellKeys])
+  }, [allSpells, spellcastingDetails, spellProfiles, character, calculationContext])
 
   const spellListItems = useMemo(() => {
     const items: SpellListItem[] = []
@@ -437,15 +420,19 @@ export function SpellsPage() {
   )
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
-    const map = buildSpellSelectionSourceMap({ spellProfiles, ledger })
-    for (const [key, attribution] of subclassSpellSources.sourceMap) {
-      map.set(key, attribution)
+    const map = buildSpellSelectionSourceMap({
+      spellProfiles,
+      ledger,
+      choices: character?.managedClassSpellChoices,
+    })
+    for (const [key, attribution] of subclassSpellSources) {
+      map.set(key, [map.get(key), attribution].filter(Boolean).join('; '))
     }
     return map
-  }, [spellProfiles, ledger, subclassSpellSources])
+  }, [spellProfiles, ledger, subclassSpellSources, character?.managedClassSpellChoices])
 
   const spellSourceRows = useMemo(() => {
-    const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
+    const rows = getSourcesRowsBySection('spells')
     const seen = new Set<string>()
     return rows.flatMap((row) => {
       const key = `${getSpellReferenceKey(row.itemName, row.itemSource)}|${row.attribution}|${row.category}`
@@ -457,7 +444,7 @@ export function SpellsPage() {
       )
       return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
-  }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
+  }, [getSourcesRowsBySection, spellByName])
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
@@ -679,6 +666,65 @@ export function SpellsPage() {
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="mx-auto w-full max-w-6xl p-4">
+                  {calculationContext?.managedClassSpellStatuses
+                    .filter((row) => !row.active)
+                    .map((row) => {
+                      const entry = character.classProgression.find(
+                        (entry) =>
+                          entry.name.trim().toLowerCase() === row.choice.slot[0][1] &&
+                          entry.source.trim().toLowerCase() === row.choice.slot[0][2],
+                      )
+                      const profileId = toClassProfileId(
+                        entry?.name ?? row.choice.slot[0][1],
+                        entry?.source ?? row.choice.slot[0][2],
+                      )
+                      const reference = formatSpellReference(
+                        row.choice.target.name,
+                        row.choice.target.source,
+                      )
+                      if (spellView !== 'all' && spellView !== profileId) return null
+                      return (
+                        <div
+                          key={JSON.stringify(row.choice.slot)}
+                          className="mb-3 rounded-md border border-border p-3 text-sm"
+                        >
+                          <p className="font-medium">{reference} — saved choice unavailable</p>
+                          <p className="text-xs text-muted-foreground">{row.reason}</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => clearClassSpellChoice(row.choice)}
+                          >
+                            Clear saved choice
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  {calculationContext?.dailyClassSpellStatuses
+                    .filter((row) => !row.active)
+                    .map((row) => {
+                      if (spellView !== 'all' && spellView !== row.profileId) return null
+                      return (
+                        <div
+                          key={`${row.profileId}|${row.reference}`}
+                          className="mb-3 rounded-md border border-border p-3 text-sm"
+                        >
+                          <p className="font-medium">
+                            {row.reference} — saved preparation unavailable
+                          </p>
+                          <p className="text-xs text-muted-foreground">{row.reason}</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => togglePrepared(row.profileId, row.reference)}
+                          >
+                            Unprepare saved choice
+                          </Button>
+                        </div>
+                      )
+                    })}
                   {spellView === 'racial' && racialProfiles.length > 0 ? (
                     <NativeRacialSpellControls
                       profiles={racialProfiles}
@@ -696,6 +742,7 @@ export function SpellsPage() {
                     groupedItems={groupedItems}
                     selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
                     preparedCasterItemsByProfile={preparedCasterItemsByProfile}
+                    managedClassSpellStatuses={calculationContext?.managedClassSpellStatuses}
                     getSpellByName={(spellName) =>
                       resolveSpellReferenceFromMap(spellName, spellByName)
                     }

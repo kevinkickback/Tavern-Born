@@ -1,20 +1,20 @@
-import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
-/**
- * Spell profile mutation hook.
- *
- * Handles all write operations for spell profiles: adding/removing spells,
- * toggling prepared state, managing racial spell choices, and syncing profiles.
- *
- * Accepts the pre-computed `spellProfiles` and `spellcastingDetailByProfileId`
- * from `useSpellSlots` so that mutations observe the same derived state.
- */
-
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { buildSpellLookup } from '@/lib/5etools/lookups'
+import {
+  type CharacterCalculationContext,
+  createCharacterCalculationContext,
+} from '@/lib/calculations/characterCalculationContext'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
+import {
+  SPECIAL_SPELL_PROFILE_ID,
+  SPECIAL_SPELL_PROFILE_LABEL,
+} from '@/lib/calculations/spellProfiles.constants'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
+import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
   addSpellToCharacter,
@@ -25,315 +25,265 @@ import {
   setRacialCastingAbility as setRacialCastingAbilityCommand,
   setRacialSpellChoice as setRacialSpellChoiceCommand,
   setRacialSpellSuite as setRacialSpellSuiteCommand,
-  syncSpellProfiles,
-  toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
-import { normalizeKey } from '@/lib/provenance/normalization'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { SpellProfile } from '@/types/character'
+import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
+import { isManagedClassSpellProfile } from '@/lib/character/managedClassSpellIdentity'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Character, SpellProfile } from '@/types/character'
+import type { ManagedClassSpellChoice } from '@/types/classCasting'
+import { useSpellProvenanceMutations } from './useSpellProvenanceMutations'
 
-function getSpellSourceMeta(profile: SpellProfile): {
-  sourceType: 'class' | 'subclass' | 'feat' | 'manual'
-  sourceName: string
-  sourceRef?: string
-} {
-  if (profile.type === 'class') {
-    return {
-      sourceType: 'class',
-      sourceName: profile.className ?? profile.label,
-      sourceRef: profile.classSource,
-    }
-  }
-  return { sourceType: 'manual', sourceName: 'User Choice' }
-}
-
+/** Mutations start from latest saved intent, never a filtered display array. */
 export function useSpellProfileMutations(
   spellProfiles: SpellProfile[],
-  spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>,
+  _spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>,
 ) {
-  const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const calculationContext = useCharacterCalculationContext(character)
-  const filtered = useFilteredGameData()
-  const spellsByKey = useMemo(() => buildSpellLookup(filtered.spells), [filtered.spells])
-  const rawSpellLookup = calculationContext?.lookups.raw.spellsByKey
-  const currentSpellLookup = useMemo(
-    () => ({ ...rawSpellLookup, ...spellsByKey }),
-    [rawSpellLookup, spellsByKey],
-  )
-
-  const synchronized = useMemo(() => {
-    if (!character) return null
-    return syncSpellProfiles(
-      character,
-      character.provenance ?? emptyProvenance(),
-      spellProfiles,
-      calculationContext?.raceResolution,
-    )
-  }, [character, spellProfiles, calculationContext])
-  const currentLedger = synchronized?.provenanceUpdate ?? emptyProvenance()
-  const commandCharacter = useMemo(() => {
-    if (!character || !synchronized) return null
-    return {
-      ...character,
-      ...synchronized.characterPatch,
-      provenance: synchronized.provenanceUpdate,
-    }
-  }, [character, synchronized])
-
-  const applySpellCommand = useCallback(
-    (result: SpellCommandResult) => {
-      if (!character) return
-      updateCharacter(character.id, {
-        ...result.characterPatch,
-        provenance: result.provenanceUpdate,
-      })
+  const character = useCharacterStore((state) => state.activeCharacter)
+  const sourceData = useGameDataStore((state) => state.gameData)
+  const calculation = useCharacterCalculationContext(character)
+  const { finishClassSpellChoices } = useSpellProvenanceMutations()
+  const run = useCallback(
+    (
+      command: (base: Character, current?: CharacterCalculationContext) => SpellCommandResult,
+      requiresCurrent = false,
+    ) => {
+      const latest = useCharacterStore.getState().activeCharacter
+      if (!latest || !character || latest.id !== character.id) return
+      try {
+        const fresh =
+          calculation &&
+          hasCurrentCharacterSourceContext(
+            latest,
+            character,
+            useGameDataStore.getState().gameData,
+            sourceData,
+          )
+        if (requiresCurrent && !fresh)
+          throw new RangeError('The spell sources changed. Reopen the selection.')
+        const current = fresh
+          ? createCharacterCalculationContext(
+              latest,
+              calculation.lookups.primary,
+              calculation.lookups.raw,
+            )
+          : undefined
+        let base = current
+          ? refreshNativeRacialSpellState(latest, current.raceResolution, {
+              spellsByKey: current.lookups.primary.spellsByKey,
+              rawSpellsByKey: current.lookups.raw.spellsByKey,
+            })
+          : latest
+        if (!base.spells.spellProfiles.some((profile) => profile.id === SPECIAL_SPELL_PROFILE_ID))
+          base = {
+            ...base,
+            spells: {
+              ...base.spells,
+              spellProfiles: [
+                ...base.spells.spellProfiles,
+                {
+                  id: SPECIAL_SPELL_PROFILE_ID,
+                  type: 'special',
+                  label: SPECIAL_SPELL_PROFILE_LABEL,
+                  cantrips: [],
+                  spellsKnown: [],
+                  preparedSpells: [],
+                  alwaysPrepared: true,
+                },
+              ],
+            },
+          }
+        const result = command(base, current)
+        if (Object.keys(result.characterPatch).length)
+          useCharacterStore.getState().updateCharacter(latest.id, {
+            ...result.characterPatch,
+            provenance: result.provenanceUpdate,
+          })
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'The spell change could not be saved.')
+      }
     },
-    [character, updateCharacter],
+    [character, calculation, sourceData],
   )
-
-  const syncProfiles = useCallback(() => {
-    if (!synchronized) return
-    applySpellCommand(synchronized)
-  }, [synchronized, applySpellCommand])
-
-  const addSpellToProfile = useCallback(
-    (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
-      if (!character || !commandCharacter) return
-      const profile = spellProfiles.find((p) => p.id === profileId)
-      const sourceMeta = profile
-        ? getSpellSourceMeta(profile)
-        : { sourceType: 'manual' as const, sourceName: 'User Choice' }
-      const result = addSpellToCharacter(commandCharacter, currentLedger, name, kind, profileId, {
-        ...sourceMeta,
-        spellsByKey: currentSpellLookup,
-      })
-      applySpellCommand(result)
-    },
-    [
-      character,
-      commandCharacter,
-      currentLedger,
-      spellProfiles,
-      applySpellCommand,
-      currentSpellLookup,
-    ],
-  )
-
-  const setProfileSpells = useCallback(
-    (profileId: string, cantrips: string[], spellsKnown: string[]) => {
-      if (!character || !commandCharacter) return
-      const result = setProfileSpellsCommand(
-        commandCharacter,
-        currentLedger,
-        profileId,
-        cantrips,
-        spellsKnown,
-        currentSpellLookup,
+  const choiceFor = (profileId: string, reference: string) => {
+    const profile =
+      character?.spells.spellProfiles.find((row) => row.id === profileId) ??
+      spellProfiles.find((row) => row.id === profileId)
+    return (
+      profile &&
+      character?.managedClassSpellChoices?.find(
+        (choice) =>
+          isManagedClassSpellProfile(choice.slot, profile) &&
+          getSpellReferenceKey(choice.target.name, choice.target.source) ===
+            getSpellReferenceKey(reference),
       )
-      applySpellCommand(result)
-    },
-    [character, commandCharacter, currentLedger, applySpellCommand, currentSpellLookup],
-  )
-
-  const removeSpellFromProfile = useCallback(
-    (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
-      if (!character || !commandCharacter) return
-      const profile = spellProfiles.find((entry) => entry.id === profileId)
-      if (profile?.type === 'racial') return
-      if (profile && isFixedProfileSpell(profile, currentLedger, name)) return
-      const result = removeSpellFromCharacter(commandCharacter, currentLedger, name, {
+    )
+  }
+  const clearClassSpellChoice = (choice: ManagedClassSpellChoice) => {
+    try {
+      finishClassSpellChoices([{ slot: choice.slot, expected: choice }])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'The spell change could not be saved.')
+    }
+  }
+  const togglePrepared = (profileId: string, reference: string) => {
+    const profile = spellProfiles.find((row) => row.id === profileId)
+    if (
+      !profile ||
+      profile.alwaysPrepared ||
+      profile.alwaysPreparedSpells?.some(
+        (row) => getSpellReferenceKey(row) === getSpellReferenceKey(reference),
+      )
+    )
+      return
+    const choice = choiceFor(profileId, reference)
+    if (choice) {
+      try {
+        finishClassSpellChoices([
+          {
+            slot: choice.slot,
+            expected: choice,
+            target: choice.target,
+            policy: choice.policy,
+            prepare: !choice.prepare,
+          },
+        ])
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'The spell change could not be saved.')
+      }
+      return
+    }
+    const raw = character?.spells.spellProfiles.find((row) => row.id === profileId)
+    const prepared = !raw?.preparedSpells.some(
+      (row) => getSpellReferenceKey(row) === getSpellReferenceKey(reference),
+    )
+    run(
+      (base, current) =>
+        setDailyClassSpellPreparedCommand(
+          base,
+          base.provenance,
+          profileId,
+          reference,
+          prepared,
+          current
+            ? { ...current.classChoices.spellContext, abilityScores: current.abilityScores.total }
+            : undefined,
+        ),
+      prepared,
+    )
+  }
+  const removeSpellFromProfile = (
+    profileId: string,
+    reference: string,
+    kind: 'cantrip' | 'spell',
+  ) => {
+    const choice = choiceFor(profileId, reference)
+    if (choice) {
+      try {
+        finishClassSpellChoices([{ slot: choice.slot, expected: choice }])
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'The spell change could not be saved.')
+      }
+      return
+    }
+    run((base) => {
+      const profile = base.spells.spellProfiles.find((row) => row.id === profileId)
+      if (profile && isFixedProfileSpell(profile, base.provenance, reference))
+        return { characterPatch: {}, provenanceUpdate: base.provenance }
+      return removeSpellFromCharacter(base, base.provenance, reference, {
         spellKind: kind,
         profileId,
       })
-      applySpellCommand(result)
-    },
-    [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand],
-  )
-
-  const togglePrepared = useCallback(
-    (profileId: string, name: string) => {
-      if (!character || !commandCharacter) return
-      const currentProfile = spellProfiles.find((profile) => profile.id === profileId)
-      if (!currentProfile || currentProfile.alwaysPrepared) return
-      const spellKey = normalizeKey(name)
-      if (
-        currentProfile.alwaysPreparedSpells?.some(
-          (preparedName) => normalizeKey(preparedName) === spellKey,
-        )
-      ) {
-        return
-      }
-
-      const isPrepared = currentProfile.preparedSpells.some(
-        (preparedName) => normalizeKey(preparedName) === spellKey,
-      )
-      const detail = spellcastingDetailByProfileId.get(profileId)
-      const preparedLimit =
-        detail?.isPreparedCaster === true ? (detail.preparedSpellLimit ?? null) : null
-
-      if (!isPrepared) {
-        const conflict = spellProfiles.find(
-          (p) =>
-            p.id !== profileId &&
-            p.preparedSpells.some((preparedName) => normalizeKey(preparedName) === spellKey),
-        )
-        if (conflict) {
-          toast.warning(`Already prepared by ${conflict.label}`, {
-            description: `${name} is already prepared through your ${conflict.label} profile.`,
-          })
-          return
-        }
-      }
-
-      if (
-        !isPrepared &&
-        preparedLimit !== null &&
-        currentProfile.preparedSpells.filter(
-          (preparedName) =>
-            !currentProfile.alwaysPreparedSpells?.some(
-              (alwaysName) => normalizeKey(alwaysName) === normalizeKey(preparedName),
-            ),
-        ).length >= preparedLimit
-      ) {
-        return
-      }
-
-      const isTruePrepared = !!detail?.isTruePreparedCaster
-      const result = toggleSpellPrepared(
-        commandCharacter,
-        currentLedger,
-        profileId,
-        name,
-        isTruePrepared,
-      )
-      applySpellCommand(result)
-    },
-    [
-      character,
-      commandCharacter,
-      currentLedger,
-      applySpellCommand,
-      spellProfiles,
-      spellcastingDetailByProfileId,
-    ],
-  )
-
-  const selectRacialSpell = useCallback(
-    (profileId: string, choiceId: string, spellName: string) => {
-      if (!character || !commandCharacter) return
-      const result = selectRacialSpellCommand(
-        commandCharacter,
-        currentLedger,
-        profileId,
-        choiceId,
-        spellName,
-        calculationContext?.raceResolution,
-        spellsByKey,
-      )
-      applySpellCommand(result)
-    },
-    [
-      character,
-      commandCharacter,
-      currentLedger,
-      applySpellCommand,
-      calculationContext,
-      spellsByKey,
-    ],
-  )
-
-  const removeRacialSpell = useCallback(
-    (profileId: string, choiceId: string, spellName: string) => {
-      if (!character || !commandCharacter) return
-      const result = removeRacialSpellCommand(
-        commandCharacter,
-        currentLedger,
-        profileId,
-        choiceId,
-        spellName,
-      )
-      applySpellCommand(result)
-    },
-    [character, commandCharacter, currentLedger, applySpellCommand],
-  )
-
-  const setRacialSpellChoice = useCallback(
-    (profileId: string, choiceId: string, selectedSpells: string[]) => {
-      if (!character || !commandCharacter) return
-      applySpellCommand(
-        setRacialSpellChoiceCommand(
-          commandCharacter,
-          currentLedger,
-          profileId,
-          choiceId,
-          selectedSpells,
-          calculationContext?.raceResolution,
-          spellsByKey,
-        ),
-      )
-    },
-    [
-      character,
-      commandCharacter,
-      currentLedger,
-      applySpellCommand,
-      calculationContext,
-      spellsByKey,
-    ],
-  )
-
-  const setRacialSpellSuite = useCallback(
-    (profileId: string, suiteId: string | undefined) => {
-      if (!commandCharacter) return
-      applySpellCommand(
-        setRacialSpellSuiteCommand(
-          commandCharacter,
-          currentLedger,
-          profileId,
-          suiteId,
-          calculationContext?.raceResolution,
-          currentSpellLookup,
-        ),
-      )
-    },
-    [commandCharacter, currentLedger, applySpellCommand, calculationContext, currentSpellLookup],
-  )
-
-  const setRacialCastingAbility = useCallback(
-    (profileId: string, ability: string) => {
-      if (!character || !commandCharacter) return
-      applySpellCommand(
-        setRacialCastingAbilityCommand(
-          commandCharacter,
-          currentLedger,
-          profileId,
-          ability,
-          calculationContext?.raceResolution,
-          currentSpellLookup,
-        ),
-      )
-    },
-    [
-      character,
-      commandCharacter,
-      currentLedger,
-      applySpellCommand,
-      calculationContext,
-      currentSpellLookup,
-    ],
-  )
-
+    })
+  }
   return {
-    syncProfiles,
-    addSpellToProfile,
-    setProfileSpells,
+    clearClassSpellChoice,
+    syncProfiles: () =>
+      run((base, current) => {
+        if (!current) return { characterPatch: {}, provenanceUpdate: base.provenance }
+        const next = preserveDailyClassSpellIntent(base, current.character)
+        return { characterPatch: { spells: next.spells }, provenanceUpdate: next.provenance }
+      }, true),
+    addSpellToProfile: (profileId: string, name: string, kind: 'cantrip' | 'spell') =>
+      run((base, current) =>
+        addSpellToCharacter(base, base.provenance, name, kind, profileId, {
+          spellsByKey: current?.lookups.primary.spellsByKey,
+        }),
+      ),
+    setProfileSpells: (profileId: string, cantrips: string[], known: string[]) =>
+      run((base, current) =>
+        setProfileSpellsCommand(
+          base,
+          base.provenance,
+          profileId,
+          cantrips,
+          known,
+          current?.lookups.primary.spellsByKey,
+        ),
+      ),
     removeSpellFromProfile,
     togglePrepared,
-    selectRacialSpell,
-    removeRacialSpell,
-    setRacialSpellChoice,
-    setRacialSpellSuite,
-    setRacialCastingAbility,
+    selectRacialSpell: (profileId: string, choiceId: string, name: string) =>
+      run(
+        (base, current) =>
+          selectRacialSpellCommand(
+            base,
+            base.provenance,
+            profileId,
+            choiceId,
+            name,
+            current?.raceResolution,
+            current?.lookups.primary.spellsByKey,
+          ),
+        true,
+      ),
+    removeRacialSpell: (profileId: string, choiceId: string, name: string) =>
+      run((base) => removeRacialSpellCommand(base, base.provenance, profileId, choiceId, name)),
+    setRacialSpellChoice: (profileId: string, choiceId: string, selected: string[]) =>
+      run(
+        (base, current) =>
+          setRacialSpellChoiceCommand(
+            base,
+            base.provenance,
+            profileId,
+            choiceId,
+            selected,
+            current?.raceResolution,
+            current?.lookups.primary.spellsByKey,
+          ),
+        selected.some(
+          (target) =>
+            !character?.spells.spellProfiles
+              .find((row) => row.id === profileId)
+              ?.choices?.find((row) => row.id === choiceId)
+              ?.selected.some((row) => getSpellReferenceKey(row) === getSpellReferenceKey(target)),
+        ),
+      ),
+    setRacialSpellSuite: (profileId: string, suiteId: string | undefined) =>
+      run(
+        (base, current) =>
+          setRacialSpellSuiteCommand(
+            base,
+            base.provenance,
+            profileId,
+            suiteId,
+            current?.raceResolution,
+            current?.lookups.primary.spellsByKey,
+          ),
+        suiteId !== undefined,
+      ),
+    setRacialCastingAbility: (profileId: string, ability: string) =>
+      run(
+        (base, current) =>
+          setRacialCastingAbilityCommand(
+            base,
+            base.provenance,
+            profileId,
+            ability,
+            current?.raceResolution,
+            current?.lookups.primary.spellsByKey,
+          ),
+        !!ability.trim(),
+      ),
   }
 }

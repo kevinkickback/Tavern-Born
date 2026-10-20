@@ -24,6 +24,7 @@ import type { Class5e, ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 vi.mock('@/components/PdfCanvasPreview', () => ({
   PdfCanvasPreview: () => <div>PDF preview</div>,
@@ -324,7 +325,7 @@ describe('CharacterSheetPage', () => {
         description: 'As an action, light a beacon.',
       },
     ])
-    expect(createCharacterSheetViewModel(character, complete).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, complete).actions).toEqual(initial)
     expect(
       deriveRulesTextActions(character, undefined, {
         classes: [wizard],
@@ -343,18 +344,18 @@ describe('CharacterSheetPage', () => {
     for (const available of [[competingWizard, bard], [bard, competingWizard], [wizard]]) {
       const lookups = install(available)
       expect(result.current).toEqual([])
-      expect(createCharacterSheetViewModel(character, lookups).actions).toEqual([])
+      expect(createCurrentCharacterSheetViewModel(character, lookups).actions).toEqual([])
     }
     const restored = install(classes)
     expect(result.current).toEqual(initial)
-    expect(createCharacterSheetViewModel(character, restored).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, restored).actions).toEqual(initial)
     const unavailableCompetitor = {
       ...structuredClone(competingWizard),
       subclasses: competingWizard.subclasses.map((subclass) => ({ ...subclass, source: 'TCE' })),
     }
     const filtered = install([unavailableCompetitor, bard])
     expect(result.current).toEqual(initial)
-    expect(createCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
     renderPage()
     expect(
       vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
@@ -366,7 +367,7 @@ describe('CharacterSheetPage', () => {
         classFeatures: [],
       }),
     }
-    expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
+    expect(createCurrentCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
   })
 
   test('Actions and PDF honor current reprint suppression across source casing', () => {
@@ -550,13 +551,13 @@ describe('CharacterSheetPage', () => {
     const rawData = makeGameDataFixture({ classes, classFeatures: [signal] })
     rawData.lookups = buildGameDataLookups(rawData)
     expect(
-      createCharacterSheetViewModel(character, rawData.lookups).actions.some(
+      createCurrentCharacterSheetViewModel(character, rawData.lookups).actions.some(
         (action) => action.id === chosen.id,
       ),
     ).toBe(false)
     const empty = buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] })
     expect(
-      createCharacterSheetViewModel(character, {
+      createCurrentCharacterSheetViewModel(character, {
         ...rawData.lookups,
         classChoiceFeatureCatalogs: empty,
       }).actions.some((action) => action.id === chosen.id),

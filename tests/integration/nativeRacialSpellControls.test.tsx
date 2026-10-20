@@ -16,12 +16,9 @@ import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutat
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
+import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import {
-  addSpellToCharacter,
-  setClassSpellSelectionsAtLevel,
-  toggleSpellPrepared,
-} from '@/lib/character/commands/spellCommands'
+import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -33,7 +30,10 @@ import {
   makeGameDataFixture,
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { makeNativeRacialCharacter, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+
+const managedFixture = makeManagedClassSpellFixtures()
 
 beforeEach(() => {
   resetCharacterStore()
@@ -53,6 +53,7 @@ afterEach(() => {
 
 function install(races: Race5e[]) {
   const data = makeGameDataFixture({
+    ...managedFixture.data,
     races,
     spells: [
       'thaumaturgy',
@@ -80,6 +81,9 @@ function install(races: Race5e[]) {
       .concat([
         makeSpellFixture({ name: 'Light', source: 'PHB', level: 0 }),
         makeSpellFixture({ name: 'Mage Hand', source: 'PHB', level: 0 }),
+        ...managedFixture.spells.filter(
+          (row) => ['Shield', 'Fireball'].includes(row.name) && row.source === 'PHB',
+        ),
       ]),
     sources: ['PHB', 'XPHB'].map((abbreviation) => ({
       abbreviation,
@@ -299,8 +303,20 @@ test('actual class spell editing commits restored racial level grants together w
   setActiveCharacter(character)
   const { result } = renderHook(() => useSpellProvenanceMutations())
   act(() =>
-    result.current.setClassSpellSelectionsAtLevel('Wizard', 'PHB', 5, [
-      { name: 'Fireball|PHB', spellLevel: 3, school: 'V' },
+    result.current.finishClassSpellChoices([
+      {
+        slot: [
+          ['class', 'wizard', 'phb'],
+          'class-spellbook',
+          'class-feature|spellcasting|wizard|phb|1|phb',
+          5,
+          0,
+        ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Fireball', source: 'PHB' },
+        policy: 'default',
+      },
     ]),
   )
   const saved = reopened()
@@ -348,27 +364,45 @@ test('removing an independently selected bonus copy commits without removing nat
   } as Race5e
   let character = makeNativeRacialCharacter(race)
   character.classProgression.push({ name: 'Wizard', source: 'PHB', levels: 1 })
-  const classSpells = setClassSpellSelectionsAtLevel(character, character.provenance, {
-    className: 'Wizard',
-    classSource: 'PHB',
-    classLevel: 1,
-    selections: [
-      { name: 'Light|PHB', spellLevel: 0 },
-      { name: 'Shield|PHB', spellLevel: 1 },
+  const classSpells = setManagedClassSpellChoicesCommand(
+    character,
+    character.provenance,
+    [
+      {
+        slot: [
+          ['class', 'wizard', 'phb'],
+          'class-cantrip',
+          'class-feature|spellcasting|wizard|phb|1|phb',
+          1,
+          0,
+        ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Light', source: 'PHB' },
+        policy: 'default',
+      },
+      {
+        slot: [
+          ['class', 'wizard', 'phb'],
+          'class-spellbook',
+          'class-feature|spellcasting|wizard|phb|1|phb',
+          1,
+          0,
+        ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Shield', source: 'PHB' },
+        policy: 'default',
+        prepare: true,
+      },
     ],
-  })
+    { ...managedFixture.context, abilityScores: character.abilityScores },
+  )
   character = {
     ...character,
     ...classSpells.characterPatch,
     provenance: classSpells.provenanceUpdate,
   }
-  const prepared = toggleSpellPrepared(
-    character,
-    character.provenance,
-    'class:Wizard|PHB',
-    'Shield|PHB',
-  )
-  character = { ...character, ...prepared.characterPatch, provenance: prepared.provenanceUpdate }
   const bonus = addSpellToCharacter(
     character,
     character.provenance,
@@ -436,12 +470,26 @@ test.each([
       )
     : makeNativeRacialCharacter(race)
   if (classOwned) {
-    const selected = setClassSpellSelectionsAtLevel(initial, initial.provenance, {
-      className: 'Wizard',
-      classSource: 'PHB',
-      classLevel: 1,
-      selections: [{ name: 'Light|PHB', spellLevel: 0 }],
-    })
+    const selected = setManagedClassSpellChoicesCommand(
+      initial,
+      initial.provenance,
+      [
+        {
+          slot: [
+            ['class', 'wizard', 'phb'],
+            'class-cantrip',
+            'class-feature|spellcasting|wizard|phb|1|phb',
+            1,
+            0,
+          ],
+          expected: null,
+          expectedEmptyRevision: 0,
+          target: { name: 'Light', source: 'PHB' },
+          policy: 'default',
+        },
+      ],
+      managedFixture.context,
+    )
     initial = { ...initial, ...selected.characterPatch, provenance: selected.provenanceUpdate }
   }
   expect(characterPersistenceSchema.safeParse(initial).success).toBe(true)

@@ -276,7 +276,6 @@ export function characterUsesContentOutsideCatalog(
     ...(profile.fixedSpells ?? []),
     ...(profile.alwaysPreparedSpells ?? []),
     ...(profile.choices ?? []).flatMap((choice) => choice.selected),
-    ...Object.values(profile.spellSwaps ?? {}).flatMap((swap) => [swap.removed, swap.added]),
   ])
   if (spellReferences.some((reference) => spellReferenceIsMissing(reference, index))) return true
 

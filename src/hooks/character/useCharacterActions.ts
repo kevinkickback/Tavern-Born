@@ -16,7 +16,7 @@ export function useCharacterActions(character: Character | null | undefined) {
 
   return useMemo(() => {
     if (!character || !calculation) return []
-    return deriveCharacterActions(character, {
+    return deriveCharacterActions(calculation.character, {
       abilityModifiers: calculation.abilityScores.modifiers,
       proficiencyBonus: getProficiencyBonus(getTotalCharacterLevel(character)),
       itemLookup: lookups?.itemLookup,
@@ -24,6 +24,7 @@ export function useCharacterActions(character: Character | null | undefined) {
       effects: calculation.effects.declarations,
       effectContext: calculation.effects.resolutionContext,
       spellsByKey: lookups?.spellsByKey,
+      effectiveSpellProfiles: calculation.character.spells.spellProfiles,
       race: calculation.raceResolution.mergedRace,
       raceResolution: calculation.raceResolution,
       classes: calculation.classes,

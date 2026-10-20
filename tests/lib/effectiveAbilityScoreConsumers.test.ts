@@ -3,9 +3,9 @@ import { buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { buildPrerequisiteSnapshot, checkPrerequisite } from '@/lib/calculations/prerequisites'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Class5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 describe('effective ability score consumers', () => {
   test('uses one effective score set for rules, spellcasting, and both PDF projections', () => {
@@ -70,7 +70,7 @@ describe('effective ability score consumers', () => {
       racesByKey: buildRaceLookup([elf]),
     }
 
-    const viewModel = createCharacterSheetViewModel(character, lookups)
+    const viewModel = createCurrentCharacterSheetViewModel(character, lookups)
     const prerequisiteSnapshot = buildPrerequisiteSnapshot({
       character,
       effectiveAbilityScores: viewModel.effectiveAbilityScores,

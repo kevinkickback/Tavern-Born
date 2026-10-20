@@ -64,7 +64,6 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -731,21 +730,20 @@ function isMagicItem(item: Equipment): boolean {
 export function createCharacterSheetViewModel(
   savedCharacter: Character,
   rawLookups: CharacterSheetLookupSet,
+  primaryLookups: EntityLookupSet,
 ): CharacterSheetViewModel {
-  const calculationContext = createCharacterCalculationContext(savedCharacter, rawLookups)
+  const calculationContext = createCharacterCalculationContext(
+    savedCharacter,
+    primaryLookups,
+    rawLookups,
+  )
   const classesById = new Map(
     Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
       toClassProfileId(classData.name, classData.source),
       classData,
     ]),
   )
-  const character = deriveSpellProfileState(
-    calculationContext.character,
-    classesById,
-    undefined,
-    calculationContext.raceResolution,
-    { preserveNonracialProfiles: true, spellsByKey: rawLookups.spellsByKey },
-  )
+  const character = calculationContext.character
   const feats = getSelectedFeats(character).map((feat) => ({
     ...feat,
     description:
@@ -773,7 +771,8 @@ export function createCharacterSheetViewModel(
   }))
   const activeClassRoutes = getEffectiveClassChoiceFeatureRoutes(
     character,
-    rawLookups.classChoiceFeatureCatalogs,
+    primaryLookups.classChoiceFeatureCatalogs,
+    character.spells.spellProfiles,
   )
   const companions = (character.classChoiceSelections ?? [])
     .filter(
@@ -855,11 +854,12 @@ export function createCharacterSheetViewModel(
     effects: calculationContext.effects.declarations,
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
+    effectiveSpellProfiles: character.spells.spellProfiles,
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,
     availableClasses: calculationContext.classChoices.classes,
-    classChoiceFeatureCatalogs: rawLookups.classChoiceFeatureCatalogs,
+    classChoiceFeatureCatalogs: primaryLookups.classChoiceFeatureCatalogs,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
@@ -869,7 +869,7 @@ export function createCharacterSheetViewModel(
     getFeatureOptionSelectionStates(
       character,
       calculationContext.classChoices.classes,
-      rawLookups.classChoiceFeatureCatalogs,
+      primaryLookups.classChoiceFeatureCatalogs,
     ),
   )
   const proficiencyCheckNotes = getProficiencyCheckNoteRows(
@@ -878,7 +878,7 @@ export function createCharacterSheetViewModel(
   )
   const optionalActivity = createOptionalClassFeatureActivity(
     character,
-    rawLookups.classChoiceFeatureCatalogs,
+    primaryLookups.classChoiceFeatureCatalogs,
   )
   const declarations = getActiveOptionalClassFeatureDeclarations(optionalActivity)
   const optionalClassFeatureSummaries = declarations.map(

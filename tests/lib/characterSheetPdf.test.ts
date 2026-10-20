@@ -21,9 +21,9 @@ import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/option
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   type CharacterSheetTemplateId,
-  createCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
@@ -32,8 +32,12 @@ import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
-import { sourceTemplateBytes } from '../fixtures/pdfTemplates'
+import { createCurrentCharacterSheetViewModel, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
   character: Character,
@@ -42,14 +46,20 @@ function prepareViewModel(
   backgroundsData: Background5e[] = [],
   spellsData: Spell5e[] = [],
   itemPropertyByAbbr: Record<string, string> = {},
+  currentAuthority?: Parameters<typeof createCharacterSheetViewModel>[2],
 ) {
-  return createCharacterSheetViewModel(character, {
+  const currentLookups = {
     classesByKey: buildClassLookup(classesData),
     racesByKey: buildRaceLookup(racesData),
     backgroundsByKey: buildBackgroundLookup(backgroundsData),
     spellsByKey: buildSpellLookup(spellsData),
     itemPropertyByAbbr,
-  })
+  }
+  return createCharacterSheetViewModel(
+    character,
+    currentLookups,
+    currentAuthority ?? currentLookups,
+  )
 }
 
 function buildCharacterSheetFieldMap(
@@ -400,7 +410,7 @@ describe('characterSheetPdf', () => {
         },
       ],
     })
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       featsByKey: buildFeatLookup([{ name: 'Alert', source: 'PHB', entries: ['Always ready.'] }]),
       itemLookup: buildItemLookup([
         { name: 'Staff of Power', source: 'DMG', type: 'ST', entries: ['A powerful staff.'] },
@@ -507,8 +517,8 @@ describe('characterSheetPdf', () => {
       classChoiceFeatureCatalogs: currentCatalogs,
       creaturesByKey: { 'Beast of the Land|TCE': land, 'Wolf|MM': wolf },
     }
-    const viewModel = createCharacterSheetViewModel(character, inputs)
-    const suspended = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, inputs)
+    const suspended = createCurrentCharacterSheetViewModel(character, {
       ...inputs,
       classChoiceFeatureCatalogs: { ...currentCatalogs, optionalClassFeatureSources: [] },
     })
@@ -1186,7 +1196,7 @@ describe('characterSheetPdf', () => {
   test.runIf(existsSync('data/class/class-wizard.json'))(
     '2024 maps weapons, spellcasting, spell slots, spells, history, and inventory',
     () => {
-      const character = makeCharacterFixture({
+      let character = makeCharacterFixture({
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
         abilityScores: {
           strength: 8,
@@ -1236,22 +1246,28 @@ describe('characterSheetPdf', () => {
           backstory: 'Studied a map written in starlight.',
         },
         spells: {
-          spellProfiles: [
-            {
-              id: 'class:Wizard|PHB',
-              type: 'class',
-              label: 'Wizard (Lv 5)',
-              className: 'Wizard',
-              classSource: 'PHB',
-              castingAbility: 'int',
-              cantrips: ['Fire Bolt|PHB'],
-              spellsKnown: [],
-              preparedSpells: ['Magic Missile|PHB'],
-            },
-          ],
+          spellProfiles: makeCharacterFixture().spells.spellProfiles.filter(
+            (profile) => profile.type === 'special',
+          ),
           spellSlots: { 1: { max: 4, used: 2 } },
         },
       })
+      const fixture = makeManagedClassSpellFixtures()
+      const owner = character.classProgression[0]
+      character = authorManagedClassSpellFixture(character, fixture, [
+        {
+          owner,
+          domain: 'class-cantrip',
+          gain: 1,
+          targets: [{ name: 'Fire Bolt', source: 'PHB' }],
+        },
+        {
+          owner,
+          domain: 'class-spellbook',
+          gain: 1,
+          targets: [{ name: 'Magic Missile', source: 'PHB', prepare: true }],
+        },
+      ])
       const classesData = parseClasses(
         JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
       ) as Class5e[]
@@ -1278,9 +1294,17 @@ describe('characterSheetPdf', () => {
           meta: { ritual: true },
         },
       ]
-      const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
-        A: 'Ammunition',
-      })
+      const viewModel = prepareViewModel(
+        character,
+        classesData,
+        [],
+        [],
+        spellsData,
+        {
+          A: 'Ammunition',
+        },
+        fixture.lookups,
+      )
       const map = mapCharacterSheetViewModel(viewModel, '2024')
 
       expect(map.textFields.Text_61).toBe('Longbow')

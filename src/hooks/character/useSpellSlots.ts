@@ -10,7 +10,6 @@ import {
   type RacialSpellcastingDetail,
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { emptyProvenance } from '@/lib/provenance/ledger'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { useCharacterStore } from '@/store/characterStore'
@@ -58,19 +57,7 @@ export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classesById = useClassesById()
   const calculationContext = useCharacterCalculationContext(character)
-  const spellState = useMemo(() => {
-    if (!character) return null
-    return deriveSpellProfileState(
-      calculationContext?.character ?? character,
-      classesById,
-      undefined,
-      calculationContext?.raceResolution,
-      {
-        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
-        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
-      },
-    )
-  }, [character, classesById, calculationContext])
+  const spellState = calculationContext?.character
   const spellProfiles = spellState?.spells.spellProfiles ?? []
 
   const slotsBreakdown = useMemo(() => {

@@ -2,15 +2,13 @@ import { describe, expect, test } from 'vitest'
 import { buildRaceLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers'
 import { deriveStructuredRaceEffects } from '@/lib/calculations/characterEffects'
-import {
-  buildCharacterSheetFieldMap,
-  createCharacterSheetViewModel,
-} from '@/lib/pdf/characterSheetPdf'
+import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
 import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterReadinessResult } from '@/lib/readiness/characterReadiness'
 import type { Race5e } from '@/types/5etools'
 import type { CharacterEffect, NumericEffectTarget } from '@/types/effects'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const READY: CharacterReadinessResult = {
   status: 'ready',
@@ -20,7 +18,7 @@ const READY: CharacterReadinessResult = {
 }
 
 function createViewModel(equipmentCount = 0) {
-  return createCharacterSheetViewModel(
+  return createCurrentCharacterSheetViewModel(
     makeCharacterFixture({
       equipment: Array.from({ length: equipmentCount }, (_, index) => ({
         id: `item-${index}`,
@@ -176,7 +174,7 @@ describe('getPdfExportPreflight', () => {
         },
       ],
     }) as Race5e[]
-    const vm = createCharacterSheetViewModel(
+    const vm = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({
         originSystem: '2024',
         race: 'Elf',
@@ -206,7 +204,7 @@ describe('getPdfExportPreflight', () => {
   })
 
   test('2014 official warns about clipped prose and an unresolved organization emblem', () => {
-    const viewModel = createCharacterSheetViewModel(
+    const viewModel = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({
         details: { faction: 'The Harpers' },
       }),
@@ -238,7 +236,7 @@ describe('getPdfExportPreflight', () => {
   })
 
   test('2014 custom warns when ammunition, companions, or description cards overflow', () => {
-    const viewModel = createCharacterSheetViewModel(
+    const viewModel = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({
         equipment: [
           { id: 'arrows', name: 'Arrows (20)', type: 'A', quantity: 1, equipped: false },

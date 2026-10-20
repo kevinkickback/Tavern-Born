@@ -14,9 +14,9 @@ import {
 } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries } from '@/lib/compendiumEntries'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
   readGameDataCache,
@@ -31,6 +31,7 @@ import type { Character } from '@/types/character'
 import { characterSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { fixedShieldTemplates, loadFixedShields } from '../fixtures/fixedShieldFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 vi.unmock('@/lib/storage/idb-storage')
 beforeEach(async () => {
@@ -95,7 +96,7 @@ test('actual source-filtered selection/add/equip, details and PDF share concrete
   expect(screen.getByText('While holding this shield, gain +2 AC.')).toBeTruthy()
   const current = useCharacterStore.getState().activeCharacter!
   expect(current.equipment[0].quantity).toBe(2)
-  const vm = createCharacterSheetViewModel(current, data.lookups!)
+  const vm = createCurrentCharacterSheetViewModel(current, data.lookups!)
   expect(vm.effectiveArmorClass).toBe(14)
   expect(mapCharacterSheet2024(vm).textFields.Text_8).toBe('14')
   expect(vm.magicItems[0].description).toContain('gain +2 AC')
@@ -141,7 +142,7 @@ test('command-produced equipped shields share Review and Compendium rules withou
   expect(useCharacterStore.getState().activeCharacter!.equipment).toEqual(current.equipment)
 })
 
-test('durable schema11 reopen, cache recomposition and exact missing/restored rules preserve two owners and prose', async () => {
+test('durable current-format reopen, cache recomposition and exact missing/restored rules preserve two owners and prose', async () => {
   const data = await loadFixedShields()
   useGameDataStore.setState({ gameData: data })
   const item = data.items.find((x) => x.name === '+1 Shield' && x.source === 'XDMG')!
@@ -160,7 +161,7 @@ test('durable schema11 reopen, cache recomposition and exact missing/restored ru
   await useCharacterStore.getState().saveActiveCharacter()
   const stored = await get<{ state: { characters: Character[] } }>('character-storage')
   const saved = characterSchema.parse(stored!.state.characters[0])
-  expect(saved.schemaVersion).toBe(11)
+  expect(saved.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
   expect(saved.equipment).toEqual(JSON.parse(JSON.stringify(equipment)))
   expect(JSON.stringify(saved)).not.toContain('magicVariantGenerated')
   const ledger = saved.provenance
@@ -210,7 +211,7 @@ test('durable schema11 reopen, cache recomposition and exact missing/restored ru
     expect(screen.queryAllByText('Restore rules for +1 Shield')).toHaveLength(
       expected === 12 ? 2 : 0,
     )
-    const vm = createCharacterSheetViewModel(current, catalog.lookups!)
+    const vm = createCurrentCharacterSheetViewModel(current, catalog.lookups!)
     expect(vm.magicItems[0].description).toBe('Player shield note')
     expect(
       getPdfExportPreflight(

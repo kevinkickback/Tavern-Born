@@ -2,12 +2,23 @@
 
 Current admission is implemented in [the version constant](../../src/lib/schema/characterSchemaVersion.ts),
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
-The current character format is **11**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
+The current character format is **12**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
 
 The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
 are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
+
+Format12 replaces ordinary numeric class spell selections with `managedClassSpellChoices` and a
+monotonic `managedClassSpellRevision` allocator. Each choice has its actual class/subclass owner,
+domain, exact casting declaration, earned class level and ordinal; it saves an exact target printing,
+positive revision, class-list policy and optional learned preparation request. It saves no applied
+snapshot or activity flag. Strict admission audits the choice/profile/provenance relation in both
+directions. Arbitrary class-choice spell tags, unowned numeric membership, invalid reserved IDs,
+duplicate spell/slot identities, counters and preparation relationships reject without loaded rules.
+An admitted relation establishes saved ownership, never current source access. Older numeric profile
+rows, inferred attribution and `spellSwaps` are not converted or accepted. Format11 files must be
+recreated, as with other prerelease breaking changes. See [class spell selection](spell-selection.md).
 The additive `optionalClassFeatureAdoptions` collection binds the actual full class/subclass owner,
 complete reviewed target and enclosing earned gain. Strict admission rejects unknown roots, children
 as roots, duplicate identities and conflicting families. Absence is unselected; no adoption or

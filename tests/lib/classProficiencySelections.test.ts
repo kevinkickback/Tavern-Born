@@ -30,10 +30,7 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
@@ -42,6 +39,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { cannySource, makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 type Fixture = ReturnType<typeof makeCannyFixture>
 const authority = (f: Fixture) => ({ classes: f.data.classes, catalogs: f.catalogs })
@@ -663,7 +661,7 @@ test('offline admission rejects forged applied tags and relations but admits una
 test('real PDF view model mechanical fields use effective proficiencies with descriptions enabled or omitted', () => {
   const f = makeCannyFixture(),
     saved = configured(f)
-  const vm = createCharacterSheetViewModel(saved, input(f))
+  const vm = createCurrentCharacterSheetViewModel(saved, input(f))
   expect(vm.character.proficiencies.expertise).toEqual(['survival'])
   expect(vm.character.proficiencies.languages).toEqual(saved.proficiencies.languages)
   const absent = {
@@ -674,7 +672,7 @@ test('real PDF view model mechanical fields use effective proficiencies with des
       classFeatureCandidates: new Map(),
     },
   }
-  const missing = createCharacterSheetViewModel(saved, absent)
+  const missing = createCurrentCharacterSheetViewModel(saved, absent)
   expect(missing.character.proficiencies.expertise).toEqual([])
   expect(withoutSheetDescriptions(missing).character.proficiencies.languages).toEqual([])
 })

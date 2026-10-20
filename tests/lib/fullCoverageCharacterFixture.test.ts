@@ -2,13 +2,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import {
-  getClassResourceDefs,
-  getClassSpellGainAtLevel,
-  getEffectiveSpellcastingClassData,
-  getSelectedSubclassData,
-} from '@/lib/5etools/classData'
+import { getClassResourceDefs, getSelectedSubclassData } from '@/lib/5etools/classData'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { DataFilter } from '@/lib/5etools/filters'
 import {
   buildBackgroundLookup,
@@ -20,8 +17,6 @@ import {
 } from '@/lib/5etools/lookups'
 import {
   parseBackgrounds,
-  parseClasses,
-  parseClassFeatures,
   parseCreatures,
   parseFeats,
   parseItemMasteries,
@@ -33,6 +28,7 @@ import {
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -51,6 +47,7 @@ import {
   getClassChoiceOptionKey,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   buildCharacterSheetFieldMap,
@@ -85,6 +82,7 @@ import type {
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterSchema } from '@/types/characterSchema'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const dataRoot = join(process.cwd(), 'data')
 const fixtureRoot = join(process.cwd(), 'tests', 'fixtures')
@@ -115,10 +113,22 @@ function loadIndexedPayloads(directory: 'class' | 'spells'): unknown[] {
 
 const classPayloads = hasConfiguredCorpus ? loadIndexedPayloads('class') : []
 const spellPayloads = hasConfiguredCorpus ? loadIndexedPayloads('spells') : []
-const classes = classPayloads.flatMap((payload) => parseClasses(payload)) as Class5e[]
-const classFeatures = classPayloads.flatMap((payload) =>
-  parseClassFeatures(payload),
-) as ClassFeature[]
+const castingData = classPayloads.length
+  ? composeGameDataLayers(
+      classPayloads.map((payload, index) => {
+        const parsed = parseClassDocument(payload, `fixture-corpus:${index}`)
+        return {
+          ...createEmptyGameData(),
+          classes: parsed.classes as Class5e[],
+          classFeatures: parsed.classFeatures as ClassFeature[],
+          classCastingSources: parsed.classCastingSources,
+          optionalClassFeatureSources: parsed.optionalClassFeatureSources,
+        }
+      }),
+    )
+  : createEmptyGameData()
+const classes = castingData.classes
+const classFeatures = castingData.classFeatures
 const rawClassFeatures = classPayloads.flatMap((payload) => [
   ...collection(payload, 'classFeature'),
   ...collection(payload, 'subclassFeature'),
@@ -206,6 +216,7 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
     ...buildClassChoiceFeatureCatalogs({
       classes: DataFilter.filterClasses(classes, { sources: character.allowedSources }),
       classFeatures: classFeatures.filter(fromAllowedSource),
+      classCastingSources: castingData.classCastingSources,
       skills: collection(readJson(join(dataRoot, 'skills.json')), 'skill').filter((row) =>
         fromAllowedSource(row as { source?: string }),
       ),
@@ -234,10 +245,6 @@ function getStoredSpellReferences(character: Character): Array<{
       ...(choice.pool ?? []),
       ...choice.selected,
     ])
-    const swapReferences = Object.values(profile.spellSwaps ?? {}).flatMap((swap) => [
-      swap.removed,
-      swap.added,
-    ])
     return [
       ...profile.cantrips,
       ...profile.spellsKnown,
@@ -245,7 +252,6 @@ function getStoredSpellReferences(character: Character): Array<{
       ...(profile.fixedSpells ?? []),
       ...(profile.alwaysPreparedSpells ?? []),
       ...choiceReferences,
-      ...swapReferences,
     ].map((reference) => ({ profile, reference }))
   })
 }
@@ -262,7 +268,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(character.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
     expect(character.originSystem).toBe(edition)
     expect(character.classProgression).toHaveLength(3)
-    expect(character.spells.spellProfiles).toHaveLength(4)
+    expect(character.spells.spellProfiles).toHaveLength(character.classProgression.length + 2)
     expect(character.equipment).toHaveLength(90)
     expect(character.features).toHaveLength(21)
     expect(character.proficiencies.skills).toHaveLength(18)
@@ -283,7 +289,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       classChoiceClasses: classChoiceCatalogs.classes,
       classChoiceFeatureCatalogs: classChoiceCatalogs,
     }
-    const viewModel = createCharacterSheetViewModel(character, inputs)
+    const viewModel = createCharacterSheetViewModel(character, inputs, inputs)
     expect(viewModel.organizationImage).toBe(organization?.imagePath)
 
     const calculation = createCharacterCalculationContext(character, inputs)
@@ -467,15 +473,15 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       if (!entry) continue
 
       const subclassData = getSelectedSubclassData(classData, entry)
-      const spellcastingData = getEffectiveSpellcastingClassData(classData, subclassData)
       const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
         character,
         className: entry.name,
         classSource: entry.source,
       })
       for (let level = 1; level <= entry.levels; level += 1) {
-        const spellGain = getClassSpellGainAtLevel(spellcastingData, level, calculation.classes)
-        const requiredSpellChoices = spellGain.cantrips + spellGain.spells
+        const requiredSpellChoices = getManagedClassSpellSlots(entry).filter(
+          (slot) => slot[3] === level,
+        ).length
         if (requiredSpellChoices === 0) continue
         expect(
           spellSelectionsByLevel.get(level),
@@ -559,8 +565,18 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
   test('each ruleset fixture exercises its own fixed-template capacity boundary', () => {
     const character2014 = loadFixture('2014')
     const character2024 = loadFixture('2024')
-    const viewModel2014 = createCharacterSheetViewModel(character2014, lookups)
-    const viewModel2024 = createCharacterSheetViewModel(character2024, lookups)
+    const inputs2014 = {
+      ...lookups,
+      classChoiceClasses: buildClassChoiceCatalogs(character2014).classes,
+      classChoiceFeatureCatalogs: buildClassChoiceCatalogs(character2014),
+    }
+    const inputs2024 = {
+      ...lookups,
+      classChoiceClasses: buildClassChoiceCatalogs(character2024).classes,
+      classChoiceFeatureCatalogs: buildClassChoiceCatalogs(character2024),
+    }
+    const viewModel2014 = createCharacterSheetViewModel(character2014, inputs2014, inputs2014)
+    const viewModel2024 = createCharacterSheetViewModel(character2024, inputs2024, inputs2024)
     const map2014 = buildCharacterSheetFieldMap(viewModel2014, '2014')
     const map2024 = buildCharacterSheetFieldMap(viewModel2024, '2024')
 
@@ -601,7 +617,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         character.details.organizationSelectionKey,
     )?.imagePath
     expect(organizationImagePath).toBeTruthy()
-    expect(createCharacterSheetViewModel(character, lookups).organizationImage).toBe(
+    expect(createCurrentCharacterSheetViewModel(character, lookups).organizationImage).toBe(
       organizationImagePath,
     )
 
@@ -704,7 +720,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         true,
       )
       expect(
-        createCharacterSheetViewModel(character, {
+        createCurrentCharacterSheetViewModel(character, {
           ...lookups,
           classChoiceClasses: catalogs.classes,
           classChoiceFeatureCatalogs: catalogs,
@@ -734,9 +750,11 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       classSource: classData.source,
     })
     for (let level = 1; level <= 3; level += 1) {
-      const required = getClassSpellGainAtLevel(classData, level, calculation.classes)
-      if (required.spells > 0) {
-        expect(selectedSpells.get(level)).toHaveLength(required.spells)
+      const required = getManagedClassSpellSlots(character.classProgression[0]).filter(
+        (slot) => slot[3] === level,
+      ).length
+      if (required > 0) {
+        expect(selectedSpells.get(level)).toHaveLength(required)
       }
     }
     const readiness = getCharacterReadiness(character, {

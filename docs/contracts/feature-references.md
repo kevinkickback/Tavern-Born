@@ -153,7 +153,7 @@ Barbarian owners retain the original PHB targets. Both the declared intro-to-Aur
 current owner-scoped source parents must qualify before any option is eligible. A structured
 `subclass-options:` ID binds the
 actual owner, exact Aura target, environment group and earned gain. Strict admission checks this
-new saved relation without requiring live catalogs; character format 11 stays additive.
+new saved relation without requiring live catalogs; these relations remain additive within character format 12.
 
 One choice governs earned Storm Soul, Shielding Storm and Raging Storm. Shared filtered source
 resolution supplies Builder, readiness, retained details, calculations, Actions and both PDF
@@ -221,7 +221,7 @@ or action is granted; other conditional Ranger prose retains its source presenta
 The shared selector handles Choose/Edit, unchanged confirmation, Cancel, per-gain Replace/Clear
 and removal-only recovery after source/class loss. Confirmation validates current source authority
 and distinctness against the latest character. Other earned gains and independent/manual grants
-survive replacement/removal. Character format 11 stays additive; parsed cache invalidation rebuilds
+survive replacement/removal. These relations remain additive within character format 12; parsed cache invalidation rebuilds
 normalization and source audits. Complete Ranger automation and legal levels 1–20 remain unqualified.
 
 ## Canny proficiencies
@@ -260,7 +260,7 @@ both PDF families use the same effective character and provenance. Shared Choose
 unchanged confirmation and removal-only recovery preserve these boundaries. Canny is passive and
 introduces no action or new generic prerequisite semantics.
 
-Character format 11 remains additive. Offline admission validates the reserved identity, owner,
+These relations remain additive within character format 12. Offline admission validates the reserved identity, owner,
 domain, slot, quota and bidirectional applied-tag relation while allowing unavailable intent without
 applied tags. [Parsed cache invalidation](../data-ingestion.md#cache-compatibility) rebuilds source
 normalization. Adopted TCE Roving/Tireless visibility follows the earned child activity above;

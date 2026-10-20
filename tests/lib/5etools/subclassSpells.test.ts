@@ -44,6 +44,28 @@ describe('parseSubclassSpells', () => {
     expect(parseSubclassSpells([{ prepared: { '1': ['bless'] } }], 0)).toEqual([])
   })
 
+  test('source-preserving fixed grants apply the upstream default only to omitted printings', () => {
+    expect(
+      parseSubclassSpells(
+        [
+          {
+            known: { 3: ['mage hand#c'] },
+            prepared: { 3: ['bless', 'bless|XPHB'] },
+            innate: { 3: { daily: { '1': ['misty step', 'misty step|TCE'] } } },
+          },
+        ],
+        3,
+        { preserveSource: true, defaultSource: 'PHB' },
+      ),
+    ).toEqual([
+      { spellName: 'bless|PHB', level: 3, isCantrip: false, mode: 'prepared' },
+      { spellName: 'bless|XPHB', level: 3, isCantrip: false, mode: 'prepared' },
+      { spellName: 'mage hand|PHB', level: 3, isCantrip: true, mode: 'known' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'innate' },
+      { spellName: 'misty step|TCE', level: 3, isCantrip: false, mode: 'innate' },
+    ])
+  })
+
   test('source-preserving decoding retains printings and accepts cantrip suffixes on either side', () => {
     const blocks = [
       {

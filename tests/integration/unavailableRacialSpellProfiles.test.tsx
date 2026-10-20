@@ -9,7 +9,6 @@ import {
   setRacialCastingAbility,
   setRacialSpellChoice,
 } from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e } from '@/types/5etools'
@@ -23,6 +22,7 @@ import {
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { renderSpellEditing } from '../fixtures/spellEditing'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
@@ -184,7 +184,7 @@ test.each([
   expect(
     result.current.slots.spellProfiles.find((profile) => profile.id === 'class:Cleric|PHB')
       ?.spellsKnown,
-  ).toContain('burning hands')
+  ).toEqual([])
   const { result: actions } = renderHook(() => useCharacterActions(character))
   const savedSpell = expect.objectContaining({
     name: 'Shocking Grasp',
@@ -193,7 +193,7 @@ test.each([
   })
   expect.soft(actions.current).toContainEqual(savedSpell)
   expect
-    .soft(createCharacterSheetViewModel(character, data.lookups!).actions)
+    .soft(createCurrentCharacterSheetViewModel(character, data.lookups!).actions)
     .toContainEqual(savedSpell)
   expect(character).toEqual(before)
 
@@ -214,7 +214,7 @@ test.each([
   expect(racialProfiles(result.current.slots.spellProfiles)).toEqual(savedRacial)
 })
 
-test('raw fallback retains compatible racial choices while class level grants continue deriving', () => {
+test('raw fallback retains compatible racial choices without unproved class benefits', () => {
   install([parent])
   const character = { ...savedCharacter(), allowedSources: ['PHB'] }
   setActiveCharacter(character)
@@ -235,7 +235,7 @@ test('raw fallback retains compatible racial choices while class level grants co
   expect(
     result.current.slots.spellProfiles.find((profile) => profile.id === 'class:Cleric|PHB')
       ?.spellsKnown,
-  ).toContain('flaming sphere')
+  ).toEqual([])
   expect(racialProfiles(result.current.slots.spellProfiles)[0]?.cantrips).toEqual([
     'Shocking Grasp|PHB',
   ])
@@ -332,7 +332,7 @@ test('clearing an unavailable selected child retracts racial ownership without r
   expect(
     result.current.slots.spellProfiles.find((profile) => profile.id === 'class:Cleric|PHB')
       ?.spellsKnown,
-  ).toContain('burning hands')
+  ).toEqual([])
   act(() => {
     install([parent])
     result.current.raceMutations.applySubraceChange(parent, child)
@@ -342,7 +342,7 @@ test('clearing an unavailable selected child retracts racial ownership without r
   expect(returned.choices?.[0].selected).toEqual([])
 })
 
-test('unavailable independent class metadata preserves its saved fixed profile while racial removal resolves', () => {
+test('unavailable class metadata suspends fixed benefits while retaining the saved profile and resolving racial removal', () => {
   install([{ ...parent, subraces: [{ ...child, _isVersion: true, additionalSpells: [] }] }], [])
   const character = savedCharacter()
   const classProfile = character.spells.spellProfiles[0]
@@ -353,7 +353,8 @@ test('unavailable independent class metadata preserves its saved fixed profile w
   const { result } = renderSpellEditing()
   expect(
     result.current.slots.spellProfiles.find((profile) => profile.id === classProfile.id),
-  ).toEqual(classProfile)
+  ).toMatchObject({ cantrips: [], spellsKnown: [], preparedSpells: [] })
+  expect(character.spells.spellProfiles[0]).toEqual(classProfile)
   expect(racialProfiles(result.current.slots.spellProfiles)).toEqual([])
 })
 
@@ -430,13 +431,13 @@ test.each([
   act(() => {
     restoredData = installSelection([parent])
   })
-  const pdf = createCharacterSheetViewModel(character, restoredData.lookups!)
+  const pdf = createCurrentCharacterSheetViewModel(character, restoredData.lookups!)
   for (const actions of [result.current, pdf.actions]) {
     expect.soft(actions).toContainEqual(savedAction)
     const matching = actions.filter((action) => action.name === 'Shocking Grasp')
-    expect.soft(matching).toHaveLength(targetAvailability === 'available' ? 2 : 1)
+    expect.soft(matching).toHaveLength(1)
     if (targetAvailability === 'available')
-      expect(actions).toContainEqual(
+      expect(actions).not.toContainEqual(
         expect.objectContaining({
           name: 'Shocking Grasp',
           kind: 'bonus-action',
@@ -448,7 +449,7 @@ test.each([
   expect(character).toEqual(before)
 })
 
-test('equivalent legacy and qualified references resolve to one action after exact race restoration', () => {
+test('unowned class aliases reject admission and cannot add an action after exact native restoration', () => {
   const data = install([parent], [{ ...cleric, subclasses: [] }])
   data.spells = [shockingGrasp]
   data.lookups = buildGameDataLookups(data)
@@ -456,11 +457,12 @@ test('equivalent legacy and qualified references resolve to one action after exa
   const character = savedCharacter()
   character.classProgression = [{ name: 'Cleric', source: 'PHB', levels: 2 }]
   character.spells.spellProfiles[0].cantrips = ['Shocking Grasp', 'Shocking Grasp|PHB']
+  expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
   setActiveCharacter(character)
   const { result } = renderHook(() => useCharacterActions(character))
   for (const actions of [
     result.current,
-    createCharacterSheetViewModel(character, data.lookups!).actions,
+    createCurrentCharacterSheetViewModel(character, data.lookups!).actions,
   ]) {
     expect(actions.filter((action) => action.name === 'Shocking Grasp')).toEqual([
       expect.objectContaining({

@@ -16,7 +16,6 @@ import {
   selectSubclass,
 } from '@/lib/character/commands/classCommands'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSourceReferences } from '@/lib/readiness/sourceReadiness'
@@ -25,6 +24,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function fixture() {
   const [wizard] = parseClasses({
@@ -79,10 +79,9 @@ function fixture() {
     provenance: selected.provenanceUpdate,
     spells: { ...base.spells, spellProfiles: [] },
   }
-  const character = deriveSpellProfileState(
-    selectedCharacter,
-    new Map([['class:Wizard|PHB', wizard]]),
-  )
+  const character = createCharacterCalculationContext(selectedCharacter, {
+    classesByKey: buildClassLookup([wizard]),
+  }).character
   const reopen = (saved: Character) =>
     characterPersistenceSchema.parse(JSON.parse(JSON.stringify(saved)))
   return { wizard, character: reopen(character), reopen }
@@ -114,7 +113,7 @@ test.each([
   const actions = deriveRulesTextActions(character, undefined, { classes: context.classes })
   expect.soft(actions.map((action) => action.name)).toEqual(['Beacon'])
   expect.soft(actions).toEqual(deriveRulesTextActions(character, undefined, { classes: [wizard] }))
-  const sheet = createCharacterSheetViewModel(reopen(character), lookups)
+  const sheet = createCharacterSheetViewModel(reopen(character), lookups, lookups)
   expect.soft(sheet.actions).toEqual(actions)
   expect.soft(sheet.maxHP).toBe(6)
   expect.soft(sheet.spellSlots.shared[1]?.max).toBe(2)
@@ -147,7 +146,7 @@ test.each([
   })
   expect.soft(saved.hitPoints.current).toBe(10)
   expect.soft(saved.classProgression).toEqual([{ name: 'Wizard', source: 'PHB', levels: 2 }])
-  expect.soft(createCharacterSheetViewModel(saved, lookups).maxHP).toBe(10)
+  expect.soft(createCurrentCharacterSheetViewModel(saved, lookups).maxHP).toBe(10)
   const lowered = applyLevelDown(
     saved,
     saved.provenance!,
@@ -160,7 +159,7 @@ test.each([
   })
   expect.soft(undone.classProgression).toEqual(character.classProgression)
   expect.soft(undone.hitPointGains).toEqual([])
-  expect.soft(createCharacterSheetViewModel(undone, lookups).actions).toEqual(actions)
+  expect.soft(createCharacterSheetViewModel(undone, lookups, lookups).actions).toEqual(actions)
 })
 
 test('missing and restored exact class rules never borrow the competing printing or rewrite saved state', () => {
@@ -175,12 +174,14 @@ test('missing and restored exact class rules never borrow the competing printing
       issue.id.startsWith('source:class:'),
     ),
   ).toBe(true)
-  expect(createCharacterSheetViewModel(character, missing).actions).toEqual([])
+  expect(createCurrentCharacterSheetViewModel(character, missing).actions).toEqual([])
   const restored = {
     classesByKey: buildClassLookup([other, { ...wizard, name: ' WIZARD ', source: ' phb ' }]),
   }
   expect(
-    createCharacterSheetViewModel(reopen(character), restored).actions.map((action) => action.name),
+    createCharacterSheetViewModel(reopen(character), restored, restored).actions.map(
+      (action) => action.name,
+    ),
   ).toEqual(['Beacon'])
   expect(JSON.stringify(character)).toBe(saved)
 })
@@ -236,8 +237,8 @@ test.each([
   )
   expect(slots.shared).toEqual({ 1: { max: 4, used: 0 }, 2: { max: 2, used: 0 } })
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).spellSlots
-      .shared,
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+      .spellSlots.shared,
   ).toEqual(slots.shared)
 })
 
@@ -277,7 +278,7 @@ test.each([
     classResources: { [resourceId]: 0 },
   })
   const view = (cls: Class5e) =>
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup([cls]) })
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup([cls]) })
   expect(view(refreshed).classResourceRows).toEqual(view(baseline).classResourceRows)
   const [other] = DataFilter.filterClasses([{ ...original, source: 'OTHER' }], {
     sources: ['OTHER'],

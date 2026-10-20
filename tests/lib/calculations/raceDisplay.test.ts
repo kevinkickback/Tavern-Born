@@ -5,8 +5,8 @@ import {
   getSpellProfileDisplayLabel,
   getSubraceDisplayName,
 } from '@/lib/calculations/raceDisplay'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 const selection = { race: 'Elf', subrace: 'High', subraceSource: 'PHB' }
 
@@ -65,7 +65,7 @@ test('full-context summaries work without loaded metadata and preserve stored id
   expect(getRaceDisplayName(character.race, character.subrace)).toBe(
     'Dragonborn (Draconblood: Brass)',
   )
-  expect(createCharacterSheetViewModel(character, {}).raceSummary).toBe(
+  expect(createCurrentCharacterSheetViewModel(character, {}).raceSummary).toBe(
     'Dragonborn (Draconblood: Brass)',
   )
   expect(JSON.stringify(character)).toBe(before)

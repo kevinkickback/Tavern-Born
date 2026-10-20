@@ -147,9 +147,12 @@ Wholly stale PDF selections follow the usual automatic fallback. Upstream UID de
 materialized current feature metadata still determine canonical data identity; they are not saved
 character compatibility adapters.
 
-Class-page spell choices and replacements use pure spell commands. `useSpellProvenanceMutations`
-exposes only `setClassSpellSelectionsAtLevel` and `swapClassSpellAtLevel`; general Spells-page writes
-use `useSpellProfileMutations`, which already commits profile and provenance changes together.
+Class-page numeric spell choices use addressed pure commands and one atomic Finish. The actual
+class/subclass owner, casting declaration, earned level and ordinal determine ownership; profile
+order and old tags cannot infer it. `useSpellProvenanceMutations` exposes `finishClassSpellChoices`.
+Spells-page learned Prepare/Clear uses that same actor; generic Add/Set/Remove edits Bonus only.
+Daily preparation and native racial setup keep their separate validated commands. Every adapter reads
+the latest saved character and ledger, preserving unrelated intent; see [spell selection](spell-selection.md).
 
 The bonus picker blocks spell targets already known through any profile. Existing overlapping
 owners remain independent when later class or origin changes grant an already selected bonus spell.

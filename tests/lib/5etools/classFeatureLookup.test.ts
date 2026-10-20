@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 const wizard: ClassFeature = {
   name: 'Shared',
@@ -326,7 +326,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
       },
     ])
     expect(actions[0]?.id).toMatch(new RegExp(`^${kind}-feature:`))
-    expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
+    expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual(actions)
     expect({ character, context }).toEqual(before)
   })
 
@@ -344,7 +344,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
         source: { kind },
       },
     ])
-    expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
+    expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
 
   test('keeps unique saved-feature text enrichment without rebinding its identity', () => {
@@ -362,7 +362,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
   test('does not gain an action before the qualified feature is earned', () => {
     const { character, context } = earnedFeatureFixture(kind, '', [wizard, bard], 3)
     expect(deriveRulesTextActions(character, undefined, context)).toEqual([])
-    expect(createCharacterSheetViewModel(character, context).actions).toEqual([])
+    expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual([])
   })
 
   test.each([
@@ -388,7 +388,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
         source: { kind },
       },
     ])
-    expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
+    expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
 
   test('keeps different saved and earned feature printings separate', () => {
@@ -444,7 +444,7 @@ describe('earned class-action canonical source defaults', () => {
         source: { source: classSource },
       },
     ])
-    expect(createCharacterSheetViewModel(character, context).actions).toEqual(actions)
+    expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
 
   test('preserves separately emitted automatic actions with different owners and spelling', () => {

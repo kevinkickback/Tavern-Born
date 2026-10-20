@@ -34,7 +34,7 @@ describe('prerequisites', () => {
             classSource: 'PHB',
             cantrips: ['Fire Bolt'],
             spellsKnown: ['Shield'],
-            preparedSpells: ['Magic Missile'],
+            preparedSpells: ['Shield'],
           },
         ],
         spellSlots: {},
@@ -44,12 +44,18 @@ describe('prerequisites', () => {
     const snapshot = buildPrerequisiteSnapshot({
       character,
       effectiveAbilityScores: character.abilityScores,
+      effectiveSpellProfiles: character.spells.spellProfiles,
     })
 
     expect(snapshot.progression).toEqual(character.classProgression)
     expect(snapshot.spells).toEqual({
       cantrips: ['Fire Bolt'],
       spellsKnown: ['Shield'],
+      preparedSpells: ['Shield'],
+    })
+    expect(buildPrerequisiteSnapshot({ character }).spells).toEqual({
+      cantrips: [],
+      spellsKnown: [],
       preparedSpells: [],
     })
   })

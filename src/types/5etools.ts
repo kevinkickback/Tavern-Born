@@ -1,3 +1,5 @@
+import type { ClassCastingSourceProof } from './classCasting'
+
 export interface Race5e {
   name: string
   source: string
@@ -567,7 +569,7 @@ export interface SpellDuration {
 
 interface SubclassReference {
   class: { name: string; source: string }
-  subclass: { name: string; source: string }
+  subclass: { name: string; shortName?: string; source: string }
 }
 
 export interface SourceBook {
@@ -665,6 +667,8 @@ export interface GameData {
   classFeatures: ClassFeature[]
   /** Separate raw source evidence; never appended to independently audited feature bodies. */
   optionalClassFeatureSources?: OptionalClassFeatureSourceProof[]
+  /** Independent declaration and actual parent/table-provider evidence for numeric casting. */
+  classCastingSources?: ClassCastingSourceProof[]
   /** Compact current book-only optional sections, including exact unavailable identities. */
   optionalClassSections?: OptionalClassSectionSource[]
   creatures?: Creature5e[]

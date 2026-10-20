@@ -1,0 +1,29 @@
+{
+  "name": "Celestial Patron",
+  "shortName": "Celestial",
+  "source": "XPHB",
+  "className": "Warlock",
+  "classSource": "XPHB",
+  "page": 160,
+  "edition": "one",
+  "additionalSpells": [
+    {
+      "known": {
+        "1": ["sacred flame|xphb#c", "light|xphb#c"]
+      },
+      "prepared": {
+        "3": ["aid|xphb", "cure wounds|xphb", "guiding bolt|xphb", "lesser restoration|xphb"],
+        "5": ["daylight|xphb", "revivify|xphb"],
+        "7": ["guardian of faith|xphb", "wall of fire|xphb"],
+        "9": ["greater restoration|xphb", "summon celestial|xphb"]
+      }
+    }
+  ],
+  "subclassFeatures": [
+    "Celestial Patron|Warlock|XPHB|Celestial|XPHB|3",
+    "Radiant Soul|Warlock|XPHB|Celestial|XPHB|6",
+    "Celestial Resilience|Warlock|XPHB|Celestial|XPHB|10",
+    "Searing Vengeance|Warlock|XPHB|Celestial|XPHB|14"
+  ],
+  "hasFluffImages": true
+}

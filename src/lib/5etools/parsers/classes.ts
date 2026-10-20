@@ -1,3 +1,4 @@
+import { auditClassCastingSources } from '@/lib/5etools/classCastingSource'
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import {
   decodeClassFeatureReference,
@@ -7,6 +8,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { auditClassProficiencySources } from '@/lib/5etools/classProficiencyChoices'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { getParsedClassSpellSlotProgression } from '@/lib/5etools/classSpellSlotTable'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import {
   auditDirectFixedClassDeclarations,
@@ -42,17 +44,6 @@ function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, Parse
   return index
 }
 
-function getClassSpellSlotProgression(classObj: ParsedObject): number[][] | undefined {
-  const groups = asArray(classObj.classTableGroups)
-  for (const group of groups) {
-    const rows = asObject(group).rowsSpellProgression
-    if (!Array.isArray(rows)) continue
-    return rows.filter(Array.isArray) as number[][]
-  }
-
-  return undefined
-}
-
 function getIsSpellcasterClass(classObj: ParsedObject): boolean {
   if (typeof classObj.isSpellcaster === 'boolean') {
     return classObj.isSpellcaster
@@ -63,7 +54,7 @@ function getIsSpellcasterClass(classObj: ParsedObject): boolean {
   const casterProgression = normalizeKey(classObj.casterProgression)
   if (casterProgression && casterProgression !== 'none') return true
 
-  return !!getClassSpellSlotProgression(classObj)
+  return !!getParsedClassSpellSlotProgression(classObj)
 }
 
 function parseClassFeatureReference(
@@ -248,7 +239,7 @@ function parsePreparedClasses(data: unknown): unknown[] {
     const key = `${String(clsObj.name ?? '')}|${String(clsObj.source ?? '')}`
     const nested = subclassMap.get(key)
     const classFeatureRefs = parseClassFeatureReferences(clsObj, classFeatureIndex)
-    const spellSlotProgression = getClassSpellSlotProgression(clsObj)
+    const spellSlotProgression = getParsedClassSpellSlotProgression(clsObj)
 
     return {
       ...clsObj,
@@ -437,6 +428,10 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     subclasses: materializedSubclasses,
     subclassFeatures: materialized,
   })
+  const classCastingSources = auditClassCastingSources(data, origin, {
+    subclasses: materializedSubclasses,
+    subclassFeatures: materialized,
+  })
   const classFeature = auditFixedClassFeatures(
     auditClassProficiencySources(
       auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject)),
@@ -450,13 +445,21 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     origin,
   )
   if (!records.length)
-    return { ...obj, class: classes, classFeature, subclass, optionalClassFeatureSources }
+    return {
+      ...obj,
+      class: classes,
+      classFeature,
+      subclass,
+      optionalClassFeatureSources,
+      classCastingSources,
+    }
   return {
     ...obj,
     class: classes,
     classFeature,
     subclass,
     optionalClassFeatureSources,
+    classCastingSources,
     subclassFeature: auditSubclassProficiencyFeatures(
       records,
       auditFeatureOptionSources(materialized),
@@ -473,6 +476,7 @@ export function parseClassDocument(
   classes: unknown[]
   classFeatures: unknown[]
   optionalClassFeatureSources: import('@/types/5etools').OptionalClassFeatureSourceProof[]
+  classCastingSources: import('@/types/classCasting').ClassCastingSourceProof[]
 } {
   const prepared = prepareClassDocument(data, sourceId)
   return {
@@ -481,6 +485,9 @@ export function parseClassDocument(
     optionalClassFeatureSources: asArray(
       asObject(prepared).optionalClassFeatureSources,
     ) as import('@/types/5etools').OptionalClassFeatureSourceProof[],
+    classCastingSources: asArray(
+      asObject(prepared).classCastingSources,
+    ) as import('@/types/classCasting').ClassCastingSourceProof[],
   }
 }
 

@@ -376,27 +376,22 @@
         "alwaysPrepared": false
       },
       {
+        "id": "class:Fighter|PHB",
+        "type": "class",
+        "label": "Fighter (Lv 5)",
+        "className": "Fighter",
+        "classSource": "PHB",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": false
+      },
+      {
         "id": "class:Cleric|PHB",
         "type": "class",
         "label": "Cleric (Lv 5)",
         "className": "Cleric",
         "classSource": "PHB",
-        "fixedSpells": [
-          "Bless|PHB",
-          "Cure Wounds|PHB",
-          "Lesser Restoration|PHB",
-          "Spiritual Weapon|PHB",
-          "Beacon of Hope|PHB",
-          "Revivify|PHB"
-        ],
-        "alwaysPreparedSpells": [
-          "Bless|PHB",
-          "Cure Wounds|PHB",
-          "Lesser Restoration|PHB",
-          "Spiritual Weapon|PHB",
-          "Beacon of Hope|PHB",
-          "Revivify|PHB"
-        ],
         "cantrips": [
           "Guidance|PHB",
           "Light|PHB",
@@ -404,12 +399,12 @@
           "Resistance|PHB"
         ],
         "spellsKnown": [
-          "Bless|PHB",
-          "Cure Wounds|PHB",
-          "Lesser Restoration|PHB",
-          "Spiritual Weapon|PHB",
-          "Beacon of Hope|PHB",
-          "Revivify|PHB"
+          "bless|PHB",
+          "cure wounds|PHB",
+          "lesser restoration|PHB",
+          "spiritual weapon|PHB",
+          "beacon of hope|PHB",
+          "revivify|PHB"
         ],
         "preparedSpells": [
           "Bane|PHB",
@@ -421,17 +416,28 @@
           "Animate Dead|PHB",
           "Bestow Curse|PHB"
         ],
+        "fixedSpells": [
+          "bless|PHB",
+          "cure wounds|PHB",
+          "lesser restoration|PHB",
+          "spiritual weapon|PHB",
+          "beacon of hope|PHB",
+          "revivify|PHB"
+        ],
+        "alwaysPreparedSpells": [
+          "bless|PHB",
+          "cure wounds|PHB",
+          "lesser restoration|PHB",
+          "spiritual weapon|PHB",
+          "beacon of hope|PHB",
+          "revivify|PHB"
+        ],
         "alwaysPrepared": false
       },
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Special (Unrestricted)",
-        "fixedSpells": [
-          "Light|PHB",
-          "Mage Hand|PHB",
-          "Detect Magic|PHB"
-        ],
+        "label": "Bonus Spells",
         "cantrips": [
           "Light|PHB",
           "Mage Hand|PHB"
@@ -440,6 +446,11 @@
           "Detect Magic|PHB"
         ],
         "preparedSpells": [],
+        "fixedSpells": [
+          "Light|PHB",
+          "Mage Hand|PHB",
+          "Detect Magic|PHB"
+        ],
         "alwaysPrepared": true
       },
       {
@@ -2826,112 +2837,26 @@
       ]
     },
     "spells": {
-      "acid splash": [
+      "light": [
         {
           "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceName": "Cleric",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Wizard",
+          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cphb%7C1%7Cphb%22%2C1%2C1%5D",
           "grantSource": "PHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
-        }
-      ],
-      "blade ward": [
+        },
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
           "sourceRef": "PHB",
           "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "chill touch": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "alarm": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "burning hands": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "charm person": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "chromatic orb": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "color spray": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "comprehend languages": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
+          "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
+          "grantSource": "PHB"
         }
       ],
       "detect magic": [
@@ -2941,6 +2866,7 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C2%2C0%5D",
           "grantSource": "PHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
@@ -2952,365 +2878,6 @@
           "grantType": "choice",
           "label": "Magic Initiate",
           "grantVariant": "selection:bonus",
-          "grantSource": "PHB"
-        }
-      ],
-      "disguise self": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 2,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "alter self": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 3,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "arcane lock": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 3,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "dancing lights": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 4,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "blindness/deafness": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 4,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "blur": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 4,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "animate dead": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 5,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "bestow curse": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 5,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "blink": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 6,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "clairvoyance": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 6,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "arcane eye": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 7,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "banishment": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 7,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "blight": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 8,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "confusion": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 8,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "animate objects": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 9,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "bigby's hand": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 9,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "fire bolt": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 10,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "cloudkill": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 10,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "cone of cold": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 10,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "guidance": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "light": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "feat",
-          "sourceName": "Magic Initiate",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Magic Initiate",
-          "grantVariant": "selection:bonus",
-          "grantSource": "PHB"
-        }
-      ],
-      "mending": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "resistance": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB",
-          "spellGrantedAtLevel": 4,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "bane": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "command": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "create or destroy water": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "aid": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "PHB"
-        }
-      ],
-      "augury": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Cleric",
           "grantSource": "PHB"
         }
       ],
@@ -3372,6 +2939,409 @@
           "grantType": "fixed",
           "label": "Life Domain",
           "grantSource": "PHB"
+        }
+      ],
+      "acid splash": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blade ward": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chill touch": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C2%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "alarm": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "burning hands": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "charm person": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C2%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chromatic orb": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C3%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "color spray": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C4%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "comprehend languages": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C1%2C5%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "disguise self": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C2%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "alter self": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C3%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "arcane lock": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C3%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "dancing lights": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C4%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blindness/deafness": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C4%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blur": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C4%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animate dead": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C5%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bestow curse": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C5%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blink": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C6%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 6,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "clairvoyance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C6%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 6,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "arcane eye": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C7%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 7,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "banishment": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C7%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 7,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blight": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C8%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 8,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "confusion": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C8%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 8,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animate objects": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C9%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 9,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bigby's hand": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C9%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 9,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "fire bolt": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C10%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cloudkill": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C10%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cone of cold": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22phb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cphb%7C1%7Cphb%22%2C10%2C1%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "guidance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cphb%7C1%7Cphb%22%2C1%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "mending": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cphb%7C1%7Cphb%22%2C1%2C2%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "resistance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22phb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cphb%7C1%7Cphb%22%2C4%2C0%5D",
+          "grantSource": "PHB",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
         }
       ],
       "mage hand": [
@@ -4139,7 +4109,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "hitPoints": {
     "current": 121,
     "temporary": 17
@@ -4419,5 +4389,647 @@
       "ownerType": "race",
       "values": []
     }
-  }
+  },
+  "managedClassSpellChoices": [
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Acid Splash",
+        "source": "PHB"
+      },
+      "revision": 1,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Blade Ward",
+        "source": "PHB"
+      },
+      "revision": 2,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Chill Touch",
+        "source": "PHB"
+      },
+      "revision": 3,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Alarm",
+        "source": "PHB"
+      },
+      "revision": 4,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Burning Hands",
+        "source": "PHB"
+      },
+      "revision": 5,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Charm Person",
+        "source": "PHB"
+      },
+      "revision": 6,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        3
+      ],
+      "target": {
+        "name": "Chromatic Orb",
+        "source": "PHB"
+      },
+      "revision": 7,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        4
+      ],
+      "target": {
+        "name": "Color Spray",
+        "source": "PHB"
+      },
+      "revision": 8,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        1,
+        5
+      ],
+      "target": {
+        "name": "Comprehend Languages",
+        "source": "PHB"
+      },
+      "revision": 9,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        2,
+        0
+      ],
+      "target": {
+        "name": "Detect Magic",
+        "source": "PHB"
+      },
+      "revision": 10,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        2,
+        1
+      ],
+      "target": {
+        "name": "Disguise Self",
+        "source": "PHB"
+      },
+      "revision": 11,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        3,
+        0
+      ],
+      "target": {
+        "name": "Alter Self",
+        "source": "PHB"
+      },
+      "revision": 12,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        3,
+        1
+      ],
+      "target": {
+        "name": "Arcane Lock",
+        "source": "PHB"
+      },
+      "revision": 13,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Dancing Lights",
+        "source": "PHB"
+      },
+      "revision": 14,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Blindness/Deafness",
+        "source": "PHB"
+      },
+      "revision": 15,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        4,
+        1
+      ],
+      "target": {
+        "name": "Blur",
+        "source": "PHB"
+      },
+      "revision": 16,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        5,
+        0
+      ],
+      "target": {
+        "name": "Animate Dead",
+        "source": "PHB"
+      },
+      "revision": 17,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        5,
+        1
+      ],
+      "target": {
+        "name": "Bestow Curse",
+        "source": "PHB"
+      },
+      "revision": 18,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        6,
+        0
+      ],
+      "target": {
+        "name": "Blink",
+        "source": "PHB"
+      },
+      "revision": 19,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        6,
+        1
+      ],
+      "target": {
+        "name": "Clairvoyance",
+        "source": "PHB"
+      },
+      "revision": 20,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        7,
+        0
+      ],
+      "target": {
+        "name": "Arcane Eye",
+        "source": "PHB"
+      },
+      "revision": 21,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        7,
+        1
+      ],
+      "target": {
+        "name": "Banishment",
+        "source": "PHB"
+      },
+      "revision": 22,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        8,
+        0
+      ],
+      "target": {
+        "name": "Blight",
+        "source": "PHB"
+      },
+      "revision": 23,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        8,
+        1
+      ],
+      "target": {
+        "name": "Confusion",
+        "source": "PHB"
+      },
+      "revision": 24,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        9,
+        0
+      ],
+      "target": {
+        "name": "Animate Objects",
+        "source": "PHB"
+      },
+      "revision": 25,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        9,
+        1
+      ],
+      "target": {
+        "name": "Bigby's Hand",
+        "source": "PHB"
+      },
+      "revision": 26,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        10,
+        0
+      ],
+      "target": {
+        "name": "Fire Bolt",
+        "source": "PHB"
+      },
+      "revision": 27,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        10,
+        0
+      ],
+      "target": {
+        "name": "Cloudkill",
+        "source": "PHB"
+      },
+      "revision": 28,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "phb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|phb|1|phb",
+        10,
+        1
+      ],
+      "target": {
+        "name": "Cone of Cold",
+        "source": "PHB"
+      },
+      "revision": 29,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|phb|1|phb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Guidance",
+        "source": "PHB"
+      },
+      "revision": 30,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|phb|1|phb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Light",
+        "source": "PHB"
+      },
+      "revision": 31,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|phb|1|phb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Mending",
+        "source": "PHB"
+      },
+      "revision": 32,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "phb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|phb|1|phb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Resistance",
+        "source": "PHB"
+      },
+      "revision": 33,
+      "policy": "default"
+    }
+  ],
+  "managedClassSpellRevision": 33
 }

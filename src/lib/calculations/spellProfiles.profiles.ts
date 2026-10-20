@@ -1,13 +1,12 @@
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
-import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
+import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { stripManagedClassSpellState } from '@/lib/character/managedClassSpellState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
 import { deriveNativeRacialSpellProfiles } from './nativeRacialSpells'
-import { getSpellNameKey, getSpellReferenceKey, parseSpellReference } from './spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from './spellIdentity'
 import {
   buildClassProfileLabel,
   SPECIAL_SPELL_PROFILE_ID,
@@ -53,19 +52,6 @@ function uniqueSpellKeys(names: readonly string[]): Set<string> {
   return new Set(names.map(getSpellNameKey).filter(Boolean))
 }
 
-function hasIndependentClassOwnership(
-  character: Character,
-  entry: { name: string; source?: string },
-  spellName: string,
-): boolean {
-  return (character.provenance?.spells?.[normalizeKey(spellName)] ?? []).some(
-    (tag) =>
-      tag.sourceType === 'class' &&
-      tag.sourceName === entry.name &&
-      (tag.sourceRef ?? '') === (entry.source ?? ''),
-  )
-}
-
 export interface SpellProfileSelectionCounts {
   cantrips: number
   spells: number
@@ -98,21 +84,6 @@ export function countUniqueSpellNames(names: readonly string[]): number {
   return uniqueSpellKeys(names).size
 }
 
-export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
-  const names = new Set<string>()
-
-  for (const profile of profiles) {
-    for (const name of profile.cantrips) {
-      names.add(name)
-    }
-    for (const name of profile.spellsKnown) {
-      names.add(name)
-    }
-  }
-
-  return names
-}
-
 /** Exact race resolution establishes grants/removals; missing metadata retains saved racial state. */
 export function ensureSpellProfiles(
   character: Character,
@@ -121,8 +92,15 @@ export function ensureSpellProfiles(
   options?: {
     preserveUnavailableClassProfiles?: boolean
     raceResolution?: ResolvedRaceReference
+    /** Already current shared projection; omitted authority strips saved numeric benefits. */
+    effectiveSpellProfiles?: readonly SpellProfile[]
+    /** Exact current visible targets; omitted authority cannot grant fixed spell benefits. */
+    availableSpellReferences?: ReadonlySet<string>
   },
 ): SpellProfile[] {
+  if (options?.effectiveSpellProfiles !== undefined)
+    return options.effectiveSpellProfiles.map(cloneProfile)
+  character = stripManagedClassSpellState(character)
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
     : []
@@ -131,27 +109,26 @@ export function ensureSpellProfiles(
   const next: SpellProfile[] = []
 
   const classEntries = getCharacterClassEntries(character)
-  const spellKey = options?.preserveUnavailableClassProfiles
-    ? getSpellReferenceKey
-    : getSpellNameKey
+  const spellKey = getSpellReferenceKey
 
   for (const entry of classEntries) {
     const id = toClassProfileId(entry.name, entry.source)
     const existingProfile = byId.get(id)
     const classData = findClassReference(entry, classesById?.values())
-    const subclassData = getSelectedSubclassData(classData, entry)
+    const subclassSpells = getEarnedSubclassSpellGrants(classData, entry)
     if (
       options?.preserveUnavailableClassProfiles &&
       existingProfile &&
-      (!classData || (entry.subclass && !subclassData))
+      (!classData || subclassSpells === undefined)
     ) {
       next.push(existingProfile)
       continue
     }
-    const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels, {
-      preserveSource: options?.preserveUnavailableClassProfiles,
-    })
-    const grantedSubclassSpells = subclassSpells.filter((grant) => grant.mode !== 'expanded')
+    const grantedSubclassSpells = (subclassSpells ?? []).filter(
+      (grant) =>
+        grant.mode !== 'expanded' &&
+        options?.availableSpellReferences?.has(getSpellReferenceKey(grant.spellName)),
+    )
     const grantedSubclassCantrips = grantedSubclassSpells
       .filter((grant) => grant.isCantrip)
       .map((grant) => grant.spellName)
@@ -166,16 +143,12 @@ export function ensureSpellProfiles(
     // derived set before merging so changing subclasses or losing a level cannot
     // leave stale grants behind in the parent class profile.
     const previousFixedKeys = new Set(
-      (existingProfile?.fixedSpells ?? []).map((name) => spellKey(name)),
+      [
+        ...(existingProfile?.fixedSpells ?? []),
+        ...(existingProfile?.alwaysPreparedSpells ?? []),
+      ].map((name) => spellKey(name)),
     )
-    const legacyFixedKeys = new Set(
-      (existingProfile?.fixedSpells ?? [])
-        .filter((name) => !parseSpellReference(name).source)
-        .map(getSpellNameKey),
-    )
-    const shouldRetain = (name: string) =>
-      (!previousFixedKeys.has(spellKey(name)) && !legacyFixedKeys.has(getSpellNameKey(name))) ||
-      hasIndependentClassOwnership(character, entry, name)
+    const shouldRetain = (name: string) => !previousFixedKeys.has(spellKey(name))
     const retainedCantrips = (existingProfile?.cantrips ?? []).filter(shouldRetain)
     const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(shouldRetain)
     const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map((name) => spellKey(name)))
@@ -189,7 +162,7 @@ export function ensureSpellProfiles(
       cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips, spellKey),
       spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells, spellKey),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(
-        (name) => !alwaysPreparedKeys.has(spellKey(name)),
+        (name) => shouldRetain(name) && !alwaysPreparedKeys.has(spellKey(name)),
       ),
       fixedSpells:
         grantedSubclassSpells.length > 0
@@ -198,7 +171,6 @@ export function ensureSpellProfiles(
       alwaysPreparedSpells:
         alwaysPreparedSubclassSpells.length > 0 ? alwaysPreparedSubclassSpells : undefined,
       alwaysPrepared: false,
-      ...(existingProfile?.spellSwaps ? { spellSwaps: existingProfile.spellSwaps } : {}),
     })
   }
 
@@ -232,7 +204,7 @@ export function ensureSpellProfiles(
   return next
 }
 
-export function collectKnownSpells(profiles: SpellProfile[]): {
+export function collectKnownSpells(profiles: readonly SpellProfile[]): {
   cantrips: string[]
   spellsKnown: string[]
   preparedSpells: string[]
@@ -262,6 +234,7 @@ export function collectKnownSpells(profiles: SpellProfile[]): {
         prepared.add(name)
       }
     }
+    for (const name of profile.preparedSpells) prepared.add(name)
   }
 
   return {

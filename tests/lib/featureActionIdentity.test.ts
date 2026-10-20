@@ -5,11 +5,11 @@ import { DataFilter } from '@/lib/5etools/filters'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function groupIdentity(id: string) {
   return JSON.parse(decodeURIComponent(id.slice(id.indexOf(':') + 1)))
@@ -56,7 +56,8 @@ function observe(classes: Class5e[], stored = false) {
   const before = structuredClone({ character, classes })
   const actions = deriveRulesTextActions(character, undefined, { classes })
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).actions,
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+      .actions,
   ).toEqual(actions)
   expect({ character, classes }).toEqual(before)
   return actions
@@ -77,7 +78,7 @@ test('bundled Fighter repeated Action Surge gains use one canonical owned action
     classProgression: [{ name: 'Fighter', source: 'XPHB', levels: 17 }],
   })
   const context = { classesByKey: buildClassLookup([fighter]) }
-  const vm = createCharacterSheetViewModel(character, context)
+  const vm = createCurrentCharacterSheetViewModel(character, context)
   const actions = vm.actions.filter((action) => action.name === 'Action Surge')
   expect(actions).toHaveLength(1)
   const id = actions[0].id
@@ -93,7 +94,7 @@ test('bundled Fighter repeated Action Surge gains use one canonical owned action
   ).toMatchObject({ automatic: false, selected: [id] })
   character.classProgression[0].levels = 1
   expect(
-    createCharacterSheetViewModel(character, context).actions.some(
+    createCurrentCharacterSheetViewModel(character, context).actions.some(
       (action) => action.name === 'Action Surge',
     ),
   ).toBe(false)
@@ -183,7 +184,7 @@ test.each([
     ],
   })
   const view = () =>
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
   const owner = JSON.stringify(kind === 'class' ? ['wizard|phb'] : ['wizard|phb', 'school|tce'])
   const expectedId = (classSource: string) => [
     owner,
@@ -309,7 +310,7 @@ test('multiple saved rows do not select an arbitrary canonical replacement', () 
       description: 'As an action, use training.',
     })),
   })
-  const actions = createCharacterSheetViewModel(character, {
+  const actions = createCurrentCharacterSheetViewModel(character, {
     classesByKey: buildClassLookup(classes),
   }).actions
   expect(actions.map((action) => action.id)).toEqual([
@@ -352,7 +353,8 @@ test.each(['1', '8', '8junk', '0'])('subclass gains use the complete encoded lev
     ],
   })
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).actions,
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+      .actions,
   ).toHaveLength(gain === '1' ? 1 : 0)
 })
 
@@ -410,12 +412,13 @@ test('copied subclasses qualify identical encoded UIDs by their actual selected 
   expect(unlisted.map((entry) => entry.subclasses![0].normalizedRules!.choices)).toEqual([[], []])
   expect(deriveRulesTextActions(character, undefined, { classes: unlisted })).toEqual([])
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unlisted) }).actions,
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unlisted) })
+      .actions,
   ).toEqual([])
   const unavailable = parseClasses({ ...payload, subclassFeature: [alternate] }) as Class5e[]
   expect(deriveRulesTextActions(character, undefined, { classes: unavailable })).toEqual([])
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unavailable) })
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(unavailable) })
       .actions,
   ).toEqual([])
   for (const entry of unavailable) {
@@ -446,10 +449,10 @@ test('copied subclasses qualify identical encoded UIDs by their actual selected 
     deriveRulesTextActions(character, undefined, { classes }),
   )
   const context = { classesByKey: buildClassLookup(classes) }
-  const actions = createCharacterSheetViewModel(character, context).actions
+  const actions = createCurrentCharacterSheetViewModel(character, context).actions
   expect(actions).toHaveLength(2)
   expect(new Set(actions.map((action) => action.id)).size).toBe(2)
   expect(actions.map((action) => action.source.source)).toEqual(['TCE', 'TCE'])
   character.classProgression.pop()
-  expect(createCharacterSheetViewModel(character, context).actions[0].id).toBe(actions[0].id)
+  expect(createCurrentCharacterSheetViewModel(character, context).actions[0].id).toBe(actions[0].id)
 })

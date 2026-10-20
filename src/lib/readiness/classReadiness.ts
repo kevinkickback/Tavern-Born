@@ -226,7 +226,11 @@ export function validateClassChoices(
               .map((option) => getClassChoiceOptionKey(option.reference)),
           )
         : undefined
-      const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(character, choiceCatalogs)
+      const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(
+        character,
+        choiceCatalogs,
+        calculation.character.spells.spellProfiles,
+      )
       const savedChoice = selections.get(choice.id)
       const count = eligibleOptionKeys
         ? storedSelection.filter(

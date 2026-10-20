@@ -3,10 +3,16 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import {
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
 function withTooltipProvider(ui: ReactNode) {
   return <TooltipProvider>{ui}</TooltipProvider>
@@ -258,6 +264,36 @@ describe('SpellProfileManager', () => {
       'Sleep',
     ].map((name, index) => makeItem({ name, kind: 'spell', level: 1, prepared: index < 4 }))
 
+    const fixture = makeManagedClassSpellFixtures()
+    const entry = { name: 'Wizard', source: 'PHB', levels: 1 }
+    const initial = makeCharacterFixture({ classProgression: [entry] })
+    initial.abilityScores.intelligence = 16
+    const selected = setManagedClassSpellChoicesCommand(
+      initial,
+      initial.provenance,
+      getManagedClassSpellSlots(entry).map((slot) => ({
+        slot,
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: {
+          name: (slot[1] === 'class-cantrip' ? cantrips : spells)[slot[4]].name,
+          source: 'PHB',
+        },
+        policy: 'default' as const,
+        ...(slot[1] === 'class-spellbook' && slot[4] < 4 ? { prepare: true } : {}),
+      })),
+      { ...fixture.context, abilityScores: initial.abilityScores },
+    )
+    const saved = characterPersistenceSchema.parse({
+      ...initial,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
+    })
+    const current = projectManagedClassSpellState(saved, {
+      ...fixture.context,
+      abilityScores: saved.abilityScores,
+    })
+
     render(
       withTooltipProvider(
         <SpellProfileManager
@@ -277,6 +313,7 @@ describe('SpellProfileManager', () => {
             ])
           }
           groupedItems={new Map([[BASE_CLASS_PROFILE.id, [...cantrips, ...spells]]])}
+          managedClassSpellStatuses={current.statuses}
           selectionSourceByProfileAndSpell={new Map()}
           getSpellByName={() => undefined}
           onTogglePrepared={vi.fn()}

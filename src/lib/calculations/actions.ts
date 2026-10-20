@@ -35,7 +35,6 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -56,6 +55,7 @@ import type {
   Feat,
   Feature,
   OptionalClassFeatureOwner,
+  SpellProfile,
 } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
@@ -64,6 +64,7 @@ import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
+import { ensureSpellProfiles } from './spellProfiles.profiles'
 import { deriveStormAuraActions } from './stormAuraActions'
 
 function isWeapon(item: Equipment): boolean {
@@ -104,6 +105,7 @@ export interface WeaponActionProjectionContext {
 }
 
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
+  effectiveSpellProfiles?: readonly SpellProfile[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
   raceResolution?: ResolvedRaceReference
@@ -168,19 +170,20 @@ export function inferRulesTextActionKind(
 export function deriveSpellActions(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
-  options: Pick<CharacterActionProjectionContext, 'classes' | 'race' | 'raceResolution'> = {},
+  options: Pick<
+    CharacterActionProjectionContext,
+    'classes' | 'race' | 'raceResolution' | 'effectiveSpellProfiles'
+  > = {},
 ): CharacterAction[] {
   const classesById = new Map<string, Class5e>()
   for (const classData of options.classes ?? []) {
     classesById.set(toClassProfileId(classData.name, classData.source), classData)
   }
-  const profiles = deriveSpellProfileState(
-    character,
-    classesById,
-    options.race,
-    options.raceResolution,
-    { spellsByKey },
-  ).spells.spellProfiles
+  const profiles =
+    options.effectiveSpellProfiles ??
+    ensureSpellProfiles(character, undefined, options.race, {
+      raceResolution: options.raceResolution,
+    })
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {
@@ -218,6 +221,7 @@ export function deriveSpellActions(
         !!profile.alwaysPrepared || !requiresPreparation || preparedKeys.has(spellKey(reference)),
       )
     }
+    for (const reference of profile.preparedSpells) addSpell(reference, true)
   }
 
   return [...spellStates.values()].flatMap(({ reference, active }) => {
@@ -246,6 +250,7 @@ type RulesTextActionContext = Pick<
   | 'classes'
   | 'availableClasses'
   | 'classChoiceFeatureCatalogs'
+  | 'effectiveSpellProfiles'
   | 'feats'
   | 'classFeaturesByKey'
   | 'optionalFeaturesByKey'
@@ -340,7 +345,11 @@ function deriveClassFeatureActions(
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
   const activity = createOptionalClassFeatureActivity(character, context.classChoiceFeatureCatalogs)
-  const routes = getEffectiveClassChoiceFeatureRoutes(character, context.classChoiceFeatureCatalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    context.classChoiceFeatureCatalogs,
+    context.effectiveSpellProfiles,
+  )
   const addAction = (
     owner: string,
     target: string,

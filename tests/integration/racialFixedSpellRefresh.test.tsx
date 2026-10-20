@@ -9,10 +9,10 @@ import {
   commitFeatOptionsCommand,
   replaceFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { addSpellGrant, applyFeatGrant, makeSourceTag } from '@/lib/provenance'
+import { applyFeatGrant } from '@/lib/provenance'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -22,6 +22,8 @@ import type { Character, SpellProfile } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { renderSpellEditing as editing } from '../fixtures/spellEditing'
 
 const lightBlock = { ability: 'int', known: { _: ['light|PHB#c'] } }
@@ -300,14 +302,35 @@ test.each([
   operation,
   childGrants,
 }) => {
-  const { character: initial, parent, child } = native(childGrants)
+  const { character: base, parent, child } = native(childGrants)
+  const fixture = makeManagedClassSpellFixtures()
+  base.classProgression.push({ name: 'Bard', source: 'PHB', levels: 1 })
+  const selectedClass = setManagedClassSpellChoiceCommand(
+    base,
+    base.provenance,
+    {
+      slot: [
+        ['class', 'bard', 'phb'],
+        'class-cantrip',
+        'class-feature|spellcasting|bard|phb|1|phb',
+        1,
+        0,
+      ],
+      expected: null,
+      expectedEmptyRevision: 0,
+      target: { name: 'Light', source: 'PHB' },
+      policy: 'default',
+    },
+    fixture.context,
+  )
+  const initial = characterPersistenceSchema.parse({
+    ...base,
+    ...selectedClass.characterPatch,
+    provenance: selectedClass.provenanceUpdate,
+  })
   const added = addSpellToCharacter(
     initial,
-    addSpellGrant(
-      initial.provenance,
-      'Light|PHB',
-      makeSourceTag('class', 'Independent', 'choice', 'OTHER'),
-    ),
+    initial.provenance,
     'Light|PHB',
     'cantrip',
     'special:unrestricted',
@@ -353,7 +376,10 @@ test.each([
   })
   const corrected = useCharacterStore.getState().activeCharacter!
   expect(racial(corrected.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
-  expect(corrected.provenance).toEqual(result.current.slots.spellProvenance)
+  expect(corrected.managedClassSpellChoices).toEqual(character.managedClassSpellChoices)
+  expect(
+    result.current.slots.spellProvenance.spells.light.filter((tag) => tag.sourceType === 'class'),
+  ).toEqual([])
   expect(racial(result.current.slots.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(getSpellRows(result.current.slots.spellProvenance)).toEqual(
     expect.arrayContaining([
@@ -361,7 +387,7 @@ test.each([
       expect.objectContaining({ itemName: 'Light', itemSource: 'PHB' }),
     ]),
   )
-  const view = createCharacterSheetViewModel(before, data.lookups!)
+  const view = createCurrentCharacterSheetViewModel(before, data.lookups!)
   expect(racial(view.character.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(view.character.provenance.spells.light).toEqual(
     result.current.slots.spellProvenance.spells.light,
@@ -387,7 +413,9 @@ test.each([
   const reopened = reopenedActive()
   expect(racial(reopened.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(reopened.provenance.spells.light).toEqual([
-    expect.objectContaining({ sourceType: 'class', grantSource: 'PHB' }),
+    ...(operation === 'sync'
+      ? []
+      : [expect.objectContaining({ sourceType: 'class', grantSource: 'PHB' })]),
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
     expect.objectContaining({ sourceType: 'feat', grantSource: 'PHB' }),
     expect.objectContaining({
@@ -408,48 +436,58 @@ test.each([
   expect(reopenedActive().provenance).toEqual(reopened.provenance)
 })
 
-test('PDF racial refresh preserves independent saved class and special preparation state', () => {
+test('PDF native refresh suspends unavailable managed preparation and preserves independent Special and saved intent', () => {
   const { character: initial, child } = native()
-  const character = independentFixedSpell(initial)
-  character.spells.spellProfiles.push({
-    id: 'class:Unresolved|OTHER',
-    type: 'class',
-    label: 'Unresolved',
-    className: 'Unresolved',
-    classSource: 'OTHER',
-    castingAbility: 'wis',
-    cantrips: ['Mage Hand|PHB'],
-    spellsKnown: ['Bonus|PHB'],
-    preparedSpells: ['Bonus|PHB'],
-    alwaysPreparedSpells: ['Bonus|PHB'],
-  })
-  const special = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
-  Object.assign(special, {
-    castingAbility: 'cha',
-    fixedSpells: ['Light|TCE'],
-    cantrips: ['Light|TCE'],
-    preparedSpells: ['Light|TCE'],
+  let character = independentFixedSpell(initial)
+  character.classProgression.push({ name: 'Wizard', source: 'PHB', levels: 1 })
+  const fixture = makeManagedClassSpellFixtures()
+  const chosen = setManagedClassSpellChoiceCommand(
+    character,
+    character.provenance,
+    {
+      slot: [
+        ['class', 'wizard', 'phb'],
+        'class-spellbook',
+        'class-feature|spellcasting|wizard|phb|1|phb',
+        1,
+        0,
+      ],
+      expected: null,
+      expectedEmptyRevision: 0,
+      target: { name: 'Shield', source: 'PHB' },
+      policy: 'default',
+      prepare: true,
+    },
+    { ...fixture.context, abilityScores: character.abilityScores },
+  )
+  character = characterPersistenceSchema.parse({
+    ...character,
+    ...chosen.characterPatch,
+    provenance: chosen.provenanceUpdate,
   })
   character.spells.spellSlots[1] = { max: 3, used: 2 }
   character.spells.pactSpellSlots = { 1: { max: 2, used: 1 } }
-  characterPersistenceSchema.parse(character)
   const original = structuredClone(character)
   const refreshed = owner('Fixed Parent', 'PARENT', [
     { ability: 'int', known: { _: ['light|TCE#c'] } },
   ])
   refreshed.subraces = [child]
   const data = install([refreshed])
-  const view = createCharacterSheetViewModel(character, data.lookups!)
+  const view = createCurrentCharacterSheetViewModel(character, data.lookups!)
   expect(racial(view.character.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(
-    view.character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
-  ).toEqual(original.spells.spellProfiles.filter((profile) => profile.type !== 'racial'))
-  expect(view.spellRows.find((row) => row.id === 'bonus|phb')?.prepared).toBe(true)
+    view.character.spells.spellProfiles.find((profile) => profile.className === 'Wizard'),
+  ).toMatchObject({ spellsKnown: [], preparedSpells: [] })
+  expect(view.character.managedClassSpellChoices).toEqual(character.managedClassSpellChoices)
+  expect(view.character.managedClassSpellRevision).toBe(1)
+  expect(view.spellRows.some((row) => row.name === 'Shield')).toBe(false)
+  expect(
+    view.character.spells.spellProfiles.find((profile) => profile.type === 'special')?.cantrips,
+  ).toEqual(['Light|TCE'])
   expect(view.character.spells.spellSlots).toEqual(original.spells.spellSlots)
   expect(view.character.spells.pactSpellSlots).toEqual(original.spells.pactSpellSlots)
   expect(character).toEqual(original)
 })
-
 test.each([
   'add',
   'remove',
@@ -471,7 +509,7 @@ test.each([
     expect(projectedRows).toContainEqual(
       expect.objectContaining({ itemName: 'Mage Hand', itemSource: 'PHB' }),
     )
-    expect(createCharacterSheetViewModel(character, data.lookups!).actions).toContainEqual(
+    expect(createCurrentCharacterSheetViewModel(character, data.lookups!).actions).toContainEqual(
       expect.objectContaining({ name: 'Mage Hand', active: true }),
     )
   } else {
@@ -480,7 +518,7 @@ test.each([
     ).toEqual([])
     expect(projectedRows).toEqual([])
     expect(
-      createCharacterSheetViewModel(character, data.lookups!).actions.some(
+      createCurrentCharacterSheetViewModel(character, data.lookups!).actions.some(
         (action) => action.name === 'Light',
       ),
     ).toBe(false)

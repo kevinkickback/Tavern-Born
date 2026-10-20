@@ -1,257 +1,62 @@
 import { expect, test } from '@playwright/test'
-import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
+import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
+import type { Character } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeManagedClassSpellBrowserFixtures } from '../fixtures/managedClassSpellBrowserFixtures'
+import { authorManagedClassSpellFixture } from '../fixtures/managedClassSpellFixtures'
 import {
   ensureStartupPromptResolved,
+  readPersistedCharacters,
   seedAppState,
   selectCharacterFromHome,
 } from './helpers/startup'
 
-test('@focused active-character spell workflow: profile switch, add/remove, prepared toggle', async ({
+test('@focused active-character spell workflow: profile switch, independent removal, prepared toggle', async ({
   page,
 }) => {
-  const character = {
-    id: 'spells-e2e-1',
-    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
+  const fixture = makeManagedClassSpellBrowserFixtures()
+  let initial = makeCharacterFixture({
+    id: 'spell-e2e-1',
     name: 'Spell E2E',
-    originSystem: '2014',
-    race: 'Human',
-    raceSource: 'PHB',
-    racialDefenses: {
-      context: { parent: { name: 'Human', source: 'PHB' } },
-      resist: { ownerType: 'race', values: [] },
-      immune: { ownerType: 'race', values: [] },
-      conditionImmune: { ownerType: 'race', values: [] },
-    },
-    background: 'Sage',
-    backgroundSource: 'PHB',
-    experiencePoints: 0,
+    allowedSources: ['PHB'],
     classProgression: [
       { name: 'Wizard', source: 'PHB', levels: 2 },
       { name: 'Cleric', source: 'PHB', levels: 1 },
       { name: 'Druid', source: 'PHB', levels: 1 },
     ],
-    abilityScores: {
-      strength: 8,
-      dexterity: 14,
-      constitution: 14,
-      intelligence: 16,
-      wisdom: 12,
-      charisma: 10,
+    abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16, wisdom: 12 },
+  })
+  // The Bonus UI locks already-known names; this independent grant precedes class learning.
+  const bonus = addSpellToCharacter(
+    initial,
+    initial.provenance,
+    'Magic Missile|PHB',
+    'spell',
+    'special:unrestricted',
+  )
+  initial = { ...initial, ...bonus.characterPatch, provenance: bonus.provenanceUpdate }
+  const character = authorManagedClassSpellFixture(initial, fixture, [
+    {
+      owner: initial.classProgression[0],
+      domain: 'class-spellbook',
+      gain: 1,
+      targets: [{ name: 'Magic Missile', source: 'PHB' }],
     },
-    proficiencies: {
-      armor: [],
-      weapons: [],
-      tools: [],
-      skills: [],
-      expertise: [],
-      languages: ['Common'],
-      savingThrows: [],
-    },
-    features: [],
-    feats: [],
-    spells: {
-      spellProfiles: [
-        {
-          id: 'class:Wizard|PHB',
-          type: 'class',
-          label: 'Wizard (Lv 2)',
-          className: 'Wizard',
-          classSource: 'PHB',
-          cantrips: [],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: false,
-        },
-        {
-          id: 'class:Cleric|PHB',
-          type: 'class',
-          label: 'Cleric (Lv 1)',
-          className: 'Cleric',
-          classSource: 'PHB',
-          cantrips: [],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: false,
-        },
-        {
-          id: 'class:Druid|PHB',
-          type: 'class',
-          label: 'Druid (Lv 1)',
-          className: 'Druid',
-          classSource: 'PHB',
-          cantrips: [],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: false,
-        },
-        {
-          id: 'special:unrestricted',
-          type: 'special',
-          label: 'Special (Unrestricted)',
-          cantrips: [],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: true,
-        },
-      ],
-      spellSlots: {
-        1: { max: 3, used: 0 },
-        2: { max: 0, used: 0 },
-        3: { max: 0, used: 0 },
-        4: { max: 0, used: 0 },
-        5: { max: 0, used: 0 },
-        6: { max: 0, used: 0 },
-        7: { max: 0, used: 0 },
-        8: { max: 0, used: 0 },
-        9: { max: 0, used: 0 },
-      },
-    },
-    equipment: [],
-    hitPoints: { current: 12, temporary: 0 },
-    movement: {
-      speeds: { walk: 30 },
-      source: { kind: 'manual', name: 'E2E seed' },
-    },
-    details: {},
-    provenance: {
-      proficiencies: {
-        armor: {},
-        weapons: {},
-        tools: {},
-        languages: {},
-        skills: {},
-        savingThrows: {},
-      },
-      abilityBonuses: [],
-      features: {},
-      feats: {},
-      spells: {},
-      equipment: {},
-      choices: [],
-    },
-    createdAt: '2026-01-01T00:00:00.000Z',
-    lastModified: '2026-01-01T00:00:00.000Z',
-  }
-
-  const gameData = {
-    races: [],
-    classes: [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        classFeatures: [],
-        classFeatureRefs: [],
-        casterProgression: 'full',
-        spellcastingAbility: 'intelligence',
-        spellSlotProgression: [[2], [3]],
-      },
-      {
-        name: 'Cleric',
-        source: 'PHB',
-        classFeatures: [],
-        classFeatureRefs: [],
-        casterProgression: 'full',
-        spellcastingAbility: 'wisdom',
-        preparedSpells: '<$level$> + <$wis_mod$>',
-        spellSlotProgression: [[2]],
-      },
-      {
-        name: 'Druid',
-        source: 'PHB',
-        classFeatures: [],
-        classFeatureRefs: [],
-        casterProgression: 'full',
-        spellcastingAbility: 'wisdom',
-        preparedSpells: '<$level$> + <$wis_mod$>',
-        spellSlotProgression: [[2]],
-      },
-    ],
-    backgrounds: [],
-    spells: [
-      {
-        name: 'Magic Missile',
-        source: 'PHB',
-        level: 1,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-        classes: {
-          fromClassList: [{ name: 'Wizard', source: 'PHB' }],
-        },
-        entries: ['A bolt of force deals damage.'],
-      },
-      {
-        name: 'Fire Bolt',
-        source: 'PHB',
-        level: 0,
-        school: 'V',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'instant' }],
-        classes: {
-          fromClassList: [{ name: 'Wizard', source: 'PHB' }],
-        },
-        entries: ['A mote of fire deals damage.'],
-      },
-      {
-        name: 'Entangle',
-        source: 'PHB',
-        level: 1,
-        school: 'C',
-        time: [{ number: 1, unit: 'action' }],
-        range: { type: 'point', distance: { type: 'feet', amount: 90 } },
-        components: { v: true, s: true },
-        duration: [{ type: 'timed', duration: { type: 'minute', amount: 1 } }],
-        classes: {
-          fromClassList: [{ name: 'Druid', source: 'PHB' }],
-        },
-        entries: ['Grasping plants sprout in an area.'],
-      },
-    ],
-    feats: [],
-    items: [],
-    itemsBase: [],
-    itemProperties: [],
-    itemTypes: [],
-    classFeatures: [],
-    actions: [],
-    conditions: [],
-    deities: [],
-    skills: [],
-    senses: [],
-    languages: [],
-    optionalfeatures: [],
-    variantrules: [],
-    trapHazards: [],
-    rewards: [],
-    cultsBoons: [],
-    organizations: [],
-    sources: [],
-  }
-
+  ])
   await page.goto('/')
-  await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
-
+  await ensureStartupPromptResolved(page, 'e2e-spell-seed', fixture.gameData)
   await seedAppState(page, {
     sourcePath: 'e2e-spell-seed',
-    gameData,
+    gameData: fixture.gameData,
     characters: [character],
     activeCharacterId: character.id,
   })
-
   await page.reload()
-  await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
-
-  await selectCharacterFromHome(page, 'Spell E2E')
+  await selectCharacterFromHome(page, character.name)
   await page.getByRole('link', { name: 'Spells' }).click()
   await expect(page).toHaveURL(/\/spells$/)
-  await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
-
   await expect(page.getByRole('heading', { name: 'Spells', exact: true })).toBeVisible()
-
   const spellViewTabs = page.getByRole('tablist', { name: 'Spell view' })
   const wizardTab = spellViewTabs.getByRole('tab', { name: /Wizard/ })
   const clericTab = spellViewTabs.getByRole('tab', { name: /Cleric/ })
@@ -260,105 +65,87 @@ test('@focused active-character spell workflow: profile switch, add/remove, prep
   await expect(clericTab).toBeVisible()
   await expect(druidTab).toBeVisible()
   await expect(spellViewTabs.getByRole('tab', { name: /^Class(?:\s+\d+)?$/ })).toHaveCount(0)
-
   await clericTab.click()
   await expect(clericTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('main').getByText('Cleric (Lv 1)')).toBeVisible()
   await expect(page.locator('main').getByText('Wizard (Lv 2)')).toHaveCount(0)
-
   await druidTab.click()
   await expect(druidTab).toHaveAttribute('aria-selected', 'true')
   const druidSpells = page.getByRole('region', { name: /Druid/ })
-  await expect(druidSpells.getByText('Entangle', { exact: true })).toBeVisible()
-  await druidSpells.getByTitle('Not prepared — click to prepare').click()
-  await expect(druidSpells.getByTitle('Prepared — click to unprepare')).toBeVisible()
-
+  const entangle = druidSpells
+    .getByRole('button', { name: 'Entangle', exact: true })
+    .locator('xpath=../..')
+  await expect(entangle).toBeVisible()
+  await entangle.getByTitle('Not prepared — click to prepare').click()
+  await expect(entangle.getByTitle('Prepared — click to unprepare')).toBeVisible()
   await wizardTab.click()
   await expect(wizardTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('main').getByText('Wizard (Lv 2)')).toBeVisible()
   await expect(page.locator('main').getByText('Cleric (Lv 1)')).toHaveCount(0)
-
-  const spellName = page.getByRole('button', { name: 'Magic Missile' })
+  const wizardSpells = page.getByRole('region', { name: /Wizard/ })
+  const spellName = wizardSpells.getByRole('button', { name: 'Magic Missile', exact: true })
+  const grid = wizardSpells.locator('[data-slot="spell-level-grid"]')
+  const columns = () =>
+    grid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
+  await expect.poll(columns).toBe(1)
+  const geometry = await spellName.evaluate((element) => {
+    const button = element.getBoundingClientRect()
+    const allocated = element.parentElement!.getBoundingClientRect()
+    const row = element.closest('.min-h-11')!
+    const badge = row.querySelector('span.shrink-0')!.getBoundingClientRect()
+    return {
+      buttonRight: button.right,
+      allocatedRight: allocated.right,
+      badgeLeft: badge.left,
+      buttonWidth: button.width,
+    }
+  })
+  expect(geometry.buttonRight).toBeLessThanOrEqual(geometry.allocatedRight + 0.5)
+  expect(geometry.buttonRight).toBeLessThanOrEqual(geometry.badgeLeft)
+  expect(geometry.buttonWidth).toBeGreaterThan(60)
   await spellName.hover()
   const spellPreview = page.getByRole('dialog', { name: 'Magic Missile preview' })
   await expect(spellPreview).toBeVisible()
   await page.waitForTimeout(300)
   await expect(spellPreview).toBeVisible()
-
-  // Seed an exact source-qualified spell reference into the Bonus Spells profile, then reload.
-  await page.evaluate(
-    async ({ characterId }) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store')
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => {
-          const db = request.result
-          const tx = db.transaction('keyval', 'readwrite')
-          const store = tx.objectStore('keyval')
-          const getReq = store.get('character-storage')
-
-          getReq.onerror = () => reject(getReq.error)
-          getReq.onsuccess = () => {
-            const payload = getReq.result as
-              | {
-                  state?: {
-                    characters?: Array<{
-                      id: string
-                      spells?: {
-                        spellProfiles?: Array<{
-                          id: string
-                          cantrips?: string[]
-                          spellsKnown?: string[]
-                        }>
-                      }
-                    }>
-                  }
-                  version?: number
-                }
-              | undefined
-
-            const characters = payload?.state?.characters ?? []
-            const target = characters.find((entry) => entry.id === characterId)
-            const profiles = target?.spells?.spellProfiles ?? []
-            const bonusProfile = profiles.find((profile) => profile.id === 'special:unrestricted')
-            if (bonusProfile) {
-              const known = new Set(bonusProfile.spellsKnown ?? [])
-              known.add('Magic Missile|PHB')
-              bonusProfile.spellsKnown = [...known]
-            }
-
-            store.put(payload, 'character-storage')
-            tx.oncomplete = () => {
-              db.close()
-              resolve()
-            }
-            tx.onerror = () => reject(tx.error)
-          }
-        }
-      })
-    },
-    { characterId: character.id },
-  )
-
-  // Reload to pick up IndexedDB changes, re-select character, navigate to Spells.
-  await page.goto('/')
-  await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
-  await selectCharacterFromHome(page, 'Spell E2E')
+  await page.getByRole('heading', { name: 'Spells', exact: true }).hover()
+  await expect(spellPreview).toBeHidden()
+  await page.setViewportSize({ width: 1536, height: 900 })
+  await expect.poll(columns).toBe(2)
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await expect.poll(columns).toBe(3)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect.poll(columns).toBe(1)
+  await wizardSpells.getByTitle('Not prepared', { exact: true }).click()
+  await expect(wizardSpells.getByTitle('Prepared', { exact: true })).toBeVisible()
+  const bonusTab = spellViewTabs.getByRole('tab', { name: /Bonus/ })
+  await bonusTab.click()
+  const bonusSpells = page.getByRole('region', { name: /Bonus Spells/ })
+  await bonusSpells.getByRole('button', { name: 'Remove Magic Missile' }).click()
+  await expect(bonusSpells.getByText('Magic Missile')).toHaveCount(0)
+  await wizardTab.click()
+  await expect(wizardSpells.getByText('Magic Missile', { exact: true })).toBeVisible()
+  await expect(wizardSpells.getByTitle('Prepared', { exact: true })).toBeVisible()
+  await druidTab.click()
+  await expect(entangle.getByTitle('Prepared — click to unprepare')).toBeVisible()
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () => {
+      const saved = characterPersistenceSchema.parse(
+        (await readPersistedCharacters(page)).find((row) => (row as Character).id === character.id),
+      )
+      return [
+        saved.managedClassSpellChoices?.[0]?.prepare,
+        saved.spells.spellProfiles.find((profile) => profile.className === 'Druid')?.preparedSpells,
+        saved.spells.spellProfiles.find((profile) => profile.type === 'special')?.spellsKnown,
+      ]
+    })
+    .toEqual([true, ['Entangle|PHB'], []])
+  await page.reload()
+  await selectCharacterFromHome(page, character.name)
   await page.getByRole('link', { name: 'Spells' }).click()
-  await expect(page).toHaveURL(/\/spells$/)
-
-  const mainContent = page.locator('main')
-  await expect(mainContent.getByText('Magic Missile').first()).toBeVisible()
-
-  const wizardSpells = page.getByRole('region', { name: /Wizard/ })
-  const notPreparedToggle = wizardSpells.getByTitle('Not prepared — click to prepare')
-  await expect(notPreparedToggle).toBeVisible()
-  await notPreparedToggle.click()
-  await expect(wizardSpells.getByTitle('Prepared — click to unprepare')).toBeVisible()
-
-  const bonusSpellsContent = page.getByRole('region', { name: /Bonus Spells/ })
-  await bonusSpellsContent.getByRole('button', { name: 'Remove Magic Missile' }).click()
-
-  // Wizard is a true prepared caster — Magic Missile always appears in its class spell list.
-  await expect(bonusSpellsContent.getByText('Magic Missile')).toHaveCount(0)
+  await wizardTab.click()
+  await expect(wizardSpells.getByTitle('Prepared', { exact: true })).toBeVisible()
+  await druidTab.click()
+  await expect(entangle.getByTitle('Prepared — click to unprepare')).toBeVisible()
 })

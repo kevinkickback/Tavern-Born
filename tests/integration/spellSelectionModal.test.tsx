@@ -38,6 +38,62 @@ function makeSpell(name: string, source: string, overrides: Partial<Spell5e> = {
 }
 
 describe('SpellSelectionModal identity', () => {
+  test('current exact list policy is captured at Confirm while hard targets remain constrained', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[
+          makeSpell('Light', 'PHB'),
+          makeSpell('Message', 'PHB'),
+          makeSpell('Shield', 'PHB', { level: 1 }),
+        ]}
+        classListReferences={new Set(['light|phb'])}
+        allowedSpellReferences={new Set(['light|phb', 'message|phb'])}
+        allowedLevels={new Set(['0'])}
+        initialFilters={{ level: new Set(['0']) }}
+        categories={[{ key: 'choice', label: 'cantrip', max: 1, test: () => true }]}
+        onConfirm={onConfirm}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Light')).toBeTruthy())
+    expect(screen.queryByText('Message')).toBeNull()
+    fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+    await waitFor(() => expect(screen.getByText('Message')).toBeTruthy())
+    expect(screen.queryByText('Shield')).toBeNull()
+    fireEvent.click(screen.getByText('Message'))
+    fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Confirm' }).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(onConfirm).toHaveBeenCalledWith(['Message|PHB'], 'ignore-class-list')
+  })
+
+  test('opening a saved bypass keeps that explicit policy when known spells are hidden', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[makeSpell('Light', 'PHB'), makeSpell('Message', 'PHB')]}
+        classListReferences={new Set()}
+        characterSpellNames={new Set(['Light|PHB'])}
+        initialSelectedNames={['Message|PHB']}
+        initialFilters={{ visibility: new Set(['ignore-class-list']) }}
+        onConfirm={onConfirm}
+      />,
+    )
+    await waitFor(() => expect(screen.getAllByText('Message')).toHaveLength(2))
+    expect(
+      screen
+        .getByRole('switch', { name: 'Ignore class restrictions' })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(onConfirm).toHaveBeenCalledWith(['Message|PHB'], 'ignore-class-list')
+  })
+
   test('racial choices allow one printing per logical spell within the same choice', async () => {
     const onConfirm = vi.fn()
     render(
@@ -61,7 +117,7 @@ describe('SpellSelectionModal identity', () => {
     expect(screen.getByText('Mage Hand').closest('button')!.disabled).toBe(false)
     fireEvent.click(screen.getByText('Mage Hand'))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    expect(onConfirm).toHaveBeenCalledWith(['Light|TCE', 'Mage Hand|PHB'])
+    expect(onConfirm).toHaveBeenCalledWith(['Light|TCE', 'Mage Hand|PHB'], 'default')
   })
 
   test('catalog choices continue to hide known logical spells across printings', async () => {
@@ -130,7 +186,7 @@ describe('SpellSelectionModal identity', () => {
       expect(document.querySelector('[data-selection-list-size="1"]')).toBeTruthy(),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|XPHB'])
+    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|XPHB'], 'default')
   })
 
   test('an exact target pool excludes a competing printing and unrelated spells', async () => {
@@ -180,7 +236,7 @@ describe('SpellSelectionModal identity', () => {
     expect(screen.getByText('Mage Hand').closest('button')?.disabled).toBe(false)
     fireEvent.click(screen.getByText('Mage Hand'))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|PHB'])
+    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|PHB'], 'default')
   })
 
   test.each([
@@ -229,7 +285,7 @@ describe('SpellSelectionModal identity', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
 
-    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|XPHB'])
+    expect(onConfirm).toHaveBeenCalledWith(['Mage Hand|XPHB'], 'default')
   })
 
   test('the Sources UI displays the target printing separately from its granting owner', () => {

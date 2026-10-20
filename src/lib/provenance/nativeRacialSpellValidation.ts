@@ -76,7 +76,6 @@ export function getInvalidNativeRacialSpellPaths(character: Character): Path[] {
     if (
       profile.className !== undefined ||
       profile.classSource !== undefined ||
-      profile.spellSwaps !== undefined ||
       profile.preparedSpells.length ||
       profile.alwaysPrepared !== true ||
       profile.alwaysPreparedSpells !== undefined

@@ -16,6 +16,7 @@ import type {
   ItemEntry5e,
   SubclassFeature,
 } from '@/types/5etools'
+import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { normalizeClassRules } from './classRuleNormalization'
@@ -427,6 +428,10 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     }
     if (key === 'optionalClassFeatureSources') {
       composed.optionalClassFeatureSources = mergeOptionalClassFeatureSources(layers)
+      continue
+    }
+    if (key === 'classCastingSources') {
+      composed.classCastingSources = mergeClassCastingSources(layers)
       continue
     }
     if (key === 'magicVariants') {

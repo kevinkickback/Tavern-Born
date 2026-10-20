@@ -29,7 +29,7 @@ import type {
   OptionalFeatureLike,
   Race5e,
 } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, SpellProfile } from '@/types/character'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
 import { getEffectiveClassChoiceFeatureRoutes } from './effectiveClassChoiceFeatures'
@@ -60,6 +60,7 @@ export function buildRetainedCharacterDetails(
   primary: GameData,
   raw: GameData | null | undefined,
   race?: Race5e,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ) {
   const featureEntriesByKey = new Map<string, unknown[]>()
   const choiceDetailsById = new Map<string, RetainedChoiceDetails[]>()
@@ -219,7 +220,11 @@ export function buildRetainedCharacterDetails(
       choiceDetailsById.set(choice.choiceId, details)
     }
   }
-  const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    primaryCatalogs,
+    effectiveSpellProfiles,
+  )
   for (const selection of character.classChoiceSelections ?? []) {
     if (!getOptionalClassPoolSelectionSection(selection)) continue
     const details = choiceDetailsById.get(selection.choiceId)

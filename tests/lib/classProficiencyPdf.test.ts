@@ -1,13 +1,15 @@
 import { decodePDFRawStream, PDFDocument, PDFRawStream } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import {
   applyProficiency,
   expertiseOption,
   makeClassProficiencyFixture,
 } from '../fixtures/classProficiencyFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 test.each([
   ['Bard', 'PHB', 3, '2014-custom', 'Arc'],
@@ -20,13 +22,13 @@ test.each([
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const vm = createCharacterSheetViewModel(saved, input)
-  const base = createCharacterSheetViewModel(f.character, input).skillByName.get('arcana')!
+  const vm = createCurrentCharacterSheetViewModel(saved, input)
+  const base = createCurrentCharacterSheetViewModel(f.character, input).skillByName.get('arcana')!
   expect(vm.skillByName.get('arcana')!.modifier).toBe(base.modifier + 2)
   const form = (await PDFDocument.load(await generateTestCharacterSheet(vm, id))).getForm()
   const modifier = vm.skillByName.get('arcana')!.modifier
   expect(form.getTextField(field).getText()).toBe(modifier >= 0 ? `+${modifier}` : String(modifier))
-  const missing = createCharacterSheetViewModel(saved, {
+  const missing = createCurrentCharacterSheetViewModel(saved, {
     ...input,
     classChoiceFeatureCatalogs: {
       ...f.catalogs,
@@ -54,7 +56,7 @@ test.each([
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const vm = createCharacterSheetViewModel(saved, input)
+  const vm = createCurrentCharacterSheetViewModel(saved, input)
   expect(vm.toolProficiencies).toEqual(["thieves' tools (Expertise)"])
   const bytes = await generateTestCharacterSheet(vm, id)
   const form = (await PDFDocument.load(bytes)).getForm()
@@ -82,7 +84,7 @@ test.each([
       "thieves' tools (expertise)",
     )
   }
-  const unavailable = createCharacterSheetViewModel(saved, {
+  const unavailable = createCurrentCharacterSheetViewModel(saved, {
     ...input,
     classChoiceFeatureCatalogs: {
       ...f.catalogs,
@@ -101,7 +103,7 @@ test('custom 2014 keeps defensive continuation after tool expertise in the defau
     expertiseOption('Stealth'),
     getProficiencyOption('expertise', "thieves' tools", 'tool'),
   ])
-  const vm = createCharacterSheetViewModel(saved, {
+  const vm = createCurrentCharacterSheetViewModel(saved, {
     ...f.data.lookups!,
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
@@ -121,7 +123,7 @@ test('custom 2014 preserves crowded defensive text through normal notes overflow
     expertiseOption('Stealth'),
     getProficiencyOption('expertise', "thieves' tools", 'tool'),
   ])
-  const vm = createCharacterSheetViewModel(saved, {
+  const vm = createCurrentCharacterSheetViewModel(saved, {
     ...f.data.lookups!,
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,

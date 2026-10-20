@@ -4,15 +4,14 @@ import { buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { deriveSpellActions } from '@/lib/calculations/actions'
+import { reconcileNativeRacialSpellLedger } from '@/lib/calculations/nativeRacialSpells'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { applyRaceSelectionCommand } from '@/lib/character/commands/raceCommands'
 import {
   addSpellToCharacter,
   removeRacialSpell,
   setRacialSpellChoice,
-  syncSpellProfiles,
 } from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addSpellGrant, getSpellRows, makeSourceTag } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -20,6 +19,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function finish(race: Race5e) {
   return buildInitialCharacter(
@@ -93,7 +93,13 @@ test('a canonical child choice rejects the active parent as its owner and clears
   })
   const original = structuredClone(malformed)
   expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
-  const synced = syncSpellProfiles(malformed, malformed.provenance, malformed.spells.spellProfiles)
+  const synced = {
+    characterPatch: {},
+    provenanceUpdate: reconcileNativeRacialSpellLedger(
+      malformed.provenance,
+      malformed.spells.spellProfiles,
+    ),
+  }
   expect(synced.provenanceUpdate.spells.light).toEqual([
     expect.objectContaining({ sourceType: 'manual' }),
     expect.objectContaining({
@@ -299,7 +305,7 @@ test('Sources, Actions and PDF retain racial and independent spell printings thr
       .sort(),
   ).toEqual(['PHB', 'XPHB'])
   expect(
-    createCharacterSheetViewModel(character, lookups)
+    createCurrentCharacterSheetViewModel(character, lookups)
       .spellRows.map((row) => row.id)
       .sort(),
   ).toEqual(['light|phb', 'light|xphb'])

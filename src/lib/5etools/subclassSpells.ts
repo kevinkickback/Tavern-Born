@@ -1,4 +1,7 @@
-import type { SubclassAdditionalSpells } from '@/types/5etools'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import type { Class5e, SubclassAdditionalSpells } from '@/types/5etools'
+import type { CharacterClassEntry } from '@/types/character'
+import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import { parseSpellToken } from './spellTokens'
 
 export interface SubclassSpellGrant {
@@ -8,13 +11,50 @@ export interface SubclassSpellGrant {
   mode: 'prepared' | 'known' | 'expanded' | 'innate'
 }
 
+/** Current selected provider at a historical class gain; undefined means authority is unavailable. */
+export function getEarnedSubclassSpellGrants(
+  classData: Class5e | undefined,
+  entry: CharacterClassEntry,
+  classLevel = entry.levels,
+): SubclassSpellGrant[] | undefined {
+  if (!entry.subclass) return []
+  const norm = normalizeOwnerIdentity
+  if (
+    !classData ||
+    norm(classData.name) !== norm(entry.name) ||
+    norm(classData.source) !== norm(entry.source)
+  )
+    return undefined
+  const boundaries = (classData.classFeatureRefs ?? []).filter(
+    (ref) => ref.gainSubclassFeature === true,
+  )
+  const levels = boundaries.map(getClassFeatureReferenceLevel)
+  if (!levels.length || levels.some((level) => level === undefined)) return undefined
+  const first = Math.min(...(levels as number[]))
+  if (levels.filter((level) => level === first).length !== 1) return undefined
+  if (classLevel < first) return []
+  const subclasses = (classData.subclasses ?? []).filter(
+    (row) =>
+      norm(row.name) === norm(entry.subclass) &&
+      norm(row.source) === norm(entry.subclassSource) &&
+      norm(row.className) === norm(entry.name) &&
+      norm(row.classSource) === norm(entry.source),
+  )
+  return subclasses.length === 1
+    ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel, {
+        preserveSource: true,
+        defaultSource: 'PHB',
+      })
+    : undefined
+}
+
 function pushSpellList(
   grants: SubclassSpellGrant[],
   mode: SubclassSpellGrant['mode'],
   levelText: string,
   spells: unknown,
   maxClassLevel: number,
-  options?: { preserveSource?: boolean },
+  options?: { preserveSource?: boolean; defaultSource?: string },
 ): void {
   const level = Number.parseInt(levelText, 10)
   if (!Number.isFinite(level) || level < 1 || level > maxClassLevel) return
@@ -36,7 +76,7 @@ function pushSpellList(
 export function parseSubclassSpells(
   additionalSpells: SubclassAdditionalSpells[] | undefined,
   classLevel: number,
-  options?: { preserveSource?: boolean },
+  options?: { preserveSource?: boolean; defaultSource?: string },
 ): SubclassSpellGrant[] {
   if (!additionalSpells || additionalSpells.length === 0 || classLevel < 1) return []
 

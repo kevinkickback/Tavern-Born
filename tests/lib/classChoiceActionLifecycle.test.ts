@@ -26,7 +26,6 @@ import {
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import {
@@ -44,6 +43,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const beacon: ClassFeature = {
   name: 'Beacon',
@@ -121,7 +121,7 @@ function observe(character: Character, classes: Class5e[], targets: ClassFeature
       .classFeaturesByKey,
   }
   const before = structuredClone({ character, classes, targets })
-  const view = createCharacterSheetViewModel(character, context)
+  const view = createCurrentCharacterSheetViewModel(character, context)
   expect(
     deriveCharacterActions(character, {
       classes,

@@ -1,5 +1,4 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
   buildSpellNameKeySet,
@@ -9,8 +8,8 @@ import {
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
-import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
+import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
@@ -19,48 +18,12 @@ import type { CharacterReadinessIssue } from './types'
 
 type SpellcastingDetail = ReturnType<typeof buildSpellcastingClassDetails>[number]
 
-function classSpellChoiceTarget(detail: SpellcastingDetail): string {
-  const params = new URLSearchParams({
-    class: `${detail.className}|${detail.classSource ?? ''}`,
-    level: String(detail.classLevel),
-  })
-  return `/build/class?${params.toString()}`
-}
-
 function validateSpellProfile(
   profile: SpellProfile,
   detail: SpellcastingDetail,
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
   const counts = getSpellProfileSelectionCounts(profile)
-  if (detail.cantripLimit != null && counts.cantrips !== detail.cantripLimit) {
-    issues.push(
-      readinessIssue(
-        spellProfileReadinessId('cantrips', detail.profileId),
-        'blocking',
-        'spells',
-        `Finish ${detail.className} cantrip choices`,
-        `${detail.cantripLimit} cantrip choices are available; ${counts.cantrips} chosen.`,
-        classSpellChoiceTarget(detail),
-      ),
-    )
-  }
-  if (
-    detail.knownSpellLimit != null &&
-    !detail.isTruePreparedCaster &&
-    counts.spells !== detail.knownSpellLimit
-  ) {
-    issues.push(
-      readinessIssue(
-        spellProfileReadinessId('known', detail.profileId),
-        'blocking',
-        'spells',
-        `Finish ${detail.className} spell choices`,
-        `${detail.knownSpellLimit} spell choices are available; ${counts.spells} chosen.`,
-        classSpellChoiceTarget(detail),
-      ),
-    )
-  }
   if (detail.preparedSpellLimit != null && counts.prepared > detail.preparedSpellLimit) {
     issues.push(
       readinessIssue(
@@ -95,11 +58,7 @@ export function validateSpells(
   calculation: CharacterCalculationContext,
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): CharacterReadinessIssue[] {
-  character = refreshSpecialSpellKinds(character, spellsByKey, calculation.lookups.raw.spellsByKey)
-  character = refreshNativeRacialSpellState(character, calculation.raceResolution, {
-    spellsByKey,
-    rawSpellsByKey: calculation.lookups.raw.spellsByKey,
-  })
+  character = calculation.character
   const classMap = new Map(
     calculation.classes.map((classData) => [
       toClassProfileId(classData.name, classData.source),
@@ -113,23 +72,7 @@ export function validateSpells(
     calculation.effects.declarations,
     calculation.effects.resolutionContext,
   )
-  const storedProfiles = character.spells.spellProfiles.filter(
-    (profile) => profile.type !== 'racial',
-  )
-  const storedProfileIds = new Set(storedProfiles.map((profile) => profile.id))
-  const derivedProfiles = deriveSpellProfileState(
-    character,
-    classMap,
-    undefined,
-    calculation.raceResolution,
-  ).spells.spellProfiles
-  // Refresh the native relation while retaining existing class and special command state.
-  const spellProfiles = [
-    ...storedProfiles,
-    ...derivedProfiles.filter(
-      (profile) => profile.type === 'racial' || !storedProfileIds.has(profile.id),
-    ),
-  ]
+  const spellProfiles = character.spells.spellProfiles
   const profileById = new Map(spellProfiles.map((profile) => [profile.id, profile]))
   const issues = details.flatMap((detail) => {
     const profile = profileById.get(detail.profileId)
@@ -144,6 +87,60 @@ export function validateSpells(
       ),
     ]
   })
+  for (const profileId of new Set(
+    calculation.dailyClassSpellStatuses.filter((row) => !row.active).map((row) => row.profileId),
+  )) {
+    const unavailable = calculation.dailyClassSpellStatuses.filter(
+      (row) => row.profileId === profileId && !row.active,
+    )
+    issues.push(
+      readinessIssue(
+        spellProfileReadinessId('prepared-unavailable', profileId),
+        'blocking',
+        'spells',
+        'Review unavailable prepared spells',
+        `${unavailable.map((row) => `${row.reference}: ${row.reason}`).join(' ')} Restore their sources or unprepare the saved choices.`,
+      ),
+    )
+  }
+
+  const statuses = new Map(
+    calculation.managedClassSpellStatuses.map((status) => [
+      managedClassSpellId(status.choice.slot),
+      status,
+    ]),
+  )
+  for (const entry of character.classProgression) {
+    const groups = new Map<string, ReturnType<typeof getManagedClassSpellSlots>>()
+    for (const slot of getManagedClassSpellSlots(entry)) {
+      const key = JSON.stringify(slot.slice(0, 4))
+      groups.set(key, [...(groups.get(key) ?? []), slot])
+    }
+    for (const slots of groups.values()) {
+      const rows = slots.map((slot) => statuses.get(managedClassSpellId(slot)))
+      const active = rows.filter((row) => row?.active).length
+      if (active === slots.length) continue
+      const unavailable = rows.flatMap((row) => (row && !row.active ? [row] : []))
+      const level = slots[0][3]
+      const kind = slots[0][1] === 'class-cantrip' ? 'cantrip' : 'spell'
+      issues.push(
+        readinessIssue(
+          `spells:managed:${managedClassSpellId(slots[0])}`,
+          'blocking',
+          'spells',
+          `${unavailable.length ? 'Review' : 'Finish'} ${entry.name} ${kind} choices at level ${level}`,
+          unavailable.length
+            ? unavailable
+                .map(
+                  (row) => `${row.choice.target.name} (${row.choice.target.source}): ${row.reason}`,
+                )
+                .join(' ')
+            : `${slots.length} choices are earned here; ${active} are active.`,
+          `/build/class?${new URLSearchParams({ class: `${entry.name}|${entry.source}`, level: String(level) })}`,
+        ),
+      )
+    }
+  }
 
   for (const profile of spellProfiles) {
     const label = getSpellProfileDisplayLabel(profile)

@@ -19,7 +19,6 @@ import {
 } from '@/lib/character/featExpertiseSelections'
 import { getFeatSetupStatus, isFeatSetupComplete } from '@/lib/character/featSetupProgress'
 import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { addGrant } from '@/lib/provenance'
 import { applyClassGrants } from '@/lib/provenance/applyClassGrants'
 import { validateFeatSetup } from '@/lib/readiness/coreReadiness'
@@ -27,6 +26,7 @@ import type { Feat5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { applyProficiency, makeClassProficiencyFixture } from '../fixtures/classProficiencyFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const sources = JSON.parse(
   readFileSync('tests/fixtures/expertiseFeatSources.json', 'utf8'),
@@ -506,9 +506,9 @@ test('normal PDF projections use the same exact feat source suspension and resto
     classChoiceFeatureCatalogs: f.catalogs,
   }
   const before = JSON.stringify(current)
-  const on = createCharacterSheetViewModel(current, input)
-  const off = createCharacterSheetViewModel(current, { ...input, featExpertiseFeats: [] })
-  const restored = createCharacterSheetViewModel(current, input)
+  const on = createCurrentCharacterSheetViewModel(current, input)
+  const off = createCurrentCharacterSheetViewModel(current, { ...input, featExpertiseFeats: [] })
+  const restored = createCurrentCharacterSheetViewModel(current, input)
   expect(on.skillByName.get('stealth')).toMatchObject({ proficient: true, expertise: true })
   expect(off.skillByName.get('stealth')).toMatchObject({ proficient: true, expertise: false })
   expect(on.skillByName.get('stealth')!.modifier - off.skillByName.get('stealth')!.modifier).toBe(

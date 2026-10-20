@@ -1,7 +1,7 @@
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry, SpellProfile } from '@/types/character'
 import type { AbilityName } from './abilityScores'
 import type { PrereqCharacterSnapshot } from './prerequisiteRules'
 import { collectKnownSpells, ensureSpellProfiles } from './spellProfiles.profiles'
@@ -12,6 +12,8 @@ interface BuildPrerequisiteSnapshotParams {
   classProgression?: CharacterClassEntry[]
   classLookup?: Readonly<Record<string, Class5e | undefined>>
   effectiveAbilityScores?: Partial<Record<AbilityName, number>>
+  /** Supplied empty profiles are authoritative; this leaf never reconstructs current spell rules. */
+  effectiveSpellProfiles?: readonly SpellProfile[]
 }
 
 export function buildEffectivePrerequisiteSnapshot({
@@ -19,8 +21,14 @@ export function buildEffectivePrerequisiteSnapshot({
   classProgression = getCharacterClassEntries(character),
   classLookup,
   effectiveAbilityScores,
+  effectiveSpellProfiles,
 }: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
-  const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
+  const profileSpells =
+    effectiveSpellProfiles !== undefined
+      ? collectKnownSpells(effectiveSpellProfiles)
+      : character
+        ? collectKnownSpells(ensureSpellProfiles(character))
+        : null
 
   return {
     progression: classProgression.map((entry) => {

@@ -18,14 +18,12 @@ import {
   deriveStormAuraEffects,
   getStormAuraSelectionStates,
 } from '@/lib/character/stormAuraSelections'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { makeStormAuraFixture, selectStormAura } from '../fixtures/stormAuraFixtures'
 import { installStormSourceDouble } from '../fixtures/stormAuraSourceDouble'
 
@@ -197,7 +195,7 @@ describe('source-backed Storm Aura', () => {
       ),
     ).toBe(false)
     expect(calculation.movement.speeds.swim).toBeUndefined()
-    const vm = createCharacterSheetViewModel(saved, input)
+    const vm = createCurrentCharacterSheetViewModel(saved, input)
     expect(vm.actions.some((action) => action.name === 'Storm Aura — Sea')).toBe(false)
     expect(vm.featuresSummary).toContain('rules unavailable')
     expect(vm.movement.speeds.swim).toBeUndefined()
@@ -456,7 +454,7 @@ describe('source-backed Storm Aura', () => {
         source: { kind: 'manual', name: 'My exact Aura' },
       },
     ]
-    const vm = createCharacterSheetViewModel(saved, {
+    const vm = createCurrentCharacterSheetViewModel(saved, {
       ...f.data.lookups!,
       classChoiceClasses: f.data.classes,
       classChoiceFeatureCatalogs: f.catalogs,
@@ -495,7 +493,7 @@ describe('source-backed Storm Aura', () => {
       subclassFeatureCandidates: new Map(),
       subclassTargets: undefined,
     }
-    const unavailable = createCharacterSheetViewModel(saved, {
+    const unavailable = createCurrentCharacterSheetViewModel(saved, {
       ...f.data.lookups!,
       classChoiceClasses: [],
       classChoiceFeatureCatalogs: empty,
@@ -503,7 +501,7 @@ describe('source-backed Storm Aura', () => {
     expect(unavailable.actions.find((row) => row.id === aura.id)?.name).toBe('My exact Aura')
     expect(unavailable.actions.some((row) => row.name === 'Raging Storm — Sea')).toBe(false)
     expect(unavailable.featuresSummary).toContain('rules unavailable')
-    const restored = createCharacterSheetViewModel(
+    const restored = createCurrentCharacterSheetViewModel(
       { ...saved, manualActions: [] },
       {
         ...f.data.lookups!,

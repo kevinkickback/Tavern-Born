@@ -5,12 +5,12 @@ import {
   replaceBonusFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
 import { addSpellToCharacter, setProfileSpells } from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import type { Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const special = (character: Character) =>
   character.spells.spellProfiles.find((profile) => profile.type === 'special')!
@@ -21,9 +21,9 @@ const apply = (character: Character, result: ReturnType<typeof commitFeatOptions
 })
 
 function setup(origin: '2014' | '2024' = '2024') {
-  const name = origin === '2024' ? 'Toll the Dead' : 'Booming Blade'
-  const source = origin === '2024' ? 'XGE' : 'SCAG'
-  const other = origin === '2024' ? 'XPHB' : 'TCE'
+  const name = 'Toll the Dead'
+  const source = 'XGE'
+  const other = 'XPHB'
   const feat =
     origin === '2024'
       ? { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVariant: 'cleric' }
@@ -120,7 +120,7 @@ test('Sources and offline PDF retain distinct target printings with their origin
     expect.objectContaining({ itemSource: 'XGE', sourceTypes: ['class', 'feat'] }),
     expect.objectContaining({ itemSource: 'XPHB', sourceTypes: ['manual'] }),
   ])
-  const vm = createCharacterSheetViewModel(configured, {})
+  const vm = createCurrentCharacterSheetViewModel(configured, {})
   expect([...vm.spellRows].sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))).toEqual([
     expect.objectContaining({ id: 'toll the dead|xge', level: 'C' }),
     expect.objectContaining({ id: 'toll the dead|xphb', level: 'C' }),

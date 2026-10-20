@@ -26,10 +26,7 @@ import {
   scopeNaturalExplorerOptions,
 } from '@/lib/character/naturalExplorerSelections'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { detectSourceConflicts } from '@/lib/sourceConflicts'
 import type { Character } from '@/types/character'
@@ -38,6 +35,7 @@ import {
   makeNaturalExplorerFixture,
   selectNaturalExplorer,
 } from '../fixtures/naturalExplorerFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 type Fixture = ReturnType<typeof makeNaturalExplorerFixture>
 const input = (f: Fixture) => ({
@@ -235,7 +233,7 @@ test('summaries retain conditional qualifiers once, selected gains and no altern
       (effect) => effect.target.kind !== 'proficiency-check-note',
     ),
   }).toEqual(baseline.effects)
-  const vm = createCharacterSheetViewModel(saved, input(f))
+  const vm = createCurrentCharacterSheetViewModel(saved, input(f))
   expect(vm.featuresSummary).toContain(summary[0].text)
   expect(withoutSheetDescriptions(vm).featuresSummary).toContain(summary[0].compactText)
   expect(
@@ -257,9 +255,9 @@ test.skipIf(!existsSync(configured))(
     }
     const noAdoptionBytes = JSON.stringify(permissionOnly)
     expect(states(permissionOnly, f).every((row) => !row.selection.inactive)).toBe(true)
-    expect(createCharacterSheetViewModel(permissionOnly, input(f)).featuresSummary).toContain(
-      'When you make an Intelligence or Wisdom check',
-    )
+    expect(
+      createCurrentCharacterSheetViewModel(permissionOnly, input(f)).featuresSummary,
+    ).toContain('When you make an Intelligence or Wisdom check')
     const request = {
       owner: ['class', 'ranger', 'phb'] as const,
       target: 'class-feature|deft explorer|ranger|phb|1|tce',
@@ -312,7 +310,7 @@ test.skipIf(!existsSync(configured))(
         createGameDataAvailabilityIndex(missingGrant.data),
       ),
     ).toBe(true)
-    const vm = createCharacterSheetViewModel(optional, input(f))
+    const vm = createCurrentCharacterSheetViewModel(optional, input(f))
     expect(vm.featuresSummary).toContain('Forest (level 1; Inactive)')
     expect(vm.featuresSummary).not.toContain('When you make an Intelligence or Wisdom check')
     expect(withoutSheetDescriptions(vm).featuresSummary).toContain('Inactive')
@@ -373,9 +371,9 @@ test.skipIf(!existsSync(configured))(
     expect(
       issues(stale, missing).filter((row) => row.title === 'Finish Natural Explorer'),
     ).toHaveLength(0)
-    expect(createCharacterSheetViewModel(stale, input(missing)).featuresSummary).not.toContain(
-      'When you make an Intelligence or Wisdom check',
-    )
+    expect(
+      createCurrentCharacterSheetViewModel(stale, input(missing)).featuresSummary,
+    ).not.toContain('When you make an Intelligence or Wisdom check')
     expect(
       detectSourceConflicts(
         stale,
@@ -402,7 +400,7 @@ test.skipIf(!existsSync(configured))(
     )
     const restored = { ...stale, ...cleared.characterPatch, provenance: cleared.provenanceUpdate }
     expect(states(restored, f).every((row) => !row.selection.inactive)).toBe(true)
-    expect(createCharacterSheetViewModel(restored, input(f)).featuresSummary).toContain(
+    expect(createCurrentCharacterSheetViewModel(restored, input(f)).featuresSummary).toContain(
       'When you make an Intelligence or Wisdom check',
     )
     expect(JSON.stringify(permissionOnly)).toBe(noAdoptionBytes)

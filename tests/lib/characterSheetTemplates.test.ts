@@ -2,12 +2,12 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import {
-  CHARACTER_SHEET_TEMPLATES,
-  createCharacterSheetViewModel,
-} from '@/lib/pdf/characterSheetPdf'
+import { CHARACTER_SHEET_TEMPLATES } from '@/lib/pdf/characterSheetPdf'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 describe('character sheet template registry', () => {
   test('ships the four registered templates and the companion supplement', () => {
@@ -39,7 +39,7 @@ describe('character sheet template registry', () => {
     'fills and reopens the %s form',
     async (templateId, nameField) => {
       const character = makeCharacterFixture({ name: 'Official Form Test' })
-      const viewModel = createCharacterSheetViewModel(character, {})
+      const viewModel = createCurrentCharacterSheetViewModel(character, {})
       const template = CHARACTER_SHEET_TEMPLATES.find((candidate) => candidate.id === templateId)
       if (!template) throw new Error(`Missing test template: ${templateId}`)
       const outputBytes = await generateTestCharacterSheet(viewModel, templateId)
