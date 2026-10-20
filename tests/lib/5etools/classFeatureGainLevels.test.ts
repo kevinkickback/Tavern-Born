@@ -5,7 +5,6 @@ import {
 } from '@/lib/5etools/classChoiceNormalization'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
-import { getExpertiseSlotsFromClasses } from '@/lib/calculations/skills'
 import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 
 const owner = { name: 'Wizard', source: 'PHB' }
@@ -29,12 +28,6 @@ function reference(name: string, ref: string, level?: number): ClassFeatureRefer
     ...(level !== undefined ? { level } : {}),
     feature: { name, source: 'PHB', level: 8, entries: optionEntries },
   }
-}
-
-function expertise(refs: ClassFeatureReference[], level: number): number {
-  return getExpertiseSlotsFromClasses([{ ...owner, levels: level }], {
-    'Wizard|PHB': { ...owner, classFeatureRefs: refs },
-  })
 }
 
 describe('class-feature gain levels', () => {
@@ -62,7 +55,6 @@ describe('class-feature gain levels', () => {
       }) as Class5e[]
     )[0]
     expect(parsed.normalizedRules?.asiLevels).toEqual([])
-    expect(expertise(parsed.classFeatureRefs ?? [], 20)).toBe(0)
   })
 
   test.each([
@@ -76,7 +68,6 @@ describe('class-feature gain levels', () => {
     expect(
       normalizeClassRules(owner, [{ ...ref, name: 'Ability Score Improvement' }]).asiLevels,
     ).toEqual([])
-    expect(expertise([{ ...ref, name: 'Expertise' }], 20)).toBe(0)
   })
 
   test.each([
@@ -93,8 +84,6 @@ describe('class-feature gain levels', () => {
     expect(
       normalizeClassRules(owner, [{ ...ref, name: 'Ability Score Improvement' }]).asiLevels,
     ).toEqual([8])
-    expect(expertise([{ ...ref, name: 'Expertise' }], 7)).toBe(0)
-    expect(expertise([{ ...ref, name: 'Expertise' }], 8)).toBe(2)
     const choice = normalizeClassChoices(owner, [ref]).choices[0]
     expect(choice).toMatchObject({ level: 8, minimumSelections: 1, maximumSelections: 1 })
     expect(choice.selectionCountByLevel.slice(0, 9)).toEqual([0, 0, 0, 0, 0, 0, 0, 1, 1])
@@ -152,8 +141,6 @@ describe('class-feature gain levels', () => {
     expect(
       normalizeClassRules(owner, [{ ...ref, name: 'Ability Score Improvement' }]).asiLevels,
     ).toEqual([expected])
-    expect(expertise([{ ...ref, name: 'Expertise' }], expected - 1)).toBe(0)
-    expect(expertise([{ ...ref, name: 'Expertise' }], expected)).toBe(2)
   })
 
   test.each([
@@ -170,7 +157,6 @@ describe('class-feature gain levels', () => {
     expect(
       normalizeClassRules(owner, [{ ...ref, name: 'Ability Score Improvement' }]).asiLevels,
     ).toEqual([])
-    expect(expertise([{ ...ref, name: 'Expertise' }], 20)).toBe(0)
   })
 
   test.each([
@@ -185,13 +171,11 @@ describe('class-feature gain levels', () => {
     const ref = reference('Choices', '')
     ref.feature!.level = level as number
     expect(normalizeClassChoices(owner, [ref]).choices).toEqual([])
-    expect(expertise([{ ...ref, name: 'Expertise' }], 20)).toBe(0)
   })
 
   test.each([null, 8])('does not treat a non-string UID as absent: %s', (uid) => {
     const ref = { ...reference('Choices', '', 4), ref: uid } as unknown as ClassFeatureReference
     expect(normalizeClassChoices(owner, [ref]).choices).toEqual([])
-    expect(expertise([{ ...ref, name: 'Expertise' }], 20)).toBe(0)
   })
 
   test('preserves an independently structured progression when feature gain metadata is invalid', () => {
@@ -206,63 +190,6 @@ describe('class-feature gain levels', () => {
     expect(choices).toHaveLength(1)
     expect(choices[0]).toMatchObject({ level: 3, source: { kind: 'optional-feature-progression' } })
     expect(choices[0].selectionCountByLevel.slice(0, 4)).toEqual(counts)
-  })
-
-  test('exact Rogue and Bard gains use owned choices even without current source bodies', () => {
-    const classes: Record<string, Class5e> = {
-      'Rogue|PHB': {
-        name: 'Rogue',
-        source: 'PHB',
-        classFeatureRefs: [1, 6].map((level) =>
-          reference('Expertise', `Expertise|Rogue||${level}`, 1),
-        ),
-      },
-      'Bard|PHB': {
-        name: 'Bard',
-        source: 'PHB',
-        classFeatureRefs: [3, 10].map((level) =>
-          reference('Expertise', `Expertise|Bard||${level}`, 1),
-        ),
-      },
-      'Rogue|XPHB': { name: 'Rogue', source: 'XPHB', classFeatureRefs: [] },
-    }
-    const progression = [
-      { name: 'Rogue', source: 'PHB', levels: 5 },
-      { name: 'Bard', source: 'PHB', levels: 3 },
-      { name: 'Rogue', source: 'XPHB', levels: 10 },
-    ]
-    expect(getExpertiseSlotsFromClasses([progression[0]], classes)).toBe(0)
-    expect(getExpertiseSlotsFromClasses(progression, classes)).toBe(0)
-    expect(
-      getExpertiseSlotsFromClasses([{ ...progression[0], levels: 6 }, progression[1]], classes),
-    ).toBe(0)
-    expect(
-      getExpertiseSlotsFromClasses([progression[0], { ...progression[1], levels: 10 }], classes),
-    ).toBe(0)
-  })
-
-  test('unregistered Expertise printings retain source-qualified earned levels and cannot serve another printing', () => {
-    const unregistered: Class5e = {
-      name: 'Bard',
-      source: 'TST',
-      classFeatureRefs: [
-        reference('Expertise', 'Expertise|Bard|TST|3', 1),
-        reference('Expertise', 'Expertise|Bard|TST|10|TST', 1),
-      ],
-    }
-    for (const [levels, expected] of [
-      [2, 0],
-      [3, 2],
-      [9, 2],
-      [10, 4],
-    ]) {
-      expect(
-        getExpertiseSlotsFromClasses([{ name: 'Bard', source: 'TST', levels }], { unregistered }),
-      ).toBe(expected)
-    }
-    expect(
-      getExpertiseSlotsFromClasses([{ name: 'Bard', source: 'PHB', levels: 10 }], { unregistered }),
-    ).toBe(0)
   })
 
   test('preserves the separate subclass reference layout', () => {

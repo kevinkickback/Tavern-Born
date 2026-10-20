@@ -10,7 +10,7 @@ import {
   StandardFonts,
 } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
+import { buildClassLookup, buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseClasses, parseSpells } from '@/lib/5etools/parsers'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
@@ -19,15 +19,21 @@ import {
   getOfficial2014SpellPages,
   OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
 } from '@/lib/pdf/characterSheetMapping2014Official'
-import {
-  buildCharacterSheetFieldMap,
-  createCharacterSheetViewModel,
-} from '@/lib/pdf/characterSheetPdf'
+import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+  sourceTemplateBytes,
+} from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'))
 const classPaths = ['wizard', 'warlock', 'fighter', 'cleric'].map(
@@ -37,7 +43,9 @@ const spellPaths = ['phb', 'xphb'].map((name) => `data/spells/spells-${name}.jso
 const hasCorpus = [...classPaths, ...spellPaths].every(existsSync)
 const classes = hasCorpus ? classPaths.flatMap((path) => parseClasses(json(path))) : []
 const spells = hasCorpus ? spellPaths.flatMap((path) => parseSpells(json(path))) : []
+const managedFixture = makeManagedClassSpellFixtures()
 const lookups = {
+  ...managedFixture.lookups,
   classesByKey: buildClassLookup(classes as Class5e[]),
   spellsByKey: buildSpellLookup(spells as Spell5e[]),
 }
@@ -47,7 +55,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   test.each([
     30, 120,
   ])('official 2014 preserves and visibly fits a walking speed of %s ft', async (speed) => {
-    const vm = createCharacterSheetViewModel(
+    const vm = createCurrentCharacterSheetViewModel(
       createEmptyCharacter({
         movement: { speeds: { walk: speed }, source: { kind: 'manual', name: 'Speed regression' } },
       }),
@@ -91,7 +99,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         },
       ],
     })
-    const vm = createCharacterSheetViewModel(character, lookups)
+    const vm = createCurrentCharacterSheetViewModel(character, lookups)
     expect(getOfficial2014SpellPages(vm)).toHaveLength(count)
     expect(getOfficial2014SpellPages(vm).map((page) => page.detail?.sourceName)).toEqual(
       count === 1 ? ['Wizard'] : ['Wizard', 'Fighter'],
@@ -115,27 +123,36 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         charisma: 14,
       },
     })
-    character.spells.spellProfiles = [
-      ...character.spells.spellProfiles.filter((profile) => profile.type === 'special'),
-      ...['Wizard', 'Cleric', 'Warlock'].map((name) => ({
-        id: `class:${name}|PHB`,
-        type: 'class' as const,
-        label: name,
-        className: name,
-        classSource: 'PHB',
-        cantrips: [],
-        spellsKnown: ['Detect Magic|PHB'],
-        preparedSpells: name === 'Wizard' ? ['Detect Magic|PHB'] : [],
-      })),
-    ]
+    character = authorManagedClassSpellFixture(
+      character,
+      managedFixture,
+      [
+        {
+          owner: character.classProgression[0],
+          domain: 'class-spellbook',
+          gain: 1,
+          targets: [
+            { name: 'Detect Magic', source: 'PHB', prepare: true },
+            { name: 'Shield', source: 'PHB' },
+          ],
+        },
+        {
+          owner: character.classProgression[2],
+          domain: 'class-known',
+          gain: 1,
+          policy: 'ignore-class-list',
+          targets: [{ name: 'Detect Magic', source: 'PHB' }],
+        },
+      ],
+      [{ profileId: 'class:Cleric|PHB', reference: 'Detect Magic|PHB' }],
+    )
+    const race = parseRaces({
+      race: [{ name: 'Elf', source: 'PHB', additionalSpells: [{ known: { _: ['light|PHB#c'] } }] }],
+    })[0] as Race5e
     character = buildInitialCharacter(
       {
         initial: character,
-        race: parseRaces({
-          race: [
-            { name: 'Elf', source: 'PHB', additionalSpells: [{ known: { _: ['light|PHB#c'] } }] },
-          ],
-        })[0] as Race5e,
+        race,
       },
       new Map(),
       () => [],
@@ -144,7 +161,10 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     character.spells.spellSlots = { 1: { max: 99, used: 1 } }
     character.spells.pactSpellSlots = { 2: { max: 99, used: 1 } }
     const before = structuredClone(character)
-    const vm = createCharacterSheetViewModel(character, lookups)
+    const vm = createCharacterSheetViewModel(character, lookups, {
+      ...managedFixture.lookups,
+      racesByKey: buildRaceLookup([race]),
+    })
     const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
     expect(saved.getPageCount()).toBe(6)
     const form = saved.getForm()
@@ -163,7 +183,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
       )
       const spell = form.getTextField(`${prefix}${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1][0]}`)
       expect(spell.getText()).toBe('Detect Magic')
-      expect(form.getCheckBox(`${prefix}Check Box 251`).isChecked()).toBe(index !== 1)
+      expect(form.getCheckBox(`${prefix}Check Box 251`).isChecked()).toBe(true)
       expect(spell.acroField.getWidgets()[0].P()).toEqual(saved.getPage(index + 2).ref)
       expect(
         saved
@@ -182,6 +202,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         form.getTextField(`${prefix}${OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[0][0]}`).getText() ?? '',
       ).toBe('')
     }
+    expect(form.getCheckBox('Check Box 309').isChecked()).toBe(false)
     expect(form.getTextField('SpellPage4__Spellcasting Class 2').getText()).toBe('Elf')
     expect(
       form.getTextField('SpellPage4__' + OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[0][0]).getText(),
@@ -211,7 +232,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   }, 30_000)
 
   test('official 2014 checks per-caster spell capacity instead of a combined list', () => {
-    const vm = createCharacterSheetViewModel(
+    const vm = createCurrentCharacterSheetViewModel(
       createEmptyCharacter({
         classProgression: [
           { name: 'Wizard', source: 'PHB', levels: 3 },
@@ -253,7 +274,10 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   })
 
   test('official 2014 uses portable dots for all checkbox states and retains inspiration X', async () => {
-    const vm = createCharacterSheetViewModel(createEmptyCharacter({ inspiration: true }), lookups)
+    const vm = createCurrentCharacterSheetViewModel(
+      createEmptyCharacter({ inspiration: true }),
+      lookups,
+    )
     const saved = await PDFDocument.load(
       await generateTestCharacterSheet(vm, '2014-official', {
         pages: { spells: true },
@@ -283,7 +307,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     const character = createEmptyCharacter()
     character.details.organizationSelectionKey = '__custom__'
     character.details.organizationCustomImage = `data:image/png;base64,${readFileSync(join(process.cwd(), 'public/assets/images/ui/logo.png')).toString('base64')}`
-    const vm = createCharacterSheetViewModel(character, lookups)
+    const vm = createCurrentCharacterSheetViewModel(character, lookups)
     expect(vm.organizationImage).toBe(character.details.organizationCustomImage)
     const saved = await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
     const widget = saved.getForm().getButton('Faction Symbol Image').acroField.getWidgets()[0]
@@ -311,7 +335,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     })
     character.spells.spellSlots = { 1: { max: 99, used: 1 }, 2: { max: 99, used: 99 } }
     const before = structuredClone(character)
-    const vm = createCharacterSheetViewModel(character, lookups)
+    const vm = createCurrentCharacterSheetViewModel(character, lookups)
     for (const id of ['2014-official', '2024-official', '2024-custom'] as const) {
       const fields = buildCharacterSheetFieldMap(vm, id)
       const names =
@@ -338,7 +362,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     })
     expect(
       buildCharacterSheetFieldMap(
-        createCharacterSheetViewModel(character, lookups),
+        createCurrentCharacterSheetViewModel(character, lookups),
         '2014-official',
       ).textFields['SlotsTotal 21'],
     ).toBe('2')
@@ -347,7 +371,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
       { name: 'Warlock', source: 'PHB', levels: 3 },
     ]
     character.spells.pactSpellSlots = { 2: { max: 99, used: 1 } }
-    const vm = createCharacterSheetViewModel(character, lookups)
+    const vm = createCurrentCharacterSheetViewModel(character, lookups)
     expect(vm.spellSlots.mergedPactWithUsage[2]).toMatchObject({ max: 2, used: 1 })
     expect(buildCharacterSheetFieldMap(vm, '2024-official').textFields.Text_221).toBe('2')
     expect(getPdfExportPreflight('2024-official', vm, null, []).issues).toContainEqual(
@@ -358,7 +382,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     )
   })
 
-  test('keeps prepared and always-prepared spells source-qualified and warns per level', () => {
+  test('maps distinct printing rows and preparation flags and warns per level', () => {
     const known = [
       'Alarm',
       'Burning Hands',
@@ -374,32 +398,31 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
       'Fog Cloud',
       'Grease',
     ].map((name) => `${name}|PHB`)
-    const character = createEmptyCharacter({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 10 }],
-    })
-    character.spells.spellProfiles = [
-      {
-        id: 'class:Wizard|PHB',
-        type: 'class',
-        label: 'Wizard',
-        className: 'Wizard',
-        classSource: 'PHB',
-        cantrips: [],
-        spellsKnown: [...known, 'Alarm|XPHB'],
-        preparedSpells: ['Alarm | PHB'],
-        alwaysPreparedSpells: [known[1]],
-      },
-    ]
-    const vm = createCharacterSheetViewModel(character, lookups)
-    expect(vm.spellRows.filter((row) => row.name === 'Alarm').map((row) => row.prepared)).toEqual([
-      true,
-      false,
-    ])
-    expect(vm.spellRows.find((row) => row.name === 'Burning Hands')?.prepared).toBe(true)
-    expect(vm.spellRows.find((row) => row.name === 'Charm Person')?.prepared).toBe(false)
+    const vm = createCurrentCharacterSheetViewModel(createEmptyCharacter(), lookups)
+    // This is a mapper boundary: distinct printed rows need no fabricated character ownership.
+    vm.spellRows = [known[0], 'Alarm|XPHB', ...known.slice(1)].map((reference) => ({
+      id: reference,
+      name: reference.split('|')[0],
+      level: '1',
+      prepared: reference === 'Alarm|PHB' || reference === 'Burning Hands|PHB',
+      castingTimeAndDuration: '',
+      castingTime: '',
+      duration: '',
+      range: '',
+      components: '',
+      notes: '',
+      concentration: false,
+      ritual: false,
+      material: false,
+    }))
     const map = buildCharacterSheetFieldMap(vm, '2014-official')
+    expect(
+      OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1].slice(0, 4).map((field) => map.textFields[field]),
+    ).toEqual(['Alarm', 'Alarm', 'Burning Hands', 'Charm Person'])
     expect(map.checkboxFields['Check Box 251']).toBe(true)
     expect(map.checkboxFields['Check Box 309']).toBe(false)
+    expect(map.checkboxFields['Check Box 3010']).toBe(true)
+    expect(map.checkboxFields['Check Box 3011']).toBe(false)
     expect(getPdfExportPreflight('2014-official', vm, null, []).issues).toContainEqual(
       expect.objectContaining({
         id: 'capacity:spells-level-1',
@@ -409,7 +432,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   })
 
   test('every prepared circle is checked beside its actual saved spell row', async () => {
-    const vm = createCharacterSheetViewModel(createEmptyCharacter(), lookups)
+    const vm = createCurrentCharacterSheetViewModel(createEmptyCharacter(), lookups)
     vm.spellRows = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.flatMap((fields, level) =>
       fields.map((_, index) => ({
         name: `Spell ${level}-${index}`,
@@ -455,7 +478,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     '2014-official',
     '2024-official',
   ] as const)('%s preserves visible weapon damage in the saved appearance', async (id) => {
-    const vm = createCharacterSheetViewModel(createEmptyCharacter(), lookups)
+    const vm = createCurrentCharacterSheetViewModel(createEmptyCharacter(), lookups)
     vm.weaponRows = [
       {
         name: 'Longsword',
@@ -502,7 +525,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
   }, 30_000)
 
   test('reports shortening when notes continuation is selected but notes are disabled', async () => {
-    const vm = createCharacterSheetViewModel(createEmptyCharacter(), lookups)
+    const vm = createCurrentCharacterSheetViewModel(createEmptyCharacter(), lookups)
     vm.historyAndPersonalitySummary = Array.from({ length: 20 }, (_, i) => `Journey ${i + 1}`).join(
       '\n',
     )

@@ -5,10 +5,10 @@ import {
   addManualEquipmentBatchCommand,
   removeManualEquipmentCommand,
 } from '@/lib/character/commands/equipmentCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Item5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 test('equipment producers retain exact printings through projections, strict reopen and removal', () => {
   const first: Item5e = {
@@ -83,7 +83,7 @@ test('equipment producers retain exact printings through projections, strict reo
     { name: 'First Mastery', source: 'A' },
   ])
   const descriptions = () =>
-    createCharacterSheetViewModel(character, { itemLookup: raw }).magicItems.map((entry) => [
+    createCurrentCharacterSheetViewModel(character, { itemLookup: raw }).magicItems.map((entry) => [
       entry.source,
       entry.description,
     ])
@@ -121,7 +121,7 @@ test('equipment producers retain exact printings through projections, strict reo
   expect(reopened.equipment.map((entry) => entry.source)).toEqual(['B'])
   expect(reopened.provenance?.equipment['test relic']).toHaveLength(1)
   expect(
-    createCharacterSheetViewModel(reopened, { itemLookup: raw }).magicItems[0].description,
+    createCurrentCharacterSheetViewModel(reopened, { itemLookup: raw }).magicItems[0].description,
   ).toBe('Second rules.')
 })
 
@@ -139,7 +139,7 @@ test('PDF descriptions prefer saved text and leave source-less or missing printi
     ['arbitrary', { name: 'Relic', source: 'A', type: 'WO', entries: ['Catalog prose.'] }],
   ])
   expect(
-    createCharacterSheetViewModel(character, { itemLookup: lookup }).magicItems.map(
+    createCurrentCharacterSheetViewModel(character, { itemLookup: lookup }).magicItems.map(
       (entry) => entry.description,
     ),
   ).toEqual(['Saved prose.', 'Catalog prose.', '', ''])

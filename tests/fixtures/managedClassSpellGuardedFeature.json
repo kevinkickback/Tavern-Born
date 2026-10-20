@@ -1,0 +1,16 @@
+{
+  "name": "Agonizing Blast",
+  "source": "PHB",
+  "page": 110,
+  "srd": true,
+  "reprintedAs": ["Agonizing Blast|XPHB"],
+  "featureType": ["EI"],
+  "prerequisite": [
+    {
+      "spell": ["eldritch blast#c"]
+    }
+  ],
+  "entries": [
+    "When you cast {@spell eldritch blast}, add your Charisma modifier to the damage it deals on a hit."
+  ]
+}

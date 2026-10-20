@@ -5,6 +5,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { isPlainSpellIdentityPart } from '@/lib/character/managedClassSpellIdentity'
 import { getInvalidOptionalClassAdoptionIndexes } from '@/lib/character/optionalClassFeatureIdentity'
 import { isReservedProficiencyCheckNoteId } from '@/lib/provenance/conditionalProficiencyIdentity'
 import { getInvalidFeatSelectionPaths } from '@/lib/provenance/featSelectionValidation'
@@ -24,6 +25,7 @@ import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVe
 import { getInvalidClassProficiencyPaths } from '@/lib/schema/classProficiencyValidation'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
 import { getInvalidFixedProficiencyPaths } from '@/lib/schema/fixedProficiencyValidation'
+import { getInvalidManagedClassSpellPaths } from '@/lib/schema/managedClassSpellValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Character } from './character'
 
@@ -59,6 +61,32 @@ const optionalClassAdoptionSchema = z
       .max(1200)
       .transform((s) => s.toLowerCase()),
     earnedLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  })
+  .strict()
+
+const managedClassSpellChoiceSchema = z
+  .object({
+    slot: z.tuple([
+      optionalClassAdoptionSchema.shape.owner,
+      z.enum(['class-cantrip', 'class-known', 'class-spellbook']),
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(1200)
+        .transform((value) => value.toLowerCase()),
+      z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+      z.number().int().nonnegative(),
+    ]),
+    target: z
+      .object({
+        name: z.string().trim().min(1).refine(isPlainSpellIdentityPart),
+        source: z.string().trim().min(1).refine(isPlainSpellIdentityPart),
+      })
+      .strict(),
+    revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    policy: z.enum(['default', 'ignore-class-list']),
+    prepare: z.literal(true).optional(),
   })
   .strict()
 
@@ -579,6 +607,7 @@ const spellSourceTagSchema = sourceTagSchema
     spellGrantedAtLevel: z.number().int().min(1).optional(),
     spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
   })
+  .strict()
   .superRefine((tag, context) => {
     if (tag.sourceType !== 'race' && tag.sourceType !== 'subrace') return
     if (!tag.grantSource?.trim()) {
@@ -764,9 +793,6 @@ const spellProfileSchema = z
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),
     alwaysPrepared: z.boolean().optional(),
-    spellSwaps: z
-      .record(z.coerce.number(), z.object({ removed: z.string(), added: z.string() }))
-      .optional(),
   })
   .strict()
   .refine(
@@ -916,6 +942,8 @@ export const characterSchema = z
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
     optionalClassFeatureAdoptions: z.array(optionalClassAdoptionSchema).optional(),
+    managedClassSpellChoices: z.array(managedClassSpellChoiceSchema).optional(),
+    managedClassSpellRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema,
     inspiration: z.boolean().optional(),
@@ -939,6 +967,12 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const path of getInvalidManagedClassSpellPaths(char as Character))
+      ctx.addIssue({
+        code: 'custom',
+        path,
+        message: 'Invalid class spell choice ownership relation.',
+      })
     for (const index of getInvalidOptionalClassAdoptionIndexes(
       char.optionalClassFeatureAdoptions ?? [],
     ))

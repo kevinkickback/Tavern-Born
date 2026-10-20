@@ -22,14 +22,12 @@ import { reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
-import {
-  removeSpellFromCharacter,
-  rollbackClassSpellSwapsAboveLevel,
-} from '@/lib/character/commands/spellCommands'
+import { retainEarnedManagedClassSpells } from '@/lib/character/commands/managedClassSpellCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
 } from '@/lib/character/equipmentHelpers'
+import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { retainEarnedOptionalClassAdoptions } from '@/lib/character/optionalClassFeatureIdentity'
 import {
   getCharacterClassEntries,
@@ -41,12 +39,9 @@ import {
   applyClassGrants,
   applyMulticlassGrants,
   diffProficiencyGrants,
-  getSpellsGrantedAtLevel,
   makeSourceTag,
   reconcileClassChange,
   removeGrantsBySourceRef,
-  removeSpellChoicesAtLevel,
-  removeSpellGrantsAtLevel,
   stripItemTag,
 } from '@/lib/provenance'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
@@ -70,8 +65,6 @@ import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
 import { projectProficiencyCommandResult } from './proficiencyProjection'
-
-export { buildInitialCharacterProficiencies } from './classProficiencies'
 
 export interface ClassSelectionEntity {
   name: string
@@ -127,6 +120,7 @@ function projectMaximumHitPoints(
 
 interface ClassProgressionLookups extends NativeSpellLookups {
   classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
+  spellContext?: ManagedClassSpellContext
 }
 interface SelectSubclassOptions extends ClassProgressionLookups {
   raceResolution?: ResolvedRaceReference
@@ -417,62 +411,12 @@ export function applyClassProgressionUpdate(
       !nextProgression.some((entry) => entry.name === old.name && entry.source === old.source),
   )
 
-  let workingCharacter = character
-  let provenanceUpdate = ledger
-
-  for (const previousEntry of previousProgression) {
-    const retainedEntry = nextProgression.find(
-      (entry) => entry.name === previousEntry.name && entry.source === previousEntry.source,
-    )
-    if (!retainedEntry || retainedEntry.levels >= previousEntry.levels) continue
-
-    for (let level = previousEntry.levels; level > retainedEntry.levels; level -= 1) {
-      const affectedSpells = getSpellsGrantedAtLevel(
-        provenanceUpdate,
-        previousEntry.name,
-        level,
-        previousEntry.source,
-      )
-      provenanceUpdate = removeSpellChoicesAtLevel(
-        provenanceUpdate,
-        previousEntry.name,
-        level,
-        previousEntry.source,
-      )
-      provenanceUpdate = removeSpellGrantsAtLevel(
-        provenanceUpdate,
-        previousEntry.name,
-        level,
-        previousEntry.source,
-      )
-
-      for (const spellName of affectedSpells) {
-        if ((provenanceUpdate.spells[normalizeKey(spellName)] ?? []).length > 0) continue
-        const result = removeSpellFromCharacter(workingCharacter, provenanceUpdate, spellName, {
-          profileId: toClassProfileId(previousEntry.name, previousEntry.source),
-        })
-        workingCharacter = {
-          ...workingCharacter,
-          ...result.characterPatch,
-          provenance: result.provenanceUpdate,
-        }
-        provenanceUpdate = result.provenanceUpdate
-      }
-    }
-
-    const swapRollback = rollbackClassSpellSwapsAboveLevel(workingCharacter, provenanceUpdate, {
-      className: previousEntry.name,
-      classSource: previousEntry.source,
-      retainedLevel: retainedEntry.levels,
-    })
-    workingCharacter = {
-      ...workingCharacter,
-      ...swapRollback.characterPatch,
-      provenance: swapRollback.provenanceUpdate,
-    }
-    provenanceUpdate = swapRollback.provenanceUpdate
-  }
-
+  let workingCharacter = retainEarnedManagedClassSpells({
+    ...character,
+    classProgression: nextProgression,
+    provenance: ledger,
+  })
+  let provenanceUpdate = workingCharacter.provenance
   for (const removed of removedEntries) {
     workingCharacter = retractRemovedClassMaterializedState(
       workingCharacter,
@@ -564,13 +508,14 @@ export function applyClassProgressionUpdate(
   )
   const classChoiceGrants = reconcileClassChoiceSelectionGrants(
     {
-      ...character,
+      ...workingCharacter,
       classProgression: nextProgression,
       proficiencies: workingCharacter.proficiencies,
     },
     provenanceUpdate,
     classChoiceSelections,
     spellLookups?.classChoiceFeatureCatalogs,
+    spellLookups?.spellContext,
   )
   provenanceUpdate = classChoiceGrants.provenanceUpdate
   const asiChoices = (character.asiChoices ?? []).filter((choice) => {
@@ -593,6 +538,7 @@ export function applyClassProgressionUpdate(
     asiChoices,
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
+    managedClassSpellChoices: workingCharacter.managedClassSpellChoices,
     proficiencies: classChoiceGrants.proficiencies,
     abilityScores: workingCharacter.abilityScores,
   }
@@ -686,6 +632,7 @@ export function applyLevelUp(
       spellsByKey: calculationContext.lookups.primary.spellsByKey,
       rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
       classChoiceFeatureCatalogs: calculationContext.classChoices.catalogs,
+      spellContext: calculationContext.classChoices.spellContext,
     },
   )
   const gain: HitPointGain = { ...hpChoice, characterLevel }
@@ -753,11 +700,11 @@ export function applyLevelDown(
     if (index !== targetIndex) return [entry]
     return entry.levels > 1 ? [{ ...entry, levels: entry.levels - 1 }] : []
   })
-  const removedSpellCount = getSpellsGrantedAtLevel(
-    ledger,
-    className,
-    classLevel,
-    classSource,
+  const removedSpellCount = (character.managedClassSpellChoices ?? []).filter(
+    (choice) =>
+      choice.slot[0][1] === className.trim().toLowerCase() &&
+      choice.slot[0][2] === classSource.trim().toLowerCase() &&
+      choice.slot[3] === classLevel,
   ).length
   const progressionResult = applyClassProgressionUpdate(
     character,
@@ -768,6 +715,7 @@ export function applyLevelDown(
       spellsByKey: calculationContext.lookups.primary.spellsByKey,
       rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
       classChoiceFeatureCatalogs: calculationContext.classChoices.catalogs,
+      spellContext: calculationContext.classChoices.spellContext,
     },
   )
   const projectedCharacter: Character = {

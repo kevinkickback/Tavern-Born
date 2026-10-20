@@ -151,28 +151,34 @@ multiclass math. There are no top-level class mirrors.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
 - Optional-feature variant reconciliation scopes persisted choices against the complete loaded class
   catalog, but activates only choices that remain available after character source filtering.
-- Level-down/class removal retracts choices, grants, ASIs, spells, and replacement events owned by
-  removed levels.
+- Level-down/class removal retracts choices, grants, ASIs and numeric spell choices owned by removed levels.
 - Subclass changes remove selections owned by the previous subclass while preserving choices owned
   by the base class. Materialized subclass-feature selections follow the same ownership boundary.
 
 ## Spell state
 
-Canonical state lives in `character.spells.spellProfiles`.
+Numeric class spell intent lives in `character.managedClassSpellChoices`; its materialization and
+independent daily/racial/Bonus state use `character.spells.spellProfiles`.
 
 - Class profiles use `class:<name>|<source>`; `special:unrestricted` owns bonus/manual spells.
-- New selections store `Name|Source`. Equality and quotas use normalized case-insensitive spell
-  names so alternate printings remain one logical selection.
+- Catalog selections store `Name|Source`. Saved targets compare normalized name and source;
+  an admitted bare manual name has its own empty-source identity. New-choice rules may separately
+  lock logical spell names across profiles or printings without merging saved targets or owners.
 - Fixed/always-prepared metadata is derived into profiles and protected by the mutation hook.
 - Shared Spellcasting and Pact Magic use independent persisted usage maps.
 - Slot maxima are derived from parsed class tables; usage is preserved and clamped when maxima fall.
-- Class-page level choices and replacements update profile state, provenance, and replacement
-  history atomically through spell commands.
-- Replacement eligibility uses the character's current class spell access, while opportunities
-  remain owned by the class level that granted them for safe rollback.
+- Class-page Finish validates every addressed slot against the latest saved base and commits the
+  choice collection, monotonic allocator, materialized profiles and provenance atomically.
+- Saved daily prepared arrays remain intent through unrelated writes and source changes. Their
+  effective view requires current exact class/declaration/target/list and own-level access.
+- `createCharacterCalculationContext` derives current spell knowledge before guarded feature
+  closure, then effective abilities and learned preparation capacity. Its character and matching
+  provenance feed Class, Spells, readiness, prerequisites, Actions, Review and PDF.
 
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
-`useSpellProvenanceMutations` exposes only class-page per-level selection/replacement adapters.
+`useSpellProvenanceMutations` exposes the addressed batch Finish adapter. Clear and preparation
+withdrawal work without unavailable sources; source suspension preserves ownership and revisions.
+Rest/acquisition event history remains separate work. See [the full spell contract](contracts/spell-selection.md).
 
 Each normalized target occurs once in `special:unrestricted`, in either cantrips or known spells.
 Available exact spell metadata determines its current kind for all special owners together. Pure
@@ -205,7 +211,7 @@ on a write failure it leaves the prior library intact before the import result i
 
 ## Schema compatibility
 
-Current pre-release admission accepts exactly character format **11**, validates complete ownership
+Current pre-release admission accepts exactly character format **12**, validates complete ownership
 without loaded rules, and rejects incompatible/malformed records without conversion. Existing
 originals stay in durable exportable quarantine until acknowledged. See [Character format](contracts/character-format.md)
 for the full current admission and breaking-change checklist. Catalog cache schema is independent.

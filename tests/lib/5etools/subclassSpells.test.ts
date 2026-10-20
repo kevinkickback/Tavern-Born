@@ -29,12 +29,12 @@ describe('parseSubclassSpells', () => {
     )
 
     expect(grants).toEqual([
-      { spellName: 'bless', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'cure wounds', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'misty step', level: 3, isCantrip: false, mode: 'known' },
-      { spellName: 'burning hands', level: 1, isCantrip: false, mode: 'expanded' },
-      { spellName: 'light', level: 1, isCantrip: true, mode: 'expanded' },
-      { spellName: 'misty step', level: 3, isCantrip: false, mode: 'innate' },
+      { spellName: 'bless|PHB', level: 1, isCantrip: false, mode: 'prepared' },
+      { spellName: 'cure wounds|PHB', level: 1, isCantrip: false, mode: 'prepared' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'known' },
+      { spellName: 'burning hands|PHB', level: 1, isCantrip: false, mode: 'expanded' },
+      { spellName: 'light|PHB', level: 1, isCantrip: true, mode: 'expanded' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'innate' },
     ])
   })
 
@@ -42,6 +42,27 @@ describe('parseSubclassSpells', () => {
     expect(parseSubclassSpells(undefined, 2)).toEqual([])
     expect(parseSubclassSpells([], 2)).toEqual([])
     expect(parseSubclassSpells([{ prepared: { '1': ['bless'] } }], 0)).toEqual([])
+  })
+
+  test('source-preserving fixed grants apply the upstream default only to omitted printings', () => {
+    expect(
+      parseSubclassSpells(
+        [
+          {
+            known: { 3: ['mage hand#c'] },
+            prepared: { 3: ['bless', 'bless|XPHB'] },
+            innate: { 3: { daily: { '1': ['misty step', 'misty step|TCE'] } } },
+          },
+        ],
+        3,
+      ),
+    ).toEqual([
+      { spellName: 'bless|PHB', level: 3, isCantrip: false, mode: 'prepared' },
+      { spellName: 'bless|XPHB', level: 3, isCantrip: false, mode: 'prepared' },
+      { spellName: 'mage hand|PHB', level: 3, isCantrip: true, mode: 'known' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'innate' },
+      { spellName: 'misty step|TCE', level: 3, isCantrip: false, mode: 'innate' },
+    ])
   })
 
   test('source-preserving decoding retains printings and accepts cantrip suffixes on either side', () => {
@@ -53,21 +74,13 @@ describe('parseSubclassSpells', () => {
         innate: { 1: { daily: { '1': ['mage hand|XPHB#c'] } } },
       },
     ]
-    expect(parseSubclassSpells(blocks, 1, { preserveSource: true })).toEqual([
+    expect(parseSubclassSpells(blocks, 1)).toEqual([
       { spellName: 'light|PHB', level: 1, isCantrip: true, mode: 'prepared' },
       { spellName: 'druidcraft|XPHB', level: 1, isCantrip: true, mode: 'prepared' },
       { spellName: 'bless|PHB', level: 1, isCantrip: false, mode: 'prepared' },
       { spellName: 'misty step|TCE', level: 1, isCantrip: false, mode: 'known' },
       { spellName: 'burning hands|PHB', level: 1, isCantrip: false, mode: 'expanded' },
       { spellName: 'mage hand|XPHB', level: 1, isCantrip: true, mode: 'innate' },
-    ])
-    expect(parseSubclassSpells(blocks, 1)).toEqual([
-      { spellName: 'light', level: 1, isCantrip: true, mode: 'prepared' },
-      { spellName: 'druidcraft', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'bless', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'misty step', level: 1, isCantrip: false, mode: 'known' },
-      { spellName: 'burning hands', level: 1, isCantrip: false, mode: 'expanded' },
-      { spellName: 'mage hand', level: 1, isCantrip: false, mode: 'innate' },
     ])
   })
 })

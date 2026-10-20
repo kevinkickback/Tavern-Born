@@ -4,22 +4,19 @@ import { buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { deriveSpellActions } from '@/lib/calculations/actions'
+import { reconcileNativeRacialSpellLedger } from '@/lib/calculations/nativeRacialSpells'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { applyRaceSelectionCommand } from '@/lib/character/commands/raceCommands'
-import {
-  addSpellToCharacter,
-  removeRacialSpell,
-  setRacialSpellChoice,
-  syncSpellProfiles,
-} from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { removeRacialSpell, setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, getSpellRows, makeSourceTag } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function finish(race: Race5e) {
   return buildInitialCharacter(
@@ -72,19 +69,7 @@ test('a canonical child choice rejects the active parent as its owner and clears
       ),
     ),
   )
-  character = reopen(
-    commit(
-      character,
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Light|PHB',
-        'cantrip',
-        'special:unrestricted',
-        { sourceType: 'manual', sourceName: 'User Choice' },
-      ),
-    ),
-  )
+  character = reopen(commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')))
   const malformed = structuredClone(character)
   Object.assign(malformed.provenance.spells.light[0], {
     sourceType: 'race',
@@ -93,7 +78,13 @@ test('a canonical child choice rejects the active parent as its owner and clears
   })
   const original = structuredClone(malformed)
   expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
-  const synced = syncSpellProfiles(malformed, malformed.provenance, malformed.spells.spellProfiles)
+  const synced = {
+    characterPatch: {},
+    provenanceUpdate: reconcileNativeRacialSpellLedger(
+      malformed.provenance,
+      malformed.spells.spellProfiles,
+    ),
+  }
   expect(synced.provenanceUpdate.spells.light).toEqual([
     expect.objectContaining({ sourceType: 'manual' }),
     expect.objectContaining({
@@ -185,17 +176,7 @@ test('same-name printing replacement and clear preserve independent target owner
     ],
   })[0] as Race5e
   let character = reopen(finish(race))
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   const independent = structuredClone(
     character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
   )
@@ -256,19 +237,7 @@ test('Sources, Actions and PDF retain racial and independent spell printings thr
     ],
   })[0] as Race5e
   let character = reopen(finish(race))
-  character = reopen(
-    commit(
-      character,
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Light|PHB',
-        'cantrip',
-        'special:unrestricted',
-        { sourceType: 'manual', sourceName: 'User Choice' },
-      ),
-    ),
-  )
+  character = reopen(commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')))
   const spells = ['PHB', 'XPHB'].map((source) =>
     makeSpellFixture({ name: 'Light', source, level: 0 }),
   )
@@ -299,7 +268,7 @@ test('Sources, Actions and PDF retain racial and independent spell printings thr
       .sort(),
   ).toEqual(['PHB', 'XPHB'])
   expect(
-    createCharacterSheetViewModel(character, lookups)
+    createCurrentCharacterSheetViewModel(character, lookups)
       .spellRows.map((row) => row.id)
       .sort(),
   ).toEqual(['light|phb', 'light|xphb'])

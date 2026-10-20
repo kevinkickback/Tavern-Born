@@ -2,7 +2,7 @@ import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyId
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
-  buildGameDataLookups,
+  buildSubclassLookup,
   getEntityLookupKey,
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
@@ -29,7 +29,7 @@ import type {
   OptionalFeatureLike,
   Race5e,
 } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, SpellProfile } from '@/types/character'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
 import { getEffectiveClassChoiceFeatureRoutes } from './effectiveClassChoiceFeatures'
@@ -60,6 +60,7 @@ export function buildRetainedCharacterDetails(
   primary: GameData,
   raw: GameData | null | undefined,
   race?: Race5e,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ) {
   const featureEntriesByKey = new Map<string, unknown[]>()
   const choiceDetailsById = new Map<string, RetainedChoiceDetails[]>()
@@ -100,7 +101,7 @@ export function buildRetainedCharacterDetails(
   ] as const) {
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
-    const lookups = buildGameDataLookups(data)
+    const subclassesByKey = buildSubclassLookup(data.classes)
     const featureCatalogs =
       data === primary ? primaryCatalogs : buildClassChoiceFeatureCatalogs(data)
     for (const feature of [
@@ -116,7 +117,7 @@ export function buildRetainedCharacterDetails(
     ) => {
       const owner = findClassReference({ name: className, source: classSource }, data.classes)
       return owner
-        ? lookups.subclassesByKey[
+        ? subclassesByKey[
             getSubclassLookupKey(owner.name, owner.source, subclassName, subclassSource)
           ]
         : undefined
@@ -219,7 +220,11 @@ export function buildRetainedCharacterDetails(
       choiceDetailsById.set(choice.choiceId, details)
     }
   }
-  const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    primaryCatalogs,
+    effectiveSpellProfiles,
+  )
   for (const selection of character.classChoiceSelections ?? []) {
     if (!getOptionalClassPoolSelectionSection(selection)) continue
     const details = choiceDetailsById.get(selection.choiceId)

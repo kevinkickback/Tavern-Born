@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
-import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
@@ -11,13 +10,14 @@ import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import type { Background5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
 import { characterSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { manualExpertiseFixtureGrant } from '../fixtures/manualProficiency'
 
 const noChoices = () => []
 const parent = { name: 'Parent', source: 'PHB', speed: 30 } as Race5e
@@ -86,7 +86,7 @@ describe('fixed feat setup owner lifecycle', () => {
     )
     character = applyCharacterCommandResult(
       character,
-      toggleExpertiseCommand(character, character.provenance, 'Arcana'),
+      manualExpertiseFixtureGrant(character, character.provenance, 'Arcana'),
     )
     const grantsFeat = { name: 'Grant', source: 'PHB', feats: [{ 'Training|PHB': true }] } as Race5e
     character = applyCharacterCommandResult(
@@ -319,13 +319,7 @@ describe('fixed feat setup owner lifecycle', () => {
     }
     character = applyCharacterCommandResult(
       character,
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Spark|PHB',
-        'cantrip',
-        'special:unrestricted',
-      ),
+      selectBonusSpellFixture(character, 'Spark|PHB', 'cantrip'),
     )
     character.spells.spellProfiles.push({
       id: 'class:independent',

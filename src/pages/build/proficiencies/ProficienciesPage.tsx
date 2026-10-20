@@ -63,7 +63,7 @@ export function BuildProficienciesPage() {
   const data = useFilteredGameData()
   const sourceData = useGameDataStore((state) => state.gameData)
   const { skills: skillDefs, items, itemsBase, languages } = data
-  const { skills, toggleExpertise, availableExpertiseSlots, usedExpertiseSlots } = useSkills()
+  const { skills } = useSkills()
   const { savingThrows } = useSavingThrows()
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const { resolveChoiceSelection } = useFeatProvenanceMutations()
@@ -428,10 +428,7 @@ export function BuildProficienciesPage() {
                       setCompactPane('right')
                     }}
                     onResolveChoiceSelection={resolveChoiceSelection}
-                    onToggleExpertise={toggleExpertise}
-                    availableExpertiseSlots={availableExpertiseSlots}
-                    usedExpertiseSlots={usedExpertiseSlots}
-                    expertiseActions={expertise?.actions}
+                    expertiseActions={expertise?.actions ?? {}}
                     onExpertiseAction={handleExpertiseAction}
                     proficiencyActions={classSkills?.actions}
                     onProficiencyAction={handleProficiencyAction}

@@ -13,7 +13,7 @@ import {
   retainSavedFeatureOptionsCommand,
 } from './classChoiceCommands'
 import type { CharacterCommandResult } from './commandResult'
-import { toggleExpertiseCommand } from './expertiseCommands'
+import { removeManualExpertiseCommand } from './expertiseCommands'
 import { getFeatOptionSourceTag } from './featCommandIdentity'
 import { storeFeatOptionSelections } from './featOptionState'
 import { projectProficiencyCommandResult } from './proficiencyProjection'
@@ -29,10 +29,10 @@ export function applySkillExpertiseActionCommand(
   const name = normalizeKey(skillName)
   const action = model.actions[name]?.find((row) => row.id === actionId)
   if (!action) return { characterPatch: {}, provenanceUpdate: character.provenance }
-  if (action.kind === 'legacy')
+  if (action.kind === 'manual')
     return projectProficiencyCommandResult(
       character,
-      toggleExpertiseCommand(character, character.provenance, name, action.adding),
+      removeManualExpertiseCommand(character, character.provenance, name),
       { ...authority.catalogs, featExpertiseFeats: authority.feats },
     )
   if (action.kind === 'class') {

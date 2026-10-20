@@ -18,10 +18,6 @@ const isAppearanceTheme = (value: string): value is AppearanceTheme => {
 export function getStoredAccentTheme(): AccentTheme {
   try {
     const storedAccent = localStorage.getItem(ACCENT_STORAGE_KEY)
-    // Backward compatibility for previously stored accent key.
-    if (storedAccent === 'tomato') {
-      return 'rose'
-    }
     return storedAccent && isAccentTheme(storedAccent) ? storedAccent : 'blue'
   } catch {
     return 'blue'

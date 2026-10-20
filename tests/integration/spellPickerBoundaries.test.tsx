@@ -8,30 +8,21 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import type { ComponentProps } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import {
-  addSpellToCharacter,
-  setClassSpellSelectionsAtLevel,
-  setRacialSpellChoice,
-} from '@/lib/character/commands/spellCommands'
-import { BuildClassModals } from '@/pages/build/class/components/Modals'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import {
-  makeClassFixture,
-  makeGameDataFixture,
-  makeSpellFixture,
-} from '../fixtures/gameDataFixtures'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
+import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 function commit(character: Character, result: ReturnType<typeof setRacialSpellChoice>): Character {
@@ -81,17 +72,7 @@ test('the racial page selects another enabled printing while retaining independe
     new Map(),
     () => [],
   )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   const gameData = makeGameDataFixture({
     races: [race],
     classes: [],
@@ -143,222 +124,6 @@ test('the racial page selects another enabled printing while retaining independe
   )
 })
 
-function classProps(
-  character: Character,
-  spells: Spell5e[],
-): ComponentProps<typeof BuildClassModals> {
-  return {
-    character,
-    classes: [],
-    classPickerOpen: false,
-    classPickerSearch: '',
-    onClassPickerOpenChange: vi.fn(),
-    onClassPickerSearchChange: vi.fn(),
-    onClassSelect: vi.fn(),
-    spellPickerLevel: 1,
-    onSpellPickerLevelChange: vi.fn(),
-    spellChoicesByLevel: new Map([
-      [1, { cantrips: 1, spells: 1, maxSpellLevel: 1, canSwap: false }],
-    ]),
-    classSpells: spells,
-    spellByReference: new Map(
-      spells.map((entry) => [`${entry.name.toLowerCase()}|${entry.source.toLowerCase()}`, entry]),
-    ),
-    viewingClass: 'Wizard',
-    viewingClassSource: 'PHB',
-    onSetClassSpellSelectionsAtLevel: vi.fn(),
-    onSwapClassSpellAtLevel: vi.fn(),
-    spellSwapLevel: null,
-    spellSwapDrop: null,
-    onSpellSwapLevelChange: vi.fn(),
-    onSpellSwapDropChange: vi.fn(),
-    subclassPickerOpen: false,
-    onSubclassPickerOpenChange: vi.fn(),
-    subclassTitle: 'Subclass',
-    subclasses: [],
-    onSubclassConfirm: vi.fn(),
-    characterSnapshot: {} as never,
-    asiPickerLevel: null,
-    onAsiPickerLevelChange: vi.fn(),
-    appliedAsiChoicesForClass: [],
-    onAsiApply: vi.fn(),
-    featPickerOpen: false,
-    onFeatPickerOpenChange: vi.fn(),
-    featModalFeats: [],
-    featPickerInitialSelectedIds: [],
-    onFeatConfirm: vi.fn(),
-  }
-}
-
-test.each([
-  'selection',
-  'replacement',
-] as const)('the actual class %s Ignore switch exposes off-list spells while retaining level and known locks', async (mode) => {
-  let character = buildInitialCharacter(
-    {
-      initial: { name: 'Class visibility', originSystem: '2014' },
-      classEntity: makeClassFixture({ spellcastingAbility: 'int' }),
-    },
-    new Map(),
-    () => [],
-  )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Bane|TCE',
-      'spell',
-      'special:unrestricted',
-    ),
-  )
-  if (mode === 'replacement')
-    character = commit(
-      character,
-      setClassSpellSelectionsAtLevel(character, character.provenance, {
-        className: 'Wizard',
-        classSource: 'PHB',
-        classLevel: 1,
-        selections: [{ name: 'Shield|PHB', spellLevel: 1 }],
-      }),
-    )
-  const offList = (name: string, level = 1) => ({
-    ...spell(name, 'PHB', level),
-    classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
-  })
-  const props = classProps(character, [
-    spell('Shield', 'PHB', 1),
-    offList('Bless'),
-    offList('Bane'),
-    offList('Aid', 2),
-  ])
-  props.spellChoicesByLevel = new Map([
-    [1, { cantrips: 0, spells: 1, maxSpellLevel: 1, canSwap: true }],
-  ])
-  if (mode === 'replacement') {
-    props.spellPickerLevel = null
-    props.spellSwapLevel = 1
-    props.spellSwapDrop = 'Shield|PHB'
-  }
-  const original = structuredClone(character)
-  render(<BuildClassModals {...props} />)
-  await waitFor(() => expect(screen.getByText('Shield')).toBeTruthy())
-  expect(screen.queryByText('Bless')).toBeNull()
-  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
-  await waitFor(() => expect(screen.getByText('Bless')).toBeTruthy())
-  expect(screen.queryByText('Aid')).toBeNull()
-  expect(screen.queryByText('Bane')).toBeNull()
-  fireEvent.click(screen.getByRole('switch', { name: 'Hide already-known spells' }))
-  expect(screen.getByText('Bane').closest('button')!.disabled).toBe(true)
-  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
-  expect(screen.queryByText('Bless')).toBeNull()
-  fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
-  fireEvent.click(screen.getByText('Bless'))
-  expect(screen.getByText('Shield').closest('button')!.disabled).toBe(true)
-  expect(character).toEqual(original)
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-  if (mode === 'selection')
-    expect(props.onSetClassSpellSelectionsAtLevel).toHaveBeenCalledWith('Wizard', 'PHB', 1, [
-      { name: 'Bless|PHB', spellLevel: 1, school: 'A' },
-    ])
-  else
-    expect(props.onSwapClassSpellAtLevel).toHaveBeenCalledWith(
-      'Wizard',
-      'PHB',
-      1,
-      'Shield|PHB',
-      'Bless|PHB',
-      'A',
-    )
-  expect(character).toEqual(original)
-})
-
-test.each([
-  'restore',
-  'remove',
-  'restore over quota',
-] as const)('class Confirm requires explicit %s of unavailable metadata without charging the leveled quota', async (action) => {
-  let character = buildInitialCharacter(
-    {
-      initial: {
-        name: 'Missing class spell',
-        originSystem: '2014',
-        allowedSources: ['PHB', 'TCE'],
-      },
-      classEntity: makeClassFixture({
-        cantripProgression: [1],
-        spellsKnownProgression: [1],
-        spellcastingAbility: 'int',
-      }),
-    },
-    new Map(),
-    () => [],
-  )
-  character = commit(
-    character,
-    setClassSpellSelectionsAtLevel(character, character.provenance, {
-      className: 'Wizard',
-      classSource: 'PHB',
-      classLevel: 1,
-      selections: [{ name: 'Mage Hand|TCE', spellLevel: 0, school: 'C' }],
-    }),
-  )
-  const original = structuredClone(character)
-  const available = [spell('Light', 'PHB'), spell('Shield', 'PHB', 1)]
-  let props = classProps(character, available)
-  const view = render(<BuildClassModals {...props} />)
-  await waitFor(() => expect(screen.getByText('Shield')).toBeTruthy())
-  expect(screen.getByText('Shield').closest('button')!.disabled).toBe(false)
-  const confirm = screen.getByRole('button', { name: 'Confirm' })
-  expect((confirm as HTMLButtonElement).disabled).toBe(true)
-  fireEvent.click(confirm)
-  expect(props.onSetClassSpellSelectionsAtLevel).not.toHaveBeenCalled()
-  expect(character).toEqual(original)
-  fireEvent.click(screen.getByText('Shield'))
-  if (action === 'restore over quota') fireEvent.click(screen.getByText('Light'))
-  if (action === 'remove')
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Mage Hand (TCE)' }))
-  else {
-    props = {
-      ...props,
-      ...classProps(character, [...available, spell('Mage Hand', 'TCE')]),
-      onSetClassSpellSelectionsAtLevel: props.onSetClassSpellSelectionsAtLevel,
-    }
-    view.rerender(<BuildClassModals {...props} />)
-  }
-  if (action === 'restore over quota') {
-    expect((confirm as HTMLButtonElement).disabled).toBe(true)
-    expect(
-      screen.getByText('Remove extra selections to fit the limits before confirming.'),
-    ).toBeTruthy()
-    fireEvent.click(confirm)
-    expect(props.onSetClassSpellSelectionsAtLevel).not.toHaveBeenCalled()
-    expect(character).toEqual(original)
-    fireEvent.click(screen.getByText('Light'))
-  }
-  expect((confirm as HTMLButtonElement).disabled).toBe(false)
-  fireEvent.click(confirm)
-  const selections = vi.mocked(props.onSetClassSpellSelectionsAtLevel).mock.calls[0][3]
-  expect(selections).toEqual(
-    expect.arrayContaining([{ name: 'Shield|PHB', spellLevel: 1, school: 'A' }]),
-  )
-  expect(selections.some((entry) => entry.name === 'Mage Hand|TCE' && entry.spellLevel !== 0)).toBe(
-    false,
-  )
-  const saved = commit(
-    character,
-    setClassSpellSelectionsAtLevel(character, character.provenance, {
-      className: 'Wizard',
-      classSource: 'PHB',
-      classLevel: 1,
-      selections,
-    }),
-  )
-  const profile = saved.spells.spellProfiles.find((entry) => entry.id === 'class:Wizard|PHB')!
-  expect(profile.cantrips).toEqual(action === 'remove' ? [] : ['Mage Hand|TCE'])
-  expect(profile.spellsKnown).toEqual(['Shield|PHB'])
-})
-
 test('actual child Clear removes its normalized choice tag and preserves an independent printing', () => {
   const parent = { name: 'Parent', source: 'PHB' } as Race5e
   const child = {
@@ -384,17 +149,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
       { 'light|tce': spell('Light', 'TCE') },
     ),
   )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   Object.assign(character.provenance.spells.light[0], { sourceName: ' child ', sourceRef: ' tce ' })
   const original = structuredClone(character)
   useCharacterStore.setState({
@@ -404,7 +159,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
   })
   const { result } = renderHook(() => {
     const active = useCharacterStore((state) => state.activeCharacter)!
-    return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+    return useSpellProfileMutations(active.spells.spellProfiles)
   })
   act(() => result.current.setRacialSpellChoice(profile.id, profile.choices![0].id, []))
   const saved = characterPersistenceSchema.parse(
@@ -418,57 +173,4 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
   ])
   expect(character).toEqual(original)
-})
-
-test('the actual class picker offers a native expanded target without automatically learning it or locking an independently granted racial spell', async () => {
-  const race = {
-    name: 'Expanded caster',
-    source: 'PHB',
-    additionalSpells: [{ expanded: { s1: ['healing word|PHB'] }, known: { 1: ['light#c'] } }],
-  } as Race5e
-  const character = buildInitialCharacter(
-    {
-      initial: { name: 'Expanded list', originSystem: '2014', allowedSources: ['PHB'] },
-      race,
-      classEntity: makeClassFixture({
-        cantripProgression: [1],
-        spellsKnownProgression: [1],
-        spellcastingAbility: 'int',
-      }),
-    },
-    new Map(),
-    () => [],
-  )
-  const available = [
-    spell('Light', 'PHB'),
-    {
-      ...spell('Healing Word', 'PHB', 1),
-      classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
-    },
-    {
-      ...spell('Healing Word', 'TCE', 1),
-      classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
-    },
-    spell('Shield', 'PHB', 1),
-  ]
-  const gameData = makeGameDataFixture({ races: [race], spells: available })
-  gameData.lookups = buildGameDataLookups(gameData)
-  useGameDataStore.setState({ gameData })
-  const props = classProps(character, available)
-  expect(character.provenance.spells['healing word']).toBeUndefined()
-  render(<BuildClassModals {...props} />)
-  await waitFor(() => expect(screen.getAllByText('Healing Word')).toHaveLength(1))
-  expect(screen.getByText('Light').closest('button')!.disabled).toBe(false)
-  fireEvent.click(screen.getByText('Light'))
-  fireEvent.click(screen.getByText('Healing Word'))
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-  expect(props.onSetClassSpellSelectionsAtLevel).toHaveBeenCalledWith(
-    'Wizard',
-    'PHB',
-    1,
-    expect.arrayContaining([
-      { name: 'Healing Word|PHB', spellLevel: 1, school: 'A' },
-      { name: 'Light|PHB', spellLevel: 0, school: 'A' },
-    ]),
-  )
 })

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClasses } from '@/hooks/data/useGameData'
@@ -117,6 +118,7 @@ export function RulesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabIdPrefix = useId()
   const character = useCharacterStore((state) => state.activeCharacter)
+  const calculation = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
   const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
@@ -166,7 +168,12 @@ export function RulesPage() {
       const result = reconcileOptionalClassFeatureChoicesCommand(
         character,
         character.provenance,
-        { availableClasses: classes, allClasses, classChoiceFeatureCatalogs },
+        {
+          availableClasses: classes,
+          allClasses,
+          classChoiceFeatureCatalogs,
+          spellContext: calculation?.classChoices.spellContext,
+        },
         checked,
       )
       updateCharacter(character.id, {

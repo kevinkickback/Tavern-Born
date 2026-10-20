@@ -30,7 +30,7 @@ describe('spell profile display model', () => {
     expect(models.map((model) => model.profile.label)).toEqual(['Bonus'])
   })
 
-  test('derives missing known choices without counting fixed grants', () => {
+  test('does not count saved class items without current numeric choice authority', () => {
     const profile = { id: 'class:Wizard|PHB', type: 'class', label: 'Wizard' }
     const models = buildSpellProfileDisplayModels({
       spellProfiles: [profile],
@@ -50,21 +50,20 @@ describe('spell profile display model', () => {
       ]),
     })
     expect(models[0]).toMatchObject({
-      missingCantrips: 1,
+      missingCantrips: 2,
       missingSpells: 2,
-      missingSummary: '1 cantrip, 2 spells',
+      missingSummary: '2 cantrips, 2 spells',
       hasMissingSpells: true,
     })
   })
 
-  test('builds swap and preparation summaries for a true prepared caster', () => {
+  test('builds preparation summaries for a true prepared caster', () => {
     const profile = {
       id: 'class:Cleric|PHB',
       type: 'class',
       label: 'Cleric',
       preparedSpells: ['Bless|PHB'],
       alwaysPreparedSpells: ['Cure Wounds|PHB'],
-      spellSwaps: { 4: { removed: 'Bane', added: 'Aid' } },
     }
     const bless = item({ profileId: profile.id, name: 'Bless' })
     const models = buildSpellProfileDisplayModels({
@@ -98,6 +97,5 @@ describe('spell profile display model', () => {
     expect(models[0].preparedSet).toEqual(new Set(['bless']))
     expect(models[0].preparedTotal).toBe(3)
     expect(models[0].displayedTotal).toBe(2)
-    expect(models[0].swappedByAddedName.get('Aid')).toEqual({ removed: 'Bane', level: 4 })
   })
 })

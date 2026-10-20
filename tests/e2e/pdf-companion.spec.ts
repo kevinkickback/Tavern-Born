@@ -2,7 +2,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from '@playwright/test'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import {
+  buildClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   createClassChoiceCatalogs,
   getCharacterClassChoices,
@@ -13,7 +22,8 @@ import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/option
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import type { Creature5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
+import { makeClassCastingLayer } from '../fixtures/classCastingFixtures'
+import { optionalDeclarationSources } from '../fixtures/optionalClassDeclarationFixtures'
 import { ensureStartupPromptResolved, seedAppState } from './helpers/startup'
 
 test('2014 MPMB export fills the active creature companion page', async ({ page }, testInfo) => {
@@ -34,15 +44,31 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
     (creature) => creature.name === 'Beast of the Land' && creature.source === 'TCE',
   )
   expect(beast).toBeDefined()
-  const { data: gameData, catalogs } = makeOptionalDeclarationCatalog('class/class-ranger.json', [
-    'subclass',
-    'ranger',
-    'phb',
-    'beast master',
-    'phb',
-  ])
+  const optional = optionalDeclarationSources.documents.find(
+    (row) => row.file === 'class/class-ranger.json',
+  )!.data
+  const gameData = makeClassCastingLayer('class/class-ranger.json', (document) => {
+    expect(document.class).toEqual(optional.class)
+    expect(document.subclass).toEqual([])
+    document.subclass = structuredClone(optional.subclass)
+    for (const [field, identity] of [
+      ['classFeature', getClassFeatureIdentity],
+      ['subclassFeature', getSubclassFeatureIdentity],
+    ] as const) {
+      const combined = [...document[field], ...structuredClone(optional[field])]
+      const identities = combined.map(identity)
+      expect(identities.every(Boolean)).toBe(true)
+      expect(new Set(identities).size).toBe(combined.length)
+      document[field] = combined
+    }
+  })
+  gameData.optionalfeatures = optionalDeclarationSources.optionalfeatures ?? []
   gameData.creatures = beast ? [beast] : []
   gameData.lookups = buildGameDataLookups(gameData)
+  const catalogs = scopeClassChoiceFeatureCatalogs(
+    buildClassChoiceFeatureCatalogs(gameData),
+    getFeatureOwnerKey('ranger', 'phb', 'beast master', 'phb'),
+  )
   const currentCatalogs = { ...createClassChoiceCatalogs(catalogs), creatures: gameData.creatures }
   // The shared fixture deliberately has no adoption. Establish this test's active companion
   // through the same source-qualified commands as Class, then strictly reopen the saved result.

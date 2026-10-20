@@ -4,7 +4,7 @@ import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
 /**
- * Integration test harness that composes all six provenance mutation domains
+ * Integration test harness that composes provenance mutation domains
  * with the provenance row derivation hook.
  *
  * **Do not call from production pages.** Production pages should call the individual

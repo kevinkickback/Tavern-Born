@@ -11,18 +11,15 @@ import {
   replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
-import {
-  addSpellToCharacter,
-  removeSpellFromCharacter,
-  setProfileSpells,
-} from '@/lib/character/commands/spellCommands'
+import { removeSpellFromCharacter, setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { refreshSpecialSpellKinds } from '@/lib/character/specialSpellState'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getSpellRows } from '@/lib/provenance'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const reference = 'Toll the Dead|XPHB'
 const profileId = 'special:unrestricted'
@@ -53,10 +50,7 @@ test.each([
   0, 1,
 ])('opposite current kind %s survives offline edits and independent owner removal in either order', (level) => {
   let character = manual(level === 0 ? 1 : 0)
-  character = apply(
-    character,
-    addSpellToCharacter(character, character.provenance, 'Toll the Dead|HB', 'cantrip', profileId),
-  )
+  character = apply(character, selectBonusSpellFixture(character, 'Toll the Dead|HB', 'cantrip'))
   const original = structuredClone(character)
   const other = { name: 'Magic Initiate', source: 'PHB', selectionKind: 'bonus' as const }
   character = apply(
@@ -133,68 +127,43 @@ test.each([
   ).toContain('Toll the Dead|HB')
 })
 
-test('manual bulk omission/removal retracts its ownership but never the remaining fixed target', () => {
+test.each([
+  'bulk',
+  'remove',
+] as const)('manual %s retracts only its owner and preserves the fixed target', (operation) => {
   let character = manual()
-  character = apply(
-    character,
-    removeSpellFromCharacter(character, character.provenance, reference, { profileId }),
-  )
   character = apply(
     character,
     commitFeatOptionsCommand(character, character.provenance, feat, options, [metadata(0)]),
   )
-  character = apply(
-    character,
-    setProfileSpells(character, character.provenance, profileId, [], [reference]),
-  )
-  expect(special(character).cantrips).toEqual([reference])
-  expect(special(character).spellsKnown).toEqual([])
-  expect(
-    character.provenance.spells['toll the dead'].some((tag) => tag.sourceType === 'manual'),
-  ).toBe(false)
-  character = apply(
-    character,
-    addSpellToCharacter(character, character.provenance, reference, 'spell', profileId),
-  )
-  expect(special(character).cantrips).toEqual([reference])
   expect(
     character.provenance.spells['toll the dead'].some((tag) => tag.sourceType === 'manual'),
   ).toBe(true)
   character = apply(
     character,
-    setProfileSpells(
-      character,
-      character.provenance,
-      profileId,
-      [],
-      [],
-      buildSpellLookup([metadata(1)]),
-    ),
+    operation === 'bulk'
+      ? setProfileSpells(
+          character,
+          character.provenance,
+          profileId,
+          [],
+          [],
+          buildSpellLookup([metadata(1)]),
+        )
+      : removeSpellFromCharacter(character, character.provenance, reference, {
+          profileId,
+          spellKind: 'spell',
+        }),
   )
-  expect(special(character).spellsKnown).toEqual([reference])
-  expect(special(character).cantrips).toEqual([])
+  expect(special(character).fixedSpells).toEqual([reference])
+  expect(special(character).cantrips).toEqual(operation === 'bulk' ? [] : [reference])
+  expect(special(character).spellsKnown).toEqual(operation === 'bulk' ? [reference] : [])
   expect(
     character.provenance.spells['toll the dead'].some((tag) => tag.sourceType === 'manual'),
   ).toBe(false)
-  character = apply(
-    character,
-    addSpellToCharacter(character, character.provenance, reference, 'cantrip', profileId),
-  )
-  character = apply(
-    character,
-    removeSpellFromCharacter(character, character.provenance, reference, {
-      profileId,
-      spellKind: 'cantrip',
-    }),
-  )
-  expect(special(character).spellsKnown).toEqual([reference])
-  expect(special(character).fixedSpells).toEqual([reference])
-  character = apply(
-    character,
-    editFeatOptionsCommand(character, character.provenance, feat, options, {}, []),
-  )
-  expect(special(character).cantrips).toEqual([])
-  expect(special(character).spellsKnown).toEqual([])
+  expect(
+    character.provenance.spells['toll the dead'].some((tag) => tag.sourceType === 'feat'),
+  ).toBe(true)
 })
 
 test('manual-only kind edits are explicit; contradictory or malformed requests reject atomically', () => {
@@ -209,7 +178,7 @@ test('manual-only kind edits are explicit; contradictory or malformed requests r
   for (const result of [
     setProfileSpells(changed, changed.provenance, profileId, [reference], [reference]),
     setProfileSpells(changed, changed.provenance, profileId, [], ['Toll the Dead|XPHB|junk']),
-    addSpellToCharacter(changed, changed.provenance, 'Toll the Dead|XPHB|junk', 'spell', profileId),
+    selectBonusSpellFixture(changed, 'Toll the Dead|XPHB|junk', 'spell'),
   ]) {
     expect(result.characterPatch).toEqual({})
     expect(result.provenanceUpdate).toBe(changed.provenance)
@@ -239,10 +208,7 @@ test('exact refresh is immutable/idempotent and field conflicts cannot establish
 
 test('bare manual values keep their explicit kind and remain distinct from qualified printings', () => {
   let character = manual()
-  character = apply(
-    character,
-    addSpellToCharacter(character, character.provenance, 'Fireball', 'spell', profileId),
-  )
+  character = apply(character, selectBonusSpellFixture(character, 'Fireball', 'spell'))
   character = apply(
     character,
     setProfileSpells(
@@ -282,7 +248,7 @@ test('shared projection, Actions, Sources and PDF agree without mutating the sav
   expect(deriveSpellActions(original, lookup)).toEqual([
     expect.objectContaining({ id: `spell:${encodeURIComponent(reference)}` }),
   ])
-  const vm = createCharacterSheetViewModel(original, { spellsByKey: lookup })
+  const vm = createCurrentCharacterSheetViewModel(original, { spellsByKey: lookup })
   expect(vm.spellRows.filter((row) => row.id === 'toll the dead|xphb')).toEqual([
     expect.objectContaining({ level: '1' }),
   ])

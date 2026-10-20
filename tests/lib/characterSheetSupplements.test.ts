@@ -1,14 +1,19 @@
 import { decodePDFRawStream, PDFArray, PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
-import { makeClassFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 const blank = () =>
-  createCharacterSheetViewModel(createEmptyCharacter({ name: 'Supplement test' }), {})
+  createCurrentCharacterSheetViewModel(createEmptyCharacter({ name: 'Supplement test' }), {})
 
 describe('Tavern Born PDF supplements', () => {
   test('does not append unused pages, and allows editable blank companion and notes pages', async () => {
@@ -175,35 +180,39 @@ describe('Tavern Born PDF supplements', () => {
   }, 30_000)
 
   test('exports independent caster pages, prepared dots and separate Pact Magic slots', async () => {
-    const character = createEmptyCharacter({
+    let character = createEmptyCharacter({
+      name: 'Independent casters',
       classProgression: ['Wizard', 'Cleric', 'Warlock'].map((name) => ({
         name,
         source: 'PHB',
         levels: 3,
       })),
     })
-    character.spells.spellProfiles = ['Wizard', 'Cleric', 'Warlock'].map((name) => ({
-      id: `class:${name}|PHB`,
-      type: 'class',
-      label: name,
-      className: name,
-      classSource: 'PHB',
-      cantrips: [],
-      spellsKnown: ['Detect Magic|PHB'],
-      preparedSpells: name === 'Wizard' ? ['Detect Magic|PHB'] : [],
-    }))
-    const vm = createCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup([
-        makeClassFixture({ name: 'Wizard', spellcastingAbility: 'int' }),
-        makeClassFixture({ name: 'Cleric', spellcastingAbility: 'wis' }),
-        makeClassFixture({
-          name: 'Warlock',
-          spellcastingAbility: 'cha',
-          casterProgression: 'pact',
-        }),
-      ]),
-      spellsByKey: buildSpellLookup([makeSpellFixture({ name: 'Detect Magic' })]),
-    })
+    const fixture = makeManagedClassSpellFixtures()
+    character = authorManagedClassSpellFixture(
+      character,
+      fixture,
+      [
+        {
+          owner: character.classProgression[0],
+          domain: 'class-spellbook',
+          gain: 1,
+          targets: [
+            { name: 'Detect Magic', source: 'PHB', prepare: true },
+            { name: 'Shield', source: 'PHB' },
+          ],
+        },
+        {
+          owner: character.classProgression[2],
+          domain: 'class-known',
+          gain: 1,
+          policy: 'ignore-class-list',
+          targets: [{ name: 'Detect Magic', source: 'PHB' }],
+        },
+      ],
+      [{ profileId: 'class:Cleric|PHB', reference: 'Detect Magic|PHB' }],
+    )
+    const vm = createCharacterSheetViewModel(character, fixture.lookups, fixture.lookups)
     vm.spellSlots.mergedSharedWithUsage = { 1: { max: 4, used: 1 } }
     vm.spellSlots.mergedPactWithUsage = { 2: { max: 2, used: 1 } }
     const doc = await PDFDocument.load(
@@ -217,7 +226,8 @@ describe('Tavern Born PDF supplements', () => {
       'Warlock (Pact Magic)',
     )
     expect(form.getCheckBox('WotC__Check Box 251').isChecked()).toBe(true)
-    expect(form.getCheckBox('WotC__SpellPage2__Check Box 251').isChecked()).toBe(false)
+    expect(form.getCheckBox('WotC__SpellPage2__Check Box 251').isChecked()).toBe(true)
+    expect(form.getCheckBox('WotC__Check Box 309').isChecked()).toBe(false)
     expect(form.getTextField('WotC__SlotsTotal 19').getText()).toBe('4')
     expect(form.getTextField('WotC__SlotsRemaining 19').getText()).toBe('1')
     expect(form.getTextField('WotC__SpellPage3__SlotsTotal 19').getText()).toBeUndefined()

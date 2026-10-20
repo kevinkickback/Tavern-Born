@@ -1,5 +1,4 @@
 import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
-import { getExpertiseSlotsFromClasses } from '@/lib/calculations/skills'
 import { normalizeKey } from '@/lib/provenance'
 import { formatSourceType } from '@/lib/provenance/summaries'
 import type { SourceRow } from '@/lib/provenance/types'
@@ -24,7 +23,7 @@ export interface ExpertiseAuthority {
 export interface SkillExpertiseAction {
   id: string
   ownerId: string
-  kind: 'class' | 'feat' | 'legacy'
+  kind: 'class' | 'feat' | 'manual'
   adding: boolean
   label: string
 }
@@ -178,10 +177,6 @@ export function getSkillExpertiseChoices(saved: Character, authority: ExpertiseA
       }
     }
   }
-  const capacity = getExpertiseSlotsFromClasses(
-    saved.classProgression,
-    Object.fromEntries(classes.map((cls, index) => [index, cls])),
-  )
   const manualNames = effective.proficiencies.expertise.filter((name) => {
     const tags = effective.provenance.proficiencies.expertise?.[normalizeKey(name)] ?? []
     return (
@@ -189,14 +184,13 @@ export function getSkillExpertiseChoices(saved: Character, authority: ExpertiseA
       tags.some((tag) => tag.sourceType === 'manual' && tag.sourceName === 'User Choice')
     )
   })
-  remaining += Math.max(0, capacity - manualNames.length)
   for (const name of manualNames) {
     addAction(name, {
-      id: 'legacy:remove',
-      ownerId: 'legacy',
-      kind: 'legacy',
+      id: 'manual:remove',
+      ownerId: 'manual',
+      kind: 'manual',
       adding: false,
-      label: 'Remove earlier manual choice',
+      label: 'Remove manual expertise',
     })
     rows.push({
       category: 'Expertise',
@@ -206,21 +200,6 @@ export function getSkillExpertiseChoices(saved: Character, authority: ExpertiseA
       isPending: false,
     })
   }
-  if (capacity > manualNames.length)
-    for (const name of effective.proficiencies.skills) {
-      if (
-        !effective.proficiencies.expertise.some(
-          (skill) => normalizeKey(skill) === normalizeKey(name),
-        )
-      )
-        addAction(name, {
-          id: 'legacy:add',
-          ownerId: 'legacy',
-          kind: 'legacy',
-          adding: true,
-          label: 'Use remaining class Expertise allowance (legacy)',
-        })
-    }
   for (const [name, tags] of Object.entries(effective.provenance.proficiencies.expertise ?? {}))
     for (const tag of tags) {
       if (

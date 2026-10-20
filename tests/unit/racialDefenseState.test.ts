@@ -17,10 +17,10 @@ import {
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
 import { refreshRacialDefenseState } from '@/lib/character/racialDefenseState'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { defenseSelection, manualFire } from '../fixtures/racialDefenseCharacter'
 
 const reopen = (character: Character) =>
@@ -107,7 +107,7 @@ test.each(
       .filter((effect) => effect.operation.kind === 'grant')
       .every((effect) => effect.source.name === (owner === 'race' ? race.name : child.name)),
   ).toBe(true)
-  expect(createCharacterSheetViewModel(saved, lookups).defensiveTraits).toEqual([
+  expect(createCurrentCharacterSheetViewModel(saved, lookups).defensiveTraits).toEqual([
     ...expected[0].map((value) => `${value} resistance`),
     ...expected[1].map((value) => `${value} immunity`),
     ...expected[2].map((value) => `${value} condition immunity`),
@@ -223,7 +223,7 @@ test('independent manual, feat and item owners survive racial removal and respec
   expect(effective(saved, lookups).damageResistances).toEqual([])
   const removed = refreshRacialDefenseState(saved, race, { ...child, resist: [] })
   expect(effective(removed).damageResistances).toEqual([])
-  expect(createCharacterSheetViewModel(saved, lookups).defensiveTraits).not.toContain(
+  expect(createCurrentCharacterSheetViewModel(saved, lookups).defensiveTraits).not.toContain(
     'fire resistance',
   )
 })

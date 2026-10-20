@@ -1,4 +1,5 @@
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   getInvalidOptionalClassAdoptionIndexes,
@@ -36,6 +37,7 @@ export function setOptionalClassAdoptionCommand(
   request: OptionalClassFeatureAdoption,
   adopt: boolean,
   expectedFamilyKeys: readonly string[],
+  spellContext?: ManagedClassSpellContext,
 ): CharacterCommandResult {
   if (
     !getOptionalClassAdoptionRule(request) ||
@@ -78,6 +80,7 @@ export function setOptionalClassAdoptionCommand(
       availableClasses: catalogs?.classes ?? [],
       allClasses: catalogs?.classes ?? [],
       classChoiceFeatureCatalogs: catalogs,
+      spellContext,
     },
     proposed.variantRules?.optionalClassFeatures ?? false,
   )

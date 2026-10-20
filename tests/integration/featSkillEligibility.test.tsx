@@ -16,7 +16,6 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { isAuditedSkilledFeat } from '@/lib/5etools/featSkillRules'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { applyManualProficiencyCommand } from '@/lib/character/commands/equipmentCommands'
-import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
@@ -31,6 +30,7 @@ import type { Feat5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeClassProficiencyFixture } from '../fixtures/classProficiencyFixtures'
+import { manualExpertiseFixtureGrant } from '../fixtures/manualProficiency'
 
 const skilled = JSON.parse(
   readFileSync('tests/fixtures/skilledFeatSources.json', 'utf8'),
@@ -226,7 +226,7 @@ test.each([
   const f = fixture('Skill Expert', source)
   f.character = applyCharacterCommandResult(
     f.character,
-    toggleExpertiseCommand(f.character, f.character.provenance, 'stealth', true),
+    manualExpertiseFixtureGrant(f.character, f.character.provenance, 'stealth'),
   )
   store(f)
   const { result } = renderHook(() => useFeatProvenanceMutations())

@@ -4,6 +4,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { getParsedClassSpellSlotProgression } from '@/lib/5etools/classSpellSlotTable'
 import {
   FEAT_CATEGORY_LABEL_FALLBACKS,
   NON_STANDARD_FEAT_SELECTION_CATEGORIES,
@@ -211,7 +212,10 @@ export function getEffectiveSpellcastingClassData(
     spellcastingAbility: subclassData.spellcastingAbility ?? classData.spellcastingAbility,
     casterProgression: subclassData.casterProgression ?? classData.casterProgression,
     isSpellcaster: subclassData.isSpellcaster ?? classData.isSpellcaster,
-    spellSlotProgression: subclassData.spellSlotProgression ?? classData.spellSlotProgression,
+    spellSlotProgression:
+      subclassData.spellSlotProgression ??
+      getParsedClassSpellSlotProgression({ classTableGroups: subclassData.subclassTableGroups }) ??
+      classData.spellSlotProgression,
     cantripProgression: subclassData.cantripProgression ?? classData.cantripProgression,
     spellsKnownProgression: subclassData.spellsKnownProgression ?? classData.spellsKnownProgression,
     spellsKnownProgressionFixed:

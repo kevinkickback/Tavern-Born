@@ -7,7 +7,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { Character, OptionalClassFeatureOwner } from '@/types/character'
+import type { Character, OptionalClassFeatureOwner, SpellProfile } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceFeatureId, getClassChoiceOptionKey } from './classChoiceIdentity'
 import {
@@ -35,9 +35,10 @@ export function resolveActiveClassChoiceDetail(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs,
   origin: Extract<ClassFeatureDetailOrigin, { kind: 'choice' }>,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ) {
-  if (!getEffectiveClassChoiceFeatureRoutes(character, catalogs).choiceIds.has(origin.choiceId))
-    return undefined
+  const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs, effectiveSpellProfiles)
+  if (!routes.choiceIds.has(origin.choiceId)) return undefined
   const selection = character.classChoiceSelections?.find(
     (row) =>
       row.choiceId === origin.choiceId &&
@@ -57,9 +58,7 @@ export function resolveActiveClassChoiceDetail(
   if (!selection || !selected) return undefined
   if (
     ['classFeature', 'subclassFeature', 'optionalFeature'].includes(selected.entityType) &&
-    !getEffectiveClassChoiceFeatureRoutes(character, catalogs).featureIds.has(
-      getClassChoiceFeatureId(selection, selected),
-    )
+    !routes.featureIds.has(getClassChoiceFeatureId(selection, selected))
   )
     return undefined
   const owner = findClassReference(

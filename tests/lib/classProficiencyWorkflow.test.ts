@@ -6,7 +6,7 @@ import {
 } from '@/lib/5etools/classProficiencyIdentity'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
-import { getExpertiseSlotsFromClasses, reconcileSkillExpertise } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
 import { resolveClassProficiencyOptions } from '@/lib/character/classProficiencyOptions'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
@@ -22,7 +22,7 @@ import {
   proficiencySources,
 } from '../fixtures/classProficiencyFixtures'
 
-test('empty and partial pools remain pending; adapted targets retire pooled additions without assigning manual values', () => {
+test('empty and partial pools remain pending; owned choices do not assign independent manual values', () => {
   const f = makeClassProficiencyFixture()
   const pending = {
     ...f.character,
@@ -32,27 +32,12 @@ test('empty and partial pools remain pending; adapted targets retire pooled addi
   expect(applyProficiency(f, f.choices[0], [], pending)).toEqual(pending)
   const partial = applyProficiency(f, f.choices[0], [expertiseOption('Stealth')])
   expect(partial.classChoiceSelections![0].selected).toHaveLength(1)
-  const bard = {
-    ...f.cls,
-    name: 'Bard',
-    classFeatureRefs: [
-      { name: 'Expertise', className: 'Bard', ref: 'Expertise|Bard|PHB|3|PHB', level: 3 },
-    ],
-  }
-  const classes = { 'rogue|phb': f.cls, 'bard|phb': bard }
-  expect(getExpertiseSlotsFromClasses(f.character.classProgression, classes)).toBe(0)
-  expect(
-    getExpertiseSlotsFromClasses(
-      [...f.character.classProgression, { name: 'Bard', source: 'PHB', levels: 3 }],
-      classes,
-    ),
-  ).toBe(0)
-  const legacy = {
+  const manual = {
     ...f.character,
     proficiencies: { ...f.character.proficiencies, expertise: ['stealth'] },
   }
-  expect(characterPersistenceSchema.parse(legacy).proficiencies.expertise).toEqual(['stealth'])
-  expect(legacy.classChoiceSelections ?? []).toEqual([])
+  expect(characterPersistenceSchema.parse(manual).proficiencies.expertise).toEqual(['stealth'])
+  expect(manual.classChoiceSelections ?? []).toEqual([])
 })
 
 test('actual class source inventory exposes fourteen distinct targets and sixteen domains', () => {

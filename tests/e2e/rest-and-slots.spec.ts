@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassCastingLayer } from '../fixtures/classCastingFixtures'
 import {
   ensureStartupPromptResolved,
   seedAppState,
@@ -10,42 +11,7 @@ import {
 
 const SOURCE_PATH = 'e2e-rest-slot-seed'
 
-const gameData = {
-  races: [],
-  classes: [
-    {
-      name: 'Test Caster',
-      source: 'TST',
-      classFeatures: [],
-      classFeatureRefs: [],
-      casterProgression: 'full',
-      spellcastingAbility: 'intelligence',
-      spellSlotProgression: [[2], [3]],
-      hd: { number: 1, faces: 8 },
-    },
-  ],
-  backgrounds: [],
-  spells: [],
-  feats: [],
-  items: [],
-  itemsBase: [],
-  itemProperties: [],
-  itemTypes: [],
-  classFeatures: [],
-  actions: [],
-  conditions: [],
-  deities: [],
-  skills: [],
-  senses: [],
-  languages: [],
-  optionalfeatures: [],
-  variantrules: [],
-  trapHazards: [],
-  rewards: [],
-  cultsBoons: [],
-  organizations: [],
-  sources: [],
-}
+const gameData = makeClassCastingLayer('class/class-wizard.json')
 
 const emptyCharacter = makeCharacterFixture()
 const character = characterPersistenceSchema.parse(
@@ -53,7 +19,7 @@ const character = characterPersistenceSchema.parse(
     id: 'rest-slot-e2e-1',
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: 'Rest Slot E2E',
-    classProgression: [{ name: 'Test Caster', source: 'TST', levels: 2 }],
+    classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
     hitPointsInitialized: true,
     hitPointGains: [],
     hitPointAdjustments: [],
@@ -74,11 +40,11 @@ const character = characterPersistenceSchema.parse(
       ...emptyCharacter.spells,
       spellProfiles: [
         {
-          id: 'class:Test Caster|TST',
+          id: 'class:Wizard|PHB',
           type: 'class',
-          label: 'Test Caster (Lv 2)',
-          className: 'Test Caster',
-          classSource: 'TST',
+          label: 'Wizard (Lv 2)',
+          className: 'Wizard',
+          classSource: 'PHB',
           cantrips: [],
           spellsKnown: [],
           preparedSpells: [],

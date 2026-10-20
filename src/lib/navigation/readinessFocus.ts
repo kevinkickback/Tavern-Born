@@ -39,6 +39,7 @@ export type SpellProfileReadinessKind =
   | 'known'
   | 'prepared-over-limit'
   | 'prepared-empty'
+  | 'prepared-unavailable'
 
 export function spellProfileReadinessId(
   kind: SpellProfileReadinessKind,
@@ -62,6 +63,7 @@ export function isSpellProfileReadinessFocus(
     'known',
     'prepared-over-limit',
     'prepared-empty',
+    'prepared-unavailable',
   ]
   return (
     profileKinds.some((kind) => readinessFocus === spellProfileReadinessId(kind, profileId)) ||

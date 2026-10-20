@@ -1,47 +1,14 @@
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
-import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
-import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
-import {
-  getClassChoiceSpellTag,
-  getClassSpellReplacementLevelLimit,
-  getClassSpellRuleContext,
-  getClassSpellSchoolGuidance,
-  getClassSpellSchoolRule,
-  getMaximumUnrestrictedSchoolChoices,
-  getReplaceableClassSpellNames,
-  isSpellInRestrictedSchools,
-  UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
-} from '@/lib/calculations/classSpellChoiceRules'
-import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import {
-  buildSpellNameKeySet,
-  getSpellNameKey,
-  parseSpellReference,
-  resolveSpellReferenceFromMap,
-  resolveSpellSelectionMetadata,
-} from '@/lib/calculations/spellIdentity'
-import {
-  buildClassSpellSelectionsByLevel,
-  ensureSpellProfiles,
-  getKnownSpellNames,
-} from '@/lib/calculations/spellProfiles'
-import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import type { ManagedClassSpellRequest } from '@/lib/character/commands/managedClassSpellCommands'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
-import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
-import type { AsiChoice, Character } from '@/types/character'
+import { ManagedClassSpellsDialog } from '@/pages/build/class/components/ManagedClassSpellsDialog'
+import type { Class5e, Feat5e, Subclass5e } from '@/types/5etools'
+import type { AsiChoice, Character, CharacterClassEntry } from '@/types/character'
 
 interface BuildClassModalsProps {
   character: Character
@@ -51,57 +18,21 @@ interface BuildClassModalsProps {
   onClassPickerOpenChange: (open: boolean) => void
   onClassPickerSearchChange: (search: string) => void
   onClassSelect: (className: string, classSource: string) => void
-
   spellPickerLevel: number | null
   onSpellPickerLevelChange: (level: number | null) => void
-  spellChoicesByLevel: Map<
-    number,
-    {
-      cantrips: number
-      spells: number
-      maxSpellLevel: number
-      canSwap: boolean
-    }
-  >
-  classSpells: Spell5e[]
-  spellByReference: Map<string, Spell5e>
-  viewingClass?: string
-  viewingClassSource?: string
-  onSetClassSpellSelectionsAtLevel: (
-    className: string,
-    classSource: string | undefined,
-    classLevel: number,
-    selections: Array<{ name: string; spellLevel: number; school?: string }>,
-  ) => void
-  onSwapClassSpellAtLevel: (
-    className: string,
-    classSource: string | undefined,
-    swapAtLevel: number,
-    removedName: string,
-    addedName: string,
-    addedSpellSchool?: string,
-  ) => void
-
-  spellSwapLevel: number | null
-  spellSwapDrop: string | null
-  onSpellSwapLevelChange: (level: number | null) => void
-  onSpellSwapDropChange: (drop: string | null) => void
-
+  viewingEntry?: CharacterClassEntry
+  onFinishClassSpellChoices: (requests: readonly ManagedClassSpellRequest[]) => void
   subclassPickerOpen: boolean
   onSubclassPickerOpenChange: (open: boolean) => void
   subclassTitle: string
   subclasses: Subclass5e[]
   viewingSubclass?: string
-  viewingSubclassSource?: string
   onSubclassConfirm: (subclass: Subclass5e) => void
-
   characterSnapshot: PrereqCharacterSnapshot
-
   asiPickerLevel: number | null
   onAsiPickerLevelChange: (level: number | null) => void
   appliedAsiChoicesForClass: AsiChoice[]
   onAsiApply: (level: number, changes: Record<string, 1 | 2>) => void
-
   featPickerOpen: boolean
   onFeatPickerOpenChange: (open: boolean) => void
   featModalFeats: Feat5e[]
@@ -109,398 +40,73 @@ interface BuildClassModalsProps {
   onFeatConfirm: (selectedFeats: Feat5e[]) => void
 }
 
-export function BuildClassModals({
-  character,
-  classes,
-  classPickerOpen,
-  classPickerSearch,
-  onClassPickerOpenChange,
-  onClassPickerSearchChange,
-  onClassSelect,
-  spellPickerLevel,
-  onSpellPickerLevelChange,
-  spellChoicesByLevel,
-  classSpells,
-  spellByReference,
-  viewingClass,
-  viewingClassSource,
-  onSetClassSpellSelectionsAtLevel,
-  onSwapClassSpellAtLevel,
-  spellSwapLevel,
-  spellSwapDrop,
-  onSpellSwapLevelChange,
-  onSpellSwapDropChange,
-  subclassPickerOpen,
-  onSubclassPickerOpenChange,
-  subclassTitle,
-  subclasses,
-  viewingSubclass,
-  viewingSubclassSource,
-  onSubclassConfirm,
-  characterSnapshot,
-  asiPickerLevel,
-  onAsiPickerLevelChange,
-  appliedAsiChoicesForClass,
-  onAsiApply,
-  featPickerOpen,
-  onFeatPickerOpenChange,
-  featModalFeats,
-  featPickerInitialSelectedIds,
-  onFeatConfirm,
-}: BuildClassModalsProps) {
-  const calculationContext = useCharacterCalculationContext(character)
-  const expanded = getNativeExpandedSpellReferences(character, calculationContext?.raceResolution)
+export function BuildClassModals(props: BuildClassModalsProps) {
+  const { character } = props
+  const calculation = useCharacterCalculationContext(character)
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
-  const viewingClassEntry = getCharacterClassEntries(character).find(
-    (entry) => entry.name === viewingClass && (entry.source ?? '') === (viewingClassSource ?? ''),
-  )
-  const spellSchoolRule = getClassSpellSchoolRule(
-    getClassSpellRuleContext(character.originSystem, viewingClassEntry),
-  )
   return (
     <>
       <ClassSelectionDialog
-        open={classPickerOpen}
-        classes={classes}
-        search={classPickerSearch}
+        open={props.classPickerOpen}
+        classes={props.classes}
+        search={props.classPickerSearch}
         selectedClassName={character.classProgression[0]?.name}
         selectedClassSource={character.classProgression[0]?.source}
         onOpenChange={(open) => {
-          onClassPickerOpenChange(open)
-          if (!open) onClassPickerSearchChange('')
+          props.onClassPickerOpenChange(open)
+          if (!open) props.onClassPickerSearchChange('')
         }}
-        onSearchChange={onClassPickerSearchChange}
-        onClassSelect={onClassSelect}
+        onSearchChange={props.onClassPickerSearchChange}
+        onClassSelect={props.onClassSelect}
       />
-
-      {spellPickerLevel !== null &&
-        (() => {
-          const gain = spellChoicesByLevel.get(spellPickerLevel)
-          if (!gain) return null
-
-          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
-          const profiles = ensureSpellProfiles(character)
-          const classProfile = profiles.find((profile) => profile.id === classProfileId)
-          const classProfileNames = classProfile
-            ? buildSpellNameKeySet([...classProfile.cantrips, ...classProfile.spellsKnown])
-            : new Set<string>()
-          const selectionsByLevel = buildClassSpellSelectionsByLevel({
-            character,
-            className: viewingClass,
-            classSource: viewingClassSource,
-          })
-          const initialSelectedNames = selectionsByLevel.get(spellPickerLevel) ?? []
-          const lockedNames = new Set(
-            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
-              (name) => !classProfileNames.has(getSpellNameKey(name)),
-            ),
-          )
-          const initialSelectedSet = buildSpellNameKeySet(initialSelectedNames)
-          const characterSpellNames = new Set(
-            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
-              (name) => !initialSelectedSet.has(getSpellNameKey(name)),
-            ),
-          )
-
-          const categories: CategoryLimit<Spell5e>[] = []
-          if (gain.cantrips > 0) {
-            categories.push({
-              key: 'cantrips',
-              label: 'cantrips',
-              max: gain.cantrips,
-              test: (spell) => spell.level === 0,
-            })
-          }
-          if (gain.spells > 0) {
-            categories.push({
-              key: 'spells',
-              label:
-                gain.maxSpellLevel > 0
-                  ? `<=${getOrdinalForm(gain.maxSpellLevel)} spells`
-                  : 'spells',
-              max: gain.spells,
-              test: (spell) =>
-                spell.level > 0 && (gain.maxSpellLevel === 0 || spell.level <= gain.maxSpellLevel),
-            })
-          }
-
-          const title = [
-            gain.cantrips > 0 && `Learn ${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`,
-            gain.spells > 0 &&
-              `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(gain.maxSpellLevel)}-level)` : ''}`,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-
-          const levelValues: string[] = []
-          if (gain.cantrips > 0) levelValues.push('0')
-          if (gain.spells > 0 && gain.maxSpellLevel > 0) {
-            for (let i = 1; i <= gain.maxSpellLevel; i++) {
-              levelValues.push(String(i))
-            }
-          }
-
-          const allowedLevels = new Set(levelValues)
-          const initialFilters: ActiveFilters = {
-            level: new Set(levelValues),
-            school: new Set(),
-            type: new Set(),
-          }
-          const maximumUnrestrictedSchoolChoices = getMaximumUnrestrictedSchoolChoices(
-            spellSchoolRule,
-            spellPickerLevel,
-          )
-          const schoolGuidance = getClassSpellSchoolGuidance(
-            spellSchoolRule,
-            gain.spells,
-            maximumUnrestrictedSchoolChoices,
-          )
-          const selectableSpells =
-            spellSchoolRule && maximumUnrestrictedSchoolChoices === 0
-              ? classSpells.filter(
-                  (spell) =>
-                    spell.level === 0 || isSpellInRestrictedSchools(spell.school, spellSchoolRule),
-                )
-              : classSpells
-          if (spellSchoolRule && maximumUnrestrictedSchoolChoices > 0) {
-            categories.push({
-              key: 'unrestricted-school',
-              label: 'outside the usual schools',
-              max: maximumUnrestrictedSchoolChoices,
-              showCount: false,
-              test: (spell) =>
-                spell.level > 0 && !isSpellInRestrictedSchools(spell.school, spellSchoolRule),
-            })
-          }
-
-          return (
-            <SpellSelectionModal
-              open={true}
-              onOpenChange={(open) => {
-                if (!open) onSpellPickerLevelChange(null)
-              }}
-              title={title}
-              spells={selectableSpells}
-              className={viewingClass}
-              classListOverrides={expanded}
-              classSource={viewingClassSource}
-              subclassName={viewingSubclass}
-              subclassSource={viewingSubclassSource}
-              initialSelectedNames={initialSelectedNames}
-              lockedNames={lockedNames}
-              characterSpellNames={characterSpellNames}
-              categories={categories}
-              selectionHint={schoolGuidance}
-              initialFilters={initialFilters}
-              allowedLevels={allowedLevels}
-              onConfirm={(names) => {
-                if (viewingClass) {
-                  onSetClassSpellSelectionsAtLevel(
-                    viewingClass,
-                    viewingClassSource,
-                    spellPickerLevel,
-                    resolveSpellSelectionMetadata(names, spellByReference),
-                  )
-                }
-                onSpellPickerLevelChange(null)
-              }}
-            />
-          )
-        })()}
-
-      {subclassPickerOpen && (
-        <SubclassSelectionModal
-          open={subclassPickerOpen}
-          onOpenChange={onSubclassPickerOpenChange}
-          title={`Choose ${subclassTitle}`}
-          subclasses={subclasses}
-          selectedName={viewingSubclass ?? undefined}
-          onConfirm={onSubclassConfirm}
+      {props.spellPickerLevel !== null && props.viewingEntry && (
+        <ManagedClassSpellsDialog
+          key={`${props.viewingEntry.name}|${props.viewingEntry.source}|${props.viewingEntry.subclass ?? ''}|${props.viewingEntry.subclassSource ?? ''}|${props.spellPickerLevel}`}
+          character={character}
+          entry={props.viewingEntry}
+          level={props.spellPickerLevel}
+          context={calculation?.classChoices.spellContext}
+          statuses={calculation?.managedClassSpellStatuses ?? []}
+          onFinish={props.onFinishClassSpellChoices}
+          onOpenChange={(open) => {
+            if (!open) props.onSpellPickerLevelChange(null)
+          }}
         />
       )}
-
-      {asiPickerLevel !== null &&
-        (() => {
-          return (
-            <AsiPickerDialog
-              open={true}
-              level={asiPickerLevel}
-              abilityScores={totalAbilityScores}
-              existingChanges={
-                appliedAsiChoicesForClass.find((ac) => ac.level === asiPickerLevel)?.abilityChanges
-              }
-              onApply={(changes) => onAsiApply(asiPickerLevel, changes)}
-              onClose={() => onAsiPickerLevelChange(null)}
-            />
-          )
-        })()}
-
+      {props.subclassPickerOpen && (
+        <SubclassSelectionModal
+          open
+          onOpenChange={props.onSubclassPickerOpenChange}
+          title={`Choose ${props.subclassTitle}`}
+          subclasses={props.subclasses}
+          selectedName={props.viewingSubclass}
+          onConfirm={props.onSubclassConfirm}
+        />
+      )}
+      {props.asiPickerLevel !== null && (
+        <AsiPickerDialog
+          open
+          level={props.asiPickerLevel}
+          abilityScores={totalAbilityScores}
+          existingChanges={
+            props.appliedAsiChoicesForClass.find((choice) => choice.level === props.asiPickerLevel)
+              ?.abilityChanges
+          }
+          onApply={(changes) => {
+            if (props.asiPickerLevel !== null) props.onAsiApply(props.asiPickerLevel, changes)
+          }}
+          onClose={() => props.onAsiPickerLevelChange(null)}
+        />
+      )}
       <FeatSelectionModal
-        open={featPickerOpen}
-        onOpenChange={onFeatPickerOpenChange}
-        feats={featModalFeats}
+        open={props.featPickerOpen}
+        onOpenChange={props.onFeatPickerOpenChange}
+        feats={props.featModalFeats}
         maxSelections={1}
-        initialSelectedIds={featPickerInitialSelectedIds}
-        characterSnapshot={characterSnapshot}
-        onConfirm={onFeatConfirm}
+        initialSelectedIds={props.featPickerInitialSelectedIds}
+        characterSnapshot={props.characterSnapshot}
+        onConfirm={props.onFeatConfirm}
       />
-
-      {spellSwapLevel !== null &&
-        (() => {
-          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
-          const profiles = ensureSpellProfiles(character)
-          const classProfile = profiles.find((profile) => profile.id === classProfileId)
-          const swappableSpellNames = getReplaceableClassSpellNames(
-            classProfile,
-            character.provenance,
-            viewingClass ?? '',
-            viewingClassSource,
-          )
-          if (swappableSpellNames.length === 0) return null
-
-          const maxSpellLevel = getClassSpellReplacementLevelLimit(
-            spellChoicesByLevel,
-            viewingClassEntry?.levels ?? spellSwapLevel,
-            swappableSpellNames,
-            spellByReference,
-          )
-
-          const closeSwap = () => {
-            onSpellSwapLevelChange(null)
-            onSpellSwapDropChange(null)
-          }
-
-          if (!spellSwapDrop) {
-            // Step 1: Pick which spell to drop
-            return (
-              <Dialog
-                open
-                onOpenChange={(open) => {
-                  if (!open) closeSwap()
-                }}
-              >
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Replace a Spell</DialogTitle>
-                    <DialogDescription className="sr-only">
-                      Select a spell to replace with a new one.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Select a spell to replace. You can choose a {viewingClass ?? 'class'} spell of{' '}
-                    {`${getOrdinalForm(maxSpellLevel)}-level`} or lower based on your current class
-                    level.
-                  </p>
-                  <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
-                    {swappableSpellNames.map((name) => {
-                      const spell = resolveSpellReferenceFromMap(name, spellByReference)
-                      return (
-                        <button
-                          key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
-                          type="button"
-                          className="flex items-center justify-between px-3 py-2 rounded-md text-sm hover:bg-accent/10 border border-transparent hover:border-accent/30 transition-colors text-left"
-                          onClick={() => onSpellSwapDropChange(name)}
-                        >
-                          <span className="font-medium">{parseSpellReference(name).name}</span>
-                          {spell && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatSpellLevel(spell.level)}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )
-          }
-
-          // Step 2: Pick the replacement spell
-          const lockedNames = new Set(
-            [...getKnownSpellNames(profiles.filter((profile) => profile.type !== 'racial'))].filter(
-              (name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop),
-            ),
-          )
-          const characterSpellNames = lockedNames
-          const allowedLevels = new Set(
-            Array.from({ length: maxSpellLevel }, (_, i) => String(i + 1)),
-          )
-          const categories: CategoryLimit<Spell5e>[] = [
-            {
-              key: 'replacement',
-              label: `replacement (up to ${getOrdinalForm(maxSpellLevel)}-level)`,
-              max: 1,
-              test: (spell) =>
-                spell.level > 0 && (maxSpellLevel === 0 || spell.level <= maxSpellLevel),
-            },
-          ]
-          const initialFilters: ActiveFilters = {
-            level: new Set(allowedLevels),
-            school: new Set(),
-            type: new Set(),
-          }
-          const removedChoiceTag = getClassChoiceSpellTag(
-            character.provenance,
-            spellSwapDrop,
-            viewingClass ?? '',
-            viewingClassSource,
-          )
-          const canUseUnrestrictedSchool =
-            removedChoiceTag?.grantVariant === UNRESTRICTED_SCHOOL_CHOICE_VARIANT
-          const replacementSpells =
-            spellSchoolRule && !canUseUnrestrictedSchool
-              ? classSpells.filter((spell) =>
-                  isSpellInRestrictedSchools(spell.school, spellSchoolRule),
-                )
-              : classSpells
-
-          return (
-            <SpellSelectionModal
-              open
-              onOpenChange={(open) => {
-                if (!open) closeSwap()
-              }}
-              title={`Replace: ${parseSpellReference(spellSwapDrop).name}`}
-              spells={replacementSpells}
-              className={viewingClass}
-              classListOverrides={expanded}
-              classSource={viewingClassSource}
-              subclassName={viewingSubclass}
-              subclassSource={viewingSubclassSource}
-              initialSelectedNames={[]}
-              lockedNames={lockedNames}
-              characterSpellNames={characterSpellNames}
-              categories={categories}
-              initialFilters={initialFilters}
-              allowedLevels={allowedLevels}
-              onConfirm={(names) => {
-                const replacement = names[0]
-                if (!replacement) {
-                  closeSwap()
-                  return
-                }
-
-                if (viewingClass) {
-                  const replacementSpell = resolveSpellReferenceFromMap(
-                    replacement,
-                    spellByReference,
-                  )
-                  onSwapClassSpellAtLevel(
-                    viewingClass,
-                    viewingClassSource,
-                    spellSwapLevel,
-                    spellSwapDrop,
-                    replacement,
-                    replacementSpell?.school,
-                  )
-                }
-
-                closeSwap()
-              }}
-            />
-          )
-        })()}
     </>
   )
 }

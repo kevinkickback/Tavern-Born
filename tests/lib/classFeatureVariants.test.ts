@@ -17,12 +17,12 @@ import {
 import { upsertManualActionCommand } from '@/lib/character/commands/actionCommands'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const source = JSON.parse(readFileSync('tests/fixtures/optionalClassSources.json', 'utf8'))
 function fighter() {
@@ -167,9 +167,9 @@ test('actual selected Interception follows ON/OFF/ON in Actions and PDF while Pr
       classChoiceClasses: classes,
       classChoiceFeatureCatalogs: catalogs,
     }
-    expect(createCharacterSheetViewModel(off, input).actions.some((row) => row.name === name)).toBe(
-      !optional,
-    )
+    expect(
+      createCurrentCharacterSheetViewModel(off, input).actions.some((row) => row.name === name),
+    ).toBe(!optional)
     expect(
       deriveRulesTextActions(
         { ...off, variantRules: { optionalClassFeatures: true } },
@@ -187,16 +187,18 @@ test('actual selected Interception follows ON/OFF/ON in Actions and PDF while Pr
       }),
     }
     expect(
-      createCharacterSheetViewModel(configured, input).actions.find((row) => row.id === action.id),
+      createCurrentCharacterSheetViewModel(configured, input).actions.find(
+        (row) => row.id === action.id,
+      ),
     ).toMatchObject({ name: 'Player configuration', active: false })
     expect(
-      createCharacterSheetViewModel(
+      createCurrentCharacterSheetViewModel(
         { ...configured, variantRules: { optionalClassFeatures: true } },
         input,
       ).actions.find((row) => row.id === action.id),
     ).toMatchObject({ name: 'Player configuration', active: false })
     expect(
-      createCharacterSheetViewModel(configured, {
+      createCurrentCharacterSheetViewModel(configured, {
         ...input,
         optionalFeaturesByKey: {},
       }).actions.find((row) => row.id === action.id),

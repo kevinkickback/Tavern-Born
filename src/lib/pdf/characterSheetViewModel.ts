@@ -39,12 +39,10 @@ import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skill
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   buildRacialSpellcastingDetails,
-  buildSpellcastingClassDetails,
   type SpellcastingClassDetail,
   type SpellcastingNumbers,
 } from '@/lib/calculations/spellProfiles.casting'
-import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
-import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
+import type { CharacterSpellSlotsBreakdown } from '@/lib/calculations/spellProfiles.slots'
 import {
   formatCastingTime,
   formatComponents,
@@ -64,7 +62,6 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -180,7 +177,7 @@ export interface CharacterSheetViewModel {
     detail: CharacterSheetSpellcastingSource
     spellRows: CharacterSheetSpellRow[]
   }>
-  spellSlots: ReturnType<typeof calculateCharacterSpellSlots>
+  spellSlots: CharacterSpellSlotsBreakdown
   magicItems: Equipment[]
   companions: Array<{
     name: string
@@ -192,7 +189,8 @@ export interface CharacterSheetViewModel {
   resolvedClasses: readonly Class5e[]
   mergedRace: Race5e | undefined
   background: Background5e | undefined
-  spellcastingDetails: ReturnType<typeof buildSpellcastingClassDetails>
+  spellcastingDetails: SpellcastingClassDetail[]
+  unearnedClassSpellProfiles: readonly string[]
   spellcastingSources: CharacterSheetSpellcastingSource[]
   visionSummary: string
   racialTraitsSummary: string
@@ -731,21 +729,14 @@ function isMagicItem(item: Equipment): boolean {
 export function createCharacterSheetViewModel(
   savedCharacter: Character,
   rawLookups: CharacterSheetLookupSet,
+  primaryLookups: EntityLookupSet,
 ): CharacterSheetViewModel {
-  const calculationContext = createCharacterCalculationContext(savedCharacter, rawLookups)
-  const classesById = new Map(
-    Object.values(rawLookups.classesByKey ?? {}).map((classData) => [
-      toClassProfileId(classData.name, classData.source),
-      classData,
-    ]),
+  const calculationContext = createCharacterCalculationContext(
+    savedCharacter,
+    primaryLookups,
+    rawLookups,
   )
-  const character = deriveSpellProfileState(
-    calculationContext.character,
-    classesById,
-    undefined,
-    calculationContext.raceResolution,
-    { preserveNonracialProfiles: true, spellsByKey: rawLookups.spellsByKey },
-  )
+  const character = calculationContext.character
   const feats = getSelectedFeats(character).map((feat) => ({
     ...feat,
     description:
@@ -773,7 +764,8 @@ export function createCharacterSheetViewModel(
   }))
   const activeClassRoutes = getEffectiveClassChoiceFeatureRoutes(
     character,
-    rawLookups.classChoiceFeatureCatalogs,
+    primaryLookups.classChoiceFeatureCatalogs,
+    character.spells.spellProfiles,
   )
   const companions = (character.classChoiceSelections ?? [])
     .filter(
@@ -825,13 +817,7 @@ export function createCharacterSheetViewModel(
   const resolvedClasses = calculationContext.classes
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
-  const spellcastingDetails = buildSpellcastingClassDetails(
-    character,
-    classesById,
-    effectiveAbilityScores,
-    calculationContext.effects.declarations,
-    calculationContext.effects.resolutionContext,
-  )
+  const spellcastingDetails = calculationContext.classCasting.details
   const spellcastingSources: CharacterSheetSpellcastingSource[] = [
     ...spellcastingDetails.map((detail) => ({
       ...detail,
@@ -855,11 +841,12 @@ export function createCharacterSheetViewModel(
     effects: calculationContext.effects.declarations,
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
+    effectiveSpellProfiles: character.spells.spellProfiles,
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,
     availableClasses: calculationContext.classChoices.classes,
-    classChoiceFeatureCatalogs: rawLookups.classChoiceFeatureCatalogs,
+    classChoiceFeatureCatalogs: primaryLookups.classChoiceFeatureCatalogs,
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
@@ -869,7 +856,7 @@ export function createCharacterSheetViewModel(
     getFeatureOptionSelectionStates(
       character,
       calculationContext.classChoices.classes,
-      rawLookups.classChoiceFeatureCatalogs,
+      primaryLookups.classChoiceFeatureCatalogs,
     ),
   )
   const proficiencyCheckNotes = getProficiencyCheckNoteRows(
@@ -878,7 +865,7 @@ export function createCharacterSheetViewModel(
   )
   const optionalActivity = createOptionalClassFeatureActivity(
     character,
-    rawLookups.classChoiceFeatureCatalogs,
+    primaryLookups.classChoiceFeatureCatalogs,
   )
   const declarations = getActiveOptionalClassFeatureDeclarations(optionalActivity)
   const optionalClassFeatureSummaries = declarations.map(
@@ -953,13 +940,14 @@ export function createCharacterSheetViewModel(
         spellcastingDetails,
       ),
     })),
-    spellSlots: calculateCharacterSpellSlots(character, classesById),
+    spellSlots: calculationContext.classCasting.slots,
     magicItems,
     companions,
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
     spellcastingDetails,
+    unearnedClassSpellProfiles: calculationContext.classCasting.unearnedProfiles,
     spellcastingSources,
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),

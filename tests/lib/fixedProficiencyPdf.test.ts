@@ -1,11 +1,11 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { makeFixedCharacterFixture } from '../fixtures/fixedProficiencyFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 test.each(
   (
@@ -41,12 +41,12 @@ test.each(
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const vm = createCharacterSheetViewModel(f.character, input)
+  const vm = createCurrentCharacterSheetViewModel(f.character, input)
   expect(vm.skillByName.get(skill)?.modifier).toBe(expected)
   const view = descriptions ? vm : withoutSheetDescriptions(vm)
   const form = (await PDFDocument.load(await generateTestCharacterSheet(view, template))).getForm()
   expect(form.getTextField(field).getText()).toBe(`+${expected}`)
-  const lost = createCharacterSheetViewModel(f.character, {
+  const lost = createCurrentCharacterSheetViewModel(f.character, {
     ...input,
     classChoiceFeatureCatalogs: { ...f.catalogs, classes: [] },
   })
@@ -67,7 +67,7 @@ test.each(
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const vm = createCharacterSheetViewModel(f.character, input)
+  const vm = createCurrentCharacterSheetViewModel(f.character, input)
   expect(vm.toolExpertiseSummary).toContain('Double your proficiency bonus')
   const view = descriptions ? vm : withoutSheetDescriptions(vm)
   const form = (await PDFDocument.load(await generateTestCharacterSheet(view, template))).getForm()

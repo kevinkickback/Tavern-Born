@@ -9,13 +9,13 @@ import {
   upsertManualEffectCommand,
 } from '@/lib/character/commands/effectCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import {
   makeConditionalCharacterFixture,
   makeConditionalSourceData,
 } from '../fixtures/conditionalProficiencyFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 test.each([
   'PHB',
@@ -58,8 +58,8 @@ test.each([
   expect(deriveConditionalProficiencyNotes(f.select(['Fire Rune'], selected), f.catalogs)).toEqual(
     notes,
   )
-  const vm = createCharacterSheetViewModel(selected, f.input)
-  const withoutAuthority = createCharacterSheetViewModel(selected, {
+  const vm = createCurrentCharacterSheetViewModel(selected, f.input)
+  const withoutAuthority = createCurrentCharacterSheetViewModel(selected, {
     ...f.input,
     classChoiceFeatureCatalogs: { ...f.catalogs, optionalFeatureCandidates: new Map() },
   })
@@ -370,7 +370,7 @@ test('conditional projection preserves an independently saved invocation, ID, us
     classResources: { 'manual:fire-rune': 1 },
   }) as Character
   const before = JSON.stringify(saved)
-  const vm = createCharacterSheetViewModel(saved, f.input)
+  const vm = createCurrentCharacterSheetViewModel(saved, f.input)
   expect(vm.actions).toContainEqual(saved.manualActions![0])
   expect(vm.character.classResources).toEqual(saved.classResources)
   expect(deriveConditionalProficiencyNotes(saved, f.catalogs)).toHaveLength(1)
@@ -407,5 +407,5 @@ test('manual command and strict reopen reject derived target/reserved ID, while 
       context.effects.resolutionContext,
     ),
   ).toEqual([])
-  expect(createCharacterSheetViewModel(saved, f.input).proficiencyCheckNotes).toEqual([])
+  expect(createCurrentCharacterSheetViewModel(saved, f.input).proficiencyCheckNotes).toEqual([])
 })

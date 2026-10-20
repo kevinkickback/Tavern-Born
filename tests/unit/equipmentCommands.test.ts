@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
-  addManualEquipmentCommand,
   applyManualProficiencyCommand,
   removeManualEquipmentCommand,
   setEquipmentRestrictionsIgnoredCommand,
@@ -79,10 +78,10 @@ describe('equipment commands', () => {
 
   test('adds inventory and manual provenance in one result', () => {
     const character = makeCharacterFixture()
-    const result = addManualEquipmentCommand(
+    const result = addManualEquipmentBatchCommand(
       character,
       character.provenance ?? emptyProvenance(),
-      item,
+      [item],
     )
 
     expect(result.characterPatch.equipment).toEqual([
@@ -118,12 +117,18 @@ describe('equipment commands', () => {
 
   test('preserves a source-qualified property note through a valid character save', () => {
     const character = makeCharacterFixture()
-    const result = addManualEquipmentCommand(character, character.provenance ?? emptyProvenance(), {
-      name: 'Lance',
-      source: 'XPHB',
-      type: 'M',
-      property: [{ uid: '2H|XPHB', note: 'unless mounted' }],
-    })
+    const result = addManualEquipmentBatchCommand(
+      character,
+      character.provenance ?? emptyProvenance(),
+      [
+        {
+          name: 'Lance',
+          source: 'XPHB',
+          type: 'M',
+          property: [{ uid: '2H|XPHB', note: 'unless mounted' }],
+        },
+      ],
+    )
 
     expect(result.characterPatch.equipment?.[0]?.properties).toEqual([
       { uid: '2H|XPHB', note: 'unless mounted' },

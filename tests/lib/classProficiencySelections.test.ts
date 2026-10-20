@@ -22,7 +22,7 @@ import {
 } from '@/lib/character/commands/classChoiceCommands'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
-import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
+import { removeManualExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import {
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
@@ -30,10 +30,7 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
@@ -42,6 +39,8 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { cannySource, makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
+import { manualExpertiseFixtureGrant } from '../fixtures/manualProficiency'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 type Fixture = ReturnType<typeof makeCannyFixture>
 const authority = (f: Fixture) => ({ classes: f.data.classes, catalogs: f.catalogs })
@@ -203,7 +202,7 @@ test('real base-skill removal and restoration suspend and restore Canny without 
 
 test('production class removal retracts Canny and expired expertise while independent language survives', () => {
   const f = makeCannyFixture()
-  const manual = toggleExpertiseCommand(f.character, f.character.provenance!, 'survival')
+  const manual = manualExpertiseFixtureGrant(f.character, f.character.provenance!, 'survival')
   const saved = configured({
     ...f,
     character: { ...f.character, ...manual.characterPatch, provenance: manual.provenanceUpdate },
@@ -346,14 +345,14 @@ test.each([
 
 test('already doubled skill stays x2; removing manual overlap frees its owner while Canny survives', () => {
   const f = makeCannyFixture()
-  const manual = toggleExpertiseCommand(f.character, f.character.provenance!, 'survival')
+  const manual = manualExpertiseFixtureGrant(f.character, f.character.provenance!, 'survival')
   const before = { ...f.character, ...manual.characterPatch, provenance: manual.provenanceUpdate }
   const saved = selectCanny(f, 'expertise', ['Survival'], before)
   expect(
     calculateSkillModifier(2, 2, true, saved.proficiencies.expertise.includes('survival')),
   ).toBe(6)
   expect(saved.provenance!.proficiencies.expertise!.survival).toHaveLength(2)
-  const remove = toggleExpertiseCommand(saved, saved.provenance!, 'survival', false)
+  const remove = removeManualExpertiseCommand(saved, saved.provenance!, 'survival')
   const after = { ...saved, ...remove.characterPatch, provenance: remove.provenanceUpdate }
   expect(after.proficiencies.expertise).toEqual(['survival'])
   expect(after.provenance!.proficiencies.expertise!.survival.map((tag) => tag.sourceType)).toEqual([
@@ -663,7 +662,7 @@ test('offline admission rejects forged applied tags and relations but admits una
 test('real PDF view model mechanical fields use effective proficiencies with descriptions enabled or omitted', () => {
   const f = makeCannyFixture(),
     saved = configured(f)
-  const vm = createCharacterSheetViewModel(saved, input(f))
+  const vm = createCurrentCharacterSheetViewModel(saved, input(f))
   expect(vm.character.proficiencies.expertise).toEqual(['survival'])
   expect(vm.character.proficiencies.languages).toEqual(saved.proficiencies.languages)
   const absent = {
@@ -674,7 +673,7 @@ test('real PDF view model mechanical fields use effective proficiencies with des
       classFeatureCandidates: new Map(),
     },
   }
-  const missing = createCharacterSheetViewModel(saved, absent)
+  const missing = createCurrentCharacterSheetViewModel(saved, absent)
   expect(missing.character.proficiencies.expertise).toEqual([])
   expect(withoutSheetDescriptions(missing).character.proficiencies.languages).toEqual([])
 })

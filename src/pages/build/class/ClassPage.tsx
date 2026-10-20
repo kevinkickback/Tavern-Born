@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
@@ -70,6 +71,7 @@ const LEVEL_UP_HINT_WIDTH = 320
 export function BuildClassPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculation = useCharacterCalculationContext(character)
   const {
     classes,
     classFeatures,
@@ -214,7 +216,13 @@ export function BuildClassPage() {
         : null
     }
     const current =
-      character && resolveActiveClassChoiceDetail(character, classChoiceCatalogs, origin)
+      character &&
+      resolveActiveClassChoiceDetail(
+        character,
+        classChoiceCatalogs,
+        origin,
+        calculation?.character.spells.spellProfiles,
+      )
     return current
       ? { ...resolved, ...current }
       : {
@@ -232,6 +240,7 @@ export function BuildClassPage() {
     activity,
     featureCatalogs,
     classChoiceCatalogs,
+    calculation,
     character,
   ])
   const viewingSubclassSpellcastingData = useMemo(
@@ -241,18 +250,12 @@ export function BuildClassPage() {
   const spellController = useClassSpellChoiceController(
     viewingClassData,
     viewingSubclassSpellcastingData,
-    classes as Class5e[],
   )
   const {
     choicesByLevel: spellChoicesByLevel,
     pickerLevel: spellPickerLevel,
     setPickerLevel: setSpellPickerLevel,
-    swapLevel: spellSwapLevel,
-    setSwapLevel: setSpellSwapLevel,
-    swapDrop: spellSwapDrop,
-    setSwapDrop: setSpellSwapDrop,
-    setClassSpellSelectionsAtLevel,
-    swapClassSpellAtLevel,
+    finishClassSpellChoices,
   } = spellController
   const classEquipmentChoiceKey =
     viewingClass && viewingClassSource ? `${viewingClass}|${viewingClassSource}` : ''
@@ -535,6 +538,7 @@ export function BuildClassPage() {
           leftWidth="var(--workspace-master-width)"
           left={
             <BuildClassLevelsPanel
+              managedSpellStatuses={calculation?.managedClassSpellStatuses}
               optionalClassActivity={activity ?? undefined}
               classProgression={classProgression}
               selectedClassTab={selectedClassTab}
@@ -573,7 +577,6 @@ export function BuildClassPage() {
               onOpenClassPicker={() => setClassPickerOpen(true)}
               onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
               onOpenSpellPicker={setSpellPickerLevel}
-              onOpenSpellSwap={setSpellSwapLevel}
               onOpenFeatPicker={(level) => {
                 setFeatPickerLevel(level)
                 setFeatPickerOpen(true)
@@ -624,18 +627,13 @@ export function BuildClassPage() {
         onClassSelect={handleClassChange}
         spellPickerLevel={spellPickerLevel}
         onSpellPickerLevelChange={setSpellPickerLevel}
-        spellChoicesByLevel={spellChoicesByLevel}
-        classSpells={allSpells}
-        spellByReference={spellByReference}
-        viewingClass={viewingClass}
-        viewingClassSource={viewingClassSource}
-        onSetClassSpellSelectionsAtLevel={setClassSpellSelectionsAtLevel}
+        viewingEntry={viewingEntry}
+        onFinishClassSpellChoices={finishClassSpellChoices}
         subclassPickerOpen={subclassPickerOpen}
         onSubclassPickerOpenChange={setSubclassPickerOpen}
         subclassTitle={subclassTitle}
         subclasses={subclasses}
         viewingSubclass={viewingSubclass}
-        viewingSubclassSource={viewingEntry?.subclassSource}
         onSubclassConfirm={(subclass) => {
           handleSubclassSelect(subclass)
           classChoiceController.configureSubclass(subclass)
@@ -653,11 +651,6 @@ export function BuildClassPage() {
         featModalFeats={featModalFeats}
         featPickerInitialSelectedIds={featPickerInitialSelectedIds}
         onFeatConfirm={handleFeatConfirm}
-        onSwapClassSpellAtLevel={swapClassSpellAtLevel}
-        spellSwapLevel={spellSwapLevel}
-        spellSwapDrop={spellSwapDrop}
-        onSpellSwapLevelChange={setSpellSwapLevel}
-        onSpellSwapDropChange={setSpellSwapDrop}
       />
 
       {classChoiceController.activeChoice && (

@@ -1,11 +1,11 @@
 import {
-  addSpellToCharacter,
   setRacialCastingAbility,
   setRacialSpellChoice,
 } from '@/lib/character/commands/spellCommands'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from './bonusSpellSelection'
 import {
   makeNativeRacialCharacter,
   nativeChoiceSpellLookup,
@@ -43,7 +43,7 @@ export function makeRacialRefreshCharacter(owner = racialRefreshRace, parent?: R
     ),
   )
   apply(setRacialCastingAbility(c, c.provenance, p.id, 'wis', resolution))
-  apply(addSpellToCharacter(c, c.provenance, 'Light|PHB', 'cantrip', 'special:unrestricted'))
+  apply(selectBonusSpellFixture(c, 'Light|PHB', 'cantrip'))
   c.spells.spellSlots = { 1: { max: 4, used: 2 } }
   c.spells.pactSpellSlots = { 2: { max: 2, used: 1 } }
   return characterPersistenceSchema.parse(JSON.parse(JSON.stringify(c)))

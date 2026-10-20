@@ -7,10 +7,33 @@ import {
   deriveWeaponActions,
   inferRulesTextActionKind,
 } from '@/lib/calculations/actions'
+import { setProfileSpells } from '@/lib/character/commands/spellCommands'
 import type { Class5e, ClassFeature, Feat5e, Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 
 describe('character action projection', () => {
+  test('a manual name never acquires catalog actions before or after a printing changes', () => {
+    const initial = makeCharacterFixture()
+    const selected = setProfileSpells(
+      initial,
+      initial.provenance,
+      'special:unrestricted',
+      ['Echo'],
+      [],
+    )
+    const character = {
+      ...initial,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
+    }
+    const before = structuredClone(character)
+    const a = makeSpellFixture({ name: 'Echo', source: 'A', level: 0, entries: ['A rules.'] })
+    const z = makeSpellFixture({ name: 'Echo', source: 'Z', level: 0, entries: ['Z rules.'] })
+    for (const spells of [[a, z], [z], []])
+      expect(deriveSpellActions(character, buildSpellLookup(spells))).toEqual([])
+    expect(character).toEqual(before)
+  })
   test('derives an effect-aware weapon attack with proficiency, properties, and selected mastery', () => {
     const character = makeCharacterFixture({
       proficiencies: {
@@ -168,8 +191,8 @@ describe('character action projection', () => {
         spellProfiles: [
           {
             ...makeCharacterFixture().spells.spellProfiles[0],
-            cantrips: [reactionSpell.name],
-            spellsKnown: [bonusSpell.name],
+            cantrips: [`${reactionSpell.name}|${reactionSpell.source}`],
+            spellsKnown: [`${bonusSpell.name}|${bonusSpell.source}`],
             preparedSpells: [],
           },
           makeCharacterFixture().spells.spellProfiles[1],
@@ -177,7 +200,9 @@ describe('character action projection', () => {
       },
     })
 
-    const actions = deriveSpellActions(character, buildSpellLookup([reactionSpell, bonusSpell]))
+    const actions = deriveSpellActions(character, buildSpellLookup([reactionSpell, bonusSpell]), {
+      effectiveSpellProfiles: character.spells.spellProfiles,
+    })
 
     expect(actions).toEqual([
       expect.objectContaining({
@@ -225,7 +250,7 @@ describe('character action projection', () => {
             className: 'Warlock',
             classSource: 'PHB',
             cantrips: [],
-            spellsKnown: [spell.name],
+            spellsKnown: [`${spell.name}|${spell.source}`],
             preparedSpells: [],
           },
         ],
@@ -233,7 +258,10 @@ describe('character action projection', () => {
     })
 
     expect(
-      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [warlock] }),
+      deriveSpellActions(character, buildSpellLookup([spell]), {
+        classes: [warlock],
+        effectiveSpellProfiles: character.spells.spellProfiles,
+      }),
     ).toEqual([
       expect.objectContaining({
         name: spell.name,
@@ -243,7 +271,7 @@ describe('character action projection', () => {
     ])
   })
 
-  test('still marks an unprepared spell inactive for a daily prepared caster', () => {
+  test('context-free Actions cannot turn an unowned daily known row into a spell action', () => {
     const spell = {
       name: 'Test Prepared Spell',
       source: 'TEST',
@@ -280,9 +308,9 @@ describe('character action projection', () => {
       },
     })
 
-    expect(
-      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [cleric] })[0],
-    ).toMatchObject({ active: false, inactiveReason: 'Not prepared' })
+    expect(deriveSpellActions(character, buildSpellLookup([spell]), { classes: [cleric] })).toEqual(
+      [],
+    )
   })
 
   test('classifies explicit action grants while excluding passive feature prose', () => {
@@ -358,7 +386,12 @@ describe('character action projection', () => {
         },
       ],
       features: [
-        { id: 'selected-feature', name: 'Selected Feature', source: 'TEST', description: '' },
+        {
+          id: 'selected-feature',
+          name: 'Selected Feature',
+          source: 'TEST',
+          description: 'As a bonus action, use the saved custom feature.',
+        },
       ],
       feats: [{ id: 'regular-feat', name: 'Regular Feat', source: 'TEST', description: '' }],
       specialFeats: [{ id: 'bonus-feat', name: 'Bonus Feat', source: 'TEST', description: '' }],
@@ -450,7 +483,7 @@ describe('character action projection', () => {
     })
 
     expect(actions.map(({ name, kind }) => ({ name, kind }))).toEqual([
-      { name: 'Selected Feature', kind: 'action' },
+      { name: 'Selected Feature', kind: 'bonus-action' },
       { name: 'Class Action', kind: 'action' },
       { name: 'Subclass Reaction', kind: 'reaction' },
       { name: 'Regular Feat', kind: 'action' },

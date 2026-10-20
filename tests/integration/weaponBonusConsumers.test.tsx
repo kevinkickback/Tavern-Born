@@ -7,7 +7,6 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { SourceDerivedEffects } from '@/pages/adjustments/components/DerivedMechanicsOverview'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
@@ -15,6 +14,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { characterWithWeapons, venom } from '../fixtures/weaponBonusFixtures'
 
 afterEach(() => {
@@ -44,7 +44,7 @@ test('actual Actions hook, Review and three PDF mappings share fixed totals acro
   const before = JSON.stringify(character)
   const hook = renderHook(() => useCharacterActions(character))
   expect(hook.result.current.find((action) => action.id === 'weapon:owned-0')?.attackBonus).toBe(6)
-  const pdf = createCharacterSheetViewModel(character, data.lookups!)
+  const pdf = createCurrentCharacterSheetViewModel(character, data.lookups!)
   expect(pdf.weaponRows[0]).toMatchObject({ attackBonus: '+6', damage: '1d4 + 4' })
   expect(mapCharacterSheet2014(pdf).textFields['Attack.1.To Hit']).toBe('+6')
   expect(mapCharacterSheet2014(pdf).textFields['Attack.1.Damage']).toBe('1d4 + 4')
@@ -104,10 +104,10 @@ test('unsupported weapon note is visible in source effects and Review and warns 
   expect(
     screen.getByText('Its +1 unattuned and +2 attuned bonuses need manual handling.'),
   ).toBeTruthy()
-  const pdf = createCharacterSheetViewModel(character, gameData.lookups!)
+  const pdf = createCurrentCharacterSheetViewModel(character, gameData.lookups!)
   expect(pdf.weaponRows[0]).toMatchObject({ attackBonus: '+5', damage: '1d4 + 3' })
   const warning = getPdfExportPreflight(
-    '2014',
+    '2014-custom',
     pdf,
     null,
     calculation.effects.declarations,

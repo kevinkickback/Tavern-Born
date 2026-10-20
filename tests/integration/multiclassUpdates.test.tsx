@@ -1,7 +1,12 @@
 import { act } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 
 /**
  * Integration tests for multiclass updates and post-creation class modifications.
@@ -49,42 +54,18 @@ describe('Multiclass Updates', () => {
     })
 
     test('leveling changes spell slots for spellcasters', () => {
-      const character = makeCharacterFixture({
-        classProgression: [
-          {
-            name: 'Wizard',
-            source: 'PHB',
-            levels: 1,
-          },
-        ],
-        spells: {
-          spellProfiles: [
-            {
-              id: 'special:unrestricted',
-              type: 'special',
-              label: 'Spell Selection',
-              alwaysPrepared: true,
-              cantrips: [],
-              spellsKnown: [],
-              preparedSpells: [],
-            },
-            {
-              id: 'class:Wizard|PHB',
-              type: 'class',
-              label: 'Wizard (Lv 1)',
-              className: 'Wizard',
-              classSource: 'PHB',
-              cantrips: ['Fire Bolt'],
-              spellsKnown: [],
-              preparedSpells: [],
-              alwaysPrepared: false,
-            },
-          ],
-          spellSlots: {
-            1: { max: 2, used: 0 },
-          },
-        },
+      const fixture = makeManagedClassSpellFixtures()
+      const initial = makeCharacterFixture({
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
       })
+      const character = authorManagedClassSpellFixture(initial, fixture, [
+        {
+          owner: initial.classProgression[0],
+          domain: 'class-cantrip',
+          gain: 1,
+          targets: [{ name: 'Fire Bolt', source: 'PHB' }],
+        },
+      ])
 
       useCharacterStore.setState({
         activeCharacter: character,
@@ -307,58 +288,38 @@ describe('Multiclass Updates', () => {
     })
 
     test('removing a spellcasting class removes its spell profile', () => {
-      const character = makeCharacterFixture({
+      const fixture = makeManagedClassSpellFixtures()
+      const initial = makeCharacterFixture({
         classProgression: [
+          { name: 'Wizard', source: 'PHB', levels: 5 },
+          { name: 'Cleric', source: 'PHB', levels: 1 },
+        ],
+      })
+      const character = authorManagedClassSpellFixture(
+        initial,
+        fixture,
+        [
           {
-            name: 'Wizard',
-            source: 'PHB',
-            levels: 5,
+            owner: initial.classProgression[0],
+            domain: 'class-cantrip',
+            gain: 1,
+            targets: [{ name: 'Fire Bolt', source: 'PHB' }],
           },
           {
-            name: 'Cleric',
-            source: 'PHB',
-            levels: 1,
+            owner: initial.classProgression[0],
+            domain: 'class-spellbook',
+            gain: 1,
+            targets: [{ name: 'Magic Missile', source: 'PHB', prepare: true }],
+          },
+          {
+            owner: initial.classProgression[1],
+            domain: 'class-cantrip',
+            gain: 1,
+            targets: [{ name: 'Sacred Flame', source: 'PHB' }],
           },
         ],
-        spells: {
-          spellProfiles: [
-            {
-              id: 'special:unrestricted',
-              type: 'special',
-              label: 'Spell Selection',
-              alwaysPrepared: true,
-              cantrips: [],
-              spellsKnown: [],
-              preparedSpells: [],
-            },
-            {
-              id: 'class:Wizard|PHB',
-              type: 'class',
-              label: 'Wizard (Lv 5)',
-              className: 'Wizard',
-              classSource: 'PHB',
-              cantrips: ['Fire Bolt'],
-              spellsKnown: ['Magic Missile'],
-              preparedSpells: ['Magic Missile'],
-              alwaysPrepared: false,
-            },
-            {
-              id: 'class:Cleric|PHB',
-              type: 'class',
-              label: 'Cleric (Lv 1)',
-              className: 'Cleric',
-              classSource: 'PHB',
-              cantrips: ['Sacred Flame'],
-              spellsKnown: [],
-              preparedSpells: ['Cure Wounds'],
-              alwaysPrepared: false,
-            },
-          ],
-          spellSlots: {
-            1: { max: 5, used: 0 },
-          },
-        },
-      })
+        [{ profileId: 'class:Cleric|PHB', reference: 'Cure Wounds|PHB' }],
+      )
 
       useCharacterStore.setState({
         activeCharacter: character,
@@ -366,35 +327,23 @@ describe('Multiclass Updates', () => {
         characters: [character],
       })
 
-      // Remove Cleric class
-      const wizardOnlyCharacter = {
-        ...character,
-        classProgression: [
-          {
-            name: 'Wizard',
-            source: 'PHB',
-            levels: 5,
-          },
-        ],
-        spells: {
-          spellProfiles: character.spells.spellProfiles.filter((p) => p.className !== 'Cleric'),
-          spellSlots: {
-            1: { max: 4, used: 0 },
-            2: { max: 3, used: 0 },
-          },
-        },
-      }
-
+      const result = applyClassProgressionUpdate(character, character.provenance, [
+        { name: 'Wizard', source: 'PHB', levels: 5 },
+      ])
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          classProgression: wizardOnlyCharacter.classProgression,
-          spells: wizardOnlyCharacter.spells,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
         })
       })
 
       const updated = useCharacterStore.getState().activeCharacter
       const clericProfile = updated?.spells.spellProfiles.find((p) => p.className === 'Cleric')
       expect(clericProfile).toBeUndefined()
+      expect(updated?.managedClassSpellChoices).toEqual(
+        character.managedClassSpellChoices?.filter((row) => row.slot[0][1] === 'wizard'),
+      )
+      expect(updated?.managedClassSpellRevision).toBe(character.managedClassSpellRevision)
     })
   })
 

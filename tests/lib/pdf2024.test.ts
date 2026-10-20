@@ -7,15 +7,21 @@ import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getCharacterSheetAssetPlan } from '@/lib/pdf/characterSheetAssets'
 import { get2024SpellRows } from '@/lib/pdf/characterSheetMapping2024'
 import { getOptionalCharacterSheetPages } from '@/lib/pdf/characterSheetPages'
-import {
-  buildCharacterSheetFieldMap,
-  createCharacterSheetViewModel,
-} from '@/lib/pdf/characterSheetPdf'
+import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { buildCompanionSheetData } from '@/lib/pdf/companionSheet'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { get2024FieldLabel } from '@/lib/pdf/official2024Text'
 import type { Class5e, Creature5e, Spell5e } from '@/types/5etools'
-import { generateTestCharacterSheet, sourceTemplateBytes } from '../fixtures/pdfTemplates'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+  sourceTemplateBytes,
+} from '../fixtures/pdfTemplates'
 
 const json = (path: string) => JSON.parse(readFileSync(path, 'utf8'))
 const hasCorpus = [
@@ -33,26 +39,32 @@ const lookups = {
     : {},
 }
 
+const managedFixture = makeManagedClassSpellFixtures()
 function caster() {
-  const character = createEmptyCharacter({
+  let character = createEmptyCharacter({
     name: 'Aster',
     originSystem: '2024',
     classProgression: [{ name: 'Wizard', source: 'XPHB', levels: 5 }],
   })
-  character.spells.spellProfiles = [
+  const owner = character.classProgression[0]
+  character = authorManagedClassSpellFixture(character, managedFixture, [
     {
-      id: 'class:Wizard|XPHB',
-      type: 'class',
-      label: 'Wizard',
-      className: 'Wizard',
-      classSource: 'XPHB',
-      castingAbility: 'int',
-      cantrips: ['Ray of Frost|XPHB'],
-      spellsKnown: ['Mage Armor|XPHB', 'Shield|XPHB'],
-      preparedSpells: ['Mage Armor|XPHB'],
+      owner,
+      domain: 'class-cantrip',
+      gain: 1,
+      targets: [{ name: 'Ray of Frost', source: 'XPHB' }],
     },
-  ]
-  return createCharacterSheetViewModel(character, lookups)
+    {
+      owner,
+      domain: 'class-spellbook',
+      gain: 1,
+      targets: [
+        { name: 'Mage Armor', source: 'XPHB', prepare: true },
+        { name: 'Shield', source: 'XPHB' },
+      ],
+    },
+  ])
+  return createCharacterSheetViewModel(character, lookups, managedFixture.lookups)
 }
 
 describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
@@ -76,11 +88,15 @@ describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
         charisma: 10,
       },
     })
-    const vm = createCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup(
-        parseClasses(json('data/class/class-ranger.json')) as Class5e[],
-      ),
-    })
+    const vm = createCharacterSheetViewModel(
+      character,
+      {
+        classesByKey: buildClassLookup(
+          parseClasses(json('data/class/class-ranger.json')) as Class5e[],
+        ),
+      },
+      managedFixture.lookups,
+    )
     const companion = buildCompanionSheetData(vm, {
       name,
       source: 'XPHB',
@@ -97,6 +113,35 @@ describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
     expect(companion.actions[0].bonus).toBe('+7')
     expect(companion.actions[0].damage).toContain('+ 4')
     expect(companion.attacks).toContain('Melee Attack Roll:')
+    const mixed = {
+      ...character,
+      classProgression: [
+        { name: 'Wizard', source: 'XPHB', levels: 1 },
+        ...character.classProgression,
+      ],
+      abilityScores: { ...character.abilityScores, intelligence: 20 },
+    }
+    const companionOwner = {
+      name,
+      source: 'XPHB',
+      className: 'Ranger',
+      classSource: 'XPHB',
+      creature,
+    }
+    const mixedVm = createCurrentCharacterSheetViewModel(mixed, managedFixture.lookups)
+    expect(mixedVm.spellcastingDetails[0].spellAttackBonus).toBe(8)
+    expect(buildCompanionSheetData(mixedVm, companionOwner).actions[0].bonus).toBe('+7')
+    const missingRanger = createCurrentCharacterSheetViewModel(mixed, {
+      ...managedFixture.lookups,
+      classChoiceFeatureCatalogs: {
+        ...managedFixture.context.catalogs,
+        classCastingSources: managedFixture.context.catalogs.classCastingSources!.filter(
+          (row) => row.kind !== 'casting-parent' || row.target !== '["class","ranger","xphb"]',
+        ),
+      },
+    })
+    expect(missingRanger.spellcastingDetails[0].spellAttackBonus).toBe(8)
+    expect(buildCompanionSheetData(missingRanger, companionOwner).actions[0].bonus).toBe('')
     // Unknown expressions remain source text; never substitute a familiar creature's rules.
     const unknown = buildCompanionSheetData(vm, {
       name,

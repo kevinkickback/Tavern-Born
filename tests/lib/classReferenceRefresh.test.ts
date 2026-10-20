@@ -5,9 +5,9 @@ import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getExpertiseSlotsFromClasses } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import {
   applyLevelDown,
@@ -16,7 +16,6 @@ import {
   selectSubclass,
 } from '@/lib/character/commands/classCommands'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSourceReferences } from '@/lib/readiness/sourceReadiness'
@@ -24,22 +23,19 @@ import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassCastingData, makeClassCastingLayer } from '../fixtures/classCastingFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function fixture() {
-  const [wizard] = parseClasses({
-    class: [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        hd: { number: 1, faces: 6 },
-        casterProgression: 'full',
-        spellcastingAbility: 'int',
-        classTableGroups: [{ rowsSpellProgression: [[2], [3]] }],
-        classFeatures: ['Beacon|Wizard|PHB|1', 'Expertise|Wizard|PHB|1'],
-      },
-    ],
-    classFeature: [
+  const data = makeClassCastingLayer('class/class-wizard.json', (document) => {
+    const parent = document.class!.find((row) => row.name === 'Wizard' && row.source === 'PHB')!
+    parent.classFeatures = [
+      ...(parent.classFeatures as unknown[]),
+      'Beacon|Wizard|PHB|1',
+      'Expertise|Wizard|PHB|1',
+    ]
+    document.classFeature!.push(
       {
         name: 'Beacon',
         source: 'PHB',
@@ -56,17 +52,21 @@ function fixture() {
         level: 1,
         entries: ['Choose two skill proficiencies.'],
       },
-    ],
-    subclass: [
-      {
-        name: 'School',
-        shortName: 'SC',
-        source: 'TCE',
-        className: 'Wizard',
-        classSource: 'PHB',
-      },
-    ],
-  }) as Class5e[]
+    )
+    document.subclass!.push({
+      name: 'School',
+      shortName: 'SC',
+      source: 'TCE',
+      className: 'Wizard',
+      classSource: 'PHB',
+    })
+  })
+  const wizard = data.classes.find((row) => row.name === 'Wizard' && row.source === 'PHB')!
+  const lookups = (classes: Class5e[]) => ({
+    classesByKey: buildClassLookup(classes),
+    classChoiceClasses: classes,
+    classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({ ...data, classes }),
+  })
   const base = makeCharacterFixture({
     features: [],
     classProgression: [],
@@ -79,20 +79,20 @@ function fixture() {
     provenance: selected.provenanceUpdate,
     spells: { ...base.spells, spellProfiles: [] },
   }
-  const character = deriveSpellProfileState(
+  const character = createCharacterCalculationContext(
     selectedCharacter,
-    new Map([['class:Wizard|PHB', wizard]]),
-  )
+    lookups([wizard]),
+  ).character
   const reopen = (saved: Character) =>
     characterPersistenceSchema.parse(JSON.parse(JSON.stringify(saved)))
-  return { wizard, character: reopen(character), reopen }
+  return { wizard, character: reopen(character), reopen, lookups }
 }
 
 test.each([
   ['WIZARD', 'phb'],
   [' Wizard ', ' PHB '],
 ])('qualified refresh %s/%s retains calculation rules, Actions, PDF and strict reopen', (name, source) => {
-  const { wizard, character, reopen } = fixture()
+  const { wizard, character, reopen, lookups: currentLookups } = fixture()
   const refreshed = { ...wizard, name, source }
   const competing = {
     ...wizard,
@@ -100,7 +100,7 @@ test.each([
     hd: { number: 1, faces: 12 },
     classFeatureRefs: [],
   }
-  const lookups = { classesByKey: buildClassLookup([competing, refreshed]) }
+  const lookups = currentLookups([competing, refreshed])
   const before = structuredClone({ character, refreshed })
   const context = createCharacterCalculationContext(character, lookups)
   expect.soft(context.classes).toEqual([refreshed])
@@ -114,7 +114,7 @@ test.each([
   const actions = deriveRulesTextActions(character, undefined, { classes: context.classes })
   expect.soft(actions.map((action) => action.name)).toEqual(['Beacon'])
   expect.soft(actions).toEqual(deriveRulesTextActions(character, undefined, { classes: [wizard] }))
-  const sheet = createCharacterSheetViewModel(reopen(character), lookups)
+  const sheet = createCharacterSheetViewModel(reopen(character), lookups, lookups)
   expect.soft(sheet.actions).toEqual(actions)
   expect.soft(sheet.maxHP).toBe(6)
   expect.soft(sheet.spellSlots.shared[1]?.max).toBe(2)
@@ -147,7 +147,7 @@ test.each([
   })
   expect.soft(saved.hitPoints.current).toBe(10)
   expect.soft(saved.classProgression).toEqual([{ name: 'Wizard', source: 'PHB', levels: 2 }])
-  expect.soft(createCharacterSheetViewModel(saved, lookups).maxHP).toBe(10)
+  expect.soft(createCurrentCharacterSheetViewModel(saved, lookups).maxHP).toBe(10)
   const lowered = applyLevelDown(
     saved,
     saved.provenance!,
@@ -160,7 +160,7 @@ test.each([
   })
   expect.soft(undone.classProgression).toEqual(character.classProgression)
   expect.soft(undone.hitPointGains).toEqual([])
-  expect.soft(createCharacterSheetViewModel(undone, lookups).actions).toEqual(actions)
+  expect.soft(createCharacterSheetViewModel(undone, lookups, lookups).actions).toEqual(actions)
 })
 
 test('missing and restored exact class rules never borrow the competing printing or rewrite saved state', () => {
@@ -175,17 +175,19 @@ test('missing and restored exact class rules never borrow the competing printing
       issue.id.startsWith('source:class:'),
     ),
   ).toBe(true)
-  expect(createCharacterSheetViewModel(character, missing).actions).toEqual([])
+  expect(createCurrentCharacterSheetViewModel(character, missing).actions).toEqual([])
   const restored = {
     classesByKey: buildClassLookup([other, { ...wizard, name: ' WIZARD ', source: ' phb ' }]),
   }
   expect(
-    createCharacterSheetViewModel(reopen(character), restored).actions.map((action) => action.name),
+    createCharacterSheetViewModel(reopen(character), restored, restored).actions.map(
+      (action) => action.name,
+    ),
   ).toEqual(['Beacon'])
   expect(JSON.stringify(character)).toBe(saved)
 })
 
-test('parent spelling refresh retains expertise, selected subclass prerequisites, readiness and Overview details', () => {
+test('parent spelling refresh retains selected subclass prerequisites, readiness and Overview details', () => {
   const { wizard, character, reopen } = fixture()
   const selected = selectSubclass(character, character.provenance!, 'School', 'TCE')
   const saved = reopen({
@@ -195,7 +197,6 @@ test('parent spelling refresh retains expertise, selected subclass prerequisites
   })
   const refreshed = { ...wizard, name: ' WIZARD ', source: ' phb ' }
   const classesByKey = buildClassLookup([refreshed])
-  expect(getExpertiseSlotsFromClasses(saved.classProgression, classesByKey)).toBe(2)
   expect(
     buildPrerequisiteSnapshot({ character: saved, classLookup: classesByKey }).progression[0],
   ).toMatchObject({
@@ -220,8 +221,9 @@ test.each([
   'PHB',
   'XPHB',
 ])('multiclass shared slots retain the exact %s table after spelling refresh', (source) => {
-  const wizard = makeClassFixture({ source, spellSlotProgression: [[2], [3], [4, 2]] })
-  const paladin = makeClassFixture({ name: 'Paladin', source, casterProgression: '1/2' })
+  const data = makeClassCastingData()
+  const wizard = data.classes.find((row) => row.name === 'Wizard' && row.source === source)!
+  const paladin = data.classes.find((row) => row.name === 'Paladin' && row.source === source)!
   const character = makeCharacterFixture({
     classProgression: [
       { name: 'Wizard', source, levels: 2 },
@@ -236,8 +238,11 @@ test.each([
   )
   expect(slots.shared).toEqual({ 1: { max: 4, used: 0 }, 2: { max: 2, used: 0 } })
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).spellSlots
-      .shared,
+    createCurrentCharacterSheetViewModel(character, {
+      classesByKey: buildClassLookup(classes),
+      classChoiceClasses: classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({ ...data, classes }),
+    }).spellSlots.shared,
   ).toEqual(slots.shared)
 })
 
@@ -277,7 +282,7 @@ test.each([
     classResources: { [resourceId]: 0 },
   })
   const view = (cls: Class5e) =>
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup([cls]) })
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup([cls]) })
   expect(view(refreshed).classResourceRows).toEqual(view(baseline).classResourceRows)
   const [other] = DataFilter.filterClasses([{ ...original, source: 'OTHER' }], {
     sources: ['OTHER'],

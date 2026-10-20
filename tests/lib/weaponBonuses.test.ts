@@ -227,9 +227,11 @@ describe('fixed intrinsic weapon bonuses', () => {
     expect(totals(character, primary)).toEqual([[6, 4]])
     expect(totals(character, lookup(wrong, venom))).toEqual([[6, 4]])
     expect(JSON.stringify(character)).toBe(before)
-    const legacy = structuredClone(character)
-    legacy.equipment[0].source = undefined
-    expect(totals(legacy, lookup(wrong, venom))).toEqual([[6, 4]])
+    const unqualified = structuredClone(character)
+    unqualified.equipment[0].source = undefined
+    const unqualifiedBefore = structuredClone(unqualified)
+    expect(totals(unqualified, lookup(wrong, venom))).toEqual([[5, 3]])
+    expect(unqualified).toEqual(unqualifiedBefore)
   })
 
   test.each([

@@ -2,8 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
 afterEach(cleanup)
 
@@ -44,7 +47,6 @@ function makeProps(
     onOpenClassPicker: vi.fn(),
     onOpenSubclassPicker: vi.fn(),
     onOpenSpellPicker: vi.fn(),
-    onOpenSpellSwap: vi.fn(),
     onOpenFeatPicker: vi.fn(),
     onOpenAsiPicker: vi.fn(),
     onOpenClassChoice: vi.fn(),
@@ -60,6 +62,63 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test('dormant saved spell intent stays editable while only active choices count toward completion', () => {
+    const fixture = makeManagedClassSpellFixtures()
+    const initial = makeCharacterFixture({
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 1 }],
+    })
+    const result = setManagedClassSpellChoiceCommand(
+      initial,
+      initial.provenance,
+      {
+        slot: [
+          ['class', 'bard', 'phb'],
+          'class-cantrip',
+          'class-feature|spellcasting|bard|phb|1|phb',
+          1,
+          0,
+        ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Light', source: 'PHB' },
+        policy: 'default',
+      },
+      fixture.context,
+    )
+    const character = { ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }
+    const props = makeProps({
+      character,
+      classProgression: character.classProgression,
+      viewingClass: 'Bard',
+      viewingClassSource: 'PHB',
+      viewingClassLevel: 1,
+      selectedClassTab: 'Bard|PHB',
+      levelsToShow: [1],
+      asiLevels: [],
+      spellChoicesByLevel: new Map([
+        [1, { cantrips: 2, spells: 4, maxSpellLevel: 1, canSwap: false }],
+      ]),
+      managedSpellStatuses: projectManagedClassSpellState(character, {
+        ...fixture.context,
+        spellsByKey: {},
+      }).statuses,
+    })
+    const { rerender } = render(<BuildClassLevelsPanel {...props} />)
+    expect(screen.getByText(/6 pending choices/)).toBeTruthy()
+    fireEvent.click(
+      screen.getByText('Level 1', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
+    expect(screen.getByText(/1 saved choice unavailable/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy()
+    rerender(
+      <BuildClassLevelsPanel
+        {...props}
+        managedSpellStatuses={projectManagedClassSpellState(character, fixture.context).statuses}
+      />,
+    )
+    expect(screen.getByText(/5 pending choices/)).toBeTruthy()
+    expect(screen.queryByText(/saved choice unavailable/)).toBeNull()
+  })
   test('shows the selected class icon, level and chosen subclass without a header details action', () => {
     const { rerender } = render(
       <BuildClassLevelsPanel
@@ -203,57 +262,25 @@ describe('BuildClassLevelsPanel', () => {
     expect(completeBadge?.querySelector('svg')).toBeTruthy()
   })
 
-  test('renders replacement without an empty choose action at replacement-only levels', () => {
-    const onOpenSpellSwap = vi.fn()
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Bard', source: 'PHB', levels: 12 }],
-      spells: {
-        ...makeCharacterFixture().spells,
-        spellProfiles: [
-          {
-            id: 'class:Bard|PHB',
-            type: 'class',
-            label: 'Bard (Lv 12)',
-            className: 'Bard',
-            classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: ['Charm Person'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-        ],
-      },
-    })
+  test('a level without a numeric gain does not invent a replacement event', () => {
     render(
       <BuildClassLevelsPanel
         {...makeProps({
-          character,
-          classProgression: character.classProgression ?? [],
-          selectedClassTab: 'Bard|PHB',
-          viewingClass: 'Bard',
-          viewingClassSource: 'PHB',
-          viewingClassLevel: 12,
           levelsToShow: [12],
+          viewingClassLevel: 12,
           asiLevels: [],
-          spellChoicesByLevel: new Map([
-            [12, { cantrips: 0, spells: 0, maxSpellLevel: 6, canSwap: true }],
-          ]),
-          onOpenSpellSwap,
+          spellChoicesByLevel: new Map(),
         })}
       />,
     )
-
     fireEvent.click(
       screen.getByText('Level 12', { selector: '[data-slot="accordion-trigger"] span' }),
     )
-    expect(screen.getByText('Spell Replacement')).toBeTruthy()
+    expect(screen.queryByText('Spell Replacement')).toBeNull()
+    expect(screen.queryByText('Replace a spell')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
-    expect(screen.getByText('Replace a spell')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Replace a spell for level 12' }))
-    expect(onOpenSpellSwap).toHaveBeenCalledWith(12)
   })
-
-  test('waits for required spell selections before offering a replacement', () => {
+  test('offers required numeric choices without an unimplemented replacement event', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 2 }],
       spells: {

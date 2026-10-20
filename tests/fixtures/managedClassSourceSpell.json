@@ -1,0 +1,51 @@
+{
+  "name": "Mind Sliver",
+  "source": "TCE",
+  "page": 108,
+  "reprintedAs": ["Mind Sliver|XPHB"],
+  "level": 0,
+  "school": "E",
+  "time": [
+    {
+      "number": 1,
+      "unit": "action"
+    }
+  ],
+  "range": {
+    "type": "point",
+    "distance": {
+      "type": "feet",
+      "amount": 60
+    }
+  },
+  "components": {
+    "v": true
+  },
+  "duration": [
+    {
+      "type": "timed",
+      "duration": {
+        "type": "round",
+        "amount": 1
+      }
+    }
+  ],
+  "entries": [
+    "You drive a disorienting spike of psychic energy into the mind of one creature you can see within range. The target must succeed on an Intelligence saving throw or take {@damage 1d6} psychic damage and subtract {@dice 1d4} from the next saving throw it makes before the end of your next turn.",
+    "This spell's damage increases by {@damage 1d6} when you reach certain levels: 5th level ({@damage 2d6}), 11th level ({@damage 3d6}), and 17th level ({@damage 4d6})."
+  ],
+  "scalingLevelDice": {
+    "label": "psychic damage",
+    "scaling": {
+      "1": "1d6",
+      "5": "2d6",
+      "11": "3d6",
+      "17": "4d6"
+    }
+  },
+  "damageInflict": ["psychic"],
+  "savingThrow": ["intelligence"],
+  "miscTags": ["SCL", "SGT"],
+  "areaTags": ["ST"],
+  "hasFluffImages": true
+}

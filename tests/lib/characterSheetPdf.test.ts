@@ -21,9 +21,9 @@ import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/option
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   type CharacterSheetTemplateId,
-  createCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
@@ -32,8 +32,12 @@ import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
-import { sourceTemplateBytes } from '../fixtures/pdfTemplates'
+import { createCurrentCharacterSheetViewModel, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
   character: Character,
@@ -42,19 +46,25 @@ function prepareViewModel(
   backgroundsData: Background5e[] = [],
   spellsData: Spell5e[] = [],
   itemPropertyByAbbr: Record<string, string> = {},
+  currentAuthority?: Parameters<typeof createCharacterSheetViewModel>[2],
 ) {
-  return createCharacterSheetViewModel(character, {
+  const currentLookups = {
     classesByKey: buildClassLookup(classesData),
     racesByKey: buildRaceLookup(racesData),
     backgroundsByKey: buildBackgroundLookup(backgroundsData),
     spellsByKey: buildSpellLookup(spellsData),
     itemPropertyByAbbr,
-  })
+  }
+  return createCharacterSheetViewModel(
+    character,
+    currentLookups,
+    currentAuthority ?? currentLookups,
+  )
 }
 
 function buildCharacterSheetFieldMap(
   character: Character,
-  templateId: CharacterSheetTemplateId = '2024',
+  templateId: CharacterSheetTemplateId = '2024-custom',
   classesData: Class5e[] = [],
   racesData: Race5e[] = [],
   backgroundsData: Background5e[] = [],
@@ -113,7 +123,7 @@ describe('characterSheetPdf', () => {
       ],
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2024')
+    const map = buildCharacterSheetFieldMap(character, '2024-custom')
 
     expect(map.textFields.Text_1).toBe('Aria Stormborn')
     expect(map.textFields.Text_2).toBe('Outlander')
@@ -145,7 +155,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2024')
+    const map = buildCharacterSheetFieldMap(character, '2024-custom')
 
     expect(map.checkboxFields.Checkbox_32).toBe(true)
     expect(map.checkboxFields.Checkbox_1).toBe(false)
@@ -179,7 +189,7 @@ describe('characterSheetPdf', () => {
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 5 }],
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2024')
+    const map = buildCharacterSheetFieldMap(character, '2024-custom')
 
     expect(map.checkboxFields.Checkbox_10).toBe(true)
     expect(map.checkboxFields.Checkbox_30).toBe(true)
@@ -217,7 +227,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['PC Name']).toBe('Bren Ironhand')
     expect(map.textFields['Class and Levels']).toBe('Fighter 5')
@@ -248,7 +258,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Language 1']).toBe('Common')
     expect(map.textFields['Language 2']).toBe('Elvish')
@@ -269,7 +279,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Tool 1']).toBe("Thieves' Tools")
     expect(map.textFields['Tool 2']).toBe('Dice Set')
@@ -289,7 +299,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.checkboxFields['Proficiency Armor Light']).toBe(true)
     expect(map.checkboxFields['Proficiency Armor Medium']).toBe(true)
@@ -314,7 +324,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.checkboxFields['Proficiency Armor Light']).toBe(false)
     expect(map.checkboxFields['Proficiency Armor Heavy']).toBe(false)
@@ -345,7 +355,7 @@ describe('characterSheetPdf', () => {
         },
       ],
     })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.checkboxFields['Medium Armor']).toBe(true)
     expect(map.checkboxFields['Heavy Armor']).toBe(false)
     expect(map.checkboxFields['Proficiency Armor Heavy']).toBe(true)
@@ -360,7 +370,7 @@ describe('characterSheetPdf', () => {
         { id: 'bolts', name: 'Crossbow Bolts (20)', type: 'A', quantity: 1, equipped: false },
       ],
     })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.textFields['AmmoLeftDisplay.Name']).toBe('Arrows')
     expect(map.textFields['AmmoLeftDisplay.Amount']).toBe('41')
     expect(map.textFields['AmmoRightDisplay.Name']).toBe('Crossbow Bolts')
@@ -375,7 +385,7 @@ describe('characterSheetPdf', () => {
       'Rank: Watcher',
       'Faction notes: Detailed account. '.repeat(9),
     ].join('\n\n')
-    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    const map = mapCharacterSheetViewModel(viewModel, '2014-custom')
     expect(map.textFields['Racial Traits'].length).toBeLessThanOrEqual(310)
     expect(map.textFields['Background_Organisation.Right']).toBe(
       'Faction: The Harpers\nRank: Watcher',
@@ -400,13 +410,13 @@ describe('characterSheetPdf', () => {
         },
       ],
     })
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       featsByKey: buildFeatLookup([{ name: 'Alert', source: 'PHB', entries: ['Always ready.'] }]),
       itemLookup: buildItemLookup([
         { name: 'Staff of Power', source: 'DMG', type: 'ST', entries: ['A powerful staff.'] },
       ]),
     })
-    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    const map = mapCharacterSheetViewModel(viewModel, '2014-custom')
     expect(map.textFields['Feat Description 1']).toBe('Always ready.')
     expect(map.textFields['Extra.Magic Item Description 1']).toBe('A powerful staff.')
   })
@@ -507,13 +517,13 @@ describe('characterSheetPdf', () => {
       classChoiceFeatureCatalogs: currentCatalogs,
       creaturesByKey: { 'Beast of the Land|TCE': land, 'Wolf|MM': wolf },
     }
-    const viewModel = createCharacterSheetViewModel(character, inputs)
-    const suspended = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, inputs)
+    const suspended = createCurrentCharacterSheetViewModel(character, {
       ...inputs,
       classChoiceFeatureCatalogs: { ...currentCatalogs, optionalClassFeatureSources: [] },
     })
     expect(suspended.companions ?? []).toEqual([])
-    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    const map = mapCharacterSheetViewModel(viewModel, '2014-custom')
     expect(map.textFields['P4.AScomp.Comp.Desc.Name']).toBe('Beast of the Land')
     expect(map.textFields['P4.AScomp.Comp.Use.Ability.Str.Score']).toBe('14')
     expect(map.textFields['P4.AScomp.Comp.Use.HP.Max']).toBe('20')
@@ -539,14 +549,14 @@ describe('characterSheetPdf', () => {
       ],
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields.Vision).toBe('Darkvision 60 ft., Blindsight 10 ft.')
   })
 
   test('2014 Vision field empty when no visions', () => {
     const character = makeCharacterFixture({ visions: [] })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.textFields.Vision).toBe('')
   })
 
@@ -587,7 +597,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Background Feature']).toBe('Criminal Contact')
     expect(map.textFields['Background Feature Description']).toBe(
@@ -597,7 +607,7 @@ describe('characterSheetPdf', () => {
 
   test('2014 Background Feature empty when no background provenance', () => {
     const character = makeCharacterFixture()
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.textFields['Background Feature']).toBe('')
     expect(map.textFields['Background Feature Description']).toBe('')
   })
@@ -615,17 +625,11 @@ describe('characterSheetPdf', () => {
       },
     })
     // Wizard: spell save DC = 8 + prof(3) + INT mod(4) = 15
-    const classesData = [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        spellcastingAbility: 'int',
-        casterProgression: 'full',
-        hd: { faces: 6 },
-      } as never,
-    ]
-
-    const map = buildCharacterSheetFieldMap(character, '2014', classesData)
+    const fixture = makeManagedClassSpellFixtures()
+    const map = mapCharacterSheetViewModel(
+      prepareViewModel(character, fixture.data.classes, [], [], [], {}, fixture.lookups),
+      '2014-custom',
+    )
 
     expect(map.textFields['Spell save DC 1']).toBe('15')
     expect(map.textFields['Spell save DC 2']).toBe('')
@@ -637,7 +641,7 @@ describe('characterSheetPdf', () => {
     })
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', classesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', classesData)
 
     expect(map.textFields['Spell save DC 1']).toBe('')
   })
@@ -678,7 +682,7 @@ describe('characterSheetPdf', () => {
       },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     // Only class feature appears in Class Features
     expect(map.textFields['Class Features']).toContain('Second Wind')
@@ -701,7 +705,7 @@ describe('characterSheetPdf', () => {
       },
       hitPoints: { current: 30, temporary: 0 },
     })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.textFields['HP Max']).toBe('24')
   })
 
@@ -725,7 +729,7 @@ describe('characterSheetPdf', () => {
       ],
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Feat Name 1']).toBe('Alert')
     expect(map.textFields['Feat Description 1']).toBe('+5 to initiative.')
@@ -741,7 +745,7 @@ describe('characterSheetPdf', () => {
     const character = makeCharacterFixture({ race: 'Halfling', raceSource: 'PHB' })
     const racesData = [{ name: 'Halfling', source: 'PHB', size: ['S'] } as never]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields['Size Category']).toBe('Small')
   })
@@ -750,14 +754,14 @@ describe('characterSheetPdf', () => {
     const character = makeCharacterFixture({ race: 'Human', raceSource: 'PHB' })
     const racesData = [{ name: 'Human', source: 'PHB', size: ['M'] } as never]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields['Size Category']).toBe('Medium')
   })
 
   test('2014 Size Category empty when no race data provided', () => {
     const character = makeCharacterFixture({ race: 'Human' })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
     expect(map.textFields['Size Category']).toBe('')
   })
 
@@ -766,7 +770,7 @@ describe('characterSheetPdf', () => {
       details: { appearance: 'Tall with silver hair' },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields.Background_Appearance).toBe('Tall with silver hair')
   })
@@ -776,7 +780,7 @@ describe('characterSheetPdf', () => {
       details: { physicalDescription: 'Stocky and scarred' },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields.Background_Appearance).toBe('Stocky and scarred')
   })
@@ -786,7 +790,7 @@ describe('characterSheetPdf', () => {
       details: { nemesis: 'The Iron Circle' },
     })
 
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields.Background_Enemies).toBe('The Iron Circle')
   })
@@ -814,7 +818,7 @@ describe('characterSheetPdf', () => {
       } as never,
     ]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields['Racial Traits']).toContain('Dwarven Resilience')
     expect(map.textFields['Racial Traits']).toContain('Stonecunning')
@@ -868,7 +872,7 @@ describe('characterSheetPdf', () => {
       } as never,
     ]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields['Racial Traits']).toContain('Dwarven Resilience')
     expect(map.textFields['Racial Traits']).not.toContain('From game data')
@@ -896,7 +900,7 @@ describe('characterSheetPdf', () => {
 
     const map = buildCharacterSheetFieldMap(
       character,
-      '2014',
+      '2014-custom',
       undefined,
       undefined,
       backgroundsData,
@@ -960,7 +964,7 @@ describe('characterSheetPdf', () => {
 
     const map = buildCharacterSheetFieldMap(
       character,
-      '2014',
+      '2014-custom',
       undefined,
       undefined,
       backgroundsData,
@@ -973,7 +977,7 @@ describe('characterSheetPdf', () => {
 
   test('2014 Background Feature empty when no background data and no provenance', () => {
     const character = makeCharacterFixture({ background: 'Unknown' })
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, undefined, [])
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, undefined, [])
     expect(map.textFields['Background Feature']).toBe('')
     expect(map.textFields['Background Feature Description']).toBe('')
   })
@@ -982,7 +986,7 @@ describe('characterSheetPdf', () => {
     const character = makeCharacterFixture({ race: 'Half-Elf', raceSource: 'PHB' })
     const racesData = [{ name: 'Half-Elf', source: 'PHB', darkvision: 60 } as never]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields.Vision).toBe('Darkvision 60 ft.')
   })
@@ -995,7 +999,7 @@ describe('characterSheetPdf', () => {
     })
     const racesData = [{ name: 'Half-Elf', source: 'PHB', darkvision: 60 } as never]
 
-    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', undefined, racesData)
 
     expect(map.textFields.Vision).toBe('Darkvision 120 ft.')
   })
@@ -1015,7 +1019,7 @@ describe('characterSheetPdf', () => {
     })
     // Fighter d10, CON +2, level 1 average = 12
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
-    const map = buildCharacterSheetFieldMap(character, '2014', classesData)
+    const map = buildCharacterSheetFieldMap(character, '2014-custom', classesData)
     expect(map.textFields['HP Max']).toBe('12')
   })
 
@@ -1148,7 +1152,7 @@ describe('characterSheetPdf', () => {
         { id: 'e3', name: 'Backpack', type: 'G', quantity: 1, equipped: false },
       ],
     })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Adventuring Gear Row 1']).toBe('Longsword')
     expect(map.textFields['Adventuring Gear Amount 1']).toBe('1')
@@ -1174,7 +1178,7 @@ describe('characterSheetPdf', () => {
       equipped: false,
     }))
     const character = makeCharacterFixture({ equipment })
-    const map = buildCharacterSheetFieldMap(character, '2014')
+    const map = buildCharacterSheetFieldMap(character, '2014-custom')
 
     expect(map.textFields['Adventuring Gear Row 54']).toBe('Item 54')
     expect(map.textFields['Adventuring Gear Row 55']).toBeUndefined()
@@ -1186,7 +1190,7 @@ describe('characterSheetPdf', () => {
   test.runIf(existsSync('data/class/class-wizard.json'))(
     '2024 maps weapons, spellcasting, spell slots, spells, history, and inventory',
     () => {
-      const character = makeCharacterFixture({
+      let character = makeCharacterFixture({
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
         abilityScores: {
           strength: 8,
@@ -1236,22 +1240,28 @@ describe('characterSheetPdf', () => {
           backstory: 'Studied a map written in starlight.',
         },
         spells: {
-          spellProfiles: [
-            {
-              id: 'class:Wizard|PHB',
-              type: 'class',
-              label: 'Wizard (Lv 5)',
-              className: 'Wizard',
-              classSource: 'PHB',
-              castingAbility: 'int',
-              cantrips: ['Fire Bolt|PHB'],
-              spellsKnown: [],
-              preparedSpells: ['Magic Missile|PHB'],
-            },
-          ],
+          spellProfiles: makeCharacterFixture().spells.spellProfiles.filter(
+            (profile) => profile.type === 'special',
+          ),
           spellSlots: { 1: { max: 4, used: 2 } },
         },
       })
+      const fixture = makeManagedClassSpellFixtures()
+      const owner = character.classProgression[0]
+      character = authorManagedClassSpellFixture(character, fixture, [
+        {
+          owner,
+          domain: 'class-cantrip',
+          gain: 1,
+          targets: [{ name: 'Fire Bolt', source: 'PHB' }],
+        },
+        {
+          owner,
+          domain: 'class-spellbook',
+          gain: 1,
+          targets: [{ name: 'Magic Missile', source: 'PHB', prepare: true }],
+        },
+      ])
       const classesData = parseClasses(
         JSON.parse(readFileSync(join(process.cwd(), 'data/class/class-wizard.json'), 'utf8')),
       ) as Class5e[]
@@ -1278,10 +1288,18 @@ describe('characterSheetPdf', () => {
           meta: { ritual: true },
         },
       ]
-      const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
-        A: 'Ammunition',
-      })
-      const map = mapCharacterSheetViewModel(viewModel, '2024')
+      const viewModel = prepareViewModel(
+        character,
+        classesData,
+        [],
+        [],
+        spellsData,
+        {
+          A: 'Ammunition',
+        },
+        fixture.lookups,
+      )
+      const map = mapCharacterSheetViewModel(viewModel, '2024-custom')
 
       expect(map.textFields.Text_61).toBe('Longbow')
       expect(map.textFields.Text_67).toBe('+6')
@@ -1405,7 +1423,7 @@ describe('characterSheetPdf', () => {
         H: 'Heavy',
         LD: 'Loading',
       }),
-      '2014',
+      '2014-custom',
     )
 
     expect(map.textFields['Attack.1.Weapon Selection']).toBe('Longsword')
@@ -1506,7 +1524,7 @@ describe('characterSheetPdf', () => {
         ],
       }),
     )
-    const map = mapCharacterSheetViewModel(viewModel, '2014')
+    const map = mapCharacterSheetViewModel(viewModel, '2014-custom')
 
     expect(viewModel.feats.map((feat) => feat.id)).toEqual([
       'feat-regular',

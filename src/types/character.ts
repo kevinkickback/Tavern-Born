@@ -2,6 +2,7 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { FeatOptionSelections } from '@/types/feat'
 import type { ItemPropertyReference } from './5etools'
 import type { CharacterAction } from './actions'
+import type { ManagedClassSpellChoice } from './classCasting'
 import type { CharacterEffect } from './effects'
 
 export type { FeatOptionSelections } from '@/types/feat'
@@ -246,6 +247,11 @@ export interface Character {
   /** Explicit optional class-feature intent. Permission and saved setup never imply adoption. */
   optionalClassFeatureAdoptions?: OptionalClassFeatureAdoption[]
 
+  /** Exact level-earned class spell choices; source loss retains occupied reservations. */
+  managedClassSpellChoices?: ManagedClassSpellChoice[]
+  /** Allocation watermark retained after Clear/removal so stale dialogs cannot match a new lifetime. */
+  managedClassSpellRevision?: number
+
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
   fixedFeatOptions?: Record<string, FeatOptionSelections>
 
@@ -420,8 +426,6 @@ export interface SpellProfile {
   preparedSpells: string[]
   /** Special unrestricted profile is always prepared. */
   alwaysPrepared?: boolean
-  /** Spell swaps by class level: each level allows at most one swap for known casters. */
-  spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
 interface SpellSlotState {

@@ -3,11 +3,11 @@ import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { buildRacialSpellcastingDetails } from '@/lib/calculations/spellProfiles.casting'
 import { setRacialSpellChoice, setRacialSpellSuite } from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const filteredRace: Race5e = {
   name: 'Filtered caster',
@@ -142,7 +142,7 @@ test('unselected alternatives stay configurable without casting summaries or rac
   expect(profile.racial!.mode).toBe('alternative')
   expect(profile.racial!.suite).toBeUndefined()
   expect(buildRacialSpellcastingDetails(character, character.abilityScores)).toEqual([])
-  expect(createCharacterSheetViewModel(character, {}).spellcastingPages).toEqual([])
+  expect(createCurrentCharacterSheetViewModel(character, {}).spellcastingPages).toEqual([])
   const emptyClear = setRacialSpellSuite(character, character.provenance, profile.id, undefined)
   expect(
     emptyClear.characterPatch.spells!.spellProfiles.find((entry) => entry.id === profile.id),

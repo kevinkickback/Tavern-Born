@@ -18,6 +18,7 @@ import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import {
   nativeChoiceSpellLookup,
   nativeChoiceSpells,
@@ -213,9 +214,9 @@ describe('acknowledged character library in IndexedDB', () => {
       const selected = replaceBonusFeatSelectionsCommand(original, original.provenance, [feat])
       original = { ...original, ...selected.characterPatch, provenance: selected.provenanceUpdate }
     }
-    const name = origin === '2024' ? 'Toll the Dead' : 'Booming Blade'
-    const source = origin === '2024' ? 'XGE' : 'SCAG'
-    const manual = origin === '2024' ? 'Toll the Dead|XPHB' : 'Booming Blade|TCE'
+    const name = 'Toll the Dead'
+    const source = 'XGE'
+    const manual = 'Toll the Dead|XPHB'
     const options = { spells: [`${name}|${source}`] }
     await useCharacterStore.getState().importCharacters([original])
     useCharacterStore.getState().setActiveCharacter(original.id)
@@ -262,7 +263,7 @@ describe('acknowledged character library in IndexedDB', () => {
     const neighbor = makeCharacterFixture({ id: 'neighbor', allowedSources: [] })
     await useCharacterStore.getState().importCharacters([original, neighbor])
     useCharacterStore.getState().setActiveCharacter(original.id)
-    const prune = pruneSpellsForDisabledSources(original, ['XPHB'], [])!
+    const prune = pruneSpellsForDisabledSources(original, ['XPHB'])!
     useCharacterStore.getState().updateCharacter(original.id, { ...prune, allowedSources: [] })
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
     await useCharacterStore.getState().saveActiveCharacter()
@@ -295,29 +296,41 @@ describe('acknowledged character library in IndexedDB', () => {
   ] as const)('%s class source removal survives Save, reopen and source re-enable', async (originSystem) => {
     const original = makeNonracialSourceCharacter(originSystem)
     const neighbor = makeCharacterFixture({ id: 'source-neighbor', allowedSources: [] })
-    const source = originSystem === '2024' ? 'XPHB' : 'TCE'
-    const ledgerName = originSystem === '2024' ? 'toll the dead' : 'booming blade'
-    const retainedSpell = originSystem === '2024' ? 'Toll the Dead|XPHB' : 'Booming Blade|TCE'
-    const allowedSources = originSystem === '2024' ? [] : ['TCE']
+    const fixture = makeManagedClassSpellFixtures()
+    const allowedSources = originSystem === '2024' ? [] : ['XPHB']
     await useCharacterStore.getState().importCharacters([original, neighbor])
     useCharacterStore.getState().setActiveCharacter(original.id)
-    const prune = pruneSpellsForDisabledSources(original, ['PHB', source], [])!
-    useCharacterStore.getState().updateCharacter(original.id, { ...prune, allowedSources })
+    const prune = pruneSpellsForDisabledSources(original, ['PHB', 'XPHB'])
+    expect(prune).toBeNull()
+    useCharacterStore.getState().updateCharacter(original.id, { allowedSources })
     await useCharacterStore.getState().saveActiveCharacter()
     useCharacterStore.getState().setActiveCharacter(null)
     await useCharacterStore.persist.rehydrate()
     useCharacterStore.getState().setActiveCharacter(original.id)
     const reopened = useCharacterStore.getState().activeCharacter!
     expect(reopened.allowedSources).toEqual(allowedSources)
+    expect(reopened.spells).toEqual(original.spells)
+    expect(reopened.managedClassSpellChoices).toEqual(original.managedClassSpellChoices)
+    expect(reopened.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'class', grantSource: 'XGE' }),
+      expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
+    ])
+    const primary = {
+      ...fixture.lookups,
+      spellsByKey: Object.fromEntries(
+        Object.entries(fixture.lookups.spellsByKey).filter(([, row]) => row.source !== 'XGE'),
+      ),
+    }
+    const suspended = createCharacterCalculationContext(reopened, primary, fixture.lookups)
+    expect(suspended.managedClassSpellStatuses[0].active).toBe(false)
     expect(
-      reopened.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
+      suspended.character.spells.spellProfiles.find((profile) => profile.type === 'class')!
+        .cantrips,
     ).toEqual([])
     expect(
-      reopened.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
-    ).toEqual([retainedSpell])
-    expect(reopened.provenance.spells[ledgerName]).toEqual([
-      expect.objectContaining({ sourceType: 'manual', grantSource: source }),
-    ])
+      suspended.character.spells.spellProfiles.find((profile) => profile.type === 'special')!
+        .cantrips,
+    ).toEqual(['Toll the Dead|XPHB'])
     useCharacterStore
       .getState()
       .updateCharacter(original.id, { allowedSources: original.allowedSources })
@@ -326,6 +339,10 @@ describe('acknowledged character library in IndexedDB', () => {
     const restored = useCharacterStore
       .getState()
       .characters.find((character) => character.id === original.id)!
+    expect(
+      createCharacterCalculationContext(restored, fixture.lookups).managedClassSpellStatuses[0]
+        .active,
+    ).toBe(true)
     expect(restored.spells).toEqual(reopened.spells)
     expect(restored.provenance).toEqual(reopened.provenance)
     expect(

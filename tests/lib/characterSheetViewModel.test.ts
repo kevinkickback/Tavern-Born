@@ -3,10 +3,11 @@ import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping2014Official'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 describe('createCharacterSheetViewModel', () => {
   test('excludes ancestry Age prose from PDF traits while keeping the character Age field', () => {
@@ -25,7 +26,7 @@ describe('createCharacterSheetViewModel', () => {
         { type: 'entries', name: 'Fey Ancestry', entries: ['A magical benefit.'] },
       ],
     }
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       racesByKey: buildRaceLookup([race]),
     })
     expect(viewModel.racialTraitsSummary).toContain('Keen Senses')
@@ -40,7 +41,7 @@ describe('createCharacterSheetViewModel', () => {
   })
 
   test('maps active structured actions into the fixed 2014 capacities', () => {
-    const viewModel = createCharacterSheetViewModel(makeCharacterFixture(), {})
+    const viewModel = createCurrentCharacterSheetViewModel(makeCharacterFixture(), {})
     const action = (
       id: string,
       kind: CharacterAction['kind'],
@@ -105,7 +106,7 @@ describe('createCharacterSheetViewModel', () => {
         },
       ],
     })
-    const viewModel = createCharacterSheetViewModel(character, {})
+    const viewModel = createCurrentCharacterSheetViewModel(character, {})
     const map = mapCharacterSheet2014(viewModel)
 
     expect(character.equipment[0]?.properties).toEqual([`2H|${source}`])
@@ -130,7 +131,7 @@ describe('createCharacterSheetViewModel', () => {
         ],
       },
     })
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       organizations: [
         {
           name: 'The Harpers',
@@ -204,7 +205,7 @@ describe('createCharacterSheetViewModel', () => {
       hitPoints: { current: 0, temporary: 0 },
     })
 
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       classesByKey: buildClassLookup([xphbWizard, phbWizard]),
       racesByKey: buildRaceLookup([elf]),
       backgroundsByKey: buildBackgroundLookup([background]),
@@ -231,11 +232,11 @@ describe('createCharacterSheetViewModel', () => {
         imagePath: '/assets/images/factions/harpers-5e.webp',
       } as Organization5e,
     ]
-    const preset = createCharacterSheetViewModel(
+    const preset = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({ details: { organizationSelectionKey: 'Harpers|SCAG' } }),
       { organizations },
     )
-    const custom = createCharacterSheetViewModel(
+    const custom = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({
         details: {
           organizationSelectionKey: '__custom__',
@@ -250,7 +251,7 @@ describe('createCharacterSheetViewModel', () => {
   })
 
   test('projects structured movement into both fixed PDF templates', () => {
-    const viewModel = createCharacterSheetViewModel(
+    const viewModel = createCurrentCharacterSheetViewModel(
       makeCharacterFixture({
         movement: {
           speeds: { walk: 25, swim: 30, fly: 40 },
@@ -313,7 +314,7 @@ describe('createCharacterSheetViewModel', () => {
       ],
     })
 
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       classesByKey: buildClassLookup([fighter]),
     })
 
@@ -373,7 +374,7 @@ describe('createCharacterSheetViewModel', () => {
       ],
     })
 
-    const viewModel = createCharacterSheetViewModel(character, {
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
       classesByKey: buildClassLookup([testClass]),
     })
     const map2014 = mapCharacterSheet2014(viewModel)
@@ -394,13 +395,10 @@ describe('createCharacterSheetViewModel', () => {
   })
 
   test('applies every structured equipped-item bonus through the shared PDF view model', () => {
-    const testClass = {
-      name: 'Test Caster',
-      source: 'TEST',
-      hd: { faces: 8 },
-      spellcastingAbility: 'int',
-      casterProgression: 'full',
-    } as Class5e
+    const current = makeManagedClassSpellFixtures()
+    const testClass = current.data.classes.find(
+      (row) => row.name === 'Wizard' && row.source === 'PHB',
+    )!
     const itemData = {
       name: 'Test Focus',
       source: 'TEST',
@@ -436,8 +434,8 @@ describe('createCharacterSheetViewModel', () => {
         },
       ],
     })
-    const viewModel = createCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup([testClass]),
+    const viewModel = createCurrentCharacterSheetViewModel(character, {
+      ...current.lookups,
       itemLookup: new Map([['test', itemData]]),
     })
     const map2014 = mapCharacterSheet2014(viewModel)

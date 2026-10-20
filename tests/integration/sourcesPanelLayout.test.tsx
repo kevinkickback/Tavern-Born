@@ -139,7 +139,7 @@ describe('Rules Additional Content panel layout', () => {
   test.each([
     'toggle',
     'None',
-  ])('%s commits class-source removal and keeps an independent printing', async (action) => {
+  ])('%s suspends class-source access and keeps independent printing and intent', async (action) => {
     const character = makeNonracialSourceCharacter()
     expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
     useCharacterStore.setState({
@@ -159,11 +159,12 @@ describe('Rules Additional Content panel layout', () => {
     expect(pruned.allowedSources).not.toContain('XGE')
     expect(
       pruned.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
-    ).toEqual([])
+    ).toEqual(['Toll the Dead|XGE'])
     expect(
       pruned.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
     ).toEqual(['Toll the Dead|XPHB'])
     expect(pruned.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'class', grantSource: 'XGE' }),
       expect.objectContaining({ sourceType: 'manual', grantSource: 'XPHB' }),
     ])
     expect(characterPersistenceSchema.safeParse(pruned).success).toBe(true)
@@ -176,7 +177,7 @@ describe('Rules Additional Content panel layout', () => {
     expect(restored.provenance).toEqual(pruned.provenance)
   })
 
-  test('Recommended removes a nonrecommended printing and its class tag', async () => {
+  test('2014 source removal preserves the saved numeric choice for exact restoration', async () => {
     const character = makeNonracialSourceCharacter('2014')
     useCharacterStore.setState({
       characters: [character],
@@ -184,18 +185,19 @@ describe('Rules Additional Content panel layout', () => {
       activeCharacter: character,
     })
     render(<SourcesPanel />)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Recommended' }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /Xanathar's Guide to Everything XGE/ }))
     const pruned = useCharacterStore.getState().activeCharacter!
-    expect(pruned.allowedSources).not.toContain('SCAG')
-    expect(pruned.allowedSources).toContain('TCE')
+    expect(pruned.allowedSources).not.toContain('XGE')
     expect(
       pruned.spells.spellProfiles.find((profile) => profile.type === 'class')!.cantrips,
-    ).toEqual([])
+    ).toEqual(['Toll the Dead|XGE'])
     expect(
       pruned.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
-    ).toEqual(['Booming Blade|TCE'])
-    expect(pruned.provenance.spells['booming blade']).toEqual([
-      expect.objectContaining({ sourceType: 'manual', grantSource: 'TCE' }),
+    ).toEqual([])
+    expect(pruned.provenance.spells['toll the dead']).toEqual([
+      expect.objectContaining({ sourceType: 'class', grantSource: 'XGE' }),
     ])
     expect(characterPersistenceSchema.safeParse(pruned).success).toBe(true)
   })
