@@ -403,6 +403,7 @@ function project<T extends Spell5e>(
   spell: T,
   audit: ClassSpellRouteAudit | undefined,
   sources?: readonly string[],
+  current?: ReadonlySet<string | undefined>,
 ): T {
   const classes = clone(object(spell.classes) ?? {}) as NonNullable<Spell5e['classes']>
   const allowed = sources?.length
@@ -411,10 +412,11 @@ function project<T extends Spell5e>(
   const routes =
     audit?.sourceRoutes.filter(
       (row) =>
-        !allowed ||
-        [row[2], row[4], ...(row[6] === null ? [] : [row[6]])].every((source) =>
-          allowed.has(source),
-        ),
+        (!current || current.has(signature(row))) &&
+        (!allowed ||
+          [row[2], row[4], ...(row[6] === null ? [] : [row[6]])].every((source) =>
+            allowed.has(source),
+          )),
     ) ?? []
   const decoded = audit ? decode(audit.target, audit.input) : undefined
   classes.fromClassList = []
@@ -435,6 +437,36 @@ function project<T extends Spell5e>(
     ],
     ...(audit ? { classSpellRouteSource: audit } : {}),
   }
+}
+
+/** Lookup/layer reads preserve the current view; only explicit source filtering restores it. */
+function preserveCurrentRoutes<T extends Spell5e>(spell: T): T {
+  if (!own(spell, 'classSpellRouteSource')) return spell
+  const audit = validated(spell)
+  if (!audit || !own(spell, 'classSpellRoutes')) return project(spell, audit)
+  const supported = new Set(audit.sourceRoutes.map(signature))
+  const current = spell.classSpellRoutes
+  const malformed =
+    !Array.isArray(current) ||
+    current.some(
+      (row) =>
+        !Array.isArray(row) ||
+        (row[6] !== null && typeof row[6] !== 'string') ||
+        !supported.has(signature(row)),
+    )
+  const result = project(spell, audit, undefined, new Set(malformed ? [] : current.map(signature)))
+  if (
+    malformed ||
+    (Array.isArray(spell.classSpellRouteDiagnostics) &&
+      spell.classSpellRouteDiagnostics.some(
+        (row) => row?.code === 'invalid-current-view' && row.path === 'classSpellRoutes',
+      ))
+  )
+    result.classSpellRouteDiagnostics = [
+      ...audit.diagnostics,
+      { code: 'invalid-current-view', path: 'classSpellRoutes' },
+    ]
+  return result
 }
 
 /** Parsed production rows always own a source package; prior derived output cannot self-certify. */
@@ -478,6 +510,7 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
   spells: T[],
   origin = 'spell-layer',
 ): T[] {
+  spells = spells.map(preserveCurrentRoutes)
   const groups = new Map<string, Array<{ spell: T; index: number }>>()
   spells.forEach((spell, index) => {
     const target = targetOf(spell)

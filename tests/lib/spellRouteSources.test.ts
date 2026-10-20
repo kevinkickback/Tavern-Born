@@ -42,6 +42,88 @@ const route = (name: string, source: string, channel = 'class', defining: string
   defining,
 ]
 
+function preservedViews(spell: Spell5e): Spell5e[] {
+  const lookup = Object.values(buildSpellLookup([spell]))[0]
+  const layer = composeGameDataLayers([makeGameDataFixture({ spells: [spell] })]).spells[0]
+  return [lookup, layer, Object.values(buildSpellLookup([JSON.parse(JSON.stringify(layer))]))[0]]
+}
+
+test.each([
+  'digest',
+  'target',
+  'routes',
+  'invalid-target',
+])('singleton lookup, layer and cached views deny invalid audited %s without input mutation', (mutation) => {
+  const spell = parse(aid, native.lookup)
+  if (mutation === 'digest') spell.classSpellRouteSource!.sourceDigest = '0'.repeat(64)
+  if (mutation === 'target') spell.classSpellRouteSource!.target[1] = 'xphb'
+  if (mutation === 'routes') spell.classSpellRouteSource!.sourceRoutes = []
+  if (mutation === 'invalid-target') spell.source = 'PHB|XPHB'
+  const before = JSON.stringify(spell)
+  for (const view of preservedViews(spell)) {
+    expect(view.classSpellRoutes).toEqual([])
+    expect(view.classes?.fromClassList).toEqual([])
+    expect(view.classes?.fromClassListVariant).toEqual([])
+    expect(view.classSpellRouteDiagnostics).toContainEqual({
+      code: 'invalid-package',
+      path: 'classSpellRouteSource',
+    })
+  }
+  expect(JSON.stringify(spell)).toBe(before)
+})
+
+test.each([
+  'empty',
+  'subset',
+])('singleton %s current routes rebuild stale lists without restoring hidden routes', (mode) => {
+  const spell = parse(aid, native.lookup)
+  const auditBefore = JSON.stringify(spell.classSpellRouteSource)
+  spell.classSpellRoutes = mode === 'empty' ? [] : [route('cleric', 'phb') as never]
+  spell.classes = {
+    fromClassList: [{ name: 'Wizard', source: 'PHB' }],
+    fromClassListVariant: [{ name: 'Sorcerer', source: 'XPHB' }],
+  }
+  const before = JSON.stringify(spell)
+  for (const view of preservedViews(spell)) {
+    expect(view.classSpellRoutes).toEqual(spell.classSpellRoutes)
+    expect(view.classes?.fromClassList).toEqual(
+      mode === 'empty' ? [] : [{ name: 'Cleric', source: 'PHB' }],
+    )
+    expect(view.classes?.fromClassListVariant).toEqual([])
+    expect(JSON.stringify(view.classSpellRouteSource)).toBe(auditBefore)
+    expect(Object.values(buildSpellLookup([view]))[0]).toEqual(view)
+    expect(filterSpellRouteSources(view).classSpellRoutes).toHaveLength(5)
+  }
+  expect(JSON.stringify(spell)).toBe(before)
+})
+
+test.each([
+  null,
+  {},
+  undefined,
+  [route('wizard', 'phb')],
+  [['classSpellRoute', 'aid']],
+])('malformed or unsupported explicit current routes %j fail closed with a visible diagnostic', (current) => {
+  const spell = parse(aid, native.lookup)
+  spell.classSpellRoutes = current as never
+  for (const view of preservedViews(spell)) {
+    expect(view.classSpellRoutes).toEqual([])
+    expect(view.classes?.fromClassList).toEqual([])
+    expect(view.classSpellRouteDiagnostics).toContainEqual({
+      code: 'invalid-current-view',
+      path: 'classSpellRoutes',
+    })
+  }
+})
+
+test('an absent current field derives verified source routes while unique unaudited legacy input remains identical', () => {
+  const spell = parse(aid, native.lookup)
+  delete spell.classSpellRoutes
+  for (const view of preservedViews(spell)) expect(view.classSpellRoutes).toHaveLength(5)
+  const legacy = synthetic({ fromClassList: [{ name: 'Wizard', source: 'PHB' }] })
+  expect(Object.values(buildSpellLookup([legacy]))[0]).toBe(legacy)
+})
+
 test.each([
   { classes: 'bad' },
   { classes: true },

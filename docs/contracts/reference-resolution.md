@@ -158,6 +158,11 @@ Original validated display labels are preserved while identity comparisons use c
 Unique legacy records without an audit retain old compatibility behavior and acquire no new proof.
 Subclass associations keep their existing contract and are cloned without mutating input.
 
+Lookup and layer boundaries validate every audited record, including singletons and malformed
+targets. They rebuild compatibility lists from the verified current route subset, preserve an
+explicit empty view and diagnose invalid current routes. An absent current field may derive the
+validated source view; malformed or unsupported current routes cannot restore hidden memberships.
+
 Runtime class-list checks continue to consume only the verified base `fromClassList` projection
 through `isSpellOnClassList()`. Variants remain separate in `fromClassListVariant`; this source-only
 boundary does not enable optional spell-section adoption, add casting quotas, select spells or
