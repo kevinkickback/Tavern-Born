@@ -48,6 +48,59 @@ function preservedViews(spell: Spell5e): Spell5e[] {
   return [lookup, layer, Object.values(buildSpellLookup([JSON.parse(JSON.stringify(layer))]))[0]]
 }
 
+test('same lookup observes undefined owner aliases and exact restoration like a fresh clone', () => {
+  const lookup = root(true)
+  const owners = (lookup.phb.aid as { class: { PHB: Record<string, unknown> } }).class.PHB
+  const initial = parse(aid, lookup)
+  owners[' cleric '] = undefined
+  const before = structuredClone(lookup)
+  const current = parse(aid, lookup)
+  expect(current).toEqual(parse(aid, structuredClone(lookup)))
+  expect(current.classSpellRoutes).toEqual([route('ranger', 'phb', 'classVariant')])
+  expect(current.classSpellRouteDiagnostics).toContainEqual({
+    code: 'invalid-predicate',
+    path: '["phb","aid"]/class/PHB/ cleric ',
+    group: ['cleric', 'phb', 'class'],
+  })
+  expect(lookup).toEqual(before)
+  delete owners[' cleric ']
+  expect(parse(aid, lookup)).toEqual(initial)
+})
+
+test('cyclic lookup revisions cannot retain an old predicate through mutation and restoration', () => {
+  const lookup = root(true)
+  lookup.loop = lookup
+  const owners = (lookup.phb.aid as { class: { PHB: Record<string, unknown> } }).class.PHB
+  const initial = parse(aid, lookup)
+  owners.Cleric = false
+  const before = structuredClone(lookup)
+  const current = parse(aid, lookup)
+  expect(current).toEqual(parse(aid, structuredClone(lookup)))
+  expect(current.classSpellRoutes).toEqual([route('ranger', 'phb', 'classVariant')])
+  expect(lookup).toEqual(before)
+  owners.Cleric = true
+  expect(parse(aid, lookup)).toEqual(initial)
+})
+
+test('one current lookup index is prepared per multi-spell parse invocation', () => {
+  const source = root(true)
+  const before = structuredClone(source)
+  let enumerations = 0
+  const lookup = new Proxy(source, {
+    ownKeys(target) {
+      enumerations++
+      return Reflect.ownKeys(target)
+    },
+  })
+  const first = parseSpells(native.spell, { sourceLookup: lookup }) as Spell5e[]
+  expect(enumerations).toBe(1)
+  expect(first).toHaveLength(native.spell.length)
+  expect(first[0].classSpellRoutes).toContainEqual(route('cleric', 'phb'))
+  expect(parseSpells(native.spell, { sourceLookup: lookup })).toEqual(first)
+  expect(enumerations).toBe(2)
+  expect(source).toEqual(before)
+})
+
 test('source-excluded targets avoid cloning while eligible invalid audits still fail closed', () => {
   const excluded = parse(aid, native.lookup)
   const eligible = parse(native.spell[1], native.lookup)

@@ -142,6 +142,8 @@ means no additional defining source; a singular source or nonempty plural string
 OR alternatives. Invalid predicates and conflicting producer sets cannot become unrestricted routes.
 Canonical aliases are checked before lookup projection; overlapping separate embedded rows remain
 unverified, while repeated alternatives within one valid plural predicate deduplicate.
+Each parse invocation prepares one shared index from its current supplied lookup. Prepared indexes
+are not reused across calls, so malformed alias mutations cannot hide behind a lossy JSON revision.
 
 Each parsed spell retains its original routing input, source-local lookup evidence and target
 occurrences in `classSpellRouteSource`. Its digest binds reconstruction, not authenticity or actor

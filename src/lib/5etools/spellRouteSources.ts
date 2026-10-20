@@ -38,17 +38,9 @@ interface PreparedLookup {
   index: Map<string, SpellRouteLookupCandidate[]>
   malformedSources: Map<string, SpellRouteLookupCandidate[]>
 }
-const lookupIndexes = new WeakMap<
-  object,
-  { revision: string | undefined; prepared: PreparedLookup }
->()
-
-/** Index parsed-object aliases before a first-match lookup can discard their evidence. */
+/** Prepare current aliases once per parse, before a first-match lookup can discard evidence. */
 export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undefined {
   if (!lookup) return undefined
-  const revision = signature(lookup)
-  const cached = lookupIndexes.get(lookup)
-  if (cached && cached.revision === revision) return cached.prepared
   const index = new Map<string, SpellRouteLookupCandidate[]>(),
     malformedSources = new Map<string, SpellRouteLookupCandidate[]>()
   for (const [source, names] of Object.entries(lookup)) {
@@ -70,9 +62,7 @@ export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undef
       index.set(key, rows)
     }
   }
-  const prepared = { index, malformedSources }
-  lookupIndexes.set(lookup, { revision, prepared })
-  return prepared
+  return { index, malformedSources }
 }
 function lookupCandidates(lookup: PreparedLookup, target: Target): SpellRouteLookupCandidate[] {
   const result = clone([
