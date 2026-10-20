@@ -2,7 +2,7 @@ import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyId
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
-  buildGameDataLookups,
+  buildSubclassLookup,
   getEntityLookupKey,
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
@@ -101,7 +101,7 @@ export function buildRetainedCharacterDetails(
   ] as const) {
     if (!data) continue
     // Filtered views can carry raw lookups, so always rebuild indexes from their own catalogs.
-    const lookups = buildGameDataLookups(data)
+    const subclassesByKey = buildSubclassLookup(data.classes)
     const featureCatalogs =
       data === primary ? primaryCatalogs : buildClassChoiceFeatureCatalogs(data)
     for (const feature of [
@@ -117,7 +117,7 @@ export function buildRetainedCharacterDetails(
     ) => {
       const owner = findClassReference({ name: className, source: classSource }, data.classes)
       return owner
-        ? lookups.subclassesByKey[
+        ? subclassesByKey[
             getSubclassLookupKey(owner.name, owner.source, subclassName, subclassSource)
           ]
         : undefined
