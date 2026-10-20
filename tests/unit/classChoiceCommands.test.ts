@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
@@ -19,6 +18,7 @@ import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { Class5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { optionalClassSources } from '../fixtures/optionalClassFeatureFixtures'
 import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
 
 function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedCharacterChoice {
@@ -68,9 +68,9 @@ describe('class choice commands', () => {
         languages: [],
       },
     })
-    const ranger = (
-      JSON.parse(readFileSync('data/class/class-ranger.json', 'utf8')).class as Class5e[]
-    ).find((row) => row.name === 'Ranger' && row.source === 'XPHB')!
+    const ranger = (optionalClassSources.class as unknown as Class5e[]).find(
+      (row) => row.name === 'Ranger' && row.source === 'XPHB',
+    )!
     character.provenance = applyClassGrants(ranger, undefined, character.provenance)
     const skill = resolveProficiencyChoiceCommand(
       character,

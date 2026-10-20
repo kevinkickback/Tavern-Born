@@ -41,12 +41,14 @@ const unsupported = (
     .issues.filter((row) => row.category === 'unsupported')
     .map((row) => row.id)
 
-test.each([
-  '2014-custom',
-  '2014-official',
-  '2024-custom',
-  '2024-official',
-] as const)('actual %s retains exact complete qualified notes once in full and names exports', async (template) => {
+test.each(
+  (['2014-custom', '2014-official', '2024-custom', '2024-official'] as const).flatMap((template) =>
+    (['full', 'names'] as const).map((descriptions) => ({ template, descriptions })),
+  ),
+)('actual $template retains exact complete qualified notes once in $descriptions export', async ({
+  template,
+  descriptions,
+}) => {
   const f = twoNotes()
   const terrain = makeConditionalCharacterFixture('Ranger', 'PHB', 10)
   f.character.classProgression.push({ name: 'Ranger', source: 'PHB', levels: 10 })
@@ -56,40 +58,38 @@ test.each([
   f.vm = createCharacterSheetViewModel(character, f.input)
   f.effects = deriveConditionalProficiencyNotes(character, f.catalogs)
   expect(f.vm.proficiencyCheckNotes).toHaveLength(3)
-  for (const descriptions of ['full', 'names'] as const) {
-    let report: SheetExportReport | undefined
-    const bytes = await generateTestCharacterSheet(f.vm, template, {
-      text: { descriptions, overflow: 'notes' },
-      pages: { notes: true },
-      onReport: (value) => {
-        report = value
-      },
-    })
-    const pdf = await PDFDocument.load(bytes)
-    const text = pdf
-      .getForm()
-      .getFields()
-      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-      .join('\n')
-    expect(report!.representedProficiencyCheckNotes).toEqual(f.vm.proficiencyCheckNotes)
-    for (const row of f.vm.proficiencyCheckNotes!) {
-      expect(text.replace(/\s+/gu, ' ').split(row.text.replace(/\s+/gu, ' '))).toHaveLength(2)
-      expect(f.vm.classFeaturesSummary2014).toContain(row.text)
-      expect(withoutSheetDescriptions(f.vm).featuresSummary).toContain(row.text)
-    }
-    expect(
-      getPdfExportPreflight(
-        template,
-        f.vm,
-        null,
-        f.effects,
-        {},
-        [],
-        { notes: true },
-        report,
-      ).issues.filter((row) => row.category === 'unsupported'),
-    ).toEqual([])
+  let report: SheetExportReport | undefined
+  const bytes = await generateTestCharacterSheet(f.vm, template, {
+    text: { descriptions, overflow: 'notes' },
+    pages: { notes: true },
+    onReport: (value) => {
+      report = value
+    },
+  })
+  const pdf = await PDFDocument.load(bytes)
+  const text = pdf
+    .getForm()
+    .getFields()
+    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    .join('\n')
+  expect(report!.representedProficiencyCheckNotes).toEqual(f.vm.proficiencyCheckNotes)
+  for (const row of f.vm.proficiencyCheckNotes!) {
+    expect(text.replace(/\s+/gu, ' ').split(row.text.replace(/\s+/gu, ' '))).toHaveLength(2)
+    expect(f.vm.classFeaturesSummary2014).toContain(row.text)
+    expect(withoutSheetDescriptions(f.vm).featuresSummary).toContain(row.text)
   }
+  expect(
+    getPdfExportPreflight(
+      template,
+      f.vm,
+      null,
+      f.effects,
+      {},
+      [],
+      { notes: true },
+      report,
+    ).issues.filter((row) => row.category === 'unsupported'),
+  ).toEqual([])
 })
 
 test.each([
