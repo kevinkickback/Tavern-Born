@@ -76,9 +76,8 @@ function panelProps(
     onFocusChange: vi.fn(),
     onExpandDetails: vi.fn(),
     onResolveChoiceSelection: vi.fn(),
-    onToggleExpertise: vi.fn(),
-    availableExpertiseSlots: 0,
-    usedExpertiseSlots: 0,
+    onExpertiseAction: vi.fn(),
+    expertiseActions: {},
     activeTab,
     ...overrides,
   }
@@ -266,7 +265,17 @@ describe('BuildProficienciesTabsPanel category panels', () => {
         choices: [choice('skills', ['Acrobatics', 'Stealth'], ['Acrobatics'])],
         proficiencies: emptyProficiencies,
       },
-      availableExpertiseSlots: 1,
+      expertiseActions: {
+        arcana: [
+          {
+            id: 'class:add:arcana',
+            ownerId: 'test-owner',
+            kind: 'class',
+            adding: true,
+            label: 'Add expertise: Arcana',
+          },
+        ],
+      },
     })
     const user = userEvent.setup()
 
@@ -279,7 +288,7 @@ describe('BuildProficienciesTabsPanel category panels', () => {
     expect(props.onResolveChoiceSelection).toHaveBeenCalledWith('skills', 'acrobatics', false)
 
     await user.click(screen.getByTitle('Add expertise: Arcana'))
-    expect(props.onToggleExpertise).toHaveBeenCalledWith('arcana')
+    expect(props.onExpertiseAction).toHaveBeenCalledWith('arcana', 'class:add:arcana')
   })
 
   test('preserves saving-throw and armor state presentation', () => {

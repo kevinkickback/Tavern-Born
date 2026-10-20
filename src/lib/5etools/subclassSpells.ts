@@ -41,10 +41,7 @@ export function getEarnedSubclassSpellGrants(
       norm(row.classSource) === norm(entry.source),
   )
   return subclasses.length === 1
-    ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel, {
-        preserveSource: true,
-        defaultSource: 'PHB',
-      })
+    ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
     : undefined
 }
 
@@ -54,7 +51,6 @@ function pushSpellList(
   levelText: string,
   spells: unknown,
   maxClassLevel: number,
-  options?: { preserveSource?: boolean; defaultSource?: string },
 ): void {
   const level = Number.parseInt(levelText, 10)
   if (!Number.isFinite(level) || level < 1 || level > maxClassLevel) return
@@ -62,7 +58,7 @@ function pushSpellList(
 
   for (const raw of spells) {
     if (typeof raw !== 'string') continue
-    const parsed = parseSpellToken(raw, options)
+    const parsed = parseSpellToken(raw)
     if (!parsed.name) continue
     grants.push({
       spellName: parsed.name,
@@ -76,7 +72,6 @@ function pushSpellList(
 export function parseSubclassSpells(
   additionalSpells: SubclassAdditionalSpells[] | undefined,
   classLevel: number,
-  options?: { preserveSource?: boolean; defaultSource?: string },
 ): SubclassSpellGrant[] {
   if (!additionalSpells || additionalSpells.length === 0 || classLevel < 1) return []
 
@@ -84,15 +79,15 @@ export function parseSubclassSpells(
 
   for (const block of additionalSpells) {
     for (const [levelText, spells] of Object.entries(block.prepared ?? {})) {
-      pushSpellList(grants, 'prepared', levelText, spells, classLevel, options)
+      pushSpellList(grants, 'prepared', levelText, spells, classLevel)
     }
 
     for (const [levelText, spells] of Object.entries(block.known ?? {})) {
-      pushSpellList(grants, 'known', levelText, spells, classLevel, options)
+      pushSpellList(grants, 'known', levelText, spells, classLevel)
     }
 
     for (const [levelText, spells] of Object.entries(block.expanded ?? {})) {
-      pushSpellList(grants, 'expanded', levelText, spells, classLevel, options)
+      pushSpellList(grants, 'expanded', levelText, spells, classLevel)
     }
 
     for (const [levelText, usageConfig] of Object.entries(block.innate ?? {})) {
@@ -107,7 +102,7 @@ export function parseSubclassSpells(
         if (!Array.isArray(spells)) continue
         for (const raw of spells) {
           if (typeof raw !== 'string') continue
-          const parsed = parseSpellToken(raw, options)
+          const parsed = parseSpellToken(raw)
           if (!parsed.name) continue
           grants.push({
             spellName: parsed.name,

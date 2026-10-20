@@ -44,7 +44,7 @@ describe('2014 saved PDF compatibility', () => {
           },
           checkboxFields: {},
         },
-        { templateId: '2014' },
+        { templateId: '2014-custom', cleanupProfile: 'mpmb-2014' },
       ),
     )
     const form = output.getForm()
@@ -93,7 +93,7 @@ describe('2014 saved PDF compatibility', () => {
         textFields: AFFECTED_TEXT_FIELDS,
         checkboxFields: AFFECTED_CHECKBOX_FIELDS,
       },
-      { templateId: '2014' },
+      { templateId: '2014-custom', cleanupProfile: 'mpmb-2014' },
     )
     const output = await PDFDocument.load(outputBytes)
     expect(output.getPageCount()).toBe(6)

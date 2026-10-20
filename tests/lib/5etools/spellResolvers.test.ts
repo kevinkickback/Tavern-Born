@@ -12,11 +12,12 @@ describe('resolveSpellReference', () => {
     expect(resolveSpellReference('ALARM|xphb', spellsByKey)).toBe(xphb)
   })
 
-  test('keeps the source-less fallback deterministic', () => {
+  test('never enriches a manual name with an arbitrary printing', () => {
     const xphb = { name: 'Alarm', source: 'XPHB' } as Spell5e
     const phb = { name: 'Alarm', source: 'PHB' } as Spell5e
 
-    expect(resolveSpellReference('alarm', { z: xphb, a: phb })).toBe(phb)
+    expect(resolveSpellReference('alarm', { z: xphb, a: phb })).toBeUndefined()
+    expect(resolveSpellReference('Alarm', { Alarm: phb })).toBeUndefined()
   })
 
   test.each([
@@ -29,9 +30,12 @@ describe('resolveSpellReference', () => {
     expect(resolveSpellReference(reference, { phb })).toBeUndefined()
   })
 
-  test('tagged source-less references retain the deterministic legacy fallback', () => {
+  test('rejects incomplete and malformed references before direct lookup', () => {
     const phb = { name: 'Alarm', source: 'PHB' } as Spell5e
     const xphb = { name: 'Alarm', source: 'XPHB' } as Spell5e
-    expect(resolveSpellReference('{@spell Alarm}', { z: xphb, a: phb })).toBe(phb)
+    for (const reference of ['{@spell Alarm}', 'Alarm|', 'Alarm|PHB|junk', 'Alarm|PHB#c'])
+      expect(resolveSpellReference(reference, { [reference]: phb, z: xphb })).toBeUndefined()
+    expect(resolveSpellReference('Alarm|PHB', { 'Alarm|PHB': xphb })).toBeUndefined()
+    expect(resolveSpellReference('Alarm|PHB', { 'Alarm|PHB': xphb, correct: phb })).toBe(phb)
   })
 })

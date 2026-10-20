@@ -6,9 +6,11 @@ import {
   createCharacterCalculationContext,
 } from '@/lib/calculations/characterCalculationContext'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
+} from '@/lib/calculations/spellIdentity'
 import { isFixedProfileSpell } from '@/lib/calculations/spellOwnership'
-import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import {
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
@@ -17,16 +19,12 @@ import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourc
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
-  addSpellToCharacter,
-  removeRacialSpell as removeRacialSpellCommand,
   removeSpellFromCharacter,
-  selectRacialSpell as selectRacialSpellCommand,
   setProfileSpells as setProfileSpellsCommand,
   setRacialCastingAbility as setRacialCastingAbilityCommand,
   setRacialSpellChoice as setRacialSpellChoiceCommand,
   setRacialSpellSuite as setRacialSpellSuiteCommand,
 } from '@/lib/character/commands/spellCommands'
-import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import { isManagedClassSpellProfile } from '@/lib/character/managedClassSpellIdentity'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -35,10 +33,7 @@ import type { ManagedClassSpellChoice } from '@/types/classCasting'
 import { useSpellProvenanceMutations } from './useSpellProvenanceMutations'
 
 /** Mutations start from latest saved intent, never a filtered display array. */
-export function useSpellProfileMutations(
-  spellProfiles: SpellProfile[],
-  _spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>,
-) {
+export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
   const character = useCharacterStore((state) => state.activeCharacter)
   const sourceData = useGameDataStore((state) => state.gameData)
   const calculation = useCharacterCalculationContext(character)
@@ -106,6 +101,7 @@ export function useSpellProfileMutations(
     [character, calculation, sourceData],
   )
   const choiceFor = (profileId: string, reference: string) => {
+    if (reference.includes('|') && !isSourceQualifiedSpellReference(reference)) return undefined
     const profile =
       character?.spells.spellProfiles.find((row) => row.id === profileId) ??
       spellProfiles.find((row) => row.id === profileId)
@@ -198,18 +194,6 @@ export function useSpellProfileMutations(
   }
   return {
     clearClassSpellChoice,
-    syncProfiles: () =>
-      run((base, current) => {
-        if (!current) return { characterPatch: {}, provenanceUpdate: base.provenance }
-        const next = preserveDailyClassSpellIntent(base, current.character)
-        return { characterPatch: { spells: next.spells }, provenanceUpdate: next.provenance }
-      }, true),
-    addSpellToProfile: (profileId: string, name: string, kind: 'cantrip' | 'spell') =>
-      run((base, current) =>
-        addSpellToCharacter(base, base.provenance, name, kind, profileId, {
-          spellsByKey: current?.lookups.primary.spellsByKey,
-        }),
-      ),
     setProfileSpells: (profileId: string, cantrips: string[], known: string[]) =>
       run((base, current) =>
         setProfileSpellsCommand(
@@ -223,22 +207,6 @@ export function useSpellProfileMutations(
       ),
     removeSpellFromProfile,
     togglePrepared,
-    selectRacialSpell: (profileId: string, choiceId: string, name: string) =>
-      run(
-        (base, current) =>
-          selectRacialSpellCommand(
-            base,
-            base.provenance,
-            profileId,
-            choiceId,
-            name,
-            current?.raceResolution,
-            current?.lookups.primary.spellsByKey,
-          ),
-        true,
-      ),
-    removeRacialSpell: (profileId: string, choiceId: string, name: string) =>
-      run((base) => removeRacialSpellCommand(base, base.provenance, profileId, choiceId, name)),
     setRacialSpellChoice: (profileId: string, choiceId: string, selected: string[]) =>
       run(
         (base, current) =>

@@ -175,7 +175,7 @@ describe('saved-feature action descriptions', () => {
       name: 'Shared',
       source: 'XPHB',
     },
-  ])('enriches saved spellings from a canonical duplicate with source defaults: %j', ({
+  ])('does not infer a custom action from canonical catalog duplicates: %j', ({
     first,
     duplicate,
     name,
@@ -191,7 +191,7 @@ describe('saved-feature action descriptions', () => {
       source,
       entries: ['As a bonus action, use the optional feature.'],
     }
-    expect(deriveRulesTextActions(character, undefined, context)[0]?.kind).toBe('action')
+    expect(deriveRulesTextActions(character, undefined, context)).toEqual([])
   })
 
   test.each(
@@ -232,9 +232,11 @@ describe('saved-feature action descriptions', () => {
     expect(storedAction([wizard, bard], '')).toEqual([])
   })
 
-  test('preserves unique catalog enrichment and exact-identity duplicate behavior', () => {
-    expect(storedAction([wizard])[0]?.kind).toBe('action')
-    expect(storedAction([wizard, { ...wizard }])[0]?.kind).toBe('action')
+  test('uses custom text even when the catalog has a unique or duplicated match', () => {
+    expect(storedAction([wizard])[0]?.kind).toBe('reaction')
+    expect(storedAction([wizard, { ...wizard }])[0]?.kind).toBe('reaction')
+    expect(storedAction([wizard], '')).toEqual([])
+    expect(storedAction([wizard, { ...wizard }], '')).toEqual([])
   })
 
   test('retains saved text for incomplete ambiguous records', () => {
@@ -267,7 +269,7 @@ describe('saved-feature action descriptions', () => {
     expect(deriveRulesTextActions(character, undefined, context)[0]?.kind).toBe('reaction')
   })
 
-  test('still enriches an optional feature when no class feature matches its printing', () => {
+  test('does not infer custom text from an optional feature with the same printing', () => {
     const context = lookups([{ ...wizard, source: 'TCE' }])
     context.optionalFeaturesByKey['Shared|PHB'] = {
       name: 'Shared',
@@ -278,10 +280,10 @@ describe('saved-feature action descriptions', () => {
       classProgression: [],
       features: [{ id: 'saved', name: 'Shared', source: 'PHB', description: '' }],
     })
-    expect(deriveRulesTextActions(character, undefined, context)[0]?.kind).toBe('bonus-action')
+    expect(deriveRulesTextActions(character, undefined, context)).toEqual([])
   })
 
-  test('accepts a unique name/source map supplied without rebuilding the catalog', () => {
+  test('does not infer custom text from an incomplete name/source lookup', () => {
     const character = makeCharacterFixture({
       classProgression: [],
       features: [{ id: 'saved', name: 'Shared', source: 'PHB', description: '' }],
@@ -289,23 +291,20 @@ describe('saved-feature action descriptions', () => {
     expect(
       deriveRulesTextActions(character, undefined, {
         classFeaturesByKey: { 'Shared|PHB': wizard },
-      })[0]?.kind,
-    ).toBe('action')
+      }),
+    ).toEqual([])
   })
 
   test.each([
     { first: wizard, duplicate: { ...wizard, name: 'shared', source: 'phb' } },
     { first: { ...wizard, source: '' }, duplicate: wizard },
-  ])('treats complete duplicate identities in catalog alias maps as a single target: %j', ({
-    first,
-    duplicate,
-  }) => {
+  ])('does not infer custom text from duplicate catalog alias maps: %j', ({ first, duplicate }) => {
     const character = makeCharacterFixture({
       classProgression: [],
       features: [{ id: 'saved', name: 'Shared', source: 'PHB', description: '' }],
     })
     const context = { classFeaturesByKey: { first, duplicate } }
-    expect(deriveRulesTextActions(character, undefined, context)[0]?.kind).toBe('action')
+    expect(deriveRulesTextActions(character, undefined, context)).toEqual([])
   })
 })
 
@@ -347,10 +346,9 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
     expect(createCurrentCharacterSheetViewModel(character, context).actions).toEqual(actions)
   })
 
-  test('keeps unique saved-feature text enrichment without rebinding its identity', () => {
+  test('derives only the earned action when an empty custom feature shares its name', () => {
     const { character, context } = earnedFeatureFixture(kind, '', [wizard])
     expect(deriveRulesTextActions(character, undefined, context)).toMatchObject([
-      { id: 'feature:saved', kind: 'action', source: { kind: 'other' } },
       {
         id: expect.stringMatching(new RegExp(`^${kind}-feature:`)),
         kind: 'action',
@@ -368,7 +366,7 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
   test.each([
     '',
     'As a reaction, use the saved feature.',
-  ])('enriches canonical saved spelling without suppressing an earned action: %j', (description) => {
+  ])('keeps custom text independent of an earned action across canonical spellings: %j', (description) => {
     const { character, context } = earnedFeatureFixture(
       kind,
       description,
@@ -377,11 +375,9 @@ describe.each(['class', 'subclass'] as const)('earned %s actions beside saved fe
     character.features[0] = { ...character.features[0], name: 'shared', source: 'phb' }
     const actions = deriveRulesTextActions(character, undefined, context)
     expect(actions).toMatchObject([
-      {
-        id: 'feature:saved',
-        kind: description ? 'reaction' : 'action',
-        source: { kind: 'other' },
-      },
+      ...(description
+        ? [{ id: 'feature:saved', kind: 'reaction', source: { kind: 'other' } }]
+        : []),
       {
         id: expect.stringMatching(new RegExp(`^${kind}-feature:`)),
         kind: 'action',
@@ -409,10 +405,7 @@ describe('earned class-action canonical source defaults', () => {
     ['PHB', 'XPHB'].flatMap((classSource) =>
       ['', undefined].map((source) => ({ classSource, source })),
     ),
-  )('retains independent saved and earned IDs after unique default-source enrichment: %j', ({
-    classSource,
-    source,
-  }) => {
+  )('applies upstream source defaults only to the earned action: %j', ({ classSource, source }) => {
     const raw = {
       class: [
         { name: 'Wizard', source: classSource, classFeatures: [`Shared|Wizard|${classSource}|1`] },
@@ -433,11 +426,6 @@ describe('earned class-action canonical source defaults', () => {
     expect(classes[0].classFeatureRefs?.[0]?.feature).toBeDefined()
     const actions = deriveRulesTextActions(character, undefined, context)
     expect(actions).toMatchObject([
-      {
-        id: 'feature:saved',
-        kind: 'action',
-        source: { source: classSource },
-      },
       {
         id: expect.stringMatching(/^class-feature:/),
         kind: 'action',

@@ -62,7 +62,7 @@ describe('getPdfExportPreflight', () => {
   })
 
   test('returns a clean result when readiness, effects, and capacities are representable', () => {
-    expect(getPdfExportPreflight('2014', createViewModel(), READY, [])).toEqual({
+    expect(getPdfExportPreflight('2014-custom', createViewModel(), READY, [])).toEqual({
       issues: [],
       blockingCount: 0,
       warningCount: 0,
@@ -102,7 +102,7 @@ describe('getPdfExportPreflight', () => {
       },
     ]
 
-    const result = getPdfExportPreflight('2014', createViewModel(91), readiness, effects)
+    const result = getPdfExportPreflight('2014-custom', createViewModel(91), readiness, effects)
 
     expect(result.issues.map((issue) => issue.category)).toEqual([
       'readiness',
@@ -122,8 +122,12 @@ describe('getPdfExportPreflight', () => {
       effect('resource', { kind: 'resource-maximum', resourceId: 'test' }),
     ]
 
-    expect(getPdfExportPreflight('2014', createViewModel(), READY, effects).warningCount).toBe(0)
-    expect(getPdfExportPreflight('2024', createViewModel(), READY, effects).warningCount).toBe(2)
+    expect(
+      getPdfExportPreflight('2014-custom', createViewModel(), READY, effects).warningCount,
+    ).toBe(0)
+    expect(
+      getPdfExportPreflight('2024-custom', createViewModel(), READY, effects).warningCount,
+    ).toBe(2)
     for (const templateId of [
       '2014-custom',
       '2014-official',

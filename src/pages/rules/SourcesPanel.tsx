@@ -174,8 +174,6 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
 
   const patch = (updates: Partial<typeof character>) => updateCharacter(character.id, updates)
 
-  const allSpells = gameData?.spells ?? []
-
   const getEffectiveSourcesForCharacter = (nextAllowed: string[]): string[] =>
     resolveEffectiveSources(nextAllowed, character.originSystem, sources)
 
@@ -186,7 +184,6 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     const prune = pruneSpellsForDisabledSources(
       character,
       getEffectiveSourcesForCharacter(nextAllowed),
-      allSpells,
     )
     if (!prune) return updates
     const removed = countRemovedSpells(character, prune.spells.spellProfiles)

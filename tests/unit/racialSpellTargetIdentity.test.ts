@@ -7,15 +7,12 @@ import { deriveSpellActions } from '@/lib/calculations/actions'
 import { reconcileNativeRacialSpellLedger } from '@/lib/calculations/nativeRacialSpells'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { applyRaceSelectionCommand } from '@/lib/character/commands/raceCommands'
-import {
-  addSpellToCharacter,
-  removeRacialSpell,
-  setRacialSpellChoice,
-} from '@/lib/character/commands/spellCommands'
+import { removeRacialSpell, setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, getSpellRows, makeSourceTag } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
@@ -72,19 +69,7 @@ test('a canonical child choice rejects the active parent as its owner and clears
       ),
     ),
   )
-  character = reopen(
-    commit(
-      character,
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Light|PHB',
-        'cantrip',
-        'special:unrestricted',
-        { sourceType: 'manual', sourceName: 'User Choice' },
-      ),
-    ),
-  )
+  character = reopen(commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')))
   const malformed = structuredClone(character)
   Object.assign(malformed.provenance.spells.light[0], {
     sourceType: 'race',
@@ -191,17 +176,7 @@ test('same-name printing replacement and clear preserve independent target owner
     ],
   })[0] as Race5e
   let character = reopen(finish(race))
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   const independent = structuredClone(
     character.spells.spellProfiles.filter((profile) => profile.type !== 'racial'),
   )
@@ -262,19 +237,7 @@ test('Sources, Actions and PDF retain racial and independent spell printings thr
     ],
   })[0] as Race5e
   let character = reopen(finish(race))
-  character = reopen(
-    commit(
-      character,
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Light|PHB',
-        'cantrip',
-        'special:unrestricted',
-        { sourceType: 'manual', sourceName: 'User Choice' },
-      ),
-    ),
-  )
+  character = reopen(commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')))
   const spells = ['PHB', 'XPHB'].map((source) =>
     makeSpellFixture({ name: 'Light', source, level: 0 }),
   )

@@ -113,8 +113,8 @@ function assertPdfAgreement(
   fixture: RepresentativeCharacterFixture,
   viewModel: ReturnType<typeof createCharacterSheetViewModel>,
 ) {
-  const pdf2014 = buildCharacterSheetFieldMap(viewModel, '2014')
-  const pdf2024 = buildCharacterSheetFieldMap(viewModel, '2024')
+  const pdf2014 = buildCharacterSheetFieldMap(viewModel, '2014-custom')
+  const pdf2024 = buildCharacterSheetFieldMap(viewModel, '2024-custom')
   for (const ability of Object.keys(PDF_2014_ABILITY_FIELDS) as AbilityName[]) {
     const expected = String(viewModel.effectiveAbilityScores[ability])
     expect(
@@ -320,8 +320,8 @@ describe('representative character consumers', () => {
       featsByKey: lookups.featsByKey,
       spellsByKey: lookups.spellsByKey,
     })
-    const pdf2014 = buildCharacterSheetFieldMap(viewModel, '2014')
-    const pdf2024 = buildCharacterSheetFieldMap(viewModel, '2024')
+    const pdf2014 = buildCharacterSheetFieldMap(viewModel, '2014-custom')
+    const pdf2024 = buildCharacterSheetFieldMap(viewModel, '2024-custom')
 
     expect(changed.classProgression.reduce((sum, entry) => sum + entry.levels, 0)).toBe(5)
     expect(changed.asiChoices).toEqual([])

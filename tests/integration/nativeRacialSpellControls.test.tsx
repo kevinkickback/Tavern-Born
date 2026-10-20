@@ -18,12 +18,12 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import {
   makeClassFixture,
@@ -403,19 +403,11 @@ test('removing an independently selected bonus copy commits without removing nat
     ...classSpells.characterPatch,
     provenance: classSpells.provenanceUpdate,
   }
-  const bonus = addSpellToCharacter(
-    character,
-    character.provenance,
-    'Light|PHB',
-    'cantrip',
-    'special:unrestricted',
-  )
+  const bonus = selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')
   character = { ...character, ...bonus.characterPatch, provenance: bonus.provenanceUpdate }
   install([race])
   setActiveCharacter(character)
-  const { result } = renderHook(() =>
-    useSpellProfileMutations(character.spells.spellProfiles, new Map()),
-  )
+  const { result } = renderHook(() => useSpellProfileMutations(character.spells.spellProfiles))
   act(() => result.current.removeSpellFromProfile('special:unrestricted', 'Light|PHB', 'cantrip'))
   const saved = reopened()
   expect(

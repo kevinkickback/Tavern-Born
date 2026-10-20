@@ -161,8 +161,9 @@ Numeric class spell intent lives in `character.managedClassSpellChoices`; its ma
 independent daily/racial/Bonus state use `character.spells.spellProfiles`.
 
 - Class profiles use `class:<name>|<source>`; `special:unrestricted` owns bonus/manual spells.
-- New selections store `Name|Source`. Equality and quotas use normalized case-insensitive spell
-  names so alternate printings remain one logical selection.
+- Catalog selections store `Name|Source`. Saved targets compare normalized name and source;
+  an admitted bare manual name has its own empty-source identity. New-choice rules may separately
+  lock logical spell names across profiles or printings without merging saved targets or owners.
 - Fixed/always-prepared metadata is derived into profiles and protected by the mutation hook.
 - Shared Spellcasting and Pact Magic use independent persisted usage maps.
 - Slot maxima are derived from parsed class tables; usage is preserved and clamped when maxima fall.
@@ -210,7 +211,7 @@ on a write failure it leaves the prior library intact before the import result i
 
 ## Schema compatibility
 
-Current pre-release admission accepts exactly character format **11**, validates complete ownership
+Current pre-release admission accepts exactly character format **12**, validates complete ownership
 without loaded rules, and rejects incompatible/malformed records without conversion. Existing
 originals stay in durable exportable quarantine until acknowledged. See [Character format](contracts/character-format.md)
 for the full current admission and breaking-change checklist. Catalog cache schema is independent.

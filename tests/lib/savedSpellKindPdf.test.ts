@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { afterEach, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { SheetExportReport } from '@/lib/pdf/types'
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { resetCharacterStore } from '../fixtures/characterStoreFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
@@ -24,7 +24,10 @@ const tiefling = (
 ).race.find((race) => race.name === 'Tiefling' && race.source === 'PHB')!
 const templates = ['2014-official', '2014-custom', '2024-official', '2024-custom'] as const
 
-function commit(character: Character, result: ReturnType<typeof addSpellToCharacter>): Character {
+function commit(
+  character: Character,
+  result: ReturnType<typeof selectBonusSpellFixture>,
+): Character {
   return characterPersistenceSchema.parse({
     ...character,
     ...result.characterPatch,
@@ -36,16 +39,7 @@ function commit(character: Character, result: ReturnType<typeof addSpellToCharac
 // correctly prevents creating this overlap. The native owner itself remains strictly validated.
 function savedNativeOverlap(reference = 'Hellish Rebuke|PHB') {
   const character = makeNativeRacialCharacter(tiefling, undefined, 3)
-  return commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      reference,
-      'cantrip',
-      'special:unrestricted',
-    ),
-  )
+  return commit(character, selectBonusSpellFixture(character, reference, 'cantrip'))
 }
 
 test('actual strict current import preserves the native unknown contribution before first-page exact-row deduplication', async () => {

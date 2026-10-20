@@ -1,11 +1,11 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { SheetExportReport } from '@/lib/pdf/types'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 import {
@@ -15,8 +15,7 @@ import {
 
 function noCaster(_kind: 'bonus') {
   const initial = makeNativeRacialCharacter({ name: 'Human', source: 'PHB' } as Race5e)
-  const special = initial.spells.spellProfiles.find((profile) => profile.type === 'special')!
-  const result = addSpellToCharacter(initial, initial.provenance, 'Bless|PHB', 'spell', special.id)
+  const result = selectBonusSpellFixture(initial, 'Bless|PHB', 'spell')
   return characterPersistenceSchema.parse({
     ...initial,
     ...result.characterPatch,
@@ -114,14 +113,7 @@ test.each(exportCases)(
 
 test('known cantrip and exact restored leveled metadata need no fallback unknown explanation', () => {
   const character = noCaster('bonus')
-  const special = character.spells.spellProfiles.find((profile) => profile.type === 'special')!
-  const result = addSpellToCharacter(
-    character,
-    character.provenance,
-    'Light|PHB',
-    'cantrip',
-    special.id,
-  )
+  const result = selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')
   const saved = characterPersistenceSchema.parse({
     ...character,
     ...result.characterPatch,

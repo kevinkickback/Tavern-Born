@@ -14,13 +14,14 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { addSpellToCharacter, setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
@@ -71,17 +72,7 @@ test('the racial page selects another enabled printing while retaining independe
     new Map(),
     () => [],
   )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   const gameData = makeGameDataFixture({
     races: [race],
     classes: [],
@@ -158,17 +149,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
       { 'light|tce': spell('Light', 'TCE') },
     ),
   )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Light|PHB',
-      'cantrip',
-      'special:unrestricted',
-      { sourceType: 'manual', sourceName: 'User Choice' },
-    ),
-  )
+  character = commit(character, selectBonusSpellFixture(character, 'Light|PHB', 'cantrip'))
   Object.assign(character.provenance.spells.light[0], { sourceName: ' child ', sourceRef: ' tce ' })
   const original = structuredClone(character)
   useCharacterStore.setState({
@@ -178,7 +159,7 @@ test('actual child Clear removes its normalized choice tag and preserves an inde
   })
   const { result } = renderHook(() => {
     const active = useCharacterStore((state) => state.activeCharacter)!
-    return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+    return useSpellProfileMutations(active.spells.spellProfiles)
   })
   act(() => result.current.setRacialSpellChoice(profile.id, profile.choices![0].id, []))
   const saved = characterPersistenceSchema.parse(

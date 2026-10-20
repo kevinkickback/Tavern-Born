@@ -29,12 +29,12 @@ describe('parseSubclassSpells', () => {
     )
 
     expect(grants).toEqual([
-      { spellName: 'bless', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'cure wounds', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'misty step', level: 3, isCantrip: false, mode: 'known' },
-      { spellName: 'burning hands', level: 1, isCantrip: false, mode: 'expanded' },
-      { spellName: 'light', level: 1, isCantrip: true, mode: 'expanded' },
-      { spellName: 'misty step', level: 3, isCantrip: false, mode: 'innate' },
+      { spellName: 'bless|PHB', level: 1, isCantrip: false, mode: 'prepared' },
+      { spellName: 'cure wounds|PHB', level: 1, isCantrip: false, mode: 'prepared' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'known' },
+      { spellName: 'burning hands|PHB', level: 1, isCantrip: false, mode: 'expanded' },
+      { spellName: 'light|PHB', level: 1, isCantrip: true, mode: 'expanded' },
+      { spellName: 'misty step|PHB', level: 3, isCantrip: false, mode: 'innate' },
     ])
   })
 
@@ -55,7 +55,6 @@ describe('parseSubclassSpells', () => {
           },
         ],
         3,
-        { preserveSource: true, defaultSource: 'PHB' },
       ),
     ).toEqual([
       { spellName: 'bless|PHB', level: 3, isCantrip: false, mode: 'prepared' },
@@ -75,21 +74,13 @@ describe('parseSubclassSpells', () => {
         innate: { 1: { daily: { '1': ['mage hand|XPHB#c'] } } },
       },
     ]
-    expect(parseSubclassSpells(blocks, 1, { preserveSource: true })).toEqual([
+    expect(parseSubclassSpells(blocks, 1)).toEqual([
       { spellName: 'light|PHB', level: 1, isCantrip: true, mode: 'prepared' },
       { spellName: 'druidcraft|XPHB', level: 1, isCantrip: true, mode: 'prepared' },
       { spellName: 'bless|PHB', level: 1, isCantrip: false, mode: 'prepared' },
       { spellName: 'misty step|TCE', level: 1, isCantrip: false, mode: 'known' },
       { spellName: 'burning hands|PHB', level: 1, isCantrip: false, mode: 'expanded' },
       { spellName: 'mage hand|XPHB', level: 1, isCantrip: true, mode: 'innate' },
-    ])
-    expect(parseSubclassSpells(blocks, 1)).toEqual([
-      { spellName: 'light', level: 1, isCantrip: true, mode: 'prepared' },
-      { spellName: 'druidcraft', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'bless', level: 1, isCantrip: false, mode: 'prepared' },
-      { spellName: 'misty step', level: 1, isCantrip: false, mode: 'known' },
-      { spellName: 'burning hands', level: 1, isCantrip: false, mode: 'expanded' },
-      { spellName: 'mage hand', level: 1, isCantrip: false, mode: 'innate' },
     ])
   })
 })

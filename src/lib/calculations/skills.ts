@@ -1,13 +1,5 @@
-import {
-  decodeClassFeatureReference,
-  getClassFeatureIdentity,
-  getClassFeatureReferenceLevel,
-} from '@/lib/5etools/classFeatureIdentity'
-import { isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
-import { findClassReference } from '@/lib/5etools/classReference'
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
-import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry, Proficiencies } from '@/types/character'
+import type { Proficiencies } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
 import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
@@ -230,36 +222,4 @@ export function reconcileSkillExpertise(proficiencies: Proficiencies): Proficien
     ...proficiencies,
     expertise: proficiencies.expertise.filter((name) => skills.has(name.toLowerCase())),
   }
-}
-
-/**
- * Count the total expertise slots available to the character from class features.
- * Non-adapted Expertise features keep their existing pooled slots.
- * Audited targets use independently owned modal choices, even when source rules are absent.
- * Expertise from feats is applied directly when the feat option is resolved and is not counted here.
- */
-export function getExpertiseSlotsFromClasses(
-  classProgression: CharacterClassEntry[] | null | undefined,
-  classesByKey: Record<string, Class5e>,
-): number {
-  if (!classProgression?.length) return 0
-  let slots = 0
-  for (const entry of classProgression) {
-    const cls = findClassReference(entry, Object.values(classesByKey))
-    if (!cls?.classFeatureRefs) continue
-    for (const ref of cls.classFeatureRefs) {
-      const level = getClassFeatureReferenceLevel(ref)
-      if (
-        typeof level === 'number' &&
-        level <= entry.levels &&
-        ref.name.toLowerCase() === 'expertise' &&
-        !isOwnedExpertiseTarget(
-          getClassFeatureIdentity(ref.ref ? decodeClassFeatureReference(ref.ref) : ref) ?? '',
-        )
-      ) {
-        slots += 2
-      }
-    }
-  }
-  return slots
 }

@@ -11,12 +11,13 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { addSpellToCharacter, setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
@@ -26,6 +27,7 @@ import {
   nativeChoiceSpells,
   nativeRaceResolution,
 } from '../fixtures/nativeRacialCharacter'
+import { finishBonusSelection } from '../fixtures/spellEditing'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn(), error: vi.fn() } }))
 
@@ -76,7 +78,7 @@ describe('useSpellProfileMutations', () => {
     const id = character.spells.spellProfiles.find((profile) => profile.type === 'racial')!.id
     const { result, unmount } = renderHook(() => {
       const active = useCharacterStore((state) => state.activeCharacter)!
-      return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+      return useSpellProfileMutations(active.spells.spellProfiles)
     })
     for (const source of ['PHB', 'XPHB']) {
       act(() =>
@@ -191,10 +193,10 @@ describe('useSpellProfileMutations', () => {
     installRace(changedRace)
     const profiles = character.spells.spellProfiles
     setActiveCharacter(character)
-    const { result, unmount } = renderHook(() => useSpellProfileMutations(profiles, new Map()))
+    const { result, unmount } = renderHook(() => useSpellProfileMutations(profiles))
     act(() => {
-      if (operation === 'sync') result.current.syncProfiles()
-      else result.current.addSpellToProfile('special:unrestricted', 'Bonus|PHB', 'cantrip')
+      if (operation === 'sync') finishBonusSelection(result.current)
+      else finishBonusSelection(result.current, 'Bonus|PHB', 'cantrip')
     })
     const reopened = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
@@ -259,7 +261,7 @@ describe('useSpellProfileMutations', () => {
     setActiveCharacter(character)
     const { result: mutations, unmount } = renderHook(() => {
       const active = useCharacterStore((state) => state.activeCharacter)!
-      return useSpellProfileMutations(active.spells.spellProfiles, new Map())
+      return useSpellProfileMutations(active.spells.spellProfiles)
     })
     const selected = operation === 'clear' ? [] : ['Mage Hand|XPHB']
     act(() =>
@@ -316,13 +318,7 @@ describe('useSpellProfileMutations', () => {
       ...learned.characterPatch,
       provenance: learned.provenanceUpdate,
     })
-    const bonus = addSpellToCharacter(
-      character,
-      character.provenance,
-      'Shield|PHB',
-      'spell',
-      'special:unrestricted',
-    )
+    const bonus = selectBonusSpellFixture(character, 'Shield|PHB', 'spell')
     character = characterPersistenceSchema.parse({
       ...character,
       ...bonus.characterPatch,
@@ -332,7 +328,7 @@ describe('useSpellProfileMutations', () => {
     const { result } = renderHook(() => {
       const active = useCharacterStore((state) => state.activeCharacter)!
       const calculation = useCharacterCalculationContext(active)!
-      return useSpellProfileMutations(calculation.character.spells.spellProfiles, new Map())
+      return useSpellProfileMutations(calculation.character.spells.spellProfiles)
     })
     act(() =>
       useCharacterStore.getState().updateCharacter(character.id, { name: 'Latest unrelated name' }),
@@ -342,6 +338,10 @@ describe('useSpellProfileMutations', () => {
     expect(prepared.name).toBe('Latest unrelated name')
     expect(prepared.managedClassSpellChoices?.[0]).toMatchObject({ prepare: true, revision: 2 })
     const beforeInvalid = JSON.stringify(prepared)
+    act(() => result.current.removeSpellFromProfile(WIZARD_PROFILE_ID, 'Shield|PHB|junk', 'spell'))
+    expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(beforeInvalid)
+    act(() => result.current.togglePrepared(WIZARD_PROFILE_ID, 'Shield|PHB|junk'))
+    expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(beforeInvalid)
     act(() => result.current.togglePrepared(WIZARD_PROFILE_ID, 'Magic Missile|PHB'))
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(beforeInvalid)
     act(() => result.current.removeSpellFromProfile(WIZARD_PROFILE_ID, 'Shield|PHB', 'spell'))
@@ -389,10 +389,10 @@ describe('useSpellProfileMutations', () => {
         calculation.character.spells.spellProfiles.find((row) => row.className === 'Cleric')
           ?.preparedSpells,
       ).toEqual([])
-      return useSpellProfileMutations(calculation.character.spells.spellProfiles, new Map())
+      return useSpellProfileMutations(calculation.character.spells.spellProfiles)
     })
-    act(() => result.current.addSpellToProfile('special:unrestricted', 'Light|PHB', 'cantrip'))
-    act(() => result.current.syncProfiles())
+    act(() => finishBonusSelection(result.current, 'Light|PHB', 'cantrip'))
+    act(() => finishBonusSelection(result.current))
     expect(
       useCharacterStore
         .getState()

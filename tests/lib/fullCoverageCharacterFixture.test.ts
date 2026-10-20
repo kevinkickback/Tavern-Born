@@ -577,8 +577,8 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     }
     const viewModel2014 = createCharacterSheetViewModel(character2014, inputs2014, inputs2014)
     const viewModel2024 = createCharacterSheetViewModel(character2024, inputs2024, inputs2024)
-    const map2014 = buildCharacterSheetFieldMap(viewModel2014, '2014')
-    const map2024 = buildCharacterSheetFieldMap(viewModel2024, '2024')
+    const map2014 = buildCharacterSheetFieldMap(viewModel2014, '2014-custom')
+    const map2024 = buildCharacterSheetFieldMap(viewModel2024, '2024-custom')
 
     expect(viewModel2014.weaponRows.length).toBeGreaterThanOrEqual(6)
     expect(viewModel2024.weaponRows.length).toBeGreaterThanOrEqual(6)

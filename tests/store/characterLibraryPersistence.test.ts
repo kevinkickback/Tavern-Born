@@ -263,7 +263,7 @@ describe('acknowledged character library in IndexedDB', () => {
     const neighbor = makeCharacterFixture({ id: 'neighbor', allowedSources: [] })
     await useCharacterStore.getState().importCharacters([original, neighbor])
     useCharacterStore.getState().setActiveCharacter(original.id)
-    const prune = pruneSpellsForDisabledSources(original, ['XPHB'], [])!
+    const prune = pruneSpellsForDisabledSources(original, ['XPHB'])!
     useCharacterStore.getState().updateCharacter(original.id, { ...prune, allowedSources: [] })
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
     await useCharacterStore.getState().saveActiveCharacter()
@@ -300,7 +300,7 @@ describe('acknowledged character library in IndexedDB', () => {
     const allowedSources = originSystem === '2024' ? [] : ['XPHB']
     await useCharacterStore.getState().importCharacters([original, neighbor])
     useCharacterStore.getState().setActiveCharacter(original.id)
-    const prune = pruneSpellsForDisabledSources(original, ['PHB', 'XPHB'], [])
+    const prune = pruneSpellsForDisabledSources(original, ['PHB', 'XPHB'])
     expect(prune).toBeNull()
     useCharacterStore.getState().updateCharacter(original.id, { allowedSources })
     await useCharacterStore.getState().saveActiveCharacter()

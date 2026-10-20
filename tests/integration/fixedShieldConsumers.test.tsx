@@ -215,7 +215,7 @@ test('durable current-format reopen, cache recomposition and exact missing/resto
     expect(vm.magicItems[0].description).toBe('Player shield note')
     expect(
       getPdfExportPreflight(
-        '2024',
+        '2024-custom',
         vm,
         readiness,
         calculation.effects.declarations,

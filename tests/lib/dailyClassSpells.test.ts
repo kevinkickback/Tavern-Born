@@ -7,16 +7,13 @@ import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { pruneNonracialSpellSelections } from '@/lib/character/commands/sourceSpellPruningCommand'
-import {
-  addSpellToCharacter,
-  removeSpellFromCharacter,
-  setProfileSpells,
-} from '@/lib/character/commands/spellCommands'
+import { removeSpellFromCharacter, setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
@@ -229,10 +226,7 @@ describe('current daily class preparation and saved intent', () => {
     )
     let next = apply(saved, numeric)
     expect(prepared(next)).toEqual(['Bless|PHB'])
-    next = apply(
-      next,
-      addSpellToCharacter(next, next.provenance, 'Shield|PHB', 'spell', 'special:unrestricted'),
-    )
+    next = apply(next, selectBonusSpellFixture(next, 'Shield|PHB', 'spell'))
     expect(prepared(next)).toEqual(['Bless|PHB'])
     expect(
       pruneNonracialSpellSelections(
@@ -255,15 +249,6 @@ describe('current daily class preparation and saved intent', () => {
 
   test('generic spell APIs cannot forge or remove class numeric ownership', () => {
     const character = initial()
-    expect(
-      addSpellToCharacter(
-        character,
-        character.provenance,
-        'Light|PHB',
-        'cantrip',
-        profileId(character),
-      ).characterPatch,
-    ).toEqual({})
     expect(
       setProfileSpells(character, character.provenance, profileId(character), ['Light|PHB'], [])
         .characterPatch,

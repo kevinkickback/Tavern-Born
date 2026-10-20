@@ -4,11 +4,12 @@ import {
   editFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
-import { addSpellToCharacter, setProfileSpells } from '@/lib/character/commands/spellCommands'
+import { setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import type { Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
@@ -184,16 +185,7 @@ test.each([
   true,
 ])('special bulk replacement retains exact fixed targets, reversed=%s', (reverse) => {
   const { configured, feat, options } = setup()
-  const manual = apply(
-    configured,
-    addSpellToCharacter(
-      configured,
-      configured.provenance,
-      'Bless|XPHB',
-      'spell',
-      'special:unrestricted',
-    ),
-  )
+  const manual = apply(configured, selectBonusSpellFixture(configured, 'Bless|XPHB', 'spell'))
   const before = apply(
     manual,
     editFeatOptionsCommand(

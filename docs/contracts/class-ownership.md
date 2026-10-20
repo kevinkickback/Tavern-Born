@@ -131,7 +131,8 @@ owners cannot suppress a resolved choice. One explicit feature-choice bundle con
 filtered class-feature catalog and complete subclass owner index; missing or empty inputs cannot be
 replenished from selected classes, embedded class references or raw dictionaries. Picker, readiness,
 availability, retained-details availability, Actions and PDF share its builder and exact resolver.
-Raw lookups still supply standalone saved-feature text and separately labelled source-unavailable
+Standalone custom features use their saved descriptions; a matching catalog name cannot replace
+that prose or establish ownership. Raw lookups supply separately labelled source-unavailable
 retained details. Filtering uses the encoded or canonical current target printing, including upstream
 blank-source defaults, independently of the actual enclosing or granting owner.
 

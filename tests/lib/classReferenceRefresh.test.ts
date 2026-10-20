@@ -5,7 +5,6 @@ import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getExpertiseSlotsFromClasses } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles.slots'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
@@ -188,7 +187,7 @@ test('missing and restored exact class rules never borrow the competing printing
   expect(JSON.stringify(character)).toBe(saved)
 })
 
-test('parent spelling refresh retains expertise, selected subclass prerequisites, readiness and Overview details', () => {
+test('parent spelling refresh retains selected subclass prerequisites, readiness and Overview details', () => {
   const { wizard, character, reopen } = fixture()
   const selected = selectSubclass(character, character.provenance!, 'School', 'TCE')
   const saved = reopen({
@@ -198,7 +197,6 @@ test('parent spelling refresh retains expertise, selected subclass prerequisites
   })
   const refreshed = { ...wizard, name: ' WIZARD ', source: ' phb ' }
   const classesByKey = buildClassLookup([refreshed])
-  expect(getExpertiseSlotsFromClasses(saved.classProgression, classesByKey)).toBe(2)
   expect(
     buildPrerequisiteSnapshot({ character: saved, classLookup: classesByKey }).progression[0],
   ).toMatchObject({

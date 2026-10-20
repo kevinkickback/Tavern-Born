@@ -1,128 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
-import {
-  applyClassSelectionCommand,
-  buildInitialCharacterProficiencies,
-} from '@/lib/character/commands/classCommands'
+import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
 import { addGrant, applyClassGrants, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const EMPTY_LOOKUP = new Map<string, Item5e>()
-
-// ---------------------------------------------------------------------------
-// buildInitialCharacterProficiencies
-// ---------------------------------------------------------------------------
-
-describe('buildInitialCharacterProficiencies', () => {
-  test('extracts armor and weapon profs from class startingProficiencies', () => {
-    const cls = {
-      startingProficiencies: {
-        armor: ['light armor', 'medium armor'],
-        weapons: ['simple weapons', 'martial weapons'],
-        tools: [],
-      },
-      proficiency: [] as string[],
-    }
-    const result = buildInitialCharacterProficiencies(cls, undefined)
-    expect(result.proficiencies.armor).toContain('light armor')
-    expect(result.proficiencies.armor).toContain('medium armor')
-    expect(result.proficiencies.weapons).toContain('simple weapons')
-  })
-
-  test('maps saving throw abbreviations to full names', () => {
-    const cls = {
-      proficiency: ['str', 'con'],
-      startingProficiencies: {},
-    }
-    const result = buildInitialCharacterProficiencies(cls, undefined)
-    expect(result.proficiencies.savingThrows).toContain('strength')
-    expect(result.proficiencies.savingThrows).toContain('constitution')
-  })
-
-  test('deduplicates saving throws', () => {
-    const cls = { proficiency: ['str', 'str'], startingProficiencies: {} }
-    const result = buildInitialCharacterProficiencies(cls, undefined)
-    expect(result.proficiencies.savingThrows.filter((s) => s === 'strength')).toHaveLength(1)
-  })
-
-  test('does not inject Common — languages come from race data or origin system, not class selection', () => {
-    const result = buildInitialCharacterProficiencies(undefined, undefined)
-    expect(result.proficiencies.languages).toEqual([])
-  })
-
-  test('merges background skills into proficiencies', () => {
-    const bg = {
-      skillProficiencies: [{ perception: true, insight: true }],
-      languageProficiencies: [],
-      toolProficiencies: [],
-    }
-    const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.proficiencies.skills).toContain('perception')
-    expect(result.proficiencies.skills).toContain('insight')
-  })
-
-  test('merges background languages into proficiencies', () => {
-    const bg = {
-      skillProficiencies: [],
-      languageProficiencies: [{ elvish: true }],
-      toolProficiencies: [],
-    }
-    const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.proficiencies.languages).toContain('elvish')
-    // Common is NOT injected here; it comes from race data via applyRaceGrants
-  })
-
-  test('initializes background skill proficiency', () => {
-    const bg = {
-      skillProficiencies: [{ perception: true }],
-      languageProficiencies: [],
-      toolProficiencies: [],
-    }
-    const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.proficiencies.skills).toContain('perception')
-  })
-
-  test('handles both undefined cls and background', () => {
-    const result = buildInitialCharacterProficiencies(undefined, undefined)
-    expect(result.proficiencies.armor).toEqual([])
-    expect(result.proficiencies.weapons).toEqual([])
-    expect(result.proficiencies.savingThrows).toEqual([])
-    expect(result.proficiencies.languages).toEqual([])
-  })
-
-  test('strips 5etools item tags from weapon/armor strings', () => {
-    // 5etools sometimes includes tags like "{@item dagger|phb|daggers}"
-    const cls = {
-      startingProficiencies: {
-        weapons: ['dagger'],
-        armor: [],
-        tools: [],
-      },
-    }
-    const result = buildInitialCharacterProficiencies(cls, undefined)
-    // stripItemTag should remove tag wrappers, leaving plain name
-    expect(result.proficiencies.weapons.some((w) => w.includes('{@'))).toBe(false)
-  })
-
-  test('excludes narrative tool choices', () => {
-    const cls = {
-      startingProficiencies: {
-        tools: ['one type of artisan tools of your choice', "thieves' tools"],
-      },
-    }
-    const result = buildInitialCharacterProficiencies(cls, undefined)
-    // The narrative option should be filtered out; concrete tool kept
-    expect(result.proficiencies.tools.some((t) => t.toLowerCase().includes('of your choice'))).toBe(
-      false,
-    )
-  })
-})
-
-// ---------------------------------------------------------------------------
-// computeApplyClassSelectionUpdates
-// ---------------------------------------------------------------------------
 
 describe('applyClassSelectionCommand', () => {
   test('selecting a subclass preserves base-class grants and provenance', () => {

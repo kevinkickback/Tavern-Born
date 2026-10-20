@@ -99,7 +99,6 @@ export function SpellsPage() {
     sharedSlots,
     pactSlots,
     isSpellcaster,
-    spellcastingDetailByProfileId,
   } = useSpellSlots()
   const { getSourcesRowsBySection } = useProvenanceRows({ ledger, selection: character })
   const {
@@ -110,7 +109,7 @@ export function SpellsPage() {
     setRacialSpellChoice,
     setRacialSpellSuite,
     setRacialCastingAbility,
-  } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
+  } = useSpellProfileMutations(spellProfiles)
 
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)

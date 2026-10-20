@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeManagedClassSpellBrowserFixtures } from '../fixtures/managedClassSpellBrowserFixtures'
 import { authorManagedClassSpellFixture } from '../fixtures/managedClassSpellFixtures'
@@ -28,13 +28,7 @@ test('@focused active-character spell workflow: profile switch, independent remo
     abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16, wisdom: 12 },
   })
   // The Bonus UI locks already-known names; this independent grant precedes class learning.
-  const bonus = addSpellToCharacter(
-    initial,
-    initial.provenance,
-    'Magic Missile|PHB',
-    'spell',
-    'special:unrestricted',
-  )
+  const bonus = selectBonusSpellFixture(initial, 'Magic Missile|PHB', 'spell')
   initial = { ...initial, ...bonus.characterPatch, provenance: bonus.provenanceUpdate }
   const character = authorManagedClassSpellFixture(initial, fixture, [
     {

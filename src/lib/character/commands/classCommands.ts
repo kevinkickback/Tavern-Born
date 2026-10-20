@@ -66,8 +66,6 @@ import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
 import { projectProficiencyCommandResult } from './proficiencyProjection'
 
-export { buildInitialCharacterProficiencies } from './classProficiencies'
-
 export interface ClassSelectionEntity {
   name: string
   source: string

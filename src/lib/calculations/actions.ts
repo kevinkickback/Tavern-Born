@@ -4,7 +4,6 @@ import {
   decodeSubclassFeatureReference,
   getClassFeatureIdentity,
   getClassFeatureReferenceLevel,
-  getClassFeatureTextLookupKey,
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
@@ -53,7 +52,6 @@ import type {
   Character,
   Equipment,
   Feat,
-  Feature,
   OptionalClassFeatureOwner,
   SpellProfile,
 } from '@/types/character'
@@ -267,48 +265,16 @@ function rulesTextAction(
   return [{ id, name, kind, description, source, active: true }]
 }
 
-function resolveStoredFeatureDescription(
-  feature: Feature,
-  context: RulesTextActionContext,
-  classFeatures: ReadonlyMap<string, ClassFeature | null>,
-): string {
-  const key = getEntityLookupKey(feature.name, feature.source)
-  const classFeature = classFeatures.get(key.toLowerCase())
-  const parsed =
-    classFeature === undefined
-      ? (context.optionalFeaturesByKey?.[key] as OptionalFeatureLike | undefined)
-      : classFeature
-  const parsedDescription = renderEntriesToText(parsed?.entries)
-  return parsedDescription || feature.description
-}
-
-function deriveStoredFeatureActions(
-  character: Character,
-  context: RulesTextActionContext,
-): CharacterAction[] {
-  const classFeatures = new Map<string, ClassFeature | null>()
-  const identities = new Set<string>()
-  for (const feature of Object.values(context.classFeaturesByKey ?? {})) {
-    const identity = getClassFeatureIdentity(feature)
-    if (identity) {
-      if (identities.has(identity)) continue
-      identities.add(identity)
-    }
-    const key =
-      getClassFeatureTextLookupKey(feature) ??
-      getEntityLookupKey(feature.name, feature.source).toLowerCase()
-    if (!classFeatures.has(key)) classFeatures.set(key, feature)
-    else if (classFeatures.get(key) !== feature) classFeatures.set(key, null)
-  }
+function deriveStoredFeatureActions(character: Character): CharacterAction[] {
   return character.features
     .filter((feature) => !feature.id.startsWith('class-choice:'))
     .flatMap((feature) =>
-      rulesTextAction(
-        `feature:${feature.id}`,
-        feature.name,
-        resolveStoredFeatureDescription(feature, context, classFeatures),
-        { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
-      ),
+      rulesTextAction(`feature:${feature.id}`, feature.name, feature.description, {
+        kind: 'other',
+        name: feature.name,
+        source: feature.source,
+        entityId: feature.id,
+      }),
     )
 }
 
@@ -539,7 +505,7 @@ export function deriveRulesTextActions(
   race: Race5e | undefined,
   context: RulesTextActionContext = {},
 ): CharacterAction[] {
-  const featureActions = deriveStoredFeatureActions(character, context)
+  const featureActions = deriveStoredFeatureActions(character)
   const classFeatureActions = deriveClassFeatureActions(character, context)
   const featActions = deriveFeatActions(character, context)
   const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(

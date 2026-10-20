@@ -13,7 +13,6 @@ import { pruneNonracialSpellSelections } from '@/lib/character/commands/sourceSp
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
-import type { Spell5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection, SpellProfile } from '@/types/character'
 
 export interface SourceConflict {
@@ -141,29 +140,12 @@ export function countRemovedSpells(character: Character, newProfiles: SpellProfi
 export function pruneSpellsForDisabledSources(
   character: Character,
   effectiveSources: string[],
-  allSpells: Spell5e[],
 ): Pick<Character, 'spells' | 'provenance'> | null {
-  // Build index: normalized spell name → set of source abbreviations (uppercased)
-  const spellSourceIndex = new Map<string, Set<string>>()
-  for (const spell of allSpells) {
-    const key = getSpellNameKey(spell.name)
-    if (!spellSourceIndex.has(key)) spellSourceIndex.set(key, new Set())
-    spellSourceIndex.get(key)?.add(spell.source.toUpperCase())
-  }
-
   const effectiveSet = new Set(effectiveSources.map((s) => s.toUpperCase()))
 
   const isSpellAllowed = (reference: string): boolean => {
     const { source } = parseSpellReference(reference)
-    if (source) return effectiveSet.has(source.toUpperCase())
-
-    const key = getSpellNameKey(reference)
-    const sources = spellSourceIndex.get(key)
-    if (!sources) return true // unknown spell — keep it
-    for (const src of sources) {
-      if (effectiveSet.has(src)) return true
-    }
-    return false
+    return !source || effectiveSet.has(source.toUpperCase())
   }
 
   let changed = false

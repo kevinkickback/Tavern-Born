@@ -1,3 +1,4 @@
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 /**
  * Unit tests for spell domain commands (Phase 1.5).
  *
@@ -6,9 +7,12 @@
  */
 
 import { describe, expect, test } from 'vitest'
+import {
+  commitFeatOptionsCommand,
+  replaceBonusFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
-  addSpellToCharacter,
   removeRacialSpell,
   removeSpellFromCharacter,
   selectRacialSpell,
@@ -17,10 +21,51 @@ import {
 } from '@/lib/character/commands/spellCommands'
 import { makeSourceTag, reconcileRaceChange } from '@/lib/provenance'
 import type { Race5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 
 describe('Spell Commands', () => {
+  test('bare manual withdrawal preserves qualified printings and an independent feat', () => {
+    let character = makeCharacterFixture()
+    const apply = (result: ReturnType<typeof setProfileSpells>) => {
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+    const feat = { name: 'Magic Initiate', source: 'PHB', selectionKind: 'bonus' as const }
+    apply(replaceBonusFeatSelectionsCommand(character, character.provenance, [feat]))
+    apply(
+      commitFeatOptionsCommand(character, character.provenance, feat, { spells: ['Light|PHB'] }, [
+        makeSpellFixture({ name: 'Light', source: 'PHB', level: 0 }),
+      ]),
+    )
+    apply(
+      setProfileSpells(
+        character,
+        character.provenance,
+        'special:unrestricted',
+        ['Light', 'Light|PHB', 'Light|XPHB'],
+        [],
+      ),
+    )
+    character = characterPersistenceSchema.parse(character)
+    const before = structuredClone(character)
+    expect(
+      removeSpellFromCharacter(character, character.provenance, 'Light|PHB|junk').characterPatch,
+    ).toEqual({})
+    apply(
+      removeSpellFromCharacter(character, character.provenance, ' Light ', {
+        profileId: 'special:unrestricted',
+      }),
+    )
+    character = characterPersistenceSchema.parse(character)
+    const bonus = character.spells.spellProfiles.find((row) => row.type === 'special')!
+    expect(bonus.cantrips).toEqual(['Light|PHB', 'Light|XPHB'])
+    expect(character.provenance.spells.light).toEqual(
+      before.provenance.spells.light.filter((tag) => !!tag.grantSource),
+    )
+    expect(character.provenance.spells.light.some((tag) => tag.sourceType === 'feat')).toBe(true)
+  })
   test('attributes a native racial choice to its actual owner and clears it atomically', () => {
     const race = {
       name: 'High Elf',
@@ -172,7 +217,7 @@ describe('Spell Commands', () => {
   test('Bonus Add/Set/Remove coordinates exact ownership without granting a class choice', () => {
     let character = makeCharacterFixture()
     const id = 'special:unrestricted'
-    const add = addSpellToCharacter(character, character.provenance, 'Light|PHB', 'cantrip', id)
+    const add = selectBonusSpellFixture(character, 'Light|PHB', 'cantrip')
     character = { ...character, ...add.characterPatch, provenance: add.provenanceUpdate }
     expect(character.spells.spellProfiles.find((profile) => profile.id === id)?.cantrips).toEqual([
       'Light|PHB',
@@ -202,10 +247,6 @@ describe('Spell Commands', () => {
   test('generic Add/Set/Remove cannot bypass the managed class actor', () => {
     const character = makeCharacterFixture()
     const id = character.spells.spellProfiles[0].id
-    expect(
-      addSpellToCharacter(character, character.provenance, 'Light|PHB', 'cantrip', id)
-        .characterPatch,
-    ).toEqual({})
     expect(
       setProfileSpells(character, character.provenance, id, ['Light|PHB'], []).characterPatch,
     ).toEqual({})

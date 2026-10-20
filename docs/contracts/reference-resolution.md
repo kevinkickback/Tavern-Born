@@ -7,8 +7,8 @@ Read this reference only when changing this contract. Start with the [topic inde
 Lookup keys use trimmed `name|source` fields. Exact resolution checks the filtered primary lookup,
 then the exact raw lookup so an existing saved selection remains resolvable after a filter change.
 Generic entity resolution requires a source instead of taking the first printing. This is not a
-universal admission rule for every persisted field: source-less custom/legacy equipment and manual
-spell values retain their separate bounded policies. See [equipment resolution](item-ingestion.md)
+universal admission rule for every persisted field: source-less custom equipment and manual spell
+values retain their saved facts without catalog enrichment. See [equipment resolution](item-ingestion.md)
 and [spell state](../state-management.md#spell-state).
 
 Class selections compare complete name and source fields independently after trimming and
@@ -119,15 +119,18 @@ removal and the [nonracial command](../../src/lib/character/commands/sourceSpell
 
 - Racial pruning uses the saved descriptor's exact target/printing removal command, even when
   rules are unavailable. Another owner or printing cannot retain the removed descriptor's tag.
-- Nonracial pruning retracts choice tags for the removed exact target only from the affected
-  class/subclass or special-profile owners. Other owners and printings remain independent.
+- Numeric class choices and daily preparation retain their exact saved intent. Current projection
+  suspends unavailable benefits; restoring the exact source re-evaluates that intent without
+  allocating another gain or changing its revision.
+- Bonus pruning retracts choice tags only for the removed exact target and its affected owners.
+  Other owners and printings remain independent.
 - A fixed declaration protects only its exact saved reference in that profile. Another printing
   cannot shield a disabled choice; a fixed grant in another profile does not protect that choice.
-- Mandatory fixed grants and unaffected independent selections remain intact, as do retained
-  preparation, slot usage and replacement history. Re-enabling a source does not recreate removed choices.
-- Current name-only selections keep their catalog-based policy: unknown names remain, and known
-  names are allowed when a current printing is enabled. Fixed name-only values retain their own
-  protection; this does not infer a target printing, change identity or convert older characters.
+- Mandatory fixed grants and unaffected independent selections remain intact, as do saved
+  preparation and slot usage. Re-enabling a source does not recreate removed Bonus or racial choices.
+- Source-less manual spells remain independent of source settings. Removing one targets only its
+  empty-source identity and preserves qualified copies and unrelated owners. Catalog metadata
+  requires a complete source-qualified reference, including before accepting a direct lookup hit.
 - Other source conflicts are reported for review instead of silently rewriting saved choices.
 
 See [nonracial source-pruning checks](../../tests/lib/nonracialSourcePruning.test.ts) and

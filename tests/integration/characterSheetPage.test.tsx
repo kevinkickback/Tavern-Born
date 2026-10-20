@@ -53,7 +53,7 @@ describe('CharacterSheetPage', () => {
   function renderPage() {
     return render(
       <MemoryRouter>
-        <CharacterSheetPage templateId="2014" />
+        <CharacterSheetPage templateId="2014-custom" />
       </MemoryRouter>,
     )
   }
@@ -512,7 +512,12 @@ describe('CharacterSheetPage', () => {
       allowedSources: ['PHB', 'TCE'],
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
       features: [
-        { id: 'saved-signal', name: 'Signal', source: 'TCE', description: 'Saved signal.' },
+        {
+          id: 'saved-signal',
+          name: 'Signal',
+          source: 'TCE',
+          description: 'As a reaction, use the saved signal.',
+        },
       ],
     })
     const choice = classes[0].normalizedRules!.choices[0]
@@ -589,17 +594,15 @@ describe('CharacterSheetPage', () => {
   test.each([
     'class',
     'optional',
-  ] as const)('exports the same uniquely resolved %s feature action as Actions', (kind) => {
+  ] as const)('exports saved custom prose independently of matching %s catalog rules', (kind) => {
     const { character } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
-    const expected = kind === 'class' ? 'bonus-action' : 'action'
+    const expected = 'reaction'
     const id = 'feature:saved-shared'
     const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe(expected)
-    expect(actions[0]?.description).toContain(
-      kind === 'class' ? 'catalog maneuver' : 'optional rules',
-    )
+    expect(actions[0]?.description).toContain('saved maneuver')
     if (kind === 'class') {
       expect(
         result.current.filter((action) => action.name.toLowerCase() === 'shared'),
@@ -610,7 +613,7 @@ describe('CharacterSheetPage', () => {
     expect(exportedSavedActions(id)).toEqual(actions)
   })
 
-  test('preserves ambiguous saved class rules in both Actions and PDF without optional fallback', () => {
+  test('preserves custom prose with ambiguous catalog records in both Actions and PDF', () => {
     const { character } = installFeatureCatalog('class', true)
     const { result } = renderHook(() => useCharacterActions(character))
     const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
@@ -625,14 +628,12 @@ describe('CharacterSheetPage', () => {
   test.each([
     'class',
     'optional',
-  ] as const)('refreshes exported actions when only the %s feature lookup changes', (kind) => {
+  ] as const)('keeps custom exported actions independent when the %s feature lookup changes', (kind) => {
     const { character, gameData } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     renderPage()
     const id = 'feature:saved-shared'
-    expect(result.current.find((action) => action.id === id)?.kind).toBe(
-      kind === 'class' ? 'bonus-action' : 'action',
-    )
+    expect(result.current.find((action) => action.id === id)?.kind).toBe('reaction')
     const key = kind === 'class' ? 'classFeaturesByKey' : 'optionalFeaturesByKey'
     const lookup = gameData.lookups![key]
     const updatedLookup = Object.fromEntries(
@@ -650,7 +651,7 @@ describe('CharacterSheetPage', () => {
     const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe('reaction')
-    expect(actions[0]?.description).toContain('refreshed catalog rules')
+    expect(actions[0]?.description).toContain('saved maneuver')
     expect(exportedSavedActions(id)).toEqual(actions)
   })
 

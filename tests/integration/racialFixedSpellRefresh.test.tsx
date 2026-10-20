@@ -11,7 +11,6 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { applyFeatGrant } from '@/lib/provenance'
 import { getSpellRows } from '@/lib/provenance/summaries'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
@@ -20,11 +19,12 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
-import { renderSpellEditing as editing } from '../fixtures/spellEditing'
+import { renderSpellEditing as editing, finishBonusSelection } from '../fixtures/spellEditing'
 
 const lightBlock = { ability: 'int', known: { _: ['light|PHB#c'] } }
 
@@ -123,14 +123,7 @@ test.each(
   transition,
 }) => {
   const { character: initial, child } = native(false, edition)
-  const added = addSpellToCharacter(
-    initial,
-    initial.provenance,
-    'Light|TCE',
-    'cantrip',
-    'special:unrestricted',
-    { sourceType: 'manual', sourceName: 'User Choice' },
-  )
+  const added = selectBonusSpellFixture(initial, 'Light|TCE', 'cantrip')
   const character = independentFixedSpell({
     ...initial,
     ...added.characterPatch,
@@ -285,7 +278,7 @@ test.each([
   const { result } = editing()
   expect(racial(result.current.slots.spellProfiles)).toEqual(racial(character.spells.spellProfiles))
   expect(result.current.slots.spellProvenance).toEqual(character.provenance)
-  act(() => result.current.mutations.syncProfiles())
+  act(() => finishBonusSelection(result.current.mutations))
   expect(reopenedActive().provenance.spells.light).toEqual(original.provenance.spells.light)
   act(() => install([parent]))
   act(() => result.current.mutations.setProfileSpells('special:unrestricted', ['Bonus|PHB'], []))
@@ -328,14 +321,7 @@ test.each([
     ...selectedClass.characterPatch,
     provenance: selectedClass.provenanceUpdate,
   })
-  const added = addSpellToCharacter(
-    initial,
-    initial.provenance,
-    'Light|PHB',
-    'cantrip',
-    'special:unrestricted',
-    { sourceType: 'manual', sourceName: 'User Choice' },
-  )
+  const added = selectBonusSpellFixture(initial, 'Light|PHB', 'cantrip')
   let character = { ...initial, ...added.characterPatch, provenance: added.provenanceUpdate }
   const feat = { name: 'Independent', source: 'OTHER' }
   const selected = replaceFeatSelectionsCommand(character, character.provenance, [feat])
@@ -358,9 +344,7 @@ test.each([
   setActiveCharacter(character)
   install([])
   const { result } = editing()
-  act(() =>
-    result.current.mutations.addSpellToProfile('special:unrestricted', 'Light|PHB', 'cantrip'),
-  )
+  act(() => finishBonusSelection(result.current.mutations, 'Light|PHB', 'cantrip'))
   const before = structuredClone(useCharacterStore.getState().activeCharacter!)
   const refreshed = owner(
     childGrants ? 'Fixed Child' : 'Fixed Parent',
@@ -402,7 +386,7 @@ test.each([
     ).toEqual(['PHB', 'TCE'])
   expect(useCharacterStore.getState().activeCharacter).toBe(corrected)
   act(() => {
-    if (operation === 'sync') result.current.mutations.syncProfiles()
+    if (operation === 'sync') finishBonusSelection(result.current.mutations)
     else
       result.current.mutations.setProfileSpells(
         'special:unrestricted',
@@ -413,9 +397,7 @@ test.each([
   const reopened = reopenedActive()
   expect(racial(reopened.spells.spellProfiles).fixedSpells).toEqual(['light|TCE'])
   expect(reopened.provenance.spells.light).toEqual([
-    ...(operation === 'sync'
-      ? []
-      : [expect.objectContaining({ sourceType: 'class', grantSource: 'PHB' })]),
+    expect.objectContaining({ sourceType: 'class', grantSource: 'PHB' }),
     expect.objectContaining({ sourceType: 'manual', grantSource: 'PHB' }),
     expect.objectContaining({ sourceType: 'feat', grantSource: 'PHB' }),
     expect.objectContaining({
@@ -523,7 +505,7 @@ test.each([
       ),
     ).toBe(false)
   }
-  act(() => result.current.mutations.syncProfiles())
+  act(() => finishBonusSelection(result.current.mutations))
   const reopened = reopenedActive()
   expect(getSpellRows(reopened.provenance)).toEqual(projectedRows)
 })
@@ -533,9 +515,7 @@ test('Builder Clear child and Replace parent retain an independent printing', ()
   install([parent])
   setActiveCharacter(character)
   const { result } = editing()
-  act(() =>
-    result.current.mutations.addSpellToProfile('special:unrestricted', 'Light|TCE', 'cantrip'),
-  )
+  act(() => finishBonusSelection(result.current.mutations, 'Light|TCE', 'cantrip'))
   act(() => result.current.raceMutations.applySubraceChange(parent, undefined))
   const cleared = reopenedActive()
   expect(cleared.subrace).toBeUndefined()

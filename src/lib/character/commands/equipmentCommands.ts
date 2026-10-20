@@ -65,22 +65,6 @@ function buildEquipment(item: Item5e): Equipment {
   }
 }
 
-export function addManualEquipmentEntryCommand(
-  character: Character,
-  ledger: ProvenanceLedger,
-  equipment: Equipment,
-): CharacterCommandResult {
-  return {
-    characterPatch: { equipment: [...(character.equipment ?? []), equipment] },
-    provenanceUpdate: addGrant(
-      ledger,
-      'equipment',
-      equipment.name,
-      makeSourceTag('manual', 'User Choice', 'choice'),
-    ),
-  }
-}
-
 function removeManualTags(
   ledger: ProvenanceLedger,
   domain: ManualProficiencyDomain,
@@ -96,14 +80,6 @@ function removeManualTags(
     ...ledger,
     proficiencies: { ...ledger.proficiencies, [domain]: nextMap },
   }
-}
-
-export function addManualEquipmentCommand(
-  character: Character,
-  ledger: ProvenanceLedger,
-  item: Item5e,
-): CharacterCommandResult {
-  return addManualEquipmentEntryCommand(character, ledger, buildEquipment(item))
 }
 
 export function addManualEquipmentBatchCommand(

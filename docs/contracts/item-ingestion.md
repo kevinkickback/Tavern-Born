@@ -6,8 +6,9 @@ Item classification uses parsed `itemType` labels first; catalog codes are compa
 Unfamiliar items remain available in an Other group instead of being dropped.
 
 Saved equipment resolution trims requested name/source fields and compares the parsed fields
-literally, including case. An explicit source never substitutes another printing; source-less
-manual/legacy equipment retains the deterministic source-order fallback. Duplicate matching
+literally, including case. Catalog enrichment requires both fields and never substitutes another
+printing. Source-less manual equipment keeps its saved physical facts and prose without borrowing
+catalog mechanics. Duplicate matching
 tuples keep the first value in lookup iteration order, independent of map keys. Calculations,
 weapon Actions, Review details and PDF item descriptions resolve their references in synchronous
 batches, scanning each supplied lookup at most once per batch. These transient results are

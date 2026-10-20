@@ -203,7 +203,7 @@
     },
     {
       "file": "src/lib/5etools/classFeatureIdentity.ts",
-      "sha256": "b6e7b5702f6d4af045ba5d3545fa0c9372ac137ce206ed5b9b4b92b34dd3c7bc"
+      "sha256": "28c54f76b6b9b7fc999dc0491d92339ea6624a2b6cd06a4ab5c0b4fc5957bc52"
     },
     {
       "file": "src/lib/5etools/classProficiencyChoices.ts",
@@ -419,7 +419,7 @@
     },
     {
       "file": "src/lib/calculations/skills.ts",
-      "sha256": "b24580fedde84c4debdfafe71a30703cc4fb131e3a0a488d0148d0c70af1e096"
+      "sha256": "607aac7f09a671346a0f89148cdc099ce3c2a2d68188b57247df5e9354604799"
     },
     {
       "file": "src/lib/calculations/spellSlots.ts",

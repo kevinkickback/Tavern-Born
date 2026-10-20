@@ -23,7 +23,7 @@ import {
 } from '../fixtures/gameDataFixtures'
 import { nativeChoiceSpellLookup, nativeRaceResolution } from '../fixtures/nativeRacialCharacter'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
-import { renderSpellEditing } from '../fixtures/spellEditing'
+import { finishBonusSelection, renderSpellEditing } from '../fixtures/spellEditing'
 
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
@@ -197,9 +197,7 @@ test.each([
     .toContainEqual(savedSpell)
   expect(character).toEqual(before)
 
-  act(() =>
-    result.current.mutations.addSpellToProfile('special:unrestricted', 'Bonus|PHB', 'cantrip'),
-  )
+  act(() => finishBonusSelection(result.current.mutations, 'Bonus|PHB', 'cantrip'))
   const reopened = characterPersistenceSchema.parse(
     JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
   )
@@ -266,9 +264,7 @@ test.each([
     install([race])
   })
   expect(racialProfiles(result.current.slots.spellProfiles)).toEqual([])
-  act(() =>
-    result.current.mutations.addSpellToProfile('special:unrestricted', 'Bonus|PHB', 'cantrip'),
-  )
+  act(() => finishBonusSelection(result.current.mutations, 'Bonus|PHB', 'cantrip'))
   const reopened = characterPersistenceSchema.parse(
     JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
   )

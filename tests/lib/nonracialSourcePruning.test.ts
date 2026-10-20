@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import { pruneSpellsForDisabledSources } from '@/lib/sourceConflicts'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
 
@@ -17,11 +17,7 @@ describe('source suspension retains class spell intent', () => {
     const selected = saved.spells.spellProfiles.find((row) => row.type === 'class')!.cantrips[0]
     const before = JSON.stringify(saved)
     saved.spells.spellSlots[1] = { max: 2, used: 1 }
-    const patch = pruneSpellsForDisabledSources(
-      saved,
-      ['PHB', 'XPHB'],
-      Object.values(lookups.spellsByKey),
-    )
+    const patch = pruneSpellsForDisabledSources(saved, ['PHB', 'XPHB'])
     expect(patch).toBeNull()
     const hidden = { ...saved, allowedSources: ['PHB', 'XPHB'] }
     const primary = {
@@ -53,23 +49,13 @@ describe('source suspension retains class spell intent', () => {
 
   test('mixed Bonus pruning final sweep retains exact reserved numeric ownership and another printing', () => {
     let saved = makeNonracialSourceCharacter()
-    const bonus = addSpellToCharacter(
-      saved,
-      saved.provenance,
-      'Toll the Dead|XGE',
-      'cantrip',
-      'special:unrestricted',
-    )
+    const bonus = selectBonusSpellFixture(saved, 'Toll the Dead|XGE', 'cantrip')
     saved = characterPersistenceSchema.parse({
       ...saved,
       ...bonus.characterPatch,
       provenance: bonus.provenanceUpdate,
     })
-    const patch = pruneSpellsForDisabledSources(
-      saved,
-      ['XPHB'],
-      Object.values(lookups.spellsByKey),
-    )!
+    const patch = pruneSpellsForDisabledSources(saved, ['XPHB'])!
     const reopened = characterPersistenceSchema.parse({ ...saved, ...patch })
     expect(reopened.spells.spellProfiles.find((row) => row.type === 'class')?.cantrips).toEqual([
       'Toll the Dead|XGE',

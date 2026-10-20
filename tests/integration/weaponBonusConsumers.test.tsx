@@ -107,7 +107,7 @@ test('unsupported weapon note is visible in source effects and Review and warns 
   const pdf = createCurrentCharacterSheetViewModel(character, gameData.lookups!)
   expect(pdf.weaponRows[0]).toMatchObject({ attackBonus: '+5', damage: '1d4 + 3' })
   const warning = getPdfExportPreflight(
-    '2014',
+    '2014-custom',
     pdf,
     null,
     calculation.effects.declarations,

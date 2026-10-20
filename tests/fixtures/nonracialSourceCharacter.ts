@@ -1,8 +1,8 @@
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { addSpellToCharacter } from '@/lib/character/commands/spellCommands'
 import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { selectBonusSpellFixture } from './bonusSpellSelection'
 import { makeManagedClassSpellFixtures } from './managedClassSpellFixtures'
 
 export function makeNonracialSourceCharacter(originSystem: '2014' | '2024' = '2024'): Character {
@@ -56,12 +56,6 @@ export function makeNonracialSourceCharacter(originSystem: '2014' | '2024' = '20
     ...selection.characterPatch,
     provenance: selection.provenanceUpdate,
   }
-  const manual = addSpellToCharacter(
-    character,
-    character.provenance,
-    retainedSpell,
-    'cantrip',
-    'special:unrestricted',
-  )
+  const manual = selectBonusSpellFixture(character, retainedSpell, 'cantrip')
   return { ...character, ...manual.characterPatch, provenance: manual.provenanceUpdate }
 }
