@@ -9,10 +9,22 @@ import {
 import { makeKnowledgeFixture } from '../fixtures/knowledgeProficiencyFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-test.each([
-  ['PHB', 'PHB', '2014-custom', 'Arc'],
-  ['XPHB', 'FRHoF', '2024-official', 'Text_32'],
-] as const)('%s/%s paired grants reach actual %s PDF fields with descriptions enabled and omitted', async (parent, source, template, field) => {
+test.each(
+  (
+    [
+      ['PHB', 'PHB', '2014-custom', 'Arc'],
+      ['XPHB', 'FRHoF', '2024-official', 'Text_32'],
+    ] as const
+  ).flatMap(([parent, source, template, field]) =>
+    [true, false].map((descriptions) => ({ parent, source, template, field, descriptions })),
+  ),
+)('$parent/$source paired grants reach actual $template PDF fields with descriptions $descriptions', async ({
+  parent,
+  source,
+  template,
+  field,
+  descriptions,
+}) => {
   const f = makeKnowledgeFixture(parent, source)
   const authority = { classes: f.data.classes, catalogs: f.catalogs }
   const paired = applyClassChoiceSelectionWithGrantsCommand(
@@ -44,15 +56,10 @@ test.each([
   expect(vm.skillByName.get('arcana')!.modifier).toBe(baseline.modifier + 4)
   if (source === 'PHB') expect(vm.proficienciesSummary).toContain('Languages: elvish, dwarvish')
   else expect(vm.toolProficiencies).toEqual([f.data.items[0].name.toLowerCase()])
-  for (const view of [vm, withoutSheetDescriptions(vm)]) {
-    const form = (
-      await PDFDocument.load(await generateTestCharacterSheet(view, template))
-    ).getForm()
-    const modifier = view.skillByName.get('arcana')!.modifier
-    expect(form.getTextField(field).getText()).toBe(
-      modifier >= 0 ? `+${modifier}` : String(modifier),
-    )
-  }
+  const view = descriptions ? vm : withoutSheetDescriptions(vm)
+  const form = (await PDFDocument.load(await generateTestCharacterSheet(view, template))).getForm()
+  const modifier = view.skillByName.get('arcana')!.modifier
+  expect(form.getTextField(field).getText()).toBe(modifier >= 0 ? `+${modifier}` : String(modifier))
   const missing = createCharacterSheetViewModel(saved, {
     ...input,
     classChoiceFeatureCatalogs: { ...f.catalogs, classes: [] },

@@ -128,7 +128,9 @@ test('two pending gains offer distinct sources; source loss leaves removable ina
   await act(async () => {
     useGameDataStore.setState({ gameData: { ...f.data, optionalClassFeatureSources: [] } })
   })
-  const sources = screen.getByRole('button', { name: /^Sources/ })
+  const sources = within(screen.getByRole('heading', { name: /^Sources/ })).getByRole('button', {
+    name: /^Sources/,
+  })
   if (sources.getAttribute('data-state') === 'closed') fireEvent.click(sources)
   expect(screen.getByText(/Nature — retained, inactive/i)).toBeTruthy()
   fireEvent.click(screen.getByTitle('Remove choice: Nature'))

@@ -90,7 +90,11 @@ test.each([
   const owner = getFeatSetupOwners(f.character, f.data.feats).find((row) => row.view === 'bonus')!
   mount(f, featSetupOwnerTarget(owner))
   fireEvent.click(screen.getByRole('button', { name: 'Edit Setup' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  fireEvent.click(
+    within(screen.getByRole('alertdialog', { name: 'Edit feat setup?' })).getByRole('button', {
+      name: 'Continue',
+    }),
+  )
   fireEvent.click(modal().getByRole('button', { name: 'Next' }))
   fireEvent.click(modal().getByRole('checkbox', { name: /^stealth$/i }))
   fireEvent.click(modal().getByRole('checkbox', { name: /^arcana$/i }))
