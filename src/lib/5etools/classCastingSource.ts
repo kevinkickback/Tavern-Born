@@ -3,6 +3,7 @@ import {
   getCasterLevelContribution,
   getSpellSlotsFromClassData,
   getStandardSpellSlotProvider,
+  type SpellSlotRuleset,
 } from '@/lib/calculations/spellSlots'
 import type { Class5e, GameData } from '@/types/5etools'
 import type { ClassCastingSourceProof } from '@/types/classCasting'
@@ -19,6 +20,7 @@ import {
 import { getEffectiveSpellcastingClassData } from './classData'
 import { createDeclarationSourceAccess, type DeclarationCatalog } from './declarationSourceAccess'
 import {
+  decodeOptionalDeclaration,
   type OptionalDeclarationOwner,
   optionalDeclarationDigest,
   optionalDeclarationKey,
@@ -42,6 +44,31 @@ const producers = new Map(
     optionalDeclarationKey(row.declaration.owner, row.declaration.target, row.declaration.level),
     row,
   ]),
+)
+// Use registered native UID spelling only for comparison. Copied targets keep their own parent.
+const parentIdentities = new Map(
+  [...parents.keys()].map((key) => {
+    const candidates = CLASS_CASTING_PRODUCERS.filter((row) => row.parent === key).flatMap(
+      (row) => [row.declaration, ...(row.declarationAlternatives ?? [])],
+    )
+    const identities = new Map(
+      candidates.flatMap((row) => {
+        const root = row.path[0]
+        const decoded = root && decodeOptionalDeclaration(root.uid, root.kind)?.decoded
+        if (
+          !decoded ||
+          typeof decoded.className !== 'string' ||
+          typeof decoded.classSource !== 'string'
+        )
+          return []
+        const identity = { name: decoded.className, source: decoded.classSource }
+        return JSON.stringify(getCastingParentOwner(identity)) === key
+          ? [[JSON.stringify(identity), identity] as const]
+          : []
+      }),
+    )
+    return [key, identities.size === 1 ? [...identities.values()][0] : undefined] as const
+  }),
 )
 const proofs = (value: object) => {
   const rows = (value as ClassCastingCatalog).classCastingSources
@@ -127,10 +154,11 @@ function currentParent(catalog: ClassCastingCatalog, key: string) {
   const evidence = proofs(catalog).filter(
     (row) => row.kind === 'casting-parent' && row.target === key,
   )
+  const identity = parentIdentities.get(key)
+  const comparison = identity && found.length === 1 ? { ...found[0], ...identity } : undefined
   if (
     found.length !== 1 ||
-    !evidence.length ||
-    new Set(evidence.map((row) => row.origin)).size !== 1 ||
+    evidence.length !== 1 ||
     evidence.some(
       (row) =>
         row.version !== 1 ||
@@ -142,10 +170,11 @@ function currentParent(catalog: ClassCastingCatalog, key: string) {
             !['version', 'kind', 'target', 'certificate', 'origin', 'verified'].includes(key),
         ),
     ) ||
-    !castingParsedParentMatches(found[0] as unknown as Record<string, unknown>, rule)
+    !comparison ||
+    !castingParsedParentMatches(comparison as unknown as Record<string, unknown>, rule)
   )
     return undefined
-  return { classData: found[0], rule }
+  return { classData: found[0], comparison, rule }
 }
 
 /** Source authority only: actor level, sources, adoption and occupied slots are checked separately. */
@@ -188,9 +217,28 @@ export function getCurrentClassCastingProducer(
   const selected = currentDeclarations.find(
     ({ certificates }) => certificates.get(key) === verified[0].certificate,
   )
-  const declaration = selected?.access.current(catalog, owner, target, level)
+  // Generic declaration consumers cache immutable catalog views. Casting reads revalidate
+  // nested source edits at each operation; only their local producer verifier may reuse this result.
   const parent = currentParent(catalog, rule.parent)
-  if (!declaration || !parent) return undefined
+  if (!parent) return undefined
+  const compared = selected?.access.current(
+    {
+      ...catalog,
+      classes: catalog.classes?.map((row) => (row === parent.classData ? parent.comparison : row)),
+    },
+    owner,
+    target,
+    level,
+  )
+  if (!compared) return undefined
+  const declaration = {
+    ...compared,
+    classData: parent.classData,
+    parent:
+      owner[0] === 'class'
+        ? (parent.classData as unknown as Record<string, unknown>)
+        : compared.parent,
+  }
   const subclass = owner[0] === 'subclass' ? declaration.parent : undefined
   if (
     Object.entries(rule.suppliers).some(
@@ -214,6 +262,34 @@ export function getClassCastingGainAuthority(
   gainLevel: number,
 ) {
   const current = getCurrentClassCastingProducer(catalog, owner, target, declarationLevel)
+  return gainAuthority(catalog, current, domain, gainLevel)
+}
+
+/** A synchronous projection may reuse certification; no memo survives a new public source read. */
+export function createClassCastingSourceAccess(catalog: ClassCastingCatalog) {
+  const memo = new Map<string, ReturnType<typeof getCurrentClassCastingProducer>>()
+  return {
+    gain(
+      owner: OptionalDeclarationOwner,
+      target: string,
+      declarationLevel: number,
+      domain: CastingDomain,
+      gainLevel: number,
+    ) {
+      const key = optionalDeclarationKey(owner, target, declarationLevel)
+      if (!memo.has(key))
+        memo.set(key, getCurrentClassCastingProducer(catalog, owner, target, declarationLevel))
+      return gainAuthority(catalog, memo.get(key), domain, gainLevel)
+    },
+  }
+}
+
+function gainAuthority(
+  catalog: ClassCastingCatalog,
+  current: ReturnType<typeof getCurrentClassCastingProducer>,
+  domain: CastingDomain,
+  gainLevel: number,
+) {
   const gain = current?.rule.domains[domain]?.find((row) => row.level === gainLevel)
   if (!current || !gain) return undefined
   if (domain === 'class-cantrip')
@@ -225,7 +301,7 @@ export function getClassCastingGainAuthority(
       maxSpellLevel: gain.spellLevel!,
       provider: undefined as Class5e | undefined,
     }
-  const access = getClassCastingLevelAccess(catalog, owner, target, declarationLevel, gainLevel)
+  const access = levelAccess(catalog, current, gainLevel)
   return access ? { ...access, gain } : undefined
 }
 
@@ -240,7 +316,21 @@ export function getClassCastingLevelAccess(
   if (!Number.isInteger(classLevel) || classLevel < declarationLevel || classLevel > 20)
     return undefined
   const current = getCurrentClassCastingProducer(catalog, owner, target, declarationLevel)
-  if (!current) return undefined
+  return levelAccess(catalog, current, classLevel)
+}
+
+function levelAccess(
+  catalog: ClassCastingCatalog,
+  current: ReturnType<typeof getCurrentClassCastingProducer>,
+  classLevel: number,
+) {
+  if (
+    !Number.isInteger(classLevel) ||
+    !current ||
+    classLevel < current.rule.declaration.level ||
+    classLevel > 20
+  )
+    return undefined
   const { effective } = current
   const own = getSpellSlotsFromClassData(effective, classLevel)
   let slots = own
@@ -248,8 +338,8 @@ export function getClassCastingLevelAccess(
   if (slots === null) {
     const progression = (effective.casterProgression ?? 'none') as CasterProgression
     if (progression === 'pact' || progression === 'none') return undefined
-    const selected = getStandardSpellSlotProvider(
-      catalog.classes ?? [],
+    const selected = getCurrentStandardSpellSlotProvider(
+      catalog,
       getCasterLevelContribution(progression, classLevel),
       effective.edition === 'one' || effective.source.trim().toUpperCase() === 'XPHB'
         ? '2024'
@@ -257,16 +347,33 @@ export function getClassCastingLevelAccess(
     )
     if (!selected) return undefined
     provider = selected.classData
-    const owner = getCastingParentOwner(provider as unknown as Record<string, unknown>)
-    const proven = owner && currentParent(catalog, JSON.stringify(owner))
-    // Validate the actual helper winner; never select again from an approved-only reduced pool.
-    if (!proven?.rule.standard || proven.classData !== provider) return undefined
     slots = selected.slots
   }
   const maxSpellLevel = Object.keys(slots)
     .map(Number)
     .reduce((max, level) => Math.max(max, level), 0)
   return { ...current, maxSpellLevel, provider }
+}
+
+/** Validate the actual complete-catalog winner, without falling back to a different approved row. */
+export function getCurrentStandardSpellSlotProvider(
+  catalog: ClassCastingCatalog,
+  casterLevel: number,
+  ruleset: SpellSlotRuleset,
+) {
+  const selected = getStandardSpellSlotProvider(catalog.classes ?? [], casterLevel, ruleset)
+  if (!selected) return undefined
+  const owner = getCastingParentOwner(selected.classData as unknown as Record<string, unknown>)
+  const proven = owner && currentParent(catalog, JSON.stringify(owner))
+  return proven?.rule.standard && proven.classData === selected.classData ? selected : undefined
+}
+
+/** Current selected noncasters can determine the combined ruleset without becoming contributors. */
+export function getCurrentClassCastingParent(
+  catalog: ClassCastingCatalog,
+  owner: readonly ['class', string, string],
+) {
+  return currentParent(catalog, JSON.stringify(owner))?.classData
 }
 
 export function mergeClassCastingSources(

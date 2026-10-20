@@ -7,15 +7,12 @@ import { buildInitialCharacter } from '@/lib/character/commands/originSelectionC
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Race5e } from '@/types/5etools'
+import type { Class5e, GameData, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
-import {
-  makeClassFixture,
-  makeGameDataFixture,
-  makeSpellFixture,
-} from '../fixtures/gameDataFixtures'
+import { makeClassCastingLayer } from '../fixtures/classCastingFixtures'
+import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 
 beforeEach(resetCharacterStore)
@@ -31,8 +28,10 @@ async function overview(
   classes: Class5e[] = [
     { name: 'Fighter', source: 'PHB', hd: { number: 1, faces: 10 } } as Class5e,
   ],
+  sourceData?: GameData,
 ) {
   const data = makeGameDataFixture({
+    ...sourceData,
     races,
     classes,
     spells: ['Light', 'Mage Hand'].map((name) =>
@@ -161,10 +160,8 @@ test('class preparation limits and slot pools remain class-specific beside racia
     source: 'PHB',
     additionalSpells: [{ ability: 'wis', known: { 1: ['light#c'] } }],
   } as Race5e
-  const wizard = makeClassFixture({
-    spellcastingAbility: 'int',
-    preparedSpells: '<$level$> + <$int_mod$>',
-  })
+  const sourceData = makeClassCastingLayer('class/class-wizard.json')
+  const wizard = sourceData.classes.find((row) => row.name === 'Wizard' && row.source === 'PHB')!
   const character = buildInitialCharacter(
     {
       initial: { name: 'Mixed casters', originSystem: '2014' },
@@ -177,7 +174,7 @@ test('class preparation limits and slot pools remain class-specific beside racia
   )
   character.abilityScores.intelligence = 16
   character.abilityScores.wisdom = 18
-  const section = await overview(character, [race], [wizard])
+  const section = await overview(character, [race], [wizard], sourceData)
   expect(
     section.getByText(/intelligence.*Save DC 13.*Spell attack \+5.*Prepared limit 4/),
   ).toBeTruthy()

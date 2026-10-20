@@ -88,11 +88,15 @@ describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
         charisma: 10,
       },
     })
-    const vm = createCurrentCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup(
-        parseClasses(json('data/class/class-ranger.json')) as Class5e[],
-      ),
-    })
+    const vm = createCharacterSheetViewModel(
+      character,
+      {
+        classesByKey: buildClassLookup(
+          parseClasses(json('data/class/class-ranger.json')) as Class5e[],
+        ),
+      },
+      managedFixture.lookups,
+    )
     const companion = buildCompanionSheetData(vm, {
       name,
       source: 'XPHB',
@@ -109,6 +113,35 @@ describe.runIf(hasCorpus)('2024 PDF layout and optional pages', () => {
     expect(companion.actions[0].bonus).toBe('+7')
     expect(companion.actions[0].damage).toContain('+ 4')
     expect(companion.attacks).toContain('Melee Attack Roll:')
+    const mixed = {
+      ...character,
+      classProgression: [
+        { name: 'Wizard', source: 'XPHB', levels: 1 },
+        ...character.classProgression,
+      ],
+      abilityScores: { ...character.abilityScores, intelligence: 20 },
+    }
+    const companionOwner = {
+      name,
+      source: 'XPHB',
+      className: 'Ranger',
+      classSource: 'XPHB',
+      creature,
+    }
+    const mixedVm = createCurrentCharacterSheetViewModel(mixed, managedFixture.lookups)
+    expect(mixedVm.spellcastingDetails[0].spellAttackBonus).toBe(8)
+    expect(buildCompanionSheetData(mixedVm, companionOwner).actions[0].bonus).toBe('+7')
+    const missingRanger = createCurrentCharacterSheetViewModel(mixed, {
+      ...managedFixture.lookups,
+      classChoiceFeatureCatalogs: {
+        ...managedFixture.context.catalogs,
+        classCastingSources: managedFixture.context.catalogs.classCastingSources!.filter(
+          (row) => row.kind !== 'casting-parent' || row.target !== '["class","ranger","xphb"]',
+        ),
+      },
+    })
+    expect(missingRanger.spellcastingDetails[0].spellAttackBonus).toBe(8)
+    expect(buildCompanionSheetData(missingRanger, companionOwner).actions[0].bonus).toBe('')
     // Unknown expressions remain source text; never substitute a familiar creature's rules.
     const unknown = buildCompanionSheetData(vm, {
       name,

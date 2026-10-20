@@ -50,6 +50,7 @@ import {
   getCharacterEffectResolutionContext,
   getCharacterEffects,
 } from './characterEffects'
+import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
@@ -106,6 +107,7 @@ export interface CharacterCalculationContext {
   abilityScores: EffectiveAbilityScoreData
   managedClassSpellStatuses: readonly ManagedClassSpellStatus[]
   dailyClassSpellStatuses: readonly DailyClassSpellStatus[]
+  classCasting: ReturnType<typeof deriveCurrentClassCasting>
   initiativeModifier: number
   senses: readonly EffectiveSense[]
   equipment: CharacterEquipmentCalculationState
@@ -444,6 +446,14 @@ export function createCharacterCalculationContext(
     abilityScores,
     managedClassSpellStatuses: managedSpells.statuses,
     dailyClassSpellStatuses: managedSpells.dailyStatuses,
+    classCasting: deriveCurrentClassCasting(
+      character,
+      choiceCatalogs,
+      abilityScores.total,
+      effects,
+      effectResolutionContext,
+      dailyIntentSource,
+    ),
     initiativeModifier: Math.trunc(
       resolveNumericEffect(
         abilityScores.modifiers.dexterity,

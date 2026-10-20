@@ -16,6 +16,9 @@ positive revision, class-list policy and optional learned preparation request. I
 snapshot or activity flag. Strict admission audits the choice/profile/provenance relation in both
 directions. Arbitrary class-choice spell tags, unowned numeric membership, invalid reserved IDs,
 duplicate spell/slot identities, counters and preparation relationships reject without loaded rules.
+An intent may have no materialized profile membership or reserved tag while its source is unavailable.
+A learned preparation request may remain saved without a prepared member when capacity or source
+access is suspended. Materialized numeric rows and reserved tags must still own each other exactly.
 An admitted relation establishes saved ownership, never current source access. Older numeric profile
 rows, inferred attribution and `spellSwaps` are not converted or accepted. Format11 files must be
 recreated, as with other prerelease breaking changes. See [class spell selection](spell-selection.md).

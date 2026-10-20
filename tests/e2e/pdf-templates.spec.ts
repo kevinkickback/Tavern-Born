@@ -3,8 +3,10 @@ import path from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, type Page, test } from '@playwright/test'
 import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import type { GameDataLookups } from '@/types/5etools'
-import { makeClassFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import {
   ensureStartupPromptResolved,
   MINIMAL_GAME_DATA,
@@ -205,25 +207,40 @@ test('@focused exports every official and custom character-sheet template', asyn
     }
   })
   const characters = (['2014', '2024'] as const).map((edition) =>
-    JSON.parse(
-      fs.readFileSync(
-        path.resolve(`tests/fixtures/full-coverage-character-${edition}.tbc`),
-        'utf8',
+    characterPersistenceSchema.parse(
+      JSON.parse(
+        fs.readFileSync(
+          path.resolve(`tests/fixtures/full-coverage-character-${edition}.tbc`),
+          'utf8',
+        ),
       ),
     ),
-  ) as Array<Record<string, unknown>>
+  )
+  const casting = makeManagedClassSpellFixtures()
+  const targets = new Set([
+    ...characters.flatMap((character) => [
+      ...(character.managedClassSpellChoices ?? []).map((choice) =>
+        getSpellReferenceKey(choice.target.name, choice.target.source),
+      ),
+      ...character.spells.spellProfiles
+        .filter((profile) => profile.type === 'class')
+        .flatMap((profile) => [...profile.preparedSpells, ...(profile.fixedSpells ?? [])])
+        .map((reference) => getSpellReferenceKey(reference)),
+    ]),
+    ...['PHB', 'XPHB'].flatMap((source) =>
+      ['Light', 'Detect Magic', 'Bless'].map((name) => getSpellReferenceKey(name, source)),
+    ),
+  ])
 
   const gameData = {
     ...MINIMAL_GAME_DATA,
-    classes: ['PHB', 'XPHB'].flatMap((source) => [
-      makeClassFixture({ source, spellcastingAbility: 'int' }),
-      makeClassFixture({ name: 'Cleric', source, spellcastingAbility: 'wis' }),
-    ]),
-    spells: ['PHB', 'XPHB'].flatMap((source) => [
-      makeSpellFixture({ name: 'Light', source, level: 0 }),
-      makeSpellFixture({ name: 'Detect Magic', source, level: 1 }),
-      makeSpellFixture({ name: 'Bless', source, level: 1 }),
-    ]),
+    classes: casting.data.classes.filter((row) => ['Wizard', 'Cleric'].includes(row.name)),
+    classFeatures: casting.data.classFeatures,
+    classCastingSources: casting.data.classCastingSources,
+    // Leave unrelated native printings absent to retain the unknown-level Notes case.
+    spells: casting.spells.filter((spell) =>
+      targets.has(getSpellReferenceKey(spell.name, spell.source)),
+    ),
     organizations: [
       {
         name: 'The Harpers',

@@ -57,16 +57,16 @@ async function openLevel(level: number) {
     await screen.findByText(`Level ${level}`, { selector: '[data-slot="accordion-trigger"] span' })
   ).closest('button')!
   if (button.getAttribute('data-state') === 'closed') fireEvent.click(button)
+  return screen.getByRole('region', { name: new RegExp(`^Level ${level},`) })
 }
 
 test('Class and Proficiencies share both Primal gains through strict reopen and removal', async () => {
   const f = makeOptionalSkillFixture()
   mount(f, f.character)
-  await openLevel(3)
-  const link = within(screen.getByRole('group', { name: 'Primal Knowledge skills' })).getByRole(
-    'link',
-    { name: 'Choose skill' },
-  )
+  const level3 = await openLevel(3)
+  const link = within(
+    within(level3).getByRole('group', { name: 'Primal Knowledge skills' }),
+  ).getByRole('link', { name: 'Choose skill' })
   expect(link.getAttribute('href')).toContain(
     encodeURIComponent('class-choice:feature-proficiencies:'),
   )
@@ -105,11 +105,14 @@ test('Class and Proficiencies share both Primal gains through strict reopen and 
   const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(active())))
   cleanup()
   mount(f, reopened)
-  await openLevel(10)
+  const level10 = await openLevel(10)
   expect(
-    within(screen.getByRole('group', { name: 'Primal Knowledge skills' })).getByRole('link', {
-      name: 'Edit skill',
-    }),
+    within(within(level10).getByRole('group', { name: 'Primal Knowledge skills' })).getByRole(
+      'link',
+      {
+        name: 'Edit skill',
+      },
+    ),
   ).toBeTruthy()
 })
 
@@ -128,7 +131,12 @@ test('two pending gains offer distinct sources; source loss leaves removable ina
   await act(async () => {
     useGameDataStore.setState({ gameData: { ...f.data, optionalClassFeatureSources: [] } })
   })
-  const sources = within(screen.getByRole('heading', { name: /^Sources/ })).getByRole('button', {
+  const sourceSection = screen
+    .getByText('Sources', { exact: true })
+    .closest('[data-slot="accordion-item"]') as HTMLElement
+  const sources = within(
+    within(sourceSection).getByRole('heading', { name: /^Sources/ }),
+  ).getByRole('button', {
     name: /^Sources/,
   })
   if (sources.getAttribute('data-state') === 'closed') fireEvent.click(sources)

@@ -5,8 +5,7 @@ import {
   getSpellNameKey,
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
-import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
-import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles.casting'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
 import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
@@ -16,7 +15,7 @@ import type { Character, SpellProfile } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
 
-type SpellcastingDetail = ReturnType<typeof buildSpellcastingClassDetails>[number]
+type SpellcastingDetail = SpellcastingClassDetail
 
 function validateSpellProfile(
   profile: SpellProfile,
@@ -59,19 +58,7 @@ export function validateSpells(
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): CharacterReadinessIssue[] {
   character = calculation.character
-  const classMap = new Map(
-    calculation.classes.map((classData) => [
-      toClassProfileId(classData.name, classData.source),
-      classData,
-    ]),
-  )
-  const details = buildSpellcastingClassDetails(
-    character,
-    classMap,
-    calculation.abilityScores.total,
-    calculation.effects.declarations,
-    calculation.effects.resolutionContext,
-  )
+  const details = calculation.classCasting.details
   const spellProfiles = character.spells.spellProfiles
   const profileById = new Map(spellProfiles.map((profile) => [profile.id, profile]))
   const issues = details.flatMap((detail) => {

@@ -394,7 +394,8 @@ async function resolveAbilityScoreImprovements(page: Page, levels: number[]) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
 
   for (const [index, level] of levels.entries()) {
-    await page.getByRole('button', { name: new RegExp(`Level ${level}\\b`) }).click()
+    const trigger = page.getByRole('button', { name: new RegExp(`Level ${level}\\b`) })
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
     const levelRegion = page.getByRole('region', { name: new RegExp(`Level ${level}\\b`) })
     await levelRegion.getByLabel('Ability Score Increase').click()
     await levelRegion.getByRole('button', { name: 'Apply' }).click()

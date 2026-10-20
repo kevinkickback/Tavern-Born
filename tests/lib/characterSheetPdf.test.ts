@@ -625,17 +625,11 @@ describe('characterSheetPdf', () => {
       },
     })
     // Wizard: spell save DC = 8 + prof(3) + INT mod(4) = 15
-    const classesData = [
-      {
-        name: 'Wizard',
-        source: 'PHB',
-        spellcastingAbility: 'int',
-        casterProgression: 'full',
-        hd: { faces: 6 },
-      } as never,
-    ]
-
-    const map = buildCharacterSheetFieldMap(character, '2014', classesData)
+    const fixture = makeManagedClassSpellFixtures()
+    const map = mapCharacterSheetViewModel(
+      prepareViewModel(character, fixture.data.classes, [], [], [], {}, fixture.lookups),
+      '2014',
+    )
 
     expect(map.textFields['Spell save DC 1']).toBe('15')
     expect(map.textFields['Spell save DC 2']).toBe('')

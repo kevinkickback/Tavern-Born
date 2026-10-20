@@ -43,12 +43,13 @@ const spellPaths = ['phb', 'xphb'].map((name) => `data/spells/spells-${name}.jso
 const hasCorpus = [...classPaths, ...spellPaths].every(existsSync)
 const classes = hasCorpus ? classPaths.flatMap((path) => parseClasses(json(path))) : []
 const spells = hasCorpus ? spellPaths.flatMap((path) => parseSpells(json(path))) : []
+const managedFixture = makeManagedClassSpellFixtures()
 const lookups = {
+  ...managedFixture.lookups,
   classesByKey: buildClassLookup(classes as Class5e[]),
   spellsByKey: buildSpellLookup(spells as Spell5e[]),
 }
 const templateBytes = sourceTemplateBytes
-const managedFixture = makeManagedClassSpellFixtures()
 
 describe.runIf(hasCorpus)('PDF export review regressions', () => {
   test.each([

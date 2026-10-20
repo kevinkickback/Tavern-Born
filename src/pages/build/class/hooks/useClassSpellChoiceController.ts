@@ -30,7 +30,8 @@ export function useClassSpellChoiceController(
       subclass: viewingSubclassData?.name,
       subclassSource: viewingSubclassData?.source,
     }
-    const catalogs = calculation?.classChoices.catalogs
+    const currentCatalogs = calculation?.classChoices.catalogs
+    const catalogs = currentCatalogs && { ...currentCatalogs }
     for (const slot of getManagedClassSpellSlots(entry)) {
       const owner = slot[0]
       const scoped =

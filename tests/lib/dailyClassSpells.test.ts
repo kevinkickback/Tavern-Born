@@ -98,6 +98,40 @@ describe('current daily class preparation and saved intent', () => {
         projectManagedClassSpellState(saved, { ...context, catalogs }).dailyStatuses[0].active,
       ).toBe(false)
     }
+    const catalogs = { ...context.catalogs }
+    const current = { ...context, catalogs, abilityScores: saved.abilityScores }
+    const baseline = projectManagedClassSpellState(saved, current)
+    const proofRows = catalogs.classCastingSources
+    const before = JSON.stringify(saved)
+    const empty = initial()
+    catalogs.classCastingSources = []
+    expect(projectManagedClassSpellState(saved, current).dailyStatuses[0].active).toBe(false)
+    expect(() =>
+      setDailyClassSpellPreparedCommand(
+        empty,
+        empty.provenance,
+        profileId(saved),
+        'Bless|PHB',
+        true,
+        current,
+      ),
+    ).toThrow()
+    expect(
+      apply(
+        saved,
+        setDailyClassSpellPreparedCommand(
+          saved,
+          saved.provenance,
+          profileId(saved),
+          'Bless|PHB',
+          false,
+          current,
+        ),
+      ).spells.spellProfiles.find((row) => row.id === profileId(saved))?.preparedSpells,
+    ).toEqual([])
+    catalogs.classCastingSources = proofRows
+    expect(projectManagedClassSpellState(saved, current)).toEqual(baseline)
+    expect(JSON.stringify(saved)).toBe(before)
     const cleric = initial()
     cleric.classProgression.push({ name: 'Wizard', source: 'PHB', levels: 10 })
     expect(() => prepare(cleric, 'Spirit Guardians|PHB')).toThrow(/outside the level/)

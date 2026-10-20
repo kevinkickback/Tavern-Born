@@ -29,6 +29,14 @@ available slots. Non-casting classes and classes before their first Spellcasting
 the combined multiclass table. Multiple earned shared casters retain their combined slot calculation;
 their larger pool never raises an individual owner's acquisition limit. Pact slots stay separate.
 
+Spells, readiness and PDF casting numbers and slots share the current certified declaration and
+table state. Retained raw class descriptions cannot restore missing casting authority.
+Class name/source casing and surrounding spaces follow the shared
+[reference identity contract](reference-resolution.md#identity-and-entity-resolution); verification
+preserves current labels and saved owners while retaining every other source and table check.
+An empty profile before its verified first casting gain does not add a spell page automatically; unavailable
+sources or retained choices still keep recovery available, and an explicit blank-page choice wins.
+
 Fixed spells already granted by the selected class/subclass at a gain cannot consume an ordinary slot.
 An earlier valid choice may later overlap an independent fixed grant without losing either owner.
 Fixed subclass tokens use the upstream PHB default only when their printing is omitted; explicit

@@ -6,6 +6,7 @@ import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 describe('createCharacterSheetViewModel', () => {
@@ -394,13 +395,10 @@ describe('createCharacterSheetViewModel', () => {
   })
 
   test('applies every structured equipped-item bonus through the shared PDF view model', () => {
-    const testClass = {
-      name: 'Test Caster',
-      source: 'TEST',
-      hd: { faces: 8 },
-      spellcastingAbility: 'int',
-      casterProgression: 'full',
-    } as Class5e
+    const current = makeManagedClassSpellFixtures()
+    const testClass = current.data.classes.find(
+      (row) => row.name === 'Wizard' && row.source === 'PHB',
+    )!
     const itemData = {
       name: 'Test Focus',
       source: 'TEST',
@@ -437,7 +435,7 @@ describe('createCharacterSheetViewModel', () => {
       ],
     })
     const viewModel = createCurrentCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup([testClass]),
+      ...current.lookups,
       itemLookup: new Map([['test', itemData]]),
     })
     const map2014 = mapCharacterSheet2014(viewModel)

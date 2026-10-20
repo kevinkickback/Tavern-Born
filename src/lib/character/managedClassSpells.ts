@@ -9,7 +9,11 @@ import {
 export type { ManagedClassSpellContext } from './classSpellAuthority'
 
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
-import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
+import {
+  type ClassCastingCatalog,
+  createClassCastingSourceAccess,
+  getClassCastingGainAuthority,
+} from '@/lib/5etools/classCastingSource'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
@@ -51,6 +55,7 @@ function resolveSlot(
   slot: ManagedClassSpellSlot,
   context?: ManagedClassSpellContext,
   classes: readonly Class5e[] = currentClasses(character, context),
+  gainAuthority = getClassCastingGainAuthority,
 ) {
   const finite = getManagedClassSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
@@ -66,7 +71,7 @@ function resolveSlot(
       ? getFeatureOwnerKey(owner[1], owner[2], owner[3], owner[4])
       : undefined,
   )
-  const authority = getClassCastingGainAuthority(
+  const authority = gainAuthority(
     catalog,
     owner,
     slot[2],
@@ -132,8 +137,11 @@ function targetError(
 export function getManagedClassSpellPool(
   character: Character,
   slot: ManagedClassSpellSlot,
-  context?: ManagedClassSpellContext,
+  sourceContext?: ManagedClassSpellContext,
 ) {
+  const context = sourceContext?.catalogs
+    ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
+    : sourceContext
   const state = resolveSlot(character, slot, context)
   if (typeof state === 'string')
     return {
@@ -175,9 +183,12 @@ export function getManagedClassSpellPool(
 /** Pure shared projection. Saved tags are stripped before current authority grants any benefit. */
 export function projectManagedClassSpellState(
   character: Character,
-  context?: ManagedClassSpellContext,
+  sourceContext?: ManagedClassSpellContext,
   dailyIntentSource: Character = character,
 ) {
+  const context = sourceContext?.catalogs
+    ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
+    : sourceContext
   const invalid = getInvalidManagedClassSpellPaths(character).length > 0
   const stripped = stripManagedClassSpellState(character)
   const allowed = sources(character)
@@ -203,6 +214,15 @@ export function projectManagedClassSpellState(
     },
   }
   const statuses: ManagedClassSpellStatus[] = []
+  const accesses = new Map<ClassCastingCatalog, ReturnType<typeof createClassCastingSourceAccess>>()
+  const gainAuthority: typeof getClassCastingGainAuthority = (catalog, ...args) => {
+    let access = accesses.get(catalog)
+    if (!access) {
+      access = createClassCastingSourceAccess(catalog)
+      accesses.set(catalog, access)
+    }
+    return access.gain(...args)
+  }
   const active: Array<{
     choice: ManagedClassSpellChoice
     entry: CharacterClassEntry
@@ -216,7 +236,7 @@ export function projectManagedClassSpellState(
     }
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
-      : resolveSlot(character, choice.slot, context, classes)
+      : resolveSlot(character, choice.slot, context, classes, gainAuthority)
     if (typeof state === 'string') {
       deny(state)
       continue

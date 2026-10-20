@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useClassesById } from '@/hooks/character/useClassesById'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   buildRacialSpellcastingDetails,
-  buildSpellcastingClassDetails,
-  calculateCharacterSpellSlots,
   collectKnownSpells,
   type RacialSpellcastingDetail,
   type SpellcastingClassDetail,
@@ -22,6 +19,9 @@ interface SpellSlotInfo {
   available: number
   isPactMagic?: boolean
 }
+
+const EMPTY_SLOTS = { shared: {}, pact: {}, mergedSharedWithUsage: {}, mergedPactWithUsage: {} }
+const EMPTY_DETAILS: SpellcastingClassDetail[] = []
 
 export interface SpellSlotsState {
   slots: SpellSlotInfo[]
@@ -55,22 +55,11 @@ function toSlotRows(
 
 export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const classesById = useClassesById()
   const calculationContext = useCharacterCalculationContext(character)
   const spellState = calculationContext?.character
   const spellProfiles = spellState?.spells.spellProfiles ?? []
 
-  const slotsBreakdown = useMemo(() => {
-    if (!character) {
-      return {
-        shared: {},
-        pact: {},
-        mergedSharedWithUsage: {},
-        mergedPactWithUsage: {},
-      }
-    }
-    return calculateCharacterSpellSlots(character, classesById)
-  }, [character, classesById])
+  const slotsBreakdown = calculationContext?.classCasting.slots ?? EMPTY_SLOTS
 
   const sharedSlots = useMemo(
     () => toSlotRows(slotsBreakdown.mergedSharedWithUsage),
@@ -89,16 +78,7 @@ export function useSpellSlots(): SpellSlotsState {
 
   const known = useMemo(() => collectKnownSpells(spellProfiles), [spellProfiles])
 
-  const spellcastingDetails = useMemo(() => {
-    if (!character) return []
-    return buildSpellcastingClassDetails(
-      character,
-      classesById,
-      calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total,
-      calculationContext?.effects.declarations,
-      calculationContext?.effects.resolutionContext,
-    )
-  }, [character, classesById, calculationContext])
+  const spellcastingDetails = calculationContext?.classCasting.details ?? EMPTY_DETAILS
 
   const racialSpellcastingDetails = useMemo(
     () =>

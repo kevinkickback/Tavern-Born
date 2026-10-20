@@ -1,6 +1,5 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test, vi } from 'vitest'
-import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
@@ -14,7 +13,7 @@ import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import type { CharacterSheetPageOptions, CharacterSheetTemplateId } from '@/lib/pdf/types'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import {
   createCurrentCharacterSheetViewModel,
   generateTestCharacterSheet,
@@ -109,26 +108,17 @@ describe('optional PDF pages', () => {
     const character = createEmptyCharacter({
       classProgression: [{ name: 'Ranger', source: 'PHB', levels: 1 }],
     })
-    character.spells.spellProfiles = [
-      {
-        id: 'class:Ranger|PHB',
-        type: 'class',
-        label: 'Ranger',
-        cantrips: [],
-        spellsKnown: [],
-        preparedSpells: [],
-      },
-    ]
-    const lookups = {
-      classesByKey: buildClassLookup([
-        makeClassFixture({
-          name: 'Ranger',
-          casterProgression: '1/2',
-          spellcastingAbility: 'wis',
-          classTableGroups: [{ rowsSpellProgression: [[], [2]] }],
-        }),
-      ]),
-    }
+    character.spells.spellProfiles.push({
+      id: 'class:Ranger|PHB',
+      type: 'class',
+      className: 'Ranger',
+      classSource: 'PHB',
+      label: 'Ranger',
+      cantrips: [],
+      spellsKnown: [],
+      preparedSpells: [],
+    })
+    const lookups = makeManagedClassSpellFixtures().lookups
     expect(
       getOptionalCharacterSheetPages(
         createCurrentCharacterSheetViewModel(character, lookups),

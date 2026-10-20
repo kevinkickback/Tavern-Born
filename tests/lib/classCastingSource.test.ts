@@ -27,6 +27,38 @@ const current = (data = makeClassCastingData(), owner = EK, target = spellcastin
   getCurrentClassCastingProducer(catalog(data, owner), owner, target, 3)
 
 describe('source-qualified casting producers and consumed table authority', () => {
+  test('native and copied producers retain complete class identity through spelling refresh', () => {
+    const data = makeClassCastingData()
+    for (const producer of CLASS_CASTING_PRODUCERS) {
+      const { owner, target, level } = producer.declaration
+      const [, name, source] = JSON.parse(producer.parent) as string[]
+      const parent = data.classes.find(
+        (row) => row.name.toLowerCase() === name && row.source.toLowerCase() === source,
+      )!
+      for (const identity of [
+        { name: parent.name.toUpperCase(), source: parent.source.toLowerCase() },
+        { name: ` ${parent.name} `, source: ` ${parent.source} ` },
+      ]) {
+        const refreshed = { ...parent, ...identity }
+        const currentData = {
+          ...data,
+          classes: data.classes.map((row) => (row === parent ? refreshed : row)),
+        }
+        const before = JSON.stringify(currentData)
+        const value = getCurrentClassCastingProducer(
+          catalog(currentData, owner),
+          owner,
+          target,
+          level,
+        )
+        expect(value, JSON.stringify(owner)).toBeTruthy()
+        expect(value!.declaration.classData).toBe(refreshed)
+        if (owner[0] === 'class') expect(value!.declaration.parent).toBe(refreshed)
+        expect(JSON.stringify(currentData)).toBe(before)
+      }
+    }
+  })
+
   test.each(
     CLASS_CASTING_PRODUCERS.filter((row) => row.declaration.owner[0] === 'subclass'),
   )('an unproven subclass slot override cannot replace the certified provider for $declaration.owner', (producer) => {
@@ -75,6 +107,34 @@ describe('source-qualified casting producers and consumed table authority', () =
         getCurrentClassCastingProducer(catalog(restored, d.owner), d.owner, d.target, d.level),
       ).toBeTruthy()
     }
+  })
+
+  test('identical parent proofs are ambiguous while repeated source layers retain one winning proof', () => {
+    const data = makeClassCastingData()
+    const c = catalog(data)
+    const parent = c.classCastingSources!.find(
+      (row) => row.kind === 'casting-parent' && row.target === '["class","fighter","phb"]',
+    )!
+    expect(current(data)).toBeTruthy()
+    expect(
+      getCurrentClassCastingProducer(
+        { ...c, classCastingSources: [...c.classCastingSources!, { ...parent }] },
+        EK,
+        spellcasting,
+        3,
+      ),
+    ).toBeUndefined()
+    expect(getCurrentClassCastingProducer(c, EK, spellcasting, 3)).toBeTruthy()
+
+    const layer = makeClassCastingLayer('class/class-fighter.json')
+    const repeated = composeGameDataLayers([layer, layer])
+    expect(
+      repeated.classCastingSources!.filter(
+        (row) => row.kind === 'casting-parent' && row.target === parent.target,
+      ),
+    ).toHaveLength(1)
+    expect(current(repeated)).toBeTruthy()
+    expect(current(JSON.parse(JSON.stringify(repeated)))).toBeTruthy()
   })
 
   test('daily leveled preparation is excluded while genuine cantrip gains and Wizard increments remain', () => {

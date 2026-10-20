@@ -87,18 +87,29 @@ export function projectDailyClassSpellIntent(
   context?: ManagedClassSpellContext,
 ) {
   const statuses: DailyClassSpellStatus[] = []
-  const targets = new Map<string, Spell5e | undefined>()
-  for (const spell of Object.values(context?.spellsByKey ?? {})) {
-    const key = getSpellReferenceKey(spell.name, spell.source)
-    targets.set(key, targets.has(key) ? undefined : spell)
+  let targets: Map<string, Spell5e | undefined> | undefined
+  const currentTargets = () => {
+    if (!targets) {
+      targets = new Map()
+      for (const spell of Object.values(context?.spellsByKey ?? {})) {
+        const key = getSpellReferenceKey(spell.name, spell.source)
+        targets.set(key, targets.has(key) ? undefined : spell)
+      }
+    }
+    return targets
   }
   const spellProfiles = current.spells.spellProfiles.map((profile) => {
     const previous = saved.spells.spellProfiles.find((row) => row.id === profile.id)
-    if (!previous || !dailyEntry(saved, previous) || !dailyEntry(current, profile)) return profile
+    if (
+      !previous?.preparedSpells.length ||
+      !dailyEntry(saved, previous) ||
+      !dailyEntry(current, profile)
+    )
+      return profile
     const access = getDailyClassSpellAccess(current, profile, context)
     const preparedSpells = [...profile.preparedSpells]
     for (const reference of previous.preparedSpells) {
-      const spell = targets.get(getSpellReferenceKey(reference))
+      const spell = currentTargets().get(getSpellReferenceKey(reference))
       const fixed = profile.fixedSpells?.some(
         (row) => getSpellReferenceKey(row) === getSpellReferenceKey(reference),
       )

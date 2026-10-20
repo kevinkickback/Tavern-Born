@@ -13,7 +13,7 @@ const sha = (bytes) => createHash('sha256').update(bytes).digest('hex')
 function runtimeSource(registry) {
   const counts = new Map()
   const visit = (value) => {
-    if (typeof value === 'string' && value.length > 8)
+    if (typeof value === 'string' && value.length > 2)
       counts.set(value, (counts.get(value) ?? 0) + 1)
     else if (Array.isArray(value)) value.forEach(visit)
     else if (value && typeof value === 'object') Object.values(value).forEach(visit)
