@@ -70,7 +70,7 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "bdb4ca5f94f5fabda22eea9db64e12bda850767206a9a80683b896dc5e47ae71"
+      "sha256": "9b5bc5d9d94a4feff74008b512d2b69ccd6117d7545db6f10c13abd7af3169b6"
     },
     {
       "file": "scripts/generate-optional-class-declaration-rules.mjs",
@@ -94,7 +94,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "db404d0928229712ec6d346fd3be222005fa3c6143cefa33799049823469c027"
+      "sha256": "6e48a61194fdad7c8910544a85912f3256cbacb3ebb1797bacec6040cef0b2bc"
     },
     {
       "file": "src/lib/5etools/classFeatureIdentity.ts",
@@ -150,7 +150,7 @@
     },
     {
       "file": "src/lib/5etools/featureSourceAudit.ts",
-      "sha256": "964b07b3f0767a2248a9ea8b5a177d626261a485f5254b3dbe7a044ce712b4d0"
+      "sha256": "98586ca6e8a52bc61901b4f1ce7619a008d2b18513a63bb52f95e0782fc5a651"
     },
     {
       "file": "src/lib/5etools/featureTableOptions.ts",
@@ -174,7 +174,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "c3c1fa9074efc25d99e66d91df8a8b59ffac50f5dac26d36473447c19022aeb0"
+      "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
@@ -266,7 +266,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "03dc7e800fdcbaed704e0acbed8c370a03647b83537832b17576b54648424a2c"
+      "sha256": "106dc3668f0d9625432de080177081ae8e8ee0bd292a3f68d08d86d6a18f7880"
     },
     {
       "file": "src/types/actions.ts",
@@ -274,7 +274,11 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "dc86d140560f4a1a0d5101166ebe337f59423222938b742cad838d937a9e70a1"
+      "sha256": "8b39e0abd33c626e9b45917062bcde27e85480de4fafc647d3be8a3143e682d0"
+    },
+    {
+      "file": "src/types/classCasting.ts",
+      "sha256": "edf0fc867c449e7ae5eac9dc24ed41bd2584affef293085d17806edc99ee607e"
     },
     {
       "file": "src/types/classRules.ts",
@@ -287,6 +291,10 @@
     {
       "file": "src/types/feat.ts",
       "sha256": "86dee6d3290feacb1e80569b3407d9aa69e44dbfc65122e51f72e0372b08b9b4"
+    },
+    {
+      "file": "src/types/spellRoutes.ts",
+      "sha256": "5fde4df80e1e9a3e6983c68030c1475968a51bebbb6f052d33288638c4d9fb10"
     }
   ]
 }

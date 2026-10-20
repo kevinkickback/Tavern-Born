@@ -708,15 +708,34 @@ describe('CharacterSheetPage', () => {
       blockingCount: 0,
     }
     vi.mocked(getPdfExportPreflight).mockReturnValueOnce(result).mockReturnValueOnce(result)
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const user = userEvent.setup()
-    renderPage()
-    await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
-    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
-    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
-    expect(screen.queryByRole('alertdialog')).toBeNull()
-    expect(click).toHaveBeenCalledOnce()
-    click.mockRestore()
+    // Object URLs are the browser download boundary; the generated Blob stays real.
+    const objectUrl = 'blob:character-sheet-test'
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue(objectUrl)
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    let download: { href: string; filename: string } | undefined
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      download = { href: this.href, filename: this.download }
+    })
+    try {
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
+      await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+      await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+      expect(click).toHaveBeenCalledOnce()
+      expect(createObjectURL).toHaveBeenCalledOnce()
+      expect(createObjectURL.mock.calls[0]?.[0]).toBeInstanceOf(Blob)
+      expect(createObjectURL.mock.calls[0]?.[0]).toMatchObject({ size: 3, type: 'application/pdf' })
+      expect(download).toEqual({ href: objectUrl, filename: 'Fixture Character.pdf' })
+      expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith(objectUrl)
+    } finally {
+      click.mockRestore()
+      createObjectURL.mockRestore()
+      revokeObjectURL.mockRestore()
+    }
   })
 
   test('changing optional pages invalidates the preview and passes choices to export', async () => {

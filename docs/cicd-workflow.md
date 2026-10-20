@@ -60,8 +60,9 @@ cannot provide independent approval for their own changes.
 
 ## Validation
 
-Use Node 24, matching `.nvmrc` and package engines. Run `npm run check:pr` at the final functional
-head after focused tests and independent review. It runs architecture/dead-code checks, read-only
+Use Node 24.15 or later in the Node 24 line, matching `.nvmrc` and the test environment's minimum
+version. Run `npm run check:pr` at the final functional head after focused tests and independent
+review. It runs architecture/dead-code checks, read-only
 lint, types, production build, normal bundle budgets, coverage and the complete browser suite.
 See the [testing commands](testing-map.md#commands) for focused runs and platform details.
 
