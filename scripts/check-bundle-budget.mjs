@@ -15,11 +15,11 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
   // Optional-feature certificates, native adoption and source-qualified spell route validation.
-  // Measured 6,127,925 B; smallest independently reviewed whole-KiB allowance.
+  // Measured 6,128,224 B; smallest independently reviewed whole-KiB allowance.
   rendererCode: 5985 * KIB,
-  // Synchronous saved-state admission and startup source proofs: measured 941,027 B.
+  // Synchronous saved-state admission and bounded content digests: measured 941,326 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
-  initialRendererScript: 919 * KIB,
+  initialRendererScript: 920 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

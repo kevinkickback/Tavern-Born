@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
@@ -47,6 +47,29 @@ function preservedViews(spell: Spell5e): Spell5e[] {
   const layer = composeGameDataLayers([makeGameDataFixture({ spells: [spell] })]).spells[0]
   return [lookup, layer, Object.values(buildSpellLookup([JSON.parse(JSON.stringify(layer))]))[0]]
 }
+
+test('source-excluded targets avoid cloning while eligible invalid audits still fail closed', () => {
+  const excluded = parse(aid, native.lookup)
+  const eligible = parse(native.spell[1], native.lookup)
+  eligible.classSpellRouteSource!.sourceDigest = '0'.repeat(64)
+  const before = JSON.stringify([excluded, eligible])
+  const clone = vi.spyOn(globalThis, 'structuredClone')
+  try {
+    expect(DataFilter.filterSpells([excluded], { sources: [' tce '] })).toEqual([])
+    expect(clone).not.toHaveBeenCalled()
+    const current = DataFilter.filterSpells([eligible], { sources: [' tce '] })
+    expect(current).toHaveLength(1)
+    expect(current[0].classSpellRoutes).toEqual([])
+    expect(current[0].classes?.fromClassList).toEqual([])
+    expect(current[0].classSpellRouteDiagnostics).toContainEqual({
+      code: 'invalid-package',
+      path: 'classSpellRouteSource',
+    })
+    expect(JSON.stringify([excluded, eligible])).toBe(before)
+  } finally {
+    clone.mockRestore()
+  }
+})
 
 test.each([
   'digest',

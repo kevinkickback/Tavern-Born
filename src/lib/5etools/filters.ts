@@ -552,12 +552,14 @@ export class DataFilter {
   }
 
   static filterSpells(spells: Spell5e[], filters: SpellFilters): Spell5e[] {
-    let filtered = spells.map((spell) => filterSpellRouteSources(spell, filters.sources))
+    let filtered = spells
 
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.trim().toUpperCase()))
       filtered = filtered.filter((s) => sourcesUpper.has(s.source.trim().toUpperCase()))
     }
+
+    filtered = filtered.map((spell) => filterSpellRouteSources(spell, filters.sources))
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
       const isSpellSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)

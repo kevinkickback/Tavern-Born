@@ -125,6 +125,11 @@ providing a winning consumed body does not re-materialize an omitted copied owne
 development semantic input is separate from ordinary generation; runtime rules retain
 compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification
 alone neither adopts a feature nor implements its conditional benefits, spell grants or events.
+Shared feature digests canonicalize current input on every call. Only exact canonical strings and
+their SHA-256 values are reused in memory; source validity, ownership and multiplicity are always
+checked separately. Retention is bounded to 256 entries, 32,768 code units per signature and a
+512 KiB UTF-16 key/value payload charge (Map overhead is separately bounded by the entry limit).
+Oversized inputs are hashed normally without retention; mutation and exact restoration are observed.
 The same declaration channel also certifies ordinary granting dependencies for optional pool
 expansions. Metamagic Options and Maneuver Options require their exact current standard grant
 and structured progression; these dependency records remain standard features and never become
