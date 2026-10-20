@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
+import { filterSpellRouteSources } from '@/lib/5etools/spellRouteSources'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const { idbGetMock, idbSetMock } = vi.hoisted(() => ({
@@ -54,6 +57,31 @@ describe('writeGameDataCache', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     idbGetMock.mockResolvedValue(null)
+  })
+
+  test('schema56 retains route witnesses through JSON and fingerprints changes in source diagnostics', async () => {
+    const fixture = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
+    const data = makeGameData()
+    data.spells = parseSpells([fixture.spell[0], fixture.spell[0]], {
+      sourceLookup: fixture.lookup,
+      origin: 'cache-fixture',
+    }) as GameData['spells']
+    const before = computeGameDataFingerprint(data)
+    const entry = await writeGameDataCache(data, config)
+    expect(entry.cacheSchemaVersion).toBe(56)
+    idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
+    const cached = (await readGameDataCache())!
+    expect(filterSpellRouteSources(cached.data.spells[0], ['PHB', 'TCE']).classSpellRoutes).toEqual(
+      [],
+    )
+    expect(cached.data.spells[0].classSpellRouteSource!.input.targetOccurrences).toHaveLength(2)
+    data.spells = parseSpells([fixture.spell[0]], {
+      sourceLookup: fixture.lookup,
+      origin: 'cache-fixture',
+    }) as GameData['spells']
+    expect(computeGameDataFingerprint(data)).not.toBe(before)
+    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 55 })
+    await expect(readGameDataCache()).resolves.toBeNull()
   })
 
   test('preserves the established JSON hash while ignoring runtime lookups', () => {

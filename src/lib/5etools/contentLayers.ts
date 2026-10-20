@@ -57,6 +57,7 @@ import {
   mergePrimaryItemTypes,
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
+import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { getSubclassIntroEntries } from './subclassContent'
 import { collectLayerSubclassFeatures as collectSubclassFeatures } from './subclassFeatureCatalog'
 import {
@@ -477,7 +478,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
           ? auditFixedLayerMultiplicity(layerValues as object[], key)
           : key === 'optionalfeatures'
             ? auditConditionalOptionalLayerMultiplicity(layerValues)
-            : layerValues
+            : key === 'spells'
+              ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
+              : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values

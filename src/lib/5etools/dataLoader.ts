@@ -60,6 +60,7 @@ import {
 } from './primaryItemTypes'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import { CreatureDataSchema } from './schemas'
+import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -622,6 +623,7 @@ export class FiveEToolsDataLoader {
           const parsedSpells = this.filterByIndexedSource(
             parseSpells(spellData, {
               sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
+              origin: `spells/${spellFile.file}`,
             }) as GameData['spells'],
             spellFile.source,
           )
@@ -640,7 +642,7 @@ export class FiveEToolsDataLoader {
       this.addItemSources(parsedSpells, sourcesSet)
     })
 
-    gameData.spells = allSpells
+    gameData.spells = auditSpellRouteMultiplicity(allSpells, 'spell-loader')
   }
 
   private async loadCreatureData(

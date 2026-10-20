@@ -17,6 +17,31 @@ function makeJsonResponse(jsonData: unknown, ok = true) {
 describe('5etools/dataLoader', () => {
   const originalFetch = globalThis.fetch
 
+  test('audits duplicate spell targets across indexed files before lookups and preserves cached ambiguity', async () => {
+    const fixture = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
+    const readJson = vi.fn(async (file: string) =>
+      file === 'spells/index.json'
+        ? ['one.json', 'two.json']
+        : file === 'generated/gendata-spell-source-lookup.json'
+          ? fixture.lookup
+          : file === 'spells/one.json' || file === 'spells/two.json'
+            ? { spell: [fixture.spell[0]] }
+            : {},
+    )
+    const loaded = await new FiveEToolsDataLoader(
+      { type: 'local', path: 'fixture:cross-file', isValid: true },
+      { type: 'local', readJson },
+    ).loadAllData()
+    expect(loaded.spells).toHaveLength(2)
+    expect(loaded.spells.every((spell) => spell.classSpellRoutes?.length === 0)).toBe(true)
+    expect(
+      Object.values(loaded.lookups!.spellsByKey)[0].classSpellRouteSource?.diagnostics,
+    ).toContainEqual(expect.objectContaining({ code: 'ambiguous-target' }))
+    expect(
+      readJson.mock.calls.filter(([file]) => file === 'generated/gendata-spell-source-lookup.json'),
+    ).toHaveLength(1)
+  })
+
   beforeEach(() => {
     vi.restoreAllMocks()
   })
