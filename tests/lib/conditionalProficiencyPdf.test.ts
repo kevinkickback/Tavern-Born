@@ -92,10 +92,14 @@ test.each(
   ).toEqual([])
 })
 
-test.each([
-  'full',
-  'names',
-] as const)('actual forced short field requires included complete continuation for %s notes', async (descriptions) => {
+test.each(
+  (['full', 'names'] as const).flatMap((descriptions) =>
+    [false, true].map((includeNotes) => ({ descriptions, includeNotes })),
+  ),
+)('actual forced short field requires included complete continuation for $descriptions notes, included $includeNotes', async ({
+  descriptions,
+  includeNotes,
+}) => {
   const f = twoNotes()
   // A real, tiny widget forces the production fitting/continuation path for this exact mapped field.
   const { generateFilledCharacterSheetPdf } = await import('@/lib/pdf/characterSheetPdf')
@@ -109,23 +113,21 @@ test.each([
     )!.acroField.getWidgets()[0]
     widget.setRectangle({ ...widget.getRectangle(), width: 90, height: 28 })
   }
-  for (const includeNotes of [false, true]) {
-    let report: SheetExportReport | undefined
-    const vm = descriptions === 'names' ? withoutSheetDescriptions(f.vm) : f.vm
-    await generateFilledCharacterSheetPdf(vm, await base.save(), '2024-official', {
-      text: { descriptions, overflow: 'notes' },
-      pages: { notes: includeNotes, spells: false, companion: false },
-      loadNotes: async () => new Uint8Array(readFileSync('public/pdf/2014/mpmb-notes.pdf')),
-      onReport: (value) => {
-        report = value
-      },
-    })
-    expect(report!.representedProficiencyCheckNotes).toEqual(
-      includeNotes ? vm.proficiencyCheckNotes : [],
-    )
-    expect(unsupported(vm, f.effects, report)).toHaveLength(includeNotes ? 0 : 2)
-    expect(includeNotes ? report!.preserved.length : report!.omitted.length).toBeGreaterThan(0)
-  }
+  let report: SheetExportReport | undefined
+  const vm = descriptions === 'names' ? withoutSheetDescriptions(f.vm) : f.vm
+  await generateFilledCharacterSheetPdf(vm, await base.save(), '2024-official', {
+    text: { descriptions, overflow: 'notes' },
+    pages: { notes: includeNotes, spells: false, companion: false },
+    loadNotes: async () => new Uint8Array(readFileSync('public/pdf/2014/mpmb-notes.pdf')),
+    onReport: (value) => {
+      report = value
+    },
+  })
+  expect(report!.representedProficiencyCheckNotes).toEqual(
+    includeNotes ? vm.proficiencyCheckNotes : [],
+  )
+  expect(unsupported(vm, f.effects, report)).toHaveLength(includeNotes ? 0 : 2)
+  expect(includeNotes ? report!.preserved.length : report!.omitted.length).toBeGreaterThan(0)
 })
 
 test('preflight authenticates each exact current ID/text and never exempts an unrelated conditional effect', () => {

@@ -357,9 +357,13 @@ export interface Spell5e {
   entries?: unknown[]
   entriesHigherLevel?: unknown[]
   classes?: {
-    fromClassList?: ClassReference[]
+    fromClassList?: import('./spellRoutes').SpellClassAssociation[]
+    fromClassListVariant?: import('./spellRoutes').SpellClassAssociation[]
     fromSubclass?: SubclassReference[]
   }
+  classSpellRouteSource?: import('./spellRoutes').ClassSpellRouteAudit
+  classSpellRoutes?: import('./spellRoutes').ClassSpellRoute[]
+  classSpellRouteDiagnostics?: import('./spellRoutes').SpellRouteDiagnostic[]
   [key: string]: unknown
 }
 
@@ -559,11 +563,6 @@ export interface SpellDuration {
     amount?: number
   }
   concentration?: boolean
-}
-
-interface ClassReference {
-  name: string
-  source: string
 }
 
 interface SubclassReference {

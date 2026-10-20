@@ -15,6 +15,7 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 import { getClassFeatureIdentity } from './classFeatureIdentity'
+import { auditSpellRouteMultiplicity } from './spellRouteSources'
 
 export function getEntityLookupKey(name?: unknown, source?: unknown): string {
   const safeName = typeof name === 'string' ? name.trim() : ''
@@ -84,13 +85,16 @@ function buildEntityLookup<T extends { name: string; source: string }>(
 }
 
 export function buildSpellLookup(spells: Spell5e[]): Record<string, Spell5e> {
-  return spells.reduce<Record<string, Spell5e>>((lookup, spell) => {
-    const key = getEntityLookupKey(spell.name, spell.source)
-    if (key !== '|' && !lookup[key]) {
-      lookup[key] = spell
-    }
-    return lookup
-  }, {})
+  return auditSpellRouteMultiplicity(spells, 'spell-lookup').reduce<Record<string, Spell5e>>(
+    (lookup, spell) => {
+      const key = getEntityLookupKey(spell.name, spell.source)
+      if (key !== '|' && !lookup[key]) {
+        lookup[key] = spell
+      }
+      return lookup
+    },
+    {},
+  )
 }
 
 function buildCreatureLookup(creatures: Creature5e[]): Record<string, Creature5e> {

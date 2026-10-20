@@ -1,0 +1,319 @@
+{
+  "spell": [
+    {
+      "name": "Aid",
+      "source": "PHB",
+      "page": 211,
+      "srd": true,
+      "basicRules": true,
+      "otherSources": [
+        {
+          "source": "RMR",
+          "page": 50
+        }
+      ],
+      "referenceSources": ["PotA", "TftYP-DiT"],
+      "reprintedAs": ["Aid|XPHB"],
+      "level": 2,
+      "school": "A",
+      "time": [
+        {
+          "number": 1,
+          "unit": "action"
+        }
+      ],
+      "range": {
+        "type": "point",
+        "distance": {
+          "type": "feet",
+          "amount": 30
+        }
+      },
+      "components": {
+        "v": true,
+        "s": true,
+        "m": "a tiny strip of white cloth"
+      },
+      "duration": [
+        {
+          "type": "timed",
+          "duration": {
+            "type": "hour",
+            "amount": 8
+          }
+        }
+      ],
+      "entries": [
+        "Your spell bolsters your allies with toughness and resolve. Choose up to three creatures within range. Each target's hit point maximum and current hit points increase by 5 for the duration."
+      ],
+      "entriesHigherLevel": [
+        {
+          "type": "entries",
+          "name": "At Higher Levels",
+          "entries": [
+            "When you cast this spell using a spell slot of 3rd level or higher, a target's hit points increase by an additional 5 for each slot level above 2nd."
+          ]
+        }
+      ],
+      "miscTags": ["HL"],
+      "areaTags": ["MT"]
+    },
+    {
+      "name": "Intellect Fortress",
+      "source": "TCE",
+      "page": 107,
+      "level": 3,
+      "school": "A",
+      "time": [
+        {
+          "number": 1,
+          "unit": "action"
+        }
+      ],
+      "range": {
+        "type": "point",
+        "distance": {
+          "type": "feet",
+          "amount": 30
+        }
+      },
+      "components": {
+        "v": true
+      },
+      "duration": [
+        {
+          "type": "timed",
+          "duration": {
+            "type": "hour",
+            "amount": 1
+          },
+          "concentration": true
+        }
+      ],
+      "entries": [
+        "For the duration, you or one willing creature you can see within range has resistance to psychic damage, as well as advantage on Intelligence, Wisdom, and Charisma saving throws."
+      ],
+      "entriesHigherLevel": [
+        {
+          "type": "entries",
+          "name": "At Higher Levels",
+          "entries": [
+            "When you cast this spell using a spell slot of 4th level or higher, you can target one additional creature for each slot level above 3rd. The creatures must be within 30 feet of each other when you target them."
+          ]
+        }
+      ],
+      "damageResist": ["psychic"],
+      "miscTags": ["ADV", "SCT", "SGT"],
+      "hasFluffImages": true
+    }
+  ],
+  "lookup": {
+    "phb": {
+      "aid": {
+        "class": {
+          "PHB": {
+            "Cleric": true,
+            "Paladin": true
+          },
+          "TCE": {
+            "Artificer": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Bard": {
+              "definedInSources": ["TCE"]
+            },
+            "Ranger": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Cleric": {
+              "PSA": {
+                "Solidarity (PSA)": {
+                  "name": "Solidarity Domain (PSA)"
+                }
+              },
+              "TCE": {
+                "Peace": {
+                  "name": "Peace Domain"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Cleric": {
+              "PSA": {
+                "Solidarity (PSA)": {
+                  "name": "Solidarity Domain (PSA)"
+                }
+              },
+              "TCE": {
+                "Peace": {
+                  "name": "Peace Domain"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              },
+              "TCE": {
+                "Clockwork Soul": {
+                  "name": "Clockwork Soul"
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "GGR": {
+            "Boros Legionnaire": true,
+            "Selesnya Initiate": true
+          }
+        },
+        "feat": {
+          "DSotDQ": {
+            "Adept of the White Robes": true
+          },
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          }
+        },
+        "race": {
+          "ERLW": {
+            "Halfling (Mark of Hospitality)": {
+              "baseName": "Halfling",
+              "baseSource": "PHB"
+            }
+          }
+        }
+      }
+    },
+    "tce": {
+      "intellect fortress": {
+        "class": {
+          "TCE": {
+            "Artificer": true
+          },
+          "EFA": {
+            "Artificer": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Bard": {
+              "definedInSources": ["TCE"]
+            },
+            "Sorcerer": {
+              "definedInSources": ["TCE"]
+            },
+            "Warlock": {
+              "definedInSources": ["TCE"]
+            },
+            "Wizard": {
+              "definedInSources": ["TCE"]
+            }
+          },
+          "XPHB": {
+            "Bard": {
+              "definedInSources": ["TCE"]
+            },
+            "Sorcerer": {
+              "definedInSources": ["TCE"]
+            },
+            "Warlock": {
+              "definedInSources": ["TCE"]
+            },
+            "Wizard": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Monk": {
+              "AU": {
+                "Mystic Arts": {
+                  "name": "Warrior of the Mystic Arts"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Wizard": {
+              "XPHB": {
+                "Abjurer": {
+                  "name": "Abjurer"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true
+          },
+          "EFA": {
+            "Boon of Siberys": true
+          }
+        }
+      }
+    }
+  }
+}

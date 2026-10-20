@@ -9,12 +9,14 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSourceData } from '../fixtures/optionalClassFeatureFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-test.each([
-  '2014-official',
-  '2014-custom',
-  '2024-official',
-  '2024-custom',
-] as const)('actual %s full/names binary includes adopted passive features and earned upgrades', async (template) => {
+test.each(
+  (['2014-official', '2014-custom', '2024-official', '2024-custom'] as const).flatMap((template) =>
+    (['full', 'names'] as const).map((descriptions) => ({ template, descriptions })),
+  ),
+)('actual $template $descriptions binary includes adopted passive features and earned upgrades', async ({
+  template,
+  descriptions,
+}) => {
   const { data, catalogs } = makeOptionalClassSourceData()
   let character = makeCharacterFixture({
     allowedSources: ['PHB', 'TCE'],
@@ -42,33 +44,31 @@ test.each([
     classChoiceClasses: data.classes,
     classChoiceFeatureCatalogs: catalogs,
   })
-  for (const descriptions of ['full', 'names'] as const) {
-    const bytes = await generateTestCharacterSheet(vm, template, {
-      text: { descriptions, overflow: 'notes' },
-      pages: { notes: true },
-    })
-    const pdf = await PDFDocument.load(bytes)
-    const text = pdf
-      .getForm()
-      .getFields()
-      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-      .join('\n')
-      .replace(/\s+/gu, ' ')
-    for (const name of [
-      'Deft Explorer',
-      'Favored Foe',
-      'Spellcasting Focus',
-      'Deft Explorer Improvement (Level 6)',
-      'Deft Explorer Improvement (Level 10)',
-    ])
-      expect(text).toContain(name)
-    if (descriptions === 'full') {
-      expect(text).toContain('Roving')
-      expect(text).toContain('Tireless')
-    } else {
-      expect(text).not.toContain('Roving')
-      expect(text).not.toContain('Tireless')
-    }
+  const bytes = await generateTestCharacterSheet(vm, template, {
+    text: { descriptions, overflow: 'notes' },
+    pages: { notes: true },
+  })
+  const pdf = await PDFDocument.load(bytes)
+  const text = pdf
+    .getForm()
+    .getFields()
+    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    .join('\n')
+    .replace(/\s+/gu, ' ')
+  for (const name of [
+    'Deft Explorer',
+    'Favored Foe',
+    'Spellcasting Focus',
+    'Deft Explorer Improvement (Level 6)',
+    'Deft Explorer Improvement (Level 10)',
+  ])
+    expect(text).toContain(name)
+  if (descriptions === 'full') {
+    expect(text).toContain('Roving')
+    expect(text).toContain('Tireless')
+  } else {
+    expect(text).not.toContain('Roving')
+    expect(text).not.toContain('Tireless')
   }
   expect(JSON.stringify(character)).toBe(before)
 })

@@ -1,3 +1,9 @@
+import type { Spell5e } from '@/types/5etools'
+import {
+  auditSpellRouteMultiplicity,
+  parseSpellRouteSource,
+  prepareSpellRouteLookup,
+} from '../spellRouteSources'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
 export type SpellSourceLookup = Record<string, Record<string, unknown>>
@@ -15,44 +21,6 @@ function getSpellLookupEntry(
 
   const entry = bySource[name]
   return typeof entry === 'object' && entry !== null ? (entry as ParsedObject) : null
-}
-
-function mergeSpellClassList(spell: ParsedObject, lookupEntry: ParsedObject): void {
-  const classLookup = asObject(lookupEntry.class)
-  if (!Object.keys(classLookup).length) return
-
-  const classes = asObject(spell.classes)
-  const fromClassList = asArray(classes.fromClassList)
-  const seen = new Set(
-    fromClassList
-      .map((it) => asObject(it))
-      .map((it) => `${normalizeKey(it.name)}|${normalizeKey(it.source)}`),
-  )
-
-  for (const [source, classNameTo] of Object.entries(classLookup)) {
-    const classNameMap = asObject(classNameTo)
-    for (const [name, val] of Object.entries(classNameMap)) {
-      const key = `${normalizeKey(name)}|${normalizeKey(source)}`
-      if (seen.has(key)) continue
-
-      const toAdd: ParsedObject = { name, source }
-      if (val && typeof val === 'object') {
-        const valObj = asObject(val)
-        if (typeof valObj.definedInSource === 'string') {
-          toAdd.definedInSource = valObj.definedInSource
-        }
-        if (Array.isArray(valObj.definedInSources)) {
-          toAdd.definedInSources = valObj.definedInSources
-        }
-      }
-
-      fromClassList.push(toAdd)
-      seen.add(key)
-    }
-  }
-
-  classes.fromClassList = fromClassList
-  spell.classes = classes
 }
 
 function mergeSpellSubclassList(spell: ParsedObject, lookupEntry: ParsedObject): void {
@@ -110,17 +78,39 @@ function enrichSpellFromLookup(
   const lookupEntry = getSpellLookupEntry(sourceLookup, spell)
   if (!lookupEntry) return spell
 
-  const out = { ...spell }
-  mergeSpellClassList(out, lookupEntry)
+  const out = structuredClone(spell)
   mergeSpellSubclassList(out, lookupEntry)
   return out
 }
 
 export function parseSpells(
   data: unknown,
-  options?: { sourceLookup?: SpellSourceLookup },
+  options?: { sourceLookup?: SpellSourceLookup; origin?: string },
 ): unknown[] {
   const obj = asObject(data)
   const spells = obj.spell ? asArray(obj.spell) : Array.isArray(data) ? data : []
-  return spells.map((spell) => enrichSpellFromLookup(asObject(spell), options?.sourceLookup))
+  const origin = options?.origin ?? 'spell-document'
+  const routeLookup = prepareSpellRouteLookup(options?.sourceLookup)
+  return auditSpellRouteMultiplicity(
+    spells.map((spell, index) => {
+      const enriched = enrichSpellFromLookup(asObject(spell), options?.sourceLookup)
+      // Keep original embedded routing evidence separate from subclass-only enrichment.
+      const routed = parseSpellRouteSource(
+        asObject(spell) as unknown as Spell5e,
+        origin,
+        String(index),
+        routeLookup,
+      )
+      return {
+        ...routed,
+        classes: {
+          ...routed.classes,
+          ...(asObject(enriched.classes).fromSubclass
+            ? { fromSubclass: structuredClone(asObject(enriched.classes).fromSubclass) }
+            : {}),
+        },
+      } as Spell5e
+    }),
+    origin,
+  )
 }

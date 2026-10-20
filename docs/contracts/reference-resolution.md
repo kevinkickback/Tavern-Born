@@ -135,10 +135,40 @@ See [nonracial source-pruning checks](../../tests/lib/nonracialSourcePruning.tes
 
 ## Spell enrichment
 
-`generated/gendata-spell-source-lookup.json` is required ingestion input. Spell parsing merges its
-class and subclass associations once into each `Spell5e`. Runtime class-list checks read that
-canonical enriched record through `isSpellOnClassList()`/`isSpellOnSubclassList()`; there is no
-second mapping system.
+`generated/gendata-spell-source-lookup.json` is required ingestion input. Spell parsing adapts
+5etools' separate `class` and `classVariant` associations into source-qualified routes. Each route
+includes the exact spell printing, class printing, channel and defining-source alternative. `true`
+means no additional defining source; a singular source or nonempty plural string/null list supplies
+OR alternatives. Invalid predicates and conflicting producer sets cannot become unrestricted routes.
+Canonical aliases are checked before lookup projection; overlapping separate embedded rows remain
+unverified, while repeated alternatives within one valid plural predicate deduplicate.
+Each parse invocation prepares one shared index from its current supplied lookup. Prepared indexes
+are not reused across calls, so malformed alias mutations cannot hide behind a lossy JSON revision.
+
+Each parsed spell retains its original routing input, source-local lookup evidence and target
+occurrences in `classSpellRouteSource`. Its digest binds reconstruction, not authenticity or actor
+permission. Duplicate spell targets remain ambiguous through document loading, cross-file merging,
+layer Maps, direct lookups and JSON cache. A later winning layer replaces the whole source package;
+it cannot borrow the losing layer's associations. Reparse without new lookup restores validated
+evidence; an explicitly supplied changed or empty lookup replaces old lookup evidence, retaining
+only genuinely original embedded input. Invalid derived packages never fall back to enriched lists.
+
+Shared source filtering derives `classSpellRoutes` and compatibility lists from the retained package,
+checking spell, class-owner and nonnull defining sources independently. An explicit empty current
+view stays empty through lookup construction; source restoration derives from retained evidence.
+Original validated display labels are preserved while identity comparisons use canonical values.
+Unique legacy records without an audit retain old compatibility behavior and acquire no new proof.
+Subclass associations keep their existing contract and are cloned without mutating input.
+
+Lookup and layer boundaries validate every audited record, including singletons and malformed
+targets. They rebuild compatibility lists from the verified current route subset, preserve an
+explicit empty view and diagnose invalid current routes. An absent current field may derive the
+validated source view; malformed or unsupported current routes cannot restore hidden memberships.
+
+Runtime class-list checks continue to consume only the verified base `fromClassList` projection
+through `isSpellOnClassList()`. Variants remain separate in `fromClassListVariant`; this source-only
+boundary does not enable optional spell-section adoption, add casting quotas, select spells or
+create managed acquisition/preparation/event state.
 
 Class slot progressions come from parsed class tables. Shared multiclass slots use the matching
 PHB/XPHB full-caster table, including Artificer's special contribution. Missing tables produce a

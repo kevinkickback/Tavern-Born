@@ -22,6 +22,7 @@ import type {
   SubclassFeature,
   SubclassFeatureReference,
 } from '@/types/5etools'
+import { filterSpellRouteSources } from './spellRouteSources'
 
 export interface RaceFilters {
   sources?: string[]
@@ -551,15 +552,18 @@ export class DataFilter {
   }
 
   static filterSpells(spells: Spell5e[], filters: SpellFilters): Spell5e[] {
-    let filtered = [...spells]
+    let filtered = spells
 
     if (filters.sources && filters.sources.length > 0) {
-      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
-      filtered = filtered.filter((s) => sourcesUpper.has(s.source.toUpperCase()))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.trim().toUpperCase()))
+      filtered = filtered.filter((s) => sourcesUpper.has(s.source.trim().toUpperCase()))
     }
 
+    filtered = filtered.map((spell) => filterSpellRouteSources(spell, filters.sources))
+
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
-      filtered = filtered.filter((s) => !isSuppressed(s.name, s.source, filters.suppressedKeys))
+      const isSpellSuppressed = buildFeatureSuppressionCheck(filters.suppressedKeys)
+      filtered = filtered.filter((s) => !isSpellSuppressed(s.name, s.source))
     }
 
     if (filters.levels && filters.levels.length > 0) {
@@ -573,7 +577,11 @@ export class DataFilter {
     if (filters.classes && filters.classes.length > 0) {
       filtered = filtered.filter((s) => {
         if (!s.classes?.fromClassList) return false
-        return s.classes.fromClassList.some((c) => filters.classes?.includes(c.name))
+        return s.classes.fromClassList.some((c) =>
+          filters.classes?.some(
+            (name) => name.trim().toLowerCase() === c.name.trim().toLowerCase(),
+          ),
+        )
       })
     }
 

@@ -194,7 +194,7 @@ describe('buildSpellLookup', () => {
     expect(names.filter((n) => spellByName.get(n)?.level !== 0)).toEqual(['Burning Hands'])
   })
 
-  test('first entry wins when duplicate name|source keys are present', () => {
+  test('first display entry wins while duplicate name|source routes remain ambiguous and inputs stay unchanged', () => {
     const first = makeSpellFixture({
       name: 'Magic Missile',
       source: 'PHB',
@@ -205,9 +205,18 @@ describe('buildSpellLookup', () => {
       source: 'PHB',
       level: 2,
     })
+    const before = JSON.stringify([first, duplicate])
     const lookup = buildSpellLookup([first, duplicate])
 
-    expect(lookup[getEntityLookupKey('Magic Missile', 'PHB')]).toBe(first)
+    const retained = lookup[getEntityLookupKey('Magic Missile', 'PHB')]
+    expect(retained).toMatchObject(first)
+    expect(retained.level).toBe(1)
+    expect(retained.classSpellRoutes).toEqual([])
+    expect(retained.classSpellRouteSource?.diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'ambiguous-target' }),
+    )
+    expect(retained.classSpellRouteSource?.input.targetOccurrences).toHaveLength(2)
+    expect(JSON.stringify([first, duplicate])).toBe(before)
   })
 
   test('returns empty object for empty input', () => {

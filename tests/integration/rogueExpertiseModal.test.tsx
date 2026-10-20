@@ -139,7 +139,9 @@ test('Knowledge circle grants proficiency with Expertise, records subclass owner
   expect(active().proficiencies.skills).toEqual(['arcana'])
   expect(active().proficiencies.expertise).toEqual(['arcana'])
   expect(screen.getByLabelText('1 Expertise choices remaining')).toBeTruthy()
-  const sources = screen.getByRole('button', { name: /^Sources/ })
+  const sources = within(screen.getByRole('heading', { name: /^Sources/ })).getByRole('button', {
+    name: /^Sources/,
+  })
   if (sources.getAttribute('data-state') === 'closed') fireEvent.click(sources)
   expect(within(screen.getByText('Expertise:').parentElement!).getByText('(subclass)')).toBeTruthy()
   const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(active())))
@@ -266,7 +268,9 @@ test.each([
     'false',
   )
   expect(JSON.stringify(active())).toBe(before)
-  const sources = screen.getByRole('button', { name: /^Sources/ })
+  const sources = within(screen.getByRole('heading', { name: /^Sources/ })).getByRole('button', {
+    name: /^Sources/,
+  })
   if (sources.getAttribute('data-state') === 'closed') fireEvent.click(sources)
   expect(screen.getByText(/Stealth — retained, inactive/i)).toBeTruthy()
   await circleAction('Stealth', /Remove from Expertise/)
@@ -355,7 +359,11 @@ test('optional OFF removes actual Deft Explorer/Favored Foe entries and selected
       (row) => row.target === 'class-feature|favored foe|ranger|phb|1|tce',
     ),
   ).toBe(true)
-  fireEvent.click(screen.getByRole('button', { name: /^Favored Foe/ }))
+  fireEvent.click(
+    within(screen.getByRole('tabpanel', { name: 'Favored Foe' })).getByRole('button', {
+      name: /^Favored Foe/,
+    }),
+  )
   expect(screen.getByRole('heading', { name: 'Favored Foe' })).toBeTruthy()
   await act(async () => {
     useCharacterStore.getState().updateCharacter(active().id, {
@@ -373,7 +381,11 @@ test('optional OFF removes actual Deft Explorer/Favored Foe entries and selected
     })
   })
   expect(screen.getByRole('group', { name: 'Canny expertise' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /^Favored Foe/ })).toBeTruthy()
+  expect(
+    within(screen.getByRole('tabpanel', { name: 'Favored Foe' })).getByRole('button', {
+      name: /^Favored Foe/,
+    }),
+  ).toBeTruthy()
 })
 
 test('selected actual Battle Master wrapper refreshes nested optional details OFF/ON while keeping base siblings', async () => {
