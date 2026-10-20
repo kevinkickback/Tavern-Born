@@ -8,9 +8,11 @@ import type {
   Language5e,
 } from '@/types/5etools'
 import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
+import { auditConditionalOptionalFeatures } from '../conditionalProficiencySource'
 import { parseMagicVariantTemplates, resolveMagicVariants } from '../magicVariants'
 import { parsePrimaryItemTypes } from '../primaryItemTypes'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
+import { subclassProficiencyDigest } from '../subclassProficiencyCertificates'
 import { asArray, asObject, type ParsedObject } from './shared'
 
 export function parseBackgrounds(data: unknown): unknown[] {
@@ -125,11 +127,13 @@ export function parseMagicVariants(data: unknown): Item5e[] {
   return resolveMagicVariants(parseMagicVariantTemplates(data)).references
 }
 
-export function parseOptionalFeatures(data: unknown): unknown[] {
+export function parseOptionalFeatures(data: unknown, sourceId?: string): unknown[] {
   const obj = asObject(data)
-  if (obj.optionalfeature) return asArray(obj.optionalfeature)
-  if (Array.isArray(data)) return data
-  return []
+  const rows = obj.optionalfeature ? asArray(obj.optionalfeature) : Array.isArray(data) ? data : []
+  return auditConditionalOptionalFeatures(
+    rows,
+    sourceId ?? `optional-feature-document:${subclassProficiencyDigest(data)}`,
+  )
 }
 
 export function parseVariantRules(data: unknown): unknown[] {

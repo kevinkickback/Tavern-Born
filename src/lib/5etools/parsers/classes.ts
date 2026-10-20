@@ -5,11 +5,25 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
+import { auditClassProficiencySources } from '@/lib/5etools/classProficiencyChoices'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
-import { CopyResolutionError, resolveCopiedRecords } from '@/lib/5etools/copyResolution'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
+import {
+  auditDirectFixedClassDeclarations,
+  auditFixedClassFeatures,
+} from '@/lib/5etools/fixedProficiencySource'
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
+import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
+import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
+import {
+  auditSubclassProficiencyFeatures,
+  auditSubclassProficiencyRoots,
+} from '@/lib/5etools/subclassProficiencySource'
+import {
+  materializeSubclassCopies,
+  materializeSubclassFeatureCopies,
+} from '@/lib/5etools/subclassSourcePreparation'
 import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
@@ -158,33 +172,6 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
-function getSubclassIdentityKey(subclass: ParsedObject): string | undefined {
-  const name = typeof subclass.name === 'string' ? subclass.name : undefined
-  const source = typeof subclass.source === 'string' ? subclass.source : undefined
-  const shortName = typeof subclass.shortName === 'string' ? subclass.shortName : undefined
-  const className = typeof subclass.className === 'string' ? subclass.className : undefined
-  const classSource = typeof subclass.classSource === 'string' ? subclass.classSource : undefined
-  if (!name || !source || !shortName || !className || !classSource) return undefined
-  return `${name}|${source}|${shortName}|${className}|${classSource}`
-}
-
-function materializeSubclassCopies(subclasses: unknown[]): ParsedObject[] {
-  const byIdentity = new Map<string, ParsedObject>()
-  for (const subclass of subclasses) {
-    const subclassObj = asObject(subclass)
-    const key = getSubclassIdentityKey(subclassObj)
-    if (key && !byIdentity.has(key)) byIdentity.set(key, subclassObj)
-  }
-
-  return subclasses.map((subclass) => {
-    const subclassObj = asObject(subclass)
-    const copy = asObject(subclassObj._copy)
-    const copiedIdentity = getSubclassIdentityKey(copy)
-    const copiedSubclass = copiedIdentity ? byIdentity.get(copiedIdentity) : undefined
-    return copiedSubclass ? { ...copiedSubclass, ...subclassObj } : subclassObj
-  })
-}
-
 function parsePreparedClasses(data: unknown): unknown[] {
   const obj = asObject(data)
   const classes: unknown[] = obj.class
@@ -192,7 +179,7 @@ function parsePreparedClasses(data: unknown): unknown[] {
     : Array.isArray(data)
       ? [...data]
       : []
-  const subclassEntries = materializeSubclassCopies(asArray(obj.subclass))
+  const subclassEntries = asArray(obj.subclass).map(asObject)
   const classFeatureRecords: unknown[] = asArray(obj.classFeature)
   const classFeatureIndex = getClassFeatureIndex(classFeatureRecords)
 
@@ -234,14 +221,22 @@ function parsePreparedClasses(data: unknown): unknown[] {
       normalizedRules: normalizeSubclassRules(
         { name: className, source: classSource ?? '' },
         {
+          ...scObj,
           name: String(scObj.name ?? scObj.shortName ?? ''),
           source: String(scObj.source ?? ''),
-          optionalfeatureProgression: Array.isArray(scObj.optionalfeatureProgression)
-            ? (scObj.optionalfeatureProgression as import('@/types/5etools').OptFeatureProg[])
-            : undefined,
-          featProgression: Array.isArray(scObj.featProgression)
-            ? (scObj.featProgression as import('@/types/5etools').OptFeatureProg[])
-            : undefined,
+          introFeatureRef,
+          ...(Array.isArray(scObj.optionalfeatureProgression)
+            ? {
+                optionalfeatureProgression:
+                  scObj.optionalfeatureProgression as import('@/types/5etools').OptFeatureProg[],
+              }
+            : {}),
+          ...(Array.isArray(scObj.featProgression)
+            ? {
+                featProgression:
+                  scObj.featProgression as import('@/types/5etools').OptFeatureProg[],
+              }
+            : {}),
         },
         subclassFeatureRefs as unknown as import('@/types/5etools').SubclassFeatureReference[],
       ),
@@ -431,34 +426,61 @@ function parsePreparedClassFeatures(data: unknown): unknown[] {
 }
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
-function prepareClassDocument(data: unknown): unknown {
+function prepareClassDocument(data: unknown, sourceId?: string): unknown {
+  if (Array.isArray(data)) return data
   const obj = asObject(data)
   const records = asArray(obj.subclassFeature).map(asObject)
-  const classFeature = auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject))
-  if (!records.length && !classFeature.length) return data
-  if (!records.length) return { ...obj, classFeature }
-  let materialized = records
-  if (records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) {
-    const resolved = resolveCopiedRecords(
-      records as Array<ParsedObject & { name: string; source: string }>,
-      'subclassFeature',
-    )
-    if (resolved.diagnostics.length)
-      throw new CopyResolutionError(resolved.diagnostics, 'in subclass features')
-    materialized = resolved.records
+  const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
+  const materializedSubclasses = materializeSubclassCopies(asArray(obj.subclass))
+  const materialized = materializeSubclassFeatureCopies(records)
+  const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
+    subclasses: materializedSubclasses,
+    subclassFeatures: materialized,
+  })
+  const classFeature = auditFixedClassFeatures(
+    auditClassProficiencySources(
+      auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject)),
+    ),
+    origin,
+  )
+  const classes = auditDirectFixedClassDeclarations(asArray(obj.class).map(asObject), origin)
+  const subclass = auditSubclassProficiencyRoots(
+    asArray(obj.subclass).map(asObject),
+    materializedSubclasses,
+    origin,
+  )
+  if (!records.length)
+    return { ...obj, class: classes, classFeature, subclass, optionalClassFeatureSources }
+  return {
+    ...obj,
+    class: classes,
+    classFeature,
+    subclass,
+    optionalClassFeatureSources,
+    subclassFeature: auditSubclassProficiencyFeatures(
+      records,
+      auditFeatureOptionSources(materialized),
+      origin,
+    ),
   }
-  return { ...obj, classFeature, subclassFeature: auditFeatureOptionSources(materialized) }
 }
 
 /** The loader prepares once for both projections of a class document. */
-export function parseClassDocument(data: unknown): {
+export function parseClassDocument(
+  data: unknown,
+  sourceId?: string,
+): {
   classes: unknown[]
   classFeatures: unknown[]
+  optionalClassFeatureSources: import('@/types/5etools').OptionalClassFeatureSourceProof[]
 } {
-  const prepared = prepareClassDocument(data)
+  const prepared = prepareClassDocument(data, sourceId)
   return {
     classes: parsePreparedClasses(prepared),
     classFeatures: parsePreparedClassFeatures(prepared),
+    optionalClassFeatureSources: asArray(
+      asObject(prepared).optionalClassFeatureSources,
+    ) as import('@/types/5etools').OptionalClassFeatureSourceProof[],
   }
 }
 

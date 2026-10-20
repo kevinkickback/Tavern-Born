@@ -1,0 +1,485 @@
+{
+  "version": 1,
+  "knownOptionalTargets": [
+    {
+      "kind": "classFeature",
+      "target": "class-feature|bardic versatility|bard|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip formulas|wizard|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip versatility|cleric|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip versatility|druid|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|dedicated weapon|monk|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer improvement|ranger|phb|10|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer improvement|ranger|phb|6|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer|ranger|phb|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|eldritch versatility|warlock|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|favored foe|ranger|phb|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|focused aim|monk|phb|5|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|instinctive pounce|barbarian|phb|7|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|ki-fueled attack|monk|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|magical guidance|sorcerer|phb|5|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|magical inspiration|bard|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|fighter|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|paladin|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|ranger|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|metamagic options|sorcerer|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|nature's veil|ranger|phb|10|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|primal awareness|ranger|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|primal knowledge|barbarian|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|quickened healing|monk|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|steady aim|rogue|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|wild companion|druid|phb|2|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce"
+    }
+  ],
+  "parents": [
+    {
+      "owner": ["class", "ranger", "phb"],
+      "fields": [
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|deft explorer|ranger|phb|1|tce",
+          "rawDeclaration": "Deft Explorer|Ranger||1|TCE",
+          "level": 1
+        },
+        {
+          "target": "class-feature|favored enemy|ranger|phb|1|phb",
+          "rawDeclaration": "Favored Enemy|Ranger||1",
+          "level": 1
+        },
+        {
+          "target": "class-feature|favored foe|ranger|phb|1|tce",
+          "rawDeclaration": "Favored Foe|Ranger||1|TCE",
+          "level": 1
+        },
+        {
+          "target": "class-feature|natural explorer|ranger|phb|1|phb",
+          "rawDeclaration": "Natural Explorer|Ranger||1",
+          "level": 1
+        },
+        {
+          "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+          "rawDeclaration": "Spellcasting Focus|Ranger||2|TCE",
+          "level": 2
+        },
+        {
+          "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+          "rawDeclaration": "Deft Explorer Improvement|Ranger||6|TCE",
+          "level": 6
+        },
+        {
+          "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+          "rawDeclaration": "Favored Enemy and Natural Explorer improvements|Ranger||6",
+          "level": 6
+        },
+        {
+          "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+          "rawDeclaration": "Deft Explorer Improvement|Ranger||10|TCE",
+          "level": 10
+        },
+        {
+          "target": "class-feature|natural explorer improvement|ranger|phb|10|phb",
+          "rawDeclaration": "Natural Explorer improvement|Ranger||10",
+          "level": 10
+        },
+        {
+          "target": "class-feature|favored enemy improvement|ranger|phb|14|phb",
+          "rawDeclaration": "Favored Enemy improvement|Ranger||14",
+          "level": 14
+        },
+        {
+          "target": "class-feature|foe slayer|ranger|phb|20|phb",
+          "rawDeclaration": "Foe Slayer|Ranger||20",
+          "level": 20
+        }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "target": "class-feature|deft explorer|ranger|phb|1|tce",
+      "name": "Deft Explorer",
+      "source": "TCE",
+      "level": 1,
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "isClassFeatureVariant",
+        "level",
+        "name",
+        "page",
+        "source"
+      ],
+      "digest": "382a0d43e16144e99a2790281519d696e486f1222ac56e35dfc72c4ca56d9832"
+    },
+    {
+      "target": "class-feature|favored enemy|ranger|phb|1|phb",
+      "name": "Favored Enemy",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "211e51428b68fbf43479068687ce56729cd3cbec3ca7dc3801e6f3affe68c87f"
+    },
+    {
+      "target": "class-feature|favored foe|ranger|phb|1|tce",
+      "name": "Favored Foe",
+      "source": "TCE",
+      "level": 1,
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "isClassFeatureVariant",
+        "level",
+        "name",
+        "page",
+        "source"
+      ],
+      "digest": "40c494fbc85d55111c721c0d0e715831a4665b690f8a9d1d0b2239c8adaca47c"
+    },
+    {
+      "target": "class-feature|natural explorer|ranger|phb|1|phb",
+      "name": "Natural Explorer",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "96c526c66f17427adcd39b95258289fb7f0d3526c4cc9a32d91ccbf376c7795e"
+    },
+    {
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+      "name": "Spellcasting Focus",
+      "source": "TCE",
+      "level": 2,
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "isClassFeatureVariant",
+        "level",
+        "name",
+        "page",
+        "source"
+      ],
+      "digest": "65f81ec6fd068deced5535929ec6f293573b3b07d013bd9b7b601aec01ff58f9"
+    },
+    {
+      "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+      "name": "Deft Explorer Improvement",
+      "source": "TCE",
+      "level": 6,
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "isClassFeatureVariant",
+        "level",
+        "name",
+        "page",
+        "source"
+      ],
+      "digest": "fb86ac67c80b6c8ae49384c7da5f1ba270dc9e2fce6c7ef3309d90ec33100a83"
+    },
+    {
+      "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+      "name": "Favored Enemy and Natural Explorer improvements",
+      "source": "PHB",
+      "level": 6,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "e19809c38a40d6a8599a57459cee46f1167091d665094b67581ea20d065d2905"
+    },
+    {
+      "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+      "name": "Deft Explorer Improvement",
+      "source": "TCE",
+      "level": 10,
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "isClassFeatureVariant",
+        "level",
+        "name",
+        "page",
+        "source"
+      ],
+      "digest": "daaab1fa6aca3a5368ab3246c7b8a9f4de8a9fcfea3b107c3d5500a071d70e81"
+    },
+    {
+      "target": "class-feature|natural explorer improvement|ranger|phb|10|phb",
+      "name": "Natural Explorer improvement",
+      "source": "PHB",
+      "level": 10,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "b8fcb92c1494150446f0bad2e188bbf594afe86bd4c29631a456a264789a12fc"
+    },
+    {
+      "target": "class-feature|favored enemy improvement|ranger|phb|14|phb",
+      "name": "Favored Enemy improvement",
+      "source": "PHB",
+      "level": 14,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "9711ffe2d5a5b98dd3f18d69511f6daba706f6dbe9de61dceeef15f10d367408"
+    },
+    {
+      "target": "class-feature|foe slayer|ranger|phb|20|phb",
+      "name": "Foe Slayer",
+      "source": "PHB",
+      "level": 20,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "0f360e81fe594f065710d56264a8b70c96ea71a3bd6e90280098458e88e82782"
+    }
+  ],
+  "roots": [
+    {
+      "target": "class-feature|deft explorer|ranger|phb|1|tce",
+      "family": "favored-terrain",
+      "children": [
+        "class-feature|deft explorer improvement|ranger|phb|6|tce",
+        "class-feature|deft explorer improvement|ranger|phb|10|tce"
+      ],
+      "replaces": [
+        {
+          "target": "class-feature|natural explorer|ranger|phb|1|phb"
+        },
+        {
+          "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+          "facet": "favored-terrain",
+          "entryIndexes": [0]
+        },
+        {
+          "target": "class-feature|natural explorer improvement|ranger|phb|10|phb"
+        }
+      ],
+      "compatible": [],
+      "owner": ["class", "ranger", "phb"],
+      "level": 1,
+      "name": "Deft Explorer",
+      "source": "TCE"
+    },
+    {
+      "target": "class-feature|favored foe|ranger|phb|1|tce",
+      "family": "favored-enemy-language",
+      "children": [],
+      "replaces": [
+        {
+          "target": "class-feature|favored enemy|ranger|phb|1|phb"
+        },
+        {
+          "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+          "facet": "favored-enemy-language",
+          "entryIndexes": [1]
+        },
+        {
+          "target": "class-feature|favored enemy improvement|ranger|phb|14|phb"
+        }
+      ],
+      "compatible": ["class-feature|foe slayer|ranger|phb|20|phb"],
+      "owner": ["class", "ranger", "phb"],
+      "level": 1,
+      "name": "Favored Foe",
+      "source": "TCE"
+    },
+    {
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+      "children": [],
+      "replaces": [],
+      "compatible": [],
+      "owner": ["class", "ranger", "phb"],
+      "level": 2,
+      "name": "Spellcasting Focus",
+      "source": "TCE"
+    }
+  ]
+}

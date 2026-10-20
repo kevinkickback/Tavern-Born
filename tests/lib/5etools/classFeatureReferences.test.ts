@@ -1,8 +1,11 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import { FIXED_PROFICIENCY_RULES } from '@/lib/5etools/fixedProficiencyRules'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
@@ -326,7 +329,30 @@ test.skipIf(!existsSync(classDirectory))(
             source,
             level: Number(levelPart),
           })
-          expect(reference.feature, `${file}:${reference.ref}`).toEqual(target)
+          const rule = FIXED_PROFICIENCY_RULES.find(
+            (row) =>
+              row.kind === 'proficient-tools' &&
+              row.target ===
+                getClassFeatureIdentity({
+                  name,
+                  className,
+                  classSource,
+                  source,
+                  level: Number(levelPart),
+                }),
+          )
+          const expected = rule
+            ? {
+                ...target,
+                fixedProficiencySourceAudit: {
+                  version: 1,
+                  certificate: subclassProficiencyDigest(rule),
+                  origin: `class-document:${subclassProficiencyDigest(payload)}:classFeature:${payload.classFeature!.indexOf(target)}`,
+                  verified: true,
+                },
+              }
+            : target
+          expect(reference.feature, `${file}:${reference.ref}`).toEqual(expected)
         }
       }
     }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
@@ -60,6 +60,38 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test('shows the selected class icon, level and chosen subclass without a header details action', () => {
+    const { rerender } = render(
+      <BuildClassLevelsPanel
+        {...makeProps({ viewingClass: 'Ranger', viewingClassLevel: 6, viewingSubclass: 'Hunter' })}
+      />,
+    )
+    const header = screen.getByRole('region', { name: 'Selected class' })
+    expect(within(header).getByRole('heading', { name: 'Ranger Level 6' })).toBeTruthy()
+    expect(within(header).getByText('PHB · Hunter')).toBeTruthy()
+    expect(header.querySelector('img')?.getAttribute('src')).toContain('/ranger.svg')
+    expect(within(header).queryByRole('button')).toBeNull()
+    expect(within(header).queryByRole('link')).toBeNull()
+    expect(screen.queryByRole('combobox', { name: 'Switch class' })).toBeNull()
+    rerender(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          classProgression: [
+            { name: 'Ranger', source: 'PHB', levels: 6 },
+            { name: 'Rogue', source: 'PHB', levels: 1 },
+          ],
+          viewingClass: 'Rogue',
+          viewingClassLevel: 1,
+          viewingSubclass: undefined,
+        })}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Switch class' })).toBeTruthy()
+    expect(
+      within(screen.getByRole('region', { name: 'Selected class' })).queryByText(/Hunter/),
+    ).toBeNull()
+  })
+
   test('offers subclass selection at the encoded gain level rather than stale metadata', () => {
     const info = getSubclassSelectionInfo({
       name: 'Artificer',
@@ -84,7 +116,9 @@ describe('BuildClassLevelsPanel', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByText('Level 4 Features'))
+    fireEvent.click(
+      screen.getByText('Level 4', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
     rerender(
       <BuildClassLevelsPanel
@@ -97,7 +131,9 @@ describe('BuildClassLevelsPanel', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByText('Level 8 Features'))
+    fireEvent.click(
+      screen.getByText('Level 8', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
     expect(onOpenSubclassPicker).toHaveBeenCalledOnce()
   })
@@ -117,7 +153,9 @@ describe('BuildClassLevelsPanel', () => {
       ],
     })
     render(<BuildClassLevelsPanel {...makeProps({ ...info, asiLevels: [] })} />)
-    fireEvent.click(screen.getByText('Level 4 Features'))
+    fireEvent.click(
+      screen.getByText('Level 4', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
     expect(screen.queryByText('Subclass')).toBeNull()
   })
@@ -141,7 +179,7 @@ describe('BuildClassLevelsPanel', () => {
   test('marks the level choice badge complete only after its ASI choice is resolved', () => {
     const { rerender } = render(<BuildClassLevelsPanel {...makeProps()} />)
 
-    const incompleteBadge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
+    const incompleteBadge = screen.getByText(/1 pending choice/).closest('[data-slot="badge"]')
     expect(incompleteBadge?.className).toContain('text-warning-foreground')
 
     rerender(
@@ -160,7 +198,7 @@ describe('BuildClassLevelsPanel', () => {
       />,
     )
 
-    const completeBadge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
+    const completeBadge = screen.getByText('All choices made').closest('[data-slot="badge"]')
     expect(completeBadge?.className).toContain('text-success')
     expect(completeBadge?.querySelector('svg')).toBeTruthy()
   })
@@ -205,7 +243,9 @@ describe('BuildClassLevelsPanel', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Level 12 Features'))
+    fireEvent.click(
+      screen.getByText('Level 12', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.getByText('Spell Replacement')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
     expect(screen.getByText('Replace a spell')).toBeTruthy()
@@ -252,7 +292,9 @@ describe('BuildClassLevelsPanel', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Level 2 Features'))
+    fireEvent.click(
+      screen.getByText('Level 2', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.queryByText('Replace a spell')).toBeNull()
   })
 
@@ -304,9 +346,11 @@ describe('BuildClassLevelsPanel', () => {
       />,
     )
 
-    const badge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
+    const badge = screen.getByText(/1 pending choice/).closest('[data-slot="badge"]')
     expect(badge?.className).toContain('text-warning-foreground')
-    fireEvent.click(screen.getByText('Level 1 Features'))
+    fireEvent.click(
+      screen.getByText('Level 1', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.getByText(/Unavailable/)).toBeTruthy()
   })
 
@@ -399,7 +443,9 @@ describe('BuildClassLevelsPanel', () => {
     )
 
     expect(screen.queryByText('Required Choices')).toBeNull()
-    fireEvent.click(screen.getByText('Level 1 Features'))
+    fireEvent.click(
+      screen.getByText('Level 1', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.getByText('Training Path')).toBeTruthy()
     expect(screen.getAllByText('Training Path')).toHaveLength(1)
     fireEvent.click(screen.getByText('Training Path'))
@@ -411,7 +457,9 @@ describe('BuildClassLevelsPanel', () => {
       expect.objectContaining({ label: 'Training Path' }),
     )
 
-    fireEvent.click(screen.getByText('Level 2 Features'))
+    fireEvent.click(
+      screen.getByText('Level 2', { selector: '[data-slot="accordion-trigger"] span' }),
+    )
     expect(screen.getByText('Unresolved Training')).toBeTruthy()
     expect(screen.getByText(/No rule was guessed/)).toBeTruthy()
   })

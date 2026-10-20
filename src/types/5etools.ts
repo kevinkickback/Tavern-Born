@@ -133,6 +133,8 @@ export interface ClassFeatureReference {
 }
 
 export interface Subclass5e {
+  /** Parser-derived source occurrence/copy certificate; never saved on a character. */
+  subclassProficiencySourceAudit?: import('@/lib/5etools/subclassProficiencyCertificates').SubclassProficiencySourceAudit
   name: string
   shortName: string
   source: string
@@ -194,6 +196,8 @@ export interface SubclassAdditionalSpells {
 }
 
 export interface SubclassFeature {
+  /** Preserved through parser/filter clones to distinguish enrichment from raw duplicates. */
+  subclassProficiencySourceAudit?: import('@/lib/5etools/subclassProficiencyCertificates').SubclassProficiencySourceAudit
   name: string
   source: string
   page?: number
@@ -270,6 +274,12 @@ export interface OptionalFeatureLike {
   featureType?: string | string[]
   entries?: unknown[]
   prerequisite?: Raw5ePrereq[]
+  conditionalProficiencySourceAudit?: {
+    version: 1
+    certificate: string
+    origin: string
+    verified: boolean
+  }
 }
 
 export interface ItemProperty5e {
@@ -654,6 +664,10 @@ export interface GameData {
   /** Parsed from data/items-base.json → .itemMastery[]. */
   itemMasteries?: ItemMastery5e[]
   classFeatures: ClassFeature[]
+  /** Separate raw source evidence; never appended to independently audited feature bodies. */
+  optionalClassFeatureSources?: OptionalClassFeatureSourceProof[]
+  /** Compact current book-only optional sections, including exact unavailable identities. */
+  optionalClassSections?: OptionalClassSectionSource[]
   creatures?: Creature5e[]
   actions: unknown[]
   conditions: unknown[]
@@ -668,4 +682,28 @@ export interface GameData {
   cultsBoons: unknown[]
   sources: SourceBook[]
   lookups?: GameDataLookups
+}
+
+export interface OptionalClassFeatureSourceProof {
+  version: 1
+  kind: 'class' | 'feature' | 'declaration'
+  target: string
+  certificate: string
+  origin: string
+  verified: boolean
+}
+
+export interface OptionalClassSectionSource {
+  version: 1
+  target: string
+  origin: string
+  input?: {
+    document: Record<string, unknown>
+    book: { id: unknown; source: unknown; name: unknown }
+    chapter: Record<string, unknown>
+    classSection: Record<string, unknown>
+    parent: Record<string, unknown>
+    leaf: Record<string, unknown>
+  }
+  diagnostic?: string
 }

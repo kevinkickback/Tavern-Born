@@ -35,6 +35,7 @@ export function useUnifiedClassSelection() {
         raceResolution: calculationContext?.raceResolution,
         spellsByKey: calculationContext?.lookups.primary.spellsByKey,
         rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
       })
 
       updateCharacter(character.id, {
@@ -72,6 +73,7 @@ export function useUnifiedClassSelection() {
           raceResolution: calculationContext?.raceResolution,
           spellsByKey: calculationContext?.lookups.primary.spellsByKey,
           rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+          classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
         },
       )
 

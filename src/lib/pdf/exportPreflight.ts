@@ -1,4 +1,5 @@
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
+import { getProficiencyCheckNoteRows } from '@/lib/calculations/proficiencyCheckNotes'
 import type { CharacterReadinessResult } from '@/lib/readiness/characterReadiness'
 import type { CharacterEffect } from '@/types/effects'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
@@ -254,9 +255,19 @@ function isUnsupportedPdfEffect(
   templateId: CharacterSheetTemplateId,
   effect: CharacterEffect,
   viewModel: CharacterSheetViewModel,
+  report?: SheetExportReport,
 ): boolean {
   if (effect.operation.kind === 'conditional-note') {
-    return true
+    const row = getProficiencyCheckNoteRows([effect])[0]
+    return !(
+      row &&
+      viewModel.proficiencyCheckNotes?.some(
+        (current) => current.effectId === row.effectId && current.text === row.text,
+      ) &&
+      report?.representedProficiencyCheckNotes?.some(
+        (current) => current.effectId === row.effectId && current.text === row.text,
+      )
+    )
   }
   // A structured racial sense is also described by its species traits. The lack of a
   // separate numeric box does not make that printed rule unsupported. Manual changes
@@ -305,7 +316,7 @@ export function getPdfExportPreflight(
   const unsupportedEffects = effects.filter(
     (effect) =>
       isCharacterEffectActive(effect, effectContext) &&
-      isUnsupportedPdfEffect(templateId, effect, viewModel),
+      isUnsupportedPdfEffect(templateId, effect, viewModel, report),
   )
   const unsupportedIssues: ExportPreflightIssue[] = unsupportedEffects.map((effect) => ({
     id: `unsupported:${effect.id}`,

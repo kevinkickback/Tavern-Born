@@ -1,13 +1,12 @@
-import { ShieldCheck } from '@phosphor-icons/react'
 import { ABILITY_FULL_TO_ABBREV } from '@/lib/calculations/abilityNames'
 import { normalizeKey } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import {
-  fixedSelectedClass,
   formatProfLabel,
   type ProficiencyRowState,
   ProficiencyStateIcon,
   ProficiencyStatus,
+  proficiencyRowClass,
 } from './shared'
 import type { ProficiencyLedger, ProficiencyPanelCallbacks, SavingThrowRow } from './types'
 
@@ -56,15 +55,10 @@ export function SavingThrowsPanel({
               onFocus={focusSave}
               className={cn(
                 'group inline-flex min-h-11 min-w-0 cursor-default items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                isSelected
-                  ? fixedSelectedClass
-                  : 'bg-surface-raised text-foreground hover:bg-surface-hover',
+                proficiencyRowClass(rowState, false),
               )}
             >
-              <ProficiencyStateIcon
-                state={rowState}
-                fallback={<ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}
-              />
+              <ProficiencyStateIcon state={rowState} />
               <span>{formatProfLabel(save.ability)}</span>
               <span className="ml-auto flex shrink-0 items-center gap-2">
                 <span className="text-xs font-normal text-muted-foreground">

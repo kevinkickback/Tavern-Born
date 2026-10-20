@@ -15,6 +15,11 @@ export function retainRawItems(data: GameData): void {
   rawItems.set(data, { items: data.items, itemsBase: data.itemsBase })
 }
 
+/** A cache-restored projection cannot reconstruct raw copy origin from an absent WeakMap entry. */
+export function hasRetainedRawItems(data: GameData): boolean {
+  return rawItems.has(data)
+}
+
 export function getRawItems(data: GameData): Pick<GameData, 'items' | 'itemsBase'> {
   return (
     rawItems.get(data) ?? {

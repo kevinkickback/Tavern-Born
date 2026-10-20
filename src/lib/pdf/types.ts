@@ -35,6 +35,8 @@ export interface SheetExportReport {
   notesPageCount: number
   preserved: SheetOverflowSection[]
   omitted: SheetOverflowSection[]
+  /** Exact active note text actually retained by a completed selected export. */
+  representedProficiencyCheckNotes?: Array<{ effectId: string; text: string }>
 }
 
 interface CharacterSheetAttribution {

@@ -17,7 +17,7 @@ import type {
   CharacterClassChoiceSelection,
   CharacterClassEntry,
 } from '@/types/character'
-import type { NormalizedCharacterChoice } from '@/types/classRules'
+import type { ClassProficiencyDomain, NormalizedCharacterChoice } from '@/types/classRules'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -29,7 +29,10 @@ import {
   resolveClassChoiceOptions,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceOptions'
+import { getClassProficiencySelectionStates } from './classProficiencySelections'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
+import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
+import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
 
@@ -49,6 +52,8 @@ export interface FeatureOptionSelectionState {
   affinity?: { available: boolean; entries: unknown[] }
   storm?: StormAuraRules
   literalGroup?: { family: string; group: string; gain: number }
+  proficiency?: { domain: ClassProficiencyDomain }
+  optionalPool?: boolean
 }
 
 function affinityRules(
@@ -144,7 +149,8 @@ export function getFeatureOptionSelectionStates(
           ? getCharacterClassChoices(
               classData,
               subclass,
-              character.variantRules?.optionalClassFeatures ?? false,
+              createOptionalClassFeatureActivity(character, catalogs),
+              catalogs,
             ).find(
               (candidate) =>
                 candidate.kind === 'feature-option' &&
@@ -201,6 +207,8 @@ export function getFeatureOptionSelectionStates(
     ...literal,
     ...getStormAuraSelectionStates(character, classes, catalogs),
     ...getNaturalExplorerSelectionStates(character, classes, catalogs),
+    ...getClassProficiencySelectionStates(character, classes, catalogs),
+    ...getOptionalClassPoolSelectionStates(character, classes, catalogs),
   ]
 }
 

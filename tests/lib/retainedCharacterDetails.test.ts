@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
 import type { CharacterClassChoiceSelection } from '@/types/character'
+import { makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -73,6 +74,37 @@ function scholarClass(
 }
 
 describe('retained character details', () => {
+  test('Canny retains source-unavailable details without activating raw benefits and restores exact detail identity', () => {
+    const f = makeCannyFixture()
+    const saved = selectCanny(
+      f,
+      'languages',
+      ['Elvish', 'Dwarvish'],
+      selectCanny(f, 'expertise', ['Survival']),
+    )
+    const before = JSON.stringify(saved)
+    const primary = {
+      ...f.data,
+      classFeatures: f.data.classFeatures.filter(
+        (feature) => !(feature.name === 'Deft Explorer' && feature.source === 'TCE'),
+      ),
+    }
+    const available = buildRetainedCharacterDetails(saved, f.data, f.data).choiceDetailsById
+    const missing = buildRetainedCharacterDetails(saved, primary, f.data).choiceDetailsById
+    for (const selection of saved.classChoiceSelections!) {
+      expect(missing.get(selection.choiceId)!.map((row) => row.availability)).toEqual(
+        selection.selected.map(() => 'source-unavailable'),
+      )
+      expect(missing.get(selection.choiceId)!.map((row) => row.entries)).toEqual(
+        available.get(selection.choiceId)!.map((row) => row.entries),
+      )
+    }
+    expect(buildRetainedCharacterDetails(saved, f.data, f.data).choiceDetailsById).toEqual(
+      available,
+    )
+    expect(JSON.stringify(saved)).toBe(before)
+  })
+
   test.each([
     'PHB',
     'XPHB',

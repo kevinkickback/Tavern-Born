@@ -1,5 +1,6 @@
 import { Warning } from '@phosphor-icons/react'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import {
   type ActiveFilters,
@@ -8,6 +9,17 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
 import {
   checkAllPrerequisites,
@@ -29,6 +41,7 @@ const ENTITY_LABELS = {
   optionalFeature: 'Optional feature',
   creature: 'Creature',
   featureOption: 'Feature option',
+  proficiency: 'Proficiency',
 } as const
 
 function masteryKey(mastery: { name: string; source?: string }): string {
@@ -37,6 +50,12 @@ function masteryKey(mastery: { name: string; source?: string }): string {
 
 function titleCase(value: string): string {
   return value.replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toUpperCase())
+}
+
+function getOptionLabel(option: ClassChoiceOptionView): string {
+  return option.reference.entityType === 'proficiency'
+    ? titleCase(option.reference.name)
+    : option.reference.name
 }
 
 function hasSelectedValue(selected: Set<string> | undefined, actual: readonly string[]): boolean {
@@ -207,7 +226,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
             !prerequisite.met && !selected && 'text-muted-foreground',
           )}
         >
-          {option.reference.name}
+          {getOptionLabel(option)}
         </span>
         <div className="flex shrink-0 gap-1">
           {option.reference.source && (
@@ -279,6 +298,11 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
 })
 
 interface ClassChoiceSelectionModalProps {
+  historicalSetup?: {
+    name: string
+    alreadyProficient?: boolean
+    onConfirm: (alreadyProficient: boolean) => void
+  }
   choice: Pick<NormalizedCharacterChoice, 'label'> & Partial<NormalizedCharacterChoice>
   removalOnly?: boolean
   options: ClassChoiceOptionView[]
@@ -302,7 +326,9 @@ export function ClassChoiceSelectionModal({
   classSource,
   onClose,
   onConfirm,
+  historicalSetup,
 }: ClassChoiceSelectionModalProps) {
+  const [editingHistory, setEditingHistory] = useState(false)
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
     () =>
       removalOnly
@@ -556,6 +582,60 @@ export function ClassChoiceSelectionModal({
     [maximumSelections, prerequisiteByOptionKey, removalOnly, initialSelectedIds],
   )
 
+  if (
+    historicalSetup &&
+    !removalOnly &&
+    (historicalSetup.alreadyProficient === undefined || editingHistory)
+  )
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Confirm {choice.owner?.featureName ?? choice.label} proficiency setup
+            </DialogTitle>
+            <DialogDescription>
+              When you gained this feature, were you already proficient in{' '}
+              {titleCase(historicalSetup.name)}?
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This answer determines whether you can choose a separate fallback skill. The feature's
+            fixed proficiency and Expertise apply either way.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                historicalSetup.onConfirm(true)
+                setEditingHistory(false)
+              }}
+            >
+              Already proficient in {titleCase(historicalSetup.name)}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                historicalSetup.onConfirm(false)
+                setEditingHistory(false)
+              }}
+            >
+              Gained {titleCase(historicalSetup.name)} from this feature
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
   return (
     <SelectionModal
       closeOnConfirm={false}
@@ -572,14 +652,46 @@ export function ClassChoiceSelectionModal({
       }
       items={options}
       getItemId={(option) => getClassChoiceOptionKey(option.reference)}
+      getItemLabel={getOptionLabel}
       renderCard={renderCard}
       matchItem={matchItem}
       filterSections={filterSections}
       categories={limits}
       selectionHint={
-        removalOnly
-          ? 'Keep or remove saved choices. Restore the source to choose a replacement.'
-          : undefined
+        historicalSetup && !removalOnly ? (
+          <span>
+            Acquisition setup:{' '}
+            {historicalSetup.alreadyProficient
+              ? 'already proficient'
+              : 'gained proficiency from this feature'}
+            .{' '}
+            <button type="button" className="underline" onClick={() => setEditingHistory(true)}>
+              Correct setup
+            </button>
+          </span>
+        ) : removalOnly ? (
+          'Keep or remove saved choices. Restore the source to choose a replacement.'
+        ) : choice.proficiencyDomain === 'expertise' &&
+          classProficiencyRule(
+            decodeClassProficiencyChoiceId(choice.id ?? '')?.target ?? '',
+          )?.domains.some((domain) => domain.coupled) ? (
+          <span>
+            Choose up to {maximumSelections} skills. Each gains proficiency and Expertise.
+          </span>
+        ) : choice.proficiencyDomain === 'expertise' &&
+          isOwnedExpertiseTarget(decodeClassProficiencyChoiceId(choice.id ?? '')?.target ?? '') ? (
+          <span>
+            Choose up to {maximumSelections} proficient option{maximumSelections === 1 ? '' : 's'}.
+            {options.filter(isClassChoiceOptionEligible).length < maximumSelections && (
+              <>
+                {' '}
+                <Link to="/build/proficiencies" className="underline" onClick={onClose}>
+                  Choose proficiencies
+                </Link>
+              </>
+            )}
+          </span>
+        ) : undefined
       }
       getConfirmationError={(ids) =>
         [...ids].some(

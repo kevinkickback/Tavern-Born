@@ -52,6 +52,26 @@ describe('5etools/validator', () => {
     vi.unstubAllGlobals()
   })
 
+  test('malformed optional book support is diagnosed independently of valid ordinary source content', async () => {
+    globalThis.fetch = vi.fn((input: string | URL | Request) =>
+      String(input).endsWith('/data/book/book-tce.json')
+        ? makeJsonResponse({ data: 'malformed' })
+        : String(input).endsWith('/data/feats.json')
+          ? makeJsonResponse(payloadByFile['feats.json'])
+          : makeJsonResponse({}, false),
+    ) as unknown as typeof fetch
+    const result = await validateDataSource({
+      type: 'remote',
+      path: 'https://example.com',
+      isValid: false,
+    })
+    expect(result.isValid).toBe(true)
+    expect(result.foundResources).toEqual(['feats.json'])
+    expect(result.optionalSupportDiagnostics).toEqual([
+      'Optional class feature support is unavailable in book/book-tce.json.',
+    ])
+  })
+
   test('rejects empty path', async () => {
     const result = await validateDataSource({
       type: 'remote',
@@ -208,7 +228,11 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(true)
     expect(result.foundResources).toHaveLength(Object.keys(payloadByFile).length)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(Object.keys(payloadByFile).length)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(Object.keys(payloadByFile).length + 1)
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://example.com/data/book/book-tce.json',
+      expect.any(Object),
+    )
   })
 
   test('validates bundled resources through the Electron bridge without a network request', async () => {

@@ -134,7 +134,7 @@ test('@focused Sorcerer can replace an earlier spell with any currently castable
   await selectCharacterFromHome(page, character.name)
   await page.getByRole('link', { name: 'Class', exact: true }).click()
 
-  await page.getByRole('button', { name: /Level 2 Features/ }).click()
+  await page.getByRole('button', { name: /Level 2\b/ }).click()
   await page.getByRole('button', { name: 'Replace a spell for level 2' }).click()
 
   const replacementDialog = page.getByRole('dialog', { name: 'Replace a Spell' })

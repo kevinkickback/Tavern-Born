@@ -1,4 +1,5 @@
 import type { Feat5e } from '@/types/5etools'
+import { isAuditedFeatExpertise } from '../featExpertiseRules'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,14 @@ export function deriveFeatOptionSteps(feat: Feat5e): FeatOptionStep[] {
   // skillProficiencies[].choose ─────────────────────────────────────────────
   for (const block of (feat.skillProficiencies as Array<Record<string, unknown>> | undefined) ??
     []) {
+    if (isAuditedFeatExpertise(feat) && typeof block.any === 'number' && block.any > 0) {
+      steps.push({
+        kind: 'proficiency',
+        label: `Choose ${block.any} skill`,
+        domain: 'skills',
+        count: block.any,
+      })
+    }
     if (typeof block.choose === 'object' && block.choose !== null) {
       const choose = block.choose as { from?: string[]; count?: number }
       const pool = (Array.isArray(choose.from) ? choose.from : []).filter((s) => s !== 'anySkill')

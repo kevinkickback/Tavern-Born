@@ -8,7 +8,7 @@ import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
-  getCharacterClassChoices,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
@@ -102,7 +102,7 @@ describe('committed bundled SRD corpus', () => {
     ])
     const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(gameData))
     const ranger = gameData.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
-    const terrain = getCharacterClassChoices(ranger, undefined, false, catalogs).filter(
+    const terrain = getClassChoiceCandidates(ranger, undefined, catalogs).filter(
       (row) => row.label === 'Natural Explorer',
     )
     expect(terrain.map((row) => row.level)).toEqual([1, 6, 10])

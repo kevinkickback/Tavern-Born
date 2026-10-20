@@ -195,8 +195,9 @@ export function BuildBackgroundPage() {
       buildPrerequisiteSnapshot({
         character,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
+        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
       }),
-    [character, calculationContext?.abilityScores.total],
+    [character, calculationContext],
   )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
@@ -638,6 +639,7 @@ export function BuildBackgroundPage() {
             if (!isOpen) setOptionsPendingFeat(null)
           }}
           feat={optionsPendingFeat}
+          optionTarget={optionsPendingFeat}
           fixedSpellcastingClass={optionsPendingFeat.fixedSpellcastingClass}
           proficientSkillNames={character?.proficiencies?.skills ?? []}
           onFinish={(selections) => {

@@ -28,6 +28,13 @@ import {
   resolveClassChoiceFeatureEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
+import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  createOptionalClassFeatureActivity,
+  getActiveOptionalClassFeatureDeclarations,
+} from '@/lib/character/optionalClassFeatureActivity'
+import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -43,7 +50,13 @@ import type {
   SubclassFeatureReference,
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
-import type { Character, Equipment, Feat, Feature } from '@/types/character'
+import type {
+  Character,
+  Equipment,
+  Feat,
+  Feature,
+  OptionalClassFeatureOwner,
+} from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
@@ -326,13 +339,16 @@ function deriveClassFeatureActions(
   context: RulesTextActionContext,
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
+  const activity = createOptionalClassFeatureActivity(character, context.classChoiceFeatureCatalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(character, context.classChoiceFeatureCatalogs)
   const addAction = (
     owner: string,
     target: string,
     feature: ClassFeature,
     source: CharacterAction['source'],
+    entries = feature.entries ?? [],
   ) => {
-    const description = renderEntriesToText(feature.entries)
+    const description = renderEntriesToText(entries)
     const kind = inferRulesTextActionKind(description)
     if (!kind) return
     const id = getFeatureActionGroupId(owner, target, feature.entries ?? [])
@@ -344,6 +360,7 @@ function deriveClassFeatureActions(
     kind: 'class' | 'subclass',
     owner: string,
     currentLevel: number,
+    actualOwner: OptionalClassFeatureOwner,
   ) {
     const feature = reference.feature
     const subclass = kind === 'subclass'
@@ -367,24 +384,42 @@ function deriveClassFeatureActions(
       ? getSubclassFeatureIdentity(decoded)
       : getClassFeatureIdentity(decoded)
     if (!identity || STORM_TARGETS.has(identity)) return
+    if (
+      !activity.declared(
+        actualOwner,
+        identity,
+        level,
+        undefined,
+        (reference as unknown as Record<string, unknown>).isClassFeatureVariant === true ||
+          feature.isClassFeatureVariant === true,
+      )
+    )
+      return
     const inheritedSource = subclass
       ? 'subclassSource' in decoded
         ? decoded.subclassSource
         : undefined
       : decoded.classSource
     const source = decoded.source?.trim() || inheritedSource?.trim() || 'PHB'
-    addAction(owner, identity, feature, {
-      kind,
-      name: feature.name,
-      source,
-    })
+    const currentFeature = activity.currentOptionalFeature(actualOwner, identity) ?? feature
+    addAction(
+      owner,
+      identity,
+      currentFeature,
+      {
+        kind,
+        name: feature.name,
+        source,
+      },
+      effectiveDeclaredEntries(currentFeature.entries ?? [], activity, actualOwner, identity),
+    )
   }
   for (const entry of getCharacterClassEntries(character)) {
-    const classData = findClassReference(entry, context.classes)
+    const classData = findClassReference(entry, context.availableClasses ?? context.classes)
     if (!classData) continue
     const owner = getFeatureOwnerKey(classData.name, classData.source)
     for (const reference of classData.classFeatureRefs ?? []) {
-      collect(reference, 'class', owner, entry.levels)
+      collect(reference, 'class', owner, entry.levels, optionalClassOwner(entry))
     }
 
     const subclass = getSelectedSubclassData(classData, entry)
@@ -394,11 +429,32 @@ function deriveClassFeatureActions(
         'subclass',
         getFeatureOwnerKey(classData.name, classData.source, subclass?.name, subclass?.source),
         entry.levels,
+        optionalClassOwner({
+          ...entry,
+          subclassName: subclass?.name,
+          subclassSource: subclass?.source,
+        }),
       )
     }
   }
+  for (const declaration of getActiveOptionalClassFeatureDeclarations(activity)) {
+    const { owner, target, feature } = declaration
+    addAction(
+      getFeatureOwnerKey(
+        owner[1],
+        owner[2],
+        owner[0] === 'subclass' ? owner[3] : undefined,
+        owner[0] === 'subclass' ? owner[4] : undefined,
+      ),
+      target,
+      feature,
+      { kind: owner[0], name: feature.name, source: feature.source },
+      effectiveDeclaredEntries(feature.entries ?? [], activity, owner, target),
+    )
+  }
   for (const selection of character.classChoiceSelections ?? []) {
-    if (selection.inactive || isStormAuraChoiceId(selection.choiceId)) continue
+    if (!routes.choiceIds.has(selection.choiceId) || isStormAuraChoiceId(selection.choiceId))
+      continue
     const entry = getCharacterClassEntries(character).find(
       (candidate) =>
         getFeatureOwnerKey(
@@ -423,6 +479,7 @@ function deriveClassFeatureActions(
     )
     for (const option of selection.selected) {
       if (option.slotLevel > entry.levels) continue
+      if (!routes.featureIds.has(getClassChoiceFeatureId(selection, option))) continue
       if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
         const target = getClassChoiceFeatureTarget(option)
         const feature = context.classChoiceFeatureCatalogs
@@ -447,7 +504,7 @@ function deriveClassFeatureActions(
         const [action] = rulesTextAction(
           `feature:${getClassChoiceFeatureId(selection, option)}`,
           option.name,
-          renderEntriesToText(feature?.entries),
+          renderEntriesToText(feature?.entries ?? []),
           {
             kind: selection.subclassName ? 'subclass' : 'class',
             name: option.name,

@@ -1,0 +1,185 @@
+{
+  "purpose": "Reviewed development-time semantic checkpoint; runtime validates complete granting source and filtered vocabulary.",
+  "upstream": "5etools b9061583536101068b3a59d27e886d1fa664e366 UID/copy handling; rendering Expertise prerequisites supplies no character choice model.",
+  "inputs": [
+    {
+      "file": "class/index.json",
+      "sha256": "77b4e3c24ab8a0515948c258a7104f04bbe70e6a89a17714f2ee0bdfce23c2e8"
+    },
+    {
+      "file": "class/class-artificer.json",
+      "sha256": "1c61ad11500d661350209fe81196e0ddaea31f0252a67891964810f4a98265dd"
+    },
+    {
+      "file": "class/class-barbarian.json",
+      "sha256": "15b090c2ede1cc5a522817bf41d83a890aa194f3d7827f98787e1b05d057f319"
+    },
+    {
+      "file": "class/class-bard.json",
+      "sha256": "e5041a799e8c720db3a28539c2a25e9d6d821b6229a65fd1484f749ea3978b1d"
+    },
+    {
+      "file": "class/class-cleric.json",
+      "sha256": "fa1cdf0f7b85e970e3191d2d516cac26b9cfadbe883ac89b3224c1fa95eb2f61"
+    },
+    {
+      "file": "class/class-druid.json",
+      "sha256": "e320ecf4f19e49acbbc449fcde4f8448bfad4bfc40a56138dced312a52af13a1"
+    },
+    {
+      "file": "class/class-fighter.json",
+      "sha256": "4353d0a6adf3652c989ed95e29bc1d2d40b393c84e50242b202441113a9c0dbd"
+    },
+    {
+      "file": "class/class-monk.json",
+      "sha256": "16318edac48630b7b83fcf23cc436589f8922e82b0874aefd24a2727b6954ffd"
+    },
+    {
+      "file": "class/class-mystic.json",
+      "sha256": "5548843ac2943b722099eb19c3745964956fdfc888ff801b0f9ae5f791081a64"
+    },
+    {
+      "file": "class/class-paladin.json",
+      "sha256": "46666e5793b1b54e0e618560010a5589d25b6ff789f6aa004ff90c1efbe42e00"
+    },
+    {
+      "file": "class/class-ranger.json",
+      "sha256": "e22da39dc2a9cf708f21996cf393af8240442aff6f523281bc65436609840dfb"
+    },
+    {
+      "file": "class/class-rogue.json",
+      "sha256": "1db96ec24a864369de9138a9d51bdf89e09fdd79f3f2d39c25ac73191f2befa0"
+    },
+    {
+      "file": "class/class-sidekick.json",
+      "sha256": "8075ac640418e7ea9558a4f173cf11d011020c00d5f8b994eaa33759d5849a7f"
+    },
+    {
+      "file": "class/class-sorcerer.json",
+      "sha256": "9f17737aa137ca3979b20cdcc7e8b0120c7be293cf9849c2d27c93f2e0e87c79"
+    },
+    {
+      "file": "class/class-warlock.json",
+      "sha256": "0339b47396f035de89d098e13099f7c1e010f85ba6987d790fc70706d817751c"
+    },
+    {
+      "file": "class/class-wizard.json",
+      "sha256": "eca6e726f13859842bce9f61fde909b35a386967a1719ec83cddb40e434ad01a"
+    },
+    {
+      "file": "items.json",
+      "sha256": "8d6f929c4faa4be5c806a6aeed0e6bf020bf8109888cc56ea9c8387dd01532ed"
+    },
+    {
+      "file": "items-base.json",
+      "sha256": "55d64d0d56db73ac099f0daa144bc33042d94741ffe5d2503cd6d3c9575d2b4b"
+    },
+    {
+      "file": "optionalfeatures.json",
+      "sha256": "410887e853e5e79d79cd917bfbb523c3cfea1d0f1a22fb8d4eee562a277d2aca"
+    },
+    {
+      "file": "variantrules.json",
+      "sha256": "136bd11b833aea50102123e0004d4ea4eee1037b837a2695a0dce5164ef28097"
+    },
+    {
+      "file": "book/book-xphb.json",
+      "sha256": "602e6c018962729b292810b4f5c2dca7f4f25ab5bc6241bdd18a058d171a13ed"
+    }
+  ],
+  "toolClassificationDependencies": [
+    {
+      "file": "src/lib/calculations/itemClassification.ts",
+      "sha256": "0462f54a6a6fa4c81d5c8182b272faf3d34057c543278beb5a796b148f8f16e1"
+    },
+    {
+      "file": "src/lib/5etools/copyResolution.ts",
+      "sha256": "c75215fd24deed3e9b49ff2c47a71a16df7144ede8a19fd725116dbf2d3b85c6"
+    },
+    {
+      "file": "src/lib/5etools/concreteToolProficiencies.ts",
+      "sha256": "0ab52269c77278ab89e83a566a1b5dd6d853c799daa447bd86442356a1c01776"
+    },
+    {
+      "file": "src/lib/5etools/concreteToolClassification.ts",
+      "sha256": "4608fbad468a57cac1307b8a5233bc6eea9ead5eebbde4697809b47b5eb81302"
+    },
+    {
+      "file": "src/lib/5etools/toolProficiencySource.ts",
+      "sha256": "97e5d1aabe364f4e94e0efa8b21ac389a97970b22fdb5ad207a351dd0d7de79c"
+    },
+    {
+      "file": "scripts/lib/tool-proficiency-copy-semantics.json",
+      "sha256": "72a2077eb5c0af2671c7359547a688c2649f55a6585df6ce8bc6c725d29288ef"
+    },
+    {
+      "file": "src/lib/5etools/rulesetMetadata.ts",
+      "sha256": "dbf8435d33df6cb1e46fec6a532a8c8a7cc7e78aa0e5a5b1681008c3d53c252e"
+    }
+  ],
+  "conditionalProficiencyDependencies": [
+    {
+      "file": "scripts/lib/conditional-proficiency-source.mjs",
+      "sha256": "cb66623b361c0f4a256aaff335d079b52638fbd0fab59362fedcc4acbe27e78f"
+    },
+    {
+      "file": "scripts/lib/conditional-proficiency-semantics.json",
+      "sha256": "5c6bc749e2106e95e4ef8847b218105a0a6ec305437195f459ee83d52542ec9d"
+    },
+    {
+      "file": "scripts/lib/conditional-proficiency-contexts.json",
+      "sha256": "8f7734ed87c6fcfcddaa611557464cec48f54f7310945d4f4d0977b341a1e88a"
+    },
+    {
+      "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
+      "sha256": "efec4446100b49f34182bc06e57d6787ec953b88c8b4bf68ea5cdf1be8a6eb82"
+    },
+    {
+      "file": "src/lib/5etools/naturalExplorerSource.ts",
+      "sha256": "b5eacb4d6050e56e895eca54834cb145616ad332d6a24463f32635a7dd384a08"
+    }
+  ],
+  "dependencies": [
+    {
+      "file": "variantrules.json",
+      "identity": "Expertise|XPHB",
+      "entriesDigest": "54f0a2296eee2a685eed0f9747306f2d33e680df5a826099bb777e34c3cbc022"
+    },
+    {
+      "file": "book/book-xphb.json",
+      "section": "data.2.entries.3.entries.4.entries.6.entries.2",
+      "identity": "Choose Languages; Standard Languages|XPHB",
+      "entriesDigest": "c0fbd2e9bed3a87c4c98f4ceb2495b265d98747d523f4daa1268dc3137eaafc6"
+    },
+    {
+      "file": "book/book-xphb.json",
+      "section": "data.2.entries.3.entries.4.entries.6.entries.4",
+      "identity": "Choose Languages; Rare Languages|XPHB",
+      "entriesDigest": "913cb445147dc8b41d3ed46d6b6d790ccf637eafc1640cb7821cb041a2de37cc"
+    },
+    {
+      "file": "items.json",
+      "identity": "itemGroup:Artisan's Tools|XPHB",
+      "entriesDigest": "9d7e9b109b4a2ed8eaed47bb063732cdcd38a4793acd73e2ec87850df854ef9d",
+      "memberIdentities": [
+        "Alchemist's Supplies|XPHB",
+        "Brewer's Supplies|XPHB",
+        "Calligrapher's Supplies|XPHB",
+        "Carpenter's Tools|XPHB",
+        "Cartographer's Tools|XPHB",
+        "Cobbler's Tools|XPHB",
+        "Cook's Utensils|XPHB",
+        "Glassblower's Tools|XPHB",
+        "Jeweler's Tools|XPHB",
+        "Leatherworker's Tools|XPHB",
+        "Mason's Tools|XPHB",
+        "Painter's Supplies|XPHB",
+        "Potter's Tools|XPHB",
+        "Smith's Tools|XPHB",
+        "Tinker's Tools|XPHB",
+        "Weaver's Tools|XPHB",
+        "Woodcarver's Tools|XPHB"
+      ]
+    }
+  ]
+}

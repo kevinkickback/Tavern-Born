@@ -12,6 +12,8 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { ABILITY_NAMES } from '@/lib/calculations/abilityScores'
+import type { SkillExpertiseAction } from '@/lib/character/skillExpertiseChoices'
+import type { SkillProficiencyAction } from '@/lib/character/skillProficiencyChoices'
 import { normalizeKey } from '@/lib/provenance'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -138,13 +140,20 @@ export function BuildProficienciesCategorySwitcher({
               />
               <span>{label}</span>
               {count > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold leading-none text-primary">
+                <span
+                  title={`${count} proficiency choices remaining`}
+                  role="status"
+                  aria-label={`${count} proficiency choices remaining`}
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold leading-none text-primary"
+                >
                   {count}
                 </span>
               )}
               {showExpertiseBadge && (
                 <span
-                  title={`${expertiseChoiceCount} expertise slot${expertiseChoiceCount !== 1 ? 's' : ''} remaining`}
+                  title={`${expertiseChoiceCount} Expertise choices remaining`}
+                  role="status"
+                  aria-label={`${expertiseChoiceCount} Expertise choices remaining`}
                   className="flex h-4 min-w-4 items-center justify-center rounded-full bg-warning/20 px-1 text-[10px] font-bold leading-none text-warning-foreground"
                 >
                   {expertiseChoiceCount}
@@ -180,6 +189,11 @@ interface BuildProficienciesTabsPanelProps {
   availableExpertiseSlots: number
   /** Number of skills currently marked with expertise. */
   usedExpertiseSlots: number
+  expertiseActions?: Record<string, SkillExpertiseAction[]>
+  onExpertiseAction?: (skill: string, actionId: string) => void
+  proficiencyActions?: Record<string, SkillProficiencyAction[]>
+  onProficiencyAction?: (skill: string, actionId: string) => void
+  classSkillChoicesRemaining?: number
   activeTab?: ProficiencyTabValue
   onActiveTabChange?: (value: ProficiencyTabValue) => void
   defaultTab?: ProficiencyTabValue
@@ -209,6 +223,11 @@ export function BuildProficienciesTabsPanel({
   onToggleExpertise,
   availableExpertiseSlots,
   usedExpertiseSlots,
+  expertiseActions,
+  onExpertiseAction,
+  proficiencyActions,
+  onProficiencyAction,
+  classSkillChoicesRemaining,
   activeTab,
   onActiveTabChange,
   defaultTab,
@@ -230,10 +249,13 @@ export function BuildProficienciesTabsPanel({
   const [langSort, setLangSort] = useState<LanguageSort>('alpha')
 
   const [showExpertiseHint, setShowExpertiseHint] = useState(
-    () => availableExpertiseSlots > 0 && !isHintDismissed('skills-expertise'),
+    () => !isHintDismissed('skills-expertise'),
   )
+  const hasExpertiseAction = expertiseActions
+    ? Object.values(expertiseActions).some((actions) => actions.length > 0)
+    : availableExpertiseSlots > 0
   const expertiseHintPos = useAnchoredHintPosition({
-    enabled: showExpertiseHint && availableExpertiseSlots > 0,
+    enabled: showExpertiseHint && hasExpertiseAction,
     selector: EXPERTISE_HINT_SELECTOR,
   })
 
@@ -403,8 +425,7 @@ export function BuildProficienciesTabsPanel({
         onDismiss={handleDismissExpertiseHint}
         dismissOnReferenceAction
       >
-        Click the two dots on a proficient skill to toggle expertise — doubling your proficiency
-        bonus for that skill.
+        Click the circle beside a skill to add or remove Expertise.
       </AnchoredHint>
       <Tabs
         value={currentActiveTab}
@@ -422,6 +443,11 @@ export function BuildProficienciesTabsPanel({
             onToggleExpertise={onToggleExpertise}
             availableExpertiseSlots={availableExpertiseSlots}
             usedExpertiseSlots={usedExpertiseSlots}
+            expertiseActions={expertiseActions}
+            onExpertiseAction={onExpertiseAction}
+            proficiencyActions={proficiencyActions}
+            onProficiencyAction={onProficiencyAction}
+            classSkillChoicesRemaining={classSkillChoicesRemaining}
           />
         </TabsContent>
 
@@ -463,6 +489,7 @@ export function BuildProficienciesTabsPanel({
             groups={toolGroups}
             visibleToolCandidates={visibleToolCandidates}
             currentTools={currentProficiencies.tools}
+            expertiseTools={currentProficiencies.expertise}
             ledger={ledger}
             sort={toolSort}
             onSortChange={setToolSort}

@@ -1,0 +1,150 @@
+[
+  {
+    "name": "Aberrant Anatomy",
+    "source": "RHW",
+    "page": 32,
+    "category": "DG",
+    "prerequisite": [
+      {
+        "campaign": ["Ravenloft"]
+      }
+    ],
+    "skillProficiencies": [
+      {
+        "perception": true
+      }
+    ],
+    "expertise": [
+      {
+        "perception": true
+      }
+    ],
+    "senses": [
+      {
+        "blindsight": 15
+      }
+    ],
+    "entries": [
+      "Exposure to alien horrors like those of the Far Realm has warped your physical form in supernatural ways. You gain the following features.",
+      {
+        "type": "entries",
+        "name": "Breathless",
+        "entries": ["You can hold your breath for 1 hour."]
+      },
+      {
+        "type": "entries",
+        "name": "Extrasensory Perception",
+        "entries": [
+          "You have proficiency in the {@skill Perception|XPHB} skill, if you lack it. You also gain {@variantrule Expertise|XPHB} in that skill.",
+          "In addition, you have {@sense Blindsight|XPHB} with a range of 15 feet."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Warping Flesh",
+        "entries": [
+          "Immediately after you make a {@variantrule D20 Test|XPHB} and roll a 1 on the {@dice d20}, the aberrant influence infecting your form flares, wrenching control of your flesh. Make a Constitution saving throw (DC 13 plus your {@variantrule Proficiency|XPHB|Proficiency Bonus}). On a failed save, you have the {@condition Stunned|XPHB} condition until the end of your next turn."
+        ]
+      }
+    ],
+    "hasFluffImages": true
+  },
+  {
+    "name": "Skill Expert",
+    "source": "TCE",
+    "page": 80,
+    "reprintedAs": ["Skill Expert|XPHB"],
+    "ability": [
+      {
+        "choose": {
+          "from": ["str", "dex", "con", "int", "wis", "cha"],
+          "amount": 1
+        }
+      }
+    ],
+    "skillProficiencies": [
+      {
+        "choose": {
+          "from": [
+            "athletics",
+            "acrobatics",
+            "sleight of hand",
+            "stealth",
+            "arcana",
+            "history",
+            "investigation",
+            "nature",
+            "religion",
+            "animal handling",
+            "insight",
+            "medicine",
+            "perception",
+            "survival",
+            "deception",
+            "intimidation",
+            "performance",
+            "persuasion"
+          ]
+        }
+      }
+    ],
+    "expertise": [
+      {
+        "anyProficientSkill": 1
+      }
+    ],
+    "entries": [
+      "You have honed your proficiency with particular skills, granting you the following benefits:",
+      {
+        "type": "list",
+        "items": [
+          "You gain proficiency in one {@table skills|phb|skill} of your choice.",
+          "Choose one skill in which you have proficiency. You gain expertise with that skill, which means your proficiency bonus is doubled for any ability check you make with it. The skill you choose must be one that isn't already benefiting from a feature, such as Expertise, that doubles your proficiency bonus."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Skill Expert",
+    "source": "XPHB",
+    "page": 207,
+    "category": "G",
+    "prerequisite": [
+      {
+        "level": 4
+      }
+    ],
+    "ability": [
+      {
+        "choose": {
+          "from": ["str", "dex", "con", "int", "wis", "cha"]
+        }
+      }
+    ],
+    "skillProficiencies": [
+      {
+        "any": 1
+      }
+    ],
+    "expertise": [
+      {
+        "anyProficientSkill": 1
+      }
+    ],
+    "entries": [
+      "You gain the following benefits.",
+      {
+        "type": "entries",
+        "name": "Skill Proficiency",
+        "entries": ["You gain proficiency in one skill of your choice."]
+      },
+      {
+        "type": "entries",
+        "name": "Expertise",
+        "entries": [
+          "Choose one skill in which you have proficiency but lack {@variantrule Expertise|XPHB}. You gain {@variantrule Expertise|XPHB} with that skill."
+        ]
+      }
+    ]
+  }
+]

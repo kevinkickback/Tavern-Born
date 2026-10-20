@@ -1,0 +1,162 @@
+{
+  "expertiseRule": {
+    "name": "Expertise",
+    "source": "XPHB",
+    "page": 367,
+    "srd52": true,
+    "basicRules2024": true,
+    "ruleType": "C",
+    "entries": [
+      "Expertise is a feature that enhances your use of a skill proficiency. When you make an ability check with a skill proficiency in which you have Expertise, your {@variantrule Proficiency|XPHB|Proficiency Bonus} is doubled for that check unless the bonus is doubled by another feature.",
+      "If you gain Expertise, you gain it in one {@variantrule skill|XPHB} in which you have proficiency. You can't have Expertise in the same skill proficiency more than once."
+    ]
+  },
+  "book": {
+    "data": [
+      null,
+      null,
+      {
+        "name": "Chapter 2: Creating a Character",
+        "entries": [
+          {
+            "type": "entries",
+            "name": "Choose Languages",
+            "page": 37,
+            "id": "0d8",
+            "entries": [
+              "Your character knows at least three languages: Common plus two languages you roll or choose from the Standard Languages table. Knowledge of a language means your character can communicate in it, read it, and write it. Your class and other features might also give you languages.",
+              "The Standard Languages table lists languages that are widespread on D&D worlds. Every player character knows Common, which originated in the planar metropolis of Sigil, the hub of the multiverse. The other standard languages originated with the first members of the most prominent species in the worlds of D&D and have since spread widely.",
+              {
+                "type": "table",
+                "caption": "Standard Languages",
+                "srd52": true,
+                "basicRules2024": true,
+                "colLabels": ["{@dice 1d12}", "Language", "Origin"],
+                "colStyles": ["col-2 text-center", "col-8", "col-2"],
+                "rows": [
+                  ["—", "{@language Common|XPHB}", "Sigil"],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 1
+                      }
+                    },
+                    "{@language Common Sign Language|XPHB}",
+                    "Sigil"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 2
+                      }
+                    },
+                    "{@language Draconic|XPHB}",
+                    "Dragons"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "min": 3,
+                        "max": 4
+                      }
+                    },
+                    "{@language Dwarvish|XPHB}",
+                    "Dwarves"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "min": 5,
+                        "max": 6
+                      }
+                    },
+                    "{@language Elvish|XPHB}",
+                    "Elves"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 7
+                      }
+                    },
+                    "{@language Giant|XPHB}",
+                    "Giants"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 8
+                      }
+                    },
+                    "{@language Gnomish|XPHB}",
+                    "Gnomes"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 9
+                      }
+                    },
+                    "{@language Goblin|XPHB}",
+                    "Goblinoids"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "min": 10,
+                        "max": 11
+                      }
+                    },
+                    "{@language Halfling|XPHB}",
+                    "Halflings"
+                  ],
+                  [
+                    {
+                      "type": "cell",
+                      "roll": {
+                        "exact": 12
+                      }
+                    },
+                    "{@language Orc|XPHB}",
+                    "Orcs"
+                  ]
+                ]
+              },
+              "The Rare Languages table lists languages that are either secret or derived from other planes of existence and thus less widespread in the worlds of the Material Plane. Some features let a character learn a rare language.",
+              {
+                "type": "table",
+                "caption": "Rare Languages",
+                "srd52": true,
+                "basicRules2024": true,
+                "colLabels": ["Language", "Origin"],
+                "colStyles": ["col-6", "col-6"],
+                "rows": [
+                  ["Abyssal", "Demons of the Abyss"],
+                  ["Celestial", "Celestials"],
+                  ["Deep Speech", "Aberrations"],
+                  ["Druidic", "Druidic circles"],
+                  ["Infernal", "Devils of the Nine Hells"],
+                  ["Primordial*", "Elementals"],
+                  ["Sylvan", "The Feywild"],
+                  ["Thieves' Cant", "Various criminal guilds"],
+                  ["Undercommon", "The Underdark"]
+                ],
+                "footnotes": [
+                  "*Primordial includes the Aquan, Auran, Ignan, and Terran dialects. Creatures that know one of these dialects can communicate with those that know a different one."
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

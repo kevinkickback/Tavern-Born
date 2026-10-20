@@ -4,11 +4,14 @@ import {
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
   getCharacterClassFeatureVariantChoices,
+  getClassChoiceCandidates,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import type { Subclass5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharacterChoice {
   return {
@@ -532,7 +535,7 @@ describe('class choice option resolution', () => {
     ).toEqual([standalone, optional, featProgression])
   })
 
-  test('switches a subclass replacement choice with the optional-feature toggle', () => {
+  test('keeps unsupported subclass replacements dormant until explicit supported adoption', () => {
     const original = choice({
       id: 'original',
       label: "Ranger's Companion",
@@ -568,12 +571,33 @@ describe('class choice option resolution', () => {
       },
     }
 
-    expect(getCharacterClassChoices({}, subclass, false)).toEqual([original])
-    expect(getCharacterClassChoices({}, subclass, true)).toEqual([variant])
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    for (const enabled of [false, true])
+      expect(
+        getCharacterClassChoices(
+          {},
+          subclass,
+          createOptionalClassFeatureActivity({
+            ...character,
+            variantRules: { optionalClassFeatures: enabled },
+          }),
+        ),
+      ).toEqual([original])
+    expect(getClassChoiceCandidates({}, subclass)).toEqual([original, variant])
     expect(getCharacterClassFeatureVariantChoices({}, subclass)).toEqual([original, variant])
   })
 
-  test('switches a class replacement choice with the optional-feature toggle', () => {
+  test('keeps standard and unrelated choices while permission alone selects no replacement', () => {
     const original = choice({
       id: 'original',
       label: 'Original Feature',
@@ -604,11 +628,22 @@ describe('class choice option resolution', () => {
       },
     }
 
-    expect(getCharacterClassChoices(classData, undefined, false)).toEqual([
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Any', source: 'PHB', levels: 1 }],
+    })
+    for (const enabled of [false, true])
+      expect(
+        getCharacterClassChoices(
+          classData,
+          undefined,
+          createOptionalClassFeatureActivity({
+            ...character,
+            variantRules: { optionalClassFeatures: enabled },
+          }),
+        ),
+      ).toEqual([original, expect.objectContaining({ id: 'unrelated' })])
+    expect(getClassChoiceCandidates(classData, undefined)).toEqual([
       original,
-      expect.objectContaining({ id: 'unrelated' }),
-    ])
-    expect(getCharacterClassChoices(classData, undefined, true)).toEqual([
       expect.objectContaining({ id: 'unrelated' }),
       variant,
     ])
@@ -618,7 +653,7 @@ describe('class choice option resolution', () => {
     ])
   })
 
-  test('switches replacement diagnostics with the optional-feature toggle', () => {
+  test('requires standard diagnostics and leaves unsupported optional setup unrequired', () => {
     const original = {
       code: 'unresolved-options' as const,
       className: 'Ranger',
@@ -645,7 +680,27 @@ describe('class choice option resolution', () => {
       },
     }
 
-    expect(getCharacterClassChoiceDiagnostics({}, subclass, false)).toEqual([original])
-    expect(getCharacterClassChoiceDiagnostics({}, subclass, true)).toEqual([variant])
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    for (const enabled of [false, true])
+      expect(
+        getCharacterClassChoiceDiagnostics(
+          {},
+          subclass,
+          createOptionalClassFeatureActivity({
+            ...character,
+            variantRules: { optionalClassFeatures: enabled },
+          }),
+        ),
+      ).toEqual([original])
   })
 })

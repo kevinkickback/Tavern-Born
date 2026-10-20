@@ -12,6 +12,14 @@ import {
 import { parseClasses } from '@/lib/5etools/parsers'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
+  createClassChoiceCatalogs,
+  getCharacterClassChoices,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
@@ -20,9 +28,11 @@ import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
-import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
 import { sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
@@ -402,47 +412,107 @@ describe('characterSheetPdf', () => {
   })
 
   test('2014 fills the active creature companion but ignores an inactive choice', async () => {
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Ranger', source: 'PHB', levels: 3 }],
-      classChoiceSelections: [
+    const { data, catalogs } = makeOptionalDeclarationCatalog('class/class-ranger.json', [
+      'subclass',
+      'ranger',
+      'phb',
+      'beast master',
+      'phb',
+    ])
+    const land: Creature5e = {
+      name: 'Beast of the Land',
+      source: 'TCE',
+      size: ['M'],
+      type: 'beast',
+      ac: [{ special: '13 + PB (natural armor)' }],
+      hp: { special: '5 + five times your ranger level' },
+      speed: { walk: 40 },
+      str: 14,
+      action: [{ name: 'Maul', entries: ['{@atk mw} {@hitYourSpellAttack} to hit.'] }],
+    }
+    const wolf: Creature5e = {
+      name: 'Wolf',
+      source: 'MM',
+      size: ['M'],
+      type: 'beast',
+      cr: '1/4',
+      hp: { average: 11 },
+    }
+    const currentCatalogs = { ...createClassChoiceCatalogs(catalogs), creatures: [land, wolf] }
+    let character: Character = makeCharacterFixture({
+      allowedSources: ['PHB', 'TCE', 'MM'],
+      variantRules: { optionalClassFeatures: true },
+      classProgression: [
         {
-          choiceId: 'inactive',
-          label: 'Companion',
-          kind: 'creature',
-          inactive: true,
-          className: 'Ranger',
-          classSource: 'PHB',
-          classLevel: 3,
-          selected: [{ entityType: 'creature', name: 'Wolf', source: 'MM', slotLevel: 3 }],
-        },
-        {
-          choiceId: 'active',
-          label: 'Primal Companion',
-          kind: 'creature',
-          className: 'Ranger',
-          classSource: 'PHB',
-          classLevel: 3,
-          selected: [
-            { entityType: 'creature', name: 'Beast of the Land', source: 'TCE', slotLevel: 3 },
-          ],
+          name: 'Ranger',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Beast Master',
+          subclassSource: 'PHB',
         },
       ],
     })
-    const viewModel = createCharacterSheetViewModel(character, {
-      creaturesByKey: {
-        'Beast of the Land|TCE': {
-          name: 'Beast of the Land',
-          source: 'TCE',
-          size: ['M'],
-          type: 'beast',
-          ac: [{ special: '13 + PB (natural armor)' }],
-          hp: { special: '5 + five times your ranger level' },
-          speed: { walk: 40 },
-          str: 14,
-          action: [{ name: 'Maul', entries: ['{@atk mw} {@hitYourSpellAttack} to hit.'] }],
-        },
+    const cls = data.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
+    const subclass = cls.subclasses!.find(
+      (row) => row.name === 'Beast Master' && row.source === 'PHB',
+    )!
+    const choose = (label: string, name: string) => {
+      const choice = getCharacterClassChoices(
+        cls,
+        subclass,
+        createOptionalClassFeatureActivity(character, currentCatalogs),
+        currentCatalogs,
+      ).find((row) => row.label === label)!
+      const option = resolveClassChoiceOptions(choice, currentCatalogs, [], 3, character).find(
+        (row) => row.reference.name === name && row.availability === 'eligible',
+      )!
+      const result = applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choice,
+        [option.reference],
+        { classes: data.classes, catalogs: currentCatalogs },
+      )
+      character = characterPersistenceSchema.parse({
+        ...character,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    }
+    choose("Ranger's Companion", 'Wolf')
+    const adopted = setOptionalClassAdoptionCommand(
+      character,
+      character.provenance,
+      currentCatalogs,
+      {
+        owner: ['subclass', 'ranger', 'phb', 'beast master', 'phb'],
+        target: 'subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce',
+        earnedLevel: 3,
       },
+      true,
+      [],
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...adopted.characterPatch,
+      provenance: adopted.provenanceUpdate,
     })
+    choose('Primal Companion', 'Beast of the Land')
+    expect(
+      character.classChoiceSelections?.find((row) => row.label === "Ranger's Companion")?.inactive,
+    ).toBe(true)
+    const inputs = {
+      classesByKey: buildClassLookup(data.classes),
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: currentCatalogs,
+      creaturesByKey: { 'Beast of the Land|TCE': land, 'Wolf|MM': wolf },
+    }
+    const viewModel = createCharacterSheetViewModel(character, inputs)
+    const suspended = createCharacterSheetViewModel(character, {
+      ...inputs,
+      classChoiceFeatureCatalogs: { ...currentCatalogs, optionalClassFeatureSources: [] },
+    })
+    expect(suspended.companions ?? []).toEqual([])
     const map = mapCharacterSheetViewModel(viewModel, '2014')
     expect(map.textFields['P4.AScomp.Comp.Desc.Name']).toBe('Beast of the Land')
     expect(map.textFields['P4.AScomp.Comp.Use.Ability.Str.Score']).toBe('14')

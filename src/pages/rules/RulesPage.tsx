@@ -1,5 +1,5 @@
 import { DiceFive, SlidersHorizontal, Sparkle, Sword, Warning } from '@phosphor-icons/react'
-import { type ReactNode, useId, useMemo } from 'react'
+import { type ReactNode, useId } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -8,11 +8,11 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
-import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
 import { cn } from '@/lib/utils'
@@ -121,10 +121,7 @@ export function RulesPage() {
   const activePanel = getActivePanel(searchParams.get('section'))
   const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
   const allClasses = useClasses()
-  const classChoiceFeatureCatalogs = useMemo(
-    () => buildClassChoiceFeatureCatalogs({ classes, classFeatures }),
-    [classes, classFeatures],
-  )
+  const classChoiceFeatureCatalogs = useClassChoiceFeatureCatalogs()
   const contentAvailability = getVariantRuleContentAvailability({
     classes,
     classFeatures,
@@ -142,13 +139,7 @@ export function RulesPage() {
   const rules = character.variantRules ?? {}
   const abilityMethod = rules.abilityScoreMethod ?? 'standard-array'
   const abilityMethods = getAbilityScoreMethodOptions(character.originSystem)
-  const hasOptionalFeatureSelections =
-    Object.values(character.provenance?.features ?? {}).some((tags) =>
-      tags.some((tag) => tag.sourceType === 'optionalFeature'),
-    ) ||
-    (character.classChoiceSelections ?? []).some(
-      (selection) => selection.inactive || selection.kind === 'optional-feature',
-    )
+  const hasOptionalFeatureSelections = !!character.optionalClassFeatureAdoptions?.length
 
   const updateRules = (updates: Partial<VariantRules>) => {
     updateCharacter(character.id, { variantRules: { ...rules, ...updates } })
@@ -321,8 +312,8 @@ export function RulesPage() {
                   description="Adjust restrictions applied while choosing character options."
                 >
                   <RuleRow
-                    label="Optional Class Features"
-                    description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
+                    label="Allow Optional Class Features"
+                    description="Choose individual optional features on the Class page. Enabling this setting does not select or replace any features."
                     checked={rules.optionalClassFeatures ?? false}
                     available={contentAvailability.optionalClassFeatures}
                     unavailableDescription="No optional or replacement class features are available from your selected content."

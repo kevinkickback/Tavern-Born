@@ -21,6 +21,10 @@ const calculationCache = new WeakMap<
   Character,
   WeakMap<object, { rawLookups: unknown; result: CharacterCalculationContext }>
 >()
+const featureCatalogCache = new WeakMap<
+  object,
+  ReturnType<typeof buildClassChoiceFeatureCatalogs>
+>()
 
 export function useCharacterCalculationContext(
   character: Character | null | undefined,
@@ -33,12 +37,18 @@ export function useCharacterCalculationContext(
     const cached = calculationCache.get(character)?.get(filteredData)
     if (cached && cached.rawLookups === rawLookupSet) return cached.result
 
+    let featureCatalogs = featureCatalogCache.get(filteredData)
+    if (!featureCatalogs) {
+      featureCatalogs = buildClassChoiceFeatureCatalogs(filteredData)
+      featureCatalogCache.set(filteredData, featureCatalogs)
+    }
     const primaryLookups = {
       classChoiceClasses: filteredData.classes,
-      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(filteredData),
+      classChoiceFeatureCatalogs: featureCatalogs,
       backgroundsByKey: buildBackgroundLookup(filteredData.backgrounds ?? []),
       classesByKey: buildClassLookup(filteredData.classes ?? []),
       featsByKey: buildFeatLookup(filteredData.feats ?? []),
+      featExpertiseFeats: filteredData.feats,
       itemLookup: buildItemLookup([
         ...(filteredData.items ?? []),
         ...(filteredData.itemsBase ?? []),

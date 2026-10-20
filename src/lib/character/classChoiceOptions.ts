@@ -1,8 +1,32 @@
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from './classChoiceFeatureCatalogs'
+
+export {
+  buildClassChoiceFeatureCatalogs,
+  type ClassChoiceFeatureCatalogs,
+  collectSubclassFeatures,
+  indexSubclassFeatureTargets,
+  scopeClassChoiceFeatureCatalogs,
+} from './classChoiceFeatureCatalogs'
+
+import { getCurrentCannyChoices, normalizeCannyChoices } from '@/lib/5etools/cannyChoices'
 import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classData'
 import {
+  decodeClassFeatureReference,
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
+import {
+  getCurrentClassProficiencyChoices,
+  normalizeClassProficiencyChoices,
+} from '@/lib/5etools/classProficiencyChoices'
+import {
+  decodeClassProficiencyChoiceId,
+  isClassProficiencyChoiceId,
+} from '@/lib/5etools/classProficiencyIdentity'
+import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   buildCreatureChoiceSummary,
@@ -18,14 +42,13 @@ import {
   resolveFeatureTableOption,
 } from '@/lib/5etools/featureTableOptions'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
-import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
 import {
   hasNaturalExplorerGrant,
-  isNaturalExplorerReplaced,
   resolveNaturalExplorerOption,
   type SourceGroupOption,
 } from '@/lib/5etools/naturalExplorerChoices'
 import {
+  DEFT_EXPLORER_TARGET,
   decodeNaturalExplorerChoiceId,
   NATURAL_EXPLORER_TARGET,
 } from '@/lib/5etools/naturalExplorerIdentity'
@@ -37,6 +60,7 @@ import {
   STORM_TARGETS,
   stormFeatureRef,
 } from '@/lib/5etools/stormAuraIdentity'
+import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   getNormalizedItemTraits,
@@ -48,7 +72,6 @@ import type {
   ClassFeature,
   Creature5e,
   Feat5e,
-  GameData,
   Item5e,
   ItemMastery5e,
   ItemPropertyReference,
@@ -57,7 +80,7 @@ import type {
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
-import type { CharacterClassChoiceOption } from '@/types/character'
+import type { Character, CharacterClassChoiceOption } from '@/types/character'
 import type {
   ChoiceOptionEntityType,
   NormalizedCharacterChoice,
@@ -69,6 +92,13 @@ import {
   getClassChoiceOptionKey,
   getFeatureOwnerKey,
 } from './classChoiceIdentity'
+import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
+import { resolveClassProficiencyOptions } from './classProficiencyOptions'
+import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
+import {
+  createOptionalClassFeatureActivity,
+  type OptionalClassFeatureActivity,
+} from './optionalClassFeatureActivity'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
@@ -102,18 +132,6 @@ type ClassChoiceOptionPresentation =
 
 export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): boolean {
   return option.availability === 'eligible'
-}
-
-export interface ClassChoiceFeatureCatalogs {
-  classFeatures: readonly ClassFeature[]
-  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
-  /** Retain multiplicity for required-setup audits before the lookup projection. */
-  ambiguousClassFeatureTargets?: ReadonlySet<string>
-  subclassFeatures: readonly SubclassFeature[]
-  /** Complete producers for literal options, preserved before the generic lookup projection. */
-  subclassFeatureCandidates?: ReadonlyMap<string, readonly SubclassFeature[]>
-  /** Composed catalogs retain full owners; class-owned targets must have one exact owner. */
-  subclassTargets?: ReturnType<typeof indexSubclassFeatureTargets>
 }
 
 export interface ClassChoiceCatalogs extends ClassChoiceFeatureCatalogs {
@@ -178,7 +196,7 @@ function getCatalog(
   > &
     Pick<ClassChoiceFeatureCatalogs, 'subclassFeatureCandidates'>,
 ): readonly ChoiceCatalogEntity[] {
-  if (entityType === 'featureOption') return []
+  if (entityType === 'featureOption' || entityType === 'proficiency') return []
   if (entityType === 'classFeature') return catalogs.classFeatures
   if (entityType === 'subclassFeature') return catalogs.subclassFeatures
   if (entityType === 'creature') return catalogs.creatures
@@ -682,51 +700,6 @@ export function resolveClassChoiceFeatureEntity(
   return matches.length === 1 ? matches[0] : undefined
 }
 
-export function scopeClassChoiceFeatureCatalogs(
-  catalogs: ClassChoiceFeatureCatalogs,
-  subclassOwner?: string,
-): Pick<
-  ClassChoiceFeatureCatalogs,
-  'classFeatures' | 'classFeatureCandidates' | 'subclassFeatures' | 'subclassFeatureCandidates'
-> {
-  if (!catalogs.subclassTargets) return catalogs
-  const targets = subclassOwner
-    ? catalogs.subclassTargets.byOwner.get(subclassOwner)
-    : catalogs.subclassTargets.unique
-  const candidates = subclassOwner
-    ? catalogs.subclassTargets.candidatesByOwner.get(subclassOwner)
-    : catalogs.subclassTargets.uniqueCandidates
-  return {
-    classFeatures: catalogs.classFeatures,
-    classFeatureCandidates: catalogs.classFeatureCandidates,
-    subclassFeatures: [...(targets?.values() ?? [])],
-    subclassFeatureCandidates: candidates ?? new Map(),
-  }
-}
-
-/** Build all qualified targets together from one authoritative, complete filtered data view. */
-export function buildClassChoiceFeatureCatalogs(data: Pick<GameData, 'classes' | 'classFeatures'>) {
-  const subclassTargets = indexSubclassFeatureTargets(data.classes)
-  const seenClassTargets = new Set<string>()
-  const classFeatureCandidates = new Map<string, ClassFeature[]>()
-  const ambiguousClassFeatureTargets = new Set<string>()
-  for (const feature of data.classFeatures) {
-    const target = getClassFeatureIdentity(feature)
-    if (!target) continue
-    classFeatureCandidates.set(target, [...(classFeatureCandidates.get(target) ?? []), feature])
-    if (seenClassTargets.has(target)) ambiguousClassFeatureTargets.add(target)
-    seenClassTargets.add(target)
-  }
-  return {
-    classFeatureCandidates,
-    ambiguousClassFeatureTargets,
-    classFeatures: Object.values(buildClassFeatureLookup(data.classFeatures)),
-    subclassFeatures: [...subclassTargets.unique.values()],
-    subclassTargets,
-    subclassFeatureCandidates: subclassTargets.uniqueCandidates,
-  }
-}
-
 function resolveExplicitOption(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceCatalogs,
@@ -769,7 +742,10 @@ export function resolveClassChoiceOptions(
   catalogs: ClassChoiceCatalogs,
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
+  character?: Character,
 ): ClassChoiceOptionView[] {
+  if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id))
+    return resolveClassProficiencyOptions(choice, catalogs, saved, character)
   if (catalogs.subclassTargets) {
     const owner =
       choice.owner.type === 'subclass'
@@ -841,8 +817,37 @@ export function resolveClassChoiceOptions(
     )
   }
 
+  const poolSection = getOptionalClassPoolSection(choice)
+  const activity = character && createOptionalClassFeatureActivity(character, catalogs)
+  const poolCounts = new Map<string, number>()
+  if (poolSection)
+    for (const row of catalogs.optionalFeatures) {
+      const key = getClassChoiceOptionKey({
+        entityType: 'optionalFeature',
+        name: row.name,
+        source: row.source,
+      })
+      poolCounts.set(key, (poolCounts.get(key) ?? 0) + 1)
+    }
   const byKey = new Map(
-    resolved.map((option) => [getClassChoiceOptionKey(option.reference), option]),
+    resolved
+      .filter((option) => {
+        if (
+          !poolSection ||
+          option.reference.entityType !== 'optionalFeature' ||
+          normalized(option.reference.source) !== normalized(poolSection.source)
+        )
+          return true
+        if (!activity?.option(choice, option.reference)) return false
+        const key = getClassChoiceOptionKey(option.reference)
+        const count = poolCounts.get(key) ?? 0
+        const candidateCount =
+          catalogs.optionalFeatureCandidates !== undefined
+            ? (catalogs.optionalFeatureCandidates.get(key) ?? []).length
+            : count
+        return count === 1 && candidateCount === 1
+      })
+      .map((option) => [getClassChoiceOptionKey(option.reference), option]),
   )
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
@@ -901,39 +906,27 @@ export function getCharacterClassFeatureVariantChoices(
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 
-function includeFeatureVariantChoice(
-  choice: NormalizedCharacterChoice,
-  choices: readonly NormalizedCharacterChoice[],
-  includeVariants: boolean,
-): boolean {
-  if (choice.featureVariant) return includeVariants
-  if (!includeVariants) return true
-  const featureName = normalized(choice.owner.featureName)
-  return !choices.some(
-    (candidate) =>
-      candidate.featureVariant &&
-      normalized(candidate.featureVariant.replacesFeatureName) === featureName,
-  )
-}
-
-export function getCharacterClassChoices(
+/** Source-only candidates include both sides; no permission or character intent is inferred. */
+export function getClassChoiceCandidates(
   classData: {
     name?: string
     source?: string
     classFeatureRefs?: Class5e['classFeatureRefs']
     normalizedRules?: { choices: NormalizedCharacterChoice[] }
   },
-  subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
-  includeVariants: boolean,
+  subclass:
+    | (Pick<Subclass5e, 'normalizedRules'> & Partial<Pick<Subclass5e, 'name' | 'source'>>)
+    | undefined,
   catalogs?: ClassChoiceFeatureCatalogs,
 ): NormalizedCharacterChoice[] {
-  const classChoices = getStandaloneClassChoices(classData)
-  const subclassChoices = subclass?.normalizedRules?.choices ?? []
   const declarations = collectUnconditionalFeatureReferences(
     classData.classFeatureRefs ?? [],
     'classFeature',
   )
-  return getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+  const ordinary = getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+    if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
+      return false
+    }
     if (isFeatureLiteralChoiceId(choice.id)) {
       const relation = decodeNaturalExplorerChoiceId(choice.id)
       const grants = declarations.filter((row) => row.target === relation?.grant)
@@ -943,29 +936,59 @@ export function getCharacterClassChoices(
         normalized(classData.source) === normalized(choice.owner.source) &&
         hasNaturalExplorerGrant(declarations, NATURAL_EXPLORER_TARGET) &&
         hasNaturalExplorerGrant(declarations, relation.grant) &&
-        Math.min(...grants.map((row) => row.level)) === choice.level &&
-        !isNaturalExplorerReplaced(classData, includeVariants, catalogs)
+        Math.min(...grants.map((row) => row.level)) === choice.level
       )
     }
-    return includeFeatureVariantChoice(
-      choice,
-      choice.owner.type === 'subclass' ? subclassChoices : classChoices,
-      includeVariants,
-    )
+    return true
   })
+  const canonical =
+    classData.name && classData.source
+      ? getCurrentOwnedProficiencyCandidates(
+          {
+            name: classData.name,
+            source: classData.source,
+            classFeatureRefs: classData.classFeatureRefs,
+          },
+          true,
+          catalogs,
+          subclass?.name && subclass.source
+            ? { name: subclass.name, source: subclass.source }
+            : undefined,
+        )
+      : []
+  return [...ordinary, ...canonical].sort(
+    (left, right) => left.level - right.level || left.id.localeCompare(right.id),
+  )
 }
 
-export function getCharacterClassChoiceDiagnostics(
+export function getCharacterClassChoices(
+  classData: Parameters<typeof getClassChoiceCandidates>[0],
+  subclass: Parameters<typeof getClassChoiceCandidates>[1],
+  activity: OptionalClassFeatureActivity,
+  catalogs?: ClassChoiceFeatureCatalogs,
+): NormalizedCharacterChoice[] {
+  if (activity.catalogs !== catalogs)
+    throw new RangeError('Class activity requires the current source catalog.')
+  return getClassChoiceCandidates(classData, subclass, catalogs).filter(activity.choice)
+}
+
+/** Source-side audit query only. This boolean never decides a character's required setup. */
+export function getClassChoiceDiagnosticCandidateSide(
   classData: {
+    name?: string
+    source?: string
     classFeatureRefs?: Class5e['classFeatureRefs']
     normalizedRules?: { choiceDiagnostics: import('@/types/classRules').ClassChoiceDiagnostic[] }
   },
-  subclass: Pick<Subclass5e, 'normalizedRules'> | undefined,
+  subclass:
+    | (Pick<Subclass5e, 'normalizedRules'> & Partial<Pick<Subclass5e, 'name' | 'source'>>)
+    | undefined,
   includeVariants: boolean,
   catalogs?: Pick<
     ClassChoiceFeatureCatalogs,
     'classFeatures' | 'classFeatureCandidates' | 'ambiguousClassFeatureTargets'
-  >,
+  > &
+    Partial<ClassChoiceFeatureCatalogs>,
 ): import('@/types/classRules').ClassChoiceDiagnostic[] {
   const known = new Set(
     getActiveRequiredSetupDiagnostics(
@@ -984,7 +1007,16 @@ export function getCharacterClassChoiceDiagnostics(
     diagnostic: import('@/types/classRules').ClassChoiceDiagnostic,
     diagnostics: readonly import('@/types/classRules').ClassChoiceDiagnostic[],
   ) => {
-    if (diagnostic.requiredChoice) return known.has(diagnostic)
+    if (diagnostic.requiredChoice) {
+      const target =
+        diagnostic.requiredChoice.target.entityType === 'classFeature' &&
+        getClassFeatureIdentity(
+          decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
+        )
+      const rule = target && classProficiencyRule(target)
+      if (rule && target !== DEFT_EXPLORER_TARGET) return includeVariants || !rule.optional
+      return known.has(diagnostic)
+    }
     if (diagnostic.featureVariant) return includeVariants
     if (!includeVariants) return true
     const featureName = normalized(diagnostic.featureName)
@@ -996,85 +1028,153 @@ export function getCharacterClassChoiceDiagnostics(
   }
   const classDiagnostics = classData.normalizedRules?.choiceDiagnostics ?? []
   const subclassDiagnostics = subclass?.normalizedRules?.choiceDiagnostics ?? []
+  const subclassProficiencyDiagnostics =
+    classData.name && classData.source && subclass?.name && subclass.source
+      ? getSubclassProficiencyDiagnostics(
+          {
+            type: 'subclass',
+            name: classData.name,
+            source: classData.source,
+            subclassName: subclass.name,
+            subclassSource: subclass.source,
+          },
+          getCurrentOwnedProficiencyCandidates(
+            {
+              name: classData.name,
+              source: classData.source,
+              classFeatureRefs: classData.classFeatureRefs,
+            },
+            includeVariants,
+            catalogs
+              ? { ...catalogs, subclassFeatures: catalogs.subclassFeatures ?? [] }
+              : undefined,
+            { name: subclass.name, source: subclass.source },
+          ),
+        )
+      : []
+  const canny =
+    classData.name && classData.source && includeVariants
+      ? normalizeCannyChoices(
+          { type: 'class', name: classData.name, source: classData.source },
+          collectUnconditionalFeatureReferences(classData.classFeatureRefs ?? [], 'classFeature'),
+        )
+      : undefined
+  const cannyDiagnostics = canny?.diagnostics ?? []
+  const generalDiagnostics: import('@/types/classRules').ClassChoiceDiagnostic[] = []
+  const seenProficiencyDiagnostics = new Set<string>()
+  if (classData.name && classData.source) {
+    const owner = { type: 'class' as const, name: classData.name, source: classData.source }
+    const normalized = normalizeClassProficiencyChoices(
+      owner,
+      collectUnconditionalFeatureReferences(classData.classFeatureRefs ?? [], 'classFeature'),
+    )
+    const current = new Set(
+      getCurrentClassProficiencyChoices(
+        { ...classData, name: classData.name, source: classData.source },
+        includeVariants,
+        catalogs,
+      ).map((choice) => choice.id),
+    )
+    for (const choice of normalized.choices) {
+      const target = decodeClassProficiencyChoiceId(choice.id)?.target
+      if (!target || target === DEFT_EXPLORER_TARGET || current.has(choice.id)) continue
+      const key = `${target}|${choice.level}`
+      if (seenProficiencyDiagnostics.has(key)) continue
+      seenProficiencyDiagnostics.add(key)
+      const feature = decodeClassFeatureReference(target.split('|').slice(1).join('|'))
+      generalDiagnostics.push({
+        code: 'unverified-required-choice',
+        className: owner.name,
+        classSource: owner.source,
+        featureName: feature.name,
+        level: choice.level,
+        message: `${feature.name} proficiency rules are unavailable, conflicting or changed. Restore the exact feature source.`,
+        requiredChoice: {
+          target: {
+            entityType: 'classFeature',
+            name: feature.name,
+            source: feature.source,
+            ref: target.split('|').slice(1).join('|'),
+          },
+        },
+      })
+    }
+  }
+  if (
+    canny?.choices.length &&
+    !getCurrentCannyChoices(
+      {
+        name: classData.name!,
+        source: classData.source!,
+        classFeatureRefs: classData.classFeatureRefs,
+      },
+      includeVariants,
+      catalogs,
+    ).length
+  )
+    cannyDiagnostics.push({
+      code: 'unverified-required-choice',
+      className: classData.name!,
+      classSource: classData.source!,
+      featureName: 'Deft Explorer',
+      level: canny.choices[0].level,
+      message:
+        'Canny setup rules are unavailable, conflicting or changed. Restore the exact Deft Explorer source.',
+      requiredChoice: {
+        target: {
+          entityType: 'classFeature',
+          name: 'Deft Explorer',
+          source: 'TCE',
+          ref: 'Deft Explorer|Ranger|PHB|1|TCE',
+        },
+        replaces: 'Natural Explorer|Ranger|PHB|1|PHB',
+      },
+    })
   return [
-    ...classDiagnostics.filter((diagnostic) => includeDiagnostic(diagnostic, classDiagnostics)),
-    ...subclassDiagnostics.filter((diagnostic) =>
-      includeDiagnostic(diagnostic, subclassDiagnostics),
+    ...classDiagnostics.filter(
+      (diagnostic) =>
+        !(
+          diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
+          getClassFeatureIdentity(
+            decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
+          ) === DEFT_EXPLORER_TARGET
+        ) && includeDiagnostic(diagnostic, classDiagnostics),
+    ),
+    ...cannyDiagnostics,
+    ...generalDiagnostics,
+    ...subclassProficiencyDiagnostics,
+    ...subclassDiagnostics.filter(
+      (diagnostic) =>
+        !(
+          diagnostic.requiredChoice?.target.entityType === 'subclassFeature' &&
+          classProficiencyRule(getClassChoiceFeatureTarget(diagnostic.requiredChoice.target) ?? '')
+        ) && includeDiagnostic(diagnostic, subclassDiagnostics),
     ),
   ]
 }
 
-export function collectSubclassFeatures(subclass: Subclass5e | undefined): SubclassFeature[] {
-  const features = new Set<SubclassFeature>()
-  const traversed = new Set<object>()
-  const visit = (feature: SubclassFeature | undefined) => {
-    if (!feature || features.has(feature)) return
-    features.add(feature)
-    const walk = (value: unknown) => {
-      if (!value || typeof value !== 'object' || traversed.has(value)) return
-      traversed.add(value)
-      if (Array.isArray(value)) {
-        value.forEach(walk)
-        return
-      }
-      const record = value as Record<string, unknown>
-      if (record.type === 'refSubclassFeature' && record.feature) {
-        visit(record.feature as SubclassFeature)
-      }
-      Object.values(record).forEach(walk)
-    }
-    walk(feature.entries)
-  }
-  for (const feature of subclass?.subclassFeatures ?? []) {
-    if (typeof feature === 'object') visit(feature)
-  }
-  for (const reference of subclass?.subclassFeatureRefs ?? []) visit(reference.feature)
-  for (const group of subclass?.levelFeatures ?? []) group.features.forEach(visit)
-  return [...features]
+/** Both qualified candidate sides remain visible to source inspection, including audit diagnostics. */
+export function getClassChoiceDiagnosticCandidates(
+  classData: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[0],
+  subclass: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[1],
+  catalogs?: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[3],
+) {
+  const rows = [
+    ...getClassChoiceDiagnosticCandidateSide(classData, subclass, false, catalogs),
+    ...getClassChoiceDiagnosticCandidateSide(classData, subclass, true, catalogs),
+  ]
+  return [...new Map(rows.map((row) => [JSON.stringify(row), row])).values()]
 }
 
-/** Catalog copies of one target remain unique within their actual full owner. */
-export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
-  const byOwner = new Map<string, Map<string, SubclassFeature>>()
-  const candidatesByOwner = new Map<string, Map<string, SubclassFeature[]>>()
-  for (const classData of classes) {
-    for (const subclass of classData.subclasses ?? []) {
-      const owner = getFeatureOwnerKey(
-        classData.name,
-        classData.source,
-        subclass.name,
-        subclass.source,
-      )
-      const targets = byOwner.get(owner) ?? new Map<string, SubclassFeature>()
-      const candidates = candidatesByOwner.get(owner) ?? new Map<string, SubclassFeature[]>()
-      for (const feature of collectSubclassFeatures(subclass)) {
-        const target = getSubclassFeatureIdentity(feature)
-        if (target) {
-          targets.set(target, feature)
-          const producers = candidates.get(target) ?? []
-          if (!producers.includes(feature)) producers.push(feature)
-          candidates.set(target, producers)
-        }
-      }
-      byOwner.set(owner, targets)
-      candidatesByOwner.set(owner, candidates)
-    }
-  }
-  const unique = new Map<string, SubclassFeature>()
-  const ambiguous = new Set<string>()
-  for (const targets of byOwner.values()) {
-    for (const [target, feature] of targets) {
-      if (unique.has(target)) {
-        unique.delete(target)
-        ambiguous.add(target)
-      } else if (!ambiguous.has(target)) unique.set(target, feature)
-    }
-  }
-  const uniqueCandidates = new Map<string, readonly SubclassFeature[]>()
-  for (const candidates of candidatesByOwner.values()) {
-    for (const [target, producers] of candidates) {
-      if (unique.has(target)) uniqueCandidates.set(target, producers)
-    }
-  }
-  return { byOwner, unique, candidatesByOwner, uniqueCandidates }
+export function getCharacterClassChoiceDiagnostics(
+  classData: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[0],
+  subclass: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[1],
+  activity: OptionalClassFeatureActivity,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (activity.catalogs !== catalogs)
+    throw new RangeError('Class activity requires the current source catalog.')
+  return getClassChoiceDiagnosticCandidates(classData, subclass, catalogs).filter(
+    activity.diagnostic,
+  )
 }

@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'vitest'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
 import {
   applyClassChoiceSelectionCommand,
   applyClassChoiceSelectionWithGrantsCommand,
@@ -6,10 +8,18 @@ import {
 } from '@/lib/character/commands/classChoiceCommands'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { applyClassProgressionUpdate, selectSubclass } from '@/lib/character/commands/classCommands'
+import {
+  commitFeatOptionsCommand,
+  resolveProficiencyChoiceCommand,
+} from '@/lib/character/commands/featCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
+import { applyClassGrants } from '@/lib/provenance/applyClassGrants'
+import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { Class5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { optionalClassSources } from '../fixtures/optionalClassFeatureFixtures'
+import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
 
 function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedCharacterChoice {
   return {
@@ -31,6 +41,81 @@ function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedC
 }
 
 describe('class choice commands', () => {
+  test.each([
+    false,
+    true,
+  ])('configured class feat clear/replace retracts skill and expertise arrays with its ledger, replacement=%s', (replace) => {
+    const featChoice = choice({
+      id: 'class:ranger|xphb|choice:epic-boon|19',
+      label: 'Epic Boon',
+      kind: 'feat',
+      owner: { type: 'class', name: 'Ranger', source: 'XPHB' },
+      level: 19,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array.from({ length: 20 }, (_, index) => (index >= 18 ? 1 : 0)),
+      optionFilter: { entityType: 'feat', categories: ['EB'] },
+    })
+    let character = makeCharacterFixture({
+      classProgression: [{ name: 'Ranger', source: 'XPHB', levels: 19 }],
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: [],
+        savingThrows: [],
+        expertise: [],
+        languages: [],
+      },
+    })
+    const ranger = (optionalClassSources.class as unknown as Class5e[]).find(
+      (row) => row.name === 'Ranger' && row.source === 'XPHB',
+    )!
+    character.provenance = applyClassGrants(ranger, undefined, character.provenance)
+    const skill = resolveProficiencyChoiceCommand(
+      character,
+      character.provenance,
+      'skills',
+      'nature',
+      true,
+    )
+    character = { ...character, ...skill.characterPatch, provenance: skill.provenanceUpdate }
+    const selected = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      character.provenance!,
+      featChoice,
+      [{ entityType: 'feat', name: 'Boon of Skill', source: 'XPHB' }],
+    )
+    character = { ...character, ...selected.characterPatch, provenance: selected.provenanceUpdate }
+    const configured = commitFeatOptionsCommand(
+      character,
+      character.provenance!,
+      { name: 'Boon of Skill', source: 'XPHB', classFeatChoiceId: featChoice.id },
+      { expertiseSkill: 'Nature' },
+    )
+    character = {
+      ...character,
+      ...configured.characterPatch,
+      provenance: configured.provenanceUpdate,
+    }
+    expect(character.proficiencies.skills).toEqual(['nature'])
+    expect(character.proficiencies.expertise).toEqual(['nature'])
+    const independentSkill = character.provenance.proficiencies.skills.nature
+    const cleared = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      character.provenance!,
+      featChoice,
+      replace ? [{ entityType: 'feat', name: 'Boon of Fate', source: 'XPHB' }] : [],
+    )
+    expect(cleared.characterPatch.proficiencies!.skills).toEqual(['nature'])
+    expect(cleared.characterPatch.proficiencies!.expertise).toEqual([])
+    expect(cleared.provenanceUpdate.proficiencies.skills.nature).toEqual(independentSkill)
+    expect(cleared.provenanceUpdate.proficiencies.expertise?.nature).toBeUndefined()
+    expect(
+      cleared.characterPatch.classFeatChoices?.flatMap((row) => row.feats.map((feat) => feat.name)),
+    ).toEqual(replace ? ['Boon of Fate'] : [])
+  })
+
   test('persists source-qualified selections with deterministic acquisition levels', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Sorcerer', source: 'XPHB', levels: 10 }],
@@ -56,35 +141,64 @@ describe('class choice commands', () => {
   })
 
   test('preserves Warlock invocation acquisition levels when later choices are catalog-sorted', () => {
-    const invocations = choice({
-      id: 'class:warlock|phb|choice:eldritch-invocations|2',
-      label: 'Eldritch Invocations',
-      owner: {
-        type: 'class',
-        name: 'Warlock',
-        source: 'PHB',
-        featureName: 'Eldritch Invocations',
-      },
-      selectionCountByLevel: [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8],
-    })
+    const { data, catalogs } = makeOptionalClassSectionData()
+    const cls = data.classes.find((row) => row.name === 'Warlock' && row.source === 'PHB')!
+    const invocations = getClassChoiceCandidates(cls, undefined, catalogs).find(
+      (row) => row.id === 'class:warlock|phb|choice:eldritch-invocations|2',
+    )!
+    expect(invocations.selectionCountByLevel).toEqual([
+      0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8,
+    ])
+    const authority = { classes: data.classes, catalogs }
+    const spells = makeCharacterFixture().spells
     const levelTwo = makeCharacterFixture({
       classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
+      spells: {
+        ...spells,
+        spellProfiles: [
+          {
+            id: toClassProfileId('Warlock', 'PHB'),
+            type: 'class',
+            label: 'Warlock',
+            className: 'Warlock',
+            classSource: 'PHB',
+            cantrips: ['Eldritch blast|PHB'],
+            spellsKnown: [],
+            preparedSpells: [],
+          },
+        ],
+      },
     })
-    const earlySelections = applyClassChoiceSelectionCommand(levelTwo, invocations, [
-      { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
-      { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
-    ]).classChoiceSelections
+    expect(() =>
+      applyClassChoiceSelectionCommand(levelTwo, invocations, [
+        { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+      ]),
+    ).toThrow(/current source/i)
+    const earlySelections = applyClassChoiceSelectionCommand(
+      levelTwo,
+      invocations,
+      [
+        { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+        { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
+      ],
+      authority,
+    ).classChoiceSelections
     const levelFive = makeCharacterFixture({
       ...levelTwo,
       classProgression: [{ name: 'Warlock', source: 'PHB', levels: 5 }],
       classChoiceSelections: earlySelections,
     })
 
-    const laterSelections = applyClassChoiceSelectionCommand(levelFive, invocations, [
-      { entityType: 'optionalFeature', name: 'Agonizing Blast', source: 'PHB' },
-      { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
-      { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
-    ]).classChoiceSelections
+    const laterSelections = applyClassChoiceSelectionCommand(
+      levelFive,
+      invocations,
+      [
+        { entityType: 'optionalFeature', name: 'Agonizing Blast', source: 'PHB' },
+        { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+        { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
+      ],
+      authority,
+    ).classChoiceSelections
 
     expect(laterSelections?.[0]?.selected).toEqual([
       expect.objectContaining({ name: 'Agonizing Blast', slotLevel: 5 }),
@@ -262,7 +376,7 @@ describe('class choice commands', () => {
   test.each([
     false,
     true,
-  ])('switches replacement grants atomically across toggles/filtering (class spelling refresh %s)', (refreshed) => {
+  ])('unknown alternatives remain dormant while declared standard/independent routes survive toggles and source restoration (class spelling refresh %s)', (refreshed) => {
     const originalFeature = choice({
       id: 'original-feature',
       label: 'Original Training',
@@ -346,9 +460,7 @@ describe('class choice commands', () => {
     })
     for (const [featureChoice, selected] of [
       [originalFeature, originalFeature.options],
-      [variantFeature, variantFeature.options],
       [originalFeat, originalFeat.options],
-      [variantFeat, variantFeat.options],
       [unrelatedFeature, unrelatedFeature.options],
     ] as const) {
       const applied = applyClassChoiceSelectionWithGrantsCommand(
@@ -359,6 +471,33 @@ describe('class choice commands', () => {
       )
       current = { ...current, ...applied.characterPatch, provenance: applied.provenanceUpdate }
     }
+    for (const unsupported of [variantFeature, variantFeat]) {
+      const before = JSON.stringify(current)
+      expect(() =>
+        applyClassChoiceSelectionWithGrantsCommand(
+          current,
+          current.provenance,
+          unsupported,
+          unsupported.options,
+        ),
+      ).toThrow(/not active/)
+      expect(JSON.stringify(current)).toBe(before)
+      current.classChoiceSelections = [
+        ...(current.classChoiceSelections ?? []),
+        {
+          choiceId: unsupported.id,
+          label: unsupported.label,
+          kind: unsupported.kind,
+          className: 'Test Class',
+          classSource: 'TEST',
+          classLevel: 2,
+          inactive: false,
+          selected: unsupported.options.map((option) => ({ ...option, slotLevel: 2 })),
+        },
+      ]
+    }
+    const alertIntent = current.classFeatChoices
+    const alertTag = current.provenance.feats.alert
 
     const enabled = reconcileOptionalClassFeatureChoicesCommand(
       current,
@@ -373,24 +512,26 @@ describe('class choice commands', () => {
     }
 
     expect(enabledCharacter.features.map((feature) => feature.name)).toEqual([
-      'Scholar Training',
+      'Guard Training',
       'Field Training',
     ])
     expect(
       enabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
-    ).toEqual(['Lucky'])
+    ).toEqual(['Alert'])
     expect(
       enabledCharacter.classChoiceSelections?.find(
         (selection) => selection.choiceId === originalFeature.id,
       )?.inactive,
-    ).toBe(true)
+    ).toBeUndefined()
     expect(
       enabledCharacter.classChoiceSelections?.find(
         (selection) => selection.choiceId === variantFeature.id,
       )?.inactive,
-    ).toBeUndefined()
-    expect(enabled.provenanceUpdate.features['guard training']).toBeUndefined()
-    expect(enabled.provenanceUpdate.feats.alert).toBeUndefined()
+    ).toBe(true)
+    expect(enabled.provenanceUpdate.features['scholar training']).toBeUndefined()
+    expect(enabled.provenanceUpdate.feats.lucky).toBeUndefined()
+    expect(enabledCharacter.classFeatChoices).toEqual(alertIntent)
+    expect(enabled.provenanceUpdate.feats.alert).toEqual(alertTag)
     expect(enabled.provenanceUpdate.features['field training']).toHaveLength(1)
 
     const sourceFilteredClassData = {
@@ -412,10 +553,7 @@ describe('class choice commands', () => {
       provenance: disabled.provenanceUpdate,
     }
 
-    expect(disabledCharacter.features.map((feature) => feature.name)).toEqual([
-      'Guard Training',
-      'Field Training',
-    ])
+    expect(disabledCharacter.features.map((feature) => feature.name)).toEqual(['Guard Training'])
     expect(
       disabledCharacter.classFeatChoices?.flatMap((entry) => entry.feats.map((feat) => feat.name)),
     ).toEqual(['Alert'])
@@ -435,8 +573,43 @@ describe('class choice commands', () => {
       disabledCharacter.classChoiceSelections?.find(
         (selection) => selection.choiceId === unrelatedFeature.id,
       )?.inactive,
-    ).toBeUndefined()
-    expect(disabled.provenanceUpdate.features['field training']).toHaveLength(1)
+    ).toBe(true)
+    expect(disabled.provenanceUpdate.features['field training']).toBeUndefined()
+    expect(
+      disabledCharacter.classChoiceSelections?.find((row) => row.choiceId === unrelatedFeature.id)
+        ?.selected,
+    ).toEqual(
+      current.classChoiceSelections?.find((row) => row.choiceId === unrelatedFeature.id)?.selected,
+    )
+    expect(disabledCharacter.classFeatChoices).toEqual(alertIntent)
+    expect(disabled.provenanceUpdate.feats.alert).toEqual(alertTag)
+    const independentTag = makeSourceTag('manual', 'Independent Field Training', 'choice')
+    const independent = {
+      ...disabledCharacter,
+      features: [
+        ...disabledCharacter.features,
+        {
+          id: 'manual:field-training',
+          name: 'Field Training',
+          source: 'OTHER',
+          description: 'Independent provider',
+        },
+      ],
+      provenance: {
+        ...disabledCharacter.provenance,
+        features: { ...disabledCharacter.provenance.features, 'field training': [independentTag] },
+      },
+    }
+    const independentResult = reconcileOptionalClassFeatureChoicesCommand(
+      independent,
+      independent.provenance,
+      { availableClasses: [sourceFilteredClassData], allClasses: [classData] },
+      true,
+    )
+    expect(
+      independentResult.characterPatch.features?.find((row) => row.id === 'manual:field-training'),
+    ).toMatchObject({ name: 'Field Training' })
+    expect(independentResult.provenanceUpdate.features['field training']).toEqual([independentTag])
 
     const enabledWithoutVariant = reconcileOptionalClassFeatureChoicesCommand(
       disabledCharacter,
@@ -452,7 +625,6 @@ describe('class choice commands', () => {
 
     expect(enabledWithoutVariantCharacter.features.map((feature) => feature.name)).toEqual([
       'Guard Training',
-      'Field Training',
     ])
     expect(
       enabledWithoutVariantCharacter.classChoiceSelections?.find(
@@ -474,19 +646,22 @@ describe('class choice commands', () => {
     }
 
     expect(restoredCharacter.features.map((feature) => feature.name)).toEqual([
-      'Scholar Training',
+      'Guard Training',
       'Field Training',
     ])
     expect(
       restoredCharacter.classChoiceSelections?.find(
         (selection) => selection.choiceId === originalFeature.id,
       )?.inactive,
-    ).toBe(true)
+    ).toBeUndefined()
     expect(
       restoredCharacter.classChoiceSelections?.find(
         (selection) => selection.choiceId === variantFeature.id,
       )?.inactive,
-    ).toBeUndefined()
+    ).toBe(true)
+    expect(restoredCharacter.classFeatChoices).toEqual(alertIntent)
+    expect(restored.provenanceUpdate.feats.alert).toEqual(alertTag)
+    expect(restored.provenanceUpdate.features['field training']).toHaveLength(1)
   })
 
   test('keeps item and feat choices source-qualified without inventing domain effects', () => {
@@ -642,7 +817,7 @@ describe('class choice commands', () => {
       applyClassChoiceSelectionCommand(hunter, companionChoice, [
         { entityType: 'creature', name: 'Wolf', source: 'MM' },
       ]),
-    ).toThrow(/current subclass/i)
+    ).toThrow(/current subclass|not active/i)
   })
 
   test.each([

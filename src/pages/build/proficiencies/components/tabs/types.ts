@@ -30,6 +30,7 @@ export interface CurrentProficiencies {
   armor: string[]
   weapons: string[]
   tools: string[]
+  expertise?: string[]
   languages: string[]
 }
 

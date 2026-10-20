@@ -57,6 +57,7 @@ export interface SelectionModalProps<T> {
   title: string
   items: T[]
   getItemId: (item: T) => string
+  getItemLabel?: (item: T) => string
   renderCard: (item: T, isSelected: boolean, canSelect: boolean) => ReactNode
   matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean
   filterSections?: FilterSection[]
@@ -98,6 +99,7 @@ function SelectionModalInner<T>({
   title,
   items,
   getItemId,
+  getItemLabel,
   renderCard,
   matchItem,
   filterSections = [],
@@ -339,6 +341,7 @@ function SelectionModalInner<T>({
       : selectedItems
           .slice(0, 5)
           .map((i) => {
+            if (getItemLabel) return getItemLabel(i)
             if (typeof i === 'object' && i !== null && 'name' in i) {
               const maybeName = (i as { name?: unknown }).name
               if (typeof maybeName === 'string') return maybeName

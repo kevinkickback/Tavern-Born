@@ -180,8 +180,9 @@ export function BuildRacePage() {
       buildPrerequisiteSnapshot({
         character,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
+        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
       }),
-    [character, calculationContext?.abilityScores.total],
+    [character, calculationContext],
   )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
@@ -667,6 +668,7 @@ export function BuildRacePage() {
             if (!isOpen) setOptionsPendingFeat(null)
           }}
           feat={optionsPendingFeat}
+          optionTarget={optionsPendingFeat}
           proficientSkillNames={character?.proficiencies?.skills ?? []}
           onFinish={(selections) => {
             commitFeatWithOptions(optionsPendingFeat, selections, spells as Spell5e[])

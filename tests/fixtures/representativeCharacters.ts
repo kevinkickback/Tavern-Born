@@ -531,7 +531,7 @@ const druidCharacter = standardCharacter({
       kind: 'class-feature',
       className: 'Druid',
       classSource: 'XPHB',
-      classLevel: 7,
+      classLevel: 1,
       selected: [
         {
           entityType: 'classFeature',

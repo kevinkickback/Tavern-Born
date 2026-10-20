@@ -165,6 +165,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             backgroundsByKey,
             spellsByKey,
             featsByKey,
+            featExpertiseFeats: filteredData.feats,
             creaturesByKey,
             itemLookup,
             itemPropertyByAbbr,

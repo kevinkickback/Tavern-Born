@@ -8,6 +8,9 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
+import { projectEffectiveClassChoiceFeatures } from '@/lib/character/effectiveClassChoiceFeatures'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import {
   deriveRacialDefenseEffects,
@@ -87,7 +90,11 @@ export interface CharacterCalculationContext {
   raceResolution: ResolvedRaceReference
   background: Background5e | undefined
   classes: readonly Class5e[]
-  classChoices: { classes: readonly Class5e[]; catalogs?: ClassChoiceFeatureCatalogs }
+  classChoices: {
+    classes: readonly Class5e[]
+    catalogs?: ClassChoiceFeatureCatalogs
+    feats?: readonly Feat5e[]
+  }
   feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
   initiativeModifier: number
@@ -286,7 +293,20 @@ export function createCharacterCalculationContext(
   primaryLookups: EntityLookupSet,
   rawLookups?: EntityLookupSet,
 ): CharacterCalculationContext {
+  character = projectEffectiveClassChoiceFeatures(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+  )
   const rawItemsAuthoritative = rawLookups?.itemLookup !== undefined
+  character = refreshClassProficiencyState(
+    character,
+    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {}),
+    {
+      ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
+      featExpertiseFeats:
+        primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
+    },
+  )
   rawLookups ??= primaryLookups
   const raceResolution = resolveRaceReference(
     {
@@ -339,9 +359,13 @@ export function createCharacterCalculationContext(
   const choiceClasses =
     primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {})
   const choiceCatalogs = primaryLookups.classChoiceFeatureCatalogs
-  const classChoices = { classes: choiceClasses, catalogs: choiceCatalogs }
+  const classChoices = {
+    classes: choiceClasses,
+    catalogs: choiceCatalogs,
+    feats: primaryLookups.featExpertiseFeats,
+  }
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
-  const sourceEffects = [
+  const baseSourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
     ...deriveRacialDefenseEffects(character.racialDefenses),
     ...deriveStructuredFeatEffects(resolvedFeats),
@@ -350,14 +374,19 @@ export function createCharacterCalculationContext(
     ),
     ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]
-  const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
   const abilityScores = deriveEffectiveAbilityScores(
     character,
     raceResolution.parentRace,
     raceResolution.subraceData,
     background,
-    sourceEffects,
+    baseSourceEffects,
   )
+  // These explanatory notes cannot feed back into numeric ability or prerequisite calculations.
+  const sourceEffects = [
+    ...baseSourceEffects,
+    ...deriveConditionalProficiencyNotes(character, choiceCatalogs, abilityScores.total),
+  ]
+  const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 
   return {
     character,

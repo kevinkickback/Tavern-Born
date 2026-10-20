@@ -1,0 +1,13 @@
+{
+  "purpose": "Development-only full conditional leaf semantic checkpoint. Ordinary generation reads but never rewrites this independently assessed source meaning.",
+  "leaves": [
+    {
+      "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+      "digest": "d168b1de924f637854294706f141566283bb7c0ab2db8396dfaa8dcab16dbe3e"
+    },
+    {
+      "target": "optionalFeature|fire rune|tce",
+      "digest": "c87a1ecbaeceb7490f490efb0376c2fbd6f79228365780667da5a8e6df7385a2"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ import { DataFilter } from '@/lib/5etools/filters'
 import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
 import {
   buildClassChoiceFeatureCatalogs,
-  getCharacterClassChoiceDiagnostics,
+  getClassChoiceDiagnosticCandidateSide,
 } from '@/lib/character/classChoiceOptions'
 import type {
   Class5e,
@@ -52,7 +52,7 @@ function rangerData() {
   }
 }
 function names(ranger: Class5e, includeVariants: boolean, features?: readonly ClassFeature[]) {
-  return getCharacterClassChoiceDiagnostics(
+  return getClassChoiceDiagnosticCandidateSide(
     ranger,
     undefined,
     includeVariants,
@@ -224,23 +224,23 @@ describe('source-confirmed required setup', () => {
   test('Ranger variants use exact active source targets and retain genuine Canny setup', () => {
     const { ranger, features } = rangerData()
     expect(names(ranger, false, features)).toEqual(['Favored Enemy', 'Natural Explorer'])
-    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
-    expect(names(ranger, true, [])).toEqual(['Favored Enemy', 'Natural Explorer'])
-    expect(names(ranger, true)).toEqual(['Favored Enemy', 'Natural Explorer'])
+    expect(names(ranger, true, features)).toEqual([])
+    expect(names(ranger, true, [])).toEqual(['Deft Explorer', 'Favored Enemy', 'Natural Explorer'])
+    expect(names(ranger, true)).toEqual(['Deft Explorer', 'Favored Enemy', 'Natural Explorer'])
     expect(
       names(
         ranger,
         true,
         features.filter((f) => f.name === 'Favored Foe'),
       ),
-    ).toEqual(['Natural Explorer'])
+    ).toEqual(['Deft Explorer', 'Natural Explorer'])
     expect(
       names(
         ranger,
         true,
         features.filter((f) => f.name === 'Deft Explorer'),
       ),
-    ).toEqual(['Deft Explorer', 'Favored Enemy'])
+    ).toEqual(['Favored Enemy'])
     expect(
       names(
         {
@@ -251,7 +251,7 @@ describe('source-confirmed required setup', () => {
         features,
       ),
     ).toEqual(['Natural Explorer'])
-    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+    expect(names(ranger, true, features)).toEqual([])
   })
 
   test.each([
@@ -275,16 +275,13 @@ describe('source-confirmed required setup', () => {
               ? ['Unrelated prose.']
               : 'Other',
     })
-    expect(names(ranger, true, features)).toEqual(['Deft Explorer', 'Favored Enemy'])
+    expect(names(ranger, true, features)).toEqual(['Favored Enemy'])
   })
 
   test('duplicate exact replacements and generic name-only warnings cannot waive known setup', () => {
     const { ranger, features } = rangerData()
     const foe = features.find((f) => f.name === 'Favored Foe')!
-    expect(names(ranger, true, [...features, { ...foe }])).toEqual([
-      'Deft Explorer',
-      'Favored Enemy',
-    ])
+    expect(names(ranger, true, [...features, { ...foe }])).toEqual(['Favored Enemy'])
     ranger.normalizedRules!.choiceDiagnostics.push({
       code: 'unresolved-options',
       className: 'Ranger',
@@ -294,6 +291,7 @@ describe('source-confirmed required setup', () => {
       featureVariant: { replacesFeatureName: 'Favored Enemy' },
     })
     expect(names(ranger, true, [])).toEqual([
+      'Deft Explorer',
       'Favored Enemy',
       'Natural Explorer',
       'Unrelated replacement',
@@ -304,11 +302,7 @@ describe('source-confirmed required setup', () => {
         ref.name === 'Favored Foe' ? { ...ref, feature: undefined } : ref,
       ),
     }
-    expect(names(missing, true, features)).toEqual([
-      'Deft Explorer',
-      'Favored Enemy',
-      'Unrelated replacement',
-    ])
+    expect(names(missing, true, features)).toEqual(['Favored Enemy', 'Unrelated replacement'])
   })
 
   test.each([
@@ -332,10 +326,10 @@ describe('source-confirmed required setup', () => {
     const catalogs = buildClassChoiceFeatureCatalogs({ classes: [ranger], classFeatures: features })
     expect(catalogs.ambiguousClassFeatureTargets.size).toBe(1)
     expect(
-      getCharacterClassChoiceDiagnostics(ranger, undefined, true, catalogs)
+      getClassChoiceDiagnosticCandidateSide(ranger, undefined, true, catalogs)
         .map((d) => d.featureName)
         .sort(),
-    ).toEqual(name === 'Favored Foe' ? ['Deft Explorer', 'Favored Enemy'] : ['Natural Explorer'])
+    ).toEqual(name === 'Favored Foe' ? ['Favored Enemy'] : ['Deft Explorer', 'Natural Explorer'])
     const restoredDocument = rangerSetupDocument()
     const restoredRanger = parseClasses(restoredDocument)[0] as Class5e
     const restored = buildClassChoiceFeatureCatalogs({
@@ -343,19 +337,19 @@ describe('source-confirmed required setup', () => {
       classFeatures: parseClassFeatures(restoredDocument) as ClassFeature[],
     })
     expect(
-      getCharacterClassChoiceDiagnostics(restoredRanger, undefined, true, restored).map(
+      getClassChoiceDiagnosticCandidateSide(restoredRanger, undefined, true, restored).map(
         (d) => d.featureName,
       ),
-    ).toEqual(['Deft Explorer'])
+    ).toEqual([])
     expect(
-      getCharacterClassChoiceDiagnostics(ranger, undefined, true, {
+      getClassChoiceDiagnosticCandidateSide(ranger, undefined, true, {
         ...catalogs,
         classFeatures: [],
         classFeatureCandidates: new Map(),
       })
         .map((d) => d.featureName)
         .sort(),
-    ).toEqual(['Favored Enemy', 'Natural Explorer'])
+    ).toEqual(['Deft Explorer', 'Favored Enemy', 'Natural Explorer'])
   })
 
   test('a different complete target does not mark the valid replacement ambiguous', () => {
@@ -367,10 +361,10 @@ describe('source-confirmed required setup', () => {
     })
     expect(catalogs.ambiguousClassFeatureTargets.size).toBe(0)
     expect(
-      getCharacterClassChoiceDiagnostics(ranger, undefined, true, catalogs).map(
+      getClassChoiceDiagnosticCandidateSide(ranger, undefined, true, catalogs).map(
         (d) => d.featureName,
       ),
-    ).toEqual(['Deft Explorer'])
+    ).toEqual([])
   })
 
   test('changed Canny declarations cannot waive the original terrain setup', () => {
@@ -385,8 +379,11 @@ describe('source-confirmed required setup', () => {
       },
     }
     expect(
-      getCharacterClassChoiceDiagnostics(ranger, undefined, true, { classFeatures: features }),
-    ).toMatchObject([{ featureName: 'Natural Explorer', code: 'unverified-required-choice' }])
+      getClassChoiceDiagnosticCandidateSide(ranger, undefined, true, { classFeatures: features }),
+    ).toMatchObject([
+      { featureName: 'Natural Explorer', code: 'unverified-required-choice' },
+      { featureName: 'Deft Explorer', code: 'unverified-required-choice' },
+    ])
   })
 
   test.each([
@@ -404,7 +401,7 @@ describe('source-confirmed required setup', () => {
     })
     const { ranger, features } = rangerData()
     ranger.classFeatureRefs = [malformed, ...ranger.classFeatureRefs!]
-    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+    expect(names(ranger, true, features)).toEqual([])
   })
 
   test('malformed scalar replacement bodies cannot waive setup on either catalog boundary', () => {
@@ -414,7 +411,7 @@ describe('source-confirmed required setup', () => {
     const malformedCatalog = features.map((feature) =>
       feature === foe ? { ...feature, entries: scalar } : feature,
     )
-    expect(names(ranger, true, malformedCatalog)).toEqual(['Deft Explorer', 'Favored Enemy'])
+    expect(names(ranger, true, malformedCatalog)).toEqual(['Favored Enemy'])
     const malformedOwner = {
       ...ranger,
       classFeatureRefs: ranger.classFeatureRefs!.map((ref) =>
@@ -423,8 +420,8 @@ describe('source-confirmed required setup', () => {
           : ref,
       ),
     }
-    expect(names(malformedOwner, true, features)).toEqual(['Deft Explorer', 'Favored Enemy'])
-    expect(names(ranger, true, features)).toEqual(['Deft Explorer'])
+    expect(names(malformedOwner, true, features)).toEqual(['Favored Enemy'])
+    expect(names(ranger, true, features)).toEqual([])
   })
 
   test('capability and coverage audits report setup gaps rather than fabricated choices', () => {
@@ -432,12 +429,15 @@ describe('source-confirmed required setup', () => {
     const report = createCorpusCapabilityReport(
       makeGameDataFixture({ classes: [ranger], classFeatures: features }),
     )
-    expect(report.classChoices.diagnostics).toBe(3)
-    expect(report.issues.filter((i) => i.code === 'choice-diagnostic')).toHaveLength(3)
+    expect(report.classChoices.diagnostics).toBe(2)
+    expect(report.issues.filter((i) => i.code === 'choice-diagnostic')).toHaveLength(2)
     const matrix = createClassChoiceCoverageMatrix([ranger], 20)
-    expect(matrix[0].levels[0]).toMatchObject({ requiredSelections: 0, choices: [] })
+    expect(matrix[0].levels[0]).toMatchObject({
+      requiredSelections: 3,
+      choices: [{ kind: 'proficiency' }, { kind: 'proficiency' }],
+    })
     expect(findClassChoiceCoverageGaps([ranger], matrix, 20).map((gap) => gap.level)).toEqual([
-      1, 1, 1,
+      1, 1,
     ])
   })
 
@@ -495,7 +495,16 @@ describe('source-confirmed required setup', () => {
           .find((c) => c.source === 'PHB')!
           .normalizedRules!.choiceDiagnostics.map((d) => d.featureName)
           .sort(),
-      ).toEqual(['Deft Explorer', 'Favored Enemy'])
+      ).toEqual(['Favored Enemy'])
+      expect(
+        classes
+          .find((c) => c.source === 'PHB')!
+          .normalizedRules!.choices.filter((choice) => choice.kind === 'proficiency')
+          .map((choice) => [choice.label, choice.level, choice.minimumSelections]),
+      ).toEqual([
+        ['Canny expertise', 1, 1],
+        ['Canny languages', 1, 2],
+      ])
       expect(classes.find((c) => c.source === 'XPHB')!.normalizedRules!.choiceDiagnostics).toEqual(
         [],
       )

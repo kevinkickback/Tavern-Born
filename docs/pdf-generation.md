@@ -105,6 +105,14 @@ have independent editable fields. Disabling notes preserves fitted beginnings an
 omissions. `SheetExportReport` records preserved/omitted sections and actual notes-page counts;
 completed exports replace estimated warnings with measured results and readable section labels.
 
+Active conditional proficiency notes retain their complete conditions in both full and names-only
+summaries, independently of unconditional Expertise values. Each exact effect ID prints once per
+summary. A completed report records a note's exact ID and current text only when an included,
+unshortened main field or an actual full continuation preserves it. Preflight exempts only that
+matching current derived note from the unsupported-mechanic warning. A shortened field, merely enabled
+Notes, stale terrain text or unrelated conditional effect cannot supply this proof; ordinary omission
+and truncation warnings remain.
+
 ## Spells and companions
 
 Both 2014 layouts use the shared spell asset per casting source, including subclasses and each

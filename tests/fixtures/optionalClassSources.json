@@ -1,0 +1,577 @@
+{
+  "classFeature": [
+    {
+      "name": "Favored Foe",
+      "source": "TCE",
+      "page": 56,
+      "className": "Ranger",
+      "classSource": "PHB",
+      "level": 1,
+      "isClassFeatureVariant": true,
+      "entries": [
+        "{@i 1st-level ranger {@variantrule optional class features|tce|optional feature}, which replaces the Favored Enemy feature and works with the Foe Slayer feature}",
+        "When you hit a creature with an attack roll, you can call on your mystical bond with nature to mark the target as your favored enemy for 1 minute or until you lose your {@status concentration} (as if you were {@status concentration||concentrating} on a spell).",
+        "The first time on each of your turns that you hit the favored enemy and deal damage to it, including when you mark it, you can increase that damage by {@damage 1d4}.",
+        "You can use this feature to mark a favored enemy a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.",
+        "This feature's extra damage increases when you reach certain levels in this class: to {@damage 1d6} at 6th level and to {@damage 1d8} at 14th level."
+      ]
+    },
+    {
+      "name": "Steady Aim",
+      "source": "TCE",
+      "page": 62,
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 3,
+      "isClassFeatureVariant": true,
+      "entries": [
+        "{@i 3rd-level rogue {@variantrule optional class features|tce|optional feature}}",
+        "As a bonus action, you give yourself advantage on your next attack roll on the current turn. You can use this bonus action only if you haven't moved during this turn, and after you use the bonus action, your speed is 0 until the end of the current turn."
+      ]
+    },
+    {
+      "name": "Cunning Action",
+      "source": "PHB",
+      "page": 94,
+      "srd": true,
+      "basicRules": true,
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 2,
+      "entries": [
+        "Starting at 2nd level, your quick thinking and agility allow you to move and act quickly. You can take a bonus action on each of your turns in combat. This action can be used only to take the {@action Dash}, {@action Disengage}, or {@action Hide} action."
+      ]
+    },
+    {
+      "name": "Martial Archetype",
+      "source": "PHB",
+      "page": 72,
+      "srd": true,
+      "basicRules": true,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "level": 3,
+      "entries": [
+        "At 3rd level, you choose an archetype from the list available that you strive to emulate in your combat styles and techniques. The archetype you choose grants you features at 3rd level and again at 7th, 10th, 15th, and 18th level."
+      ]
+    },
+    {
+      "name": "Fighting Style",
+      "source": "PHB",
+      "page": 72,
+      "srd": true,
+      "basicRules": true,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "level": 1,
+      "entries": [
+        "You adopt a particular style of fighting as your specialty. Choose one of the following options. You can't take the same Fighting Style option more than once, even if you get to choose again.",
+        {
+          "type": "options",
+          "count": 1,
+          "entries": [
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Archery"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Defense"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Dueling"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Great Weapon Fighting"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Protection"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Two-Weapon Fighting"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Blind Fighting|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Interception|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Superior Technique|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Thrown Weapon Fighting|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Unarmed Fighting|TCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "subclass": [
+    {
+      "name": "Battle Master",
+      "shortName": "Battle Master",
+      "source": "PHB",
+      "className": "Fighter",
+      "classSource": "PHB",
+      "page": 73,
+      "reprintedAs": ["Battle Master|Fighter|XPHB|XPHB"],
+      "edition": "classic",
+      "optionalfeatureProgression": [
+        {
+          "name": "Maneuvers",
+          "featureType": ["MV:B"],
+          "progression": {
+            "3": 3,
+            "7": 5,
+            "10": 7,
+            "15": 9
+          }
+        }
+      ],
+      "subclassFeatures": [
+        "Battle Master|Fighter||Battle Master||3",
+        "Additional Maneuvers|Fighter||Battle Master||7",
+        "Additional Superiority Die|Fighter||Battle Master||7",
+        "Know Your Enemy|Fighter||Battle Master||7",
+        "Additional Maneuvers|Fighter||Battle Master||10",
+        "Improved Combat Superiority (d10)|Fighter||Battle Master||10",
+        "Additional Maneuvers|Fighter||Battle Master||15",
+        "Additional Superiority Die|Fighter||Battle Master||15",
+        "Relentless|Fighter||Battle Master||15",
+        "Improved Combat Superiority (d12)|Fighter||Battle Master||18"
+      ],
+      "hasFluffImages": true
+    }
+  ],
+  "subclassFeature": [
+    {
+      "name": "Battle Master",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 3,
+      "entries": [
+        "Those who emulate the archetypal Battle Master employ martial techniques passed down through generations. To a Battle Master, combat is an academic field, sometimes including subjects beyond battle such as weaponsmithing and calligraphy. Not every fighter absorbs the lessons of history, theory, and artistry that are reflected in the Battle Master archetype, but those who do are well-rounded fighters of great skill and knowledge.",
+        {
+          "type": "refSubclassFeature",
+          "subclassFeature": "Student of War|Fighter||Battle Master||3"
+        },
+        {
+          "type": "refSubclassFeature",
+          "subclassFeature": "Combat Superiority|Fighter||Battle Master||3"
+        },
+        {
+          "type": "refSubclassFeature",
+          "subclassFeature": "Maneuvers|Fighter||Battle Master||3"
+        },
+        {
+          "type": "refSubclassFeature",
+          "subclassFeature": "Maneuver Options|Fighter||Battle Master||3|TCE"
+        }
+      ]
+    },
+    {
+      "name": "Combat Superiority",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 3,
+      "header": 1,
+      "entries": [
+        "When you choose this archetype at 3rd level, you learn maneuvers that are fueled by special dice called superiority dice.",
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "entries",
+              "name": "Maneuvers",
+              "entries": [
+                "You learn three maneuvers of your choice, which are listed under \"Maneuvers\" below. Many maneuvers enhance an attack in some way. You can use only one maneuver per attack.",
+                "You learn two additional maneuvers of your choice at 7th, 10th, and 15th level. Each time you learn new maneuvers, you can also replace one maneuver you know with a different one."
+              ]
+            }
+          ]
+        },
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "entries",
+              "name": "Superiority Dice",
+              "entries": [
+                "You have four superiority dice, which are {@dice d8}s. A superiority die is expended when you use it. You regain all of your expended superiority dice when you finish a short or long rest.",
+                "You gain another superiority die at 7th level and one more at 15th level."
+              ]
+            }
+          ]
+        },
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "entries",
+              "name": "Saving Throws",
+              "entries": [
+                "Some of your maneuvers require your target to make a saving throw to resist the maneuver's effects. The saving throw DC is calculated as follows:",
+                {
+                  "type": "abilityDc",
+                  "name": "Maneuver",
+                  "attributes": ["str", "dex"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Maneuver Options",
+      "source": "TCE",
+      "page": 41,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 3,
+      "isClassFeatureVariant": true,
+      "header": 1,
+      "entries": [
+        "{@i 3rd-level fighter {@variantrule optional class features|tce|optional feature}}",
+        "If you have access to maneuvers, the following maneuvers are added to the list of options available to you. Maneuvers are available to Battle Masters but also to characters who have a special feature like the {@optfeature Superior Technique|TCE} fighting style or the {@feat Martial Adept} feat.",
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "options",
+              "entries": [
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Ambush|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Bait and Switch|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Brace|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Commanding Presence|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Grappling Strike|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Quick Toss|TCE"
+                },
+                {
+                  "type": "refOptionalfeature",
+                  "optionalfeature": "Tactical Assessment|TCE"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Maneuvers",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 3,
+      "header": 1,
+      "entries": [
+        "The maneuvers are presented in alphabetical order.",
+        {
+          "type": "options",
+          "count": 3,
+          "entries": [
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Commander's Strike"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Disarming Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Distracting Strike"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Evasive Footwork"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Feinting Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Goading Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Lunging Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Maneuvering Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Menacing Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Parry"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Precision Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Pushing Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Rally"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Riposte"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Sweeping Attack"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Trip Attack"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Student of War",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 3,
+      "header": 1,
+      "entries": [
+        "At 3rd level, you gain proficiency with one type of {@filter artisan's tools|items|source=phb|miscellaneous=mundane|type=artisan's tools} of your choice."
+      ]
+    },
+    {
+      "name": "Additional Maneuvers",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 7,
+      "header": 2,
+      "entries": ["At 7th level, you learn two additional maneuvers of your choice."]
+    },
+    {
+      "name": "Additional Superiority Die",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 7,
+      "header": 2,
+      "entries": ["You gain another superiority die at 7th level."]
+    },
+    {
+      "name": "Know Your Enemy",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 7,
+      "header": 2,
+      "entries": [
+        "If you spend at least 1 minute observing or interacting with another creature outside combat, you can learn certain information about its capabilities compared to your own. The DM tells you if the creature is your equal, superior, or inferior in regard to two of the following characteristics of your choice:",
+        {
+          "type": "list",
+          "items": [
+            "Strength score",
+            "Dexterity score",
+            "Constitution score",
+            "Armor Class",
+            "Current hit points",
+            "Total class levels (if any)",
+            "Fighter class levels (if any)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Additional Maneuvers",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 10,
+      "header": 2,
+      "entries": ["At 10th level, you learn two additional maneuvers of your choice."]
+    },
+    {
+      "name": "Improved Combat Superiority (d10)",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 10,
+      "header": 2,
+      "entries": ["At 10th level, your superiority dice turn into {@dice d10}s."]
+    },
+    {
+      "name": "Additional Maneuvers",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 15,
+      "header": 2,
+      "entries": ["At 15th level, you learn two additional maneuvers of your choice."]
+    },
+    {
+      "name": "Additional Superiority Die",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 15,
+      "header": 2,
+      "entries": ["You gain another superiority die at 15th level."]
+    },
+    {
+      "name": "Relentless",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 15,
+      "header": 2,
+      "entries": [
+        "Starting at 15th level, when you roll initiative and have no superiority dice remaining, you regain 1 superiority die."
+      ]
+    },
+    {
+      "name": "Improved Combat Superiority (d12)",
+      "source": "PHB",
+      "page": 73,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassShortName": "Battle Master",
+      "subclassSource": "PHB",
+      "level": 18,
+      "header": 2,
+      "entries": ["At 18th level, your superiority dice turn into {@dice d12}s."]
+    }
+  ],
+  "fightingStyleClass": {
+    "name": "Fighter",
+    "source": "PHB",
+    "optionalfeatureProgression": [
+      {
+        "name": "Fighting Style",
+        "featureType": ["FS:F"],
+        "progression": {
+          "1": 1
+        }
+      }
+    ],
+    "classFeatures": ["Fighting Style|Fighter|PHB|1|PHB"]
+  },
+  "optionalfeature": [
+    {
+      "name": "Interception",
+      "source": "TCE",
+      "page": 41,
+      "reprintedAs": [
+        {
+          "uid": "Interception|XPHB",
+          "tag": "feat"
+        }
+      ],
+      "isClassFeatureVariant": true,
+      "featureType": ["FS:F", "FS:P"],
+      "entries": [
+        "When a creature you can see hits a target, other than you, within 5 feet of you with an attack, you can use your reaction to reduce the damage the target takes by {@dice 1d10} + your proficiency bonus (to a minimum of 0 damage). You must be wielding a {@item shield|phb} or a {@filter simple or martial weapon|items|source=phb|category=basic|type=martial weapon;simple weapon} to use this reaction."
+      ]
+    },
+    {
+      "name": "Protection",
+      "source": "PHB",
+      "page": 72,
+      "srd": true,
+      "otherSources": [
+        {
+          "source": "PHB",
+          "page": 84
+        }
+      ],
+      "reprintedAs": [
+        {
+          "uid": "Protection|XPHB",
+          "tag": "feat"
+        }
+      ],
+      "featureType": ["FS:F", "FS:P"],
+      "entries": [
+        "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield."
+      ]
+    }
+  ]
+}

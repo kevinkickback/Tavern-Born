@@ -28,6 +28,7 @@ export function makeNaturalExplorerFixture(
   const data = makeGameDataFixture({
     classes: parsed.classes as Class5e[],
     classFeatures: parsed.classFeatures as ClassFeature[],
+    optionalClassFeatureSources: parsed.optionalClassFeatureSources,
   })
   data.lookups = buildGameDataLookups(data)
   const classData = data.classes.find((row) => row.source === 'PHB')!

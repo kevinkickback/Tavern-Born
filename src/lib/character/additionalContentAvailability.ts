@@ -1,4 +1,5 @@
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { isClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
@@ -15,6 +16,8 @@ import {
 import type { Class5e, GameData } from '@/types/5etools'
 import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/types/character'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
+import { getClassProficiencySelectionStates } from './classProficiencySelections'
+import { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 
 export interface GameDataAvailabilityIndex {
@@ -121,6 +124,9 @@ function choiceIsMissing(
   index: GameDataAvailabilityIndex,
   subclassOwner?: string,
 ): boolean {
+  if (choice.entityType === 'proficiency') {
+    return !hasProficiencyCatalogTarget(choice, index.featureOptions)
+  }
   if (choice.entityType === 'featureOption') {
     return (
       !index.featureOptions ||
@@ -141,7 +147,7 @@ function choiceIsMissing(
     return !target || !available?.has(target)
   }
   const catalogs: Record<
-    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption'>,
+    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption' | 'proficiency'>,
     ReadonlySet<string>
   > = {
     classFeature: index.classFeatures,
@@ -208,6 +214,13 @@ export function characterUsesContentOutsideCatalog(
       index.featureOptions,
     ).map((state) => [state.selection.choiceId, state]),
   )
+  const proficiencyStates = new Map(
+    getClassProficiencySelectionStates(
+      character,
+      index.choiceClasses ?? [],
+      index.featureOptions,
+    ).map((state) => [state.selection.choiceId, state]),
+  )
   if (
     getEffectiveClassChoiceSelections(
       character,
@@ -216,22 +229,25 @@ export function characterUsesContentOutsideCatalog(
     ).some(
       (selection) =>
         !selection.inactive &&
-        (isFeatureLiteralChoiceId(selection.choiceId)
-          ? literalStates.get(selection.choiceId)?.recovery !== false
-          : selection.selected.some((choice) =>
-              choiceIsMissing(
-                choice,
-                index,
-                selection.subclassName
-                  ? getFeatureOwnerKey(
-                      selection.className,
-                      selection.classSource,
-                      selection.subclassName,
-                      selection.subclassSource,
-                    )
-                  : undefined,
-              ),
-            )),
+        (isClassProficiencyChoiceId(selection.choiceId)
+          ? !proficiencyStates.get(selection.choiceId)?.choice ||
+            selection.selected.some((choice) => choiceIsMissing(choice, index))
+          : isFeatureLiteralChoiceId(selection.choiceId)
+            ? literalStates.get(selection.choiceId)?.recovery !== false
+            : selection.selected.some((choice) =>
+                choiceIsMissing(
+                  choice,
+                  index,
+                  selection.subclassName
+                    ? getFeatureOwnerKey(
+                        selection.className,
+                        selection.classSource,
+                        selection.subclassName,
+                        selection.subclassSource,
+                      )
+                    : undefined,
+                ),
+              )),
     )
   ) {
     return true

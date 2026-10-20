@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { RulesPage } from '@/pages/rules/RulesPage'
@@ -58,10 +59,12 @@ function footer(name: 'Confirm' | 'Cancel') {
   return control
 }
 async function levelButton(level: number) {
-  const label = await screen.findByText(`Level ${level} Features`, { selector: 'span' })
+  const label = await screen.findByText(`Level ${level}`, {
+    selector: '[data-slot="accordion-trigger"] span',
+  })
   const candidate = label.closest('button')!
   const control = await within(candidate.parentElement!).findByRole('button', {
-    name: new RegExp(`Level ${level} Features`),
+    name: new RegExp(`Level ${level}\\b`),
   })
   expect(control).toBe(candidate)
   return control
@@ -229,11 +232,30 @@ test.skipIf(!existsSync('data/class/class-ranger.json'))(
     mount(f, selectNaturalExplorer(f), '/rules')
     const before = active().classChoiceSelections![0]
     fireEvent.click(screen.getByRole('tab', { name: 'Character Options' }))
-    fireEvent.click(screen.getByLabelText('Optional Class Features'))
+    fireEvent.click(screen.getByLabelText('Allow Optional Class Features'))
+    expect(active().classChoiceSelections![0].inactive).not.toBe(true)
+    const adoption = setOptionalClassAdoptionCommand(
+      active(),
+      active().provenance,
+      f.catalogs,
+      {
+        owner: ['class', 'ranger', 'phb'],
+        target: 'class-feature|deft explorer|ranger|phb|1|tce',
+        earnedLevel: 1,
+      },
+      true,
+      [],
+    )
+    await act(async () => {
+      useCharacterStore.getState().updateCharacter(active().id, {
+        ...adoption.characterPatch,
+        provenance: adoption.provenanceUpdate,
+      })
+    })
     await waitFor(() => expect(active().classChoiceSelections![0].inactive).toBe(true))
     expect(active().classChoiceSelections![0].selected).toEqual(before.selected)
     expect(active().features).toEqual(f.character.features)
-    fireEvent.click(screen.getByLabelText('Optional Class Features'))
+    fireEvent.click(screen.getByLabelText('Allow Optional Class Features'))
     await waitFor(() => expect(active().classChoiceSelections![0].inactive).not.toBe(true))
     expect(active().classChoiceSelections![0]).toEqual(before)
   },
@@ -264,7 +286,24 @@ test.skipIf(!existsSync('data/class/class-ranger.json'))(
   'Overview uses current replacement authority and cannot reactivate dormant facts through raw details',
   async () => {
     const f = makeNaturalExplorerFixture(1, undefined, 'data/class/class-ranger.json')
-    const saved = { ...selectNaturalExplorer(f), variantRules: { optionalClassFeatures: true } }
+    const allowed = { ...selectNaturalExplorer(f), variantRules: { optionalClassFeatures: true } }
+    const adoption = setOptionalClassAdoptionCommand(
+      allowed,
+      allowed.provenance,
+      f.catalogs,
+      {
+        owner: ['class', 'ranger', 'phb'],
+        target: 'class-feature|deft explorer|ranger|phb|1|tce',
+        earnedLevel: 1,
+      },
+      true,
+      [],
+    )
+    const saved = characterPersistenceSchema.parse({
+      ...allowed,
+      ...adoption.characterPatch,
+      provenance: adoption.provenanceUpdate,
+    })
     mount(f, saved, '/build/review')
     fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
     expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0)
@@ -283,8 +322,21 @@ test.skipIf(!existsSync('data/class/class-ranger.json'))(
     await act(async () => {
       await useGameDataStore.setState({ gameData: missing.data })
     })
-    expect(screen.queryByText('Inactive')).toBeNull()
-    expect(screen.getByText(/When you make an Intelligence or Wisdom check/)).toBeTruthy()
+    expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
+    expect(screen.getByText('Restore or clear Deft Explorer')).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
+    const clause =
+      "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in."
+    expect(screen.queryByText(clause)).toBeNull()
+    expect(JSON.stringify(active())).toBe(before)
+    await act(async () => {
+      useGameDataStore.setState({ gameData: f.data })
+    })
+    fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
+    expect(screen.queryByText('Restore or clear Deft Explorer')).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
+    expect(screen.queryByText(clause)).toBeNull()
     expect(JSON.stringify(active())).toBe(before)
   },
 )

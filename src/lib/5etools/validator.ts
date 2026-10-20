@@ -1,4 +1,5 @@
 import type { ZodTypeAny } from 'zod'
+import { mapWithConcurrency } from '@/lib/async'
 import type { DataSourceConfig } from '@/types/5etools'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import {
@@ -11,6 +12,7 @@ import {
   IndexSchema,
   ItemDataSchema,
   LanguageDataSchema,
+  OptionalClassBookDataSchema,
   OptionalFeatureDataSchema,
   RaceDataSchema,
   TrapHazardDataSchema,
@@ -22,15 +24,23 @@ interface ValidationResult {
   error?: string
   foundResources?: string[]
   normalizedPath?: string
+  optionalSupportDiagnostics?: string[]
 }
 
 interface FileValidationConfig {
   name: string
   schema?: ZodTypeAny
   required?: boolean
+  optionalSupport?: boolean
 }
 
 const CANDIDATE_FILES: FileValidationConfig[] = [
+  {
+    name: 'book/book-tce.json',
+    schema: OptionalClassBookDataSchema,
+    required: false,
+    optionalSupport: true,
+  },
   { name: 'books.json', schema: BookDataSchema },
   { name: 'adventures.json', schema: GenericDataSchema },
   { name: 'races.json', schema: RaceDataSchema },
@@ -120,16 +130,17 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
     }
 
     const reader = createJsonResourceReader({ ...config, path: normalizedPath })
-    const results = await Promise.all(
-      CANDIDATE_FILES.map(async (file) => {
-        const status = await validateFile(reader, file)
-        return { name: file.name, status }
-      }),
+    const candidates = CANDIDATE_FILES.filter(
+      (file) => config.type !== 'bundled' || !file.optionalSupport,
     )
+    const results = await mapWithConcurrency(candidates, 6, async (file) => {
+      const status = await validateFile(reader, file)
+      return { name: file.name, status, optionalSupport: file.optionalSupport }
+    })
 
     const foundResources = results.filter((result) => result.status === 'valid').map((r) => r.name)
     const invalidResources = results
-      .filter((result) => result.status === 'invalid')
+      .filter((result) => result.status === 'invalid' && !result.optionalSupport)
       .map((result) => result.name)
 
     if (invalidResources.length > 0) {
@@ -166,6 +177,9 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       isValid: true,
       foundResources,
       normalizedPath: persistedPath,
+      optionalSupportDiagnostics: results
+        .filter((result) => result.optionalSupport && result.status === 'invalid')
+        .map((result) => `Optional class feature support is unavailable in ${result.name}.`),
     }
   } catch (error) {
     return {

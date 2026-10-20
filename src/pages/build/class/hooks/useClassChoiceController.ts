@@ -3,7 +3,9 @@ import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
@@ -16,14 +18,27 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
+  hasClassProficiencyRecovery,
+  refreshClassProficiencyState,
+} from '@/lib/character/classProficiencySelections'
+import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
 } from '@/lib/character/featureOptionSelections'
 import {
+  getHistoricalProficiencyRule,
+  resolveHistoricalProficiencyChoice,
+} from '@/lib/character/historicalProficiencyChoices'
+import {
   hasNaturalExplorerRecovery,
   scopeNaturalExplorerOptions,
 } from '@/lib/character/naturalExplorerSelections'
+import { getOptionalClassPoolSelectionSection } from '@/lib/character/optionalClassAdoptionRules'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
 import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -46,7 +61,7 @@ interface ClassChoiceControllerParams {
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
 export function useClassChoiceController({
-  character,
+  character: savedCharacter,
   viewingClassData,
   viewingClassEntry,
   viewingSubclassData,
@@ -56,13 +71,28 @@ export function useClassChoiceController({
   onFeatOptionsRequired,
   configurationPaused = false,
 }: ClassChoiceControllerParams) {
-  const { applyClassChoiceSelection, retainSavedFeatureOptions } = useClassProvenanceMutations()
+  const sourceData = useGameDataStore((state) => state.gameData)
+  const character = useMemo(
+    () =>
+      savedCharacter &&
+      refreshClassProficiencyState(savedCharacter, catalogs.classes ?? [], {
+        ...catalogs,
+        featExpertiseFeats: catalogs.feats,
+      }),
+    [savedCharacter, catalogs],
+  )
+  const { applyClassChoiceSelection, retainSavedFeatureOptions, setHistoricalProficiencySetup } =
+    useClassProvenanceMutations()
+  const activity = useMemo(
+    () => character && createOptionalClassFeatureActivity(character, catalogs),
+    [character, catalogs],
+  )
   const itemTypeByAbbr = useItemTypeLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const weaponProficiencies = character?.proficiencies.weapons ?? EMPTY_WEAPON_PROFICIENCIES
-  const ownerContext = (subclassName?: string, subclassSource?: string) =>
+  const ownerContext = (subclassName?: string, subclassSource?: string, actor = character) =>
     JSON.stringify([
-      character?.id,
+      actor?.id,
       getFeatureOwnerKey(
         viewingClassEntry?.name ?? viewingClassData?.name ?? '',
         viewingClassEntry?.source ?? viewingClassData?.source,
@@ -71,12 +101,17 @@ export function useClassChoiceController({
       ),
       viewingClassLevel,
       includeClassFeatureVariants,
+      actor?.optionalClassFeatureAdoptions,
     ])
   const contextKey = ownerContext(
     viewingClassEntry?.subclass ?? viewingSubclassData?.name,
     viewingClassEntry?.subclassSource ?? viewingSubclassData?.source,
   )
-  const [request, setRequest] = useState<{ id: string; contextKey: string } | null>(null)
+  const [request, setRequest] = useState<{
+    id: string
+    contextKey: string
+    savedHandle?: string
+  } | null>(null)
   const [queue, setQueue] = useState<{
     ids: string[]
     contextKey: string
@@ -84,20 +119,21 @@ export function useClassChoiceController({
   } | null>(null)
   const choices = useMemo(
     () =>
-      viewingClassData
-        ? getCharacterClassChoices(
-            viewingClassData,
-            viewingSubclassData,
-            includeClassFeatureVariants,
-            catalogs,
-          ).filter((choice) => choice.level <= viewingClassLevel)
+      viewingClassData && activity
+        ? getCharacterClassChoices(viewingClassData, viewingSubclassData, activity, catalogs)
+            .filter((choice) => choice.level <= viewingClassLevel)
+            .map((choice) =>
+              character ? resolveHistoricalProficiencyChoice(character, choice) : choice,
+            )
         : [],
     [
+      activity,
       includeClassFeatureVariants,
       viewingClassData,
       viewingClassLevel,
       viewingSubclassData,
       catalogs,
+      character,
     ],
   )
   const persistedSelectionByChoiceId = useMemo(
@@ -135,7 +171,7 @@ export function useClassChoiceController({
     const viewed = viewingClassEntry ?? viewingClassData
     return featureOptionStates.filter((state) => {
       if (!state.recovery) return false
-      if (state.storm || state.literalGroup)
+      if (state.storm || state.literalGroup || state.proficiency || state.optionalPool)
         return (
           !!state.owner &&
           !!viewed &&
@@ -162,7 +198,13 @@ export function useClassChoiceController({
             state?.options ??
             scopeNaturalExplorerOptions(
               choice,
-              resolveClassChoiceOptions(choice, resolvedCatalogs, selected, viewingClassLevel),
+              resolveClassChoiceOptions(
+                choice,
+                resolvedCatalogs,
+                selected,
+                viewingClassLevel,
+                character ?? undefined,
+              ),
               character?.classChoiceSelections ?? [],
             )
           return [
@@ -187,7 +229,7 @@ export function useClassChoiceController({
       resolvedCatalogs,
       viewingClassLevel,
       featureOptionStates,
-      character?.classChoiceSelections,
+      character,
     ],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
@@ -226,7 +268,18 @@ export function useClassChoiceController({
   useEffect(() => {
     if (queue && !queuedChoice) setQueue(null)
     if (request && request.contextKey !== contextKey) setRequest(null)
-  }, [queue, queuedChoice, request, contextKey])
+    if (request?.savedHandle !== undefined) {
+      const latest = character?.classChoiceSelections?.find((row) => row.choiceId === request.id)
+      if (!latest || getOptionalPoolSelectionHandle(latest) !== request.savedHandle)
+        setRequest(null)
+    }
+    if (
+      request &&
+      !choices.some((choice) => choice.id === request.id) &&
+      !recoveries.some((state) => state.selection.choiceId === request.id)
+    )
+      setRequest(null)
+  }, [queue, queuedChoice, request, contextKey, choices, recoveries, character])
   const activeId =
     request?.contextKey === contextKey
       ? request.id
@@ -259,7 +312,10 @@ export function useClassChoiceController({
     activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
   )
   const activeInitialSelectedIds = activeDisplayChoice
-    ? (selectionByChoiceId.get(activeDisplayChoice.id)?.selected ?? [])
+    ? (activeRemovalOnly && activeSaved
+        ? activeSaved.selection.selected
+        : (selectionByChoiceId.get(activeDisplayChoice.id)?.selected ?? [])
+      )
         .map(getClassChoiceOptionKey)
         .filter((key) => activeOptionKeys.has(key))
     : []
@@ -280,7 +336,20 @@ export function useClassChoiceController({
         toast.error('Source rules changed. Review the saved choices before confirming.')
         return
       }
-      retainSavedFeatureOptions(activeSaved.selection.choiceId, keys)
+      try {
+        retainSavedFeatureOptions(
+          activeSaved.selection.choiceId,
+          keys,
+          activeSaved.optionalPool ? request?.savedHandle : undefined,
+        )
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'The saved choice changed. Review it before confirming.',
+        )
+        return
+      }
       close()
       return
     }
@@ -361,31 +430,57 @@ export function useClassChoiceController({
     configurations,
     configureSubclass: (subclass: Subclass5e) => {
       if (!viewingClassData || !character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        !hasCurrentCharacterSourceContext(
+          latest,
+          savedCharacter,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        ) ||
+        !latest
+      )
+        return
+      const owner = findClassReference(viewingClassData, latest.classProgression)
+      if (
+        !owner ||
+        owner.levels !== viewingClassLevel ||
+        owner.subclass !== subclass.name ||
+        owner.subclassSource !== subclass.source
+      )
+        return
       const candidates = getSubclassConfigurations(
-        getCharacterClassChoices(viewingClassData, subclass, includeClassFeatureVariants, catalogs),
+        getCharacterClassChoices(
+          viewingClassData,
+          subclass,
+          createOptionalClassFeatureActivity(latest, catalogs),
+          catalogs,
+        ),
         viewingClassData,
         subclass,
       ).filter((choice) => choice.level <= viewingClassLevel)
       setRequest(null)
       setQueue({
         ids: candidates.map((choice) => choice.id),
-        contextKey: ownerContext(subclass.name, subclass.source),
+        contextKey: ownerContext(subclass.name, subclass.source, latest),
         catalogs,
       })
     },
     recoveries,
-    diagnostics: viewingClassData
-      ? getCharacterClassChoiceDiagnostics(
-          viewingClassData,
-          viewingSubclassData,
-          includeClassFeatureVariants,
-          catalogs,
-        ).filter(
-          (diagnostic) =>
-            (diagnostic.level === undefined || diagnostic.level <= viewingClassLevel) &&
-            !hasNaturalExplorerRecovery(diagnostic, featureOptionStates),
-        )
-      : [],
+    diagnostics:
+      viewingClassData && activity
+        ? getCharacterClassChoiceDiagnostics(
+            viewingClassData,
+            viewingSubclassData,
+            activity,
+            catalogs,
+          ).filter(
+            (diagnostic) =>
+              (diagnostic.level === undefined || diagnostic.level <= viewingClassLevel) &&
+              !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
+              !hasClassProficiencyRecovery(diagnostic, featureOptionStates),
+          )
+        : [],
     selectionByChoiceId,
     selectedViewsByChoiceId,
     activeChoice: activeDisplayChoice,
@@ -393,12 +488,41 @@ export function useClassChoiceController({
     activeOptionViews,
     activeInitialSelectedIds,
     activeRequiredCount,
+    historicalSetup:
+      activeDisplayChoice?.id &&
+      !activeRemovalOnly &&
+      getHistoricalProficiencyRule(activeDisplayChoice.id)
+        ? {
+            name: getHistoricalProficiencyRule(activeDisplayChoice.id)!.proficiencyAtGain!,
+            alreadyProficient: selectionByChoiceId.get(activeDisplayChoice.id)?.proficiencyAtGain
+              ?.alreadyProficient,
+            onConfirm: (alreadyProficient: boolean) => {
+              if (!resolvedActiveChoice) return
+              try {
+                setHistoricalProficiencySetup(resolvedActiveChoice, alreadyProficient)
+                if (!alreadyProficient) close()
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : 'This setup could not be verified.',
+                )
+              }
+            },
+          }
+        : undefined,
     open: (choice: NormalizedCharacterChoice) => {
       setQueue(null)
+      const saved = character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
       setRequest((previous) =>
         previous?.id === choice.id && previous.contextKey === contextKey
           ? previous
-          : { id: choice.id, contextKey },
+          : {
+              id: choice.id,
+              contextKey,
+              savedHandle:
+                saved && getOptionalClassPoolSelectionSection(saved)
+                  ? getOptionalPoolSelectionHandle(saved)
+                  : undefined,
+            },
       )
     },
     openRecovery: (state: FeatureOptionSelectionState) => {
@@ -406,7 +530,13 @@ export function useClassChoiceController({
       setRequest((previous) =>
         previous?.id === state.selection.choiceId && previous.contextKey === contextKey
           ? previous
-          : { id: state.selection.choiceId, contextKey },
+          : {
+              id: state.selection.choiceId,
+              contextKey,
+              savedHandle: state.optionalPool
+                ? getOptionalPoolSelectionHandle(state.selection)
+                : undefined,
+            },
       )
     },
     close,

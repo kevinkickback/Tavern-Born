@@ -15,10 +15,24 @@ import {
   getSelectedSubclassData,
   getSubclassSelectionInfo,
 } from '@/lib/5etools/classData'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import {
+  type ClassFeatureDetailOrigin,
+  effectiveClassDisplayData,
+  effectiveDeclaredEntries,
+  resolveActiveClassChoiceDetail,
+} from '@/lib/character/classFeatureActivityView'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -28,6 +42,7 @@ import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassC
 import { BuildClassDetailsPanel } from '@/pages/build/class/components/DetailsPanel'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
+import { getVisibleOptionalClassFeatures } from '@/pages/build/class/components/OptionalClassFeatures'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
@@ -113,14 +128,14 @@ export function BuildClassPage() {
   const viewingClassData = useMemo(() => {
     return findClassReference({ name: viewingClass, source: viewingClassSource }, classes)
   }, [classes, viewingClass, viewingClassSource])
-  const selectedFeature = useMemo(
-    () => resolveSubclassDetailsSelection(featureSelection, viewingClassData),
-    [featureSelection, viewingClassData],
-  )
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
-  const viewingSubclassSpellcastingData = useMemo(
-    () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
-    [viewingClassData, viewingEntry],
+  const activity = useMemo(
+    () => character && createOptionalClassFeatureActivity(character, featureCatalogs),
+    [character, featureCatalogs],
+  )
+  const viewingClassDisplayData = useMemo(
+    () => (activity ? effectiveClassDisplayData(viewingClassData, activity) : undefined),
+    [viewingClassData, activity],
   )
   const classChoiceCatalogs = useMemo(
     () => ({
@@ -130,9 +145,7 @@ export function BuildClassPage() {
       items: items as Item5e[],
       itemsBase: itemsBase as Item5e[],
       itemMasteries,
-      optionalFeatures: (
-        optionalfeatures as Array<OptionalFeatureLike & { isClassFeatureVariant?: boolean }>
-      ).filter((feature) => includeClassFeatureVariants || !feature.isClassFeatureVariant),
+      optionalFeatures: optionalfeatures as OptionalFeatureLike[],
     }),
     [
       featureCatalogs,
@@ -144,6 +157,86 @@ export function BuildClassPage() {
       itemsBase,
       optionalfeatures,
     ],
+  )
+  const selectedFeature = useMemo(() => {
+    const resolved = resolveSubclassDetailsSelection(featureSelection, viewingClassDisplayData)
+    const origin = resolved?.origin
+    if (!resolved || !activity || !origin || origin.kind === 'independent') return resolved
+    if (origin.kind === 'declared') {
+      const addition = activity.states.find(
+        ({ root, state, offered, current }) =>
+          !root.original &&
+          state === 'unselected' &&
+          root.target === origin.target &&
+          root.level === origin.earnedLevel &&
+          JSON.stringify(root.owner) === JSON.stringify(origin.owner) &&
+          offered &&
+          !!current,
+      )
+      if (addition?.current)
+        return {
+          ...resolved,
+          name: addition.current.name,
+          source: addition.current.source,
+          entries: addition.current.entries ?? [],
+        }
+      if (!activity.declared(origin.owner, origin.target, origin.earnedLevel)) return null
+      const rows =
+        origin.owner[0] === 'class'
+          ? featureCatalogs.classFeatures
+          : scopeClassChoiceFeatureCatalogs(
+              featureCatalogs,
+              getFeatureOwnerKey(
+                origin.owner[1],
+                origin.owner[2],
+                origin.owner[3],
+                origin.owner[4],
+              ),
+            ).subclassFeatures
+      const current =
+        activity.currentOptionalFeature(origin.owner, origin.target) ??
+        rows.find(
+          (row) =>
+            (origin.owner[0] === 'class'
+              ? getClassFeatureIdentity(row)
+              : getSubclassFeatureIdentity(row)) === origin.target,
+        )
+      return current
+        ? {
+            ...resolved,
+            entries: effectiveDeclaredEntries(
+              current.entries ?? [],
+              activity,
+              origin.owner,
+              origin.target,
+            ),
+          }
+        : null
+    }
+    const current =
+      character && resolveActiveClassChoiceDetail(character, classChoiceCatalogs, origin)
+    return current
+      ? { ...resolved, ...current }
+      : {
+          ...resolved,
+          entries: ['This saved choice is inactive or its current source is unavailable.'],
+        }
+  }, [
+    featureSelection,
+    viewingClassDisplayData,
+    viewingClassData,
+    includeClassFeatureVariants,
+    classFeatures,
+    viewingClass,
+    viewingClassSource,
+    activity,
+    featureCatalogs,
+    classChoiceCatalogs,
+    character,
+  ])
+  const viewingSubclassSpellcastingData = useMemo(
+    () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
+    [viewingClassData, viewingEntry],
   )
   const spellController = useClassSpellChoiceController(
     viewingClassData,
@@ -278,15 +371,40 @@ export function BuildClassPage() {
     viewingClassKey,
   ])
   const allClassFeatures = useMemo(() => {
-    if (!viewingClass) return []
+    if (!viewingClass || !activity || !viewingClassData) return []
+    const owner = optionalClassOwner(viewingClassData)
     const src = viewingClassSource ?? viewingClassData?.source
     return classFeatures
       .filter((f) => {
         if (f.className !== viewingClass) return false
         if (src && f.classSource !== src) return false
-        if (!includeClassFeatureVariants && f.name.startsWith('Optional Rule:')) return false
-        return true
+        const target = getClassFeatureIdentity(f)
+        return (
+          !!target &&
+          activity.declared(
+            owner,
+            target,
+            f.level ?? 1,
+            undefined,
+            f.isClassFeatureVariant === true,
+          )
+        )
       })
+      .map((feature) => ({
+        ...feature,
+        origin: {
+          kind: 'declared',
+          owner,
+          target: getClassFeatureIdentity(feature)!,
+          earnedLevel: feature.level ?? 1,
+        } as ClassFeatureDetailOrigin,
+        entries: effectiveDeclaredEntries(
+          feature.entries ?? [],
+          activity,
+          owner,
+          getClassFeatureIdentity(feature),
+        ),
+      }))
       .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
   }, [
     classFeatures,
@@ -294,6 +412,7 @@ export function BuildClassPage() {
     viewingClassSource,
     viewingClassData,
     includeClassFeatureVariants,
+    activity,
   ])
 
   const featuresByLevel = useMemo(() => {
@@ -314,6 +433,15 @@ export function BuildClassPage() {
         classChoiceLevels: [
           ...classChoiceController.choices.map((choice) => choice.level),
           ...classChoiceController.diagnostics.map((diagnostic) => diagnostic.level ?? 1),
+          ...classChoiceController.recoveries.map((state) => state.selection.classLevel),
+          ...(character && activity && viewingClass
+            ? getVisibleOptionalClassFeatures({
+                character,
+                className: viewingClass,
+                classSource: viewingClassSource,
+                activity,
+              }).map((row) => row.root.level)
+            : []),
         ],
       }),
     [
@@ -324,6 +452,11 @@ export function BuildClassPage() {
       spellChoicesByLevel,
       classChoiceController.choices,
       classChoiceController.diagnostics,
+      classChoiceController.recoveries,
+      character,
+      activity,
+      viewingClass,
+      viewingClassSource,
     ],
   )
   const {
@@ -336,8 +469,15 @@ export function BuildClassPage() {
     select: handleSubclassSelect,
   } = subclassController
   const viewingClassEntries = useMemo(
-    () => (Array.isArray(viewingClassData?.entries) ? (viewingClassData.entries as unknown[]) : []),
-    [viewingClassData?.entries],
+    () =>
+      Array.isArray(viewingClassDisplayData?.entries)
+        ? (viewingClassDisplayData.entries as unknown[])
+        : [],
+    [viewingClassDisplayData?.entries],
+  )
+  const viewingSubclassDisplayData = viewingClassDisplayData?.subclasses?.find(
+    (subclass) =>
+      subclass.name === viewingSubclassData?.name && subclass.source === viewingSubclassData.source,
   )
   const allSpells = spells as Spell5e[]
   const [showLevelUpHint, setShowLevelUpHint] = useState(
@@ -395,6 +535,7 @@ export function BuildClassPage() {
           leftWidth="var(--workspace-master-width)"
           left={
             <BuildClassLevelsPanel
+              optionalClassActivity={activity ?? undefined}
               classProgression={classProgression}
               selectedClassTab={selectedClassTab}
               onSelectClassTab={handleSelectClassTab}
@@ -406,9 +547,9 @@ export function BuildClassPage() {
               featuresByLevel={featuresByLevel}
               subclassFeatureName={subclassFeatureName}
               selectedFeature={selectedFeature}
-              viewingClassData={viewingClassData}
+              viewingClassData={viewingClassDisplayData}
               viewingSubclass={viewingSubclass}
-              viewingSubclassData={viewingSubclassData}
+              viewingSubclassData={viewingSubclassDisplayData}
               detailCollapsed={detailCollapsed}
               viewingClass={viewingClass ?? ''}
               viewingClassSource={viewingClassSource}
@@ -464,7 +605,7 @@ export function BuildClassPage() {
           right={
             <BuildClassDetailsPanel
               selectedFeature={selectedFeature}
-              viewingClassData={viewingClassData}
+              viewingClassData={viewingClassDisplayData}
               viewingClassLevel={viewingClassLevel}
               viewingClassEntries={viewingClassEntries}
               viewingSubclass={viewingSubclass}
@@ -536,6 +677,7 @@ export function BuildClassPage() {
           classSource={viewingClassSource}
           onClose={classChoiceController.close}
           onConfirm={classChoiceController.confirm}
+          historicalSetup={classChoiceController.historicalSetup}
         />
       )}
 
@@ -546,6 +688,8 @@ export function BuildClassPage() {
             if (!isOpen) setOptionsPendingFeat(null)
           }}
           feat={optionsPendingFeat}
+          initialSelections={optionsPendingFeat.initialOptions}
+          optionTarget={optionsPendingFeat}
           proficientSkillNames={character.proficiencies?.skills ?? []}
           onFinish={(selections) => {
             commitFeatWithOptions(optionsPendingFeat, selections, allSpells)

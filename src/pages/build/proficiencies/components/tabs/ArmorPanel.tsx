@@ -1,14 +1,12 @@
-import { Shield } from '@phosphor-icons/react'
 import { normalizeKey } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { hasProfInArray } from '@/pages/build/proficiencies/model/data'
 import {
-  choiceSelectedClass,
-  fixedSelectedClass,
   formatProfLabel,
   type ProficiencyRowState,
   ProficiencyStateIcon,
   ProficiencyStatus,
+  proficiencyRowClass,
 } from './shared'
 import type {
   CurrentProficiencies,
@@ -34,6 +32,9 @@ export function ArmorPanel({
   onExpandDetails,
   onResolveChoiceSelection,
 }: ArmorPanelProps) {
+  const hasPendingChoices = ledger.choices.some(
+    (choice) => choice.domain === 'armor' && choice.selected.length < choice.chooseCount,
+  )
   return (
     <div className="space-y-4">
       <div className="h-8" aria-hidden="true" />
@@ -97,20 +98,10 @@ export function ArmorPanel({
               className={cn(
                 'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                 canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                isChoiceSelected
-                  ? choiceSelectedClass
-                  : isSelected
-                    ? fixedSelectedClass
-                    : canSelect
-                      ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                      : 'bg-surface-raised text-foreground hover:bg-surface-hover',
+                proficiencyRowClass(rowState, hasPendingChoices),
               )}
             >
-              <ProficiencyStateIcon
-                state={rowState}
-                actionable={canSelect || canDeselect}
-                fallback={<Shield className="size-3.5 shrink-0" aria-hidden="true" />}
-              />
+              <ProficiencyStateIcon state={rowState} actionable={canSelect || canDeselect} />
               <span>{formatProfLabel(armorKey)}</span>
               <span className="ml-auto flex shrink-0 items-center gap-2">
                 <ProficiencyStatus state={rowState} />

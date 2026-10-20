@@ -29,6 +29,10 @@ import {
   getAdditionalMovementSummary,
   getWalkingSpeed,
 } from '@/lib/calculations/movement'
+import {
+  getProficiencyCheckNoteRows,
+  type ProficiencyCheckNoteRow,
+} from '@/lib/calculations/proficiencyCheckNotes'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
@@ -49,10 +53,16 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   getFeatureOptionSelectionStates,
   summarizeFeatureOptionSelectionGroups,
 } from '@/lib/character/featureOptionSelections'
+import {
+  createOptionalClassFeatureActivity,
+  getActiveOptionalClassFeatureDeclarations,
+} from '@/lib/character/optionalClassFeatureActivity'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import {
@@ -190,8 +200,12 @@ export interface CharacterSheetViewModel {
   classFeaturesSummary2014: string
   featuresSummary: string
   featureOptionSummaries?: Array<{ text: string; compactText: string }>
+  optionalClassFeatureSummaries?: Array<{ text: string; compactText: string }>
+  proficiencyCheckNotes?: ProficiencyCheckNoteRow[]
   equipmentSummary: string
   proficienciesSummary: string
+  toolProficiencies: string[]
+  toolExpertiseSummary: string
   languagesSummary: string
   featsSummary: string
   customOrganizationSummary: string
@@ -365,12 +379,16 @@ function withFeatureOptionSummaries(
   summary: string,
   selections: CharacterSheetViewModel['featureOptionSummaries'],
   descriptions: boolean,
+  notes: readonly ProficiencyCheckNoteRow[] = [],
+  optionalFeatures: NonNullable<CharacterSheetViewModel['optionalClassFeatureSummaries']> = [],
 ): string {
   return [
     summary,
+    ...optionalFeatures.map((row) => (descriptions ? row.text : row.compactText)),
     ...(selections ?? []).map((selection) =>
       descriptions ? selection.text : selection.compactText,
     ),
+    ...notes.map((row) => row.text),
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -385,11 +403,15 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       buildClassFeaturesSummary(vm.character, false),
       vm.featureOptionSummaries,
       false,
+      vm.proficiencyCheckNotes,
+      vm.optionalClassFeatureSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(vm.character, false),
       vm.featureOptionSummaries,
       false,
+      vm.proficiencyCheckNotes,
+      vm.optionalClassFeatureSummaries,
     ),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
@@ -411,10 +433,17 @@ function buildProficienciesSummary(character: Character): string {
   if (character.proficiencies.weapons.length)
     rows.push(`Weapons: ${character.proficiencies.weapons.join(', ')}`)
   if (character.proficiencies.tools.length)
-    rows.push(`Tools: ${character.proficiencies.tools.join(', ')}`)
+    rows.push(`Tools: ${toolProficiencyLabels(character).join(', ')}`)
   if (character.proficiencies.languages.length)
     rows.push(`Languages: ${character.proficiencies.languages.join(', ')}`)
   return rows.join('\n')
+}
+
+function toolProficiencyLabels(character: Character): string[] {
+  const expertise = new Set(character.proficiencies.expertise.map((name) => name.toLowerCase()))
+  return character.proficiencies.tools.map((name) =>
+    expertise.has(name.toLowerCase()) ? `${name} (Expertise)` : name,
+  )
 }
 
 function buildLabeledSummary(
@@ -742,8 +771,14 @@ export function createCharacterSheetViewModel(
     ...item,
     description: item.description?.trim() || descriptions.get(item) || '',
   }))
+  const activeClassRoutes = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    rawLookups.classChoiceFeatureCatalogs,
+  )
   const companions = (character.classChoiceSelections ?? [])
-    .filter((choice) => choice.kind === 'creature' && !choice.inactive)
+    .filter(
+      (choice) => choice.kind === 'creature' && activeClassRoutes.choiceIds.has(choice.choiceId),
+    )
     .flatMap((choice) =>
       choice.selected.map((selection) => ({
         ...selection,
@@ -837,12 +872,34 @@ export function createCharacterSheetViewModel(
       rawLookups.classChoiceFeatureCatalogs,
     ),
   )
+  const proficiencyCheckNotes = getProficiencyCheckNoteRows(
+    calculationContext.effects.sourceDeclarations,
+    calculationContext.effects.resolutionContext,
+  )
+  const optionalActivity = createOptionalClassFeatureActivity(
+    character,
+    rawLookups.classChoiceFeatureCatalogs,
+  )
+  const declarations = getActiveOptionalClassFeatureDeclarations(optionalActivity)
+  const optionalClassFeatureSummaries = declarations.map(
+    ({ owner, target, level: gainedLevel, feature }) => {
+      const repeatedName =
+        declarations.filter((row) => row.feature.name === feature.name).length > 1
+      const name = repeatedName ? `${feature.name} (Level ${gainedLevel})` : feature.name
+      const description = renderEntriesToText(
+        effectiveDeclaredEntries(feature.entries ?? [], optionalActivity, owner, target),
+      )
+      return { text: description ? `${name}: ${description}` : name, compactText: name }
+    },
+  )
 
   return {
     character,
     feats,
     level,
     featureOptionSummaries,
+    optionalClassFeatureSummaries,
+    proficiencyCheckNotes,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
     classLevelSummary: getClassLevelSummary(character),
@@ -911,16 +968,30 @@ export function createCharacterSheetViewModel(
       buildClassFeaturesSummary(character),
       featureOptionSummaries,
       true,
+      proficiencyCheckNotes,
+      optionalClassFeatureSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(character),
       featureOptionSummaries,
       true,
+      proficiencyCheckNotes,
+      optionalClassFeatureSummaries,
     ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
       .join('\n'),
     proficienciesSummary: buildProficienciesSummary(character),
+    toolProficiencies: toolProficiencyLabels(character),
+    toolExpertiseSummary: (() => {
+      const expertise = new Set(character.proficiencies.expertise.map((name) => name.toLowerCase()))
+      const tools = character.proficiencies.tools.filter((name) =>
+        expertise.has(name.toLowerCase()),
+      )
+      return tools.length
+        ? `Tool Expertise: ${tools.join(', ')}. Double your proficiency bonus for ability checks using ${tools.length === 1 ? 'this proficient tool' : 'these proficient tools'}.`
+        : ''
+    })(),
     languagesSummary: character.proficiencies.languages.join(', '),
     featsSummary: feats
       .map((feat) => {

@@ -122,7 +122,7 @@ export function RulesStep({
   )
   const VARIANT_RULE_DESCRIPTIONS: Record<string, string> = {
     optionalClassFeatures:
-      "Unlocks Tasha's optional class features for your class, such as additional spells, feature replacements, and expanded options from TCE.",
+      'Allow individual optional class features. Choose which features to use on the Class page after creation.',
     averageHitPoints:
       'Choose whether later levels use the fixed average automatically or ask you to roll or enter the hit-die result.',
     anyRaceSubclasses:
@@ -267,7 +267,7 @@ export function RulesStep({
                   {
                     id: optionalClassFeaturesId,
                     key: 'optionalClassFeatures' as const,
-                    label: 'Optional Class Features',
+                    label: 'Allow Optional Class Features',
                     available: contentAvailability.optionalClassFeatures,
                   },
                   {

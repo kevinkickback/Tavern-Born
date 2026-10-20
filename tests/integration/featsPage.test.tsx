@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import {
   act,
   cleanup,
@@ -20,18 +21,11 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 
-const configurableFeat = {
-  name: 'Skilled',
-  source: 'PHB',
-  skillProficiencies: [{ choose: { from: ['Arcana', 'History'], count: 1 } }],
-  entries: ['Gain proficiency in one skill.'],
-} as Feat5e
-
-const configurableFeat2024 = {
-  ...configurableFeat,
-  source: 'XPHB',
-  entries: ['Gain proficiency using the revised printing.'],
-} as Feat5e
+const skilledSources = JSON.parse(
+  readFileSync('tests/fixtures/skilledFeatSources.json', 'utf8'),
+) as Feat5e[]
+const configurableFeat = skilledSources.find((feat) => feat.source === 'PHB')!
+const configurableFeat2024 = skilledSources.find((feat) => feat.source === 'XPHB')!
 
 const magicInitiate = {
   name: 'Magic Initiate',
@@ -380,9 +374,9 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(
       screen.getByRole('button', { name: 'Select Skilled' }).getAttribute('aria-pressed'),
     ).toBe('true')
-    expect(screen.getAllByText('Gain proficiency using the revised printing.')).toHaveLength(2)
+    expect(screen.getByText('You can take this feat more than once.')).toBeTruthy()
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Remove Skilled' })))
-    expect(screen.queryByText('Gain proficiency using the revised printing.')).toBeNull()
+    expect(screen.queryByText('You can take this feat more than once.')).toBeNull()
   })
 
   test('keeps a missing fixed source and its saved options without offering another printing', () => {
@@ -487,6 +481,6 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(screen.getByRole('tab', { name: /^Character/ }).getAttribute('aria-selected')).toBe(
       'true',
     )
-    expect(screen.getByText('Gain proficiency using the revised printing.')).toBeTruthy()
+    expect(screen.getByText('You can take this feat more than once.')).toBeTruthy()
   })
 })

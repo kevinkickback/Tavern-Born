@@ -1,0 +1,975 @@
+{
+  "document": {
+    "class": [
+      {
+        "name": "Cleric",
+        "source": "PHB",
+        "classFeatures": []
+      },
+      {
+        "name": "Cleric",
+        "source": "XPHB",
+        "classFeatures": []
+      }
+    ],
+    "subclass": [
+      {
+        "name": "Knowledge Domain",
+        "shortName": "Knowledge",
+        "source": "PHB",
+        "className": "Cleric",
+        "classSource": "PHB",
+        "page": 59,
+        "reprintedAs": ["Knowledge|Cleric|XPHB|FRHoF"],
+        "edition": "classic",
+        "additionalSpells": [
+          {
+            "prepared": {
+              "1": ["command", "identify"],
+              "3": ["augury", "suggestion"],
+              "5": ["nondetection", "speak with dead"],
+              "7": ["arcane eye", "confusion"],
+              "9": ["legend lore", "scrying"]
+            }
+          }
+        ],
+        "subclassFeatures": [
+          "Knowledge Domain|Cleric||Knowledge||1",
+          "Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2",
+          "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+          "Potent Spellcasting|Cleric||Knowledge||8",
+          "Blessed Strikes|Cleric||Knowledge||8|TCE",
+          "Visions of the Past|Cleric||Knowledge||17"
+        ]
+      },
+      {
+        "name": "Knowledge Domain",
+        "shortName": "Knowledge",
+        "source": "PHB",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "reprintedAs": ["Knowledge|Cleric|XPHB|FRHoF"],
+        "_copy": {
+          "name": "Knowledge Domain",
+          "source": "PHB",
+          "shortName": "Knowledge",
+          "className": "Cleric",
+          "classSource": "PHB",
+          "_preserve": {
+            "page": true,
+            "otherSources": true,
+            "referenceSources": true,
+            "srd": true,
+            "basicRules": true,
+            "reprintedAs": true
+          }
+        },
+        "subclassFeatures": [
+          "Knowledge Domain|Cleric|XPHB|Knowledge||3",
+          "Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3",
+          "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+          "Visions of the Past|Cleric||Knowledge||17"
+        ]
+      },
+      {
+        "name": "Knowledge Domain (PSA)",
+        "shortName": "Knowledge (PSA)",
+        "source": "PSA",
+        "className": "Cleric",
+        "classSource": "PHB",
+        "page": 25,
+        "isReprinted": true,
+        "edition": "classic",
+        "additionalSpells": [
+          {
+            "prepared": {
+              "1": ["command", "identify"],
+              "3": ["augury", "suggestion"],
+              "5": ["nondetection", "speak with dead"],
+              "7": ["arcane eye", "confusion"],
+              "9": ["legend lore", "scrying"]
+            }
+          }
+        ],
+        "subclassFeatures": [
+          "Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1",
+          "Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2",
+          "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+          "Potent Spellcasting|Cleric||Knowledge||8",
+          "Blessed Strikes|Cleric||Knowledge||8|TCE",
+          "Visions of the Past|Cleric||Knowledge||17"
+        ],
+        "hasFluffImages": true
+      },
+      {
+        "name": "Knowledge Domain (PSA)",
+        "shortName": "Knowledge (PSA)",
+        "source": "PSA",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "_copy": {
+          "name": "Knowledge Domain (PSA)",
+          "source": "PSA",
+          "shortName": "Knowledge (PSA)",
+          "className": "Cleric",
+          "classSource": "PHB",
+          "_preserve": {
+            "page": true,
+            "otherSources": true,
+            "referenceSources": true,
+            "srd": true,
+            "basicRules": true,
+            "reprintedAs": true
+          }
+        },
+        "subclassFeatures": [
+          "Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3",
+          "Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3",
+          "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+          "Visions of the Past|Cleric||Knowledge||17"
+        ],
+        "fluff": {
+          "_subclassFluff": {
+            "name": "Knowledge Domain (PSA)",
+            "source": "PSA",
+            "shortName": "Knowledge (PSA)",
+            "className": "Cleric",
+            "classSource": "PHB"
+          }
+        }
+      },
+      {
+        "name": "Knowledge Domain",
+        "shortName": "Knowledge",
+        "source": "FRHoF",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "page": 18,
+        "edition": "one",
+        "additionalSpells": [
+          {
+            "prepared": {
+              "3": [
+                "command|xphb",
+                "comprehend languages|xphb",
+                "detect magic|xphb",
+                "detect thoughts|xphb",
+                "identify|xphb",
+                "mind spike|xphb"
+              ],
+              "5": ["dispel magic|xphb", "nondetection|xphb", "tongues|xphb"],
+              "7": ["arcane eye|xphb", "banishment|xphb", "confusion|xphb"],
+              "9": ["legend lore|xphb", "scrying|xphb", "synaptic static|xphb"]
+            }
+          }
+        ],
+        "subclassFeatures": [
+          "Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF",
+          "Unfettered Mind|Cleric|XPHB|Knowledge|FRHoF|6|FRHoF",
+          "Divine Foreknowledge|Cleric|XPHB|Knowledge|FRHoF|17|FRHoF"
+        ],
+        "hasFluffImages": true
+      }
+    ],
+    "subclassFeature": [
+      {
+        "name": "Knowledge Domain",
+        "source": "PHB",
+        "page": 59,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "PHB",
+        "level": 1,
+        "entries": [
+          "The gods of knowledge—including {@deity Oghma}, {@deity Boccob|Greyhawk}, {@deity Gilean|Dragonlance}, {@deity Aureon|Eberron}, and {@deity Thoth|Egyptian}—value learning and understanding above all. Some teach that knowledge is to be gathered and shared in libraries and universities, or promote the practical knowledge of craft and invention. Some deities hoard knowledge and keep its secrets to themselves. And some promise their followers that they will gain tremendous power if they unlock the secrets of the multiverse. Followers of these gods study esoteric lore, collect old tomes, delve into the secret places of the earth, and learn all they can. Some gods of knowledge promote the practical knowledge of craft and invention, including smith deities like {@deity Gond}, {@deity Reorx|Dragonlance}, {@deity Onatar|Eberron}, {@deity Moradin|Nonhuman}, {@deity Hephaestus|Greek}, and {@deity Goibhniu|Celtic}.",
+          "At each indicated cleric level, you add the listed spells to your spells prepared.",
+          {
+            "type": "table",
+            "caption": "Knowledge Domain Spells",
+            "colLabels": ["Cleric Level", "Spells"],
+            "colStyles": ["col-2 text-center", "col-10"],
+            "rows": [
+              ["1st", "{@spell command}, {@spell identify}"],
+              ["3rd", "{@spell augury}, {@spell suggestion}"],
+              ["5th", "{@spell nondetection}, {@spell speak with dead}"],
+              ["7th", "{@spell arcane eye}, {@spell confusion}"],
+              ["9th", "{@spell legend lore}, {@spell scrying}"]
+            ]
+          },
+          {
+            "type": "refSubclassFeature",
+            "subclassFeature": "Blessings of Knowledge|Cleric||Knowledge||1"
+          }
+        ]
+      },
+      {
+        "name": "Blessings of Knowledge",
+        "source": "PHB",
+        "page": 59,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "PHB",
+        "level": 1,
+        "header": 1,
+        "entries": [
+          "At 1st level, you learn two languages of your choice. You also become proficient in your choice of two of the following skills: {@skill Arcana}, {@skill History}, {@skill Nature}, or {@skill Religion}.",
+          "Your proficiency bonus is doubled for any ability check you make that uses either of those skills."
+        ]
+      },
+      {
+        "name": "Knowledge Domain (PSA)",
+        "source": "PSA",
+        "page": 25,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Knowledge (PSA)",
+        "subclassSource": "PSA",
+        "level": 1,
+        "entries": [
+          {
+            "type": "quote",
+            "entries": [
+              "The worthy shall cultivate a nimble mind that can perceive the wonders beyond imagination that wait in the afterlife."
+            ]
+          },
+          "Kefnet's task is to pass on this teaching of the God-Pharaoh and elucidate its meaning. He teaches that the afterlife will be inhabited only by those who have proved by their wits that they are worthy of dwelling in the glorious presence of the God-Pharaoh. He trains acolytes and initiates to push their limits and challenge their mental capacity with spells of ever-greater power.",
+          "Kefnet's domain is identical to the {@class Cleric|PHB|Knowledge domain in the Player's Handbook|Knowledge|PHB}.",
+          {
+            "type": "refSubclassFeature",
+            "subclassFeature": "Knowledge Domain|Cleric||Knowledge||1"
+          }
+        ]
+      },
+      {
+        "name": "Blessings of Knowledge",
+        "source": "FRHoF",
+        "page": 18,
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "FRHoF",
+        "level": 3,
+        "entries": [
+          "You gain proficiency with one type of {@item Artisan's Tools|XPHB} of your choice and in two of the following skills of your choice: {@skill Arcana|XPHB}, {@skill History|XPHB}, {@skill Nature|XPHB}, or {@skill Religion|XPHB}. You have {@variantrule Expertise|XPHB} in those two skills."
+        ]
+      },
+      {
+        "name": "Knowledge Domain",
+        "source": "FRHoF",
+        "page": 18,
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "FRHoF",
+        "level": 3,
+        "entries": [
+          "{@i Unearth Secrets and Master the Mind}",
+          "The Knowledge Domain values learning and understanding above all. Clerics who tap into this domain study esoteric lore, collect old tomes, delve into secret places, and examine the processes of the mind. To them, knowledge is more valuable than material wealth, and learning is an act of worship. Libraries, universities, and other educational institutions also draw on the power of the Knowledge Domain.",
+          "Gods of knowledge vary from masters of arcane magic to patrons of craft and invention. In Faerûn, Clerics of the Knowledge Domain worship deities of learning and ingenuity such as {@deity Oghma|Faerûnian|FRHoF} and {@deity Gond|Faerûnian|FRHoF}, among many others.",
+          {
+            "type": "refSubclassFeature",
+            "subclassFeature": "Blessings of Knowledge|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF"
+          },
+          {
+            "type": "refSubclassFeature",
+            "subclassFeature": "Knowledge Domain Spells|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF"
+          },
+          {
+            "type": "refSubclassFeature",
+            "subclassFeature": "Mind Magic|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF"
+          }
+        ]
+      },
+      {
+        "name": "Knowledge Domain",
+        "source": "PHB",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "PHB",
+        "level": 3,
+        "_copy": {
+          "name": "Knowledge Domain",
+          "source": "PHB",
+          "className": "Cleric",
+          "classSource": "PHB",
+          "subclassShortName": "Knowledge",
+          "subclassSource": "PHB",
+          "level": 1,
+          "_preserve": {
+            "page": true
+          }
+        }
+      },
+      {
+        "name": "Knowledge Domain (PSA)",
+        "source": "PSA",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "subclassShortName": "Knowledge (PSA)",
+        "subclassSource": "PSA",
+        "level": 3,
+        "_copy": {
+          "name": "Knowledge Domain (PSA)",
+          "source": "PSA",
+          "className": "Cleric",
+          "classSource": "PHB",
+          "subclassShortName": "Knowledge (PSA)",
+          "subclassSource": "PSA",
+          "level": 1,
+          "_preserve": {
+            "page": true
+          }
+        }
+      }
+    ]
+  },
+  "items": {
+    "itemGroup": [
+      {
+        "name": "Artisan's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "items": [
+          "Alchemist's Supplies|XPHB",
+          "Brewer's Supplies|XPHB",
+          "Calligrapher's Supplies|XPHB",
+          "Carpenter's Tools|XPHB",
+          "Cartographer's Tools|XPHB",
+          "Cobbler's Tools|XPHB",
+          "Cook's Utensils|XPHB",
+          "Glassblower's Tools|XPHB",
+          "Jeweler's Tools|XPHB",
+          "Leatherworker's Tools|XPHB",
+          "Mason's Tools|XPHB",
+          "Painter's Supplies|XPHB",
+          "Potter's Tools|XPHB",
+          "Smith's Tools|XPHB",
+          "Tinker's Tools|XPHB",
+          "Weaver's Tools|XPHB",
+          "Woodcarver's Tools|XPHB"
+        ]
+      }
+    ],
+    "item": [
+      {
+        "name": "Alchemist's Supplies",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TFV"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 8,
+        "value": 5000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Intelligence"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Identify a substance ({@dc 15}), or start a fire ({@dc 15})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Acid|XPHB}, {@item Alchemist's Fire|XPHB}, {@item Component Pouch|XPHB}, {@item Oil|XPHB}, {@item Paper|XPHB}, {@item Perfume|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Brewer's Supplies",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN", "DrDe-TFV"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 9,
+        "value": 2000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Intelligence"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Detect poisoned drink ({@dc 15}), or identify alcohol ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Antitoxin|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Calligrapher's Supplies",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 1000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": [
+                  "Write text with impressive flourishes that guard against forgery ({@dc 15})"
+                ]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Ink|XPHB}, {@item Spell Scroll|XDMG}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Carpenter's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 6,
+        "value": 800,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Strength"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Seal or pry open a door or container ({@dc 20})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Club|XPHB}, {@item Greatclub|XPHB}, {@item Quarterstaff|XPHB}, {@item Barrel|XPHB}, {@item Chest|XPHB}, {@item Ladder|XPHB}, {@item Pole|XPHB}, {@item Portable Ram|XPHB}, {@item Torch|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Cartographer's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 6,
+        "value": 1500,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Wisdom"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Draft a map of a small area ({@dc 15})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Map|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Cobbler's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 500,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": [
+                  "Modify footwear to give {@variantrule Advantage|XPHB} on the wearer's next Dexterity ({@skill Acrobatics|XPHB}) check ({@dc 10})"
+                ]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Climber's Kit|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Cook's Utensils",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 8,
+        "value": 100,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Wisdom"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": [
+                  "Improve food's flavor ({@dc 10}), or detect spoiled or poisoned food ({@dc 15})"
+                ]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Rations|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Glassblower's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 3000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Intelligence"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Discern what a glass object held in the past 24 hours ({@dc 15})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Glass Bottle|XPHB}, {@item Magnifying Glass|XPHB}, {@item Spyglass|XPHB}, {@item Vial|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Jeweler's Tools",
+        "source": "XPHB",
+        "page": 220,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TFV"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 2,
+        "value": 2500,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Intelligence"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Discern a gem's value ({@dc 15})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Arcane Focus|XPHB}, {@item Holy Symbol|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Leatherworker's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 500,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Add a design to a leather item ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Sling|XPHB}, {@item Whip|XPHB}, {@item Hide Armor|XPHB}, {@item Leather Armor|XPHB}, {@item Studded Leather Armor|XPHB}, {@item Backpack|XPHB}, {@item Crossbow Bolt Case|XPHB}, {@item Map or Scroll Case|XPHB}, {@item Parchment|XPHB}, {@item Pouch|XPHB}, {@item Quiver|XPHB}, {@item Waterskin|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mason's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN", "DrDe-TFV"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 8,
+        "value": 1000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Strength"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Chisel a symbol or hole in stone ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Block and Tackle|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Painter's Supplies",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 1000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Wisdom"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Paint a recognizable image of something you've seen ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Druidic Focus|XPHB}, {@item Holy Symbol|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Potter's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 3,
+        "value": 1000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Intelligence"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Discern what a ceramic object held in the past 24 hours ({@dc 15})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": ["{@item Jug|XPHB}, {@item Lamp|XPHB}"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Smith's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 8,
+        "value": 2000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Strength"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Pry open a door or container ({@dc 20})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "Any Melee weapon (except {@item Club|XPHB}, {@item Greatclub|XPHB}, {@item Quarterstaff|XPHB}, and {@item Whip|XPHB}), Medium armor (except {@item Hide Armor|XPHB|Hide}), Heavy armor, {@item Ball Bearings|XPHB}, {@item Bucket|XPHB}, {@item Caltrops|XPHB}, {@item Chain|XPHB}, {@item Crowbar|XPHB}, {@item Firearm Bullets (10)|XPHB|Firearm Bullets}, {@item Grappling Hook|XPHB}, {@item Iron Pot|XPHB}, {@item Iron Spikes|XPHB}, {@item Sling Bullets (20)|XPHB|Sling Bullets}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Tinker's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 10,
+        "value": 5000,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": [
+                  "Assemble a Tiny item composed of scrap, which falls apart in 1 minute ({@dc 20})"
+                ]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Musket|XPHB}, {@item Pistol|XPHB}, {@item Bell|XPHB}, {@item Bullseye Lantern|XPHB}, {@item Flask|XPHB}, {@item Hooded Lantern|XPHB}, {@item Hunting Trap|XPHB}, {@item Lock|XPHB}, {@item Manacles|XPHB}, {@item Mirror|XPHB}, {@item Shovel|XPHB}, {@item Signal Whistle|XPHB}, {@item Tinderbox|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Weaver's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 100,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Mend a tear in clothing ({@dc 10}), or sew a Tiny design ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Padded Armor|XPHB}, {@item Basket|XPHB}, {@item Bedroll|XPHB}, {@item Blanket|XPHB}, {@item Fine Clothes|XPHB}, {@item Net|XPHB}, {@item Robe|XPHB}, {@item Rope|XPHB}, {@item Sack|XPHB}, {@item String|XPHB}, {@item Tent|XPHB}, {@item Traveler's Clothes|XPHB}"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Woodcarver's Tools",
+        "source": "XPHB",
+        "page": 221,
+        "srd52": true,
+        "basicRules2024": true,
+        "referenceSources": ["DrDe-TDoN"],
+        "type": "AT|XPHB",
+        "rarity": "none",
+        "weight": 5,
+        "value": 100,
+        "entries": [
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "name": "Ability:",
+                "type": "item",
+                "entries": ["Dexterity"]
+              },
+              {
+                "name": "Utilize:",
+                "type": "item",
+                "entries": ["Carve a pattern in wood ({@dc 10})"]
+              },
+              {
+                "name": "Craft:",
+                "type": "item",
+                "entries": [
+                  "{@item Club|XPHB}, {@item Greatclub|XPHB}, {@item Quarterstaff|XPHB}, Ranged weapons (except {@item Pistol|XPHB}, {@item Musket|XPHB}, and {@item Sling|XPHB}), {@item Arcane Focus|XPHB}, {@item Arrows (20)|XPHB|Arrows}, {@item Bolts (20)|XPHB|Bolts}, {@item Druidic Focus|XPHB}, {@item Ink Pen|XPHB}, {@item Needles (50)|XPHB|Needles}"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

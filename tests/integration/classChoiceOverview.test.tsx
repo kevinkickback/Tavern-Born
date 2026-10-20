@@ -4,13 +4,16 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { normalizeClassChoices } from '@/lib/5etools/classChoiceNormalization'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { OPTIONAL_CLASS_FEATURE_RULES } from '@/lib/5etools/optionalClassFeatureRules'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeOptionalClassSourceData } from '../fixtures/optionalClassFeatureFixtures'
 
 beforeEach(resetCharacterStore)
 afterEach(() => {
@@ -18,6 +21,55 @@ afterEach(() => {
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
   vi.restoreAllMocks()
+})
+
+test('Overview derives passive adopted roots/earned children and suspends them without mutating saved features', async () => {
+  const { data, catalogs } = makeOptionalClassSourceData()
+  let character = createEmptyCharacter({
+    name: 'Adopted Ranger',
+    classProgression: [{ name: 'Ranger', source: 'PHB', levels: 10 }],
+  })
+  character = {
+    ...character,
+    allowedSources: ['PHB', 'TCE'],
+    variantRules: { optionalClassFeatures: true },
+  }
+  for (const root of OPTIONAL_CLASS_FEATURE_RULES.roots) {
+    const result = setOptionalClassAdoptionCommand(
+      character,
+      character.provenance,
+      catalogs,
+      { owner: root.owner, target: root.target, earnedLevel: root.level },
+      true,
+      [],
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    })
+  }
+  const before = JSON.stringify(character)
+  useGameDataStore.setState({ gameData: data })
+  setActiveCharacter(character)
+  render(
+    <MemoryRouter initialEntries={['/build/review?section=overview']}>
+      <BuildReviewPage />
+    </MemoryRouter>,
+  )
+  await userEvent.setup().click(screen.getByText('Traits & features'))
+  const section = within(screen.getByText('Class, subclass & other features').closest('section')!)
+  expect(section.getByText('Favored Foe')).toBeTruthy()
+  expect(section.getByText('Spellcasting Focus')).toBeTruthy()
+  expect(section.getByText('Roving')).toBeTruthy()
+  expect(section.getByText('Tireless')).toBeTruthy()
+  act(() => setActiveCharacter({ ...character, variantRules: { optionalClassFeatures: false } }))
+  expect(section.queryByText('Favored Foe')).toBeNull()
+  expect(section.queryByText('Spellcasting Focus')).toBeNull()
+  act(() => setActiveCharacter(character))
+  expect(section.getByText('Favored Foe')).toBeTruthy()
+  expect(character.features).toEqual([])
+  expect(JSON.stringify(character)).toBe(before)
 })
 
 test('Overview renders and removes independently selected same-label complete feature targets', async () => {

@@ -337,7 +337,9 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Feat Note 2': viewModel.feats[1]?.prerequisites ?? '',
     'Feat Note 3': viewModel.feats[2]?.prerequisites ?? '',
     'Feat Note 4': viewModel.feats[3]?.prerequisites ?? '',
-    'Extra.Notes': viewModel.defensiveTraits.slice(6).join('\n'),
+    'Extra.Notes': [viewModel.toolExpertiseSummary, ...viewModel.defensiveTraits.slice(6)]
+      .filter(Boolean)
+      .join('\n'),
     'P4.AScomp.Comp.Desc.Name': companion?.name ?? '',
     'P4.AScomp.Comp.Desc.Size': companionSummary?.sizes[0] ?? '',
     'P4.AScomp.Comp.Desc.MonsterType': companionSummary?.creatureType ?? '',

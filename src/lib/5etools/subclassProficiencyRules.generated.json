@@ -1,0 +1,116 @@
+[
+  {
+    "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+    "digest": "66be08e9a75ea40ebd01b11b0527f30ccb90edfa856a3098cf9d01cd104b169e",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "count": 2,
+        "tools": [],
+        "skillPool": ["arcana", "history", "nature", "religion"],
+        "coupled": true,
+        "excludeExisting": false,
+        "distinctEarlier": false
+      },
+      {
+        "domain": "languages",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|blessings of knowledge|cleric|xphb|knowledge|frhof|3|frhof",
+    "digest": "e8937ea4c46344d4aee61a91d59a336620b176c9573ac62b2d74a519c5eb9ce9",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "count": 2,
+        "tools": [],
+        "skillPool": ["arcana", "history", "nature", "religion"],
+        "coupled": true,
+        "excludeExisting": true,
+        "distinctEarlier": false
+      },
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolPool": [
+          "alchemist's supplies",
+          "brewer's supplies",
+          "calligrapher's supplies",
+          "carpenter's tools",
+          "cartographer's tools",
+          "cobbler's tools",
+          "cook's utensils",
+          "glassblower's tools",
+          "jeweler's tools",
+          "leatherworker's tools",
+          "mason's tools",
+          "painter's supplies",
+          "potter's tools",
+          "smith's tools",
+          "tinker's tools",
+          "weaver's tools",
+          "woodcarver's tools"
+        ],
+        "toolCategory": "AT"
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
+    "digest": "7efbc0948749d341cd93aead16290a279ed28ace770193f9e2dfcad9a9cedb5b",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "proficiencyAtGain": "persuasion",
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["animal handling", "insight", "intimidation", "performance"]
+      }
+    ]
+  }
+]

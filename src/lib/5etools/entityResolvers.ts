@@ -18,6 +18,8 @@ export interface EntityLookupSet {
   racesByKey?: Readonly<Record<string, Race5e>>
   backgroundsByKey?: Readonly<Record<string, Background5e>>
   featsByKey?: Readonly<Record<string, Feat5e>>
+  /** Current filtered producers retain multiplicity for owned Expertise authority. */
+  featExpertiseFeats?: readonly Feat5e[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
   itemLookup?: ReadonlyMap<string, Item5e>
 }

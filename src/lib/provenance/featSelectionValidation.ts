@@ -1,3 +1,4 @@
+import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import {
   getSpellNameKey,
@@ -72,6 +73,17 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
       if (feat.options?.expertiseSkill) {
         const skill = normalizeKey(feat.options.expertiseSkill)
         for (const domain of ['skills', 'expertise'] as const) {
+          // Intent can be suspended. Old coupled skill tags remain admissible only for
+          // this exact saved skill and owner; new Expertise never requires that tag.
+          const applied = character.provenance.proficiencies[domain]?.[skill]?.some(
+            (tag) =>
+              tag.sourceType === 'feat' &&
+              tag.grantType === 'choice' &&
+              tag.grantVariant === getSelectedFeatOwnerKey(kind) &&
+              getFeatSelectionKey({ name: tag.sourceName, source: tag.sourceRef }) ===
+                getFeatSelectionKey(feat),
+          )
+          if (isKnownFeatExpertiseTarget(feat) && !applied) continue
           add(domain, skill)
           if (!hasProficiency(domain, skill)) invalid.push([...path, 'options', 'expertiseSkill'])
         }

@@ -39,6 +39,7 @@ const EFFECT_TARGET_LABELS: Record<CharacterEffect['target']['kind'], string> = 
   'resource-maximum': 'Resource maximum',
   sense: 'Sense',
   'skill-modifier': 'Skill modifier',
+  'proficiency-check-note': 'Conditional proficiency checks',
   'saving-throw-modifier': 'Saving throws',
   speed: 'Speed',
   'spell-attack': 'Spell attacks',

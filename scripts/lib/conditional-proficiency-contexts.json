@@ -1,0 +1,61 @@
+{
+  "purpose": "Development-only admitted conditional owner/original-intro/path closure, derived from the four actual source producers assessed in source review dacf8403. Ordinary generation reads and never rewrites this evidence.",
+  "contexts": [
+    {
+      "owner": ["fighter", "phb", "rune knight", "tce"],
+      "intro": "Rune Knight|Fighter||Rune Knight|TCE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+          "refs": [
+            "Rune Knight|Fighter||Rune Knight|TCE|3",
+            "Rune Carver|Fighter||Rune Knight|TCE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["fighter", "xphb", "rune knight", "tce"],
+      "intro": "Rune Knight|Fighter||Rune Knight|TCE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+          "refs": [
+            "Rune Knight|Fighter||Rune Knight|TCE|3",
+            "Rune Carver|Fighter||Rune Knight|TCE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["sorcerer", "phb", "draconic bloodline", "phb"],
+      "intro": "Draconic Bloodline|Sorcerer||Draconic||1",
+      "paths": [
+        {
+          "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+          "refs": [
+            "Draconic Bloodline|Sorcerer||Draconic||1",
+            "Dragon Ancestor|Sorcerer||Draconic||1"
+          ],
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["sorcerer", "xphb", "draconic bloodline", "phb"],
+      "intro": "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
+      "paths": [
+        {
+          "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+          "refs": [
+            "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
+            "Dragon Ancestor|Sorcerer||Draconic||1"
+          ],
+          "level": 3
+        }
+      ]
+    }
+  ]
+}

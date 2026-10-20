@@ -30,7 +30,7 @@ describe('ReviewStep variant rule ordering', () => {
       />,
     )
 
-    const optionalClassFeatures = screen.getByText('Optional Class Features')
+    const optionalClassFeatures = screen.getByText('Allow Optional Class Features')
     const anyRaceSubclasses = screen.getByText('Any-Race Subclasses')
     const averageHitPoints = screen.getByText('Average Hit Points')
     const preferNewerPrintings = screen.getByText('Prefer Newer Printings')
@@ -82,7 +82,7 @@ describe('RulesStep average hit-points toggle', () => {
     )
 
     expect(
-      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+      (screen.getByRole('switch', { name: 'Allow Optional Class Features' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true)
     expect(
@@ -110,7 +110,7 @@ describe('RulesStep average hit-points toggle', () => {
     )
 
     expect(
-      (screen.getByRole('switch', { name: 'Optional Class Features' }) as HTMLButtonElement)
+      (screen.getByRole('switch', { name: 'Allow Optional Class Features' }) as HTMLButtonElement)
         .disabled,
     ).toBe(false)
     expect(

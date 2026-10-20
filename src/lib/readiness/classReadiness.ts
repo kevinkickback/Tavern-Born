@@ -1,10 +1,12 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
+import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceCatalogs,
   collectSubclassFeatures,
@@ -14,8 +16,16 @@ import {
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
+import {
+  getHistoricalProficiencyRule,
+  resolveHistoricalProficiencyChoice,
+} from '@/lib/character/historicalProficiencyChoices'
 import { hasNaturalExplorerRecovery } from '@/lib/character/naturalExplorerSelections'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { getOptionalClassAdoptionKey } from '@/lib/character/optionalClassFeatureIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   classAsiReadinessId,
@@ -59,6 +69,28 @@ export function validateClassChoices(
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
   const entries = getCharacterClassEntries(character)
+  const activity = createOptionalClassFeatureActivity(character, catalogs)
+  const unavailable = activity.states.filter((row) => row.state === 'unavailable')
+  for (const row of unavailable) {
+    const owner = entries.find(
+      (entry) =>
+        entry.name.trim().toLowerCase() === row.root.owner[1] &&
+        entry.source.trim().toLowerCase() === row.root.owner[2],
+    )
+    if (owner)
+      issues.push(
+        readinessIssue(
+          getOptionalClassAdoptionKey(row.adoption),
+          'blocking',
+          'class',
+          `Restore or clear ${row.root.name}`,
+          row.root.replaces.length
+            ? 'The adopted optional feature is unavailable. Its standard replacement remains reserved until you restore its source, clear it, or turn optional features off.'
+            : 'The adopted optional feature is unavailable. Restore its source or clear the saved adoption.',
+          classChoiceTarget(owner, row.root.level),
+        ),
+      )
+  }
   const selections = new Map(
     getEffectiveClassChoiceSelections(character, calculation.classChoices.classes, catalogs)
       .filter((selection) => !selection.inactive)
@@ -70,8 +102,21 @@ export function validateClassChoices(
     catalogs,
   )
   for (const state of featureOptionStates.filter(
-    (row) => (row.storm || row.literalGroup) && row.owner && row.recovery,
+    (row) =>
+      (row.storm || row.literalGroup || row.proficiency || row.optionalPool) &&
+      row.owner &&
+      row.recovery,
   )) {
+    if (
+      state.proficiency &&
+      unavailable.some(
+        (row) =>
+          row.root.target === decodeClassProficiencyChoiceId(state.selection.choiceId)?.target &&
+          row.root.owner[1] === state.selection.className.trim().toLowerCase() &&
+          row.root.owner[2] === state.selection.classSource.trim().toLowerCase(),
+      )
+    )
+      continue
     issues.push(
       readinessIssue(
         classChoiceReadinessId(state.selection.choiceId),
@@ -138,13 +183,25 @@ export function validateClassChoices(
       )
     }
 
-    const includeClassFeatureVariants = character.variantRules?.optionalClassFeatures ?? false
-    for (const choice of getCharacterClassChoices(
-      classData,
-      subclassData,
-      includeClassFeatureVariants,
-      catalogs,
-    )) {
+    for (const original of getCharacterClassChoices(classData, subclassData, activity, catalogs)) {
+      const choice = resolveHistoricalProficiencyChoice(character, original)
+      if (
+        choice.level <= entry.levels &&
+        getHistoricalProficiencyRule(choice.id) &&
+        !selections.get(choice.id)?.proficiencyAtGain
+      ) {
+        issues.push(
+          readinessIssue(
+            classChoiceReadinessId(choice.id),
+            'blocking',
+            'class',
+            `Confirm ${choice.owner.featureName} proficiency setup`,
+            'Confirm whether you already had the proficiency when you gained this feature.',
+            classChoiceTarget(entry, choice.level, choice.id),
+          ),
+        )
+        continue
+      }
       if (
         featureOptionStates.some(
           (state) => state.recovery && state.selection.choiceId === choice.id,
@@ -158,14 +215,28 @@ export function validateClassChoices(
         choice.owner.type === 'subclass' && !catalogs?.subclassTargets ? subclassCatalogs : catalogs
       const eligibleOptionKeys = choiceCatalogs
         ? new Set(
-            resolveClassChoiceOptions(choice, choiceCatalogs, [], entry.levels)
+            resolveClassChoiceOptions(
+              choice,
+              choiceCatalogs,
+              choice.kind === 'proficiency' ? storedSelection : [],
+              entry.levels,
+              character,
+            )
               .filter(isClassChoiceOptionEligible)
               .map((option) => getClassChoiceOptionKey(option.reference)),
           )
         : undefined
+      const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(character, choiceCatalogs)
+      const savedChoice = selections.get(choice.id)
       const count = eligibleOptionKeys
-        ? storedSelection.filter((option) =>
-            eligibleOptionKeys.has(getClassChoiceOptionKey(option)),
+        ? storedSelection.filter(
+            (option) =>
+              eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+              (!['classFeature', 'subclassFeature', 'optionalFeature'].includes(
+                option.entityType,
+              ) ||
+                (!!savedChoice &&
+                  effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
           ).length
         : storedSelection.length
       if (count !== required) {
@@ -184,12 +255,21 @@ export function validateClassChoices(
     for (const diagnostic of getCharacterClassChoiceDiagnostics(
       classData,
       subclassData,
-      includeClassFeatureVariants,
+      activity,
       catalogs,
     )) {
       if (
         (diagnostic.level ?? 1) > entry.levels ||
-        hasNaturalExplorerRecovery(diagnostic, featureOptionStates)
+        hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
+        hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
+        (diagnostic.featureName === 'Deft Explorer' &&
+          featureOptionStates.some(
+            (state) =>
+              state.proficiency &&
+              state.recovery &&
+              state.selection.className === entry.name &&
+              state.selection.classSource === entry.source,
+          ))
       )
         continue
       issues.push(
@@ -221,7 +301,11 @@ export function validateClassChoices(
         (state.selection.subclassName && !state.subclass)
       )
         continue
-      if ((state.storm || state.literalGroup) && state.recovery) continue
+      if (
+        (state.storm || state.literalGroup || state.proficiency || state.optionalPool) &&
+        state.recovery
+      )
+        continue
       if (state.recovery) {
         issues.push(
           readinessIssue(

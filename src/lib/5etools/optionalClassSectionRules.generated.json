@@ -1,0 +1,5328 @@
+{
+  "version": 3,
+  "sections": [
+    {
+      "target": "book-section|tce|08d",
+      "owner": ["class", "bard", "phb"],
+      "name": "Additional Bard Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "08b"
+        },
+        "parent": {
+          "id": "08c"
+        },
+        "leaf": {
+          "id": "08d"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Bard Colleges",
+                "page": 28,
+                "id": "091"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/013-01-016.webp"
+                    },
+                    "title": "A dragonborn bard of the College of Creation animates a statue to dance.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "Zoltan Boros"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/014-01-017.webp"
+                    },
+                    "title": "Drow Bard of Eloquence",
+                    "width": 800,
+                    "height": 1527,
+                    "credit": "Andrew Mar"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "College of Creation",
+                "shortName": "Creation",
+                "className": "Bard",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "College of Eloquence",
+                "shortName": "Eloquence",
+                "className": "Bard",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "02b47d2bae0ed89a02bd63385bed6c20580811ca9dce50329ea3ffdc415499e2",
+      "members": [
+        ["spell", "Color spray", "PHB"],
+        ["spell", "Command", "PHB"],
+        ["spell", "Aid", "PHB"],
+        ["spell", "Enlarge/reduce", "PHB"],
+        ["spell", "Mirror image", "PHB"],
+        ["spell", "Intellect fortress", "TCE"],
+        ["spell", "Mass healing word", "PHB"],
+        ["spell", "Slow", "PHB"],
+        ["spell", "Phantasmal killer", "PHB"],
+        ["spell", "Rary's telepathic bond", "PHB"],
+        ["spell", "Heroes' feast", "PHB"],
+        ["spell", "Dream of the blue veil", "TCE"],
+        ["spell", "Prismatic spray", "PHB"],
+        ["spell", "Antipathy/sympathy", "PHB"],
+        ["spell", "Prismatic wall", "PHB"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|bard|phb|1|phb"
+    },
+    {
+      "target": "book-section|tce|09f",
+      "owner": ["class", "cleric", "phb"],
+      "name": "Additional Cleric Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "09d"
+        },
+        "parent": {
+          "id": "09e"
+        },
+        "leaf": {
+          "id": "09f"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Divine Domains",
+                "page": 31,
+                "id": "0a4"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/016-01-020.webp"
+                    },
+                    "title": "A cleric harnesses divine power",
+                    "width": 800,
+                    "height": 1013,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/017-01-021.webp"
+                    },
+                    "title": "Dragonborn Cleric of Order",
+                    "width": 800,
+                    "height": 1643,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/018-01-022.webp"
+                    },
+                    "title": "Human Cleric of Peace",
+                    "width": 800,
+                    "height": 1535,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/019-01-023.webp"
+                    },
+                    "title": "Human Cleric of Twilight",
+                    "width": 800,
+                    "height": 1072,
+                    "credit": "Shawn Wood"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Order Domain",
+                "shortName": "Order",
+                "className": "Cleric",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Peace Domain",
+                "shortName": "Peace",
+                "className": "Cleric",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Twilight Domain",
+                "shortName": "Twilight",
+                "className": "Cleric",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "a34cdd8b5ba4ffb4eeaa8ff3f48b0ddabe3afd800d74290ca26c5f2243d120ec",
+      "members": [
+        ["spell", "Aura of vitality", "PHB"],
+        ["spell", "Spirit shroud", "TCE"],
+        ["spell", "Aura of life", "PHB"],
+        ["spell", "Aura of purity", "PHB"],
+        ["spell", "Summon celestial", "TCE"],
+        ["spell", "Sunbeam", "PHB"],
+        ["spell", "Sunburst", "PHB"],
+        ["spell", "Power word heal", "PHB"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|cleric|phb|1|phb"
+    },
+    {
+      "target": "book-section|tce|0c0",
+      "owner": ["class", "druid", "phb"],
+      "name": "Additional Druid Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "0be"
+        },
+        "parent": {
+          "id": "0bf"
+        },
+        "leaf": {
+          "id": "0c0"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Druid Circles",
+                "page": 36,
+                "id": "0c4"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/021-01-026.webp"
+                    },
+                    "title": "Druid with Wild Companion",
+                    "width": 822,
+                    "height": 1000,
+                    "credit": "Kieran Yanner"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/022-01-027.webp"
+                    },
+                    "title": "A gnome druid of spores picks mushrooms with his bullywug zombie companion.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "mark Behm"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/023-01-028.webp"
+                    },
+                    "title": "Tiefling Druid of Stars",
+                    "width": 675,
+                    "height": 1000,
+                    "credit": "Kieran Yanner"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/024-01-029.webp"
+                    },
+                    "title": "Dwarf Druid of Wildfire",
+                    "width": 1200,
+                    "height": 832,
+                    "credit": "Shawn Wood"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Circle of Spores",
+                "shortName": "Spores",
+                "className": "Druid",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Circle of Stars",
+                "shortName": "Stars",
+                "className": "Druid",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Circle of Wildfire",
+                "shortName": "Wildfire",
+                "className": "Druid",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "fdf7d8b689afbe122373ba333abb1e0f7315b3fb80f59fbb5e66584359587a2a",
+      "members": [
+        ["spell", "Protection from evil and good", "PHB"],
+        ["spell", "Augury", "PHB"],
+        ["spell", "Continual flame", "PHB"],
+        ["spell", "Enlarge/reduce", "PHB"],
+        ["spell", "Summon beast", "TCE"],
+        ["spell", "Aura of vitality", "PHB"],
+        ["spell", "Elemental weapon", "PHB"],
+        ["spell", "Revivify", "PHB"],
+        ["spell", "Summon fey", "TCE"],
+        ["spell", "Divination", "PHB"],
+        ["spell", "Fire shield", "PHB"],
+        ["spell", "Summon elemental", "TCE"],
+        ["spell", "Cone of cold", "PHB"],
+        ["spell", "Flesh to stone", "PHB"],
+        ["spell", "Symbol", "PHB"],
+        ["spell", "Incendiary cloud", "PHB"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|druid|phb|1|phb"
+    },
+    {
+      "target": "book-section|tce|0dc",
+      "owner": ["class", "fighter", "phb"],
+      "name": "Fighting Style Options",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "0da"
+        },
+        "parent": {
+          "id": "0db"
+        },
+        "leaf": {
+          "id": "0dc"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Maneuver Options",
+                "page": 42,
+                "id": "0e3"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Martial Archetypes",
+                "page": 42,
+                "id": "0eb"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/026-01-032.webp"
+                    },
+                    "title": "A young fighter spars with an instructor.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "Robson Michel"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/027-01-033.webp"
+                    },
+                    "title": "High Elf Psi Warrior",
+                    "width": 823,
+                    "height": 1000,
+                    "credit": "Marcela Medeiros"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/028-01-034.webp"
+                    },
+                    "title": "Orc Rune Knight",
+                    "width": 800,
+                    "height": 1693,
+                    "credit": "Marcela Medeiros"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Psi Warrior",
+                "shortName": "Psi Warrior",
+                "className": "Fighter",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Rune Knight",
+                "shortName": "Rune Knight",
+                "className": "Fighter",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Battle Master Builds",
+                "page": 46,
+                "id": "013"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Archer",
+                "page": 46,
+                "id": "106"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Bodyguard",
+                "page": 46,
+                "id": "107"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Brawler",
+                "page": 46,
+                "id": "108"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Duelist",
+                "page": 46,
+                "id": "109"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Gladiator",
+                "page": 46,
+                "id": "10a"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Hoplite",
+                "page": 47,
+                "id": "10b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Lancer",
+                "page": 47,
+                "id": "10c"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Outrider",
+                "page": 47,
+                "id": "10d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Pugilist",
+                "page": 47,
+                "id": "10e"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Shock Trooper",
+                "page": 47,
+                "id": "10f"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Skirmisher",
+                "page": 47,
+                "id": "110"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Strategist",
+                "page": 47,
+                "id": "111"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "31038cadb51a1afce191e302f5d6f0799936b4c62bbd3c633e5c4c708aa1f74d",
+      "members": [
+        ["optionalFeature", "Blind Fighting", "TCE"],
+        ["optionalFeature", "Interception", "TCE"],
+        ["optionalFeature", "Superior Technique", "TCE"],
+        ["optionalFeature", "Thrown Weapon Fighting", "TCE"],
+        ["optionalFeature", "Unarmed Fighting", "TCE"]
+      ],
+      "grantingTarget": "class-feature|fighting style|fighter|phb|1|phb",
+      "progression": {
+        "name": "Fighting Style",
+        "featureType": ["FS:F"],
+        "progression": {
+          "1": 1
+        }
+      }
+    },
+    {
+      "target": "book-section|tce|12f",
+      "owner": ["class", "paladin", "phb"],
+      "name": "Additional Paladin Spells",
+      "source": "TCE",
+      "level": 2,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "12d"
+        },
+        "parent": {
+          "id": "12e"
+        },
+        "leaf": {
+          "id": "12f"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Sacred Oaths",
+                "page": 53,
+                "id": "137"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/035-01-043.webp"
+                    },
+                    "title": "A young paladin seeks divine guidance.",
+                    "width": 1200,
+                    "height": 797,
+                    "credit": "Irina Nordsol"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/036-01-044.webp"
+                    },
+                    "title": "Tiefling Paladin of Glory",
+                    "width": 800,
+                    "height": 1320,
+                    "credit": "Olga Drebas"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/037-01-045.webp"
+                    },
+                    "title": "Dwarf Paladin of the Watchers",
+                    "width": 936,
+                    "height": 1000,
+                    "credit": "Anna Veltkamp"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Oath of Glory",
+                "shortName": "Glory",
+                "className": "Paladin",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Oath of the Watchers",
+                "shortName": "Watchers",
+                "className": "Paladin",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Fighting Style Options",
+                "page": 52,
+                "id": "131"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "16e4b177e632cf6f7b020ed6a8f7bfad3b3cdd89b757cc8ad2a8e05bb42669b4",
+      "members": [
+        ["spell", "Gentle repose", "PHB"],
+        ["spell", "Prayer of healing", "PHB"],
+        ["spell", "Warding bond", "PHB"],
+        ["spell", "Spirit shroud", "TCE"],
+        ["spell", "Summon celestial", "TCE"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|paladin|phb|2|phb"
+    },
+    {
+      "target": "book-section|tce|131",
+      "owner": ["class", "paladin", "phb"],
+      "name": "Fighting Style Options",
+      "source": "TCE",
+      "level": 2,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "12d"
+        },
+        "parent": {
+          "id": "12e"
+        },
+        "leaf": {
+          "id": "131"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Sacred Oaths",
+                "page": 53,
+                "id": "137"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/035-01-043.webp"
+                    },
+                    "title": "A young paladin seeks divine guidance.",
+                    "width": 1200,
+                    "height": 797,
+                    "credit": "Irina Nordsol"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/036-01-044.webp"
+                    },
+                    "title": "Tiefling Paladin of Glory",
+                    "width": 800,
+                    "height": 1320,
+                    "credit": "Olga Drebas"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/037-01-045.webp"
+                    },
+                    "title": "Dwarf Paladin of the Watchers",
+                    "width": 936,
+                    "height": 1000,
+                    "credit": "Anna Veltkamp"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Oath of Glory",
+                "shortName": "Glory",
+                "className": "Paladin",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Oath of the Watchers",
+                "shortName": "Watchers",
+                "className": "Paladin",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Additional Paladin Spells",
+                "page": 52,
+                "id": "12f"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "4a210b5af0e921093762c58dde98faf4f7db167c580f0b11d71fd0be87cc7325",
+      "members": [
+        ["optionalFeature", "Blessed Warrior", "TCE"],
+        ["optionalFeature", "Blind Fighting", "TCE"],
+        ["optionalFeature", "Interception", "TCE"]
+      ],
+      "grantingTarget": "class-feature|fighting style|paladin|phb|2|phb",
+      "progression": {
+        "name": "Fighting Style",
+        "featureType": ["FS:P"],
+        "progression": {
+          "2": 1
+        }
+      }
+    },
+    {
+      "target": "book-section|tce|157",
+      "owner": ["class", "ranger", "phb"],
+      "name": "Additional Ranger Spells",
+      "source": "TCE",
+      "level": 2,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "150"
+        },
+        "parent": {
+          "id": "151"
+        },
+        "leaf": {
+          "id": "157"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Ranger Archetypes",
+                "page": 58,
+                "id": "161"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/039-01-048.webp"
+                    },
+                    "title": "A Halfling Ranger explores the wilds",
+                    "width": 800,
+                    "height": 1000,
+                    "credit": "Zuzanna Wužyk"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/040-01-049.webp"
+                    },
+                    "title": "Human Fey Wanderer",
+                    "width": 800,
+                    "height": 1265,
+                    "credit": "Anna Veltkamp"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/041-01-050.webp"
+                    },
+                    "title": "Gnome Swarmkeeper",
+                    "width": 860,
+                    "height": 1000,
+                    "credit": "Zuzanna Wužyk"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Fey Wanderer",
+                "shortName": "Fey Wanderer",
+                "className": "Ranger",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Swarmkeeper",
+                "shortName": "Swarmkeeper",
+                "className": "Ranger",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Beast Master Companions",
+                "id": "170"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Fighting Style Options",
+                "page": 57,
+                "id": "159"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "2f358fc4a8e641fe232e218a17e6f095f6bc9a20fca742c3703597c58c41eac1",
+      "members": [
+        ["spell", "Entangle", "PHB"],
+        ["spell", "Searing smite", "PHB"],
+        ["spell", "Aid", "PHB"],
+        ["spell", "Enhance ability", "PHB"],
+        ["spell", "Gust of wind", "PHB"],
+        ["spell", "Magic weapon", "PHB"],
+        ["spell", "Summon beast", "TCE"],
+        ["spell", "Elemental weapon", "PHB"],
+        ["spell", "Meld into stone", "PHB"],
+        ["spell", "Revivify", "PHB"],
+        ["spell", "Summon fey", "TCE"],
+        ["spell", "Dominate beast", "PHB"],
+        ["spell", "Summon elemental", "TCE"],
+        ["spell", "Greater restoration", "PHB"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|ranger|phb|2|phb"
+    },
+    {
+      "target": "book-section|tce|159",
+      "owner": ["class", "ranger", "phb"],
+      "name": "Fighting Style Options",
+      "source": "TCE",
+      "level": 2,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "150"
+        },
+        "parent": {
+          "id": "151"
+        },
+        "leaf": {
+          "id": "159"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Ranger Archetypes",
+                "page": 58,
+                "id": "161"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/039-01-048.webp"
+                    },
+                    "title": "A Halfling Ranger explores the wilds",
+                    "width": 800,
+                    "height": 1000,
+                    "credit": "Zuzanna Wužyk"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/040-01-049.webp"
+                    },
+                    "title": "Human Fey Wanderer",
+                    "width": 800,
+                    "height": 1265,
+                    "credit": "Anna Veltkamp"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/041-01-050.webp"
+                    },
+                    "title": "Gnome Swarmkeeper",
+                    "width": 860,
+                    "height": 1000,
+                    "credit": "Zuzanna Wužyk"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Fey Wanderer",
+                "shortName": "Fey Wanderer",
+                "className": "Ranger",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Swarmkeeper",
+                "shortName": "Swarmkeeper",
+                "className": "Ranger",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Beast Master Companions",
+                "id": "170"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Additional Ranger Spells",
+                "page": 57,
+                "id": "157"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "2700f176f9be8c1d05bbd50c3fe9baefe6c3fa1f3c4ece8af1db3736f415d5e4",
+      "members": [
+        ["optionalFeature", "Blind Fighting", "TCE"],
+        ["optionalFeature", "Druidic Warrior", "TCE"],
+        ["optionalFeature", "Thrown Weapon Fighting", "TCE"]
+      ],
+      "grantingTarget": "class-feature|fighting style|ranger|phb|2|phb",
+      "progression": {
+        "name": "Fighting Style",
+        "featureType": ["FS:R"],
+        "progression": {
+          "2": 1
+        }
+      }
+    },
+    {
+      "target": "book-section|tce|188",
+      "owner": ["class", "sorcerer", "phb"],
+      "name": "Additional Sorcerer Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "186"
+        },
+        "parent": {
+          "id": "187"
+        },
+        "leaf": {
+          "id": "188"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Sorcerous Origins",
+                "page": 66,
+                "id": "18f"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/047-01-058.webp"
+                    },
+                    "title": "A Sorcerer uses transmuted spell",
+                    "width": 987,
+                    "height": 1000,
+                    "credit": "Kieran Yanner"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/048-01-059.webp"
+                    },
+                    "title": "Tiefling Aberrant Mind",
+                    "width": 800,
+                    "height": 1463,
+                    "credit": "Kieran Yanner"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/049-01-060.webp"
+                    },
+                    "title": "Human Clockwork Soul",
+                    "width": 800,
+                    "height": 1332,
+                    "credit": "Kieran Yanner"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Aberrant Mind",
+                "shortName": "Aberrant Mind",
+                "className": "Sorcerer",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Clockwork Soul",
+                "shortName": "Clockwork Soul",
+                "className": "Sorcerer",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "16731cb8f78d3e5e5fc2907f775b755592a38991cfe2dab807fc282cf9886bbc",
+      "members": [
+        ["spell", "Booming blade", "TCE"],
+        ["spell", "Green-flame blade", "TCE"],
+        ["spell", "Lightning lure", "TCE"],
+        ["spell", "Mind sliver", "TCE"],
+        ["spell", "Sword burst", "TCE"],
+        ["spell", "Grease", "PHB"],
+        ["spell", "Tasha's caustic brew", "TCE"],
+        ["spell", "Flame blade", "PHB"],
+        ["spell", "Flaming sphere", "PHB"],
+        ["spell", "Magic weapon", "PHB"],
+        ["spell", "Tasha's mind whip", "TCE"],
+        ["spell", "Intellect fortress", "TCE"],
+        ["spell", "Vampiric touch", "PHB"],
+        ["spell", "Fire shield", "PHB"],
+        ["spell", "Bigby's hand", "PHB"],
+        ["spell", "Flesh to stone", "PHB"],
+        ["spell", "Otiluke's freezing sphere", "PHB"],
+        ["spell", "Tasha's otherworldly guise", "TCE"],
+        ["spell", "Dream of the blue veil", "TCE"],
+        ["spell", "Demiplane", "PHB"],
+        ["spell", "Blade of disaster", "TCE"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|sorcerer|phb|1|phb"
+    },
+    {
+      "target": "book-section|tce|19f",
+      "owner": ["class", "warlock", "phb"],
+      "name": "Additional Warlock Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "19d"
+        },
+        "parent": {
+          "id": "19e"
+        },
+        "leaf": {
+          "id": "19f"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Otherworldly Patrons",
+                "page": 72,
+                "id": "1ad"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/051-01-063.webp"
+                    },
+                    "title": "A tiefling warlock calls on the power of his talisman.",
+                    "width": 800,
+                    "height": 1466,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/052-01-064.webp"
+                    },
+                    "title": "Human Warlock of the Fathomless",
+                    "width": 800,
+                    "height": 1290,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/053-01-065.webp"
+                    },
+                    "title": "A warlock uses a genie's vessel to battle a cyclops.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "Zuzanna Wužyk"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Fathomless",
+                "shortName": "Fathomless",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Genie",
+                "shortName": "Genie",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Pact Boon Option",
+                "page": 70,
+                "id": "1a1"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Eldritch Invocation Options",
+                "page": 70,
+                "id": "1a4"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "d90e5b4d617f5c8601913bc8c929a8177669000f3322cac5ebac015bea588f71",
+      "members": [
+        ["spell", "Booming blade", "TCE"],
+        ["spell", "Green-flame blade", "TCE"],
+        ["spell", "Lightning lure", "TCE"],
+        ["spell", "Mind sliver", "TCE"],
+        ["spell", "Sword burst", "TCE"],
+        ["spell", "Intellect fortress", "TCE"],
+        ["spell", "Spirit shroud", "TCE"],
+        ["spell", "Summon fey", "TCE"],
+        ["spell", "Summon Shadowspawn", "TCE"],
+        ["spell", "Summon undead", "TCE"],
+        ["spell", "Summon aberration", "TCE"],
+        ["spell", "Mislead", "PHB"],
+        ["spell", "Planar binding", "PHB"],
+        ["spell", "Teleportation circle", "PHB"],
+        ["spell", "Summon fiend", "TCE"],
+        ["spell", "Tasha's otherworldly guise", "TCE"],
+        ["spell", "Dream of the blue veil", "TCE"],
+        ["spell", "Blade of disaster", "TCE"],
+        ["spell", "Gate", "PHB"],
+        ["spell", "Weird", "PHB"]
+      ],
+      "grantingTarget": "class-feature|pact magic|warlock|phb|1|phb"
+    },
+    {
+      "target": "book-section|tce|1a1",
+      "owner": ["class", "warlock", "phb"],
+      "name": "Pact Boon Option",
+      "source": "TCE",
+      "level": 3,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "19d"
+        },
+        "parent": {
+          "id": "19e"
+        },
+        "leaf": {
+          "id": "1a1"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Otherworldly Patrons",
+                "page": 72,
+                "id": "1ad"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/051-01-063.webp"
+                    },
+                    "title": "A tiefling warlock calls on the power of his talisman.",
+                    "width": 800,
+                    "height": 1466,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/052-01-064.webp"
+                    },
+                    "title": "Human Warlock of the Fathomless",
+                    "width": 800,
+                    "height": 1290,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/053-01-065.webp"
+                    },
+                    "title": "A warlock uses a genie's vessel to battle a cyclops.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "Zuzanna Wužyk"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Fathomless",
+                "shortName": "Fathomless",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Genie",
+                "shortName": "Genie",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Additional Warlock Spells",
+                "page": 70,
+                "id": "19f"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Eldritch Invocation Options",
+                "page": 70,
+                "id": "1a4"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "63f351ab92bf77b1a081a7477e6aeeb4ac6e03db068d69b0beab76596f325510",
+      "members": [["optionalFeature", "Pact of the Talisman", "TCE"]],
+      "grantingTarget": "class-feature|pact boon|warlock|phb|3|phb",
+      "progression": {
+        "name": "Pact Boon",
+        "featureType": ["PB"],
+        "progression": {
+          "3": 1
+        }
+      }
+    },
+    {
+      "target": "book-section|tce|1a4",
+      "owner": ["class", "warlock", "phb"],
+      "name": "Eldritch Invocation Options",
+      "source": "TCE",
+      "level": 2,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "19d"
+        },
+        "parent": {
+          "id": "19e"
+        },
+        "leaf": {
+          "id": "1a4"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Wizard",
+                "page": 75,
+                "id": "1bc"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Otherworldly Patrons",
+                "page": 72,
+                "id": "1ad"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/051-01-063.webp"
+                    },
+                    "title": "A tiefling warlock calls on the power of his talisman.",
+                    "width": 800,
+                    "height": 1466,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/052-01-064.webp"
+                    },
+                    "title": "Human Warlock of the Fathomless",
+                    "width": 800,
+                    "height": 1290,
+                    "credit": "Nikki Dawes"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/053-01-065.webp"
+                    },
+                    "title": "A warlock uses a genie's vessel to battle a cyclops.",
+                    "width": 1200,
+                    "height": 802,
+                    "credit": "Zuzanna Wužyk"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Fathomless",
+                "shortName": "Fathomless",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "The Genie",
+                "shortName": "Genie",
+                "className": "Warlock",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Additional Warlock Spells",
+                "page": 70,
+                "id": "19f"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Pact Boon Option",
+                "page": 70,
+                "id": "1a1"
+              },
+              "entriesKind": "array"
+            }
+          ]
+        }
+      },
+      "digest": "43c32757ba14182260209c9184e397937deb46d7496c0be14c33d5859ef84742",
+      "members": [
+        ["optionalFeature", "Bond of the Talisman", "TCE"],
+        ["optionalFeature", "Eldritch Mind", "TCE"],
+        ["optionalFeature", "Far Scribe", "TCE"],
+        ["optionalFeature", "Gift of the Protectors", "TCE"],
+        ["optionalFeature", "Investment of the Chain Master", "TCE"],
+        ["optionalFeature", "Protection of the Talisman", "TCE"],
+        ["optionalFeature", "Rebuke of the Talisman", "TCE"],
+        ["optionalFeature", "Undying Servitude", "TCE"]
+      ],
+      "grantingTarget": "class-feature|eldritch invocations|warlock|phb|2|phb",
+      "progression": {
+        "name": "Eldritch Invocations",
+        "featureType": ["EI"],
+        "progression": [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8]
+      }
+    },
+    {
+      "target": "book-section|tce|1be",
+      "owner": ["class", "wizard", "phb"],
+      "name": "Additional Wizard Spells",
+      "source": "TCE",
+      "level": 1,
+      "locator": {
+        "book": {
+          "id": "TCE",
+          "source": "TCE",
+          "name": "Tasha's Cauldron of Everything"
+        },
+        "chapter": {
+          "id": "010"
+        },
+        "classSection": {
+          "id": "1bc"
+        },
+        "parent": {
+          "id": "1bd"
+        },
+        "leaf": {
+          "id": "1be"
+        },
+        "contextInventory": {
+          "booksShape": {
+            "book": "array"
+          },
+          "bookShape": {
+            "name": "string",
+            "id": "string",
+            "source": "string",
+            "group": "string",
+            "cover": "object",
+            "published": "string",
+            "author": "string",
+            "contents": "array"
+          },
+          "rootSiblings": [
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Using This Book",
+                "page": 4,
+                "id": "000"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Group Patrons",
+                "page": 83,
+                "id": "1de"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Magical Miscellany",
+                "page": 105,
+                "id": "237"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Dungeon Master's Tools",
+                "page": 139,
+                "id": "340"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Credits",
+                "id": "015"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "chapterSiblings": [
+            {
+              "metadata": {
+                "type": "list",
+                "items": [
+                  "A way to customize your character's origin by changing some of your racial traits",
+                  "Guidance on changing your subclass",
+                  "{@area The artificer class|01b|x}, a master of magical invention",
+                  "Class features and subclasses for every class in the {@book Player's Handbook|PHB}",
+                  "{@area Feats|1ce|x} for anyone who uses that optional rule"
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "image",
+                "href": {
+                  "type": "internal",
+                  "path": "book/TCE/001-01-001.webp"
+                },
+                "title": "The wizard Tasha studies magic outside the hut of her adoptive mother, Baba Yaga",
+                "width": 1131,
+                "height": 1500,
+                "credit": "Brian Valeza"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Customizing Your Origin",
+                "page": 7,
+                "id": "011"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing a Skill",
+                "page": 8,
+                "id": "017"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Changing Your Subclass",
+                "page": 8,
+                "id": "018"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Artificer",
+                "page": 9,
+                "id": "01b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Barbarian",
+                "page": 24,
+                "id": "07b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Bard",
+                "page": 27,
+                "id": "08b"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Cleric",
+                "page": 30,
+                "id": "09d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Druid",
+                "page": 35,
+                "id": "0be"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Fighter",
+                "page": 41,
+                "id": "0da"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Monk",
+                "page": 48,
+                "id": "112"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Paladin",
+                "page": 52,
+                "id": "12d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Ranger",
+                "page": 56,
+                "id": "150"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Rogue",
+                "page": 62,
+                "id": "172"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Sorcerer",
+                "page": 65,
+                "id": "186"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Warlock",
+                "page": 70,
+                "id": "19d"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "section",
+                "name": "Feats",
+                "page": 79,
+                "id": "1ce"
+              },
+              "entriesKind": "array"
+            }
+          ],
+          "classSiblings": [
+            {
+              "metadata": {
+                "type": "entries",
+                "name": "Arcane Traditions",
+                "page": 76,
+                "id": "1c1"
+              },
+              "entriesKind": "array"
+            },
+            {
+              "metadata": {
+                "type": "gallery",
+                "images": [
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/055-01-068.webp"
+                    },
+                    "title": "A Drow and a High Elf Bladesinger",
+                    "width": 1200,
+                    "height": 935,
+                    "credit": "Caroline Gariba"
+                  },
+                  {
+                    "type": "image",
+                    "href": {
+                      "type": "internal",
+                      "path": "book/TCE/056-01-069.webp"
+                    },
+                    "title": "Human Wizard, Order of Scribes",
+                    "width": 800,
+                    "height": 1353,
+                    "credit": "Mark Behm"
+                  }
+                ]
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Bladesinging",
+                "shortName": "Bladesinging",
+                "className": "Wizard",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            },
+            {
+              "metadata": {
+                "type": "statblock",
+                "tag": "subclass",
+                "source": "TCE",
+                "name": "Order of Scribes",
+                "shortName": "Scribes",
+                "className": "Wizard",
+                "classSource": "PHB"
+              },
+              "entriesKind": "absent"
+            }
+          ],
+          "parentSiblings": []
+        }
+      },
+      "digest": "a085e7351262ee96449f773a9b0953ee8627f5700ebc3c5871d18d4ef9aaeca5",
+      "members": [
+        ["spell", "Booming blade", "TCE"],
+        ["spell", "Green-flame blade", "TCE"],
+        ["spell", "Lightning lure", "TCE"],
+        ["spell", "Mind sliver", "TCE"],
+        ["spell", "Sword burst", "TCE"],
+        ["spell", "Tasha's caustic brew", "TCE"],
+        ["spell", "Augury", "PHB"],
+        ["spell", "Enhance ability", "PHB"],
+        ["spell", "Tasha's mind whip", "TCE"],
+        ["spell", "Intellect fortress", "TCE"],
+        ["spell", "Speak with dead", "PHB"],
+        ["spell", "Spirit shroud", "TCE"],
+        ["spell", "Summon fey", "TCE"],
+        ["spell", "Summon Shadowspawn", "TCE"],
+        ["spell", "Summon undead", "TCE"],
+        ["spell", "Divination", "PHB"],
+        ["spell", "Summon aberration", "TCE"],
+        ["spell", "Summon construct", "TCE"],
+        ["spell", "Summon elemental", "TCE"],
+        ["spell", "Summon fiend", "TCE"],
+        ["spell", "Tasha's otherworldly guise", "TCE"],
+        ["spell", "Dream of the blue veil", "TCE"],
+        ["spell", "Blade of disaster", "TCE"]
+      ],
+      "grantingTarget": "class-feature|spellcasting|wizard|phb|1|phb"
+    }
+  ],
+  "parents": [
+    {
+      "owner": ["class", "bard", "phb"],
+      "fields": [
+        "additionalSpells",
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|bard|phb|1|phb",
+          "rawDeclaration": "Spellcasting|Bard||1",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["class", "cleric", "phb"],
+      "fields": [
+        "basicRules",
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|cleric|phb|1|phb",
+          "rawDeclaration": "Spellcasting|Cleric||1",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["class", "druid", "phb"],
+      "fields": [
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|druid|phb|1|phb",
+          "rawDeclaration": "Spellcasting|Druid||1",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["class", "fighter", "phb"],
+      "fields": [
+        "basicRules",
+        "classFeatures",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|fighting style|fighter|phb|1|phb",
+          "rawDeclaration": "Fighting Style|Fighter||1",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["class", "paladin", "phb"],
+      "fields": [
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|paladin|phb|2|phb",
+          "rawDeclaration": "Spellcasting|Paladin||2",
+          "level": 2
+        },
+        {
+          "target": "class-feature|fighting style|paladin|phb|2|phb",
+          "rawDeclaration": "Fighting Style|Paladin||2",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "fields": [
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|ranger|phb|2|phb",
+          "rawDeclaration": "Spellcasting|Ranger||2",
+          "level": 2
+        },
+        {
+          "target": "class-feature|fighting style|ranger|phb|2|phb",
+          "rawDeclaration": "Fighting Style|Ranger||2",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "fields": [
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|sorcerer|phb|1|phb",
+          "rawDeclaration": "Spellcasting|Sorcerer||1",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["class", "warlock", "phb"],
+      "fields": [
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "spellsKnownProgressionFixedByLevel",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|pact magic|warlock|phb|1|phb",
+          "rawDeclaration": "Pact Magic|Warlock||1",
+          "level": 1
+        },
+        {
+          "target": "class-feature|pact boon|warlock|phb|3|phb",
+          "rawDeclaration": "Pact Boon|Warlock||3",
+          "level": 3
+        },
+        {
+          "target": "class-feature|eldritch invocations|warlock|phb|2|phb",
+          "rawDeclaration": "Eldritch Invocations|Warlock||2",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "owner": ["class", "wizard", "phb"],
+      "fields": [
+        "basicRules",
+        "cantripProgression",
+        "casterProgression",
+        "classFeatures",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgressionFixed",
+        "spellsKnownProgressionFixedAllowLowerLevel",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "declarations": [
+        {
+          "target": "class-feature|spellcasting|wizard|phb|1|phb",
+          "rawDeclaration": "Spellcasting|Wizard||1",
+          "level": 1
+        }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "target": "class-feature|spellcasting|bard|phb|1|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "2397b4d46ff4ad9668ef7e78e3f9290cfe6cd23ea3c4198daaea58075708d589"
+    },
+    {
+      "target": "class-feature|spellcasting|cleric|phb|1|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 1,
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ],
+      "digest": "0524b87ddf7668ce3c78d5f7e751295afc99403c0c94c49c5ff3d3b9a12acfa0"
+    },
+    {
+      "target": "class-feature|spellcasting|druid|phb|1|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "b48d530c8be5a80832d25fce328ae2ec5a72dbbada44fbd6e85a0e970b1f54a5"
+    },
+    {
+      "target": "class-feature|fighting style|fighter|phb|1|phb",
+      "name": "Fighting Style",
+      "source": "PHB",
+      "level": 1,
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ],
+      "digest": "66bd95f6a0521a2597bf886bd6e558fb39d3cb2990907afb497bfc39fb1bef5a"
+    },
+    {
+      "target": "class-feature|spellcasting|paladin|phb|2|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 2,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "7ee09a2b1ad3141d5629c6efd07e73b4c6485ac5f9ed43a6d724f3760d4151c5"
+    },
+    {
+      "target": "class-feature|fighting style|paladin|phb|2|phb",
+      "name": "Fighting Style",
+      "source": "PHB",
+      "level": 2,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "6868543d751c3bddee5a9f02f69cf278d28c9d574462c24b92e4aed02d4fa324"
+    },
+    {
+      "target": "class-feature|spellcasting|ranger|phb|2|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 2,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "523af378daf029adc37e3aba04bf31ebdd504c264ecb5ce0a88c75d358783772"
+    },
+    {
+      "target": "class-feature|fighting style|ranger|phb|2|phb",
+      "name": "Fighting Style",
+      "source": "PHB",
+      "level": 2,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "bbe632fb5af7d9b60ec0fb96b6a6e4a5b9598b1f7ce20c3396539cd461bd1d34"
+    },
+    {
+      "target": "class-feature|spellcasting|sorcerer|phb|1|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "496c4955b7d769dbfc00a86ab5c9f8c569d99d117b0f7bc071ecb7710feee40d"
+    },
+    {
+      "target": "class-feature|pact magic|warlock|phb|1|phb",
+      "name": "Pact Magic",
+      "source": "PHB",
+      "level": 1,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "5d3398bd84641dcc2537d1bdc77b02dca6e09d672fb74b6147df6c75618ff1b5"
+    },
+    {
+      "target": "class-feature|pact boon|warlock|phb|3|phb",
+      "name": "Pact Boon",
+      "source": "PHB",
+      "level": 3,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "67af0a9ce1d2ed42a115f686fd645ce44684f2d3c5b93afda272c58f0794dd20"
+    },
+    {
+      "target": "class-feature|eldritch invocations|warlock|phb|2|phb",
+      "name": "Eldritch Invocations",
+      "source": "PHB",
+      "level": 2,
+      "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+      "digest": "9d0d0a6084c69bf7ca362f7325e2b80cc26e6fc5a76c55f180fc1b3e24c5bbda"
+    },
+    {
+      "target": "class-feature|spellcasting|wizard|phb|1|phb",
+      "name": "Spellcasting",
+      "source": "PHB",
+      "level": 1,
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ],
+      "digest": "0763c8f60cd01174db80ef7315f44bcca82a779d8c53d290db59fd8b016fc08c"
+    }
+  ]
+}

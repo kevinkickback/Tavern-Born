@@ -1,0 +1,356 @@
+{
+  "version": 1,
+  "upstream": "b9061583536101068b3a59d27e886d1fa664e366",
+  "inputs": [
+    {
+      "file": "class/index.json",
+      "sha256": "77b4e3c24ab8a0515948c258a7104f04bbe70e6a89a17714f2ee0bdfce23c2e8"
+    },
+    {
+      "file": "class/class-artificer.json",
+      "sha256": "1c61ad11500d661350209fe81196e0ddaea31f0252a67891964810f4a98265dd"
+    },
+    {
+      "file": "class/class-barbarian.json",
+      "sha256": "15b090c2ede1cc5a522817bf41d83a890aa194f3d7827f98787e1b05d057f319"
+    },
+    {
+      "file": "class/class-bard.json",
+      "sha256": "e5041a799e8c720db3a28539c2a25e9d6d821b6229a65fd1484f749ea3978b1d"
+    },
+    {
+      "file": "class/class-cleric.json",
+      "sha256": "fa1cdf0f7b85e970e3191d2d516cac26b9cfadbe883ac89b3224c1fa95eb2f61"
+    },
+    {
+      "file": "class/class-druid.json",
+      "sha256": "e320ecf4f19e49acbbc449fcde4f8448bfad4bfc40a56138dced312a52af13a1"
+    },
+    {
+      "file": "class/class-fighter.json",
+      "sha256": "4353d0a6adf3652c989ed95e29bc1d2d40b393c84e50242b202441113a9c0dbd"
+    },
+    {
+      "file": "class/class-monk.json",
+      "sha256": "16318edac48630b7b83fcf23cc436589f8922e82b0874aefd24a2727b6954ffd"
+    },
+    {
+      "file": "class/class-mystic.json",
+      "sha256": "5548843ac2943b722099eb19c3745964956fdfc888ff801b0f9ae5f791081a64"
+    },
+    {
+      "file": "class/class-paladin.json",
+      "sha256": "46666e5793b1b54e0e618560010a5589d25b6ff789f6aa004ff90c1efbe42e00"
+    },
+    {
+      "file": "class/class-ranger.json",
+      "sha256": "e22da39dc2a9cf708f21996cf393af8240442aff6f523281bc65436609840dfb"
+    },
+    {
+      "file": "class/class-rogue.json",
+      "sha256": "1db96ec24a864369de9138a9d51bdf89e09fdd79f3f2d39c25ac73191f2befa0"
+    },
+    {
+      "file": "class/class-sidekick.json",
+      "sha256": "8075ac640418e7ea9558a4f173cf11d011020c00d5f8b994eaa33759d5849a7f"
+    },
+    {
+      "file": "class/class-sorcerer.json",
+      "sha256": "9f17737aa137ca3979b20cdcc7e8b0120c7be293cf9849c2d27c93f2e0e87c79"
+    },
+    {
+      "file": "class/class-warlock.json",
+      "sha256": "0339b47396f035de89d098e13099f7c1e010f85ba6987d790fc70706d817751c"
+    },
+    {
+      "file": "class/class-wizard.json",
+      "sha256": "eca6e726f13859842bce9f61fde909b35a386967a1719ec83cddb40e434ad01a"
+    },
+    {
+      "file": "optionalfeatures.json",
+      "sha256": "410887e853e5e79d79cd917bfbb523c3cfea1d0f1a22fb8d4eee562a277d2aca"
+    }
+  ],
+  "helpers": [
+    {
+      "file": "package-lock.json",
+      "sha256": "bdb4ca5f94f5fabda22eea9db64e12bda850767206a9a80683b896dc5e47ae71"
+    },
+    {
+      "file": "scripts/generate-optional-class-native-rules.mjs",
+      "sha256": "5cdc2561b8d1bed2dad2d675e53d6c318589b1e2504c7160d91492c6caaabd4d"
+    },
+    {
+      "file": "scripts/lib/optional-class-declaration-semantics.json",
+      "sha256": "5a5dc44d02b66d895809ad25d451db18b9b9e991289c9738a1277dbbc501b9e3"
+    },
+    {
+      "file": "scripts/lib/optional-class-native-semantics.json",
+      "sha256": "16456e03ab1c04e4f3912128f80f640b8102fff622167c410c0135f47ecdbbfa"
+    },
+    {
+      "file": "scripts/lib/optional-class-native-source.mjs",
+      "sha256": "496362041ee881da0a8536f885e785d0b5686bb9a525c67b7c3e71617534dc34"
+    },
+    {
+      "file": "src/lib/5etools/backgroundRuleNormalization.ts",
+      "sha256": "fb039598540d08e7a2691582752dadc888d1773f09d93cbd00317f0808c0570a"
+    },
+    {
+      "file": "src/lib/5etools/cannyChoices.ts",
+      "sha256": "65018fbf9a249bb8d2fcee0582a7e9a0aab485d9f2181adfe9b92e3ca5843772"
+    },
+    {
+      "file": "src/lib/5etools/classChoiceId.ts",
+      "sha256": "1edfc8117c3d8dd696c43ff751ac60327e06e7e8922217a2f6b0fb232065e334"
+    },
+    {
+      "file": "src/lib/5etools/classChoiceNormalization.ts",
+      "sha256": "db404d0928229712ec6d346fd3be222005fa3c6143cefa33799049823469c027"
+    },
+    {
+      "file": "src/lib/5etools/classFeatureIdentity.ts",
+      "sha256": "b6e7b5702f6d4af045ba5d3545fa0c9372ac137ce206ed5b9b4b92b34dd3c7bc"
+    },
+    {
+      "file": "src/lib/5etools/classProficiencyChoices.ts",
+      "sha256": "c9c2ccd602209be18c7132d53c737b45423e79a6295a089fcb6a53240f0fb4b0"
+    },
+    {
+      "file": "src/lib/5etools/classProficiencyIdentity.ts",
+      "sha256": "9d9b54685d3486b321fb17f813b9fbfc9389a9baadfcac3aa6c5640bc98a34f7"
+    },
+    {
+      "file": "src/lib/5etools/classProficiencyRules.generated.json",
+      "sha256": "c9d3a4bb5f4815f3f0854b0581bbc47bc943d516cfacec20255ca781411820d2"
+    },
+    {
+      "file": "src/lib/5etools/classProficiencyRules.ts",
+      "sha256": "dc931f8253c0944b308bbed7023f9b64ac4c4fad3b843a7b1284626eff840f8b"
+    },
+    {
+      "file": "src/lib/5etools/classReference.ts",
+      "sha256": "9660d3a85cfcb367935b4a5a0b8f261cce590a9076b3774a859b9f627fc3a92b"
+    },
+    {
+      "file": "src/lib/5etools/classRuleNormalization.ts",
+      "sha256": "a15123a2c475c45ec6798304fe5008f589bde8be05f6c3fa85a3f159bbd80f70"
+    },
+    {
+      "file": "src/lib/5etools/conditionalProficiencyRules.generated.json",
+      "sha256": "8decce1ec67e97ba4bb4a57ce8095fb41cc30ce015e123f2fae73d499eb85fbd"
+    },
+    {
+      "file": "src/lib/5etools/conditionalProficiencyRules.ts",
+      "sha256": "f17e6401377f28323c9eb3a1fb6602e96323c6d64ed22c98d8ee1552748b37d2"
+    },
+    {
+      "file": "src/lib/5etools/constants.ts",
+      "sha256": "9f0766e07f81fc8a57229847eb160c212f266fb516ce0049a67b457a428866fc"
+    },
+    {
+      "file": "src/lib/5etools/copyResolution.ts",
+      "sha256": "c75215fd24deed3e9b49ff2c47a71a16df7144ede8a19fd725116dbf2d3b85c6"
+    },
+    {
+      "file": "src/lib/5etools/featureOptionIdentity.ts",
+      "sha256": "4c087b67cf88a09c85c9838f648d5a3c4093d5575d3262035dac379bbdcab4d7"
+    },
+    {
+      "file": "src/lib/5etools/featureRulesSignature.ts",
+      "sha256": "8cb4b6468ef04f0d39a6403980af64dcfb99266b1917ec4a32c65dbb992b9adb"
+    },
+    {
+      "file": "src/lib/5etools/featureSourceAudit.ts",
+      "sha256": "964b07b3f0767a2248a9ea8b5a177d626261a485f5254b3dbe7a044ce712b4d0"
+    },
+    {
+      "file": "src/lib/5etools/featureTableOptions.ts",
+      "sha256": "c54c254cd135ade358ccfab6d25e721fd2f2e8f877ae643e78a57481568acf94"
+    },
+    {
+      "file": "src/lib/5etools/featureVariantMetadata.ts",
+      "sha256": "51cf009d4041ab677de980d1353286309a9d86c17758495e5ce17c3ccd10e5bd"
+    },
+    {
+      "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
+      "sha256": "f9a0109517d6ad5284379d238a85e5a1813302e8e77c9a2a4274ff7cf6ef0723"
+    },
+    {
+      "file": "src/lib/5etools/fixedProficiencyRules.ts",
+      "sha256": "83ba2814a5244c547fa097669b34f452bbd98ba29175ba83fc01aa0d362824df"
+    },
+    {
+      "file": "src/lib/5etools/fixedProficiencySource.ts",
+      "sha256": "aaeccfb7f8e144816dc59786c12cfb19fd29672cca6986c8ab0ec3bee66b94c9"
+    },
+    {
+      "file": "src/lib/5etools/naturalExplorerChoices.ts",
+      "sha256": "924dd53357477b14199b0b8971d02128f875b133af679e48c6ba6794125ee7fc"
+    },
+    {
+      "file": "src/lib/5etools/naturalExplorerIdentity.ts",
+      "sha256": "278a27fe12235ab96fa3ccea37121ce4f9c6f539eac74998f93cf9b783f5bc37"
+    },
+    {
+      "file": "src/lib/5etools/naturalExplorerSource.ts",
+      "sha256": "b5eacb4d6050e56e895eca54834cb145616ad332d6a24463f32635a7dd384a08"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassDeclarationRules.generated.json",
+      "sha256": "790930d6b752a037ee2c0996d0e341febd98258abd4b53734bf3860e76386cf2"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassDeclarationSource.ts",
+      "sha256": "8cf75706ec9d11dd41ec4b9f2addc55b0bb0aadc643336c40e914da74713e70f"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
+      "sha256": "c3c1fa9074efc25d99e66d91df8a8b59ffac50f5dac26d36473447c19022aeb0"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
+      "sha256": "3e33b136ad37528115a18daf61175d2e8ecac1a8f66f5cedeef6135075c6a70d"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassFeatureRules.ts",
+      "sha256": "83be87eb63aa84e00daa6563d8b54963c3d1964f0d00c3018072f6f0747023b9"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassFeatureSource.ts",
+      "sha256": "e24dfc1d5a2bd87c6ea4ce47b9b0308cba212b62f8b3499360cf1dcc4ba52809"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassSectionRules.generated.json",
+      "sha256": "63fa9ccffa3c6383331e43048e418b81b0b7b9c4dec258a9830facb9f3f6f180"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassSectionRules.ts",
+      "sha256": "a49b758e00d219d10da2eb6584a33e9487e61c50adbba6c1b6cbb84537b79897"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassSectionStructure.ts",
+      "sha256": "69a7d3e3ee164f71f9e457a8aba39e039ab4477d763cccec2a1c9023075a7a5d"
+    },
+    {
+      "file": "src/lib/5etools/parsers/classes.ts",
+      "sha256": "8754feec304238172d99ee6e784b875768e9febec69f8db27affb3f59ac9c8ac"
+    },
+    {
+      "file": "src/lib/5etools/parsers/shared.ts",
+      "sha256": "00555c6c887672f4abc0dd2ffb14a1bd7f8c8de7fb9f7e8709ae23fbade4901d"
+    },
+    {
+      "file": "src/lib/5etools/requiredSetupDiagnostics.ts",
+      "sha256": "49ff102f506302c1fb255720b4583f5dd1b3c6da5ae180e022f347168573690a"
+    },
+    {
+      "file": "src/lib/5etools/rulesetMetadata.ts",
+      "sha256": "dbf8435d33df6cb1e46fec6a532a8c8a7cc7e78aa0e5a5b1681008c3d53c252e"
+    },
+    {
+      "file": "src/lib/5etools/stormAuraChoices.ts",
+      "sha256": "241dfc4b8c7e2a80ff3789a3dc2a5d6e7c8ee3051363b35524de8af81d1d530e"
+    },
+    {
+      "file": "src/lib/5etools/stormAuraIdentity.ts",
+      "sha256": "0b4f51f4480adbc7adec1e9862fa8b19e591b1577554b78ad471b6bce4282062"
+    },
+    {
+      "file": "src/lib/5etools/stormAuraSource.ts",
+      "sha256": "0fef71c27a7eba29f328857570881e2a06b0af98fdc3168616668867e1e1e5eb"
+    },
+    {
+      "file": "src/lib/5etools/subclassContent.ts",
+      "sha256": "5ae8dbd557f6b048d0a38496b24f12ade40ce092800c5d8d1ee9824ae9522f70"
+    },
+    {
+      "file": "src/lib/5etools/subclassFeatureCatalog.ts",
+      "sha256": "1578cb9ab934befe7c57e1b65a3b1405cd8b9314feae19af7810c1b2bab8ccaa"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencyCertificates.generated.json",
+      "sha256": "1dc8733885ee13d766786c3473e5f305a46ae0b4a17644895ecae0b6c99208d9"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
+      "sha256": "63ced4c582ae4a77c542db121ba44035519aa4199f3510ef622f676a1109d00a"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencyChoices.ts",
+      "sha256": "f22980cde14cdee31deaa412431108e5ff17d5ec7f33cfed37b68485183a092f"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencyRegistry.ts",
+      "sha256": "822b1d0af1213b84e16de667f9d3a74808c9f2b3d7b160ea5c14f507c215cb81"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
+      "sha256": "882cc59d641cf4e776685a3adec8c86c1e9f08bacdf04c8e57c21734c41e29f3"
+    },
+    {
+      "file": "src/lib/5etools/subclassProficiencySource.ts",
+      "sha256": "8ef0aa6483f908cc5b71b3565aff35b85b3875491c7e99da3fa4f2d1d057639b"
+    },
+    {
+      "file": "src/lib/5etools/subclassSourcePreparation.ts",
+      "sha256": "86387667adfc5e7ef7cd58400f7e094b175f48df234ef473757947df4b7eddae"
+    },
+    {
+      "file": "src/lib/5etools/unconditionalFeatureReferences.ts",
+      "sha256": "9d44545d3c88f8497ca2b4ce6afc236c40fb033901f116291c69568df5ef7a9c"
+    },
+    {
+      "file": "src/lib/calculations/abilityNames.ts",
+      "sha256": "ae43a2ceab53c5e32d3331650f0302349009bec7a0fb93a8ec5539518c921cf7"
+    },
+    {
+      "file": "src/lib/calculations/abilityScores.ts",
+      "sha256": "c1e6bb3f6f6790db8c87335b866d6d10ca7b5e566e0d29cd005aeb480df45b60"
+    },
+    {
+      "file": "src/lib/calculations/effects.ts",
+      "sha256": "4cca33a6d00b08c20c3ebe0630c3ca8eeb8d2727583940100f57e8ba4e818514"
+    },
+    {
+      "file": "src/lib/calculations/gameRules.ts",
+      "sha256": "2d7506e3c025893489eec605fb3922020e7beec0553abd0c6f46d80449e0a3d6"
+    },
+    {
+      "file": "src/lib/calculations/skills.ts",
+      "sha256": "b24580fedde84c4debdfafe71a30703cc4fb131e3a0a488d0148d0c70af1e096"
+    },
+    {
+      "file": "src/lib/provenance/normalization.ts",
+      "sha256": "a11f0edd4bab3a2f90fcd0c3db8d75a8f0ef9bec09fdc5a6d0bcdcafdaa62f8d"
+    },
+    {
+      "file": "src/lib/provenance/types.ts",
+      "sha256": "e76a5c0454ddd4927fea15e27c484167d2e024f41998720b1d1e0dc318a709d9"
+    },
+    {
+      "file": "src/types/5etools.ts",
+      "sha256": "03dc7e800fdcbaed704e0acbed8c370a03647b83537832b17576b54648424a2c"
+    },
+    {
+      "file": "src/types/actions.ts",
+      "sha256": "b55dbe923381ce17d8cc88b1dc7c0c89a6a5b491ce9e6b27dde0d4666e20a3aa"
+    },
+    {
+      "file": "src/types/character.ts",
+      "sha256": "dc86d140560f4a1a0d5101166ebe337f59423222938b742cad838d937a9e70a1"
+    },
+    {
+      "file": "src/types/classRules.ts",
+      "sha256": "ef16c32cd224a8fce655746c31fdf7dc7b4fc0034071962070b896ffb7bc7407"
+    },
+    {
+      "file": "src/types/effects.ts",
+      "sha256": "076341c2b15da9c5868c4d9f8875da4ba77001d8791472f2315ca14a8e049acd"
+    },
+    {
+      "file": "src/types/feat.ts",
+      "sha256": "86dee6d3290feacb1e80569b3407d9aa69e44dbfc65122e51f72e0372b08b9b4"
+    }
+  ]
+}

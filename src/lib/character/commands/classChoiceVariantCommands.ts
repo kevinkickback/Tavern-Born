@@ -5,8 +5,10 @@ import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceAc
 import {
   type ClassChoiceFeatureCatalogs,
   getCharacterClassChoices,
-  getCharacterClassFeatureVariantChoices,
+  getClassChoiceCandidates,
 } from '@/lib/character/classChoiceOptions'
+import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
@@ -16,6 +18,7 @@ import {
   reconcileClassChoiceSelectionGrants,
 } from './classChoiceCommands'
 import type { CharacterCommandResult } from './commandResult'
+import { projectProficiencyCommandResult } from './proficiencyProjection'
 
 function uniqueChoices(choices: readonly NormalizedCharacterChoice[]): NormalizedCharacterChoice[] {
   return [...new Map(choices.map((choice) => [choice.id, choice])).values()]
@@ -37,6 +40,11 @@ export function reconcileOptionalClassFeatureChoicesCommand(
   },
   includeVariants: boolean,
 ): CharacterCommandResult {
+  const proposed = {
+    ...character,
+    variantRules: { ...character.variantRules, optionalClassFeatures: includeVariants },
+  }
+  const activity = createOptionalClassFeatureActivity(proposed, catalogs.classChoiceFeatureCatalogs)
   const allChoices: NormalizedCharacterChoice[] = []
   const activeChoiceIds = new Set<string>()
 
@@ -44,7 +52,13 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     const scopedClassData = findClassReference(entry, catalogs.allClasses)
     if (scopedClassData) {
       const scopedSubclass = getSelectedSubclassData(scopedClassData, entry)
-      allChoices.push(...getCharacterClassFeatureVariantChoices(scopedClassData, scopedSubclass))
+      allChoices.push(
+        ...getClassChoiceCandidates(
+          scopedClassData,
+          scopedSubclass,
+          catalogs.classChoiceFeatureCatalogs,
+        ),
+      )
     }
 
     const availableClassData = findClassReference(entry, catalogs.availableClasses)
@@ -53,7 +67,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     for (const choice of getCharacterClassChoices(
       availableClassData,
       availableSubclass,
-      includeVariants,
+      activity,
       catalogs.classChoiceFeatureCatalogs,
     )) {
       activeChoiceIds.add(choice.id)
@@ -64,10 +78,9 @@ export function reconcileOptionalClassFeatureChoicesCommand(
   const scopedChoiceIds = new Set(scopedChoices.map((choice) => choice.id))
   const effective = new Map(
     getEffectiveClassChoiceSelections(
-      character,
+      proposed,
       catalogs.availableClasses,
       catalogs.classChoiceFeatureCatalogs,
-      includeVariants,
     ).map((selection) => [selection.choiceId, selection]),
   )
   const classChoiceSelections: CharacterClassChoiceSelection[] = (
@@ -80,17 +93,24 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     const { inactive: _inactive, ...activeSelection } = selection
     return activeSelection
   })
-  const grants = reconcileClassChoiceSelectionGrants(character, ledger, classChoiceSelections)
+  const grants = reconcileClassChoiceSelectionGrants(
+    proposed,
+    ledger,
+    classChoiceSelections,
+    catalogs.classChoiceFeatureCatalogs,
+  )
   let workingCharacter: Character = {
     ...character,
     classChoiceSelections,
     features: grants.features,
+    proficiencies: grants.proficiencies,
     provenance: grants.provenanceUpdate,
   }
   let provenanceUpdate = grants.provenanceUpdate
   let characterPatch: Partial<Character> = {
     classChoiceSelections,
     features: grants.features,
+    proficiencies: grants.proficiencies,
   }
 
   for (const choice of scopedChoices) {
@@ -113,5 +133,27 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     }
   }
 
-  return { characterPatch, provenanceUpdate }
+  if (catalogs.classChoiceFeatureCatalogs) {
+    const projected = refreshClassProficiencyState(
+      {
+        ...workingCharacter,
+        variantRules: { ...workingCharacter.variantRules, optionalClassFeatures: includeVariants },
+      },
+      catalogs.availableClasses,
+      {
+        ...catalogs.classChoiceFeatureCatalogs,
+        classes: catalogs.classChoiceFeatureCatalogs.classes ?? catalogs.availableClasses,
+      },
+    )
+    characterPatch = { ...characterPatch, proficiencies: projected.proficiencies }
+    provenanceUpdate = projected.provenance
+  }
+  return projectProficiencyCommandResult(
+    {
+      ...character,
+      variantRules: { ...character.variantRules, optionalClassFeatures: includeVariants },
+    },
+    { characterPatch, provenanceUpdate },
+    catalogs.classChoiceFeatureCatalogs,
+  )
 }

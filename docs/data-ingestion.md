@@ -86,6 +86,51 @@ not read arbitrary files or construct legal metadata independently.
 
 ## Loading rules
 
+External validation recognizes the optional nested capability `book/book-tce.json`. It uses the
+same authorized reader and bounded request pool; the Included SRD never requests it. Only a
+confirmed inventory entry permits the loader to fetch it, once per source load. Existing source
+configurations need revalidation before book-backed optional class features become available.
+Malformed optional support is diagnosed without rejecting otherwise valid ordinary content.
+
+`optionalClassSections` retains thirteen compact source-qualified sections and their exact book,
+chapter, class and optional-parent context, rather than the whole book. Independently reviewed
+semantic inputs are separate from ordinary descriptor generation. Changed/ambiguous context or
+body, missing source, or a missing current class granting declaration/progression leaves the
+section unavailable. Members never supply a missing section. Later provided section identities
+replace earlier candidates, retaining same-layer multiplicity for audit; omitted identities retain
+the base. Current unavailable records cannot borrow old certificates. Background transport failure
+retains the previous complete catalog under the existing refresh policy, rather than mixing revisions.
+The closed context includes chapter/class introductory prose, document metadata and unexpected
+structured ancestor entries. Only inventoried sibling frames/leaves are excluded; another known
+class's title/page/body does not govern this class, while its type/field shape and stable ID remain
+bounded. Each targeted class/section still requires its own complete context and exact identity.
+Sibling inventories record whether an `entries` field was absent or an array. A known array body
+may change or disappear; a new body on an entry-less node or a wrong-kind body remains unverified.
+This applies at the book root and chapter, class and leaf lists. Books-index and TCE metadata keys
+and value kinds are closed, while known publication/navigation values and unrelated books remain
+independent of optional rules. These optional certificates do not tighten ordinary book validation.
+
+Native optional class/subclass declarations use separate per-declaration records in
+`optionalClassFeatureSources`. They bind the complete actual owner, encoded target and enclosing
+gain to raw multiplicity, the exact local copy directive/lookup closure and complete retained
+ancestor bodies before parser enrichment. Production copy preparation is shared with parsing.
+Each declaration has its own scope: unrelated later declaration loss does not invalidate an
+earlier root. Current filtered ancestors may omit only unrelated qualified subclass-reference entries,
+preserving prose, metadata, order and the requested path. Unattached nested class references still
+require the exact current candidate collection. Empty current indexes remain authoritative.
+Winning owner/body identities replace their proof too, including absent or invalid incoming proof.
+Existing proficiency/body audits remain independent. Parsed cache55 retains these serializable
+records. Copies are materialized within their source document; replacing a different owner without
+providing a winning consumed body does not re-materialize an omitted copied owner. The
+development semantic input is separate from ordinary generation; runtime rules retain
+compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification
+alone neither adopts a feature nor implements its conditional benefits, spell grants or events.
+The same declaration channel also certifies ordinary granting dependencies for optional pool
+expansions. Metamagic Options and Maneuver Options require their exact current standard grant
+and structured progression; these dependency records remain standard features and never become
+optional adoptions or additional selections. Their absence suspends only the expanded route,
+retaining saved intent for exact restoration.
+
 - The loader uses one bounded worker pool (maximum six requests), including expanded class/spell
   indexes. Do not replace it with unbounded `Promise.all`.
 - Every load has a request identity and abort signal. Superseded progress, success, and failure are
@@ -193,7 +238,7 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **43**, owned by [dataCache](../src/lib/storage/dataCache.ts);
+The current parsed cache schema is **55**, owned by [dataCache](../src/lib/storage/dataCache.ts);
 use that constant when changing code. Old increment numbers are not the current version.
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized

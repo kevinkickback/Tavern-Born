@@ -84,6 +84,20 @@ function choice(owner = 'Wizard', id = `choice:${owner}`): NormalizedCharacterCh
     source: { kind: 'class-feature-options', field: 'test' },
   }
 }
+function declaringClass(choices: NormalizedCharacterChoice[], overrides: Partial<Class5e> = {}) {
+  return makeClassFixture({
+    name: choices[0]?.owner.name ?? 'Wizard',
+    source: choices[0]?.owner.source ?? 'PHB',
+    normalizedRules: {
+      resources: [],
+      asiLevels: [],
+      ritualCasting: false,
+      choiceDiagnostics: [],
+      choices,
+    },
+    ...overrides,
+  })
+}
 function apply(character: Character, descriptor: NormalizedCharacterChoice, clear = false) {
   const result = applyClassChoiceSelectionWithGrantsCommand(
     character,
@@ -189,10 +203,11 @@ test('new complete choice IDs survive missing owner, earned restoration, save, E
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
   })
   character = apply(character, choice())
-  const id = observe(character, []).actions[0].id
+  const classes = [declaringClass([choice()], { classFeatureRefs: [earned()] })]
+  expect(observe(character, []).actions).toEqual([])
+  const id = observe(character, classes).actions[0].id
   configure(character, id)
   expectConfigured(character, [], id)
-  const classes = [makeClassFixture({ classFeatureRefs: [earned()] })]
   expectConfigured(character, classes, id)
   const refreshed = { ...beacon, entries: ['As a reaction, dismiss the beacon.'] }
   expect(
@@ -217,8 +232,8 @@ test('unresolved qualified choices never emit an opaque action before complete t
   character = apply(character, choice())
   character.features[0].description = 'As an action, use a saved label.'
   expect(observe(reopen(character), [], []).actions).toEqual([])
-  const id = observe(reopen(character), []).actions[0].id
-  const classes = [makeClassFixture({ classFeatureRefs: [earned()] })]
+  const classes = [declaringClass([choice()], { classFeatureRefs: [earned()] })]
+  const id = observe(reopen(character), classes).actions[0].id
   expect(observe(reopen(character), classes).actions).toMatchObject([{ id }])
   character.classChoiceSelections![0].selected[0].ref = undefined
   expect(observe(reopen(character), []).actions).toEqual([])
@@ -277,6 +292,13 @@ test.each([
     ...choice(),
     owner: { type: 'class' as const, name: 'Wizard', source: classSource },
     options: [{ entityType, name: 'Beacon', source: targetSource, ref }],
+  }
+  classes[0].normalizedRules = {
+    resources: [],
+    asiLevels: [],
+    ritualCasting: false,
+    choiceDiagnostics: [],
+    choices: [descriptor],
   }
   const [view] = resolveClassChoiceOptions(descriptor, choiceCatalogs)
   expect(view).toMatchObject({ availability: 'eligible', entries: beacon.entries })
@@ -364,14 +386,15 @@ test('independent choice owners survive removal and never bind to a competing ea
   })
   character = apply(apply(character, choice()), choice('Bard'))
   expect(character.features).toHaveLength(2)
-  const actions = observe(character, []).actions
+  const declaring = [declaringClass([choice()]), declaringClass([choice('Bard')])]
+  const actions = observe(character, declaring).actions
   expect(actions).toHaveLength(2)
   expect(new Set(actions.map((action) => action.id)).size).toBe(2)
   const bardId = actions[1].id
   character = apply(character, choice(), true)
   expect(character.features).toHaveLength(1)
-  expect(observe(character, []).actions).toMatchObject([{ id: bardId }])
-  const classes = [makeClassFixture({ classFeatureRefs: [earned()] })]
+  expect(observe(character, declaring).actions).toMatchObject([{ id: bardId }])
+  const classes = [makeClassFixture({ classFeatureRefs: [earned()] }), declaring[1]]
   expect(observe(character, classes).actions).toHaveLength(2)
   expect(observe(character, classes).actions.some((action) => action.id === bardId)).toBe(true)
 })
@@ -382,14 +405,15 @@ test('two choices granting the same owned target retain materialized/action IDs 
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
   })
   character = apply(apply(character, choice('Wizard', 'one')), choice('Wizard', 'two'))
+  const classes = [declaringClass([choice('Wizard', 'one'), choice('Wizard', 'two')])]
   const featureId = character.features[0].id
-  const actionId = observe(character, []).actions[0].id
+  const actionId = observe(character, classes).actions[0].id
   expect(character.features).toHaveLength(1)
   expect(character.provenance!.features.beacon).toHaveLength(2)
   character = apply(character, choice('Wizard', 'one'), true)
   expect(character.features).toMatchObject([{ id: featureId }])
   expect(character.provenance!.features.beacon).toHaveLength(1)
-  expect(observe(character, []).actions).toMatchObject([{ id: actionId }])
+  expect(observe(character, classes).actions).toMatchObject([{ id: actionId }])
   character = apply(character, choice('Wizard', 'two'), true)
   expect(character.features).toEqual([])
   expect(character.provenance!.features.beacon).toBeUndefined()
@@ -564,11 +588,40 @@ test('subclass choice eligibility honors encoded gain and rejects premature comm
   const before = structuredClone(character)
   const descriptor = schoolChoice('First School', '8', 3)[0]
   expect(descriptor.level).toBe(8)
-  expect(() => apply(character, descriptor)).toThrow(/current class level/)
+  expect(() => apply(character, descriptor)).toThrow(/not active|current class level/)
   expect(character).toEqual(before)
   expect(schoolChoice('First School', '', 0)).toEqual([])
   for (const gain of ['3', '']) {
     const available = schoolChoice('First School', gain)[0]
+    const classes = [
+      makeClassFixture({
+        classFeatureRefs: [],
+        subclasses: [
+          {
+            name: 'First School',
+            shortName: 'School',
+            source: 'PHB',
+            className: 'Wizard',
+            classSource: 'PHB',
+            normalizedRules: normalizeSubclassRules(
+              { name: 'Wizard', source: 'PHB' },
+              { name: 'First School', source: 'PHB' },
+              [schoolTraining(gain)],
+            ),
+            subclassFeatureRefs: [
+              schoolTraining(gain),
+              {
+                ...schoolTraining('3'),
+                ref: 'Beacon|Wizard||School||3',
+                name: 'Beacon',
+                feature: schoolBeacon,
+              },
+            ],
+          },
+        ],
+      }),
+    ]
+    const currentCatalogs = buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] })
     const views = resolveClassChoiceOptions(available, {
       ...catalogs,
       subclassFeatures: [schoolBeacon],
@@ -579,6 +632,7 @@ test('subclass choice eligibility honors encoded gain and rejects premature comm
       character.provenance!,
       available,
       views.map((view) => view.reference),
+      { classes, catalogs: currentCatalogs },
     )
     const saved = reopen({
       ...character,
@@ -608,6 +662,7 @@ test('subclass choice rules stay with the full selected owner through competitio
           [schoolTraining('3')],
         ),
         subclassFeatureRefs: [
+          schoolTraining('3'),
           {
             ref: 'Beacon|Wizard||School||3',
             name: 'Beacon',
@@ -633,6 +688,13 @@ test('subclass choice rules stay with the full selected owner through competitio
       createCharacterCalculationContext(character, { classesByKey: buildClassLookup(classes) }),
       {
         ...catalogs,
+        ...buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] }),
+        ...(subclassFeatures.length
+          ? {}
+          : {
+              subclassTargets: indexSubclassFeatureTargets([]),
+              subclassFeatureCandidates: new Map(),
+            }),
         subclassFeatures,
       },
     ).map((issue) => issue.id)
@@ -695,7 +757,7 @@ test('availability and Overview recover the complete cross-parent target without
       descriptor,
     ),
   )
-  const classes = [makeClassFixture({ classFeatureRefs: [] })]
+  const classes = [declaringClass([descriptor], { classFeatureRefs: [] })]
   const exact = { ...beacon, className: 'Bard', entries: ['As a reaction, answer a beacon.'] }
   const competing = makeGameDataFixture({ classes, classFeatures: [beacon] })
   const restored = makeGameDataFixture({ classes, classFeatures: [beacon, exact] })
@@ -756,6 +818,7 @@ test('normal source filtering retains a class-owned subclass-target action and i
   expect(observe(character, filtered, []).actions).toEqual(initial)
   const options = (classes: Class5e[]) => ({
     ...catalogs,
+    ...buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] }),
     subclassFeatures: classes.flatMap(
       (classData) => classData.subclasses?.flatMap(collectSubclassFeatures) ?? [],
     ),

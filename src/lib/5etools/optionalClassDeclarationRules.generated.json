@@ -1,0 +1,4461 @@
+{
+  "version": 1,
+  "relations": [
+    {
+      "owner": ["class", "artificer", "tce"],
+      "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce",
+      "level": 1,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce",
+          "uid": "Optional Rule: Firearm Proficiency|Artificer|TCE|1"
+        }
+      ],
+      "certificate": "01d67903721b1c07fda3a889cfb5327df8efd638239ce9a8ab8bb3cb40d0c6b5",
+      "parentMetadataDigest": "95d0e6ab6644842117c739266c81d15a2a7dc1ad8e69a318e124caee4bb68262",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "otherSources",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Optional Rule: Firearm Proficiency|Artificer|TCE|1"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce",
+          "body": {
+            "metadataDigest": "5909ba8533bdd103bc8d4ed51255b340fa30190f6f60b2afa14199b845227066",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "otherSources",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "6637d1a53f07392cb10562471459c5276e50bf02fcbf4f84d6508b0d61f3062b"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "barbarian", "phb"],
+      "target": "class-feature|instinctive pounce|barbarian|phb|7|tce",
+      "level": 7,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|instinctive pounce|barbarian|phb|7|tce",
+          "uid": "Instinctive Pounce|Barbarian||7|TCE"
+        }
+      ],
+      "certificate": "21cc90e03ac4d7d6ca124d513384b6d8f7bd65403b3a66e916c45924e23e9de9",
+      "parentMetadataDigest": "8f5ee8d3e6d7264f7ede942913d12657e0c2ea8322a73c3dfbd9a563022fd579",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Instinctive Pounce|Barbarian||7|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|instinctive pounce|barbarian|phb|7|tce",
+          "body": {
+            "metadataDigest": "f676c431fc9767003b3d9bf3dd14eb0744343afb15e6eacb1e48da87314046a6",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "2f53f7403b7df343b0d064f480c920f47d2c2e3206775b8b1ba7677bc2e18e95"
+                },
+                {
+                  "digest": "e6668866bebcb30cb8c06d57a0cfb9d82eef525682dd2d2ce0e2ffd9544c787c"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "barbarian", "phb"],
+      "target": "class-feature|primal knowledge|barbarian|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|primal knowledge|barbarian|phb|3|tce",
+          "uid": "Primal Knowledge|Barbarian||3|TCE"
+        }
+      ],
+      "certificate": "b5145b7a2dc9107378ea238538f2e2419ef916c2aad26c5c95da417ff0cf0c2a",
+      "parentMetadataDigest": "8f5ee8d3e6d7264f7ede942913d12657e0c2ea8322a73c3dfbd9a563022fd579",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Primal Knowledge|Barbarian||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|primal knowledge|barbarian|phb|3|tce",
+          "body": {
+            "metadataDigest": "9109447d7fd376a30e7b2dbd6dfd90cf22ab600244d362a30ac9ad435444cc22",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3e2c65c254588e9bea4605ad7cd9c05ea7363eeca7da4305c81e3699d2fba237"
+                },
+                {
+                  "digest": "23e831a6dd73299ead9a263377ddbeafc0a521038f3e4bfdf6223bab8bcf7fd5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "bard", "phb"],
+      "target": "class-feature|bardic versatility|bard|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|bardic versatility|bard|phb|4|tce",
+          "uid": "Bardic Versatility|Bard||4|TCE"
+        }
+      ],
+      "certificate": "2e57c4d8b0c7a9e0ce70fee5a106d34cc6c46581314cc0767208bac72b82a2d3",
+      "parentMetadataDigest": "f8928fb73edebbf860e2f8bd4d643b6b7a5113d8c9523db53658d9e45053e98e",
+      "parentFields": [
+        "additionalSpells",
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Bardic Versatility|Bard||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|bardic versatility|bard|phb|4|tce",
+          "body": {
+            "metadataDigest": "9501888ca23f6ed3da492c2852321d4df10b2e12cdaf07cbf71a52039d44bd6f",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "2980f076aed615b496c83d7b620caf28d76d69b7d8a5fb8fab3a9cb3e6a0b16d"
+                },
+                {
+                  "digest": "2a4fdf07d2e36d0b6a2c2c73cffae46c5674ef805c16f506a151c05af65acf78"
+                },
+                {
+                  "metadataDigest": "31c25a6d7f1c4943eae841639f25762980f5a159b5f80d8437910d60435474d8",
+                  "fields": ["items", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "bard", "phb"],
+      "target": "class-feature|magical inspiration|bard|phb|2|tce",
+      "level": 2,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|magical inspiration|bard|phb|2|tce",
+          "uid": "Magical Inspiration|Bard||2|TCE"
+        }
+      ],
+      "certificate": "d0e75704a50ed5c7db99362a2398ff88b6453412a6172af40e96330775bb58d2",
+      "parentMetadataDigest": "f8928fb73edebbf860e2f8bd4d643b6b7a5113d8c9523db53658d9e45053e98e",
+      "parentFields": [
+        "additionalSpells",
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Magical Inspiration|Bard||2|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|magical inspiration|bard|phb|2|tce",
+          "body": {
+            "metadataDigest": "0fe983903fd1d3864193328be3d49da4e8be2af9f0121c145ebf8dc52edb80e1",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "539d4052b5194c4f375876cb149b1a7f35a8c0faeb88d4680e03deeeee967ff7"
+                },
+                {
+                  "digest": "62af55d0d715d02cab8eb76ef8c20a74c0dc214a1f7efc5c3b32442551bb968a"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "cleric", "phb"],
+      "target": "class-feature|cantrip versatility|cleric|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip versatility|cleric|phb|4|tce",
+          "uid": "Cantrip Versatility|Cleric||4|TCE"
+        }
+      ],
+      "certificate": "52c605117570b8c48469eddcfd3603d78ea28d4f1a41718f7abe8dfff5495174",
+      "parentMetadataDigest": "6cbe4db29dce5a9473264197b8ef9c0ad84048b79425e1bade4f83b0700d76d7",
+      "parentFields": [
+        "basicRules",
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Cantrip Versatility|Cleric||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip versatility|cleric|phb|4|tce",
+          "body": {
+            "metadataDigest": "4d8186fc76f1af93c23292e911e62b0446b9e177b4b618e606890c486fa657a1",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3ed62bfb2d765c94dd0048ab2c6176f791fe2708fa93f8ce96a402373ab296e0"
+                },
+                {
+                  "digest": "1c295c78548f1401664608cd6b2ce34e1ba818a41e1cf4021dca00e47d52905f"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "cleric", "phb"],
+      "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce",
+      "level": 2,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce",
+          "uid": "Channel Divinity: Harness Divine Power|Cleric||2|TCE"
+        }
+      ],
+      "certificate": "4d3f044315145cf7702a5d45f79da29da90ac837b6b0ef079f53d81d1c2b6182",
+      "parentMetadataDigest": "6cbe4db29dce5a9473264197b8ef9c0ad84048b79425e1bade4f83b0700d76d7",
+      "parentFields": [
+        "basicRules",
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Channel Divinity: Harness Divine Power|Cleric||2|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce",
+          "body": {
+            "metadataDigest": "77948973d1d16c8a61494b397a2bf4968b7de56f5a264da82966107f956a83a8",
+            "fields": [
+              "className",
+              "classSource",
+              "consumes",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "0162d98d7d023996d4f1aada5a54bf06278f4ecf0dc5dc40b631c01a1d68567e"
+                },
+                {
+                  "digest": "78744e9a60d6d6d4bdb84bade5ae3d3c13d9c0dfee104992b090a943e422f8c2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "druid", "phb"],
+      "target": "class-feature|cantrip versatility|druid|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip versatility|druid|phb|4|tce",
+          "uid": "Cantrip Versatility|Druid||4|TCE"
+        }
+      ],
+      "certificate": "167adf46edf0bb59f7fa197d1d25a55cd1c9b1e7ad732b33f3acda041f228f63",
+      "parentMetadataDigest": "31d79d5f724d1f382107760fada4f5da3b2f7a77cf64d3d0cbaeae223528594d",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Cantrip Versatility|Druid||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip versatility|druid|phb|4|tce",
+          "body": {
+            "metadataDigest": "6e32fa5bd8e715913fa7f63954a01559232ed356329f4195dbbef625d1ea49ed",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "9fc5031942fcb45a4aa7719b01aebbd779c15d48df9969654e2d6e2688776b22"
+                },
+                {
+                  "digest": "f669384351630f0fd979d211c30999867c727c42e045c7fdb4edd5f9b88a5e7d"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "druid", "phb"],
+      "target": "class-feature|wild companion|druid|phb|2|tce",
+      "level": 2,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|wild companion|druid|phb|2|tce",
+          "uid": "Wild Companion|Druid||2|TCE"
+        }
+      ],
+      "certificate": "c9d5b9154a68bacc3fd52884e9785c31af7f4cee04b50cc491d0ad752f9714df",
+      "parentMetadataDigest": "31d79d5f724d1f382107760fada4f5da3b2f7a77cf64d3d0cbaeae223528594d",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Wild Companion|Druid||2|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|wild companion|druid|phb|2|tce",
+          "body": {
+            "metadataDigest": "0aa5a3f18f431e78752cc89c5d46d00bc2e9097656ec33bea2e3b55d822293f9",
+            "fields": [
+              "className",
+              "classSource",
+              "consumes",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "bb8c7bf3948010d3b8c84799a5f1228d63aa9a18e4f270c865c9cdd63bc64513"
+                },
+                {
+                  "digest": "3a6c5068f640474f8c754cf6dafc4ef5ac78557a812b88c890a1f5fdd0e0aa81"
+                },
+                {
+                  "digest": "676ca7c765d5c82f032602f538b4257f4e532cc299d0f7ac60ad1d4075d4dece"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "fighter", "phb"],
+      "target": "class-feature|martial versatility|fighter|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|fighter|phb|4|tce",
+          "uid": "Martial Versatility|Fighter||4|TCE"
+        }
+      ],
+      "certificate": "7e366becb0ba1b33e4006c8b756ad2b28fc8da1953e444a7921fb3c9683ec8ee",
+      "parentMetadataDigest": "ebf3b987bb4fe311e924a79d74b7bd74d0d673a9f976920f3aedbe35436ebc1c",
+      "parentFields": [
+        "basicRules",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Martial Versatility|Fighter||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|fighter|phb|4|tce",
+          "body": {
+            "metadataDigest": "4c7a0da664cefd302718097d233126f8eab510a1e6abb7ef9e86d91d768f9abd",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a1f52ada19989f954ab80819b723a70444d4b7c161e2e6bcc6f638f640adaae8"
+                },
+                {
+                  "digest": "342620fb93db79df25efd60635e481ff0b01857e1c8ff700fbd4ab0889410688"
+                },
+                {
+                  "metadataDigest": "c62630649139b31f70e6ccd08dc358a57addd2f6ed76a5824d2a8c80fd62c4ff",
+                  "fields": ["items", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|dedicated weapon|monk|phb|2|tce",
+      "level": 2,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|dedicated weapon|monk|phb|2|tce",
+          "uid": "Dedicated Weapon|Monk||2|TCE"
+        }
+      ],
+      "certificate": "af4f119a0ccc56f71194e1430b5ce75e5657da9cbe2f340dff0a259f4b21c572",
+      "parentMetadataDigest": "315fd54f7afd943905ae4ee4d30b94c0a4a57cad6a427dad5d586e5680c601df",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Dedicated Weapon|Monk||2|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|dedicated weapon|monk|phb|2|tce",
+          "body": {
+            "metadataDigest": "803a40857d2f2576e41f393e23f239c140e1ca1c65336754891b75de7d074811",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "ae26423a238b9574eeabf66999ed86214a08445a62ba3b28469267ad9f487c2d"
+                },
+                {
+                  "digest": "caf7ffd34bce901e4479044f88231ecece1bb3bb2fd28e7629cc57d58cbfdac5"
+                },
+                {
+                  "digest": "804d2785ad7e0042b6082b668cd49762afd0481f306eaabd9a98b58a856c076e"
+                },
+                {
+                  "metadataDigest": "dcedae8f71874f9af4f36e9d6526dda147158983d6132cd83899ca9318a1ab4d",
+                  "fields": ["items", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|focused aim|monk|phb|5|tce",
+      "level": 5,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|focused aim|monk|phb|5|tce",
+          "uid": "Focused Aim|Monk||5|TCE"
+        }
+      ],
+      "certificate": "c72ab0572c22fbfd96ca67fcdce66f1ed370bf2a43e5d011e58d01f0258055b3",
+      "parentMetadataDigest": "315fd54f7afd943905ae4ee4d30b94c0a4a57cad6a427dad5d586e5680c601df",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Focused Aim|Monk||5|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|focused aim|monk|phb|5|tce",
+          "body": {
+            "metadataDigest": "1138ce139394a50049faf13301596c982949c0c1d413e1b3ca9ee188df326f03",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "94b96083266f63213efafa09415bb779285ca083ddd2c7ab1e28c9532b89cec4"
+                },
+                {
+                  "digest": "983ae25ed36c241b504df9e30280fbac19d139352de7ea52b6425d7d2f8111a9"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|ki-fueled attack|monk|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|ki-fueled attack|monk|phb|3|tce",
+          "uid": "Ki-Fueled Attack|Monk||3|TCE"
+        }
+      ],
+      "certificate": "839b18a7bec3cb15dbe2885d0090f7a50a537b0e22b96b1d8401a4122f60ed4b",
+      "parentMetadataDigest": "315fd54f7afd943905ae4ee4d30b94c0a4a57cad6a427dad5d586e5680c601df",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Ki-Fueled Attack|Monk||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|ki-fueled attack|monk|phb|3|tce",
+          "body": {
+            "metadataDigest": "7bd1f8e3076181d7c3d7b42499e61c5ae34ba84b97f7e7e2e823a3118e8b24bd",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "8833e1c2aa35df6b25b39227f34e55ca8981954938c2abde646b13242653a18b"
+                },
+                {
+                  "digest": "deebca1eba594703384370ea3364a849016e5e9b3ac719ebbc4a864bbb4c739a"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|quickened healing|monk|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|quickened healing|monk|phb|4|tce",
+          "uid": "Quickened Healing|Monk||4|TCE"
+        }
+      ],
+      "certificate": "88cb73a0f8d9a97f5cbd088e350eaad686d546ec9225c7344bd358ac9d879fa1",
+      "parentMetadataDigest": "315fd54f7afd943905ae4ee4d30b94c0a4a57cad6a427dad5d586e5680c601df",
+      "parentFields": [
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Quickened Healing|Monk||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|quickened healing|monk|phb|4|tce",
+          "body": {
+            "metadataDigest": "75e22a1f3c9021784ee327cac5f0e5d458792b121d135889c0bf5e35375e5ea8",
+            "fields": [
+              "className",
+              "classSource",
+              "consumes",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "aab7f8831c03417c776af69a58411b568c4258ccc7fa0c9d16e77b15a1269f34"
+                },
+                {
+                  "digest": "e70fa338b01d82b443180c48cfccc6c4fbce1590a2c8839735e0b518892f4bbb"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "paladin", "phb"],
+      "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|sacred oath|paladin|phb|3|phb",
+          "uid": "Sacred Oath|Paladin||3"
+        },
+        {
+          "kind": "classFeature",
+          "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce",
+          "uid": "Channel Divinity: Harness Divine Power|Paladin||3|TCE"
+        }
+      ],
+      "certificate": "66d36d3000d2a3a695ed5e73df1905bccbf9d6f9298aa3677f67237bfbee062c",
+      "parentMetadataDigest": "782621782f6949631c9816934ff3eb104e8f670dce0e2d5f458245194197a864",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": [
+        {
+          "classFeature": "Sacred Oath|Paladin||3",
+          "gainSubclassFeature": true,
+          "gainSubclassFeatureHasContent": true
+        }
+      ],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|sacred oath|paladin|phb|3|phb",
+          "body": {
+            "metadataDigest": "fa2a5207b5707c417cd3b50323c3b1bae8f9be48bb62a6e2ba26df5f179c7d5a",
+            "fields": ["className", "classSource", "level", "name", "page", "source", "srd"],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "c6f3783aa315217da1d7aab88db63c0835bfb66fe7a1a16f27a6e2733b435eba"
+                },
+                {
+                  "digest": "8a2561ce376a0c59054af0c6214796c0389d5ea5d2a30b05a0ead5c4b7dc8e53"
+                },
+                {
+                  "metadataDigest": "ba80991b412125c1f5647fdacf95fc2572a3118eba440e1ea8a3507ced73cbb7",
+                  "fields": ["name", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "digest": "3dce701a51c66f9bba95db0a0c63bce1b33476cb3eac929524e1f77b1c0c74a8"
+                      },
+                      {
+                        "digest": "709700131a2e8ce86ff4af3a5fe7883553e0b35c5467caa5aeac20eb6cbcd491"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "metadataDigest": "8b30ea66e8d05b739a4bf0315daf12a236ae34ab059c2f3c24be075885ef0d84",
+                  "fields": ["classFeature", "type"],
+                  "reference": "class-feature|channel divinity|paladin|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "7cba262dd9838463bacea7f4771e48e2b118a76e2f54378c53c748d8a7670908",
+                  "fields": ["classFeature", "type"],
+                  "reference": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "0f10a81abebf54b4138aa9caf5270134a746ca4fc43f1ccd695b15dad05689db",
+                  "fields": ["name", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "digest": "02ccc18aa6581e7121ddf2ebe4e804152e06356426f35191e3ba71ed1a3e0cae"
+                      },
+                      {
+                        "digest": "3dfe5c7682f262cc26133bff9fa3a4dafc29910a4d09c48cc7a48af3d7a28ad3"
+                      },
+                      {
+                        "digest": "8cd9750b9308c8130fbfc111c0fa1d503791057625592502909a6146158203ba"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "classFeature",
+          "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce",
+          "body": {
+            "metadataDigest": "ab3102fba32e3d7ce8b07d82569d9953c8c463d7ae9984273a34f6ab49f291fb",
+            "fields": [
+              "className",
+              "classSource",
+              "consumes",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "7178ce5fbde1ed016b3d150cff78411922660b1f1d98bc5192f5cfb0df178421"
+                },
+                {
+                  "digest": "c9f936a8f4795657825a15754c59277e91dce346e6820628508dd80318daceaa"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "paladin", "phb"],
+      "target": "class-feature|martial versatility|paladin|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|paladin|phb|4|tce",
+          "uid": "Martial Versatility|Paladin||4|TCE"
+        }
+      ],
+      "certificate": "65bdb5586ccbddf06b018cccf8ab9da3f59bdb28e58fcbdfaca74bb5495a519c",
+      "parentMetadataDigest": "782621782f6949631c9816934ff3eb104e8f670dce0e2d5f458245194197a864",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "preparedSpells",
+        "preparedSpellsChange",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Martial Versatility|Paladin||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|paladin|phb|4|tce",
+          "body": {
+            "metadataDigest": "013a3e83896c6847e68501af47bc98494c13be93c8b15f71005e3f79327967e4",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "2033c4398329369fcfcf70739d6f91c775a82fd176c26df8781fa1bc140eabf8"
+                },
+                {
+                  "digest": "77d680797d8927225d346f0b4dd23c90def00c1f3d7242ff57600625188eb848"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+      "level": 10,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+          "uid": "Deft Explorer Improvement|Ranger||10|TCE"
+        }
+      ],
+      "certificate": "3563d3678fc07ee14134f5959ad43fdbedb7da54c6e811d7957bf0c63af5d173",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Deft Explorer Improvement|Ranger||10|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+          "body": {
+            "metadataDigest": "e3f34a6700bb8d449740b20c703d716282e151fb877d8e023381c920a74ca7ec",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "01d64216fd566adb30f446b4127c18821cc25be4fadef733127746908e1cbe81"
+                },
+                {
+                  "metadataDigest": "377c49e46811b89308740c4332e8fa5b6cc5d2687e410845d27f0f0e33205d69",
+                  "fields": ["name", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "digest": "6a7e67631e9c94be4ea575aea967a03396a59aee1c7c5ffb10793c5fd9056273"
+                      },
+                      {
+                        "digest": "80f0cd4bb3c1cb66f16b509e19d7271602851f06685fc23caa69432691a48b86"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+      "level": 6,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+          "uid": "Deft Explorer Improvement|Ranger||6|TCE"
+        }
+      ],
+      "certificate": "c50dd4a0774b658c91c9c0c19fea8f89237bc6eafc7881e65c1b2e71b3f82679",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Deft Explorer Improvement|Ranger||6|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+          "body": {
+            "metadataDigest": "03d00ecea739c0d5e46d2320fedff774de9b9931ee79f427be544e2f81c24775",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "1582b9595476840bc42bb1b54b771cfbee14e66c7b7cdbbf7b88695b02a0d7ca"
+                },
+                {
+                  "metadataDigest": "3a4f27e132a3e7f0528d1028e1aae698c28d529d0c7b21e2ae91ca54efec299e",
+                  "fields": ["name", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "digest": "a05c3f88096f2fced09f2b4fb5f6aa1577a0423fac99ad10680b8eb5d60d1a6a"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|deft explorer|ranger|phb|1|tce",
+      "level": 1,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer|ranger|phb|1|tce",
+          "uid": "Deft Explorer|Ranger||1|TCE"
+        }
+      ],
+      "certificate": "41114810fc53f505cba02edcd9375119f7f338792df53685e36a50d14e3050ba",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Deft Explorer|Ranger||1|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|deft explorer|ranger|phb|1|tce",
+          "body": {
+            "metadataDigest": "a994bacfcad941545bfb4097c372b2e8d5e92090f04aa4fe41ba56b5f0dee627",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "8b35348b3cc0ebf2b8ba1fd7ad5a73c0b654302000962a253c6fe9d7db02c625"
+                },
+                {
+                  "digest": "62b3cb38f65e5ac0b9df767455eb828d890b98973e3e135ef2c055a3c9bf9938"
+                },
+                {
+                  "metadataDigest": "4b9bdb7ccfe4b864e41b5568e1352add0380e5351672ff7b0cded27730fca4d1",
+                  "fields": ["name", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "digest": "b96f715e7f9203dafcc0a148188fb830fe8fe14efab31c167e1b649cd3d57742"
+                      },
+                      {
+                        "digest": "8063fb85ead2f95f65246a8a31486a64d676041490178679e8afce192d20ed40"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|favored foe|ranger|phb|1|tce",
+      "level": 1,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|favored foe|ranger|phb|1|tce",
+          "uid": "Favored Foe|Ranger||1|TCE"
+        }
+      ],
+      "certificate": "ff5fad4008b8c7bfbaf13ce85fb19e04b0d003a2e69a120a5c316226ced9a5a5",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Favored Foe|Ranger||1|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|favored foe|ranger|phb|1|tce",
+          "body": {
+            "metadataDigest": "0f2314cd0e4a70bd01c502a5d0743c889e4f78015bfa573c7591442e2da61bf2",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "6ee0bd48630900163ab7de39ec35fd79f9232ee5d847831f4add630b34cf318b"
+                },
+                {
+                  "digest": "9328a6a529f4604c4aa0f77ad9711d85159a152fa1b0bb05bd42df902d47e8e5"
+                },
+                {
+                  "digest": "d9e1d27522bcbaef36fedb49a6aacc5b8691c0e3b4f63c9fba6967ad117f3290"
+                },
+                {
+                  "digest": "699c98897827d8836ade2a8d1ddc5ad3cd935110c44678daa32480948e3f538d"
+                },
+                {
+                  "digest": "2415056a04f6546d96ee734a4c50636818434ba990ad54779b3f04981db522b6"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|martial versatility|ranger|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|ranger|phb|4|tce",
+          "uid": "Martial Versatility|Ranger||4|TCE"
+        }
+      ],
+      "certificate": "0338bf2254198a7060ceb151a32ef8beccff90e735ee6a4e12e95e257ce107e0",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Martial Versatility|Ranger||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|martial versatility|ranger|phb|4|tce",
+          "body": {
+            "metadataDigest": "abfb7c91fc5b8434b768b57753b5716083b9cb51a21b2cca3c80544588ee4b30",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "9a1da02a4e7533ab494193cb7dadb55ba82dc111ceb7f8ea126b2ff2cf88211a"
+                },
+                {
+                  "digest": "4f36d78e78b7b078e07897794ea9cbbb53c8ae0d5fb1785c57db6bda05b8679e"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|nature's veil|ranger|phb|10|tce",
+      "level": 10,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|nature's veil|ranger|phb|10|tce",
+          "uid": "Nature's Veil|Ranger||10|TCE"
+        }
+      ],
+      "certificate": "e3daa9463d6c93e406b330e39a709cd411d9a2343cfeb80ecc16ccd70b7d9ad2",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Nature's Veil|Ranger||10|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|nature's veil|ranger|phb|10|tce",
+          "body": {
+            "metadataDigest": "8e37d874a5c890cb2ee061c3aac43c1258efaffa78d7de2af8761b06d1b8ac4f",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "661d2b1658070ac91f59faad99c9d8ca6f15edd6e1019bb5fc6f673d493de8f3"
+                },
+                {
+                  "digest": "7471b8b736d00efeee87c556ea164cb5697b5e0cb1b81d04ed748419ed03e435"
+                },
+                {
+                  "digest": "60bcdef00d1c3b43a0a9a6bf860d7279d05e7dc76cb49ee37c50198828b1cfbd"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|primal awareness|ranger|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|primal awareness|ranger|phb|3|tce",
+          "uid": "Primal Awareness|Ranger||3|TCE"
+        }
+      ],
+      "certificate": "7d541e28c48a39f95323802ff65a320c6976b71ccd89adceb839456365955e2c",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Primal Awareness|Ranger||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|primal awareness|ranger|phb|3|tce",
+          "body": {
+            "metadataDigest": "a35744f78c998e0b42a5d5c7f5652f26963f9f57113a5db6622c709ddefbca26",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "0f4fef54332e6a30c2a0036266259a60ad1a4ac69b785d7d813529424585c667"
+                },
+                {
+                  "digest": "307c264efbfe461a10e485e36564cb91675c9f4c556b3989b01ec1c5bb67a73c"
+                },
+                {
+                  "metadataDigest": "cd63b7f9d52e2acc4f9448e23c66e8a415c7e9146d1b8a79e9d8608c3445b402",
+                  "fields": ["caption", "colLabels", "colStyles", "rows", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "digest": "d1b82119ead3a63798f1287fc1bf42aaf81bac33f669a80888810a5e9f12b6b0"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+      "level": 2,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+          "uid": "Spellcasting Focus|Ranger||2|TCE"
+        }
+      ],
+      "certificate": "fdaad90dc310819ffdf052ef6f1442fc3fd4a42b6343f1bbba50bc607179dfc1",
+      "parentMetadataDigest": "f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec",
+      "parentFields": [
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Spellcasting Focus|Ranger||2|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+          "body": {
+            "metadataDigest": "acf5a2346e13e881d859353f3e4e0b4879cd6855a0117d15ebaf334a915f384e",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "f70800b0bfefeba830bc4558e4816d6db495f4375339321c16d9cf3f8e2a79e7"
+                },
+                {
+                  "digest": "6a09b7395f36d99bf4c52cadbceaabf8ffc36960fdc71161929adcfa70cae7b7"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "rogue", "phb"],
+      "target": "class-feature|steady aim|rogue|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|steady aim|rogue|phb|3|tce",
+          "uid": "Steady Aim|Rogue||3|TCE"
+        }
+      ],
+      "certificate": "782b652e2369bd36d9c26eb2e2df835309de396a0661e00dfa4a2dcc07e17ea2",
+      "parentMetadataDigest": "efd09f1eed3cc3e4d09191f73ecc66506d11e928b4e8f75bce249c9670a0a07a",
+      "parentFields": [
+        "basicRules",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Steady Aim|Rogue||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|steady aim|rogue|phb|3|tce",
+          "body": {
+            "metadataDigest": "c63b638ad3f82921ce846257cc1c2e24d93caba5a2e5efcd4996a9a2d71547ae",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "b718de2bc3370d57c972a5f58a7a7ac71dfdf75ebcc7edd1e44d55d4229ce433"
+                },
+                {
+                  "digest": "99f2eb8c9e77c2a16ff84dd576d681ddcbbb89ce007d0f60d920109e305738f7"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|magical guidance|sorcerer|phb|5|tce",
+      "level": 5,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|magical guidance|sorcerer|phb|5|tce",
+          "uid": "Magical Guidance|Sorcerer||5|TCE"
+        }
+      ],
+      "certificate": "519be5e9f990de650dd6369c1a633243f43ec7addf91f92e38157faaa81ed364",
+      "parentMetadataDigest": "b28c1d181cf499b35fae03396301654b62f6d972324c8bc908dde8c36967e0a2",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Magical Guidance|Sorcerer||5|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|magical guidance|sorcerer|phb|5|tce",
+          "body": {
+            "metadataDigest": "ca073d87500050bcfdda39583f72fa312bbc90702ad660f8607a14e1415a1465",
+            "fields": [
+              "className",
+              "classSource",
+              "consumes",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "9f5a3170cf2616c32c58824baa247ff3e6d0689735ef12b120749b8164900ce0"
+                },
+                {
+                  "digest": "96facd57deb89897c85c55d2cac21a3248e45038d454a160a39201eff5f2b645"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|metamagic options|sorcerer|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|metamagic options|sorcerer|phb|3|tce",
+          "uid": "Metamagic Options|Sorcerer||3|TCE"
+        }
+      ],
+      "certificate": "6b4bf7c476000a192b8893fb8a7ed2e732bfa4364eba09cb3c42acd6b6d6578a",
+      "parentMetadataDigest": "b28c1d181cf499b35fae03396301654b62f6d972324c8bc908dde8c36967e0a2",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Metamagic Options|Sorcerer||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|metamagic options|sorcerer|phb|3|tce",
+          "body": {
+            "metadataDigest": "d88b10ed1b2890c2ee943830ea939ecfde54f4b56b61fd71468f79eb293901f4",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "9799f899c4378548d2602375a3e579b6f9b2bb80aa206d3dfe2376e8beb89e77"
+                },
+                {
+                  "digest": "a76e76696950f6ada9753453d61aab20ca6645b8cef4b25eb63cd44f6eb43e01"
+                },
+                {
+                  "metadataDigest": "76b71ef71c3a0f4507510830a7b002c0eb39ca342907a314122b0f6c87476f96",
+                  "fields": ["type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "96b920b3a5fb5f24e3a7e5a18bcbc8a0f0e99590d02fa72b7581974907111f00",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "667b761c95f7b44ea00c87c8d45ce403fa3f6bfda92de80a2d526e552274f58f",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|metamagic|sorcerer|phb|3|phb",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|metamagic|sorcerer|phb|3|phb",
+          "uid": "Metamagic|Sorcerer||3"
+        }
+      ],
+      "certificate": "483768b96901e486d062649cbc9a62d8ce556440827ad5d3e0957bf4e8eb9129",
+      "parentMetadataDigest": "b28c1d181cf499b35fae03396301654b62f6d972324c8bc908dde8c36967e0a2",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Metamagic|Sorcerer||3"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|metamagic|sorcerer|phb|3|phb",
+          "body": {
+            "metadataDigest": "bf0b64b9bd4a95a4f1ee69193485d56afee08602599afcc369a9effe08602c8b",
+            "fields": ["className", "classSource", "level", "name", "page", "source", "srd"],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "098ee5f5bd1aa5f667a97a6f32460e0dd0f6db69e459f683ecf84877a7edfa95"
+                },
+                {
+                  "digest": "79b23ba0fbe9e6a2bbb19df09635c2f31541522af32fba7899790475daa7de14"
+                },
+                {
+                  "metadataDigest": "d243dfdeafe08b04c49ca4ee5cf0224ad25634f2cacceba8e4c70be060446969",
+                  "fields": ["count", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "5faafd573dd9ab1a8a6ff0eedfbfdfe01fa8af982b4fc3c82970562d814929cd",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "2abf6ee8895ca6e310e3c8a5248ae78ba99485c024397c1f404de38fb83b0f04",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "76f0bb463a20e1f0a1f330ddc52e13d46f5a0a20ccba613863864b74e9c96d2c",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "0f5243fdf714361f65eeb6114fc687e4d17fa7306a43f00159fe3a708d5aefaf",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "108d5a886360d0e26468fa0aff119f37731dac86ab402a503e74199d0b926fa4",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "a2d8faa596ada6cb647862a5acfbcc6a52e050f110a894c153670045b079d069",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "7ad6ae075b8a110dec9ffdf69848dec78f763ac8d0c7f72e57e514c7cc8ea36b",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "ff739ad82c0acb9f0a1e26f01150e5bb8b79e95cca216c785cbb764b9d64a172",
+                        "fields": ["optionalfeature", "preserve", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce",
+          "uid": "Sorcerous Versatility|Sorcerer||4|TCE"
+        }
+      ],
+      "certificate": "30809ed4d337637003ad0e838f4feeddad579c54104525c64f68e2ba06cd262a",
+      "parentMetadataDigest": "b28c1d181cf499b35fae03396301654b62f6d972324c8bc908dde8c36967e0a2",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Sorcerous Versatility|Sorcerer||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce",
+          "body": {
+            "metadataDigest": "fea268b790951c5abbcc138d8c039cf2850ee27871120db4780fdd692b2cca47",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "cc3f3059fec6ec98ab433548d198078369878129920f5aca7945b7c60fcecb99"
+                },
+                {
+                  "digest": "971a15d76b06e00d5bf59cdd08f91c88293367a60c66153a6759979f659eca50"
+                },
+                {
+                  "metadataDigest": "d4ba242a9df0cc80a1cb4250f9dbc5e89931650c29ce076147c2ea66ad804600",
+                  "fields": ["items", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "warlock", "phb"],
+      "target": "class-feature|eldritch versatility|warlock|phb|4|tce",
+      "level": 4,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|eldritch versatility|warlock|phb|4|tce",
+          "uid": "Eldritch Versatility|Warlock||4|TCE"
+        }
+      ],
+      "certificate": "bb59a7643dc10893e33e1c45c74e0fc79825ae5a1bfee53cbf4e337ba572c011",
+      "parentMetadataDigest": "52818adb975946403dac6d676dff9ab4ffa47d8c5a64562d78bb43c6536ae169",
+      "parentFields": [
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgression",
+        "spellsKnownProgressionFixedByLevel",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Eldritch Versatility|Warlock||4|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|eldritch versatility|warlock|phb|4|tce",
+          "body": {
+            "metadataDigest": "4e5cc1ca0017e4d023ae82c29ce13a3569807ae687c573624d1b6b9248098a01",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "8e9f719556909a33f1ba776ae339c2f99902c54b1637639d309680dfc4e182a9"
+                },
+                {
+                  "digest": "44da3bdf413327e7855c8ac5e48b1257f819568eee17f7f99528470d2f300de9"
+                },
+                {
+                  "metadataDigest": "e64b2bc255cfcb2660b6ce6fbee9c542f669163708039e9f6c99b9315c65d25f",
+                  "fields": ["items", "type"],
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "digest": "75dabf544446c164daf198b38888432bb754887c5a770dac0adbc585d00395ee"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["class", "wizard", "phb"],
+      "target": "class-feature|cantrip formulas|wizard|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip formulas|wizard|phb|3|tce",
+          "uid": "Cantrip Formulas|Wizard||3|TCE"
+        }
+      ],
+      "certificate": "4149a25f3e27afdc6191e3f0355c43fc0f771dfcc7cc42da4699565e6eca065c",
+      "parentMetadataDigest": "2d7d0ff7b2692fae629a66c1ece848db0a103bed46b5201bb0dc8a9dd9414867",
+      "parentFields": [
+        "basicRules",
+        "cantripProgression",
+        "casterProgression",
+        "classTableGroups",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "hd",
+        "multiclassing",
+        "name",
+        "page",
+        "preparedSpells",
+        "proficiency",
+        "reprintedAs",
+        "source",
+        "spellcastingAbility",
+        "spellsKnownProgressionFixed",
+        "spellsKnownProgressionFixedAllowLowerLevel",
+        "srd",
+        "startingEquipment",
+        "startingProficiencies",
+        "subclassTitle"
+      ],
+      "rootValues": ["Cantrip Formulas|Wizard||3|TCE"],
+      "features": [
+        {
+          "kind": "classFeature",
+          "target": "class-feature|cantrip formulas|wizard|phb|3|tce",
+          "body": {
+            "metadataDigest": "c67770e2fe99fe192dfe8fe5710abebdebb4492fb2c63376a90564f78712b46a",
+            "fields": [
+              "className",
+              "classSource",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "d1079a0c01acbf5a76559597d138d9dae362c353c9b7c277ca3f648adcdb3885"
+                },
+                {
+                  "digest": "a833605265e848ba2a598b8fcf046522d1d7b5f1cd1c78087863f656dd4cc070"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "ambition domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce",
+          "uid": "Blessed Strikes|Cleric||Ambition (PSA)|PSA|8|TCE"
+        }
+      ],
+      "certificate": "975ee56bb772ea8be81bc4ebfe12b8ce76ff38e896b504050747c43cfcdb629c",
+      "parentMetadataDigest": "10b820e074bbb29050e4dbdfa21dc3ad7ed90d2721ec56732bf145b3b960ce3e",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Ambition (PSA)|PSA|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce",
+          "body": {
+            "metadataDigest": "346d8817a30c91eec59171a891aa4cec92125a9d9bc19c11e61425cef4c736bf",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "arcana domain", "scag"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce",
+          "uid": "Blessed Strikes|Cleric||Arcana|SCAG|8|TCE"
+        }
+      ],
+      "certificate": "6652b6014b69ab77c24c4360ec0f2bfae6a852c9db97b7f6249fb76dbe4e35ab",
+      "parentMetadataDigest": "a5620a58d994b64847f6c8e78cd721dfb865602a3459e405abf05a01875337ca",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Arcana|SCAG|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce",
+          "body": {
+            "metadataDigest": "7c67a3d1d7f41fb31175ca0fa85c05b9c7d5d20bfa3e9e87748d6e69f5de1d75",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "death domain", "dmg"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce",
+          "uid": "Blessed Strikes|Cleric||Death|DMG|8|TCE"
+        }
+      ],
+      "certificate": "59249f510b6fd42809d2dd329670cf5260f55b2f09a9b1b16fea495c09ef37bf",
+      "parentMetadataDigest": "3cc3dbbb7204d38f6e0a8db1196326505953a249dea5917264c1d4330fbf7308",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Death|DMG|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce",
+          "body": {
+            "metadataDigest": "cc12aefc45cc35d9a59a2ae974cb71b3f1c1850f0e87cb468b2c69e7b6289214",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "forge domain", "xge"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce",
+          "uid": "Blessed Strikes|Cleric||Forge|XGE|8|TCE"
+        }
+      ],
+      "certificate": "380eabee644f0bdbe9c224a6e1b66a4882198267a3fa31bda1d8940d2ccec94b",
+      "parentMetadataDigest": "49c6cb25b252aaf880cced3cbc01da6e15262874b7892f6649d1cb76bfa082a1",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Forge|XGE|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce",
+          "body": {
+            "metadataDigest": "f06762817653ebcfcb4f148c2291cff42082b3ba0d1094c73fff35c059802f3b",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "grave domain", "xge"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce",
+          "uid": "Blessed Strikes|Cleric||Grave|XGE|8|TCE"
+        }
+      ],
+      "certificate": "deeeba897691686268bb1354179da08ad093287544688f1469daa1ae3c45bad4",
+      "parentMetadataDigest": "16c5b4a6fd9c38215f0c3684b321b99c2ee5839571a241ed174b7a65cdf9b817",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Grave|XGE|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce",
+          "body": {
+            "metadataDigest": "c02103f0654a83e3c6bbf54ab7b630ebfc44bc0e92a6bf1c7f1e9e3e4f607148",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "knowledge domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Knowledge||8|TCE"
+        }
+      ],
+      "certificate": "1c15e40fa453f4bcf883e1ff4c320e8036e5f1df38e48be8c703d86af76bbc9a",
+      "parentMetadataDigest": "8924567153f49ea39b2abce41efadd9f927a3a14ee40f0c991cc433d170e1601",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "isReprinted",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Knowledge||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+          "body": {
+            "metadataDigest": "b2ea44fd0e98a64375e7173cf71434c49ba09d1f5f921743656cfb16814fdba5",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "knowledge domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Knowledge||8|TCE"
+        }
+      ],
+      "certificate": "ca5e9c775c10b32d729fe4ef77e70fc7ab954461172727a855d444035b8bbe62",
+      "parentMetadataDigest": "92a77061e3c28084ff14d0edcf7c0376fba184d95c292b07b67047a1bec133a4",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Knowledge||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+          "body": {
+            "metadataDigest": "b2ea44fd0e98a64375e7173cf71434c49ba09d1f5f921743656cfb16814fdba5",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "life domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Life||8|TCE"
+        }
+      ],
+      "certificate": "95107cdb1248cbae4872b9ffbab0f9f25ecf08d8557a5cf9e60a8f9b13bccb67",
+      "parentMetadataDigest": "69ca4072b0589b6604212c2f389f55f7441ebbd6650ec482135e49f07abda188",
+      "parentFields": [
+        "additionalSpells",
+        "basicRules",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "srd"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Life||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce",
+          "body": {
+            "metadataDigest": "44ac5da7b28b08e4fbecf3035131d4ded334490efcfd25cc201efd79fef8e9e6",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "light domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Light||8|TCE"
+        }
+      ],
+      "certificate": "6d1c497f2c60357398ca854529cba4cfe84a08cdbf35bd33677839f24e16da3f",
+      "parentMetadataDigest": "61ccc5d05cceaccba419e915f03e5cfd5703b3fbd36d10d685fb52b85bc40469",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Light||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce",
+          "body": {
+            "metadataDigest": "83d102ba43ab9bb66fadfe35d5cafaf99d8efae09f650a53529f7a7e7b3719ab",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "nature domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Nature||8|TCE"
+        }
+      ],
+      "certificate": "6e5d8a384080f735ab448623a1fd83e2d742bae3cafada114e3a5966062bee54",
+      "parentMetadataDigest": "1dfd5a7a066d4081bf803af281560eb6805de02ad7518c6a187ab22774f392b6",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Nature||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce",
+          "body": {
+            "metadataDigest": "46469180bfb89b5b127af458f517f9f7694232e14af1e7ac055c60841f7d74e9",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "order domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce",
+          "uid": "Blessed Strikes|Cleric||Order|TCE|8|TCE"
+        }
+      ],
+      "certificate": "5e225285f3a646fb441af2630828c6db4d3aebdb8a46de99e958aef0a82474a5",
+      "parentMetadataDigest": "f16f3645b6f5048d93207e3fedd3883d6e29ab750b213c3e8403a0e00007bbf1",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "otherSources",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Order|TCE|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce",
+          "body": {
+            "metadataDigest": "bb400318260508df47af1111e632f001d050f427e7d198c2e62e04a93d41d7dc",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "peace domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce",
+          "uid": "Blessed Strikes|Cleric||Peace|TCE|8|TCE"
+        }
+      ],
+      "certificate": "49cf5f34c260dfd5ae5f5efd15795e04a8e127328bc02e3d0e66002869f8dcaf",
+      "parentMetadataDigest": "ca1a66bdb8654264e787bb67df8821ea94b1aa5c90e62e4b2774ee710bce5d50",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Peace|TCE|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce",
+          "body": {
+            "metadataDigest": "97e4f15fb0f33cc1441a8abc8505d2bfba240ff67875138e0d34dd7d3d3399f8",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "fae48e907d2e60b331862dca81c42c3f6e1f61bdd8de22896fab5e34b8b8348f"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "solidarity domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce",
+          "uid": "Blessed Strikes|Cleric||Solidarity (PSA)|PSA|8|TCE"
+        }
+      ],
+      "certificate": "806035b56cd968dacac1dd2ecf90207baf8bd6fd177b27b15e048392610c252d",
+      "parentMetadataDigest": "e2b46f6945a829fd26e6df4254e54acb4e30cf94a025c6c2bfe31176b5acf4dc",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Solidarity (PSA)|PSA|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce",
+          "body": {
+            "metadataDigest": "6cdc78f927a096e083c483c0fbb317e19b572f583cb5aa1229662fbb96d6d7a3",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "strength domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce",
+          "uid": "Blessed Strikes|Cleric||Strength (PSA)|PSA|8|TCE"
+        }
+      ],
+      "certificate": "86360c20ed3ad7c81fce5c6100ff212d30ac1ebad85f2a69a9a6ec97088340db",
+      "parentMetadataDigest": "8c0858ec5800b8d98696f1baac4f2dc505a49672fea50ae673bb6bc250c947dc",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Strength (PSA)|PSA|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce",
+          "body": {
+            "metadataDigest": "693af8a14d3c46b9d8c5cd8fbff13b1db0935ea5c1e8112bd5c29fb09cb3a96b",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "tempest domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Tempest||8|TCE"
+        }
+      ],
+      "certificate": "f017ff512f19320b1b7fdafc3e78422287051c5d4b0d98ea581bedfeb02e5bbf",
+      "parentMetadataDigest": "b3c694a177e186ae7b9a7ffeb194a7da493be8662431b6dd9d84a0f752169af2",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Tempest||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce",
+          "body": {
+            "metadataDigest": "0fd80e5a66d6f2acb88159e2ce50c835655c58adad33481de124efce1d514e23",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "trickery domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||Trickery||8|TCE"
+        }
+      ],
+      "certificate": "6508312e482ab187f75bb99446094e24b9b1cfdf558b064f1d1b6ba708ef2e95",
+      "parentMetadataDigest": "fc541c8800567372a0b04df6a38d7a1b76dba45b21f858d6a9145729d6766dee",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Trickery||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce",
+          "body": {
+            "metadataDigest": "834b1f0e249675fd8114d001aa5cb6daa41857aa103ac862f10965c1e71039b1",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "twilight domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce",
+          "uid": "Blessed Strikes|Cleric||Twilight|TCE|8|TCE"
+        }
+      ],
+      "certificate": "ae0fe16bcb59a444a6b28b1516490d093d676c9dd958c9616be37bd433ea60d8",
+      "parentMetadataDigest": "6b67696fa484e412d10978492d67627af988a8aa5113edc52bcbdd1d682825db",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Twilight|TCE|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce",
+          "body": {
+            "metadataDigest": "875a605253911bbb02458caec5aca1ddc899b79a28e7d02985189394300e61eb",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "war domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce",
+          "uid": "Blessed Strikes|Cleric||War||8|TCE"
+        }
+      ],
+      "certificate": "22366887441b8e1842ceacfa06964179cbd0d5d73c59557b3ad6bd17d675a858",
+      "parentMetadataDigest": "0d1b5cd7296f2605d5c432f3d349b0972740dc270edd03698a5e8d601ef393f3",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||War||8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce",
+          "body": {
+            "metadataDigest": "4feb2100b1a740d7b7318a02f632a694de776e6248de35a1faf91399cc5e8828",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "zeal domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce",
+      "level": 8,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce",
+          "uid": "Blessed Strikes|Cleric||Zeal (PSA)|PSA|8|TCE"
+        }
+      ],
+      "certificate": "3abd6b6f72cd92d325048a3185ac9d8882821c880fe33f1f3e7f066849edb525",
+      "parentMetadataDigest": "7812312c95ba8446ac0cc32a9e84c6ce74cc7150985ff9757d886f1f9ac27472",
+      "parentFields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Blessed Strikes|Cleric||Zeal (PSA)|PSA|8|TCE"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce",
+          "body": {
+            "metadataDigest": "400a81f2672d9558617e52044de14e0e2285298e5bb8c7f28608cd657a1e0f2a",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a95839c1caf7450eb5e75643921b3e134769d9421de670298b2090d07e7d5839"
+                },
+                {
+                  "digest": "195e3c163b8aeafa95d38c30cb1f7ac593b5369db20aa59432104e7852736ae2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "phb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "uid": "Battle Master|Fighter||Battle Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+          "uid": "Maneuver Options|Fighter||Battle Master||3|TCE"
+        }
+      ],
+      "certificate": "87da7491283f65341de1202975c5b3a0b5839b385f2ce84ecfd2c80b02efb646",
+      "parentMetadataDigest": "f6a5301aca120ca3686b88051d99a8fc5239862b01c9a75f2f974aac7c36f704",
+      "parentFields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Battle Master|Fighter||Battle Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "5bbf416da409239492b31897ad34141c97772df17aae15a44b6d732974b3640b",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3a82cc2e57db1c6177acf95760a138b4f51b3e5407f59792b25b731ac1ff52d8"
+                },
+                {
+                  "metadataDigest": "be4bae2a67a0b8be83271727a4b4fc93781a38ee9f7b44ded4e47fd7825f1a0d",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|student of war|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "0451e53d6bac5967e6ffaf38cce528132afcba11c49fd71a2d4f0b2350f6e671",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|combat superiority|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "6f8c621b69bfa30c3f9774233bdbe53b191171742779704c8b02801396cc2f97",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "e48b64c53e837b84c85941068c6d26357846c8fb293db8a0e88f88705ce525ef",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+          "body": {
+            "metadataDigest": "23d0f90ac92567636c429d8d378abacf65c27db7dbc143991505393939c31c4a",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "4b404f0208e6743a11fbdc9e2b0d3583058e127e57c9b1aeed714163f1ccb293"
+                },
+                {
+                  "digest": "3212908bbd0accf8ce84f37eacc86aacdb702c9767b2957d74dbff8f1a9eac82"
+                },
+                {
+                  "metadataDigest": "02847c09833a43f6863c87cc3985ebffde37c5a822e1e6b11481ddd2e4278d29",
+                  "fields": ["type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "76b71ef71c3a0f4507510830a7b002c0eb39ca342907a314122b0f6c87476f96",
+                        "fields": ["type"],
+                        "entries": {
+                          "kind": "array",
+                          "values": [
+                            {
+                              "metadataDigest": "2f4486573ace8efe04b2112927a4c3caa9d02913df127d4c3fdcaf0a2608b40f",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "9617ff2003bf0f9971b2c67eeb9d1669579e7251f9bdb6bf445761153f19bd28",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "12eb1a5d30dc94ebef617dfe4a484877c48971a1769cc140548e1adca6513186",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "0fdb89c070be3b55f6277d2fdca1fefb06dfaa8c45df1d4d179888c67c13da44",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "100abcb84c829abb4a3b7cee29b76d5d6433b67c4e6416a8138ff14d10a951bf",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "5f64382795b2c2b75599fec7dd90de7fef360178a42c1f266ddcbb619057c109",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "17d1ff8616f8d3d4dba2cdb8a703bd120bef2ba7a980f3c231ca8c137908e26f",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "phb", "battle master", "phb"],
+      "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "uid": "Battle Master|Fighter||Battle Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+          "uid": "Maneuvers|Fighter||Battle Master||3"
+        }
+      ],
+      "certificate": "b3c3d7ee37151b20133b2d8b3922a61ed9d4117f76275a44c1867bd71c6dd727",
+      "parentMetadataDigest": "f6a5301aca120ca3686b88051d99a8fc5239862b01c9a75f2f974aac7c36f704",
+      "parentFields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Battle Master|Fighter||Battle Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "5bbf416da409239492b31897ad34141c97772df17aae15a44b6d732974b3640b",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3a82cc2e57db1c6177acf95760a138b4f51b3e5407f59792b25b731ac1ff52d8"
+                },
+                {
+                  "metadataDigest": "be4bae2a67a0b8be83271727a4b4fc93781a38ee9f7b44ded4e47fd7825f1a0d",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|student of war|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "0451e53d6bac5967e6ffaf38cce528132afcba11c49fd71a2d4f0b2350f6e671",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|combat superiority|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "6f8c621b69bfa30c3f9774233bdbe53b191171742779704c8b02801396cc2f97",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "e48b64c53e837b84c85941068c6d26357846c8fb293db8a0e88f88705ce525ef",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "9981c5cbd29df3cf6fe44953e972b14ba34bcad0a68b9686b8cac37299ebb267",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "f04eb1511c471e953643160aa31ccad410a872bb97373325ba8a96fdc714ec8b"
+                },
+                {
+                  "metadataDigest": "054d80cbe1c76684ad0b7d54fb63549c426c6830fdb5d482b5d772c6d7da6e08",
+                  "fields": ["count", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "25c2cd82b1ab94684ede4ae2a5203d000961bc1cb869d5d634650183da9a776f",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "ff3056c3c78d77726510336eb5521c8af8b1770928a40afd3eabdbcdf6678f2c",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "5f95446d8e34d9b908cdc522bd19111e285605e2d2da274a27a1e982e279f7ab",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "2312860bb7d795b920f77dc6331c31ebad8af93c364594fc72931f03a16f681d",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "3f7a26dd301a201133ba66e653817efc678e6871cea2f9010faf5a0994c55e2b",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "cbe2edceb2070b7e03bf9424d119796109535a2772344895f1bee6caedd4b188",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "1fada607b815c9612116be004ed7c9e7b31d9da8a235ef4c6ef8a626412231c3",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bf7e91b19d5f123b4052e26f30bb36b050da2444b963fa6711ae91d1233f53c8",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "d4a983cc20d7b304ecf764917c836f7086f0ed16bc4e6361fa2fa5f8d48caacc",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "0f1d826a8e6aa9895f82d6c0749b4ea289c0d8a5abdac50cd3d432e4c1975ac9",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "e7d84e1fa0fa803eb43b12ff1563447bde89939a4bf89b1078e063c90c76ba71",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bbdd02457d13160ac810a46dd685319f159e815cfe7cda908968d0e0cdf3a04f",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "5137bbbfbbfc591d42724802c222ac48ca04d9331a6cb0027754c8fe8a1b95fe",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bfd89a7dce69c4ab7069367d90419638ff3eca63c3c63796f01be349be514179",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "fa156a180a34fe5446e13bcd8418d76e375317a36310695692c816127bca0d03",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "0d9bf3750d97d392663f9e5c2a93d0a2f87b5b522c22e6ed3cb809b06645c100",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "xphb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "uid": "Battle Master|Fighter||Battle Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+          "uid": "Maneuver Options|Fighter||Battle Master||3|TCE"
+        }
+      ],
+      "certificate": "c224cf5e36ecda95ea77ef9f572db6fb08ea9c8c28a38a20a45537f2d448ed05",
+      "parentMetadataDigest": "4af5296deee37d187840d1be484a83296452429289fc9846bff9104be07213cf",
+      "parentFields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Battle Master|Fighter||Battle Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "5bbf416da409239492b31897ad34141c97772df17aae15a44b6d732974b3640b",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3a82cc2e57db1c6177acf95760a138b4f51b3e5407f59792b25b731ac1ff52d8"
+                },
+                {
+                  "metadataDigest": "be4bae2a67a0b8be83271727a4b4fc93781a38ee9f7b44ded4e47fd7825f1a0d",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|student of war|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "0451e53d6bac5967e6ffaf38cce528132afcba11c49fd71a2d4f0b2350f6e671",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|combat superiority|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "6f8c621b69bfa30c3f9774233bdbe53b191171742779704c8b02801396cc2f97",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "e48b64c53e837b84c85941068c6d26357846c8fb293db8a0e88f88705ce525ef",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+          "body": {
+            "metadataDigest": "23d0f90ac92567636c429d8d378abacf65c27db7dbc143991505393939c31c4a",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "4b404f0208e6743a11fbdc9e2b0d3583058e127e57c9b1aeed714163f1ccb293"
+                },
+                {
+                  "digest": "3212908bbd0accf8ce84f37eacc86aacdb702c9767b2957d74dbff8f1a9eac82"
+                },
+                {
+                  "metadataDigest": "02847c09833a43f6863c87cc3985ebffde37c5a822e1e6b11481ddd2e4278d29",
+                  "fields": ["type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "76b71ef71c3a0f4507510830a7b002c0eb39ca342907a314122b0f6c87476f96",
+                        "fields": ["type"],
+                        "entries": {
+                          "kind": "array",
+                          "values": [
+                            {
+                              "metadataDigest": "2f4486573ace8efe04b2112927a4c3caa9d02913df127d4c3fdcaf0a2608b40f",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "9617ff2003bf0f9971b2c67eeb9d1669579e7251f9bdb6bf445761153f19bd28",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "12eb1a5d30dc94ebef617dfe4a484877c48971a1769cc140548e1adca6513186",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "0fdb89c070be3b55f6277d2fdca1fefb06dfaa8c45df1d4d179888c67c13da44",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "100abcb84c829abb4a3b7cee29b76d5d6433b67c4e6416a8138ff14d10a951bf",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "5f64382795b2c2b75599fec7dd90de7fef360178a42c1f266ddcbb619057c109",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            },
+                            {
+                              "metadataDigest": "17d1ff8616f8d3d4dba2cdb8a703bd120bef2ba7a980f3c231ca8c137908e26f",
+                              "fields": ["optionalfeature", "type"],
+                              "entries": {
+                                "kind": "absent"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "xphb", "battle master", "phb"],
+      "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "uid": "Battle Master|Fighter||Battle Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+          "uid": "Maneuvers|Fighter||Battle Master||3"
+        }
+      ],
+      "certificate": "8971fd385c734363e47d0d693e69ef7c36e5fdabc11381b64570a02ce3c7e7ca",
+      "parentMetadataDigest": "4af5296deee37d187840d1be484a83296452429289fc9846bff9104be07213cf",
+      "parentFields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Battle Master|Fighter||Battle Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "5bbf416da409239492b31897ad34141c97772df17aae15a44b6d732974b3640b",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "3a82cc2e57db1c6177acf95760a138b4f51b3e5407f59792b25b731ac1ff52d8"
+                },
+                {
+                  "metadataDigest": "be4bae2a67a0b8be83271727a4b4fc93781a38ee9f7b44ded4e47fd7825f1a0d",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|student of war|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "0451e53d6bac5967e6ffaf38cce528132afcba11c49fd71a2d4f0b2350f6e671",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|combat superiority|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "6f8c621b69bfa30c3f9774233bdbe53b191171742779704c8b02801396cc2f97",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "e48b64c53e837b84c85941068c6d26357846c8fb293db8a0e88f88705ce525ef",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+          "body": {
+            "metadataDigest": "9981c5cbd29df3cf6fe44953e972b14ba34bcad0a68b9686b8cac37299ebb267",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "f04eb1511c471e953643160aa31ccad410a872bb97373325ba8a96fdc714ec8b"
+                },
+                {
+                  "metadataDigest": "054d80cbe1c76684ad0b7d54fb63549c426c6830fdb5d482b5d772c6d7da6e08",
+                  "fields": ["count", "type"],
+                  "entries": {
+                    "kind": "array",
+                    "values": [
+                      {
+                        "metadataDigest": "25c2cd82b1ab94684ede4ae2a5203d000961bc1cb869d5d634650183da9a776f",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "ff3056c3c78d77726510336eb5521c8af8b1770928a40afd3eabdbcdf6678f2c",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "5f95446d8e34d9b908cdc522bd19111e285605e2d2da274a27a1e982e279f7ab",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "2312860bb7d795b920f77dc6331c31ebad8af93c364594fc72931f03a16f681d",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "3f7a26dd301a201133ba66e653817efc678e6871cea2f9010faf5a0994c55e2b",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "cbe2edceb2070b7e03bf9424d119796109535a2772344895f1bee6caedd4b188",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "1fada607b815c9612116be004ed7c9e7b31d9da8a235ef4c6ef8a626412231c3",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bf7e91b19d5f123b4052e26f30bb36b050da2444b963fa6711ae91d1233f53c8",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "d4a983cc20d7b304ecf764917c836f7086f0ed16bc4e6361fa2fa5f8d48caacc",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "0f1d826a8e6aa9895f82d6c0749b4ea289c0d8a5abdac50cd3d432e4c1975ac9",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "e7d84e1fa0fa803eb43b12ff1563447bde89939a4bf89b1078e063c90c76ba71",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bbdd02457d13160ac810a46dd685319f159e815cfe7cda908968d0e0cdf3a04f",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "5137bbbfbbfc591d42724802c222ac48ca04d9331a6cb0027754c8fe8a1b95fe",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "bfd89a7dce69c4ab7069367d90419638ff3eca63c3c63796f01be349be514179",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "fa156a180a34fe5446e13bcd8418d76e375317a36310695692c816127bca0d03",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      },
+                      {
+                        "metadataDigest": "0d9bf3750d97d392663f9e5c2a93d0a2f87b5b522c22e6ed3cb809b06645c100",
+                        "fields": ["optionalfeature", "type"],
+                        "entries": {
+                          "kind": "absent"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "ranger", "phb", "beast master", "phb"],
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|beast master|ranger|phb|beast master|phb|3|phb",
+          "uid": "Beast Master|Ranger||Beast Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+          "uid": "Primal Companion|Ranger||Beast Master||3|TCE"
+        }
+      ],
+      "certificate": "18b9d14664602ea922bf8992018ee491ae2fe82d7af4a8d5c5641481d17d8816",
+      "parentMetadataDigest": "a6be2ad4f264036ef61dee9cc1314cb294037da301e9ed24ddd84342b831e5d6",
+      "parentFields": [
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Beast Master|Ranger||Beast Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|beast master|ranger|phb|beast master|phb|3|phb",
+          "body": {
+            "metadataDigest": "868fa47e988ce32b40b4f02a264ebce36d73e103381955db00c55c3b257d0975",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "b5d6099f64d187249a4477086da74aaf8fbacb5696a8b697d61ff2f95adbbcfc"
+                },
+                {
+                  "metadataDigest": "abb0b1d67d334b2bcbd6a2694778bb536ebe156a1adab40a87cdcb25b637c50b",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "7f7dfe03a374b96e7c32f036e8dc817e9272ce3932e0916f81e6637471ec155c",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+          "body": {
+            "metadataDigest": "1ec6499f3384ddf6da038adda60dffbc39a6ba2efa1fa28df32dfd6b8b3f199d",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a002933cbed787822fce441233fa345c7fda4f9a1a9075cd071c20e7f975bc96"
+                },
+                {
+                  "digest": "173f7facba5ea3c9e6ee4196ccb5d221089b67b95f23b9be258318b87c81baa7"
+                },
+                {
+                  "digest": "d9e97746515354bc69ecf76e3d6091fbe2b4c4f30fab3d58a6bf3eb7c838b40d"
+                },
+                {
+                  "digest": "f0d92bacca442ec46f02c27e0c57c4c52adcc4dfe53281e74a0ff702a71f663f"
+                },
+                {
+                  "digest": "7beb0b1a6792dc5137050249b4a2e9bc184971a7739c5d3fe351e81e8673baef"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "ranger", "xphb", "beast master", "phb"],
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+      "level": 3,
+      "path": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|beast master|ranger|phb|beast master|phb|3|phb",
+          "uid": "Beast Master|Ranger||Beast Master||3"
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+          "uid": "Primal Companion|Ranger||Beast Master||3|TCE"
+        }
+      ],
+      "certificate": "c15f0a64a2b50d752f5c3397cb436fc3bac72872a1e06691b9c42c10984ec366",
+      "parentMetadataDigest": "4fcb9db9904de3c4089b6452f0fb37daeca8c444496128464c7d780b11fd7741",
+      "parentFields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source"
+      ],
+      "rootValues": ["Beast Master|Ranger||Beast Master||3"],
+      "features": [
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|beast master|ranger|phb|beast master|phb|3|phb",
+          "body": {
+            "metadataDigest": "868fa47e988ce32b40b4f02a264ebce36d73e103381955db00c55c3b257d0975",
+            "fields": [
+              "className",
+              "classSource",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "b5d6099f64d187249a4477086da74aaf8fbacb5696a8b697d61ff2f95adbbcfc"
+                },
+                {
+                  "metadataDigest": "abb0b1d67d334b2bcbd6a2694778bb536ebe156a1adab40a87cdcb25b637c50b",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                },
+                {
+                  "metadataDigest": "7f7dfe03a374b96e7c32f036e8dc817e9272ce3932e0916f81e6637471ec155c",
+                  "fields": ["subclassFeature", "type"],
+                  "reference": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+                  "entries": {
+                    "kind": "absent"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "subclassFeature",
+          "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+          "body": {
+            "metadataDigest": "1ec6499f3384ddf6da038adda60dffbc39a6ba2efa1fa28df32dfd6b8b3f199d",
+            "fields": [
+              "className",
+              "classSource",
+              "header",
+              "isClassFeatureVariant",
+              "level",
+              "name",
+              "page",
+              "source",
+              "subclassShortName",
+              "subclassSource"
+            ],
+            "entries": {
+              "kind": "array",
+              "values": [
+                {
+                  "digest": "a002933cbed787822fce441233fa345c7fda4f9a1a9075cd071c20e7f975bc96"
+                },
+                {
+                  "digest": "173f7facba5ea3c9e6ee4196ccb5d221089b67b95f23b9be258318b87c81baa7"
+                },
+                {
+                  "digest": "d9e97746515354bc69ecf76e3d6091fbe2b4c4f30fab3d58a6bf3eb7c838b40d"
+                },
+                {
+                  "digest": "f0d92bacca442ec46f02c27e0c57c4c52adcc4dfe53281e74a0ff702a71f663f"
+                },
+                {
+                  "digest": "7beb0b1a6792dc5137050249b4a2e9bc184971a7739c5d3fe351e81e8673baef"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

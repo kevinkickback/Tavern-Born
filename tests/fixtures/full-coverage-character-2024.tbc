@@ -112,7 +112,8 @@
       "deception",
       "investigation",
       "performance",
-      "stealth"
+      "stealth",
+      "history"
     ]
   },
   "features": [
@@ -2587,6 +2588,16 @@
             "label": "Skill Expert",
             "grantVariant": "selection:ordinary"
           }
+        ],
+        "history": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard",
+            "grantVariant": "feature-proficiencies:%5B%5B%22wizard%22%2C%22xphb%22%5D%2C%22class-feature%7Cscholar%7Cwizard%7Cxphb%7C2%7Cxphb%22%2C%22expertise%22%2C2%5D"
+          }
         ]
       }
     },
@@ -4406,6 +4417,22 @@
           "name": "Precision Attack",
           "source": "XPHB",
           "slotLevel": 3
+        }
+      ]
+    },
+    {
+      "choiceId": "feature-proficiencies:%5B%5B%22wizard%22%2C%22xphb%22%5D%2C%22class-feature%7Cscholar%7Cwizard%7Cxphb%7C2%7Cxphb%22%2C%22expertise%22%2C2%5D",
+      "label": "Scholar expertise",
+      "kind": "proficiency",
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "selected": [
+        {
+          "entityType": "proficiency",
+          "name": "History",
+          "ref": "[\"proficiency\",\"expertise\",\"history\"]",
+          "slotLevel": 2
         }
       ]
     }

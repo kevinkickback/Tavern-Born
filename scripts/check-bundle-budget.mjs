@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared subclass configuration and live choice guards measure 5,731,041 renderer bytes.
-  // Use the smallest independently reviewed whole-KiB allowance.
-  rendererCode: 5597 * KIB,
-  // Shared source qualification and saved-relation checks: initial script 586,074 bytes.
-  // Other limits and normal enforcement remain unchanged.
-  initialRendererScript: 573 * KIB,
+  // Exact optional-feature declarations, section certificates and native adoption validation.
+  // Measured 6,119,630 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 5977 * KIB,
+  // Synchronous saved-state admission and startup source proofs: measured 932,549 B.
+  // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
+  initialRendererScript: 911 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

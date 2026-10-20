@@ -1,0 +1,1029 @@
+{
+  "features": [
+    {
+      "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+      "rawDigest": "4db4967712cc75915612f2d256a9f8e5b46ea2f8b521530656d2fb2631be81b0",
+      "metadataDigest": "b4d307316bb57da9eb1fbfaa4d74bb8e94f292c0f0503017f5568dd035cbaf56",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "2840ed16f3e69fd42d289e45707ba19469138463dc8e973512613ab2494de497"
+        },
+        {
+          "digest": "a6cc42fd124ebb644d4287a78eafae6675eb0afa86ac0f66e3988da14523a8d1"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|blessings of knowledge|cleric|xphb|knowledge|frhof|3|frhof",
+      "rawDigest": "fc36619e423cd1a6beb22d78bd5080b51d278d9d40ba44ec60781f1af39615c6",
+      "metadataDigest": "e75979136c0ae22e4cf7b81e8cf2e9beeb4298827c2f8f370a04bc240726e303",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "e8937ea4c46344d4aee61a91d59a336620b176c9573ac62b2d74a519c5eb9ce9"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb",
+      "rawDigest": "27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe",
+      "metadataDigest": "2242821534576c6a4aca9a85cd103dc873c137a2c59bbd2df1306e4b72948cc7",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "dbfc20007026c570e4740fb8a5fcba790b25753b0f5c19ae7fb219bd74e61934"
+        },
+        {
+          "digest": "d266021360c3c3e2dc8080a4de241bfd05265f86bc081230d4cbdab51c2d5664",
+          "reference": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb"
+        },
+        {
+          "digest": "1aef7ce8cdfa4d09a8788a1eb3895b838006d80e71bc779ba08e92a02a046b05",
+          "reference": "subclass-feature|draconic resilience|sorcerer|phb|draconic|phb|1|phb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|draconic bloodline|sorcerer|xphb|draconic|phb|3|phb",
+      "rawDigest": "6f9bc9228d0de86a4109d339e51678860b6d492be9180ca79b7557bff42a69c1",
+      "metadataDigest": "a4ae92f64fa002a47fafcdcd8005f5dbbbbee75deced65b7760e18e168b68ac8",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "dbfc20007026c570e4740fb8a5fcba790b25753b0f5c19ae7fb219bd74e61934"
+        },
+        {
+          "digest": "d266021360c3c3e2dc8080a4de241bfd05265f86bc081230d4cbdab51c2d5664",
+          "reference": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb"
+        },
+        {
+          "digest": "1aef7ce8cdfa4d09a8788a1eb3895b838006d80e71bc779ba08e92a02a046b05",
+          "reference": "subclass-feature|draconic resilience|sorcerer|phb|draconic|phb|1|phb"
+        }
+      ],
+      "copies": [
+        {
+          "target": "subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb",
+          "digest": "27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe"
+        }
+      ]
+    },
+    {
+      "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+      "rawDigest": "d168b1de924f637854294706f141566283bb7c0ab2db8396dfaa8dcab16dbe3e",
+      "metadataDigest": "479c9bea237f63d3a5f972a0e93d61c66f721b3f41e41665c2873f35d2adb356",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "c489967504c449fe0fbc8a65e0cf1fbe487d91681dd2a73ab34f570c491c9ab3"
+        },
+        {
+          "digest": "acd007fd3650f8c30f6ea31e258207af176d43e118c5ce40944e683da0372cac"
+        },
+        {
+          "digest": "5d0858832228d1c6db4ee4e01c1edf85c995a3d286c040766473f119ad6d45c2"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
+      "rawDigest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f",
+      "metadataDigest": "9920b8bad34d257c6a6d427ef61e96ec36c982086bf734876291934691987925",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "ea65113b57b3f04cd9e1a13e81df2d1af6c33a6afad52b56a7635b94cd990b9d"
+        },
+        {
+          "digest": "06e9bb466dcf1d0d734cfa0dd921795e0c8abd526f3fd13d7a88a1fc02bf5c43"
+        },
+        {
+          "digest": "194c9b8814a8fc287223907aa55e56e8d2ef158ecc37a6881db582b9a271adc3"
+        },
+        {
+          "digest": "cd98dfbc4a46347d20c7217a7192ffb47fcf61bb949bf7c43e4026325ac8c51d",
+          "reference": "subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|knowledge domain (psa)|cleric|xphb|knowledge (psa)|psa|3|psa",
+      "rawDigest": "b59d7341d0044e96be6fb44c47b1bfb62a56720d818626970a836a287ed55910",
+      "metadataDigest": "ed11af6c0dd2e336a6b30e03b26ecd1742a2245083343c50a10407f2b4c521d3",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "ea65113b57b3f04cd9e1a13e81df2d1af6c33a6afad52b56a7635b94cd990b9d"
+        },
+        {
+          "digest": "06e9bb466dcf1d0d734cfa0dd921795e0c8abd526f3fd13d7a88a1fc02bf5c43"
+        },
+        {
+          "digest": "194c9b8814a8fc287223907aa55e56e8d2ef158ecc37a6881db582b9a271adc3"
+        },
+        {
+          "digest": "cd98dfbc4a46347d20c7217a7192ffb47fcf61bb949bf7c43e4026325ac8c51d",
+          "reference": "subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb"
+        }
+      ],
+      "copies": [
+        {
+          "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
+          "digest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f"
+        }
+      ]
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb",
+      "rawDigest": "433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65",
+      "metadataDigest": "19713df0bdc97690e9c6b33a8621b31a10e2c026b84d72a6e82d192ecc8e91dc",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "49edd2a987b63ca3ab5da6fd241c0a8bff0cc4d3d41d592240336e1e435de93f"
+        },
+        {
+          "digest": "636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32"
+        },
+        {
+          "digest": "ac47cc6ff4d8e7d34892a35d4f3db9f21e05a5d345d15b759587f500dc15a19c"
+        },
+        {
+          "digest": "55b5d4814afcfa53c5ea90cd2d698c0b55a736d26d577d13ddfb31fadc4c1e38",
+          "reference": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|xphb|knowledge|frhof|3|frhof",
+      "rawDigest": "bd003b0298863f0cf23b9083631e86407c2b0c0eac7726af18e2218eb15bb047",
+      "metadataDigest": "983eb750a3fef289fbec85c7459d973ae0d56a0d1d814cc9c259160619b19345",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "9daefe6f94127ec0d1cb9e09bdd50680a6611ef303c8d3ba2b785969d30a1129"
+        },
+        {
+          "digest": "e0df7e9a0de0f9e95b38c34213a13b12babdc2fde9d8a4cd4be9f8b3d16428b3"
+        },
+        {
+          "digest": "0993ab9d95cccc05a943dc4b5eb6e9bbba76b8b3b9f907d572f0c83b19338aaa"
+        },
+        {
+          "digest": "b2585c2a52651e275ec54daa9036db7203235f68309d33e39e00ddce28f14ba3",
+          "reference": "subclass-feature|blessings of knowledge|cleric|xphb|knowledge|frhof|3|frhof"
+        },
+        {
+          "digest": "5ea8f4ac6ea260571c08c32752b486e780e398f69ec84e41564152f6c51bdbba",
+          "reference": "subclass-feature|knowledge domain spells|cleric|xphb|knowledge|frhof|3|frhof"
+        },
+        {
+          "digest": "539039d92e4a1c9c3b6e964a5547d9da6d1fc4878be3baea77f896e56eca891c",
+          "reference": "subclass-feature|mind magic|cleric|xphb|knowledge|frhof|3|frhof"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|xphb|knowledge|phb|3|phb",
+      "rawDigest": "44caba490a65232e344b16f23e7493a61f3640d89028af1413176cb387dd677a",
+      "metadataDigest": "4830bc90ad8ebfa1374f62d299515b5b470b8ff6febc1cd3c0b3d55e0dfba2c5",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "49edd2a987b63ca3ab5da6fd241c0a8bff0cc4d3d41d592240336e1e435de93f"
+        },
+        {
+          "digest": "636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32"
+        },
+        {
+          "digest": "ac47cc6ff4d8e7d34892a35d4f3db9f21e05a5d345d15b759587f500dc15a19c"
+        },
+        {
+          "digest": "55b5d4814afcfa53c5ea90cd2d698c0b55a736d26d577d13ddfb31fadc4c1e38",
+          "reference": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb"
+        }
+      ],
+      "copies": [
+        {
+          "target": "subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb",
+          "digest": "433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65"
+        }
+      ]
+    },
+    {
+      "target": "subclass-feature|purple dragon knight (banneret)|fighter|phb|purple dragon knight (banneret)|scag|3|scag",
+      "rawDigest": "c8de21c80bda120ce3bb9bc2db7bdaaf221277d16d6f201b988f0da367c4c071",
+      "metadataDigest": "64c691b7b1fdba1197966c3a396b72e07d6b5751dee31d993c5e7b25be091897",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "c1b134ec4a290cae897c9e7d49c75dc90282eb7efab7b7d4a3f802d59fd2fd70"
+        },
+        {
+          "digest": "c83fc60c2bf689f990e2f2b771135dc1ff9f6f1e8be7aeba56889b03d431a1be"
+        },
+        {
+          "digest": "8163db2fc6e4c685ff824bb4162062b3ccc6579004eceadb0dd78f401000edf6"
+        },
+        {
+          "digest": "3cf3c0b1c6789d4c1d05ea2f5941f9358baa97378bbf23b6a37ce52e003d9a0b",
+          "reference": "subclass-feature|restriction: knighthood|fighter|phb|purple dragon knight (banneret)|scag|3|scag"
+        },
+        {
+          "digest": "35ec33ae865af09b6a00e75619e6251c1f0f34ac56aba6e44aeda549648f7478",
+          "reference": "subclass-feature|rallying cry|fighter|phb|purple dragon knight (banneret)|scag|3|scag"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
+      "rawDigest": "6015480e9b30dff93d0a44c21082ae6b04501878d87338e7b8d190948c4a7442",
+      "metadataDigest": "1f67b77a9948b3633e7c0799defd24869f1ff105ea6a71863151f6de2294878b",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "a73cb75dd138b656c6a23ceed0c50bb7b10f22f1f54259a3353678264910910e"
+        },
+        {
+          "digest": "4018cc05869cc6eee67449ee113654cbc1e0a25afb67b33e0b52ff699d5e87cb"
+        },
+        {
+          "digest": "e6ad8ca40df76db5d6589ff100fbc6648ce695b27af37ff368d0af0d04bf9248"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+      "rawDigest": "367ace053b00979326d0d219a03a4ced4c24b5c7f9dbfafbeba7f147a7c386e8",
+      "metadataDigest": "ee3997d7275357ee35f4689fddfb0ad377c3aad9a507a21ebb138221315cf8ab",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "bdc81ad589cf2bdeae2d3d7386084b3403fd6a1b2245c10fcb61c4eb19009215"
+        },
+        {
+          "digest": "b499285184a4cc8a90f927b0383c5bd65328d9209bded1e08b2bb233d1e8dea2"
+        },
+        {
+          "digest": "5d09275c11314106bc6f865806a3a155843a3e21b6dbaaf65a082c1810a9bebc"
+        },
+        {
+          "digest": "f50b4383d81a960695a73a95a6cc07e29c91eef2496ebcfa314767b2a2efab9a"
+        },
+        {
+          "digest": "541c9b84e191834f7deecd909391abfaaf5db70fe9c3be14db89e2b028db92bf"
+        },
+        {
+          "digest": "6c986f55e2ef10b2d7db85570b9876024112944f66f865367c2b7380df7d5429"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|rune knight|fighter|phb|rune knight|tce|3|tce",
+      "rawDigest": "2b0e14dca180427495eb152555ec7a99f5ba8a574303cac491c7831fa482ede7",
+      "metadataDigest": "5866e823469ee5cbdbe7dc5054ccad914ad725690070d552f0198584fd311738",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "8750c6d5f98cea7a3bb3f92d253b9cbc631ef1c272eae6891a0917e69af784c3"
+        },
+        {
+          "digest": "8affc918da478cc9e4ad4c9b02187f1ce3803c0a61bae654462017e341535597",
+          "reference": "subclass-feature|bonus proficiencies|fighter|phb|rune knight|tce|3|tce"
+        },
+        {
+          "digest": "95c80fedd9b5fa0a768f5aeb49440fc81bdaca23867b25d02259e8083b09af81",
+          "reference": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce"
+        },
+        {
+          "digest": "e55dceff8bff4063112a4d9fbebedafb36b270d8f05b3bd6eb9e9fed04bf9bc5",
+          "reference": "subclass-feature|giant's might|fighter|phb|rune knight|tce|3|tce"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|scout|rogue|phb|scout|xge|3|xge",
+      "rawDigest": "320d8128f56d9c5428afc3fafa4d39ed8480a8279102237b6027ac56251b60cf",
+      "metadataDigest": "b5220b76e0e0c8557fc43fcec11fa8faef3da13740e515821e1bf10024f169f2",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "741d4dedde5e01859f0d9d33448798b0faaebaf3048d0ad173e4cfe60779554b"
+        },
+        {
+          "digest": "90ca285e5e455a167c6b33fce9bdc82532c95e73ec3721309ddbe50dcc6924c3",
+          "reference": "subclass-feature|skirmisher|rogue|phb|scout|xge|3|xge"
+        },
+        {
+          "digest": "c1b0ee90e8b0b31a380b4a707f9dcd35f04a58c3f58ee60810c7c23f0e25a562",
+          "reference": "subclass-feature|survivalist|rogue|phb|scout|xge|3|xge"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|survivalist|rogue|phb|scout|xge|3|xge",
+      "rawDigest": "a3e87be35b17b5e577f6389aee5b51a1e89ba4e551e8fc86a2d726b1e175b170",
+      "metadataDigest": "da2ffa5b6f53be26583efcd612a1178117a3d4e24b9e6d5070cc44d5bbcbbf5d",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "d03490da6f2e74df8779efac42d6b62bdd6ad86a1bde9a8fdfd7baec79030226"
+        }
+      ],
+      "copies": []
+    }
+  ],
+  "roots": [
+    {
+      "owner": ["cleric", "phb", "knowledge domain (psa)", "psa"],
+      "shortName": "Knowledge (PSA)",
+      "rawDigest": "0f6cd3345ce9601380eafb87079cd9f6dabded350cb57bdb297ed10f41f15d32",
+      "metadataDigest": "8924567153f49ea39b2abce41efadd9f927a3a14ee40f0c991cc433d170e1601",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "isReprinted",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1",
+        "Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2",
+        "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+        "Potent Spellcasting|Cleric||Knowledge||8",
+        "Blessed Strikes|Cleric||Knowledge||8|TCE",
+        "Visions of the Past|Cleric||Knowledge||17"
+      ],
+      "intro": "Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1",
+      "paths": [
+        {
+          "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+          "refs": [
+            "Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1",
+            "Knowledge Domain|Cleric||Knowledge||1",
+            "Blessings of Knowledge|Cleric||Knowledge||1"
+          ],
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["cleric", "phb", "knowledge domain", "phb"],
+      "shortName": "Knowledge",
+      "rawDigest": "12fc5dfdb6287f5bc6b69c59b4d287af203f5ce1e52b908d5c41ad42ba4cc122",
+      "metadataDigest": "92a77061e3c28084ff14d0edcf7c0376fba184d95c292b07b67047a1bec133a4",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Knowledge Domain|Cleric||Knowledge||1",
+        "Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2",
+        "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+        "Potent Spellcasting|Cleric||Knowledge||8",
+        "Blessed Strikes|Cleric||Knowledge||8|TCE",
+        "Visions of the Past|Cleric||Knowledge||17"
+      ],
+      "intro": "Knowledge Domain|Cleric||Knowledge||1",
+      "paths": [
+        {
+          "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+          "refs": [
+            "Knowledge Domain|Cleric||Knowledge||1",
+            "Blessings of Knowledge|Cleric||Knowledge||1"
+          ],
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["cleric", "xphb", "knowledge domain (psa)", "psa"],
+      "shortName": "Knowledge (PSA)",
+      "rawDigest": "398c42be1e4e662fa042c7e52ffefdfbf182a6da17fbdf39e16d7a800d1b4f4b",
+      "metadataDigest": "541523546f2dcdd4d80b9bdac41d8e675cedebd44eff4e0012912ff816813765",
+      "fields": [
+        "_copy",
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "fluff",
+        "hasFluffImages",
+        "isReprinted",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Knowledge Domain (PSA)|PSA|Knowledge (PSA)|Cleric|PHB",
+          "digest": "0f6cd3345ce9601380eafb87079cd9f6dabded350cb57bdb297ed10f41f15d32"
+        }
+      ],
+      "declarations": [
+        "Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3",
+        "Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3",
+        "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+        "Visions of the Past|Cleric||Knowledge||17"
+      ],
+      "intro": "Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3",
+      "paths": [
+        {
+          "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+          "refs": [
+            "Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3",
+            "Knowledge Domain|Cleric||Knowledge||1",
+            "Blessings of Knowledge|Cleric||Knowledge||1"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["cleric", "xphb", "knowledge domain", "frhof"],
+      "shortName": "Knowledge",
+      "rawDigest": "eecf44a3092e5e5cc7b48dfde99fa57b8d4bff533546528c88746191c92f5313",
+      "metadataDigest": "562e1da31326bcf996aa3bf07cc7b93bcc512b3c45b1012ac495964fd97b5cf9",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF",
+        "Unfettered Mind|Cleric|XPHB|Knowledge|FRHoF|6|FRHoF",
+        "Divine Foreknowledge|Cleric|XPHB|Knowledge|FRHoF|17|FRHoF"
+      ],
+      "intro": "Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF",
+      "paths": [
+        {
+          "target": "subclass-feature|blessings of knowledge|cleric|xphb|knowledge|frhof|3|frhof",
+          "refs": [
+            "Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF",
+            "Blessings of Knowledge|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["cleric", "xphb", "knowledge domain", "phb"],
+      "shortName": "Knowledge",
+      "rawDigest": "5b5f3b7459ca1505b80301ca924bffbce7ae014edc48cd21856ef1155e1cbc62",
+      "metadataDigest": "61f95e197a24ee7300b9918b88036abd4c5a9009841d32818c2665beaf02c5a8",
+      "fields": [
+        "_copy",
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Knowledge Domain|PHB|Knowledge|Cleric|PHB",
+          "digest": "12fc5dfdb6287f5bc6b69c59b4d287af203f5ce1e52b908d5c41ad42ba4cc122"
+        }
+      ],
+      "declarations": [
+        "Knowledge Domain|Cleric|XPHB|Knowledge||3",
+        "Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3",
+        "Channel Divinity: Read Thoughts|Cleric||Knowledge||6",
+        "Visions of the Past|Cleric||Knowledge||17"
+      ],
+      "intro": "Knowledge Domain|Cleric|XPHB|Knowledge||3",
+      "paths": [
+        {
+          "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
+          "refs": [
+            "Knowledge Domain|Cleric|XPHB|Knowledge||3",
+            "Blessings of Knowledge|Cleric||Knowledge||1"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["fighter", "phb", "purple dragon knight (banneret)", "scag"],
+      "shortName": "Purple Dragon Knight (Banneret)",
+      "rawDigest": "596d505316ec3cc2126de15d5be9593ee7c98fd464f9994b3bbf1823570d6c72",
+      "metadataDigest": "7299278623ff0159e3c0084a086414063538fc8f9cb7ecd081e1d62c5c659bea",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3",
+        "Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7",
+        "Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|10",
+        "Bulwark|Fighter||Purple Dragon Knight (Banneret)|SCAG|15",
+        "Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|18"
+      ],
+      "intro": "Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3",
+      "paths": [
+        {
+          "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
+          "refs": ["Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7"],
+          "level": 7
+        }
+      ]
+    },
+    {
+      "owner": ["fighter", "phb", "rune knight", "tce"],
+      "shortName": "Rune Knight",
+      "rawDigest": "b129b6460a2d5707cf1b1d115b5a1c7b5be3cad6bbb75fc309837056dc3a8cd1",
+      "metadataDigest": "cdfca143336b11c455c8ec1594684163e90a609a821a5bdd70deeb13f9e211e8",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Rune Knight|Fighter||Rune Knight|TCE|3",
+        "Runic Shield|Fighter||Rune Knight|TCE|7",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|7",
+        "Great Stature|Fighter||Rune Knight|TCE|10",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|10",
+        "Master of Runes|Fighter||Rune Knight|TCE|15",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|15",
+        "Runic Juggernaut|Fighter||Rune Knight|TCE|18"
+      ],
+      "intro": "Rune Knight|Fighter||Rune Knight|TCE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+          "refs": [
+            "Rune Knight|Fighter||Rune Knight|TCE|3",
+            "Rune Carver|Fighter||Rune Knight|TCE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["fighter", "xphb", "purple dragon knight (banneret)", "scag"],
+      "shortName": "Purple Dragon Knight (Banneret)",
+      "rawDigest": "cff6903ae42019f6178a811649713e97df1f3337bf13e952a78c1ced80f52e17",
+      "metadataDigest": "81deb89b778cd5d02204c220289f005a1ad55149cce91d7a53f681f77101b998",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "fluff",
+        "hasFluffImages",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Purple Dragon Knight (Banneret)|SCAG|Purple Dragon Knight (Banneret)|Fighter|PHB",
+          "digest": "596d505316ec3cc2126de15d5be9593ee7c98fd464f9994b3bbf1823570d6c72"
+        }
+      ],
+      "declarations": [
+        "Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3",
+        "Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7",
+        "Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|10",
+        "Bulwark|Fighter||Purple Dragon Knight (Banneret)|SCAG|15",
+        "Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|18"
+      ],
+      "intro": "Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3",
+      "paths": [
+        {
+          "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
+          "refs": ["Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7"],
+          "level": 7
+        }
+      ]
+    },
+    {
+      "owner": ["fighter", "xphb", "rune knight", "tce"],
+      "shortName": "Rune Knight",
+      "rawDigest": "5077b7d4b3665b8e76c05202b358ab97f1c788ff45bfe945953f4dd5dcbd54e8",
+      "metadataDigest": "ff3ddc725d3f16984b505b36a10b0d752312eeeafdaf076f618674b31cc813e7",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "fluff",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Rune Knight|TCE|Rune Knight|Fighter|PHB",
+          "digest": "b129b6460a2d5707cf1b1d115b5a1c7b5be3cad6bbb75fc309837056dc3a8cd1"
+        }
+      ],
+      "declarations": [
+        "Rune Knight|Fighter||Rune Knight|TCE|3",
+        "Runic Shield|Fighter||Rune Knight|TCE|7",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|7",
+        "Great Stature|Fighter||Rune Knight|TCE|10",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|10",
+        "Master of Runes|Fighter||Rune Knight|TCE|15",
+        "Additional Rune Known|Fighter||Rune Knight|TCE|15",
+        "Runic Juggernaut|Fighter||Rune Knight|TCE|18"
+      ],
+      "intro": "Rune Knight|Fighter||Rune Knight|TCE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+          "refs": [
+            "Rune Knight|Fighter||Rune Knight|TCE|3",
+            "Rune Carver|Fighter||Rune Knight|TCE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["rogue", "phb", "scout", "xge"],
+      "shortName": "Scout",
+      "rawDigest": "c529fc63e3fe48a7106b8889d9c31fc8751c9a35e5e9ff9cbc15f7c4b87b1cd0",
+      "metadataDigest": "f2ca5b65e7ef656229e565c43cfe1b5cdcf24db94e81af9d0a5480b72f83e5fd",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Scout|Rogue||Scout|XGE|3",
+        "Superior Mobility|Rogue||Scout|XGE|9",
+        "Ambush Master|Rogue||Scout|XGE|13",
+        "Sudden Strike|Rogue||Scout|XGE|17"
+      ],
+      "intro": "Scout|Rogue||Scout|XGE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|survivalist|rogue|phb|scout|xge|3|xge",
+          "refs": ["Scout|Rogue||Scout|XGE|3", "Survivalist|Rogue||Scout|XGE|3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["rogue", "xphb", "scout", "xge"],
+      "shortName": "Scout",
+      "rawDigest": "13c5784150f33717c5ff557e79c676ae64af6dbc8ccb0572b68454eaa7640367",
+      "metadataDigest": "df4bed1d234d642076a490cbe78c7487eae2e83c70f18fd36fd70e263ac3dcdd",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Scout|XGE|Scout|Rogue|PHB",
+          "digest": "c529fc63e3fe48a7106b8889d9c31fc8751c9a35e5e9ff9cbc15f7c4b87b1cd0"
+        }
+      ],
+      "declarations": [
+        "Scout|Rogue||Scout|XGE|3",
+        "Superior Mobility|Rogue||Scout|XGE|9",
+        "Ambush Master|Rogue||Scout|XGE|13",
+        "Sudden Strike|Rogue||Scout|XGE|17"
+      ],
+      "intro": "Scout|Rogue||Scout|XGE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|survivalist|rogue|phb|scout|xge|3|xge",
+          "refs": ["Scout|Rogue||Scout|XGE|3", "Survivalist|Rogue||Scout|XGE|3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["sorcerer", "phb", "draconic bloodline", "phb"],
+      "shortName": "Draconic",
+      "rawDigest": "1dbcce46c2b8cda1a5201700ce1792e5fea7f71b38ff1774b2acb268973d1531",
+      "metadataDigest": "c14d29625b01405f5b5e59852467e02301a11f33ee9833c8b58341eef9fdf157",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "srd",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Draconic Bloodline|Sorcerer||Draconic||1",
+        "Elemental Affinity|Sorcerer||Draconic||6",
+        "Dragon Wings|Sorcerer||Draconic||14",
+        "Draconic Presence|Sorcerer||Draconic||18"
+      ],
+      "intro": "Draconic Bloodline|Sorcerer||Draconic||1",
+      "paths": [
+        {
+          "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+          "refs": [
+            "Draconic Bloodline|Sorcerer||Draconic||1",
+            "Dragon Ancestor|Sorcerer||Draconic||1"
+          ],
+          "level": 1
+        }
+      ]
+    },
+    {
+      "owner": ["sorcerer", "xphb", "draconic bloodline", "phb"],
+      "shortName": "Draconic",
+      "rawDigest": "43f37f7fd351e606dc8e75a33d75fe155557f5b9313d78f37d69f4e95e8a01e1",
+      "metadataDigest": "187c611c43fdf56b91ab691883dced82b9b01a1215adbbe6591f84b8286de274",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "srd",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Draconic Bloodline|PHB|Draconic|Sorcerer|PHB",
+          "digest": "1dbcce46c2b8cda1a5201700ce1792e5fea7f71b38ff1774b2acb268973d1531"
+        }
+      ],
+      "declarations": [
+        "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
+        "Elemental Affinity|Sorcerer||Draconic||6",
+        "Dragon Wings|Sorcerer||Draconic||14",
+        "Draconic Presence|Sorcerer||Draconic||18"
+      ],
+      "intro": "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
+      "paths": [
+        {
+          "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+          "refs": [
+            "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
+            "Dragon Ancestor|Sorcerer||Draconic||1"
+          ],
+          "level": 3
+        }
+      ]
+    }
+  ]
+}

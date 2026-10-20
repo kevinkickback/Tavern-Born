@@ -30,15 +30,27 @@ export function BuildClassPassiveFeatureList({
     <>
       {passiveFeatures.map((feature) => {
         const replacement = renderFeature?.(feature)
+        const selected =
+          feature.origin || selectedFeature?.origin
+            ? JSON.stringify(feature.origin) === JSON.stringify(selectedFeature?.origin)
+            : selectedFeature?.name === feature.name && selectedFeature?.source === feature.source
         return (
-          <div key={`${feature.name}|${feature.source ?? ''}`}>
+          <div
+            key={
+              feature.origin
+                ? JSON.stringify(feature.origin)
+                : `${feature.name}|${feature.source ?? ''}`
+            }
+          >
             {replacement !== undefined ? (
               replacement
             ) : (
               <button
                 type="button"
+                aria-pressed={selected}
                 onClick={() => {
                   onSelectFeature({
+                    origin: feature.origin,
                     name: feature.name,
                     source: feature.source,
                     entries: resolveSubclassFeatureRefs(
@@ -50,7 +62,7 @@ export function BuildClassPassiveFeatureList({
                 }}
                 className={cn(
                   'w-full text-left px-3 py-2 rounded-md hover:bg-accent/10 hover:text-accent transition-colors group flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-                  selectedFeature?.name === feature.name && 'bg-accent/10 text-accent',
+                  selected && 'bg-accent/10 text-accent',
                 )}
               >
                 <span className="text-sm font-medium">{feature.name}</span>

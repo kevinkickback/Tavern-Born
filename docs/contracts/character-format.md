@@ -2,12 +2,19 @@
 
 Current admission is implemented in [the version constant](../../src/lib/schema/characterSchemaVersion.ts),
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
-The current character format is **11**; parsed catalog cache schema **43** is independent.
+The current character format is **11**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
 
 The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
 are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
+The additive `optionalClassFeatureAdoptions` collection binds the actual full class/subclass owner,
+complete reviewed target and enclosing earned gain. Strict admission rejects unknown roots, children
+as roots, duplicate identities and conflicting families. Absence is unselected; no adoption or
+historical event is inferred from the Rules flag, materialized benefits or saved setup. Known
+unavailable intent remains saveable and removable; current source authority is derived separately.
+Book-backed option pools retain their actual `book-section|source|id` target rather than a fabricated
+class-feature UID; selected members remain ordinary exact class-choice intents in their existing slots.
 The additive `feature-option`/`featureOption` class-choice category validates structural saved
 row identity without loaded data; see [source-backed feature options](feature-references.md#source-backed-feature-options)
 for current entitlement, retained recovery and derived rules.

@@ -57,6 +57,16 @@ Option commits and edit dialogs use the requested feat owner. Fixed, class and r
 choice setups update their own records, including when a separately selected copy has the same
 name and printing. They do not overwrite or borrow that independent copy's saved selections.
 
+Skilled PHB/XPHB skill selection excludes skills already proficient in the current effective state.
+The picker and confirmation share current source and exact owner eligibility. Only that live owner's
+saved skill choices remain available on Edit, including later independent overlap. Missing, changed
+or ambiguous current rules permit retaining/removing those saved choices, and do not authorize new
+ones. The bounded source audit includes the three-pick mixed declaration and ordered rules; other
+feat families retain their behavior. Skilled's broader mixed skill/tool wizard remains a separate
+parser limitation. Skill Expert's Expertise picker and confirmation exclude new picks already
+benefiting from Expertise, while retaining the exact owner's established saved intent. Race,
+Background, Class and Feats setup provide the same exact target to that shared eligibility check.
+
 Feat-selected spells retain the exact target printing in the special profile, fixed list and
 `grantSource`; the granting feat's printing remains in `sourceRef`. Retraction considers only
 remaining owners in the special profile, so class or racial ownership cannot leave an orphan

@@ -7,7 +7,7 @@ import {
 } from '@/lib/character/additionalContentAvailability'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import {
-  getCharacterClassChoices,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -16,6 +16,7 @@ import {
   retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
+import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import {
   getFeatureOptionSelectionStates,
   summarizeFeatureOptionSelectionGroups,
@@ -210,7 +211,30 @@ test('summaries retain conditional qualifiers once, selected gains and no altern
   const baseline = createCharacterCalculationContext(f.character, input(f)),
     calc = createCharacterCalculationContext(saved, input(f))
   expect(calc.movement).toEqual(baseline.movement)
-  expect(calc.effects).toEqual(baseline.effects)
+  const notes = calc.effects.sourceDeclarations.filter(
+    (effect) => effect.target.kind === 'proficiency-check-note',
+  )
+  expect(notes).toHaveLength(1)
+  expect(notes[0]).toMatchObject({
+    target: {
+      kind: 'proficiency-check-note',
+      proficiencyType: 'skill',
+      abilities: ['intelligence', 'wisdom'],
+    },
+    operation: {
+      kind: 'conditional-note',
+      note: "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+    },
+  })
+  expect({
+    ...calc.effects,
+    sourceDeclarations: calc.effects.sourceDeclarations.filter(
+      (effect) => effect.target.kind !== 'proficiency-check-note',
+    ),
+    declarations: calc.effects.declarations.filter(
+      (effect) => effect.target.kind !== 'proficiency-check-note',
+    ),
+  }).toEqual(baseline.effects)
   const vm = createCharacterSheetViewModel(saved, input(f))
   expect(vm.featuresSummary).toContain(summary[0].text)
   expect(withoutSheetDescriptions(vm).featuresSummary).toContain(summary[0].compactText)
@@ -227,9 +251,32 @@ test.skipIf(!existsSync(configured))(
     const f = makeNaturalExplorerFixture(10, undefined, configured)
     let saved = selectNaturalExplorer(f)
     saved = selectNaturalExplorer(f, 6, 'Coast', saved)
-    const optional = {
+    const permissionOnly = {
       ...saved,
       variantRules: { ...saved.variantRules, optionalClassFeatures: true },
+    }
+    const noAdoptionBytes = JSON.stringify(permissionOnly)
+    expect(states(permissionOnly, f).every((row) => !row.selection.inactive)).toBe(true)
+    expect(createCharacterSheetViewModel(permissionOnly, input(f)).featuresSummary).toContain(
+      'When you make an Intelligence or Wisdom check',
+    )
+    const request = {
+      owner: ['class', 'ranger', 'phb'] as const,
+      target: 'class-feature|deft explorer|ranger|phb|1|tce',
+      earnedLevel: 1,
+    }
+    const adoption = setOptionalClassAdoptionCommand(
+      permissionOnly,
+      permissionOnly.provenance!,
+      f.catalogs,
+      { ...request, owner: [...request.owner] },
+      true,
+      [],
+    )
+    const optional = {
+      ...permissionOnly,
+      ...adoption.characterPatch,
+      provenance: adoption.provenanceUpdate,
     }
     const before = JSON.stringify(optional)
     const dormant = getEffectiveClassChoiceSelections(optional, f.data.classes, f.catalogs)
@@ -301,32 +348,32 @@ test.skipIf(!existsSync(configured))(
       },
       configured,
     )
-    expect(states(stale, missing).every((row) => !row.selection.inactive && !row.recovery)).toBe(
+    expect(states(stale, missing).every((row) => row.selection.inactive && !row.recovery)).toBe(
       true,
     )
-    const unchanged = applyClassChoiceSelectionWithGrantsCommand(
-      stale,
-      stale.provenance!,
-      f.choices[0],
-      [f.choices[0].options.find((row) => row.name === 'Forest')!],
-      authority(missing),
-    )
-    expect(unchanged.characterPatch).toEqual({})
-    expect(unchanged.provenanceUpdate).toBe(stale.provenance)
-    const edited = applyClassChoiceSelectionWithGrantsCommand(
-      stale,
-      stale.provenance!,
-      f.choices[0],
-      [f.choices[0].options.find((row) => row.name === 'Desert')!],
-      authority(missing),
-    )
-    expect(
-      edited.characterPatch.classChoiceSelections!.find((row) => row.classLevel === 1)?.inactive,
-    ).not.toBe(true)
+    expect(states(permissionOnly, missing).every((row) => !row.selection.inactive)).toBe(true)
+    expect(() =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        stale,
+        stale.provenance!,
+        f.choices[0],
+        [f.choices[0].options.find((row) => row.name === 'Forest')!],
+        authority(missing),
+      ),
+    ).toThrow(/source rules/)
+    expect(() =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        stale,
+        stale.provenance!,
+        f.choices[0],
+        [f.choices[0].options.find((row) => row.name === 'Desert')!],
+        authority(missing),
+      ),
+    ).toThrow(/source rules/)
     expect(
       issues(stale, missing).filter((row) => row.title === 'Finish Natural Explorer'),
-    ).toHaveLength(1)
-    expect(createCharacterSheetViewModel(stale, input(missing)).featuresSummary).toContain(
+    ).toHaveLength(0)
+    expect(createCharacterSheetViewModel(stale, input(missing)).featuresSummary).not.toContain(
       'When you make an Intelligence or Wisdom check',
     )
     expect(
@@ -335,13 +382,30 @@ test.skipIf(!existsSync(configured))(
         [],
         getEffectiveClassChoiceSelections(stale, missing.data.classes, missing.catalogs),
       ).flatMap((row) => row.items),
-    ).toContain('Forest')
+    ).not.toContain('Forest')
     expect(states(stale, f).every((row) => row.selection.inactive)).toBe(true)
     expect(
       states({ ...stale, variantRules: { optionalClassFeatures: false } }, f).every(
         (row) => !row.selection.inactive,
       ),
     ).toBe(true)
+    const cleared = setOptionalClassAdoptionCommand(
+      stale,
+      stale.provenance!,
+      missing.catalogs,
+      { ...request, owner: [...request.owner] },
+      false,
+      [
+        'optional-class-adoption:v1:' +
+          encodeURIComponent(JSON.stringify([request.owner, request.target, 1])),
+      ],
+    )
+    const restored = { ...stale, ...cleared.characterPatch, provenance: cleared.provenanceUpdate }
+    expect(states(restored, f).every((row) => !row.selection.inactive)).toBe(true)
+    expect(createCharacterSheetViewModel(restored, input(f)).featuresSummary).toContain(
+      'When you make an Intelligence or Wisdom check',
+    )
+    expect(JSON.stringify(permissionOnly)).toBe(noAdoptionBytes)
     expect(JSON.stringify(optional)).toBe(before)
   },
 )
@@ -351,7 +415,7 @@ test('two explicitly declaring owners keep the same pool target but independent 
     doc.class.push({ ...doc.class[0], source: 'OTHER' })
   })
   const other = f.data.classes.find((row) => row.source === 'OTHER')!
-  const otherChoices = getCharacterClassChoices(other, undefined, false, f.catalogs).filter(
+  const otherChoices = getClassChoiceCandidates(other, undefined, f.catalogs).filter(
     (row) => row.label === 'Natural Explorer',
   )
   expect(otherChoices[0].id).not.toBe(f.choices[0].id)
@@ -380,6 +444,81 @@ test('two explicitly declaring owners keep the same pool target but independent 
   ])
   expect(removed.characterPatch.features).toEqual(f.character.features)
 })
+
+test.skipIf(!existsSync(configured))(
+  'adopted PHB terrain replacement preserves an independently declaring owner and exact Clear inverse',
+  () => {
+    const f = makeNaturalExplorerFixture(
+      1,
+      (doc) => {
+        doc.class.push({ ...doc.class.find((row) => row.source === 'PHB')!, source: 'OTHER' })
+      },
+      configured,
+    )
+    const other = f.data.classes.find((row) => row.source === 'OTHER')!
+    const otherChoice = getClassChoiceCandidates(other, undefined, f.catalogs).find(
+      (row) => row.label === 'Natural Explorer',
+    )!
+    const first = selectNaturalExplorer(f)
+    const actor = {
+      ...first,
+      classProgression: [...first.classProgression, { name: 'Ranger', source: 'OTHER', levels: 1 }],
+    }
+    const selected = applyClassChoiceSelectionWithGrantsCommand(
+      actor,
+      actor.provenance!,
+      otherChoice,
+      [otherChoice.options.find((row) => row.name === 'Forest')!],
+      authority(f),
+    )
+    const current = {
+      ...actor,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
+      variantRules: { optionalClassFeatures: true },
+    }
+    const request = {
+      owner: ['class', 'ranger', 'phb'] as ['class', string, string],
+      target: 'class-feature|deft explorer|ranger|phb|1|tce',
+      earnedLevel: 1,
+    }
+    const adopted = setOptionalClassAdoptionCommand(
+      current,
+      current.provenance!,
+      f.catalogs,
+      request,
+      true,
+      [],
+    )
+    const saved = characterPersistenceSchema.parse({
+      ...current,
+      ...adopted.characterPatch,
+      provenance: adopted.provenanceUpdate,
+    })
+    expect(
+      states(saved, f).map((row) => [row.selection.classSource, !!row.selection.inactive]),
+    ).toEqual([
+      ['PHB', true],
+      ['OTHER', false],
+    ])
+    const key =
+      'optional-class-adoption:v1:' +
+      encodeURIComponent(JSON.stringify([request.owner, request.target, 1]))
+    const cleared = setOptionalClassAdoptionCommand(
+      saved,
+      saved.provenance!,
+      f.catalogs,
+      request,
+      false,
+      [key],
+    )
+    const restored = { ...saved, ...cleared.characterPatch, provenance: cleared.provenanceUpdate }
+    expect(states(restored, f).every((row) => !row.selection.inactive)).toBe(true)
+    expect(restored.classChoiceSelections?.map((row) => row.selected)).toEqual(
+      current.classChoiceSelections?.map((row) => row.selected),
+    )
+  },
+)
 
 test.each([
   false,

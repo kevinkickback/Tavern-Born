@@ -35,6 +35,7 @@ export function useSkills(): SkillsState {
 
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
   const calculationContext = useCharacterCalculationContext(activeCharacter)
+  const effectiveCharacter = calculationContext?.character ?? activeCharacter
   const abilityModifiers = useMemo(() => {
     if (calculationContext) return calculationContext.abilityScores.modifiers
     return Object.fromEntries(
@@ -45,12 +46,12 @@ export function useSkills(): SkillsState {
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 
   const proficientSkills = useMemo(
-    () => activeCharacter?.proficiencies.skills ?? [],
-    [activeCharacter?.proficiencies.skills],
+    () => effectiveCharacter?.proficiencies.skills ?? [],
+    [effectiveCharacter?.proficiencies.skills],
   )
   const expertiseSkills = useMemo(
-    () => activeCharacter?.proficiencies.expertise ?? [],
-    [activeCharacter?.proficiencies.expertise],
+    () => effectiveCharacter?.proficiencies.expertise ?? [],
+    [effectiveCharacter?.proficiencies.expertise],
   )
 
   const skills = useMemo(
@@ -86,7 +87,15 @@ export function useSkills(): SkillsState {
     [activeCharacter, classesByKey],
   )
 
-  const usedExpertiseSlots = activeCharacter?.proficiencies.expertise.length ?? 0
+  const usedExpertiseSlots =
+    effectiveCharacter?.proficiencies.expertise.filter((name) => {
+      const tags =
+        effectiveCharacter.provenance?.proficiencies.expertise?.[name.trim().toLowerCase()] ?? []
+      return (
+        !tags.length ||
+        tags.some((tag) => tag.sourceType === 'manual' && tag.sourceName === 'User Choice')
+      )
+    }).length ?? 0
 
   const toggleExpertise = useCallback(
     (skillName: string) => {
@@ -95,13 +104,16 @@ export function useSkills(): SkillsState {
         activeCharacter,
         activeCharacter.provenance ?? emptyProvenance(),
         skillName,
+        !effectiveCharacter?.proficiencies.expertise.some(
+          (name) => name.trim().toLowerCase() === skillName.trim().toLowerCase(),
+        ),
       )
       updateCharacter(activeCharacter.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [activeCharacter, updateCharacter],
+    [activeCharacter, effectiveCharacter, updateCharacter],
   )
 
   return {

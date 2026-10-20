@@ -1,0 +1,1334 @@
+{
+  "version": 2,
+  "roots": [
+    {
+      "owner": ["class", "artificer", "tce"],
+      "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce",
+      "name": "Optional Rule: Firearm Proficiency",
+      "source": "TCE",
+      "level": 1,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "barbarian", "phb"],
+      "target": "class-feature|instinctive pounce|barbarian|phb|7|tce",
+      "name": "Instinctive Pounce",
+      "source": "TCE",
+      "level": 7,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "barbarian", "phb"],
+      "target": "class-feature|primal knowledge|barbarian|phb|3|tce",
+      "name": "Primal Knowledge",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "bard", "phb"],
+      "target": "class-feature|bardic versatility|bard|phb|4|tce",
+      "name": "Bardic Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "bard", "phb"],
+      "target": "class-feature|magical inspiration|bard|phb|2|tce",
+      "name": "Magical Inspiration",
+      "source": "TCE",
+      "level": 2,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "cleric", "phb"],
+      "target": "class-feature|cantrip versatility|cleric|phb|4|tce",
+      "name": "Cantrip Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "cleric", "phb"],
+      "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce",
+      "name": "Channel Divinity: Harness Divine Power",
+      "source": "TCE",
+      "level": 2,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "druid", "phb"],
+      "target": "class-feature|cantrip versatility|druid|phb|4|tce",
+      "name": "Cantrip Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "druid", "phb"],
+      "target": "class-feature|wild companion|druid|phb|2|tce",
+      "name": "Wild Companion",
+      "source": "TCE",
+      "level": 2,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "fighter", "phb"],
+      "target": "class-feature|martial versatility|fighter|phb|4|tce",
+      "name": "Martial Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|dedicated weapon|monk|phb|2|tce",
+      "name": "Dedicated Weapon",
+      "source": "TCE",
+      "level": 2,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|focused aim|monk|phb|5|tce",
+      "name": "Focused Aim",
+      "source": "TCE",
+      "level": 5,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|ki-fueled attack|monk|phb|3|tce",
+      "name": "Ki-Fueled Attack",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "monk", "phb"],
+      "target": "class-feature|quickened healing|monk|phb|4|tce",
+      "name": "Quickened Healing",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "paladin", "phb"],
+      "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce",
+      "name": "Channel Divinity: Harness Divine Power",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "paladin", "phb"],
+      "target": "class-feature|martial versatility|paladin|phb|4|tce",
+      "name": "Martial Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "target": "class-feature|deft explorer|ranger|phb|1|tce",
+      "family": "favored-terrain",
+      "children": [
+        "class-feature|deft explorer improvement|ranger|phb|6|tce",
+        "class-feature|deft explorer improvement|ranger|phb|10|tce"
+      ],
+      "replaces": [
+        {
+          "target": "class-feature|natural explorer|ranger|phb|1|phb"
+        },
+        {
+          "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+          "facet": "favored-terrain",
+          "entryIndexes": [0]
+        },
+        {
+          "target": "class-feature|natural explorer improvement|ranger|phb|10|phb"
+        }
+      ],
+      "compatible": [],
+      "owner": ["class", "ranger", "phb"],
+      "level": 1,
+      "name": "Deft Explorer",
+      "source": "TCE",
+      "original": {
+        "target": "class-feature|natural explorer|ranger|phb|1|phb",
+        "name": "Natural Explorer",
+        "source": "PHB",
+        "level": 1,
+        "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+        "digest": "96c526c66f17427adcd39b95258289fb7f0d3526c4cc9a32d91ccbf376c7795e"
+      }
+    },
+    {
+      "target": "class-feature|favored foe|ranger|phb|1|tce",
+      "family": "favored-enemy-language",
+      "children": [],
+      "replaces": [
+        {
+          "target": "class-feature|favored enemy|ranger|phb|1|phb"
+        },
+        {
+          "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+          "facet": "favored-enemy-language",
+          "entryIndexes": [1]
+        },
+        {
+          "target": "class-feature|favored enemy improvement|ranger|phb|14|phb"
+        }
+      ],
+      "compatible": ["class-feature|foe slayer|ranger|phb|20|phb"],
+      "owner": ["class", "ranger", "phb"],
+      "level": 1,
+      "name": "Favored Foe",
+      "source": "TCE",
+      "original": {
+        "target": "class-feature|favored enemy|ranger|phb|1|phb",
+        "name": "Favored Enemy",
+        "source": "PHB",
+        "level": 1,
+        "fields": ["className", "classSource", "entries", "level", "name", "page", "source", "srd"],
+        "digest": "211e51428b68fbf43479068687ce56729cd3cbec3ca7dc3801e6f3affe68c87f"
+      }
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|martial versatility|ranger|phb|4|tce",
+      "name": "Martial Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|nature's veil|ranger|phb|10|tce",
+      "name": "Nature's Veil",
+      "source": "TCE",
+      "level": 10,
+      "children": [],
+      "replaces": [
+        {
+          "target": "class-feature|hide in plain sight|ranger|phb|10|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:class-feature|hide in plain sight|ranger|phb|10|phb",
+      "original": {
+        "target": "class-feature|hide in plain sight|ranger|phb|10|phb",
+        "name": "Hide in Plain Sight",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["class", "ranger", "phb"],
+      "target": "class-feature|primal awareness|ranger|phb|3|tce",
+      "name": "Primal Awareness",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [
+        {
+          "target": "class-feature|primeval awareness|ranger|phb|3|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:class-feature|primeval awareness|ranger|phb|3|phb",
+      "original": {
+        "target": "class-feature|primeval awareness|ranger|phb|3|phb",
+        "name": "Primeval Awareness",
+        "source": "PHB"
+      }
+    },
+    {
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+      "children": [],
+      "replaces": [],
+      "compatible": [],
+      "owner": ["class", "ranger", "phb"],
+      "level": 2,
+      "name": "Spellcasting Focus",
+      "source": "TCE"
+    },
+    {
+      "owner": ["class", "rogue", "phb"],
+      "target": "class-feature|steady aim|rogue|phb|3|tce",
+      "name": "Steady Aim",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|magical guidance|sorcerer|phb|5|tce",
+      "name": "Magical Guidance",
+      "source": "TCE",
+      "level": 5,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|metamagic options|sorcerer|phb|3|tce",
+      "name": "Metamagic Options",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce",
+      "name": "Sorcerous Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "warlock", "phb"],
+      "target": "class-feature|eldritch versatility|warlock|phb|4|tce",
+      "name": "Eldritch Versatility",
+      "source": "TCE",
+      "level": 4,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["class", "wizard", "phb"],
+      "target": "class-feature|cantrip formulas|wizard|phb|3|tce",
+      "name": "Cantrip Formulas",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "ambition domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|ambition (psa)|psa|8|psa"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|ambition (psa)|psa|8|psa",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|ambition (psa)|psa|8|psa",
+        "name": "Potent Spellcasting",
+        "source": "PSA"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "arcana domain", "scag"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|arcana|scag|8|scag"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|arcana|scag|8|scag",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|arcana|scag|8|scag",
+        "name": "Potent Spellcasting",
+        "source": "SCAG"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "death domain", "dmg"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|death|dmg|8|dmg"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|death|dmg|8|dmg",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|death|dmg|8|dmg",
+        "name": "Divine Strike",
+        "source": "DMG"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "forge domain", "xge"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|forge|xge|8|xge"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|forge|xge|8|xge",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|forge|xge|8|xge",
+        "name": "Divine Strike",
+        "source": "XGE"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "grave domain", "xge"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|grave|xge|8|xge"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|grave|xge|8|xge",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|grave|xge|8|xge",
+        "name": "Potent Spellcasting",
+        "source": "XGE"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "knowledge domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb",
+        "name": "Potent Spellcasting",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "knowledge domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb",
+        "name": "Potent Spellcasting",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "life domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|life|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|life|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|life|phb|8|phb",
+        "name": "Divine Strike",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "light domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|light|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|light|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|light|phb|8|phb",
+        "name": "Potent Spellcasting",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "nature domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|nature|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|nature|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|nature|phb|8|phb",
+        "name": "Divine Strike",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "order domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|order|tce|8|tce"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|order|tce|8|tce",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|order|tce|8|tce",
+        "name": "Divine Strike",
+        "source": "TCE"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "peace domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|potent spellcasting|cleric|phb|peace|tce|8|tce"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|potent spellcasting|cleric|phb|peace|tce|8|tce",
+      "original": {
+        "target": "subclass-feature|potent spellcasting|cleric|phb|peace|tce|8|tce",
+        "name": "Potent Spellcasting",
+        "source": "TCE"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "solidarity domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|solidarity (psa)|psa|8|psa"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|solidarity (psa)|psa|8|psa",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|solidarity (psa)|psa|8|psa",
+        "name": "Divine Strike",
+        "source": "PSA"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "strength domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|strength (psa)|psa|8|psa"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|strength (psa)|psa|8|psa",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|strength (psa)|psa|8|psa",
+        "name": "Divine Strike",
+        "source": "PSA"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "tempest domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|tempest|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|tempest|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|tempest|phb|8|phb",
+        "name": "Divine Strike",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "trickery domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|trickery|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|trickery|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|trickery|phb|8|phb",
+        "name": "Divine Strike",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "twilight domain", "tce"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|twilight|tce|8|tce"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|twilight|tce|8|tce",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|twilight|tce|8|tce",
+        "name": "Divine Strike",
+        "source": "TCE"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "war domain", "phb"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|war|phb|8|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|war|phb|8|phb",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|war|phb|8|phb",
+        "name": "Divine Strike",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "cleric", "phb", "zeal domain (psa)", "psa"],
+      "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce",
+      "name": "Blessed Strikes",
+      "source": "TCE",
+      "level": 8,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|divine strike|cleric|phb|zeal (psa)|psa|8|psa"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|divine strike|cleric|phb|zeal (psa)|psa|8|psa",
+      "original": {
+        "target": "subclass-feature|divine strike|cleric|phb|zeal (psa)|psa|8|psa",
+        "name": "Divine Strike",
+        "source": "PSA"
+      }
+    },
+    {
+      "owner": ["subclass", "fighter", "phb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "name": "Maneuver Options",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["subclass", "fighter", "xphb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "name": "Maneuver Options",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [],
+      "compatible": []
+    },
+    {
+      "owner": ["subclass", "ranger", "phb", "beast master", "phb"],
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+      "name": "Primal Companion",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+      "original": {
+        "target": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+        "name": "Ranger's Companion",
+        "source": "PHB"
+      }
+    },
+    {
+      "owner": ["subclass", "ranger", "xphb", "beast master", "phb"],
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce",
+      "name": "Primal Companion",
+      "source": "TCE",
+      "level": 3,
+      "children": [],
+      "replaces": [
+        {
+          "target": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb"
+        }
+      ],
+      "compatible": [],
+      "family": "replacement:subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+      "original": {
+        "target": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+        "name": "Ranger's Companion",
+        "source": "PHB"
+      }
+    }
+  ],
+  "originals": [
+    {
+      "kind": "classFeature",
+      "target": "class-feature|hide in plain sight|ranger|phb|10|phb",
+      "body": {
+        "name": "Hide in Plain Sight",
+        "source": "PHB",
+        "page": 89,
+        "srd": true,
+        "className": "Ranger",
+        "classSource": "PHB",
+        "level": 10,
+        "entries": [
+          "Starting at 10th level, you can spend 1 minute creating camouflage for yourself. You must have access to fresh mud, dirt, plants, soot, and other naturally occurring materials with which to create your camouflage.",
+          "Once you are camouflaged in this way, you can try to hide by pressing yourself up against a solid surface, such as a tree or wall, that is at least as tall and wide as you are. You gain a +10 bonus to Dexterity ({@skill Stealth}) checks as long as you remain there without moving or taking actions. Once you move or take an action or a reaction, you must camouflage yourself again to gain this benefit."
+        ]
+      }
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|primeval awareness|ranger|phb|3|phb",
+      "body": {
+        "name": "Primeval Awareness",
+        "source": "PHB",
+        "page": 89,
+        "srd": true,
+        "className": "Ranger",
+        "classSource": "PHB",
+        "level": 3,
+        "entries": [
+          "Beginning at 3rd level, you can use your action and expend one ranger spell slot to focus your awareness on the region around you. For 1 minute per level of the spell slot you expend, you can sense whether the following types of creatures are present within 1 mile of you (or within up to 6 miles if you are in your favored terrain): aberrations, celestials, dragons, elementals, fey, fiends, and undead. This feature doesn't reveal the creatures' location or number."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|death|dmg|8|dmg",
+      "body": {
+        "name": "Divine Strike",
+        "source": "DMG",
+        "page": 96,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Death",
+        "subclassSource": "DMG",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, the cleric gains the ability to infuse his or her weapon strikes with necrotic energy. Once on each of the cleric's turns when he or she hits a creature with a weapon attack, the cleric can cause the attack to deal an extra {@damage 1d8} necrotic damage to the target. When the cleric reaches 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|forge|xge|8|xge",
+      "body": {
+        "name": "Divine Strike",
+        "source": "XGE",
+        "page": 18,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Forge",
+        "subclassSource": "XGE",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with the fiery power of the forge. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} fire damage to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|life|phb|8|phb",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PHB",
+        "page": 60,
+        "srd": true,
+        "basicRules": true,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Life",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} radiant damage to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|nature|phb|8|phb",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PHB",
+        "page": 61,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Nature",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} cold, fire, or lightning damage (your choice) to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|order|tce|8|tce",
+      "body": {
+        "name": "Divine Strike",
+        "source": "TCE",
+        "page": 31,
+        "otherSources": [
+          {
+            "source": "GGR",
+            "page": 25
+          }
+        ],
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Order",
+        "subclassSource": "TCE",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} psychic damage to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|solidarity (psa)|psa|8|psa",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PSA",
+        "page": 24,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Solidarity (PSA)",
+        "subclassSource": "PSA",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} damage of the same type dealt by the weapon to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|strength (psa)|psa|8|psa",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PSA",
+        "page": 26,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Strength (PSA)",
+        "subclassSource": "PSA",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} damage of the same type dealt by the weapon to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|tempest|phb|8|phb",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PHB",
+        "page": 62,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Tempest",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} thunder damage to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|trickery|phb|8|phb",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PHB",
+        "page": 62,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Trickery",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with poison—a gift from your deity. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} poison damage to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|twilight|tce|8|tce",
+      "body": {
+        "name": "Divine Strike",
+        "source": "TCE",
+        "page": 34,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Twilight",
+        "subclassSource": "TCE",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "{@i 8th-level Twilight Domain feature}",
+          "You gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} radiant damage. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|war|phb|8|phb",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PHB",
+        "page": 63,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "War",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} damage of the same type dealt by the weapon to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|divine strike|cleric|phb|zeal (psa)|psa|8|psa",
+      "body": {
+        "name": "Divine Strike",
+        "source": "PSA",
+        "page": 28,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Zeal (PSA)",
+        "subclassSource": "PSA",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "At 8th level, you gain the ability to infuse your weapon strikes with divine energy. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra {@damage 1d8} damage of the same type dealt by the weapon to the target. When you reach 14th level, the extra damage increases to {@damage 2d8}."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|ambition (psa)|psa|8|psa",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "PSA",
+        "page": 27,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Ambition (PSA)",
+        "subclassSource": "PSA",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "Starting at 8th level, you add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|arcana|scag|8|scag",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "SCAG",
+        "page": 125,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Arcana",
+        "subclassSource": "SCAG",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "Starting at 8th level, you add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|grave|xge|8|xge",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "XGE",
+        "page": 19,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Grave",
+        "subclassSource": "XGE",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "Starting at 8th level, you add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|knowledge|phb|8|phb",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "PHB",
+        "page": 59,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Knowledge",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "Starting at 8th level, you add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|light|phb|8|phb",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "PHB",
+        "page": 60,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Light",
+        "subclassSource": "PHB",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "Starting at 8th level, you add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|potent spellcasting|cleric|phb|peace|tce|8|tce",
+      "body": {
+        "name": "Potent Spellcasting",
+        "source": "TCE",
+        "page": 32,
+        "className": "Cleric",
+        "classSource": "PHB",
+        "subclassShortName": "Peace",
+        "subclassSource": "TCE",
+        "level": 8,
+        "header": 2,
+        "entries": [
+          "{@i 8th-level Peace Domain feature}",
+          "You add your Wisdom modifier to the damage you deal with any cleric cantrip."
+        ]
+      }
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|ranger's companion|ranger|phb|beast master|phb|3|phb",
+      "body": {
+        "name": "Ranger's Companion",
+        "source": "PHB",
+        "page": 93,
+        "className": "Ranger",
+        "classSource": "PHB",
+        "subclassShortName": "Beast Master",
+        "subclassSource": "PHB",
+        "level": 3,
+        "header": 1,
+        "entries": [
+          "You gain a beast companion that accompanies you on your adventures and is trained to fight alongside you. Choose a {@filter beast that is no larger than Medium and that has a challenge rating of 1/4 or lower|bestiary|challenge rating=[&0;&1/4]|type=beast|size=f;d;t;s;m|miscellaneous=!swarm}. Add your proficiency bonus to the beast's AC, attack rolls, and damage rolls, as well as to any saving throws and skills it is proficient in. Its hit point maximum equals its normal maximum or four times your ranger level, whichever is higher. Like any creature, the beast can spend Hit Dice during a short rest.",
+          "The beast obeys your commands as best as it can. It takes its turn on your initiative. On your turn, you can verbally command the beast where to move (no action required by you). You can use your action to verbally command it to take the {@action Attack}, {@action Dash}, {@action Disengage}, or {@action Help} action. If you don't issue a command, the beast takes the {@action Dodge} action. Once you have the Extra Attack feature, you can make one weapon attack yourself when you command the beast to take the {@action Attack} action.",
+          "If you are {@condition incapacitated} or absent, your beast companion acts on its own, focusing on protecting you and itself. It never requires your command to use its reaction, such as when making an opportunity attack.",
+          "While traveling through your favored terrain with only the beast, you can move stealthily at a normal pace.",
+          "If the beast dies, you can obtain a new companion by spending 8 hours magically bonding with a beast that isn't hostile to you and that meets the requirements."
+        ]
+      }
+    }
+  ],
+  "pools": [
+    {
+      "owner": ["class", "sorcerer", "phb"],
+      "target": "class-feature|metamagic options|sorcerer|phb|3|tce",
+      "level": 3,
+      "dependency": {
+        "owner": ["class", "sorcerer", "phb"],
+        "target": "class-feature|metamagic|sorcerer|phb|3|phb",
+        "level": 3
+      },
+      "choiceId": "class:sorcerer|phb|choice:metamagic|3",
+      "progressionField": "optionalfeatureProgression[0]",
+      "progression": {
+        "name": "Metamagic",
+        "featureType": ["MM"],
+        "progression": {
+          "3": 2,
+          "10": 3,
+          "17": 4
+        }
+      },
+      "members": [
+        {
+          "entityType": "optionalFeature",
+          "name": "Seeking Spell",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Transmuted Spell",
+          "source": "TCE"
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "phb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "level": 3,
+      "dependency": {
+        "owner": ["subclass", "fighter", "phb", "battle master", "phb"],
+        "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+        "level": 3
+      },
+      "choiceId": "class:fighter|phb|subclass:battle-master|phb|choice:maneuvers|3",
+      "progressionField": "optionalfeatureProgression[0]",
+      "progression": {
+        "name": "Maneuvers",
+        "featureType": ["MV:B"],
+        "progression": {
+          "3": 3,
+          "7": 5,
+          "10": 7,
+          "15": 9
+        }
+      },
+      "members": [
+        {
+          "entityType": "optionalFeature",
+          "name": "Ambush",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Bait and Switch",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Brace",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Commanding Presence",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Grappling Strike",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Quick Toss",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Tactical Assessment",
+          "source": "TCE"
+        }
+      ]
+    },
+    {
+      "owner": ["subclass", "fighter", "xphb", "battle master", "phb"],
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce",
+      "level": 3,
+      "dependency": {
+        "owner": ["subclass", "fighter", "xphb", "battle master", "phb"],
+        "target": "subclass-feature|maneuvers|fighter|phb|battle master|phb|3|phb",
+        "level": 3
+      },
+      "choiceId": "class:fighter|xphb|subclass:battle-master|phb|choice:maneuvers|3",
+      "progressionField": "optionalfeatureProgression[0]",
+      "progression": {
+        "name": "Maneuvers",
+        "featureType": ["MV:B"],
+        "progression": {
+          "3": 3,
+          "7": 5,
+          "10": 7,
+          "15": 9
+        }
+      },
+      "members": [
+        {
+          "entityType": "optionalFeature",
+          "name": "Ambush",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Bait and Switch",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Brace",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Commanding Presence",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Grappling Strike",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Quick Toss",
+          "source": "TCE"
+        },
+        {
+          "entityType": "optionalFeature",
+          "name": "Tactical Assessment",
+          "source": "TCE"
+        }
+      ]
+    }
+  ]
+}

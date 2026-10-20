@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseCreatures } from '@/lib/5etools/parsers/basic'
-import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import { parseClassDocument, parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
@@ -49,10 +49,12 @@ function footer(name: 'Confirm' | 'Cancel') {
   return control
 }
 async function levelButton(level: number) {
-  const label = await screen.findByText(`Level ${level} Features`, { selector: 'span' })
+  const label = await screen.findByText(`Level ${level}`, {
+    selector: '[data-slot="accordion-trigger"] span',
+  })
   const candidate = label.closest('button')!
   const control = await within(candidate.parentElement!).findByRole('button', {
-    name: new RegExp(`Level ${level} Features`),
+    name: new RegExp(`Level ${level}\\b`),
   })
   expect(control).toBe(candidate)
   return control
@@ -422,9 +424,11 @@ test
   'actual %s/%s Primal Companion keeps an independent rest-changing picker',
   async (classSource, subclassSource, creatureSource, parent, optional) => {
     const document = JSON.parse(readFileSync('data/class/class-ranger.json', 'utf8'))
+    const parsed = parseClassDocument(document)
     const data = makeGameDataFixture({
-      classes: parseClasses(document) as Class5e[],
-      classFeatures: parseClassFeatures(document) as ClassFeature[],
+      classes: parsed.classes as Class5e[],
+      classFeatures: parsed.classFeatures as ClassFeature[],
+      optionalClassFeatureSources: parsed.optionalClassFeatureSources,
       creatures: parseCreatures(
         JSON.parse(
           readFileSync(`data/bestiary/bestiary-${creatureSource.toLowerCase()}.json`, 'utf8'),
@@ -441,6 +445,16 @@ test
     mount(data, character)
     await expand(3)
     await pickSubclass(parent, 'Beast Master')
+    if (optional) {
+      expect(active().optionalClassFeatureAdoptions ?? []).toEqual([])
+      expect(await screen.findByRole('heading', { name: "Choose Ranger's Companion" })).toBeTruthy()
+      fireEvent.click(footer('Cancel'))
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Primal Companion' }), {
+        button: 0,
+        ctrlKey: false,
+      })
+      expect(active().optionalClassFeatureAdoptions).toHaveLength(1)
+    }
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(
       within(screen.getByRole('group', { name: parent })).queryByRole('button', {

@@ -1467,6 +1467,58 @@ function buildCompanionFixture(baseFixture, edition) {
   )
 }
 
+/** Complete the source-owned setup added to the otherwise-complete 2024 export fixture. */
+function completeScholarFixture(fixture) {
+  const parsed = classPayloads.map(parseClassDocument)
+  const allowed = new Set(fixture.allowedSources)
+  const currentClasses = DataFilter.filterClasses(
+    parsed.flatMap((row) => row.classes),
+    {
+      sources: fixture.allowedSources,
+    },
+  )
+  const catalogs = buildClassChoiceFeatureCatalogs({
+    classes: currentClasses,
+    feats: DataFilter.filterFeats(feats, { sources: fixture.allowedSources }),
+    classFeatures: parsed
+      .flatMap((row) => row.classFeatures)
+      .filter((row) => allowed.has(row.source)),
+    skills: asArray(readJson(join(dataRoot, 'skills.json')).skill).filter(
+      (row) => !row.source || allowed.has(row.source),
+    ),
+    languages: asArray(readJson(join(dataRoot, 'languages.json')).language).filter(
+      (row) => !row.source || allowed.has(row.source),
+    ),
+  })
+  const owner = fixture.classProgression.find(
+    (entry) => entry.name === 'Wizard' && entry.source === 'XPHB',
+  )
+  const wizard = currentClasses.find(
+    (entry) => entry.name === owner?.name && entry.source === owner.source,
+  )
+  if (!owner || !wizard) throw new Error('Missing exact Scholar fixture owner.')
+  const choice = getCurrentClassProficiencyChoices(wizard, false, catalogs).find(
+    (row) =>
+      decodeClassProficiencyChoiceId(row.id)?.target ===
+        'class-feature|scholar|wizard|xphb|2|xphb' && row.level <= owner.levels,
+  )
+  if (!choice) throw new Error('Missing current Scholar fixture authority.')
+  const result = applyClassChoiceSelectionWithGrantsCommand(
+    fixture,
+    fixture.provenance,
+    choice,
+    [getProficiencyOption('expertise', 'History')],
+    { classes: currentClasses, catalogs },
+  )
+  const completed = {
+    ...fixture,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  }
+  characterPersistenceSchema.parse(completed)
+  return completed
+}
+
 // Load the same pure TypeScript producers through the existing Vite alias boundary.
 // No second native rule implementation or persistence conversion belongs in this authoring script.
 const runtime = await createServer({
@@ -1489,6 +1541,13 @@ let parseRaces,
   applyFeatGrant,
   commitFeatOptionsCommand,
   getClassChoiceFeatureId,
+  parseClassDocument,
+  DataFilter,
+  buildClassChoiceFeatureCatalogs,
+  getCurrentClassProficiencyChoices,
+  decodeClassProficiencyChoiceId,
+  getProficiencyOption,
+  applyClassChoiceSelectionWithGrantsCommand,
   characterPersistenceSchema
 try {
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
@@ -1515,6 +1574,20 @@ try {
   ;({ getClassChoiceFeatureId } = await runtime.ssrLoadModule(
     '/src/lib/character/classChoiceIdentity.ts',
   ))
+  ;({ parseClassDocument } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/classes.ts'))
+  ;({ DataFilter } = await runtime.ssrLoadModule('/src/lib/5etools/filters.ts'))
+  ;({ buildClassChoiceFeatureCatalogs } = await runtime.ssrLoadModule(
+    '/src/lib/character/classChoiceOptions.ts',
+  ))
+  ;({ getCurrentClassProficiencyChoices } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/classProficiencyChoices.ts',
+  ))
+  ;({ decodeClassProficiencyChoiceId, getProficiencyOption } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/classProficiencyIdentity.ts',
+  ))
+  ;({ applyClassChoiceSelectionWithGrantsCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/classChoiceCommands.ts',
+  ))
 } finally {
   await runtime.close()
 }
@@ -1522,19 +1595,27 @@ const nativeRaces = parseRaces(racePayload)
 const parsedFixtureSpells = parseSpells(spells, { sourceLookup: spellSourceLookup })
 const nativeSpellLookup = buildSpellLookup(parsedFixtureSpells)
 
-const seed = readJson(fixture2014Path)
-const character2014 = buildFixture(seed, '2014')
-const character2024 = buildFixture(seed, '2024')
-const companion2014 = buildCompanionFixture(character2014, '2014')
-const companion2024 = buildCompanionFixture(character2024, '2024')
+if (process.argv.includes('--complete-class-setup')) {
+  // Narrow repair mode preserves the three unrelated fixture files byte for byte.
+  const fixture = completeScholarFixture(readJson(fixture2024Path))
+  const output =
+    process.argv.find((argument) => argument.startsWith('--output='))?.slice(9) ?? fixture2024Path
+  writeFileSync(output, `${JSON.stringify(fixture, null, 2)}\n`)
+} else {
+  const seed = readJson(fixture2014Path)
+  const character2014 = buildFixture(seed, '2014')
+  const character2024 = completeScholarFixture(buildFixture(seed, '2024'))
+  const companion2014 = buildCompanionFixture(character2014, '2014')
+  const companion2024 = buildCompanionFixture(character2024, '2024')
 
-const outputs = [
-  [fixture2014Path, character2014],
-  [fixture2024Path, character2024],
-  [companion2014Path, companion2014],
-  [companion2024Path, companion2024],
-]
-for (const [, fixture] of outputs) characterPersistenceSchema.parse(fixture)
-for (const [path, fixture] of outputs) {
-  writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`)
+  const outputs = [
+    [fixture2014Path, character2014],
+    [fixture2024Path, character2024],
+    [companion2014Path, companion2014],
+    [companion2024Path, companion2024],
+  ]
+  for (const [, fixture] of outputs) characterPersistenceSchema.parse(fixture)
+  for (const [path, fixture] of outputs) {
+    writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`)
+  }
 }

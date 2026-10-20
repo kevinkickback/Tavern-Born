@@ -8,6 +8,7 @@ import {
   getEffectiveSpellcastingClassData,
   getSelectedSubclassData,
 } from '@/lib/5etools/classData'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { DataFilter } from '@/lib/5etools/filters'
 import {
   buildBackgroundLookup,
@@ -41,14 +42,16 @@ import {
   buildClassSpellSelectionsByLevel,
   isSpellOnClassList,
 } from '@/lib/calculations/spellProfiles'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import {
+  buildClassChoiceFeatureCatalogs,
   type ClassChoiceCatalogs,
-  collectSubclassFeatures,
   getCharacterClassChoices,
+  getClassChoiceCandidates,
   getClassChoiceOptionKey,
-  indexSubclassFeatureTargets,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   buildCharacterSheetFieldMap,
   createCharacterSheetViewModel,
@@ -75,6 +78,7 @@ import type {
   Item5e,
   ItemMastery5e,
   ItemType5e,
+  Language5e,
   OptionalFeatureLike,
   Race5e,
   Spell5e,
@@ -199,15 +203,16 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
   const fromAllowedSource = (entity: { source?: string }) =>
     !entity.source || allowedSources.has(entity.source)
   return {
-    classFeatures: classFeatures.filter(fromAllowedSource),
-    subclassFeatures: classes
-      .flatMap((classData) =>
-        (classData.subclasses ?? []).flatMap((subclass) => collectSubclassFeatures(subclass)),
-      )
-      .filter(fromAllowedSource),
-    subclassTargets: indexSubclassFeatureTargets(
-      DataFilter.filterClasses(classes, { sources: character.allowedSources }),
-    ),
+    ...buildClassChoiceFeatureCatalogs({
+      classes: DataFilter.filterClasses(classes, { sources: character.allowedSources }),
+      classFeatures: classFeatures.filter(fromAllowedSource),
+      skills: collection(readJson(join(dataRoot, 'skills.json')), 'skill').filter((row) =>
+        fromAllowedSource(row as { source?: string }),
+      ),
+      languages: (
+        collection(readJson(join(dataRoot, 'languages.json')), 'language') as Language5e[]
+      ).filter(fromAllowedSource),
+    }),
     creatures: companionCreatures.filter(fromAllowedSource),
     feats: feats.filter(fromAllowedSource),
     items: items.filter(fromAllowedSource),
@@ -272,10 +277,34 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
     expect(
       existsSync(join(process.cwd(), 'public', organization?.imagePath?.replace(/^\//, '') ?? '')),
     ).toBe(true)
-    const viewModel = createCharacterSheetViewModel(character, lookups)
+    const classChoiceCatalogs = buildClassChoiceCatalogs(character)
+    const inputs = {
+      ...lookups,
+      classChoiceClasses: classChoiceCatalogs.classes,
+      classChoiceFeatureCatalogs: classChoiceCatalogs,
+    }
+    const viewModel = createCharacterSheetViewModel(character, inputs)
     expect(viewModel.organizationImage).toBe(organization?.imagePath)
 
-    const calculation = createCharacterCalculationContext(character, lookups)
+    const calculation = createCharacterCalculationContext(character, inputs)
+    if (edition === '2024') {
+      const scholar = character.classChoiceSelections?.find(
+        (row) =>
+          decodeClassProficiencyChoiceId(row.choiceId)?.target ===
+          'class-feature|scholar|wizard|xphb|2|xphb',
+      )
+      expect(scholar?.selected.map((row) => row.name)).toEqual(['History'])
+      expect(calculation.character.provenance.proficiencies.expertise?.history).toContainEqual(
+        expect.objectContaining({
+          sourceType: 'class',
+          sourceName: 'Wizard',
+          grantVariant: scholar!.choiceId,
+        }),
+      )
+      expect(viewModel.skillByName.get('history')!.modifier).toBe(
+        calculation.abilityScores.modifiers.intelligence + 12,
+      )
+    }
     expect(character.movement).toEqual(
       normalizeRaceMovement(
         calculation.raceResolution.parentRace as Race5e,
@@ -283,7 +312,6 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       ),
     )
     expect(viewModel.walkingSpeed).toBeGreaterThan(0)
-    const classChoiceCatalogs = buildClassChoiceCatalogs(character)
     const readiness = getCharacterReadiness(character, {
       calculation,
       classChoiceCatalogs,
@@ -455,13 +483,24 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         ).toHaveLength(requiredSpellChoices)
       }
 
-      for (const choice of getCharacterClassChoices(classData, subclassData, false)) {
+      for (const choice of getCharacterClassChoices(
+        classData,
+        subclassData,
+        createOptionalClassFeatureActivity(character, classChoiceCatalogs),
+        classChoiceCatalogs,
+      )) {
         const required = getRequiredChoiceSelectionCount(choice, entry.levels)
         if (required === 0) continue
         const selection = storedChoices.get(choice.id)
         expect(selection?.selected, `Missing ${choice.label} selection`).toHaveLength(required)
         const eligible = new Set(
-          resolveClassChoiceOptions(choice, classChoiceCatalogs)
+          resolveClassChoiceOptions(
+            choice,
+            classChoiceCatalogs,
+            selection?.selected ?? [],
+            entry.levels,
+            choice.kind === 'proficiency' ? character : undefined,
+          )
             .filter((option) => option.availability === 'eligible')
             .map((option) => getClassChoiceOptionKey(option.reference)),
         )
@@ -566,18 +605,51 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       organizationImagePath,
     )
 
-    const calculation = createCharacterCalculationContext(character, lookups)
+    const catalogs = buildClassChoiceCatalogs(character)
+    const calculation = createCharacterCalculationContext(character, {
+      ...lookups,
+      classChoiceClasses: catalogs.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    })
     const classData = calculation.classes[0]
     expect(character.movement.speeds.walk).toBeGreaterThan(0)
     const subclassData = getSelectedSubclassData(classData, character.classProgression[0])
-    const catalogs = buildClassChoiceCatalogs(character)
-    const choices = getCharacterClassChoices(classData, subclassData, edition === '2014', catalogs)
+    const effectiveSelections = getEffectiveClassChoiceSelections(
+      character,
+      catalogs.classes!,
+      catalogs,
+    )
+    const choices = getCharacterClassChoices(
+      classData,
+      subclassData,
+      createOptionalClassFeatureActivity(character, catalogs),
+      catalogs,
+    )
     for (const choice of choices) {
       const required = getRequiredChoiceSelectionCount(choice, 3)
       if (required === 0) continue
-      const selection = character.classChoiceSelections?.find(
-        (candidate) => candidate.choiceId === choice.id,
-      )
+      const selection = effectiveSelections.find((candidate) => candidate.choiceId === choice.id)
+      if (choice.kind === 'proficiency') {
+        // Companion setup is complete; its source-owned proficiency setup stays explicitly pending.
+        const revised = edition === '2024'
+        expect(decodeClassProficiencyChoiceId(choice.id)).toEqual({
+          owner: ['ranger', revised ? 'xphb' : 'phb'],
+          target: revised
+            ? 'class-feature|deft explorer|ranger|xphb|2|xphb'
+            : 'class-feature|deft explorer|ranger|phb|1|tce',
+          domain: choice.proficiencyDomain,
+          level: revised ? 2 : 1,
+        })
+        expect(['expertise', 'languages']).toContain(choice.proficiencyDomain)
+        expect(choice.maximumSelections).toBe(choice.proficiencyDomain === 'expertise' ? 1 : 2)
+        expect(selection).toBeUndefined()
+        continue
+      }
+      if (edition === '2014' && choice.label === 'Natural Explorer') {
+        expect(choice.level).toBe(1)
+        expect(selection).toBeUndefined()
+        continue
+      }
       expect(selection?.inactive).not.toBe(true)
       expect(selection?.selected, `Missing ${choice.label} selection`).toHaveLength(required)
       const eligible = new Set(
@@ -624,12 +696,26 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         (selection) => selection.label === "Ranger's Companion",
       )
       expect(classic?.inactive).toBe(true)
+      expect(character.optionalClassFeatureAdoptions).toBeUndefined()
+      expect(
+        effectiveSelections.find((row) => row.choiceId === classic?.choiceId)?.inactive,
+      ).not.toBe(true)
+      expect(effectiveSelections.find((row) => row.choiceId === primal?.choiceId)?.inactive).toBe(
+        true,
+      )
+      expect(
+        createCharacterSheetViewModel(character, {
+          ...lookups,
+          classChoiceClasses: catalogs.classes,
+          classChoiceFeatureCatalogs: catalogs,
+        }).actions.some((row) => row.name === 'Primal Companion'),
+      ).toBe(false)
       expect(classic?.selected[0]).toMatchObject({
         entityType: 'creature',
         name: 'Wolf',
         source: 'MM',
       })
-      const classicChoice = getCharacterClassChoices(classData, subclassData, false).find(
+      const classicChoice = getClassChoiceCandidates(classData, subclassData).find(
         (choice) => choice.id === classic?.choiceId,
       )
       expect(classicChoice).toBeDefined()
@@ -659,25 +745,80 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       featsByKey: lookups.featsByKey,
       spellsByKey: lookups.spellsByKey,
     })
-    // The companion is eligible; unsupported Canny setup still blocks the 2014 character.
-    expect(readiness.status).toBe(edition === '2014' ? 'incomplete' : 'ready')
+    // The old optional flag is permission only. Revised Deft Explorer remains standard.
+    expect(readiness.status).toBe('incomplete')
     expect(
       readiness.blockingIssues,
       readiness.blockingIssues.map((issue) => `${issue.title}: ${issue.explanation}`).join('\n'),
     ).toEqual(
       edition === '2014'
-        ? [
-            {
-              id: 'class-choice-diagnostic:Ranger|PHB:Deft Explorer:unsupported-required-choice',
+        ? (() => {
+            const choiceId =
+              'feature-literals:' +
+              encodeURIComponent(
+                JSON.stringify([
+                  ['ranger', 'phb', '', ''],
+                  'class-feature|natural explorer|ranger|phb|1|phb',
+                  'favored-terrain',
+                  'class-feature|natural explorer|ranger|phb|1|phb',
+                  1,
+                ]),
+              )
+            return [
+              {
+                id: `class-choice:${choiceId}`,
+                severity: 'blocking',
+                section: 'class',
+                title: 'Finish Natural Explorer',
+                explanation: 'Ranger: choose 1 selection; 0 chosen.',
+                navigationTarget:
+                  '/build/class?' +
+                  new URLSearchParams({
+                    class: 'Ranger|PHB',
+                    level: '1',
+                    choice: choiceId,
+                  }).toString(),
+              },
+              {
+                id: 'class-choice-diagnostic:Ranger|PHB:Favored Enemy:unsupported-required-choice',
+                severity: 'blocking',
+                section: 'class',
+                title: 'Review unresolved Favored Enemy choice',
+                explanation:
+                  'Favored Enemy requires enemy and associated language choices. Tavern Born does not yet support this setup.',
+                navigationTarget: '/build/class?class=Ranger%7CPHB&level=1',
+              },
+            ]
+          })()
+        : (['expertise', 'languages'] as const).map((domain, index) => {
+            const revised = edition === '2024'
+            const choiceId =
+              'feature-proficiencies:' +
+              encodeURIComponent(
+                JSON.stringify([
+                  ['ranger', revised ? 'xphb' : 'phb'],
+                  revised
+                    ? 'class-feature|deft explorer|ranger|xphb|2|xphb'
+                    : 'class-feature|deft explorer|ranger|phb|1|tce',
+                  domain,
+                  revised ? 2 : 1,
+                ]),
+              )
+            return {
+              id: `class-choice:${choiceId}`,
               severity: 'blocking',
               section: 'class',
-              title: 'Review unresolved Deft Explorer choice',
-              explanation:
-                'Deft Explorer requires Canny expertise and language choices. Tavern Born does not yet support this setup.',
-              navigationTarget: '/build/class?class=Ranger%7CPHB&level=1',
-            },
-          ]
-        : [],
+              title: `Finish ${revised ? 'Deft Explorer' : 'Canny'} ${domain}`,
+              explanation: `Ranger: choose ${index + 1} ${index === 0 ? 'selection' : 'selections'}; 0 chosen.`,
+              navigationTarget:
+                '/build/class?' +
+                new URLSearchParams({
+                  class: revised ? 'Ranger|XPHB' : 'Ranger|PHB',
+                  level: revised ? '2' : '1',
+                  choice: choiceId,
+                }).toString(),
+            }
+          }),
     )
   })
 })

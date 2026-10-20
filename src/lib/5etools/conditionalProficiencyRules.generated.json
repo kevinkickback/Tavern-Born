@@ -1,0 +1,58 @@
+{
+  "features": [
+    {
+      "family": "favored-terrain",
+      "target": "class-feature|natural explorer|ranger|phb|1|phb",
+      "name": "Natural Explorer",
+      "proficiencyType": "skill",
+      "abilities": ["intelligence", "wisdom"],
+      "note": "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+      "className": "Ranger",
+      "classSource": "PHB",
+      "level": 1
+    },
+    {
+      "family": "dragon-ancestor",
+      "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+      "name": "Dragon Ancestor",
+      "proficiencyType": "any",
+      "abilities": ["charisma"],
+      "note": "Whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+      "className": "Sorcerer",
+      "classSource": "PHB",
+      "level": 1
+    },
+    {
+      "family": "fire-rune",
+      "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+      "name": "Fire Rune",
+      "proficiencyType": "tool",
+      "note": "While wearing or carrying an object inscribed with this rune, your proficiency bonus is doubled for any ability check you make that uses your proficiency with a tool.",
+      "className": "Fighter",
+      "classSource": "PHB",
+      "level": 3,
+      "optionalTarget": "optionalFeature|fire rune|tce",
+      "progressionOwner": {
+        "shortName": "Rune Knight",
+        "source": "TCE"
+      },
+      "progression": {
+        "name": "Runes",
+        "featureType": ["RN"],
+        "progression": {
+          "3": 2,
+          "7": 3,
+          "10": 4,
+          "15": 5
+        }
+      }
+    }
+  ],
+  "optional": [
+    {
+      "target": "optionalFeature|fire rune|tce",
+      "digest": "c87a1ecbaeceb7490f490efb0376c2fbd6f79228365780667da5a8e6df7385a2",
+      "fields": ["entries", "featureType", "name", "page", "source"]
+    }
+  ]
+}

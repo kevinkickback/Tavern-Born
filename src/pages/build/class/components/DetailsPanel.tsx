@@ -9,16 +9,19 @@ import {
   getSavingThrowsDisplay,
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
+import type { ClassFeatureDetailOrigin } from '@/lib/character/classFeatureActivityView'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 
 export interface ClassFeatureDisplay {
+  origin?: ClassFeatureDetailOrigin
   name: string
   source?: string
   entries?: unknown[]
 }
 
 export interface SelectedFeatureState {
+  origin?: ClassFeatureDetailOrigin
   name: string
   source?: string
   entries: unknown[]

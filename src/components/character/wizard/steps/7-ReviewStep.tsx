@@ -107,7 +107,7 @@ export function ReviewStep({
 
   const variantRuleRows = [
     {
-      label: 'Optional Class Features',
+      label: 'Allow Optional Class Features',
       enabled: data.variantRules?.optionalClassFeatures,
       available: variantRuleAvailability?.optionalClassFeatures ?? true,
     },
