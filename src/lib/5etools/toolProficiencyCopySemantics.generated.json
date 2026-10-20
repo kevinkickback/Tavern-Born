@@ -1,0 +1,14 @@
+[
+  {
+    "identity": ["enchanted three-dragon ante set", "llk"],
+    "disposition": "not-a-proficiency-name",
+    "rawDigest": "01ec8af5779d9e0a10e264bc32e85983ff5987b8ff73452e8838560d9bd7f350",
+    "dependencies": [
+      {
+        "identity": ["three-dragon ante set", "phb"],
+        "digest": "34d87e218565f6fbbb75e9ed29d3030ea585d68b58b6809ee04f97d6810f4bd7"
+      }
+    ],
+    "resolvedDigest": "d28b9fecf2abcded2ba63364842c98d079073d52a9492bcfc4263b84c32becca"
+  }
+]

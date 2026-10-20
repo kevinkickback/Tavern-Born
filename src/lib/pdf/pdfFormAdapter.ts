@@ -5,10 +5,12 @@ import {
   fill,
   lineTo,
   moveTo,
+  PDFButton,
   PDFCheckBox,
   PDFDict,
   PDFDocument,
   PDFDropdown,
+  type PDFField,
   PDFHexString,
   PDFName,
   PDFNumber,
@@ -81,6 +83,7 @@ const MPMB_LARGE_NUMBER_FIELDS = new Set([
   'Cha Mod',
 ])
 const MPMB_SPELL_ABILITY_MODIFIER_FIELDS = ['Spell DC 1 Mod', 'Spell DC 2 Mod'] as const
+type FieldIndex = ReadonlyMap<string, PDFField>
 
 export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
@@ -144,25 +147,36 @@ export async function fillCharacterSheetDocument(
       fields.checkboxFields[prefix + name] = value
   }
 
+  // Page copies are complete. Reuse this document's first exact-name field through filling.
+  const fieldIndex = new Map<string, PDFField>()
+  for (const field of form.getFields()) {
+    const name = field.getName()
+    if (!fieldIndex.has(name)) fieldIndex.set(name, field)
+  }
+
   for (const [fieldName, value] of Object.entries(fields.textFields)) {
     if (excludedFields.has(fieldName)) continue
     let handled = false
     try {
-      const field = form.getTextField(fieldName)
-      field.removeMaxLength()
-      field.setText(value)
-      handled = true
+      const field = fieldIndex.get(fieldName)
+      if (field instanceof PDFTextField) {
+        field.removeMaxLength()
+        field.setText(value)
+        handled = true
+      }
     } catch {
       // Some templates expose select fields as dropdowns.
     }
     if (!handled) {
       try {
-        const dropdown = form.getDropdown(fieldName)
-        const choices = dropdown.getOptions()
-        if (value && !choices.includes(value)) dropdown.addOptions([value])
-        if (value) dropdown.select(value)
-        else dropdown.clear()
-        handled = true
+        const dropdown = fieldIndex.get(fieldName)
+        if (dropdown instanceof PDFDropdown) {
+          const choices = dropdown.getOptions()
+          if (value && !choices.includes(value)) dropdown.addOptions([value])
+          if (value) dropdown.select(value)
+          else dropdown.clear()
+          handled = true
+        }
       } catch {
         // Report missing and wrong-type fields together after validating the complete map.
       }
@@ -173,7 +187,11 @@ export async function fillCharacterSheetDocument(
   for (const [fieldName, checked] of Object.entries(fields.checkboxFields)) {
     if (excludedFields.has(fieldName)) continue
     try {
-      const checkbox = form.getCheckBox(fieldName)
+      const checkbox = fieldIndex.get(fieldName)
+      if (!(checkbox instanceof PDFCheckBox)) {
+        missingFields.push(fieldName)
+        continue
+      }
       if (checked) checkbox.check()
       else checkbox.uncheck()
     } catch {
@@ -188,14 +206,14 @@ export async function fillCharacterSheetDocument(
   }
 
   if (cleanupProfile === 'mpmb-2014') {
-    setMappedTextDefaults(form, fields.textFields)
-    clearAttackModDropdowns(form)
+    setMappedTextDefaults(fieldIndex, fields.textFields)
+    clearAttackModDropdowns(fieldIndex)
     stripFormActions(form, fields)
-    makeCalculatedFieldsEditable(form)
-    fitMpmbText(form, fields.textFields, onTextTruncated)
-    enlargeMpmbSpellAbilityModifiers(form)
+    makeCalculatedFieldsEditable(fieldIndex)
+    fitMpmbText(form, fieldIndex, fields.textFields, onTextTruncated)
+    enlargeMpmbSpellAbilityModifiers(form, fieldIndex)
     updateDirtyFieldAppearances(form)
-    alignMpmbRuledText(form)
+    alignMpmbRuledText(form, fieldIndex)
     hideUnwantedFields(form)
   } else {
     if (options.templateId?.startsWith('2024')) fit2024TextAppearances(pdfDoc, onTextTruncated)
@@ -252,10 +270,10 @@ async function appendOfficial2014SpellPage(pdfDoc: PDFDocument, prefix: string, 
 }
 
 /** Keep MPMB multiline text on the template's roughly 11 pt printed rules. */
-function alignMpmbRuledText(form: ReturnType<PDFDocument['getForm']>) {
+function alignMpmbRuledText(form: ReturnType<PDFDocument['getForm']>, fieldIndex: FieldIndex) {
   const font = form.getDefaultFont()
   for (const name of MPMB_RULED_TEXT_FIELDS) {
-    const field = form.getFieldMaybe(name)
+    const field = fieldIndex.get(name)
     if (!(field instanceof PDFTextField) || !field.getText()) continue
     field.updateAppearances(font, (textField, widget, appearanceFont) => {
       const operators = defaultTextFieldAppearanceProvider(textField, widget, appearanceFont)
@@ -293,12 +311,13 @@ function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
 
 function fitMpmbText(
   form: ReturnType<PDFDocument['getForm']>,
+  fieldIndex: FieldIndex,
   values: Record<string, string>,
   onTextTruncated: (name: string) => void,
 ) {
   const font = form.getDefaultFont()
   for (const name of Object.keys(values)) {
-    const field = form.getFieldMaybe(name)
+    const field = fieldIndex.get(name)
     if (!(field instanceof PDFTextField) || !field.getText()) continue
     const widget = field.acroField.getWidgets()[0]
     if (!widget) continue
@@ -329,10 +348,13 @@ function fitMpmbText(
   }
 }
 
-function enlargeMpmbSpellAbilityModifiers(form: ReturnType<PDFDocument['getForm']>) {
+function enlargeMpmbSpellAbilityModifiers(
+  form: ReturnType<PDFDocument['getForm']>,
+  fieldIndex: FieldIndex,
+) {
   const font = form.getDefaultFont()
   for (const name of MPMB_SPELL_ABILITY_MODIFIER_FIELDS) {
-    const field = form.getFieldMaybe(name)
+    const field = fieldIndex.get(name)
     if (!(field instanceof PDFDropdown) || field.getSelected().length === 0) continue
     field.setFontSize(7.5)
     const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
@@ -449,21 +471,11 @@ function hideFieldWidgets(field: FieldWithInternals) {
   }
 }
 
-function isPushButtonField(form: ReturnType<PDFDocument['getForm']>, fieldName: string) {
-  try {
-    form.getButton(fieldName)
-    return true
-  } catch {
-    return false
-  }
-}
-
 function hideUnwantedFields(form: ReturnType<PDFDocument['getForm']>) {
   for (const field of form.getFields()) {
     const name = field.getName()
     const isInteractiveButton =
-      isPushButtonField(form, name) &&
-      !MPMB_BUTTON_KEEP_PATTERNS.some((pattern) => pattern.test(name))
+      field instanceof PDFButton && !MPMB_BUTTON_KEEP_PATTERNS.some((pattern) => pattern.test(name))
     if (!isInteractiveButton && !AMMO_CHECKBOX_PATTERN.test(name)) continue
     const internals = asFieldWithInternals(field)
     if (!internals) continue
@@ -475,23 +487,21 @@ function hideUnwantedFields(form: ReturnType<PDFDocument['getForm']>) {
   }
 }
 
-function clearAttackModDropdowns(form: ReturnType<PDFDocument['getForm']>) {
+function clearAttackModDropdowns(fieldIndex: FieldIndex) {
   for (let index = 1; index <= 5; index += 1) {
     try {
-      form.getDropdown(`Attack.${index}.Mod`).clear()
+      const field = fieldIndex.get(`Attack.${index}.Mod`)
+      if (field instanceof PDFDropdown) field.clear()
     } catch {
       // Field may not exist in all template revisions.
     }
   }
 }
 
-function setMappedTextDefaults(
-  form: ReturnType<PDFDocument['getForm']>,
-  textFields: Record<string, string>,
-) {
+function setMappedTextDefaults(fieldIndex: FieldIndex, textFields: Record<string, string>) {
   const defaultValueKey = PDFName.of('DV')
   for (const [fieldName, value] of Object.entries(textFields)) {
-    const internals = asFieldWithInternals(form.getFieldMaybe(fieldName))
+    const internals = asFieldWithInternals(fieldIndex.get(fieldName))
     if (!internals) continue
     internals.acroField.dict.set(defaultValueKey, PDFHexString.fromText(value))
   }
@@ -521,11 +531,13 @@ function stripFormActions(
   ;(form as unknown as FormWithInternals).acroForm.dict.delete(PDFName.of('CO'))
 }
 
-function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) {
+function makeCalculatedFieldsEditable(fieldIndex: FieldIndex) {
   const flagsKey = PDFName.of('Ff')
   for (const fieldName of CALCULATED_FIELDS) {
     try {
-      const field = asFieldWithInternals(form.getTextField(fieldName))
+      const current = fieldIndex.get(fieldName)
+      if (!(current instanceof PDFTextField)) continue
+      const field = asFieldWithInternals(current)
       if (!field) continue
       const flags = field.acroField.dict.get(flagsKey) as { numberValue?: number } | undefined
       if (typeof flags?.numberValue === 'number') {
@@ -544,13 +556,8 @@ function replaceCheckboxOffAppearances(
 ) {
   for (const field of form.getFields()) {
     const internals = asFieldWithInternals(field)
-    if (!internals) continue
-    let checkbox: PDFCheckBox
-    try {
-      checkbox = form.getCheckBox(internals.getName())
-    } catch {
-      continue
-    }
+    if (!internals || !(field instanceof PDFCheckBox)) continue
+    const checkbox = field
     for (const widget of internals.acroField.getWidgets() as AcroWidget[]) {
       const appearanceEntry = widget.dict.get(PDFName.of('AP')) as PDFObject | undefined
       const appearance = pdfDoc.context.lookup(appearanceEntry)

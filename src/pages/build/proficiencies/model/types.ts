@@ -20,6 +20,7 @@ export type ProfFocus =
       category: 'armor' | 'weapons' | 'tools' | 'languages'
       name: string
       isProficient: boolean
+      expertise?: boolean
       itemData?: Item5e | null
       languageData?: Language5e | null
     }

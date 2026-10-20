@@ -155,7 +155,15 @@ export function mapCharacterSheet2024(
     Text_18: normalizeSize(viewModel.sizeSummary),
     Text_19: String(passivePerception),
     Text_55: character.proficiencies.weapons.join(', '),
-    Text_56: character.proficiencies.tools.join(', '),
+    Text_56: viewModel.toolProficiencies
+      .map((name) =>
+        character.proficiencies.expertise.some(
+          (value) => value.trim().toLowerCase() === name.trim().toLowerCase(),
+        )
+          ? `${name} (Expertise)`
+          : name,
+      )
+      .join(', '),
     Text_57: classFeaturesLeft,
     Text_58: classFeaturesRight,
     Text_59: [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),

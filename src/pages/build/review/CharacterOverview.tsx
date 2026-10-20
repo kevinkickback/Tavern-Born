@@ -26,6 +26,7 @@ import {
 } from '@/lib/calculations/abilityScores'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
+import { isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   getRaceDisplayName,
@@ -42,6 +43,12 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
+import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
+import { projectEffectiveClassChoiceFeatures } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  createOptionalClassFeatureActivity,
+  getActiveOptionalClassFeatureDeclarations,
+} from '@/lib/character/optionalClassFeatureActivity'
 import {
   CUSTOM_ORGANIZATION_KEY,
   getOrganizationKey,
@@ -213,6 +220,7 @@ export function CharacterOverview({
   sourceNames: string[]
   ready: boolean
 }) {
+  character = calculation.character
   const navigate = useNavigate()
   const { skills, passivePerception } = useSkills()
   const { savingThrows } = useSavingThrows()
@@ -275,7 +283,15 @@ export function CharacterOverview({
       (feature.source === calculation.raceResolution.mergedRace?.source &&
         resolvedRaceTraits.some((trait) => trait.name === feature.name)),
   )
-  const otherFeatures = character.features.filter((feature) => !racialFeatures.includes(feature))
+  const otherFeatures = projectEffectiveClassChoiceFeatures(
+    character,
+    calculation.classChoices.catalogs,
+  ).features.filter((feature) => !racialFeatures.includes(feature))
+  const optionalActivity = createOptionalClassFeatureActivity(
+    character,
+    calculation.classChoices.catalogs,
+  )
+  const adoptedFeatures = getActiveOptionalClassFeatureDeclarations(optionalActivity)
   const raceTraits = resolvedRaceTraits.filter(
     (trait) => !racialFeatures.some((feature) => feature.name === trait.name),
   )
@@ -285,7 +301,9 @@ export function CharacterOverview({
     ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
   ]
   const conditionalNotes = calculation.effects.declarations.filter(
-    (effect) => effect.operation.kind === 'conditional-note',
+    (effect) =>
+      effect.operation.kind === 'conditional-note' &&
+      isCharacterEffectActive(effect, calculation.effects.resolutionContext),
   )
   const defenses = getEffectiveDefensiveTraits(
     calculation.effects.declarations,
@@ -513,6 +531,7 @@ export function CharacterOverview({
               racialFeatures.length +
               raceTraits.length +
               otherFeatures.length +
+              adoptedFeatures.length +
               (character.classChoiceSelections?.length ?? 0) +
               conditionalNotes.length
             }
@@ -547,6 +566,26 @@ export function CharacterOverview({
                   Class, subclass & other features
                 </h3>
                 <FeatureList features={otherFeatures} entriesByKey={featureEntriesByKey} />
+                {adoptedFeatures.length > 0 && (
+                  <ul className="space-y-2">
+                    {adoptedFeatures.map(({ owner, target, level: gain, feature }) => (
+                      <DetailEntry
+                        key={JSON.stringify([owner, target, gain])}
+                        name={feature.name}
+                        source={`${feature.className} ${gain} · ${feature.source}`}
+                      >
+                        <GameContent
+                          entry={effectiveDeclaredEntries(
+                            feature.entries ?? [],
+                            optionalActivity,
+                            owner,
+                            target,
+                          )}
+                        />
+                      </DetailEntry>
+                    ))}
+                  </ul>
+                )}
               </section>
               {(character.classChoiceSelections?.length ?? 0) > 0 && (
                 <section>
@@ -584,6 +623,9 @@ export function CharacterOverview({
                                     )}
                                     {details?.availability === 'source-unavailable' && (
                                       <Badge variant="outline">Source unavailable</Badge>
+                                    )}
+                                    {details?.availability === 'inactive' && (
+                                      <Badge variant="outline">Inactive</Badge>
                                     )}
                                   </div>
                                   {entries?.length ? <GameContent entry={entries} /> : null}

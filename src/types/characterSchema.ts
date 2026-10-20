@@ -5,6 +5,8 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getInvalidOptionalClassAdoptionIndexes } from '@/lib/character/optionalClassFeatureIdentity'
+import { isReservedProficiencyCheckNoteId } from '@/lib/provenance/conditionalProficiencyIdentity'
 import { getInvalidFeatSelectionPaths } from '@/lib/provenance/featSelectionValidation'
 import { getInvalidNativeRacialSpellPaths } from '@/lib/provenance/nativeRacialSpellValidation'
 import { getInvalidRaceAbilityChoicePaths } from '@/lib/provenance/raceAbilityChoiceIdentity'
@@ -19,7 +21,9 @@ import {
 import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance/resolveRaceAsiChoices'
 import { getInvalidSpecialSpellPaths } from '@/lib/provenance/specialSpellValidation'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
+import { getInvalidClassProficiencyPaths } from '@/lib/schema/classProficiencyValidation'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
+import { getInvalidFixedProficiencyPaths } from '@/lib/schema/fixedProficiencyValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Character } from './character'
 
@@ -29,6 +33,34 @@ const sourceSchema = z
   .string()
   .min(1)
   .transform((s) => s.toUpperCase())
+
+const optionalOwnerPartSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .transform((s) => s.toLowerCase())
+const optionalClassAdoptionSchema = z
+  .object({
+    owner: z.union([
+      z.tuple([z.literal('class'), optionalOwnerPartSchema, optionalOwnerPartSchema]),
+      z.tuple([
+        z.literal('subclass'),
+        optionalOwnerPartSchema,
+        optionalOwnerPartSchema,
+        optionalOwnerPartSchema,
+        optionalOwnerPartSchema,
+      ]),
+    ]),
+    target: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1200)
+      .transform((s) => s.toLowerCase()),
+    earnedLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  })
+  .strict()
 
 /** Any legal ability score, including magical boosted maximums. */
 const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
@@ -311,6 +343,7 @@ const characterClassChoiceSelectionSchema = z.object({
     'optional-feature',
     'creature',
     'feature-option',
+    'proficiency',
   ]),
   inactive: z.boolean().optional(),
   className: z.string().min(1),
@@ -318,6 +351,10 @@ const characterClassChoiceSelectionSchema = z.object({
   subclassName: z.string().min(1).optional(),
   subclassSource: z.string().min(1).optional(),
   classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  proficiencyAtGain: z
+    .object({ name: z.string().min(1), alreadyProficient: z.boolean() })
+    .strict()
+    .optional(),
   selected: z.array(
     z.object({
       entityType: z.enum([
@@ -328,6 +365,7 @@ const characterClassChoiceSelectionSchema = z.object({
         'optionalFeature',
         'creature',
         'featureOption',
+        'proficiency',
       ]),
       name: z.string().min(1),
       source: z.string().optional(),
@@ -877,6 +915,7 @@ export const characterSchema = z
     specialFeats: z.array(featSchema).optional(),
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
+    optionalClassFeatureAdoptions: z.array(optionalClassAdoptionSchema).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema,
     inspiration: z.boolean().optional(),
@@ -900,6 +939,26 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const index of getInvalidOptionalClassAdoptionIndexes(
+      char.optionalClassFeatureAdoptions ?? [],
+    ))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['optionalClassFeatureAdoptions', index],
+        message: 'Invalid or conflicting optional class feature adoption.',
+      })
+    for (const path of getInvalidFixedProficiencyPaths(char as Character))
+      ctx.addIssue({
+        code: 'custom',
+        path,
+        message: 'Invalid source-owned fixed proficiency relation.',
+      })
+    for (const path of getInvalidClassProficiencyPaths(char as Character))
+      ctx.addIssue({
+        code: 'custom',
+        path,
+        message: 'Invalid source-owned class proficiency relation.',
+      })
     for (const [index, selection] of (char.classChoiceSelections ?? []).entries()) {
       if (isStormAuraChoiceId(selection.choiceId) && !isValidStormAuraSelection(selection))
         ctx.addIssue({
@@ -927,12 +986,17 @@ export const characterSchema = z
     const manualIds = new Set<string>()
     char.manualEffects?.forEach((effect, index) => {
       const id = effect.id.trim()
-      if (!id || isReservedRacialDefenseId(id) || manualIds.has(id))
+      if (
+        !id ||
+        isReservedRacialDefenseId(id) ||
+        isReservedProficiencyCheckNoteId(id) ||
+        manualIds.has(id)
+      )
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['manualEffects', index, 'id'],
           message:
-            'Manual effect IDs must be nonblank, unique and outside the racial defense namespace.',
+            'Manual effect IDs must be nonblank, unique and outside derived source namespaces.',
         })
       manualIds.add(id)
     })

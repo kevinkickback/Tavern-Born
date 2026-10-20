@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -229,12 +230,12 @@ describe('class page controllers', () => {
   })
 
   test('ASI selection and Finish retain an independently configured bonus copy of the same printing', () => {
-    const metadata = {
-      name: 'Skilled',
-      source: 'PHB',
-      entries: [],
-      skillProficiencies: [{ choose: { count: 1, from: ['Arcana', 'History'] } }],
-    } satisfies Feat5e
+    const metadata = (
+      JSON.parse(readFileSync('tests/fixtures/skilledFeatSources.json', 'utf8')) as Feat5e[]
+    ).find((feat) => feat.source === 'PHB')!
+    const gameData = { ...useGameDataStore.getState().gameData!, feats: [metadata] }
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
     let character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
     })

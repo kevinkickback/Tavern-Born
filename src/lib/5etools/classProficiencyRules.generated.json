@@ -1,0 +1,402 @@
+[
+  {
+    "target": "class-feature|deft explorer|ranger|phb|1|tce",
+    "digest": "82cfa1cf0129c848cd9a5a6309430e16b0afe73d90c66caf6d4923374b58d08a",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "isClassFeatureVariant",
+      "level",
+      "name",
+      "page",
+      "source"
+    ],
+    "optional": true,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": false,
+        "count": 1
+      },
+      {
+        "domain": "languages",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|deft explorer|ranger|xphb|2|xphb",
+    "digest": "4de7bb6fc5a31578962e904016b2911b77d0bb4a7abd6ef09632497bc24e41cf",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": false,
+        "count": 1
+      },
+      {
+        "domain": "languages",
+        "count": 2,
+        "languagePool": [
+          "abyssal",
+          "celestial",
+          "common",
+          "common sign language",
+          "deep speech",
+          "draconic",
+          "druidic",
+          "dwarvish",
+          "elvish",
+          "giant",
+          "gnomish",
+          "goblin",
+          "halfling",
+          "infernal",
+          "orc",
+          "primordial",
+          "sylvan",
+          "thieves' cant",
+          "undercommon"
+        ]
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|bard|phb|10|phb",
+    "digest": "09381156a321bf84ce923a699a828daf9b6ece9121eca99fbb2709395b618fb9",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": true,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|bard|phb|3|phb",
+    "digest": "3c1f0d9dd7b5a3f4b57101fbc4b8b77ef52bfbff40907958c7e157aa79945a25",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|bard|xphb|2|xphb",
+    "digest": "ad1ea10d721b3b58e9ee24a92f53a68bb1c91088dbddba4d44bf0a84fcf79ade",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|bard|xphb|9|xphb",
+    "digest": "04e6c5e4e773c30df1e183649be818129c84a636de152fb836e5f1c81216bc1c",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": true,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|expert sidekick|tce|15|tce",
+    "digest": "abd473d550465e90d3d6737138ec3b520849f1f157ee915eda702d394238641a",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": true,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|expert sidekick|tce|3|tce",
+    "digest": "4e57fd930c51f4f3336767ed437b757302b22ec37c16c210ac318fccb626789c",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|ranger|xphb|9|xphb",
+    "digest": "c13e80ca18026ca5d8785348e68a434a581560a8265a89b493531e6516d72c71",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|rogue|phb|1|phb",
+    "digest": "c4deff8d9ed8dc8273e209c021ede8a9dfedd4147661d6da7ca0856e633c99c7",
+    "fields": [
+      "basicRules",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": ["thieves' tools"],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|rogue|phb|6|phb",
+    "digest": "6df38e5d9cb6a69526ab2e583a66075ae257ea3b8c45a8ba0c7079d53595b0b4",
+    "fields": [
+      "basicRules",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": ["thieves' tools"],
+        "skillPool": null,
+        "excludeExisting": false,
+        "distinctEarlier": true,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|rogue|xphb|1|xphb",
+    "digest": "13bdaa0d04554f03f8043795d80008acc9c6ba3d437967e60ab86b8ca2ac9bf6",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": false,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|expertise|rogue|xphb|6|xphb",
+    "digest": "04e6c5e4e773c30df1e183649be818129c84a636de152fb836e5f1c81216bc1c",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": null,
+        "excludeExisting": true,
+        "distinctEarlier": true,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "target": "class-feature|scholar|wizard|xphb|2|xphb",
+    "digest": "c78b17585f872ec1d7700832ee49fdc3a4d3f94f727035bf467cd7c739bda160",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "expertise",
+        "tools": [],
+        "skillPool": ["arcana", "history", "investigation", "medicine", "nature", "religion"],
+        "excludeExisting": true,
+        "distinctEarlier": false,
+        "count": 1
+      }
+    ]
+  }
+]

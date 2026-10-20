@@ -42,7 +42,11 @@ export function getCharacterReadiness(
     )
   }
   issues.push(
-    ...validateFeatSetup(character, context.featsByKey),
+    ...validateFeatSetup(
+      character,
+      context.featsByKey,
+      calculation?.lookups.primary.featExpertiseFeats,
+    ),
     ...validateEquipment(character, calculation ?? undefined),
   )
 

@@ -488,6 +488,11 @@ function ItemDetails({
             <span className="text-muted-foreground/70 italic">Not proficient</span>
           )}{' '}
           · {categoryLabel} Proficiency
+          {focused.expertise && (
+            <span className="ml-1 font-medium text-primary">
+              · Expertise (double proficiency bonus)
+            </span>
+          )}
         </p>
       </div>
       <Separator />

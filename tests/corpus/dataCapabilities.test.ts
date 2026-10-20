@@ -325,7 +325,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       setupIssues.map(({ entity, message }) => ({ entity, feature: message.split(':')[0] })),
     ).toEqual([
       { entity: 'Mystic|UATheMysticClass', feature: 'Psionics' },
-      { entity: 'Ranger|PHB', feature: 'Deft Explorer' },
       { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
     ])
     expect(

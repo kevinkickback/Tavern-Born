@@ -1,3 +1,4 @@
+import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
@@ -49,6 +50,8 @@ import {
   getFeatChoiceSelectedRefs,
   removeChoiceGrant,
 } from './featCommandSupport'
+import { storeFeatOptionSelections } from './featOptionState'
+import { projectProficiencyCommandResult } from './proficiencyProjection'
 import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 export type { FeatOptionTarget, SelectedFeat } from './featCommandIdentity'
@@ -254,7 +257,7 @@ function reconcileFeatChoiceMarker(
   return { ...ledger, feats }
 }
 
-export function resolveProficiencyChoiceCommand(
+function resolveProficiencyChoice(
   character: Character,
   ledger: ProvenanceLedger,
   domain: Extract<ChoiceDomain, 'skills' | 'languages' | 'tools' | 'armor' | 'weapons'>,
@@ -358,6 +361,22 @@ export function resolveProficiencyChoiceCommand(
   }
 }
 
+export function resolveProficiencyChoiceCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  domain: Extract<ChoiceDomain, 'skills' | 'languages' | 'tools' | 'armor' | 'weapons'>,
+  itemName: string,
+  adding: boolean,
+  choiceId?: string,
+  catalogs?: import('@/lib/character/classChoiceFeatureCatalogs').ClassChoiceFeatureCatalogs,
+): CharacterCommandResult {
+  return projectProficiencyCommandResult(
+    character,
+    resolveProficiencyChoice(character, ledger, domain, itemName, adding, choiceId),
+    catalogs,
+  )
+}
+
 export function retractFeatOptionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
@@ -416,6 +435,12 @@ export function retractFeatOptionsCommand(
 
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
+    if (
+      !ledger.proficiencies.skills[normalized]?.some((tag) =>
+        isSameGrantSource(tag, getFeatOptionSourceTag(feat)),
+      )
+    )
+      continue
     if (provenanceUpdate.proficiencies.skills[normalized]) continue
     proficiencies = {
       ...proficiencies,
@@ -683,8 +708,11 @@ function commitResolvedFeatOptions(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
+    const expertiseOnly = isKnownFeatExpertiseTarget(feat)
     // Legacy/manual selections without ownership must survive a newly configured feat.
-    for (const domain of ['skills', 'expertise'] as const) {
+    for (const domain of expertiseOnly
+      ? (['expertise'] as const)
+      : (['skills', 'expertise'] as const)) {
       if (
         proficiencies[domain].some((name) => normalizeKey(name) === normalized) &&
         !provenanceUpdate.proficiencies[domain]?.[normalized]?.length
@@ -696,12 +724,18 @@ function commitResolvedFeatOptions(
           makeSourceTag('manual', 'User Choice', 'choice'),
         )
       }
-      provenanceUpdate = addGrant(provenanceUpdate, domain, normalized, sourceTag)
+      if (!expertiseOnly || proficiencies.skills.some((name) => normalizeKey(name) === normalized))
+        provenanceUpdate = addGrant(provenanceUpdate, domain, normalized, sourceTag)
     }
     proficiencies = {
       ...proficiencies,
-      skills: [...new Set([...proficiencies.skills, normalized])],
-      expertise: [...new Set([...proficiencies.expertise, normalized])],
+      skills: expertiseOnly
+        ? proficiencies.skills
+        : [...new Set([...proficiencies.skills, normalized])],
+      expertise:
+        !expertiseOnly || proficiencies.skills.some((name) => normalizeKey(name) === normalized)
+          ? [...new Set([...proficiencies.expertise, normalized])]
+          : proficiencies.expertise,
     }
   }
   provenanceUpdate = {
@@ -722,53 +756,14 @@ function commitResolvedFeatOptions(
       }),
   }
 
-  const optionOwnerKey = getFeatOptionOwnerKey(feat)
-  const feats =
-    feat.selectionKind === 'ordinary'
-      ? character.feats.map((entry) =>
-          getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
-            ? { ...entry, options: selections }
-            : entry,
-        )
-      : character.feats
-  const specialFeats =
-    feat.selectionKind === 'bonus'
-      ? character.specialFeats?.map((entry) =>
-          getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
-            ? { ...entry, options: selections }
-            : entry,
-        )
-      : character.specialFeats
-  const classFeatChoices = character.classFeatChoices?.map((choice) =>
-    optionOwnerKey === `class:${choice.id}`
-      ? {
-          ...choice,
-          feats: choice.feats.map((entry) =>
-            getFeatSelectionKey(entry) === getFeatSelectionKey(feat)
-              ? { ...entry, options: selections }
-              : entry,
-          ),
-        }
-      : choice,
-  )
-  const fixedFeatOptions =
-    optionOwnerKey?.startsWith('fixed:') === true
-      ? {
-          ...(character.fixedFeatOptions ?? {}),
-          [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
-        }
-      : character.fixedFeatOptions
-
+  const stored = storeFeatOptionSelections(character, provenanceUpdate, feat, selections)
   return {
     characterPatch: {
-      feats,
-      specialFeats,
-      classFeatChoices,
-      fixedFeatOptions,
+      ...stored.characterPatch,
       spells: { ...character.spells, spellProfiles },
       proficiencies,
     },
-    provenanceUpdate,
+    provenanceUpdate: stored.provenanceUpdate,
   }
 }
 

@@ -1,0 +1,49 @@
+{
+  "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
+  "ancestors": [
+    {
+      "target": "subclass-feature|purple dragon knight (banneret)|fighter|phb|purple dragon knight (banneret)|scag|3|scag",
+      "digest": "c8de21c80bda120ce3bb9bc2db7bdaaf221277d16d6f201b988f0da367c4c071"
+    },
+    {
+      "target": "subclass-feature|scout|rogue|phb|scout|xge|3|xge",
+      "digest": "320d8128f56d9c5428afc3fafa4d39ed8480a8279102237b6027ac56251b60cf"
+    },
+    {
+      "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
+      "digest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f"
+    },
+    {
+      "target": "subclass-feature|knowledge domain (psa)|cleric|xphb|knowledge (psa)|psa|3|psa",
+      "digest": "2950b4291b50febc07eb2e4833ffb054797024e0ce1dbd6f417961390fad7e0f"
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb",
+      "digest": "433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65"
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|xphb|knowledge|frhof|3|frhof",
+      "digest": "bd003b0298863f0cf23b9083631e86407c2b0c0eac7726af18e2218eb15bb047"
+    },
+    {
+      "target": "subclass-feature|knowledge domain|cleric|xphb|knowledge|phb|3|phb",
+      "digest": "6cf1d61c235079130485aaae76a8a5706112dfdd5650c711b26aa417ca6cf6aa"
+    },
+    {
+      "target": "subclass-feature|rune knight|fighter|phb|rune knight|tce|3|tce",
+      "digest": "2b0e14dca180427495eb152555ec7a99f5ba8a574303cac491c7831fa482ede7"
+    },
+    {
+      "target": "subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce",
+      "digest": "367ace053b00979326d0d219a03a4ced4c24b5c7f9dbfafbeba7f147a7c386e8"
+    },
+    {
+      "target": "subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb",
+      "digest": "27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe"
+    },
+    {
+      "target": "subclass-feature|draconic bloodline|sorcerer|xphb|draconic|phb|3|phb",
+      "digest": "4c86262024499638ab7a795000106d9b6033dedcad79f767472449926c03a31c"
+    }
+  ]
+}

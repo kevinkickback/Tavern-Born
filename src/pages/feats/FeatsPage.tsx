@@ -26,7 +26,7 @@ import {
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
-import { getFixedFeatOptionKey } from '@/lib/featGrants'
+import { getFeatSetupFocusKey } from '@/lib/character/featSetupOwners'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { cn } from '@/lib/utils'
@@ -47,6 +47,7 @@ export function FeatsPage() {
   const controller = useFeatsPageController()
   const {
     activeFeatData,
+    focusedFeatOwnerKey,
     activeFeatName,
     bonusFeats,
     bonusInitialSelectedIds,
@@ -61,6 +62,7 @@ export function FeatsPage() {
     featEditCandidate,
     featEditTarget,
     featOptionsTarget,
+    isSetupComplete,
     feats,
     featView,
     getSourcesRowsBySection,
@@ -74,6 +76,7 @@ export function FeatsPage() {
     handleEditFinish,
     handleEditSetup,
     handleFeatOptionsFinish,
+    handleFeatOptionsClear,
     handleRemoveBonusFeat,
     handleRemoveFeat,
     handleRemoveGrantedChoice,
@@ -107,8 +110,14 @@ export function FeatsPage() {
     showEditHint,
   } = controller
 
-  const isFocusedFeat = (name: string, source: string) =>
-    readinessFocus?.startsWith(`feat:setup:${getEntityLookupKey(name, source)}:`) ?? false
+  const isFocusedFeat = (name: string, source: string, ownerKey?: string) =>
+    searchParams.has('featOwner')
+      ? !!ownerKey && ownerKey === focusedFeatOwnerKey
+      : (readinessFocus?.startsWith(`feat:setup:${getEntityLookupKey(name, source)}:`) ?? false) ||
+        (searchParams.get('focus') === 'feat' && isSelectedFeat(selectedFeat, name, source))
+  const isSelectedFeatCard = (name: string, source: string, ownerKey?: string) =>
+    isSelectedFeat(selectedFeat, name, source) &&
+    (!selectedFeat?.ownerKey || selectedFeat.ownerKey === ownerKey)
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
@@ -306,9 +315,23 @@ export function FeatsPage() {
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
-                                  highlighted={isFocusedFeat(feat.name, feat.source)}
-                                  selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
-                                  onSelect={handleSelectFeat}
+                                  highlighted={isFocusedFeat(
+                                    feat.name,
+                                    feat.source,
+                                    getFeatSetupFocusKey({ ...feat, selectionKind: 'ordinary' }),
+                                  )}
+                                  selected={isSelectedFeatCard(
+                                    feat.name,
+                                    feat.source,
+                                    getFeatSetupFocusKey({ ...feat, selectionKind: 'ordinary' }),
+                                  )}
+                                  onSelect={(name, source) =>
+                                    handleSelectFeat(
+                                      name,
+                                      source,
+                                      getFeatSetupFocusKey({ ...feat, selectionKind: 'ordinary' }),
+                                    )
+                                  }
                                   onRemove={handleRemoveFeat}
                                   onCompleteSetup={isPending ? handleCompleteSetup : undefined}
                                   onEditSetup={isConfigured ? handleEditSetup : undefined}
@@ -329,13 +352,41 @@ export function FeatsPage() {
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
-                                  highlighted={isFocusedFeat(feat.name, feat.source)}
-                                  selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
-                                  onSelect={handleSelectFeat}
+                                  highlighted={isFocusedFeat(
+                                    feat.name,
+                                    feat.source,
+                                    getFeatSetupFocusKey({ ...feat, classFeatChoiceId: choice.id }),
+                                  )}
+                                  selected={isSelectedFeatCard(
+                                    feat.name,
+                                    feat.source,
+                                    getFeatSetupFocusKey({ ...feat, classFeatChoiceId: choice.id }),
+                                  )}
+                                  onSelect={(name, source) =>
+                                    handleSelectFeat(
+                                      name,
+                                      source,
+                                      getFeatSetupFocusKey({
+                                        ...feat,
+                                        classFeatChoiceId: choice.id,
+                                      }),
+                                    )
+                                  }
                                   grantedBy={`${choice.className}: ${choice.progressionName}`}
                                   classFeatChoiceId={choice.id}
-                                  optionsPending={needsOptions && !feat.options}
-                                  optionsConfigured={!!feat.options}
+                                  optionsPending={
+                                    needsOptions &&
+                                    !isSetupComplete(feat, feat.options, {
+                                      classFeatChoiceId: choice.id,
+                                    })
+                                  }
+                                  optionsConfigured={
+                                    !!feat.options &&
+                                    (!needsOptions ||
+                                      isSetupComplete(feat, feat.options, {
+                                        classFeatChoiceId: choice.id,
+                                      }))
+                                  }
                                   onCompleteSetup={handleCompleteSetup}
                                   onEditSetup={handleEditSetup}
                                 />
@@ -351,17 +402,19 @@ export function FeatsPage() {
                                 }}
                                 featData={granted.featData}
                                 characterSnapshot={characterSnapshot}
-                                selected={isSelectedFeat(
-                                  selectedFeat,
+                                selected={isSelectedFeatCard(
                                   granted.name,
                                   granted.source,
+                                  granted.focusKey,
                                 )}
-                                highlighted={
-                                  (searchParams.get('focus') === 'feat' &&
-                                    isSelectedFeat(selectedFeat, granted.name, granted.source)) ||
-                                  isFocusedFeat(granted.name, granted.source)
+                                highlighted={isFocusedFeat(
+                                  granted.name,
+                                  granted.source,
+                                  granted.focusKey,
+                                )}
+                                onSelect={(name, source) =>
+                                  handleSelectFeat(name, source, granted.focusKey)
                                 }
-                                onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceDisplayLabel}
                                 grantVariant={granted.grantVariant}
                                 fixedGrant
@@ -369,22 +422,11 @@ export function FeatsPage() {
                                 optionsPending={
                                   !!granted.featData &&
                                   hasFeatOptions(granted.featData) &&
-                                  !character.fixedFeatOptions?.[
-                                    getFixedFeatOptionKey(
-                                      granted.name,
-                                      granted.source,
-                                      granted.grantVariant,
-                                    )
-                                  ]
+                                  !granted.optionsComplete
                                 }
                                 optionsConfigured={
-                                  !!character.fixedFeatOptions?.[
-                                    getFixedFeatOptionKey(
-                                      granted.name,
-                                      granted.source,
-                                      granted.grantVariant,
-                                    )
-                                  ]
+                                  granted.optionsSaved &&
+                                  (!granted.featData || granted.optionsComplete)
                                 }
                                 onCompleteSetup={handleCompleteSetup}
                                 onEditSetup={handleEditSetup}
@@ -413,21 +455,35 @@ export function FeatsPage() {
                                     }}
                                     featData={data}
                                     characterSnapshot={characterSnapshot}
-                                    selected={isSelectedFeat(
-                                      selectedFeat,
+                                    selected={isSelectedFeatCard(
                                       selectedName,
                                       selectedSource,
+                                      getFeatSetupFocusKey({
+                                        name: selectedName,
+                                        source: selectedSource,
+                                        provenanceChoiceId: choice.id,
+                                      }),
                                     )}
-                                    highlighted={
-                                      (searchParams.get('focus') === 'feat' &&
-                                        isSelectedFeat(
-                                          selectedFeat,
-                                          selectedName,
-                                          selectedSource,
-                                        )) ||
-                                      isFocusedFeat(selectedName, selectedSource)
+                                    highlighted={isFocusedFeat(
+                                      selectedName,
+                                      selectedSource,
+                                      getFeatSetupFocusKey({
+                                        name: selectedName,
+                                        source: selectedSource,
+                                        provenanceChoiceId: choice.id,
+                                      }),
+                                    )}
+                                    onSelect={(name, source) =>
+                                      handleSelectFeat(
+                                        name,
+                                        source,
+                                        getFeatSetupFocusKey({
+                                          name: selectedName,
+                                          source: selectedSource,
+                                          provenanceChoiceId: choice.id,
+                                        }),
+                                      )
                                     }
-                                    onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${getRacialSourceDisplayName(character, choice.sourceTag)}`}
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
@@ -437,8 +493,19 @@ export function FeatsPage() {
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
-                                    optionsPending={needsOptions && !selection.options}
-                                    optionsConfigured={!!selection.options}
+                                    optionsPending={
+                                      needsOptions &&
+                                      !isSetupComplete(selection, selection.options, {
+                                        provenanceChoiceId: choice.id,
+                                      })
+                                    }
+                                    optionsConfigured={
+                                      !!selection.options &&
+                                      (!needsOptions ||
+                                        isSetupComplete(selection, selection.options, {
+                                          provenanceChoiceId: choice.id,
+                                        }))
+                                    }
                                     onCompleteSetup={handleCompleteSetup}
                                     onEditSetup={handleEditSetup}
                                   />
@@ -455,17 +522,19 @@ export function FeatsPage() {
                                 }}
                                 featData={granted.featData}
                                 characterSnapshot={characterSnapshot}
-                                selected={isSelectedFeat(
-                                  selectedFeat,
+                                selected={isSelectedFeatCard(
                                   granted.name,
                                   granted.source,
+                                  granted.focusKey,
                                 )}
-                                highlighted={
-                                  (searchParams.get('focus') === 'feat' &&
-                                    isSelectedFeat(selectedFeat, granted.name, granted.source)) ||
-                                  isFocusedFeat(granted.name, granted.source)
+                                highlighted={isFocusedFeat(
+                                  granted.name,
+                                  granted.source,
+                                  granted.focusKey,
+                                )}
+                                onSelect={(name, source) =>
+                                  handleSelectFeat(name, source, granted.focusKey)
                                 }
-                                onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceDisplayLabel}
                                 grantVariant={granted.grantVariant}
                                 fixedGrant
@@ -473,22 +542,11 @@ export function FeatsPage() {
                                 optionsPending={
                                   !!granted.featData &&
                                   hasFeatOptions(granted.featData) &&
-                                  !character.fixedFeatOptions?.[
-                                    getFixedFeatOptionKey(
-                                      granted.name,
-                                      granted.source,
-                                      granted.grantVariant,
-                                    )
-                                  ]
+                                  !granted.optionsComplete
                                 }
                                 optionsConfigured={
-                                  !!character.fixedFeatOptions?.[
-                                    getFixedFeatOptionKey(
-                                      granted.name,
-                                      granted.source,
-                                      granted.grantVariant,
-                                    )
-                                  ]
+                                  granted.optionsSaved &&
+                                  (!granted.featData || granted.optionsComplete)
                                 }
                                 onCompleteSetup={handleCompleteSetup}
                                 onEditSetup={handleEditSetup}
@@ -518,21 +576,35 @@ export function FeatsPage() {
                                     }}
                                     featData={data}
                                     characterSnapshot={characterSnapshot}
-                                    selected={isSelectedFeat(
-                                      selectedFeat,
+                                    selected={isSelectedFeatCard(
                                       selectedName,
                                       selectedSource,
+                                      getFeatSetupFocusKey({
+                                        name: selectedName,
+                                        source: selectedSource,
+                                        provenanceChoiceId: choice.id,
+                                      }),
                                     )}
-                                    highlighted={
-                                      (searchParams.get('focus') === 'feat' &&
-                                        isSelectedFeat(
-                                          selectedFeat,
-                                          selectedName,
-                                          selectedSource,
-                                        )) ||
-                                      isFocusedFeat(selectedName, selectedSource)
+                                    highlighted={isFocusedFeat(
+                                      selectedName,
+                                      selectedSource,
+                                      getFeatSetupFocusKey({
+                                        name: selectedName,
+                                        source: selectedSource,
+                                        provenanceChoiceId: choice.id,
+                                      }),
+                                    )}
+                                    onSelect={(name, source) =>
+                                      handleSelectFeat(
+                                        name,
+                                        source,
+                                        getFeatSetupFocusKey({
+                                          name: selectedName,
+                                          source: selectedSource,
+                                          provenanceChoiceId: choice.id,
+                                        }),
+                                      )
                                     }
-                                    onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${getRacialSourceDisplayName(character, choice.sourceTag)}`}
                                     onRemove={() =>
                                       handleRemoveGrantedChoice(
@@ -542,8 +614,19 @@ export function FeatsPage() {
                                       )
                                     }
                                     provenanceChoiceId={choice.id}
-                                    optionsPending={needsOptions && !selection.options}
-                                    optionsConfigured={!!selection.options}
+                                    optionsPending={
+                                      needsOptions &&
+                                      !isSetupComplete(selection, selection.options, {
+                                        provenanceChoiceId: choice.id,
+                                      })
+                                    }
+                                    optionsConfigured={
+                                      !!selection.options &&
+                                      (!needsOptions ||
+                                        isSetupComplete(selection, selection.options, {
+                                          provenanceChoiceId: choice.id,
+                                        }))
+                                    }
                                     onCompleteSetup={handleCompleteSetup}
                                     onEditSetup={handleEditSetup}
                                     isOrigin
@@ -610,9 +693,23 @@ export function FeatsPage() {
                                 feat={feat}
                                 featData={featData}
                                 characterSnapshot={characterSnapshot}
-                                highlighted={isFocusedFeat(feat.name, feat.source)}
-                                selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
-                                onSelect={handleSelectFeat}
+                                highlighted={isFocusedFeat(
+                                  feat.name,
+                                  feat.source,
+                                  getFeatSetupFocusKey({ ...feat, selectionKind: 'bonus' }),
+                                )}
+                                selected={isSelectedFeatCard(
+                                  feat.name,
+                                  feat.source,
+                                  getFeatSetupFocusKey({ ...feat, selectionKind: 'bonus' }),
+                                )}
+                                onSelect={(name, source) =>
+                                  handleSelectFeat(
+                                    name,
+                                    source,
+                                    getFeatSetupFocusKey({ ...feat, selectionKind: 'bonus' }),
+                                  )
+                                }
                                 onRemove={handleRemoveBonusFeat}
                                 onCompleteSetup={isPending ? handleCompleteBonusSetup : undefined}
                                 onEditSetup={isConfigured ? handleEditBonusSetup : undefined}
@@ -690,6 +787,9 @@ export function FeatsPage() {
           feat={featOptionsTarget}
           fixedSpellcastingClass={featOptionsTarget.fixedSpellcastingClass}
           proficientSkillNames={proficientSkillNames}
+          initialSelections={featOptionsTarget.initialOptions}
+          optionTarget={featOptionsTarget}
+          onClear={featOptionsTarget.initialOptions ? handleFeatOptionsClear : undefined}
           onFinish={handleFeatOptionsFinish}
           onDismiss={() => setFeatOptionsTarget(null)}
         />
@@ -728,6 +828,7 @@ export function FeatsPage() {
           fixedSpellcastingClass={featEditTarget.feat5e.fixedSpellcastingClass}
           proficientSkillNames={proficientSkillNames}
           initialSelections={featEditTarget.priorOptions}
+          optionTarget={featEditTarget.feat5e}
           onClear={handleEditClear}
           onFinish={handleEditFinish}
           onDismiss={() => setFeatEditTarget(null)}

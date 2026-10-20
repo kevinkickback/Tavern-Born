@@ -1,15 +1,24 @@
+import { readFileSync } from 'node:fs'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { replaceBonusFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Spell5e } from '@/types/5etools'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Feat5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 describe('useFeatProvenanceMutations bonus feats', () => {
   beforeEach(() => {
+    const data = makeGameDataFixture({
+      feats: JSON.parse(readFileSync('tests/fixtures/skilledFeatSources.json', 'utf8')) as Feat5e[],
+    })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
     const initial = makeCharacterFixture()
     const selected = replaceBonusFeatSelectionsCommand(initial, initial.provenance, [
       { name: 'Skilled', source: 'PHB' },

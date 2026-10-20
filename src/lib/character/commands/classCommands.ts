@@ -30,6 +30,7 @@ import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
 } from '@/lib/character/equipmentHelpers'
+import { retainEarnedOptionalClassAdoptions } from '@/lib/character/optionalClassFeatureIdentity'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -59,6 +60,7 @@ import type {
   HitPointGain,
   HitPointGainMethod,
 } from '@/types/character'
+import type { ClassChoiceFeatureCatalogs } from '../classChoiceFeatureCatalogs'
 import {
   reconcileClassChoiceSelectionGrants,
   reconcileClassChoiceSelections,
@@ -67,6 +69,7 @@ import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
+import { projectProficiencyCommandResult } from './proficiencyProjection'
 
 export { buildInitialCharacterProficiencies } from './classProficiencies'
 
@@ -122,7 +125,10 @@ function projectMaximumHitPoints(
   )
 }
 
-interface SelectSubclassOptions extends NativeSpellLookups {
+interface ClassProgressionLookups extends NativeSpellLookups {
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
+}
+interface SelectSubclassOptions extends ClassProgressionLookups {
   raceResolution?: ResolvedRaceReference
   classProgression?: CharacterClassEntry[]
   viewingEntry?: CharacterClassEntry
@@ -403,7 +409,7 @@ export function applyClassProgressionUpdate(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
   raceResolution?: ResolvedRaceReference,
-  spellLookups?: NativeSpellLookups,
+  spellLookups?: ClassProgressionLookups,
 ): ClassCommandResult {
   const previousProgression = character.classProgression
   const removedEntries = previousProgression.filter(
@@ -557,9 +563,14 @@ export function applyClassProgressionUpdate(
     nextProgression,
   )
   const classChoiceGrants = reconcileClassChoiceSelectionGrants(
-    character,
+    {
+      ...character,
+      classProgression: nextProgression,
+      proficiencies: workingCharacter.proficiencies,
+    },
     provenanceUpdate,
     classChoiceSelections,
+    spellLookups?.classChoiceFeatureCatalogs,
   )
   provenanceUpdate = classChoiceGrants.provenanceUpdate
   const asiChoices = (character.asiChoices ?? []).filter((choice) => {
@@ -574,6 +585,7 @@ export function applyClassProgressionUpdate(
 
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
+    optionalClassFeatureAdoptions: retainEarnedOptionalClassAdoptions(character, nextProgression),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
@@ -581,7 +593,7 @@ export function applyClassProgressionUpdate(
     asiChoices,
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
-    proficiencies: workingCharacter.proficiencies,
+    proficiencies: classChoiceGrants.proficiencies,
     abilityScores: workingCharacter.abilityScores,
   }
   const native = refreshNativeRacialSpellState(
@@ -592,10 +604,14 @@ export function applyClassProgressionUpdate(
   characterPatch.spells = native.spells
   provenanceUpdate = native.provenance
 
-  return reconcileExpertiseOwnership({
-    characterPatch,
-    provenanceUpdate,
-  })
+  return projectProficiencyCommandResult(
+    character,
+    reconcileExpertiseOwnership({
+      characterPatch,
+      provenanceUpdate,
+    }),
+    spellLookups?.classChoiceFeatureCatalogs,
+  )
 }
 
 /**
@@ -669,6 +685,7 @@ export function applyLevelUp(
     {
       spellsByKey: calculationContext.lookups.primary.spellsByKey,
       rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
+      classChoiceFeatureCatalogs: calculationContext.classChoices.catalogs,
     },
   )
   const gain: HitPointGain = { ...hpChoice, characterLevel }
@@ -750,6 +767,7 @@ export function applyLevelDown(
     {
       spellsByKey: calculationContext.lookups.primary.spellsByKey,
       rawSpellsByKey: calculationContext.lookups.raw.spellsByKey,
+      classChoiceFeatureCatalogs: calculationContext.classChoices.catalogs,
     },
   )
   const projectedCharacter: Character = {

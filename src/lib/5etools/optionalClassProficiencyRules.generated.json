@@ -1,0 +1,28 @@
+[
+  {
+    "target": "class-feature|primal knowledge|barbarian|phb|3|tce",
+    "owner": ["class", "barbarian", "phb"],
+    "rootLevel": 3,
+    "gains": [3, 10],
+    "name": "Primal Knowledge",
+    "source": "TCE",
+    "digest": "b5145b7a2dc9107378ea238538f2e2419ef916c2aad26c5c95da417ff0cf0c2a",
+    "fields": [],
+    "optional": true,
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": [
+          "animal handling",
+          "athletics",
+          "intimidation",
+          "nature",
+          "perception",
+          "survival"
+        ],
+        "excludeExisting": true
+      }
+    ]
+  }
+]

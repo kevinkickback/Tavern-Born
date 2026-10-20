@@ -1,3 +1,4 @@
+import { isReservedProficiencyCheckNoteId } from '@/lib/provenance/conditionalProficiencyIdentity'
 import { isReservedRacialDefenseId } from '@/lib/provenance/racialDefenseValidation'
 import type { Character } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -8,6 +9,8 @@ function normalizeManualEffect(effect: CharacterEffect): CharacterEffect {
   if (!id) throw new Error('A manual effect requires a stable ID.')
   if (isReservedRacialDefenseId(id))
     throw new Error('That effect ID is reserved for racial defenses.')
+  if (isReservedProficiencyCheckNoteId(id) || effect.target.kind === 'proficiency-check-note')
+    throw new Error('Conditional proficiency notes are derived from their current source.')
   if (!label) throw new Error('A manual effect requires a label.')
   return {
     ...effect,

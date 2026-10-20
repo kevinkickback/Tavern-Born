@@ -86,6 +86,7 @@ export function DataSourceConfigurator({
     error?: string
     foundResources?: string[]
     normalizedPath?: string
+    optionalSupportDiagnostics?: string[]
   } | null>(null)
   const autoOpenedSelectorRef = useRef(!hasActiveDataSource)
 
@@ -547,6 +548,13 @@ export function DataSourceConfigurator({
                   </div>
                 </TabsContent>
               </Tabs>
+              {validationStatus === 'valid' &&
+                !!validationResult?.optionalSupportDiagnostics?.length && (
+                  <p className="text-sm text-warning">
+                    Some optional class features are unavailable in this source. Other compatible
+                    content can still be used.
+                  </p>
+                )}
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />

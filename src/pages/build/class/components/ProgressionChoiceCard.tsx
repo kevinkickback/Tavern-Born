@@ -1,10 +1,19 @@
 import { CaretRight, Check, Sparkle, Warning } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
+import { optionalClassProficiencyRule } from '@/lib/5etools/ownedClassProficiencyRules'
+import { getHistoricalProficiencyRule } from '@/lib/character/historicalProficiencyChoices'
+import { addReadinessFocus, classChoiceReadinessId } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
 interface ChosenItem {
+  origin?: SelectedFeatureState['origin']
   name: string
   source?: string
   entries?: unknown[]
@@ -45,6 +54,15 @@ export function BuildClassProgressionChoiceCard({
 }: ProgressionChoiceCardProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLFieldSetElement>(highlighted)
+  const proficiencyChoice = decodeClassProficiencyChoiceId(id)
+  const optionalSkill =
+    proficiencyChoice?.domain === 'skills' &&
+    !!optionalClassProficiencyRule(proficiencyChoice.target)
+  const saved = useCharacterStore((state) => state.activeCharacter)
+  const historical = !!getHistoricalProficiencyRule(id)
+  const setup = historical
+    ? saved?.classChoiceSelections?.find((row) => row.choiceId === id)?.proficiencyAtGain
+    : undefined
   return (
     <fieldset
       aria-label={label ?? feature?.name}
@@ -63,6 +81,7 @@ export function BuildClassProgressionChoiceCard({
           onClick={() => {
             if (!feature) return
             onSelectFeature({
+              origin: feature.origin,
               name: feature.name,
               source: feature.source,
               entries: feature.entries ?? [],
@@ -82,22 +101,55 @@ export function BuildClassProgressionChoiceCard({
               {!label && isFull && <Check className="h-3.5 w-3.5 shrink-0 text-success" />}
               {recovery
                 ? 'Saved choice — source rules unavailable'
-                : `${selectedCount} / ${totalAllowed} chosen`}
+                : historical && !setup
+                  ? 'Confirm proficiency at acquisition'
+                  : historical && setup?.alreadyProficient === false
+                    ? 'Proficiency setup confirmed'
+                    : `${selectedCount} / ${totalAllowed} chosen`}
             </div>
           </div>
           {feature && (feature.entries ?? []).length > 0 && (
             <CaretRight className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-accent" />
           )}
         </button>
-        <Button
-          variant={selectedCount > 0 ? 'outline' : 'default'}
-          size="sm"
-          className="flex-shrink-0 ml-2 h-7 text-xs"
-          onClick={onChoose}
-        >
-          {recovery ? 'Review saved choice' : selectedCount > 0 ? 'Edit' : 'Choose'}
-        </Button>
+        {optionalSkill ? (
+          <Button
+            asChild
+            variant={selectedCount > 0 ? 'outline' : 'default'}
+            size="sm"
+            className="flex-shrink-0 ml-2 h-7 text-xs"
+          >
+            <Link to={addReadinessFocus('/build/proficiencies', classChoiceReadinessId(id))}>
+              {recovery ? 'Review saved skill' : selectedCount > 0 ? 'Edit skill' : 'Choose skill'}
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            variant={selectedCount > 0 ? 'outline' : 'default'}
+            size="sm"
+            className="flex-shrink-0 ml-2 h-7 text-xs"
+            onClick={onChoose}
+          >
+            {recovery
+              ? 'Review saved choice'
+              : historical && !setup
+                ? 'Confirm setup'
+                : historical && setup?.alreadyProficient === false
+                  ? 'Edit setup'
+                  : selectedCount > 0
+                    ? 'Edit'
+                    : 'Choose'}
+          </Button>
+        )}
       </div>
+
+      {!isFull &&
+        !recovery &&
+        proficiencyChoice?.domain === 'expertise' &&
+        isOwnedExpertiseTarget(proficiencyChoice.target) &&
+        !classProficiencyRule(proficiencyChoice.target)?.domains.some(
+          (domain) => domain.coupled,
+        ) && <PendingProficiencyHint />}
 
       {chosenItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
@@ -113,6 +165,25 @@ export function BuildClassProgressionChoiceCard({
         </div>
       )}
     </fieldset>
+  )
+}
+
+function PendingProficiencyHint() {
+  const savedCharacter = useCharacterStore((state) => state.activeCharacter)
+  const calculation = useCharacterCalculationContext(savedCharacter)
+  const character = calculation?.character ?? savedCharacter
+  const pending = character?.provenance?.choices.some(
+    (choice) =>
+      ['skills', 'tools', 'languages', 'armor', 'weapons'].includes(choice.domain) &&
+      choice.selected.length < choice.chooseCount,
+  )
+  if (!pending) return null
+  return (
+    <p className="px-3 pb-3 text-xs text-muted-foreground">
+      <Link className="text-primary underline" to="/build/proficiencies">
+        You still have proficiency choices to make.
+      </Link>
+    </p>
   )
 }
 
@@ -132,6 +203,7 @@ export function BuildClassChosenItemBadge({
       type="button"
       onMouseEnter={() => {
         onSelectFeature({
+          origin: item.origin,
           name: item.name,
           source: item.source,
           entries: item.entries ?? [],
@@ -140,6 +212,7 @@ export function BuildClassChosenItemBadge({
       }}
       onClick={() => {
         onSelectFeature({
+          origin: item.origin,
           name: item.name,
           source: item.source,
           entries: item.entries ?? [],

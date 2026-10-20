@@ -7,6 +7,7 @@ import {
   resolveFeatureOptionEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
+import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyOptions'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type {
   Class5e,
@@ -18,6 +19,7 @@ import type {
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { normalizeClassRules } from './classRuleNormalization'
+import { auditConditionalOptionalLayerMultiplicity } from './conditionalProficiencySource'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import type { DataLoaderOptions } from './dataLoader'
 import {
@@ -27,7 +29,17 @@ import {
   setLoadedRaceData,
 } from './dataLoader'
 import { mergeFixedShieldBases } from './fixedBonusShields'
-import { expandItemEntries, getItemEntryIdentity, getRawItems, retainRawItems } from './itemEntries'
+import {
+  auditFixedLayerMultiplicity,
+  auditProficiencySubclassLayerMultiplicity,
+} from './fixedProficiencySource'
+import {
+  expandItemEntries,
+  getItemEntryIdentity,
+  getRawItems,
+  hasRetainedRawItems,
+  retainRawItems,
+} from './itemEntries'
 import {
   associateItemTypeEntries,
   getItemTypeEntrySources,
@@ -35,6 +47,8 @@ import {
 } from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
 import { appendMagicVariantReferences, mergeMagicVariants } from './magicVariants'
+import { mergeOptionalClassFeatureSources } from './optionalClassFeatureSource'
+import { mergeOptionalClassSections } from './optionalClassSectionSource'
 import { buildSourcesList } from './parsers/basic'
 import { parseRaces } from './parsers/races'
 import {
@@ -44,6 +58,13 @@ import {
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
 import { getSubclassIntroEntries } from './subclassContent'
+import { collectLayerSubclassFeatures as collectSubclassFeatures } from './subclassFeatureCatalog'
+import {
+  auditToolLayerMultiplicity,
+  prepareToolProficiencySources,
+  preserveToolSourcePresentation,
+  restoreToolSourceInput,
+} from './toolProficiencySource'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
 
@@ -126,53 +147,6 @@ function mergeCollection<T>(
   for (const value of base) merged.set(getIdentity(value), value)
   for (const value of overlay) merged.set(getIdentity(value), value)
   return [...merged.values()]
-}
-
-function collectSubclassFeatures(layers: readonly GameData[]): Map<string, SubclassFeature> {
-  const features = new Map<string, SubclassFeature>()
-  const traversedObjects = new WeakSet<object>()
-
-  const visit = (feature: SubclassFeature | undefined) => {
-    if (!feature) return
-    const identity = getSubclassFeatureIdentity(feature)
-    if (identity) features.set(identity, feature)
-
-    const walk = (value: unknown) => {
-      if (Array.isArray(value)) {
-        value.forEach(walk)
-        return
-      }
-      if (!value || typeof value !== 'object') return
-      if (traversedObjects.has(value)) return
-      traversedObjects.add(value)
-      const record = value as Record<string, unknown>
-      if (record.type === 'refSubclassFeature' && record.feature) {
-        visit(record.feature as SubclassFeature)
-      }
-      for (const [key, nested] of Object.entries(record)) {
-        if (key !== 'feature') walk(nested)
-      }
-    }
-
-    walk(feature.entries)
-  }
-
-  for (const layer of layers) {
-    for (const classData of layer.classes) {
-      for (const subclass of classData.subclasses ?? []) {
-        for (const reference of subclass.subclassFeatureRefs ?? []) {
-          visit(reference.feature)
-        }
-        for (const feature of subclass.subclassFeatures ?? []) {
-          if (typeof feature === 'object') visit(feature)
-        }
-        for (const group of subclass.levelFeatures ?? []) {
-          for (const feature of group.features) visit(feature)
-        }
-      }
-    }
-  }
-  return features
 }
 
 function groupSubclassFeaturesByLevel(
@@ -307,6 +281,15 @@ export function findLayerDependencyIssues(
     }
     for (const [choiceIndex, choice] of (classData.normalizedRules?.choices ?? []).entries()) {
       for (const [optionIndex, option] of choice.options.entries()) {
+        if (option.entityType === 'proficiency') {
+          if (!hasProficiencyCatalogTarget(option, featureCatalogs))
+            issues.push({
+              owner,
+              path: `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+              reference: option.ref ?? option.name,
+            })
+          continue
+        }
         const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
         const featureOption =
           option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
@@ -346,6 +329,15 @@ export function findLayerDependencyIssues(
     for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
       for (const [choiceIndex, choice] of (subclass.normalizedRules?.choices ?? []).entries()) {
         for (const [optionIndex, option] of choice.options.entries()) {
+          if (option.entityType === 'proficiency') {
+            if (!hasProficiencyCatalogTarget(option, featureCatalogs))
+              issues.push({
+                owner: `${owner}/${subclass.name}|${subclass.source}`,
+                path: `subclasses[${subclassIndex}].normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+                reference: option.ref ?? option.name,
+              })
+            continue
+          }
           const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
           const featureOption =
             option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
@@ -407,8 +399,35 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     (key): key is GameDataCollectionKey => key !== 'lookups',
   )
   const composed = {} as GameData
+  const classLayers = new Map(
+    layers.map((layer) => [layer, auditProficiencySubclassLayerMultiplicity(layer.classes)]),
+  )
+  const toolRawLayers = new Map(
+    layers.map((layer) => {
+      const original = getRawItems(layer)
+      const raw = hasRetainedRawItems(layer)
+        ? original
+        : {
+            items: original.items.map(restoreToolSourceInput),
+            itemsBase: original.itemsBase.map(restoreToolSourceInput),
+          }
+      const audited = auditToolLayerMultiplicity([...raw.items, ...raw.itemsBase])
+      return [
+        layer,
+        { items: audited.slice(0, raw.items.length), itemsBase: audited.slice(raw.items.length) },
+      ] as const
+    }),
+  )
 
   for (const key of collectionKeys) {
+    if (key === 'optionalClassSections') {
+      composed.optionalClassSections = mergeOptionalClassSections(layers)
+      continue
+    }
+    if (key === 'optionalClassFeatureSources') {
+      composed.optionalClassFeatureSources = mergeOptionalClassFeatureSources(layers)
+      continue
+    }
     if (key === 'magicVariants') {
       composed.magicVariants = mergeMagicVariants(layers.map((layer) => layer.magicVariants ?? []))
       continue
@@ -447,20 +466,27 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       continue
     }
     const getIdentity = COLLECTION_IDENTITIES[key] ?? recordIdentity
-    const values = layers.reduce<unknown[]>(
-      (merged, layer) =>
-        mergeCollection(
-          merged,
-          ((key === 'items' || key === 'itemsBase' ? getRawItems(layer)[key] : layer[key]) ??
-            []) as unknown[],
-          getIdentity as (value: unknown) => string,
-        ),
-      [],
-    )
+    const values = layers.reduce<unknown[]>((merged, layer) => {
+      const layerValues = ((key === 'classes'
+        ? classLayers.get(layer)
+        : key === 'items' || key === 'itemsBase'
+          ? toolRawLayers.get(layer)?.[key]
+          : layer[key]) ?? []) as unknown[]
+      const audited =
+        key === 'classes' || key === 'classFeatures'
+          ? auditFixedLayerMultiplicity(layerValues as object[], key)
+          : key === 'optionalfeatures'
+            ? auditConditionalOptionalLayerMultiplicity(layerValues)
+            : layerValues
+      return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
+    }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values
   }
 
-  resolveComposedFeatureReferences(composed, layers)
+  resolveComposedFeatureReferences(
+    composed,
+    layers.map((layer) => ({ ...layer, classes: classLayers.get(layer)! })),
+  )
   // Race copies and versions must see the winning raw parents, including already-resolved copies.
   const rawRaces = layers.map(getLoadedRaceData).reduce(
     (merged, layer) => ({
@@ -494,9 +520,11 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   composed.fixedShieldBases = mergeFixedShieldBases(layers)
   const concreteItemCount = composed.items.length
   retainRawItems(composed)
-  const items = resolveCopiedRecords([...composed.items, ...composed.itemsBase], 'item')
-  composed.items = items.records.slice(0, concreteItemCount)
-  composed.itemsBase = items.records.slice(concreteItemCount)
+  const rawToolInputs = [...composed.items, ...composed.itemsBase]
+  const items = resolveCopiedRecords(rawToolInputs, 'item')
+  const toolAuditedItems = prepareToolProficiencySources(rawToolInputs, items.records)
+  composed.items = toolAuditedItems.slice(0, concreteItemCount)
+  composed.itemsBase = toolAuditedItems.slice(concreteItemCount)
   appendMagicVariantReferences(composed)
   const referenceSources = new Set(
     composed.sources.map((source) => normalizeIdentityPart(source.abbreviation)),
@@ -519,14 +547,18 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   )
   const itemCount = composed.items.length
   resolvePrimaryItemTypes(composed)
-  const describedItems = associateItemTypeEntries(
-    associatePrimaryItemTypes(
-      expandItemEntries([...composed.items, ...composed.itemsBase], composed.itemEntries ?? []),
-      composed.itemTypes,
+  const beforeToolPresentation = [...composed.items, ...composed.itemsBase]
+  const describedItems = preserveToolSourcePresentation(
+    beforeToolPresentation,
+    associateItemTypeEntries(
+      associatePrimaryItemTypes(
+        expandItemEntries(beforeToolPresentation, composed.itemEntries ?? []),
+        composed.itemTypes,
+        composed.itemEntries ?? [],
+      ),
+      composed.itemTypeAdditionalEntries ?? [],
       composed.itemEntries ?? [],
     ),
-    composed.itemTypeAdditionalEntries ?? [],
-    composed.itemEntries ?? [],
   )
   composed.items = describedItems.slice(0, itemCount)
   composed.itemsBase = describedItems.slice(itemCount)

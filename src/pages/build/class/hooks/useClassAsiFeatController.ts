@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import { getFeatOptionOwnerKey } from '@/lib/character/commands/featCommandIdentity'
 import type { FeatOptionTarget } from '@/lib/character/commands/featCommands'
+import { getFeatSetupOwners } from '@/lib/character/featSetupOwners'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import {
@@ -16,7 +19,7 @@ import {
 import { countTotalAsiAcrossClasses } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, FeatOptionSelections } from '@/types/character'
 
 interface ClassAsiFeatControllerParams {
   character: Character | null
@@ -35,14 +38,26 @@ export function useClassAsiFeatController({
 }: ClassAsiFeatControllerParams) {
   const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
-  const { replaceFeatSelections, commitFeatWithOptions } = useFeatProvenanceMutations()
+  const { replaceFeatSelections, editFeatWithOptions } = useFeatProvenanceMutations()
   const [featPickerOpen, setFeatPickerOpen] = useState(false)
   const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
   const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null)
   const [asiModeByLevel, setAsiModeByLevel] = useState<Record<string, 'asi' | 'feat'>>({})
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<(Feat5e & FeatOptionTarget) | null>(
-    null,
-  )
+  const [optionsPendingFeat, setPendingFeat] = useState<
+    (Feat5e & FeatOptionTarget & { initialOptions?: FeatOptionSelections }) | null
+  >(null)
+  const currentOptions = (target: FeatOptionTarget) => {
+    const current = useCharacterStore.getState().activeCharacter
+    return current
+      ? getFeatSetupOwners(current, feats).find(
+          (owner) =>
+            getFeatSelectionKey(owner.target) === getFeatSelectionKey(target) &&
+            getFeatOptionOwnerKey(owner.target) === getFeatOptionOwnerKey(target),
+        )?.options
+      : undefined
+  }
+  const setOptionsPendingFeat = (target: (Feat5e & FeatOptionTarget) | null) =>
+    setPendingFeat(target ? { ...target, initialOptions: currentOptions(target) } : null)
   const classProgression = getCharacterClassEntries(character)
   const effectiveFeats = character?.feats ?? []
 
@@ -70,6 +85,7 @@ export function useClassAsiFeatController({
         classProgression,
         classLookup,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
+        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
       }),
     [character, calculationContext, classProgression, classLookup],
   )
@@ -201,9 +217,17 @@ export function useClassAsiFeatController({
     setAsiMode,
     clearAsiMode,
     commitFeatWithOptions: (
-      feat: Feat5e & FeatOptionTarget,
-      selections: Parameters<typeof commitFeatWithOptions>[1],
+      feat: Feat5e & FeatOptionTarget & { initialOptions?: FeatOptionSelections },
+      selections: FeatOptionSelections,
       allSpells: Spell5e[],
-    ) => commitFeatWithOptions(feat, selections, allSpells),
+    ) => {
+      if (
+        JSON.stringify(currentOptions(feat) ?? {}) !== JSON.stringify(feat.initialOptions ?? {})
+      ) {
+        toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
+        return
+      }
+      editFeatWithOptions(feat, feat.initialOptions ?? {}, selections, allSpells)
+    },
   }
 }

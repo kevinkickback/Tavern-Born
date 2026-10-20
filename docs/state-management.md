@@ -134,7 +134,13 @@ multiclass math. There are no top-level class mirrors.
 - Class feats retain source-qualified slot ownership in `classFeatChoices`.
 - Other normalized class and subclass choices retain descriptor identity, source-qualified owner,
   and earned level in `classChoiceSelections`. Supported selections include class features,
-  subclass features, optional features, feats, items, and creatures.
+  subclass features, optional features, feats, items, creatures, and named proficiencies.
+- Source-backed proficiency choices bind the actual owner, complete granting feature, domain and
+  earned level. The saved intent and its applied provenance are structurally validated together;
+  current filtered rules and named vocabulary determine effective benefits. Read-only source
+  refreshes suspend and restore owned expertise/languages without changing saved intent. Skills,
+  languages, Review and PDF use the same calculation character and effective provenance. See
+  [Canny's bounded contract](contracts/feature-references.md#canny-proficiencies).
 - Class/subclass feature options retain their complete 5etools UID in `ref`, separately from the
   actual granting owner. Normalization, option keys, persistence and exact resolution share that
   identity. Missing target rules retain the intent without borrowing a same-named feature.

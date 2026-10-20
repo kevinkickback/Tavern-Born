@@ -5,6 +5,7 @@ import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSavingThrows } from '@/hooks/character/useSavingThrows'
@@ -12,7 +13,21 @@ import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getProficiencyCheckNoteRows } from '@/lib/calculations/proficiencyCheckNotes'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { applySkillExpertiseActionCommand } from '@/lib/character/commands/skillExpertiseCommands'
+import {
+  applySkillProficiencyActionCommand,
+  removeSavedSkillProficiencyCommand,
+} from '@/lib/character/commands/skillProficiencyCommands'
+import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
+import { getSkillProficiencyChoices } from '@/lib/character/skillProficiencyChoices'
+import {
+  classChoiceReadinessId,
+  findFocusedProvenanceChoice,
+  getReadinessFocus,
+} from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -38,16 +53,88 @@ import {
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export function BuildProficienciesPage() {
   const [searchParams] = useSearchParams()
-  const character = useCharacterStore((state) => state.activeCharacter)
-  const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
+  const savedCharacter = useCharacterStore((state) => state.activeCharacter)
+  const calculation = useCharacterCalculationContext(savedCharacter)
+  const character = calculation?.character ?? savedCharacter
+  const data = useFilteredGameData()
+  const sourceData = useGameDataStore((state) => state.gameData)
+  const { skills: skillDefs, items, itemsBase, languages } = data
   const { skills, toggleExpertise, availableExpertiseSlots, usedExpertiseSlots } = useSkills()
   const { savingThrows } = useSavingThrows()
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const { resolveChoiceSelection } = useFeatProvenanceMutations()
   const availableProficiencies = useAvailableProficiencies()
+  const expertiseAuthority = useMemo(
+    () => ({
+      classes: data.classes,
+      feats: data.feats,
+      catalogs: buildClassChoiceFeatureCatalogs(data),
+    }),
+    [data],
+  )
+  const expertise = useMemo(
+    () => (savedCharacter ? getSkillExpertiseChoices(savedCharacter, expertiseAuthority) : null),
+    [savedCharacter, expertiseAuthority],
+  )
+  const classSkills = useMemo(
+    () =>
+      savedCharacter
+        ? getSkillProficiencyChoices(savedCharacter, expertiseAuthority, ledger)
+        : null,
+    [savedCharacter, expertiseAuthority, ledger],
+  )
+  const handleProficiencyAction = useCallback(
+    (skill: string, actionId: string) => {
+      const current = useCharacterStore.getState().activeCharacter
+      if (!current || current.id !== savedCharacter?.id) return
+      const currentAuthority = hasCurrentCharacterSourceContext(
+        current,
+        savedCharacter,
+        useGameDataStore.getState().gameData,
+        sourceData,
+      )
+      const result = currentAuthority
+        ? applySkillProficiencyActionCommand(
+            current,
+            current.provenance,
+            skill,
+            actionId,
+            expertiseAuthority,
+          )
+        : removeSavedSkillProficiencyCommand(current, current.provenance, skill, actionId)
+      if (
+        !Object.keys(result.characterPatch).length &&
+        result.provenanceUpdate === current.provenance
+      )
+        return
+      useCharacterStore.getState().updateCharacter(current.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [savedCharacter, sourceData, expertiseAuthority],
+  )
+  const handleExpertiseAction = useCallback(
+    (skill: string, actionId: string) => {
+      const current = useCharacterStore.getState().activeCharacter
+      if (!current) return
+      const result = applySkillExpertiseActionCommand(current, skill, actionId, expertiseAuthority)
+      if (
+        !Object.keys(result.characterPatch).length &&
+        result.provenanceUpdate === current.provenance
+      )
+        return
+      useCharacterStore.getState().updateCharacter(current.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [expertiseAuthority],
+  )
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
@@ -56,16 +143,20 @@ export function BuildProficienciesPage() {
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
   const readinessFocus = getReadinessFocus(searchParams)
   const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
+  const focusedClassSkill = classSkills?.classOwners.find(
+    (owner) => readinessFocus === classChoiceReadinessId(owner.id),
+  )
   const focusProficiencyChoice =
-    (focusedChoice?.domain === 'skills' ||
+    (!!focusedClassSkill ||
+      focusedChoice?.domain === 'skills' ||
       focusedChoice?.domain === 'languages' ||
       focusedChoice?.domain === 'tools' ||
       focusedChoice?.domain === 'armor' ||
       focusedChoice?.domain === 'weapons') ??
     false
   const focusedChoiceTarget =
-    focusProficiencyChoice && focusedChoice
-      ? `${readinessFocus ?? ''}\0${focusedChoice.domain}`
+    focusProficiencyChoice && (focusedChoice || focusedClassSkill)
+      ? `${readinessFocus ?? ''}\0${focusedClassSkill ? 'skills' : focusedChoice!.domain}`
       : null
   const { ref: choicePanelRef, highlighted: choicePanelHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(focusProficiencyChoice)
@@ -146,15 +237,21 @@ export function BuildProficienciesPage() {
           character.proficiencies[category as keyof typeof character.proficiencies] as string[],
           name,
         ) || hasGrant
-      return { ...focused, isProficient }
+      const expertise =
+        category === 'tools' &&
+        character.proficiencies.expertise.some((value) => normalizeKey(value) === norm)
+      return { ...focused, isProficient, expertise }
     }
     return focused
   }, [focused, skills, savingThrows, character, ledger])
 
   const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 
-  const choiceCounts = useMemo(() => buildChoiceCounts(ledger.choices), [ledger.choices])
-  const expertiseChoiceCount = Math.max(0, availableExpertiseSlots - usedExpertiseSlots)
+  const choiceCounts = useMemo(() => {
+    const counts = buildChoiceCounts(ledger.choices)
+    return { ...counts, skills: counts.skills + (classSkills?.remaining ?? 0) }
+  }, [ledger.choices, classSkills?.remaining])
+  const expertiseChoiceCount = expertise?.remaining ?? 0
 
   const toolSubtypeOptionsByKind = useMemo(() => {
     const rawAllowed = character?.allowedSources
@@ -312,6 +409,7 @@ export function BuildProficienciesPage() {
                       armor: character.proficiencies.armor,
                       weapons: character.proficiencies.weapons,
                       tools: character.proficiencies.tools,
+                      expertise: character.proficiencies.expertise,
                       languages: character.proficiencies.languages,
                     }}
                     ledger={ledger}
@@ -333,6 +431,11 @@ export function BuildProficienciesPage() {
                     onToggleExpertise={toggleExpertise}
                     availableExpertiseSlots={availableExpertiseSlots}
                     usedExpertiseSlots={usedExpertiseSlots}
+                    expertiseActions={expertise?.actions}
+                    onExpertiseAction={handleExpertiseAction}
+                    proficiencyActions={classSkills?.actions}
+                    onProficiencyAction={handleProficiencyAction}
+                    classSkillChoicesRemaining={classSkills?.remaining}
                   />
                 </div>
               </ScrollArea>
@@ -340,7 +443,21 @@ export function BuildProficienciesPage() {
                 <SourcesAccordion
                   sectionId="build-proficiencies"
                   title="Sources"
-                  rows={getSourcesRowsBySection('build-proficiencies')}
+                  rows={[
+                    ...getSourcesRowsBySection('build-proficiencies'),
+                    ...(expertise?.rows ?? []),
+                    ...(classSkills?.rows ?? []),
+                    ...getProficiencyCheckNoteRows(
+                      calculation?.effects.sourceDeclarations ?? [],
+                      calculation?.effects.resolutionContext,
+                    ).map((row) => ({
+                      itemName: row.text,
+                      category: 'Conditional proficiency',
+                      attribution: 'Class',
+                      sourceTypes: ['class' as const],
+                      isPending: false,
+                    })),
+                  ]}
                 />
               </div>
             </>

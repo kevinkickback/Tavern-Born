@@ -54,6 +54,7 @@ export function useSubclassSelectionController({
           classSource: viewingClassSource,
           character,
           effectiveAbilityScores: calculationContext?.abilityScores.total,
+          classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
         }),
     )
   }, [

@@ -1,4 +1,4 @@
-import { PDFDocument } from '@cantoo/pdf-lib'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import {
   formatActionEntry,
   getAmmunitionRows,
@@ -48,6 +48,10 @@ export {
 export type { CharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 export { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 export type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
+
+// Fitting can insert hard line breaks into otherwise complete text. Compare words, retaining all
+// punctuation/qualifiers; reports still bind the exact original current note text.
+const comparableNoteText = (text: string) => text.replace(/\s+/gu, ' ').trim()
 
 export function buildCharacterSheetFieldMap(
   viewModel: CharacterSheetViewModel,
@@ -148,6 +152,7 @@ export async function generateFilledCharacterSheetPdf(
   const overflow: SheetOverflowSection[] = [...selection.overflow, ...actionDetails]
   const shortened: string[] = []
   const noteReferences: string[] = []
+  const representedMainTexts: string[] = []
   const officialSpellMap = mapOfficial2014SpellPage(viewModel)
   const spellNames = new Set([
     ...Object.keys(officialSpellMap.textFields),
@@ -258,6 +263,16 @@ export async function generateFilledCharacterSheetPdf(
         }
       },
     })
+    if (part.id === 'main') {
+      for (const field of doc.getForm().getFields()) {
+        if (
+          field instanceof PDFTextField &&
+          fields.textFields[field.getName()] !== undefined &&
+          !shortened.includes(field.getName())
+        )
+          representedMainTexts.push(comparableNoteText(field.getText() ?? ''))
+      }
+    }
     await appendPdfForm(output, doc, prefix)
   }
   const uniqueOverflow = [
@@ -294,6 +309,14 @@ export async function generateFilledCharacterSheetPdf(
     notesPageCount,
     preserved: includeNotes ? notesContent : [],
     omitted: uniqueOverflow.filter((section) => !includeNotes || !notesContent.includes(section)),
+    representedProficiencyCheckNotes: (original.proficiencyCheckNotes ?? []).filter(
+      (row) =>
+        representedMainTexts.some((text) => text.includes(comparableNoteText(row.text))) ||
+        (includeNotes &&
+          notesContent.some((section) =>
+            comparableNoteText(section.text).includes(comparableNoteText(row.text)),
+          )),
+    ),
   })
   output.setTitle(viewModel.character.name)
   return output.save({ updateFieldAppearances: false })

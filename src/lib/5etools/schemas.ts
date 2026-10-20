@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+/** Optional nested support capability; exact section semantics are audited separately. */
+export const OptionalClassBookDataSchema = z.object({ data: z.array(z.unknown()) }).strict()
+
 /**
  * 5etools JSON has broad and evolving nested shapes across books and sources.
  * We validate identity and high-value fields strictly, while keeping many

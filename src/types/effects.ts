@@ -22,6 +22,12 @@ export type TraitEffectTarget =
   | { kind: 'damage-immunity'; damageType: string }
   | { kind: 'condition-immunity'; condition: string }
 
+interface ProficiencyCheckNoteTarget {
+  kind: 'proficiency-check-note'
+  proficiencyType: 'skill' | 'tool' | 'any'
+  abilities?: AbilityName[]
+}
+
 export type NumericEffectOperation =
   | { kind: 'base'; value: number }
   | { kind: 'set'; value: number }
@@ -81,3 +87,7 @@ export type CharacterEffect =
       operation: NumericEffectOperation | { kind: 'conditional-note'; note: string }
     })
   | (CharacterEffectBase & { target: TraitEffectTarget; operation: TraitEffectOperation })
+  | (CharacterEffectBase & {
+      target: ProficiencyCheckNoteTarget
+      operation: { kind: 'conditional-note'; note: string }
+    })

@@ -7,9 +7,92 @@ import {
   normalizeSubclassRules,
 } from '@/lib/5etools/classChoiceNormalization'
 import { parseClasses } from '@/lib/5etools/parsers'
+import { getClassChoiceDeclaration } from '@/lib/character/classChoiceIdentity'
 import type { Class5e, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 
 const hasConfiguredCorpus = existsSync(join(process.cwd(), 'data', 'class', 'index.json'))
+
+test.each([
+  ['class', 'options'],
+  ['class', 'filter'],
+  ['subclass', 'options'],
+  ['subclass', 'filter'],
+  ['subclass', 'creature'],
+] as const)('materialized %s %s declarations preserve complete copied targets without rewriting raw UIDs', (kind, route) => {
+  const entries =
+    route === 'options'
+      ? [
+          {
+            type: 'options',
+            count: 1,
+            entries: [
+              { type: 'refClassFeature', classFeature: 'Benefit|Encoded Parent|PHB|3|TCE' },
+            ],
+          },
+        ]
+      : route === 'filter'
+        ? [
+            "Choose one {@filter artisan's tools|items|source=phb|type=artisan's tools} of your choice.",
+          ]
+        : [
+            'Choose its stat block: {@creature Beast of the Land|TCE} or {@creature Beast of the Sky|TCE}.',
+          ]
+  const ref = {
+    ref: '',
+    name: 'Training',
+    className: 'Encoded Parent',
+    classSource: 'PHB',
+    source: 'TCE',
+    level: 3,
+    subclassShortName: 'Encoded School',
+    subclassSource: 'PHB',
+    feature: {
+      name: 'Training',
+      className: 'Encoded Parent',
+      classSource: 'PHB',
+      source: 'TCE',
+      level: 9,
+      subclassShortName: 'Encoded School',
+      subclassSource: 'PHB',
+      entries,
+    },
+  }
+  const normalize = (value: typeof ref) =>
+    kind === 'class'
+      ? normalizeClassChoices({ name: 'Selected Parent', source: 'XPHB' }, [value]).choices
+      : normalizeSubclassRules(
+          { name: 'Selected Parent', source: 'XPHB' },
+          { name: 'Selected School', source: 'XPHB' },
+          [value],
+        ).choices
+  const before = structuredClone(ref)
+  const target =
+    kind === 'class'
+      ? 'class-feature|training|encoded parent|phb|3|tce'
+      : 'subclass-feature|training|encoded parent|phb|encoded school|phb|3|tce'
+  const choice = normalize(ref)[0]
+  expect(choice).toBeDefined()
+  expect(getClassChoiceDeclaration(choice)).toEqual({ target })
+  expect(choice.owner.name).toBe('Selected Parent')
+  expect(choice.owner.source).toBe('XPHB')
+  expect(ref).toEqual(before)
+  expect(
+    getClassChoiceDeclaration(normalize({ ...ref, ref: undefined } as unknown as typeof ref)[0]),
+  ).toEqual({ target })
+  expect(getClassChoiceDeclaration(normalize({ ...ref, className: '' })[0])).toEqual({})
+  expect(
+    normalize({
+      ...ref,
+      ref:
+        kind === 'class'
+          ? 'Training|Encoded Parent|PHB|3junk|TCE'
+          : 'Training|Encoded Parent|PHB|Encoded School|PHB|3junk|TCE',
+    }),
+  ).toEqual([])
+  const attached = normalize({ ...ref, level: undefined } as unknown as typeof ref)[0]
+  expect(attached.level).toBe(9)
+  expect(getClassChoiceDeclaration(attached)?.target).toBe(target.replace('|3|tce', '|9|tce'))
+})
 
 function featureRef(
   name: string,

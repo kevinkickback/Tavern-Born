@@ -208,7 +208,7 @@ describe('class-feature gain levels', () => {
     expect(choices[0].selectionCountByLevel.slice(0, 4)).toEqual(counts)
   })
 
-  test('counts repeated expertise levels by their source-qualified class progression', () => {
+  test('exact Rogue and Bard gains use owned choices even without current source bodies', () => {
     const classes: Record<string, Class5e> = {
       'Rogue|PHB': {
         name: 'Rogue',
@@ -231,13 +231,38 @@ describe('class-feature gain levels', () => {
       { name: 'Bard', source: 'PHB', levels: 3 },
       { name: 'Rogue', source: 'XPHB', levels: 10 },
     ]
-    expect(getExpertiseSlotsFromClasses(progression, classes)).toBe(4)
+    expect(getExpertiseSlotsFromClasses([progression[0]], classes)).toBe(0)
+    expect(getExpertiseSlotsFromClasses(progression, classes)).toBe(0)
     expect(
       getExpertiseSlotsFromClasses([{ ...progression[0], levels: 6 }, progression[1]], classes),
-    ).toBe(6)
+    ).toBe(0)
     expect(
       getExpertiseSlotsFromClasses([progression[0], { ...progression[1], levels: 10 }], classes),
-    ).toBe(6)
+    ).toBe(0)
+  })
+
+  test('unregistered Expertise printings retain source-qualified earned levels and cannot serve another printing', () => {
+    const unregistered: Class5e = {
+      name: 'Bard',
+      source: 'TST',
+      classFeatureRefs: [
+        reference('Expertise', 'Expertise|Bard|TST|3', 1),
+        reference('Expertise', 'Expertise|Bard|TST|10|TST', 1),
+      ],
+    }
+    for (const [levels, expected] of [
+      [2, 0],
+      [3, 2],
+      [9, 2],
+      [10, 4],
+    ]) {
+      expect(
+        getExpertiseSlotsFromClasses([{ name: 'Bard', source: 'TST', levels }], { unregistered }),
+      ).toBe(expected)
+    }
+    expect(
+      getExpertiseSlotsFromClasses([{ name: 'Bard', source: 'PHB', levels: 10 }], { unregistered }),
+    ).toBe(0)
   })
 
   test('preserves the separate subclass reference layout', () => {

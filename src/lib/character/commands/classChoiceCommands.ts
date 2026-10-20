@@ -1,10 +1,16 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import {
+  decodeClassProficiencyChoiceId,
+  decodeProficiencyOption,
+  isClassProficiencyChoiceId,
+} from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   getClassChoiceFeatureId,
-  getClassChoiceFeatureTarget,
+  getClassChoiceGrantedFeature,
   getClassChoiceOptionKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
@@ -13,12 +19,36 @@ import {
   getCharacterClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { getEffectiveOwnerProficiencyChoices } from '@/lib/character/classProficiencyAuthority'
+import {
+  reconcileClassProficiencyGrants,
+  retainClassProficiencyGrants,
+} from '@/lib/character/classProficiencyOwnership'
+import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  getHistoricalProficiencyRule,
+  resolveHistoricalProficiencyChoice,
+} from '@/lib/character/historicalProficiencyChoices'
+import {
+  getOptionalClassPoolSection,
+  getOptionalClassPoolSelectionSection,
+} from '@/lib/character/optionalClassAdoptionRules'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import {
+  getOptionalPoolSelectionHandle,
+  getRegisteredOptionalPoolSelection,
+} from '@/lib/character/optionalClassPoolSelections'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import {
+  getInvalidClassProficiencySelectionIds,
+  isValidClassProficiencySelection,
+} from '@/lib/schema/classProficiencyValidation'
 import { getInvalidNaturalExplorerSelectionIds } from '@/lib/schema/naturalExplorerValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Feat5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassChoiceOption,
@@ -29,11 +59,13 @@ import type {
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { CharacterCommandResult } from './commandResult'
 import { replaceClassFeatSelectionsCommand } from './featCommands'
+import { projectProficiencyCommandResult } from './proficiencyProjection'
 import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 export interface ClassChoiceAuthority {
   classes: readonly Class5e[]
   catalogs?: ClassChoiceFeatureCatalogs
+  feats?: readonly Feat5e[]
 }
 
 function currentLiteralChoice(
@@ -42,14 +74,103 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
-  if (!isFeatureLiteralChoiceId(choice.id)) return choice
+  if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
+    const relation = decodeClassProficiencyChoiceId(choice.id)
+    const owner = findOwner(character, choice)
+    const current =
+      owner &&
+      authority &&
+      getEffectiveOwnerProficiencyChoices(character, owner, authority.catalogs).find(
+        (row) => row.id === choice.id,
+      )
+    if (!relation || !current || !authority?.catalogs)
+      throw new RangeError('Current source rules cannot verify this proficiency choice.')
+    if (
+      getHistoricalProficiencyRule(choice.id) &&
+      !character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.proficiencyAtGain
+    )
+      throw new RangeError('Confirm the proficiency setup before choosing a fallback skill.')
+    const prior =
+      character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.selected ?? []
+    const eligibilityCharacter = refreshClassProficiencyState(character, authority.classes, {
+      ...authority.catalogs,
+      featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+    })
+    const eligible = new Set(
+      resolveClassChoiceOptions(
+        current,
+        createClassChoiceCatalogs({
+          ...authority.catalogs,
+          featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+        }),
+        prior,
+        findOwner(character, current)?.levels ?? 0,
+        eligibilityCharacter,
+      )
+        .filter((option) => option.availability === 'eligible')
+        .map((option) => getClassChoiceOptionKey(option.reference)),
+    )
+    if (selected.some((option) => !eligible.has(getClassChoiceOptionKey(option))))
+      throw new RangeError(
+        'Proficiency eligibility changed. Review the available choices before confirming.',
+      )
+    return resolveHistoricalProficiencyChoice(character, current)
+  }
+  if (!isFeatureLiteralChoiceId(choice.id)) {
+    if (getOptionalClassPoolSection(choice)) {
+      const owner = findOwner(character, choice)
+      const cls = authority && findClassReference(choice.owner, authority.classes)
+      const current =
+        cls &&
+        owner &&
+        authority?.catalogs &&
+        getCharacterClassChoices(
+          cls,
+          getSelectedSubclassData(cls, owner),
+          createOptionalClassFeatureActivity(character, authority.catalogs),
+          authority.catalogs,
+        ).find((row) => row.id === choice.id)
+      if (!current || !authority?.catalogs)
+        throw new RangeError('Current source rules cannot verify this optional feature pool.')
+      const eligible = new Set(
+        resolveClassChoiceOptions(
+          current,
+          createClassChoiceCatalogs(authority.catalogs),
+          [],
+          owner?.levels ?? 0,
+          character,
+        )
+          .filter((row) => row.availability === 'eligible')
+          .map((row) => getClassChoiceOptionKey(row.reference)),
+      )
+      const prior = new Set(
+        (
+          character.classChoiceSelections?.find((row) => row.choiceId === current.id)?.selected ??
+          []
+        ).map(getClassChoiceOptionKey),
+      )
+      if (
+        selected.some(
+          (row) =>
+            !eligible.has(getClassChoiceOptionKey(row)) && !prior.has(getClassChoiceOptionKey(row)),
+        )
+      )
+        throw new RangeError(
+          'Optional feature availability changed. Review the current choices before confirming.',
+        )
+      return current
+    }
+    if (!createOptionalClassFeatureActivity(character, authority?.catalogs).choice(choice))
+      throw new RangeError('This class feature choice is not active for this character.')
+    return choice
+  }
   const classData = authority && findClassReference(choice.owner, authority.classes)
   const current =
     classData &&
     getCharacterClassChoices(
       classData,
       undefined,
-      character.variantRules?.optionalClassFeatures ?? false,
+      createOptionalClassFeatureActivity(character, authority?.catalogs),
       authority?.catalogs,
     ).find((candidate) => candidate.id === choice.id)
   if (!current || !authority?.catalogs)
@@ -90,11 +211,28 @@ export function retainSavedFeatureOptionsCommand(
   ledger: ProvenanceLedger,
   choiceId: string,
   remainingKeys: readonly string[],
+  authority?: ClassChoiceAuthority,
+  expectedSelectionHandle?: string,
 ): CharacterCommandResult {
   const selection = character.classChoiceSelections?.find((row) => row.choiceId === choiceId)
-  if (!selection) return { characterPatch: {}, provenanceUpdate: ledger }
+  if (!selection) {
+    if (expectedSelectionHandle !== undefined)
+      throw new RangeError('The saved choice changed. Review it before confirming.')
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
+  const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
+  if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
+    throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
+    (registeredPool && expectedSelectionHandle === undefined) ||
+    (expectedSelectionHandle !== undefined &&
+      getOptionalPoolSelectionHandle(selection) !== expectedSelectionHandle)
+  )
+    throw new RangeError('The saved choice changed. Review it before confirming.')
+  if (
+    !registeredPool &&
     !isValidStormAuraSelection(selection) &&
+    !isValidClassProficiencySelection(selection) &&
     (selection.kind !== 'feature-option' ||
       selection.selected.some((option) => option.entityType !== 'featureOption'))
   ) {
@@ -118,13 +256,65 @@ export function retainSavedFeatureOptionsCommand(
     remaining.has(getClassChoiceOptionKey(option)),
   )
   const next = (character.classChoiceSelections ?? []).flatMap((row) =>
-    row.choiceId !== choiceId ? [row] : selected.length ? [{ ...row, selected }] : [],
+    row.choiceId !== choiceId
+      ? [row]
+      : selected.length || row.proficiencyAtGain
+        ? [{ ...row, selected }]
+        : [],
   )
-  const grants = reconcileClassChoiceSelectionGrants(character, ledger, next)
-  return {
-    characterPatch: { classChoiceSelections: next, features: grants.features },
-    provenanceUpdate: grants.provenanceUpdate,
+  const ownedProficiencies = isClassProficiencyChoiceId(selection.choiceId)
+    ? retainClassProficiencyGrants(
+        character,
+        ledger,
+        selection,
+        new Set(selected.flatMap((option) => decodeProficiencyOption(option)?.name ?? [])),
+      )
+    : undefined
+  const featureGrants = ownedProficiencies
+    ? undefined
+    : reconcileChoiceMutationGrants(
+        character,
+        ledger,
+        next,
+        selection,
+        authority?.catalogs ??
+          (registeredPool ? { classes: [], classFeatures: [], subclassFeatures: [] } : undefined),
+      )
+  const grants = {
+    features: featureGrants?.features ?? character.features,
+    proficiencies: ownedProficiencies?.proficiencies ?? character.proficiencies,
+    provenanceUpdate: ownedProficiencies?.provenance ?? {
+      ...featureGrants!.provenanceUpdate,
+      proficiencies: ledger.proficiencies,
+    },
   }
+  const projected = authority?.catalogs
+    ? refreshClassProficiencyState(
+        {
+          ...character,
+          classChoiceSelections: next,
+          proficiencies: grants.proficiencies,
+          provenance: grants.provenanceUpdate,
+        },
+        authority.classes,
+        {
+          ...authority.catalogs,
+          featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+        },
+      )
+    : undefined
+  return projectProficiencyCommandResult(
+    character,
+    {
+      characterPatch: {
+        classChoiceSelections: next,
+        features: grants.features,
+        proficiencies: projected?.proficiencies ?? grants.proficiencies,
+      },
+      provenanceUpdate: projected?.provenance ?? grants.provenanceUpdate,
+    },
+    authority?.catalogs,
+  )
 }
 
 function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
@@ -211,7 +401,9 @@ export function applyClassChoiceSelectionCommand(
       )
   }
   if (
-    (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
+    (choice.kind === 'feature-option' ||
+      choice.kind === 'proficiency' ||
+      isStormAuraChoiceId(choice.id)) &&
     sameSelectionKeys(
       (existingSelection?.selected ?? []).map(getClassChoiceOptionKey),
       selected.map(getClassChoiceOptionKey),
@@ -237,6 +429,9 @@ export function applyClassChoiceSelectionCommand(
     ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
     ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
+    ...(existingSelection?.proficiencyAtGain
+      ? { proficiencyAtGain: existingSelection.proficiencyAtGain }
+      : {}),
     selected: selected.map<CharacterClassChoiceOption>((option, index) => ({
       ...option,
       name: option.name.trim(),
@@ -247,9 +442,31 @@ export function applyClassChoiceSelectionCommand(
   const retained = (character.classChoiceSelections ?? []).filter(
     (existing) => existing.choiceId !== choice.id,
   )
-  return {
-    classChoiceSelections: selection.selected.length > 0 ? [...retained, selection] : retained,
+  const next =
+    selection.selected.length > 0 || selection.proficiencyAtGain
+      ? [...retained, selection]
+      : retained
+  if (
+    isClassProficiencyChoiceId(choice.id) &&
+    getInvalidClassProficiencySelectionIds(next).has(choice.id)
+  )
+    throw new RangeError('Choose different skills for each earned proficiency choice.')
+  if (getOptionalClassPoolSection(choice)) {
+    const active = getEffectiveClassChoiceFeatureRoutes(
+      { ...character, classChoiceSelections: next },
+      authority?.catalogs,
+    )
+    const prior = new Set((existingSelection?.selected ?? []).map(getClassChoiceOptionKey))
+    if (
+      selection.selected.some(
+        (option) =>
+          !prior.has(getClassChoiceOptionKey(option)) &&
+          !active.featureIds.has(getClassChoiceFeatureId(selection, option)),
+      )
+    )
+      throw new RangeError('This option does not meet its current prerequisites.')
   }
+  return { classChoiceSelections: next }
 }
 
 function isFeatureOption(
@@ -270,7 +487,8 @@ export function reconcileClassChoiceFeatMirror(
   choice: NormalizedCharacterChoice,
   selection: CharacterClassChoiceSelection | undefined,
 ): CharacterCommandResult {
-  if (choice.kind !== 'feat') return { characterPatch: {}, provenanceUpdate: ledger }
+  if (choice.kind !== 'feat' || isClassProficiencyChoiceId(choice.id))
+    return { characterPatch: {}, provenanceUpdate: ledger }
   const owner = findOwner(character, choice)
   const categories = choice.optionFilter?.categories ?? []
   return replaceClassFeatSelectionsCommand(
@@ -304,16 +522,7 @@ function rebuildClassChoiceFeatures(
       if (!isFeatureOption(option)) continue
       const identity = getClassChoiceFeatureId(selection, option)
       if (existingIdentities.has(identity)) continue
-      retained.push({
-        id: identity,
-        name: option.name,
-        source:
-          option.source?.trim() ||
-          getClassChoiceFeatureTarget(option)?.split('|').slice(-1)[0] ||
-          '',
-        description: '',
-        level: option.slotLevel,
-      })
+      retained.push(getClassChoiceGrantedFeature(selection, option))
       existingIdentities.add(identity)
     }
   }
@@ -329,11 +538,35 @@ function rebuildClassChoiceFeatures(
  * source-qualified selections until structured item effects can be applied safely.
  */
 export function reconcileClassChoiceSelectionGrants(
-  character: Pick<Character, 'classChoiceSelections' | 'features'>,
+  character: Character,
   ledger: ProvenanceLedger,
   selections: readonly CharacterClassChoiceSelection[],
-): Pick<CharacterCommandResult, 'provenanceUpdate'> & { features: Feature[] } {
-  const activeSelections = selections.filter((selection) => !selection.inactive)
+  catalogs?: ClassChoiceFeatureCatalogs,
+): Pick<CharacterCommandResult, 'provenanceUpdate'> & {
+  features: Feature[]
+  proficiencies: Character['proficiencies']
+} {
+  const routes = getEffectiveClassChoiceFeatureRoutes(
+    { ...character, classChoiceSelections: [...selections] },
+    catalogs,
+  )
+  const activeSelections = selections
+    .filter((selection) => !selection.inactive)
+    .map((selection) => {
+      const section = getOptionalClassPoolSelectionSection(selection)
+      return section
+        ? {
+            ...selection,
+            selected: selection.selected.filter(
+              (option) =>
+                option.entityType !== 'optionalFeature' ||
+                (!catalogs &&
+                  option.source?.trim().toLowerCase() !== section.source.toLowerCase()) ||
+                routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
+            ),
+          }
+        : selection
+    })
   const ownedChoiceIds = new Set([
     ...(character.classChoiceSelections ?? []).map((selection) => selection.choiceId),
     ...selections.map((selection) => selection.choiceId),
@@ -364,9 +597,32 @@ export function reconcileClassChoiceSelectionGrants(
     }
   }
 
+  const proficiencyGrants = reconcileClassProficiencyGrants(character, provenanceUpdate, selections)
   return {
     features: rebuildClassChoiceFeatures(character.features, activeSelections),
-    provenanceUpdate,
+    proficiencies: proficiencyGrants.proficiencies,
+    provenanceUpdate: proficiencyGrants.provenance!,
+  }
+}
+
+/** A proficiency-only edit must preserve unrelated feature ownership, including supplied ledger work. */
+function reconcileChoiceMutationGrants(
+  character: Character,
+  ledger: ProvenanceLedger,
+  selections: readonly CharacterClassChoiceSelection[],
+  choice: { kind: NormalizedCharacterChoice['kind']; id?: string; choiceId?: string },
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (
+    choice.kind !== 'proficiency' &&
+    !isClassProficiencyChoiceId(choice.id ?? choice.choiceId ?? '')
+  )
+    return reconcileClassChoiceSelectionGrants(character, ledger, selections, catalogs)
+  const state = reconcileClassProficiencyGrants(character, ledger, selections)
+  return {
+    features: character.features,
+    proficiencies: state.proficiencies,
+    provenanceUpdate: state.provenance!,
   }
 }
 
@@ -380,17 +636,27 @@ export function applyClassChoiceSelectionWithGrantsCommand(
 ): CharacterCommandResult {
   const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected, authority)
   if (
-    (choice.kind === 'feature-option' || isStormAuraChoiceId(choice.id)) &&
+    (choice.kind === 'feature-option' ||
+      choice.kind === 'proficiency' ||
+      isClassProficiencyChoiceId(choice.id) ||
+      isStormAuraChoiceId(choice.id)) &&
     selectionPatch.classChoiceSelections === character.classChoiceSelections
   ) {
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
   const classChoiceSelections = selectionPatch.classChoiceSelections ?? []
-  const grants = reconcileClassChoiceSelectionGrants(character, ledger, classChoiceSelections)
+  const grants = reconcileChoiceMutationGrants(
+    character,
+    ledger,
+    classChoiceSelections,
+    choice,
+    authority?.catalogs,
+  )
   const withSelections: Character = {
     ...character,
     classChoiceSelections,
     features: grants.features,
+    proficiencies: grants.proficiencies,
     provenance: grants.provenanceUpdate,
   }
   const featMirror = reconcileClassChoiceFeatMirror(
@@ -399,15 +665,37 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     choice,
     classChoiceSelections.find((selection) => selection.choiceId === choice.id),
   )
+  const projected = authority?.catalogs
+    ? refreshClassProficiencyState(
+        {
+          ...withSelections,
+          ...featMirror.characterPatch,
+          provenance: featMirror.provenanceUpdate,
+        },
+        authority.classes,
+        {
+          ...authority.catalogs,
+          featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+        },
+      )
+    : undefined
 
-  return {
-    characterPatch: {
-      ...featMirror.characterPatch,
-      classChoiceSelections,
-      features: grants.features,
+  return projectProficiencyCommandResult(
+    character,
+    {
+      characterPatch: {
+        ...featMirror.characterPatch,
+        classChoiceSelections,
+        features: grants.features,
+        proficiencies:
+          projected?.proficiencies ??
+          featMirror.characterPatch.proficiencies ??
+          grants.proficiencies,
+      },
+      provenanceUpdate: projected?.provenance ?? featMirror.provenanceUpdate,
     },
-    provenanceUpdate: featMirror.provenanceUpdate,
-  }
+    authority?.catalogs,
+  )
 }
 
 /** Removes selections whose source-qualified class or earned choice slot no longer exists. */
@@ -430,6 +718,6 @@ export function reconcileClassChoiceSelections(
       return []
     }
     const selected = selection.selected.filter((option) => option.slotLevel <= owner.levels)
-    return selected.length > 0 ? [{ ...selection, selected }] : []
+    return selected.length > 0 || selection.proficiencyAtGain ? [{ ...selection, selected }] : []
   })
 }

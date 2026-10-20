@@ -97,6 +97,7 @@ type CharacterClassChoiceKind =
   | 'optional-feature'
   | 'creature'
   | 'feature-option'
+  | 'proficiency'
 
 export interface CharacterClassChoiceOption {
   entityType:
@@ -107,6 +108,7 @@ export interface CharacterClassChoiceOption {
     | 'optionalFeature'
     | 'creature'
     | 'featureOption'
+    | 'proficiency'
   name: string
   source?: string
   /** Exact class/subclass feature target; an unresolved intent never borrows named rules. */
@@ -126,7 +128,20 @@ export interface CharacterClassChoiceSelection {
   subclassName?: string
   subclassSource?: string
   classLevel: number
+  /** Explicit acquisition fact for source-defined historical proficiency fallback choices. */
+  proficiencyAtGain?: { name: string; alreadyProficient: boolean }
   selected: CharacterClassChoiceOption[]
+}
+
+export type OptionalClassFeatureOwner =
+  | ['class', string, string]
+  | ['subclass', string, string, string, string]
+
+export interface OptionalClassFeatureAdoption {
+  owner: OptionalClassFeatureOwner
+  /** Complete canonical class-feature/subclass-feature identity, independent of the actual owner. */
+  target: string
+  earnedLevel: number
 }
 
 export interface Character {
@@ -227,6 +242,9 @@ export interface Character {
 
   /** Structured choices owned by a source-qualified class feature or progression. */
   classChoiceSelections?: CharacterClassChoiceSelection[]
+
+  /** Explicit optional class-feature intent. Permission and saved setup never imply adoption. */
+  optionalClassFeatureAdoptions?: OptionalClassFeatureAdoption[]
 
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
   fixedFeatOptions?: Record<string, FeatOptionSelections>

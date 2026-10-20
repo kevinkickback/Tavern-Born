@@ -1,4 +1,3 @@
-import { Wrench } from '@phosphor-icons/react'
 import {
   Select,
   SelectContent,
@@ -14,12 +13,11 @@ import {
   normalizeGenericToolKind,
 } from '@/pages/build/proficiencies/model/data'
 import {
-  choiceSelectedClass,
-  fixedSelectedClass,
   formatProfLabel,
   type ProficiencyRowState,
   ProficiencyStateIcon,
   ProficiencyStatus,
+  proficiencyRowClass,
 } from './shared'
 import type {
   CurrentProficiencies,
@@ -35,6 +33,7 @@ interface ToolsPanelProps extends ToolPanelChoices {
   groups: ItemGroup[]
   visibleToolCandidates: string[]
   currentTools: CurrentProficiencies['tools']
+  expertiseTools?: string[]
   ledger: ProficiencyLedger
   sort: ToolSort
   onSortChange: (sort: ToolSort) => void
@@ -47,6 +46,7 @@ export function ToolsPanel({
   groups,
   visibleToolCandidates,
   currentTools,
+  expertiseTools = [],
   ledger,
   sort,
   onSortChange,
@@ -57,6 +57,9 @@ export function ToolsPanel({
   onExpandDetails,
   onResolveChoiceSelection,
 }: ToolsPanelProps) {
+  const hasPendingChoices = ledger.choices.some(
+    (choice) => choice.domain === 'tools' && choice.selected.length < choice.chooseCount,
+  )
   return (
     <div className="space-y-4">
       {dropdownToolSlots.length > 0 && (
@@ -161,11 +164,16 @@ export function ToolsPanel({
                       slot.options.some((option) => normalizeKey(option) === normTool),
                     ))
                 const canDeselect = isChoiceSelected
+                const availableInDropdown = dropdownToolSlots.some((slot) =>
+                  slot.options.some((option) => normalizeKey(option) === normTool),
+                )
                 const rowState: ProficiencyRowState = isChoiceSelected
                   ? 'chosen'
                   : isSelected
                     ? 'granted'
-                    : canSelect || (isGenericKind && hasOptionalChoiceForKind)
+                    : canSelect ||
+                        availableInDropdown ||
+                        (isGenericKind && hasOptionalChoiceForKind)
                       ? 'available'
                       : 'unavailable'
                 const focusTool = () => {
@@ -197,33 +205,29 @@ export function ToolsPanel({
                           ? `${formatProfLabel(toolName)} is granted and cannot be removed`
                           : canSelect
                             ? `Choose ${formatProfLabel(toolName)}`
-                            : undefined
+                            : availableInDropdown
+                              ? `Choose ${formatProfLabel(toolName)} in the tool dropdown`
+                              : undefined
                     }
                     className={cn(
                       'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                       !isGenericKind && (canSelect || canDeselect)
                         ? 'cursor-pointer'
                         : 'cursor-default',
-                      isGenericKind
-                        ? hasOptionalChoiceForKind
-                          ? 'bg-primary/5 text-foreground hover:bg-primary/10'
-                          : 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                        : isChoiceSelected
-                          ? choiceSelectedClass
-                          : isSelected
-                            ? fixedSelectedClass
-                            : canSelect
-                              ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                              : 'bg-surface-raised text-foreground hover:bg-surface-hover',
+                      isGenericKind && hasOptionalChoiceForKind
+                        ? 'bg-primary/5 text-foreground hover:bg-primary/10'
+                        : proficiencyRowClass(rowState, hasPendingChoices),
                     )}
                   >
                     <ProficiencyStateIcon
                       state={rowState}
                       actionable={!isGenericKind && (canSelect || canDeselect)}
-                      fallback={<Wrench className="size-3.5 shrink-0" aria-hidden="true" />}
                     />
                     <span className="truncate">{formatProfLabel(toolName)}</span>
                     <span className="ml-auto flex shrink-0 items-center gap-2">
+                      {expertiseTools.some(
+                        (name) => normalizeKey(name) === normalizeKey(toolName),
+                      ) && <span className="text-xs text-primary">Expertise</span>}
                       <ProficiencyStatus state={rowState} />
                     </span>
                   </button>

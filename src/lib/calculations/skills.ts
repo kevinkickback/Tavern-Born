@@ -1,4 +1,9 @@
-import { getClassFeatureReferenceLevel } from '@/lib/5etools/classFeatureIdentity'
+import {
+  decodeClassFeatureReference,
+  getClassFeatureIdentity,
+  getClassFeatureReferenceLevel,
+} from '@/lib/5etools/classFeatureIdentity'
+import { isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
@@ -216,9 +221,11 @@ export function deriveAllSkills(
   })
 }
 
-/** Keep expertise constrained to the authoritative skill-proficiency set. */
+/** Skill and tool expertise never grant their underlying proficiency. */
 export function reconcileSkillExpertise(proficiencies: Proficiencies): Proficiencies {
-  const skills = new Set(proficiencies.skills.map((name) => name.toLowerCase()))
+  const skills = new Set(
+    [...proficiencies.skills, ...proficiencies.tools].map((name) => name.toLowerCase()),
+  )
   return {
     ...proficiencies,
     expertise: proficiencies.expertise.filter((name) => skills.has(name.toLowerCase())),
@@ -227,7 +234,8 @@ export function reconcileSkillExpertise(proficiencies: Proficiencies): Proficien
 
 /**
  * Count the total expertise slots available to the character from class features.
- * Each "Expertise" class feature instance (e.g. Rogue L1/L6, Bard L3/L10) grants 2 slots.
+ * Non-adapted Expertise features keep their existing pooled slots.
+ * Audited targets use independently owned modal choices, even when source rules are absent.
  * Expertise from feats is applied directly when the feat option is resolved and is not counted here.
  */
 export function getExpertiseSlotsFromClasses(
@@ -244,7 +252,10 @@ export function getExpertiseSlotsFromClasses(
       if (
         typeof level === 'number' &&
         level <= entry.levels &&
-        ref.name.toLowerCase() === 'expertise'
+        ref.name.toLowerCase() === 'expertise' &&
+        !isOwnedExpertiseTarget(
+          getClassFeatureIdentity(ref.ref ? decodeClassFeatureReference(ref.ref) : ref) ?? '',
+        )
       ) {
         slots += 2
       }

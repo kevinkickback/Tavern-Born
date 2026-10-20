@@ -7,6 +7,84 @@ Read this reference only when changing this contract. Start with the [topic inde
 Class tags include source-qualified class identity and, where needed, the granting level/choice.
 This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
 
+### Individual optional class features
+
+The Rules setting permits optional choices; it never selects them. Class records individual
+`optionalClassFeatureAdoptions` by actual owner, complete target and earned gain. Missing records
+mean unselected, even when an older character enabled the setting or retained feature setup.
+Source candidates are separate from actor activity. Current source/owner/level proof is required
+for a new adoption; a saved active flag, matching label or raw recovery description cannot supply it.
+
+The Ranger PHB adapter treats Deft Explorer1 and Favored Foe1 as independent exclusive families,
+and Spellcasting Focus2 as an addition. Deft Explorer's gain6/10 children require their own earned
+level/current source, without another adoption or quota. The combined standard gain6 node retains
+its terrain and enemy/language paragraphs independently; Foe Slayer20 stays compatible. Revised
+standard Ranger and independently declaring owners keep their own rules.
+
+TCE Fighting Style Options for PHB Fighter/Paladin/Ranger and PHB Warlock's Pact Boon/Invocation
+options use real `book-section|tce|<id>` targets. Their current book section, ordinary granting
+declaration/progression and explicit adoption extend the existing pool without extra slots. Stable
+choice IDs identify these routes; display labels do not authorize them. Missing/duplicate current
+members suspend only their own option. Saved unavailable picks retain their occupied slots and
+recovery details, while their managed benefits/provenance, Actions, prerequisites and PDF suspend.
+Standard options, independent providers and manual rows keep their own authority.
+Structured pool prerequisites use a finite projection seeded from independent providers, then
+current qualified choice contributions. Saved managed rows cannot satisfy their own requirements
+or bootstrap a cycle. New/retargeted command picks must qualify in the complete proposed set;
+established unmet intent stays occupied and inactive. The same result supplies derived rows/tags,
+details, readiness, Actions, Review and PDF. Exact source/provider restoration rebuilds missing
+active contributions without another write, preserving existing same-ID metadata. Pure prerequisite
+rules and snapshot construction are separate from the public effective-character wrapper.
+This static boundary does not infer acquisition/rest events or authorize historical replacements.
+
+PHB Barbarian's adopted TCE Primal Knowledge uses one root at level 3 and separate skill choices
+earned at levels 3 and 10. Each grants one currently nonproficient skill from the source's initial
+Barbarian pool; the gains cannot choose the same skill. These are skill proficiencies, with no
+historical proficiency question or automatic Expertise. Class links to the shared Proficiencies
+controls with the exact gain in focus; multiple independent gains use a source chooser. Equivalent
+skill vocabulary printings represent one semantic skill and never create duplicate source actions.
+Saved setup survives permission/adoption suspension and missing source rules; intentional loss of
+the owner or earned gain removes only its setup. Current source-certified skills enter the shared
+foundation before dependent Expertise, whose saved intent remains dormant when its last underlying
+proficiency disappears. Independent proficiency providers preserve that qualification.
+
+While permission is ON, an adopted unavailable replacement reserves its original family and
+creates one exact root recovery duty. Neither side supplies benefits until restored or cleared.
+OFF restores eligible originals while retaining adoption/setup; ON rechecks only explicit prior
+adoptions. Clear addresses the latest exact family and retains dormant setup. Intentional class,
+subclass or unearned-root removal cleans its intent atomically; source filtering never deletes it.
+
+The shared activity view gates setup and proficiency projection before grants, current commands,
+Class/details/readiness, prerequisites, Actions, Review and PDF. Adopted passive declarations and
+earned children are derived for Review and full/names-only PDF summaries without saved Feature
+mirrors. Detail/highlight identity includes owner, target/choice, option and gain. Independent stored
+features/actions retain their own identity; source/name-wide filtering cannot remove them. Generic
+unsupported prerequisite conditions remain unsupported. Adoption does not certify unrelated runtime
+movement, resources, combat, companion scaling or complete class progression mechanics.
+
+The Class selector pane keeps the viewed class icon, level and selected subclass above its scrolling
+level list;
+the multiclass switcher remains in its pane header. Each level shows its feature count and pending
+selection count, or “All choices made” with a checkmark when complete. Exclusive standard/optional
+replacements have a separate tab group per declared
+owner/family/gain. Selecting a tab records that adoption through the shared command; keyboard focus
+alone does not select it. Tabs display the feature name and selected checkmark. Only the active side's
+current setup appears inside its panel. Additional features retain independent checkboxes on selectable
+surfaces. The checkbox alone changes adoption; the separate feature-name area opens current source-backed
+details without toggling it, including before adoption. Details require the exact offered addition's
+owner, target and earned level, and disappear when that source or eligibility is lost. Do not repeat the
+plain addition below its card; retain genuine setup choices and diagnostics. Setup cards and ordinary
+feature-name buttons open the rules inspector without duplicate
+View links. Class choice modal summaries use readable option labels while retaining canonical saved
+references; concise expertise hints preserve each feature's allowance and coupled benefits.
+Full declared identities associate displayed features with
+their group; matching names alone cannot move setup between owners or replacement families.
+Normalized setup uses its actual owner type to decode the declaring feature UID, including legacy
+subclass filter rows carrying a class-reference field prefix. Recognized malformed declarations or
+explicit name/source/gain conflicts cannot fall back to a generic earned choice. Copied feature
+parents remain distinct from the actual selected owner. Moving configuration controls into tabs
+preserves the subclass parent's complete setup status.
+
 ### Automatic feature actions
 
 Actions and PDF use one pure projection. Class/subclass references retain the complete encoded

@@ -11,6 +11,10 @@ import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildPrerequisiteSnapshot, checkPrerequisite } from '@/lib/calculations/prerequisites'
 import { calculateCharacterSpellSlots } from '@/lib/calculations/spellProfiles'
+import {
+  buildClassChoiceFeatureCatalogs,
+  createClassChoiceCatalogs,
+} from '@/lib/character/classChoiceOptions'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import {
   buildCharacterSheetFieldMap,
@@ -171,15 +175,27 @@ describe('representative character consumers', () => {
 
     await waitFor(() => expect(consumerSnapshot).toBeDefined())
     const snapshot = consumerSnapshot as ConsumerSnapshot
-    const lookups = fixture.gameData.lookups!
+    const lookups = {
+      ...fixture.gameData.lookups!,
+      classChoiceClasses: fixture.gameData.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(fixture.gameData),
+    }
     const calculation = createCharacterCalculationContext(fixture.character, lookups)
     const viewModel = createCharacterSheetViewModel(fixture.character, lookups)
     const prerequisiteSnapshot = buildPrerequisiteSnapshot({
       character: fixture.character,
       effectiveAbilityScores: calculation.abilityScores.total,
+      classChoiceFeatureCatalogs: lookups.classChoiceFeatureCatalogs,
     })
     const readiness = getCharacterReadiness(fixture.character, {
       calculation,
+      classChoiceCatalogs: {
+        ...createClassChoiceCatalogs(lookups.classChoiceFeatureCatalogs),
+        items: fixture.gameData.items,
+        itemsBase: fixture.gameData.itemsBase,
+        itemMasteries: fixture.gameData.itemMasteries ?? [],
+        weaponProficiencies: fixture.character.proficiencies.weapons,
+      },
       featsByKey: lookups.featsByKey,
       spellsByKey: lookups.spellsByKey,
     })
@@ -274,7 +290,11 @@ describe('representative character consumers', () => {
       ...result.characterPatch,
       provenance: result.provenanceUpdate,
     }
-    const lookups = fixture.gameData.lookups!
+    const lookups = {
+      ...fixture.gameData.lookups!,
+      classChoiceClasses: fixture.gameData.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(fixture.gameData),
+    }
     const calculation = createCharacterCalculationContext(changed, lookups)
     const viewModel = createCharacterSheetViewModel(changed, lookups)
     const slots = calculateCharacterSpellSlots(
@@ -288,6 +308,13 @@ describe('representative character consumers', () => {
     )
     const readiness = getCharacterReadiness(changed, {
       calculation,
+      classChoiceCatalogs: {
+        ...createClassChoiceCatalogs(lookups.classChoiceFeatureCatalogs),
+        items: fixture.gameData.items,
+        itemsBase: fixture.gameData.itemsBase,
+        itemMasteries: fixture.gameData.itemMasteries ?? [],
+        weaponProficiencies: changed.proficiencies.weapons,
+      },
       featsByKey: lookups.featsByKey,
       spellsByKey: lookups.spellsByKey,
     })

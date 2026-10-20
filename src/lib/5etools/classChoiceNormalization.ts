@@ -14,6 +14,10 @@ import type {
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
 import {
+  getNormalizedClassChoiceId as buildChoiceId,
+  normalizedChoiceIdPart as normalizedIdPart,
+} from './classChoiceId'
+import {
   decodeClassFeatureReference,
   decodeSubclassFeatureReference,
   getClassFeatureIdentity,
@@ -21,10 +25,17 @@ import {
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
+import { normalizeClassProficiencyChoices } from './classProficiencyChoices'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
+import { getFeatureVariantMetadata } from './featureVariantMetadata'
 import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
+import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 import { normalizeStormAuraChoices } from './stormAuraChoices'
+import {
+  getSubclassProficiencyDiagnostics,
+  normalizeSubclassProficiencyChoices,
+} from './subclassProficiencyChoices'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 interface ParsedFilterTag {
@@ -88,21 +99,6 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-function normalizedIdPart(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
-function buildChoiceId(owner: ChoiceOwner, label: string, level: number) {
-  const subclassPart = owner.subclassName
-    ? `|subclass:${normalizedIdPart(owner.subclassName)}|${normalizedIdPart(owner.subclassSource ?? '')}`
-    : ''
-  return `class:${normalizedIdPart(owner.name)}|${normalizedIdPart(owner.source)}${subclassPart}|choice:${normalizedIdPart(label)}|${level}`
-}
-
 function getReferenceLevel(
   ref: ChoiceFeatureReference,
   kind: 'class' | 'subclass',
@@ -110,6 +106,26 @@ function getReferenceLevel(
   return kind === 'subclass'
     ? getSubclassFeatureReferenceLevel(ref)
     : getClassFeatureReferenceLevel(ref)
+}
+
+/** No-UID producers retain materialized target identity, independently of the selected owner. */
+function declarationSourceUid(ref: ChoiceFeatureReference, kind: 'class' | 'subclass'): string {
+  if (typeof ref.ref === 'string' && ref.ref.trim()) return ref.ref
+  const level = getReferenceLevel(ref, kind)
+  if (!level || !ref.feature) return ''
+  const materialized = {
+    ...ref.feature,
+    ...Object.fromEntries(
+      Object.entries(ref).filter(([, value]) => value !== undefined && value !== null),
+    ),
+    level,
+    source: ref.source ?? ref.feature.source,
+  }
+  const target =
+    kind === 'subclass'
+      ? getSubclassFeatureIdentity(materialized)
+      : getClassFeatureIdentity(materialized)
+  return target?.slice(target.indexOf('|') + 1) ?? ''
 }
 
 function countsFromLevel(level: number, count: number): number[] {
@@ -556,10 +572,7 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
 function getFeatureVariant(
   ref: ChoiceFeatureReference,
 ): NormalizedCharacterChoice['featureVariant'] | undefined {
-  if (ref.feature?.isClassFeatureVariant !== true) return undefined
-  const text = toSearchableText(getFeatureText(ref))
-  const replacesFeatureName = /replaces (?:the )?([^.,;]+?) feature\b/i.exec(text)?.[1]?.trim()
-  return { ...(replacesFeatureName ? { replacesFeatureName } : {}) }
+  return getFeatureVariantMetadata(ref.feature)
 }
 
 function getFeatureSource(ref: ChoiceFeatureReference, fallbackSource: string): string {
@@ -686,7 +699,7 @@ function normalizeFeatureOptionChoices(
         ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
         source: {
           kind: 'class-feature-options',
-          field: `classFeatureRefs:${ref.ref || ref.name}:entries`,
+          field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries`,
         },
       })
     })
@@ -906,7 +919,7 @@ function normalizeSingleFilterChoices(
       ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
       source: {
         kind: 'class-feature-options',
-        field: `classFeatureRefs:${ref.ref || ref.name}:entries.filter`,
+        field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.filter`,
       },
     })
   }
@@ -961,7 +974,7 @@ function normalizeCreatureTagChoices(
         ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
         source: {
           kind: 'class-feature-options' as const,
-          field: `subclassFeatureRefs:${ref.ref || ref.name}:entries.creature`,
+          field: `subclassFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.creature`,
         },
       },
     ]
@@ -1006,6 +1019,7 @@ export function normalizeClassChoices(
   const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
   const terrain = normalizeNaturalExplorerChoices(owner, declarations)
+  const canny = normalizeClassProficiencyChoices(owner, declarations)
   const direct = normalizeFeatureOptionChoices(
     classData,
     refs,
@@ -1025,6 +1039,7 @@ export function normalizeClassChoices(
     ...tableBacked,
     ...tables.choices,
     ...terrain.choices,
+    ...canny.choices,
   ]
   const singleFilters = normalizeSingleFilterChoices(refs, accumulated, owner)
   const choices = [...accumulated, ...singleFilters.choices].sort(
@@ -1036,9 +1051,17 @@ export function normalizeClassChoices(
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
       ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
-        (diagnostic) => diagnostic.featureName !== 'Natural Explorer',
+        (diagnostic) =>
+          diagnostic.featureName !== 'Natural Explorer' &&
+          !(
+            diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
+            getClassFeatureIdentity(
+              decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
+            ) === DEFT_EXPLORER_TARGET
+          ),
       ),
       ...terrain.diagnostics,
+      ...canny.diagnostics,
       ...tables.diagnostics,
     ],
   }
@@ -1047,13 +1070,15 @@ export function normalizeClassChoices(
 /** Normalizes selected-subclass feature choices, including nested referenced features. */
 export function normalizeSubclassRules(
   classData: Pick<Class5e, 'name' | 'source'>,
-  subclass: Pick<Subclass5e, 'name' | 'source' | 'optionalfeatureProgression' | 'featProgression'>,
+  subclass: Pick<Subclass5e, 'name' | 'source' | 'optionalfeatureProgression' | 'featProgression'> &
+    Partial<Subclass5e>,
   refs: readonly SubclassFeatureReference[],
 ): import('@/types/classRules').NormalizedClassRules {
   const owner = subclassChoiceOwner(classData, subclass)
   const declarations = collectUnconditionalFeatureReferences(refs, 'subclassFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
   const storm = normalizeStormAuraChoices(owner, declarations)
+  const proficiencies = normalizeSubclassProficiencyChoices(owner, subclass as Subclass5e, refs)
   const expandedRefs = collectSubclassChoiceFeatureRefs(refs)
   const optionalFeatureProgressions = subclass.optionalfeatureProgression ?? []
   const featProgressions = subclass.featProgression ?? []
@@ -1089,6 +1114,7 @@ export function normalizeSubclassRules(
     ...creatureTags,
     ...tables.choices,
     ...storm,
+    ...proficiencies,
   ]
   const singleFilters = normalizeSingleFilterChoices(expandedRefs, accumulated, owner)
   return {
@@ -1099,10 +1125,13 @@ export function normalizeSubclassRules(
       (left, right) => left.level - right.level || left.id.localeCompare(right.id),
     ),
     choiceDiagnostics: [
+      ...getSubclassProficiencyDiagnostics(owner, proficiencies),
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
       ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
-        (diagnostic) => !(storm.length && diagnostic.featureName === 'Storm Aura'),
+        (diagnostic) =>
+          !(storm.length && diagnostic.featureName === 'Storm Aura') &&
+          !proficiencies.some((choice) => choice.owner.featureName === diagnostic.featureName),
       ),
       ...tables.diagnostics,
     ],

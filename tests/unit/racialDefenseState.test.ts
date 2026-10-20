@@ -192,7 +192,7 @@ test('refresh is exact, missing context freezes the whole snapshot, restoration 
 
 test('independent manual, feat and item owners survive racial removal and respect source suppression/activation', () => {
   const { race, child, character } = defenseSelection()
-  let saved = reopen(manualFire(character))
+  let saved: Character = reopen(manualFire(character))
   const feat = { name: 'Independent feat', source: 'HB', resist: ['fire'] }
   const item = {
     name: 'Independent ring',

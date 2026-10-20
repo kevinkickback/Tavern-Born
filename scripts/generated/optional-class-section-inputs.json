@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "upstream": "b9061583536101068b3a59d27e886d1fa664e366",
+  "inputs": [
+    {
+      "file": "book/book-tce.json",
+      "sha256": "2c6e64badf1b5fdbd6154ca8cb313cd60e051664f2611d791566ce4e7385c831"
+    },
+    {
+      "file": "books.json",
+      "sha256": "2573974b4e9e4e5924ac0fca4439fb843a63e916cc2247833c587538b20b4fce"
+    },
+    {
+      "file": "class/class-bard.json",
+      "sha256": "e5041a799e8c720db3a28539c2a25e9d6d821b6229a65fd1484f749ea3978b1d"
+    },
+    {
+      "file": "class/class-cleric.json",
+      "sha256": "fa1cdf0f7b85e970e3191d2d516cac26b9cfadbe883ac89b3224c1fa95eb2f61"
+    },
+    {
+      "file": "class/class-druid.json",
+      "sha256": "e320ecf4f19e49acbbc449fcde4f8448bfad4bfc40a56138dced312a52af13a1"
+    },
+    {
+      "file": "class/class-fighter.json",
+      "sha256": "4353d0a6adf3652c989ed95e29bc1d2d40b393c84e50242b202441113a9c0dbd"
+    },
+    {
+      "file": "class/class-paladin.json",
+      "sha256": "46666e5793b1b54e0e618560010a5589d25b6ff789f6aa004ff90c1efbe42e00"
+    },
+    {
+      "file": "class/class-ranger.json",
+      "sha256": "e22da39dc2a9cf708f21996cf393af8240442aff6f523281bc65436609840dfb"
+    },
+    {
+      "file": "class/class-sorcerer.json",
+      "sha256": "9f17737aa137ca3979b20cdcc7e8b0120c7be293cf9849c2d27c93f2e0e87c79"
+    },
+    {
+      "file": "class/class-warlock.json",
+      "sha256": "0339b47396f035de89d098e13099f7c1e010f85ba6987d790fc70706d817751c"
+    },
+    {
+      "file": "class/class-wizard.json",
+      "sha256": "eca6e726f13859842bce9f61fde909b35a386967a1719ec83cddb40e434ad01a"
+    }
+  ],
+  "helpers": [
+    {
+      "file": "scripts/generate-optional-class-section-rules.mjs",
+      "sha256": "ddb65552ce6d04423475f5d0816e424ea7ce0627974f67f1c955d4d05ed78382"
+    },
+    {
+      "file": "scripts/lib/optional-class-section-semantics.json",
+      "sha256": "aaea53eb3e3b228390e4a54a937163bf17ae4685ea6396d7753aab4d79dd9c74"
+    },
+    {
+      "file": "src/lib/5etools/optionalClassSectionStructure.ts",
+      "sha256": "69a7d3e3ee164f71f9e457a8aba39e039ab4477d763cccec2a1c9023075a7a5d"
+    },
+    {
+      "file": "src/lib/5etools/featureSourceAudit.ts",
+      "sha256": "964b07b3f0767a2248a9ea8b5a177d626261a485f5254b3dbe7a044ce712b4d0"
+    },
+    {
+      "file": "src/lib/5etools/featureRulesSignature.ts",
+      "sha256": "8cb4b6468ef04f0d39a6403980af64dcfb99266b1917ec4a32c65dbb992b9adb"
+    },
+    {
+      "file": "src/lib/5etools/classFeatureIdentity.ts",
+      "sha256": "b6e7b5702f6d4af045ba5d3545fa0c9372ac137ce206ed5b9b4b92b34dd3c7bc"
+    }
+  ]
+}

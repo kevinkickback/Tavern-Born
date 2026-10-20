@@ -5,9 +5,11 @@ import {
 } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
+  type ClassChoiceFeatureCatalogs,
   resolveFeatureOptionEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
+import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyOptions'
 import type { Class5e, GameData, Item5e, Race5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -113,7 +115,10 @@ function increment(target: Record<string, number>, key: string): void {
 
 function optionCatalogs(
   gameData: GameData,
-): Record<Exclude<NormalizedChoiceOptionReference['entityType'], 'featureOption'>, Set<string>> {
+): Record<
+  Exclude<NormalizedChoiceOptionReference['entityType'], 'featureOption' | 'proficiency'>,
+  Set<string>
+> {
   const embeddedClassFeatures = gameData.classes.flatMap((classData) =>
     (classData.classFeatureRefs ?? []).flatMap((reference) =>
       reference.feature ? [reference.feature] : [],
@@ -175,8 +180,19 @@ function inspectReference(
   path: string,
   catalogs: ReturnType<typeof optionCatalogs>,
   issues: CapabilityIssue[],
-  literalCatalog?: Parameters<typeof resolveFeatureOptionEntity>[1],
+  literalCatalog?: ClassChoiceFeatureCatalogs,
 ): void {
+  if (option.entityType === 'proficiency') {
+    if (!hasProficiencyCatalogTarget(option, literalCatalog))
+      issues.push({
+        entity: owner,
+        collection: 'classes',
+        path,
+        code: 'unresolved-reference',
+        message: 'The named proficiency option cannot be resolved in the current catalog.',
+      })
+    return
+  }
   if (option.entityType === 'featureOption') {
     if (literalCatalog && resolveFeatureOptionEntity(option, literalCatalog)) return
     issues.push({

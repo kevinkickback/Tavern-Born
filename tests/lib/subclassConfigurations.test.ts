@@ -1,13 +1,18 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
-import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
+import {
+  getCharacterClassChoices,
+  getClassChoiceCandidates,
+} from '@/lib/character/classChoiceOptions'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   getSubclassConfigurations,
   hasUnavailableSubclassConfiguration,
 } from '@/lib/character/subclassConfigurations'
 import type { Class5e } from '@/types/5etools'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import {
   makeFeatureOptionFixture,
   pruneFeatureOptionDeclaration,
@@ -16,7 +21,7 @@ import {
 
 function grouped(fixture = makeFeatureOptionFixture()) {
   return getSubclassConfigurations(
-    getCharacterClassChoices(fixture.classData, fixture.subclass, false, fixture.catalogs),
+    getClassChoiceCandidates(fixture.classData, fixture.subclass, fixture.catalogs),
     fixture.classData,
     fixture.subclass,
   )
@@ -70,7 +75,7 @@ describe('stable subclass configuration', () => {
   })
 
   test.runIf(existsSync('data/class/class-ranger.json'))(
-    'classifies actual classic/copy/native companions through the variant policy and real rest wording',
+    'permission alone preserves classic/copy companion setup while source candidates retain real rest wording',
     () => {
       const classes = parseClasses(
         JSON.parse(readFileSync('data/class/class-ranger.json', 'utf8')),
@@ -81,13 +86,35 @@ describe('stable subclass configuration', () => {
           const all = subclass.normalizedRules!.choices
           for (const primal of all.filter((choice) => choice.label === 'Primal Companion'))
             expect(primal.replacement.cadence).toBe('long-rest')
-          const classic = getCharacterClassChoices(classData, subclass, false)
-          const optional = getCharacterClassChoices(classData, subclass, true)
+          const character = makeCharacterFixture({
+            classProgression: [
+              {
+                name: classData.name,
+                source: classData.source,
+                levels: 20,
+                subclass: subclass.name,
+                subclassSource: subclass.source,
+              },
+            ],
+          })
+          const classic = getCharacterClassChoices(
+            classData,
+            subclass,
+            createOptionalClassFeatureActivity(character),
+          )
+          const optional = getCharacterClassChoices(
+            classData,
+            subclass,
+            createOptionalClassFeatureActivity({
+              ...character,
+              variantRules: { optionalClassFeatures: true },
+            }),
+          )
           const classicGroups = getSubclassConfigurations(classic, classData, subclass)
           expect(classicGroups.map((choice) => choice.label)).toEqual(
             subclass.source === 'PHB' ? ["Ranger's Companion"] : [],
           )
-          expect(getSubclassConfigurations(optional, classData, subclass)).toEqual([])
+          expect(getSubclassConfigurations(optional, classData, subclass)).toEqual(classicGroups)
         }
       }
     },
@@ -104,7 +131,7 @@ describe('stable subclass configuration', () => {
         (row) => row.name === 'Draconic Bloodline' && row.source === 'PHB',
       )!
       const choices = getSubclassConfigurations(
-        getCharacterClassChoices(classData, subclass, false),
+        getClassChoiceCandidates(classData, subclass),
         classData,
         subclass,
       )

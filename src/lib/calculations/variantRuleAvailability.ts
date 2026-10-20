@@ -1,3 +1,4 @@
+import { isClassFeatureVariant } from '@/lib/5etools/classFeatureVariants'
 import { LEGACY_SUBCLASS_PREREQUISITE_FIXUPS } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 
@@ -12,15 +13,6 @@ interface VariantRuleContent {
   classFeatures: readonly ClassFeature[]
   optionalFeatures: readonly unknown[]
   preferNewerPrintingsAvailable?: boolean
-}
-
-function isClassFeatureVariant(value: unknown): boolean {
-  if (!value || typeof value !== 'object') return false
-  const feature = value as { isClassFeatureVariant?: unknown; name?: unknown }
-  return (
-    feature.isClassFeatureVariant === true ||
-    (typeof feature.name === 'string' && feature.name.startsWith('Optional Rule:'))
-  )
 }
 
 function hasRestrictedSubclass(classes: readonly Class5e[]): boolean {

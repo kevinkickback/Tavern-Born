@@ -32,6 +32,7 @@ interface BuildClassSubclassSectionProps {
   onOpenSubclassPicker: () => void
   hasUnavailableConfiguration: boolean
   configurations: NormalizedCharacterChoice[]
+  separateConfigurationIds?: ReadonlySet<string>
   classLevel: number
   selectedViewsByChoiceId: ReadonlyMap<string, ClassChoiceOptionView[]>
   onConfigure: (choice: NormalizedCharacterChoice) => void
@@ -51,12 +52,16 @@ export function BuildClassSubclassSection({
   onExpandDetails,
   onOpenSubclassPicker,
   configurations,
+  separateConfigurationIds = new Set(),
   hasUnavailableConfiguration,
   classLevel,
   selectedViewsByChoiceId,
   onConfigure,
   highlighted = false,
 }: BuildClassSubclassSectionProps) {
+  const inlineConfigurations = configurations.filter(
+    (choice) => !separateConfigurationIds.has(choice.id),
+  )
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLFieldSetElement>(highlighted)
   const subclassFeature = subclassFeatureName
@@ -122,7 +127,7 @@ export function BuildClassSubclassSection({
           )}
         </button>
         <div className="ml-auto flex flex-wrap gap-2">
-          {configurations.map((choice) => (
+          {inlineConfigurations.map((choice) => (
             <Button
               key={choice.id}
               variant="outline"
@@ -157,7 +162,7 @@ export function BuildClassSubclassSection({
           >
             <span className="font-medium">{viewingSubclass}</span>
           </button>
-          {configurations.flatMap((choice) =>
+          {inlineConfigurations.flatMap((choice) =>
             (selectedViewsByChoiceId.get(choice.id) ?? []).map((view) => (
               <BuildClassChosenItemBadge
                 key={`${choice.id}|${getClassChoiceOptionKey(view.reference)}`}

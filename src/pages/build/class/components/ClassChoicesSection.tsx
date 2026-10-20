@@ -2,11 +2,13 @@ import { WarningCircle } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
+import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import { cn } from '@/lib/utils'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
@@ -91,6 +93,13 @@ export function BuildClassChoicesSection({
             totalAllowed={required}
             isFull={selectedCount >= required}
             chosenItems={views.map((view) => ({
+              origin: {
+                kind: 'choice' as const,
+                owner: optionalClassOwner(choice.owner),
+                choiceId: choice.id,
+                earnedLevel: choice.level,
+                optionKey: getClassChoiceOptionKey(view.reference),
+              },
               name: view.reference.name,
               source: view.reference.source,
               entries: view.entries,

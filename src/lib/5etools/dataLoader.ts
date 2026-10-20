@@ -24,6 +24,7 @@ import {
 } from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
 import { appendMagicVariantReferences, parseMagicVariantTemplates } from './magicVariants'
+import { parseOptionalClassSections } from './optionalClassSectionSource'
 import {
   buildSourcesList,
   parseActions,
@@ -59,6 +60,10 @@ import {
 } from './primaryItemTypes'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import { CreatureDataSchema } from './schemas'
+import {
+  prepareToolProficiencySources,
+  preserveToolSourcePresentation,
+} from './toolProficiencySource'
 
 export { DATA_REQUEST_TIMEOUT_MS } from './resourceReader'
 
@@ -168,6 +173,10 @@ export class FiveEToolsDataLoader {
       { key: 'rewards', file: 'rewards.json' },
       { key: 'cultsBoons', file: 'cultsboons.json' },
     ]
+    const hasOptionalClassBook =
+      this.sourceType !== 'bundled' && this.availableResources?.has('book/book-tce.json') === true
+    if (hasOptionalClassBook)
+      resources.push({ key: 'optionalClassBook', file: 'book/book-tce.json', required: false })
     const configuredResources = this.availableResources
       ? resources.filter((resource) => this.availableResources?.has(resource.file))
       : resources
@@ -177,6 +186,7 @@ export class FiveEToolsDataLoader {
     const sourcesSet = new Set<string>()
     let booksData: unknown = null
     let adventuresData: unknown = null
+    let optionalClassBookData: unknown = null
     let classIndexData: unknown = null
     let spellIndexData: unknown = null
     let bestiaryIndexData: unknown = null
@@ -195,6 +205,9 @@ export class FiveEToolsDataLoader {
         loadedTopLevelResources += 1
 
         switch (resource.key) {
+          case 'optionalClassBook':
+            optionalClassBookData = data
+            break
           case 'books':
             booksData = data
             break
@@ -298,7 +311,7 @@ export class FiveEToolsDataLoader {
             gameData.magicVariants = parseMagicVariantTemplates(data)
             break
           case 'optionalfeatures':
-            gameData.optionalfeatures = parseOptionalFeatures(data)
+            gameData.optionalfeatures = parseOptionalFeatures(data, resource.file)
             this.addItemSources(gameData.optionalfeatures, sourcesSet)
             break
           case 'variantrules':
@@ -345,6 +358,13 @@ export class FiveEToolsDataLoader {
     }
 
     throwIfAborted(options?.signal)
+
+    if (hasOptionalClassBook)
+      gameData.optionalClassSections = parseOptionalClassSections(
+        optionalClassBookData,
+        booksData,
+        'book/book-tce.json',
+      )
 
     if (classIndexData) {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options)
@@ -400,21 +420,27 @@ export class FiveEToolsDataLoader {
 
     retainRawItems(gameData)
     const concreteItemCount = gameData.items.length
-    const resolvedItems = resolveCopiedRecords([...gameData.items, ...gameData.itemsBase], 'item')
-    gameData.items = resolvedItems.records.slice(0, concreteItemCount)
-    gameData.itemsBase = resolvedItems.records.slice(concreteItemCount)
+    const rawToolInputs = [...gameData.items, ...gameData.itemsBase]
+    const resolvedItems = resolveCopiedRecords(rawToolInputs, 'item')
+    const toolAuditedItems = prepareToolProficiencySources(rawToolInputs, resolvedItems.records)
+    gameData.items = toolAuditedItems.slice(0, concreteItemCount)
+    gameData.itemsBase = toolAuditedItems.slice(concreteItemCount)
     appendMagicVariantReferences(gameData)
     this.addItemSources(gameData.items, sourcesSet)
     const itemCount = gameData.items.length
     resolvePrimaryItemTypes(gameData)
-    const describedItems = associateItemTypeEntries(
-      associatePrimaryItemTypes(
-        expandItemEntries([...gameData.items, ...gameData.itemsBase], gameData.itemEntries ?? []),
-        gameData.itemTypes,
+    const beforeToolPresentation = [...gameData.items, ...gameData.itemsBase]
+    const describedItems = preserveToolSourcePresentation(
+      beforeToolPresentation,
+      associateItemTypeEntries(
+        associatePrimaryItemTypes(
+          expandItemEntries(beforeToolPresentation, gameData.itemEntries ?? []),
+          gameData.itemTypes,
+          gameData.itemEntries ?? [],
+        ),
+        gameData.itemTypeAdditionalEntries ?? [],
         gameData.itemEntries ?? [],
       ),
-      gameData.itemTypeAdditionalEntries ?? [],
-      gameData.itemEntries ?? [],
     )
     gameData.items = describedItems.slice(0, itemCount)
     gameData.itemsBase = describedItems.slice(itemCount)
@@ -523,7 +549,7 @@ export class FiveEToolsDataLoader {
             richFluff.map((item) => [`${item.name}|${item.source}`, item]),
           )
 
-          const parsedDocument = parseClassDocument(classData)
+          const parsedDocument = parseClassDocument(classData, `class/${classFile.file}`)
           const parsedClasses = this.filterByIndexedSource(
             parsedDocument.classes as GameData['classes'],
             classFile.source,
@@ -546,6 +572,7 @@ export class FiveEToolsDataLoader {
           return {
             classes: parsedClasses,
             features: parsedFeatures,
+            optionalClassFeatureSources: parsedDocument.optionalClassFeatureSources,
           }
         } catch (error) {
           if (isAbortError(error)) throw error
@@ -554,6 +581,7 @@ export class FiveEToolsDataLoader {
           return {
             classes: [] as GameData['classes'],
             features: [] as GameData['classFeatures'],
+            optionalClassFeatureSources: [] as NonNullable<GameData['optionalClassFeatureSources']>,
           }
         }
       },
@@ -568,6 +596,9 @@ export class FiveEToolsDataLoader {
 
     gameData.classes = allClasses
     gameData.classFeatures = allClassFeatures
+    gameData.optionalClassFeatureSources = classResults.flatMap(
+      (result) => result.optionalClassFeatureSources,
+    )
   }
 
   private async loadSpellData(

@@ -165,7 +165,7 @@ test.each([
     </MemoryRouter>,
   )
   if (!screen.queryByRole('button', { name: 'School' })) {
-    fireEvent.click(screen.getByRole('button', { name: /^Level 3 Features/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Level 3\b/ }))
   }
   fireEvent.click(screen.getByRole('button', { name: 'School' }))
   expect(screen.getAllByText('Original school rules.')).toHaveLength(1)

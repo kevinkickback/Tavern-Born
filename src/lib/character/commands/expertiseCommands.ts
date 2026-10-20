@@ -4,33 +4,20 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
-/** Expertise owners expire with their materialized selection, including proficiency loss. */
-export function reconcileExpertiseOwnership<T extends CharacterCommandResult>(result: T): T {
-  const proficiencies = result.characterPatch.proficiencies
-  const owners = result.provenanceUpdate.proficiencies.expertise
-  if (!proficiencies || !owners) return result
-  const active = new Set(proficiencies.expertise.map(normalizeKey))
-  const retained = Object.fromEntries(Object.entries(owners).filter(([skill]) => active.has(skill)))
-  if (Object.keys(retained).length === Object.keys(owners).length) return result
-  return {
-    ...result,
-    provenanceUpdate: {
-      ...result.provenanceUpdate,
-      proficiencies: {
-        ...result.provenanceUpdate.proficiencies,
-        expertise: retained,
-      },
-    },
-  }
-}
+export { reconcileExpertiseOwnership } from '../expertiseOwnership'
 
 export function toggleExpertiseCommand(
   character: Character,
   ledger: ProvenanceLedger,
   skillName: string,
+  adding?: boolean,
 ): CharacterCommandResult {
   const key = normalizeKey(skillName)
-  if (!character.proficiencies.skills.some((skill) => normalizeKey(skill) === key)) {
+  if (
+    ![...character.proficiencies.skills, ...character.proficiencies.tools].some(
+      (skill) => normalizeKey(skill) === key,
+    )
+  ) {
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
   const hasExpertise = character.proficiencies.expertise.some(
@@ -38,10 +25,17 @@ export function toggleExpertiseCommand(
   )
   const manual = makeSourceTag('manual', 'User Choice', 'choice')
   const expertiseOwners = ledger.proficiencies.expertise ?? {}
+  const removing = adding === false || (adding === undefined && hasExpertise)
   const remaining = (expertiseOwners[key] ?? []).filter(
     (tag) => !(tag.sourceType === manual.sourceType && tag.sourceName === manual.sourceName),
   )
-  const provenanceUpdate = hasExpertise
+  if (
+    removing &&
+    (expertiseOwners[key]?.length ?? 0) > 0 &&
+    remaining.length === (expertiseOwners[key]?.length ?? 0)
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  const provenanceUpdate = removing
     ? {
         ...ledger,
         proficiencies: {
@@ -58,7 +52,7 @@ export function toggleExpertiseCommand(
       proficiencies: {
         ...character.proficiencies,
         expertise:
-          hasExpertise && remaining.length === 0
+          removing && remaining.length === 0
             ? character.proficiencies.expertise.filter((skill) => normalizeKey(skill) !== key)
             : hasExpertise
               ? character.proficiencies.expertise

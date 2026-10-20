@@ -1,3 +1,4 @@
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
@@ -7,16 +8,19 @@ import {
 } from '@/lib/5etools/lookups'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
+  getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
   collectSubclassFeatures,
+  getClassChoiceCandidates,
   getCreatureChoiceEntries,
   resolveClassChoiceOptionEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
+import { isValidClassProficiencySelection } from '@/lib/schema/classProficiencyValidation'
 import type {
   Class5e,
   ClassFeature,
@@ -27,10 +31,15 @@ import type {
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
+import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
+import { getEffectiveClassChoiceFeatureRoutes } from './effectiveClassChoiceFeatures'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
+import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
+import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
+import { optionalClassOwner } from './optionalClassFeatureIdentity'
 
 export interface RetainedChoiceDetails {
-  availability: 'available' | 'source-unavailable' | 'missing'
+  availability: 'available' | 'source-unavailable' | 'missing' | 'inactive'
   entries: unknown[]
 }
 
@@ -131,6 +140,43 @@ export function buildRetainedCharacterDetails(
       choiceDetailsById.set(state.selection.choiceId, details)
     }
     for (const choice of character.classChoiceSelections ?? []) {
+      if (data !== primary && isValidClassProficiencySelection(choice)) {
+        const relation = decodeClassProficiencyChoiceId(choice.choiceId)!
+        const dormant = createOptionalClassFeatureActivity(character, primaryCatalogs).dormant(
+          optionalClassOwner({
+            name: choice.className,
+            source: choice.classSource,
+            subclassName: choice.subclassName,
+            subclassSource: choice.subclassSource,
+          }),
+          relation.target,
+        )
+        const cls = findClassReference(
+          { name: choice.className, source: choice.classSource },
+          data.classes,
+        )
+        const candidate =
+          cls &&
+          getClassChoiceCandidates(
+            cls,
+            subclassFor(
+              choice.className,
+              choice.classSource,
+              choice.subclassName,
+              choice.subclassSource,
+            ),
+            featureCatalogs,
+          ).find((row) => row.id === choice.choiceId && row.level === choice.classLevel)
+        if (!dormant && candidate) {
+          const details = choiceDetailsById.get(choice.choiceId) ?? []
+          choice.selected.forEach((option, index) => {
+            if (details[index]?.availability === 'available') return
+            const entries = getProficiencyOptionEntries(option, featureCatalogs)
+            if (entries) details[index] = { availability: 'source-unavailable', entries }
+          })
+          choiceDetailsById.set(choice.choiceId, details)
+        }
+      }
       const catalogs = {
         ...data,
         creatures: data.creatures ?? [],
@@ -151,6 +197,7 @@ export function buildRetainedCharacterDetails(
       choice.selected.forEach((option, index) => {
         if (
           option.entityType === 'featureOption' ||
+          option.entityType === 'proficiency' ||
           choice.choiceId.startsWith('subclass-options:')
         )
           return
@@ -171,6 +218,20 @@ export function buildRetainedCharacterDetails(
       })
       choiceDetailsById.set(choice.choiceId, details)
     }
+  }
+  const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs)
+  for (const selection of character.classChoiceSelections ?? []) {
+    if (!getOptionalClassPoolSelectionSection(selection)) continue
+    const details = choiceDetailsById.get(selection.choiceId)
+    selection.selected.forEach((option, index) => {
+      const detail = details?.[index]
+      if (
+        option.entityType === 'optionalFeature' &&
+        detail?.availability === 'available' &&
+        !routes.featureIds.has(getClassChoiceFeatureId(selection, option))
+      )
+        details![index] = { ...detail, availability: 'inactive' }
+    })
   }
   if (race) {
     for (const trait of getRaceTraits(race)) {

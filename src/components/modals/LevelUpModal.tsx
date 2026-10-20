@@ -183,7 +183,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
     const nextProvenance = multiclassResult?.provenanceUpdate ?? character.provenance
     const result = applyLevelUp(
-      character,
+      { ...character, proficiencies: nextProficiencies, provenance: nextProvenance },
       nextProvenance,
       newProgression,
       hpChoice,
@@ -192,7 +192,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     updateCharacter(character.id, {
       ...result.characterPatch,
-      proficiencies: nextProficiencies,
       provenance: result.provenanceUpdate,
     })
     toast.success(`Added ${pending.className} (level 1).`)

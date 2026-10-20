@@ -48,7 +48,7 @@ const active = () => useCharacterStore.getState().activeCharacter!
 const dialog = () => within(screen.getByRole('dialog'))
 async function open() {
   if (!screen.queryByRole('group', { name: 'Storm Aura' })) {
-    const level = await screen.findByRole('button', { name: /Level 3 Features/ })
+    const level = await screen.findByRole('button', { name: /Level 3\b/ })
     if (level.getAttribute('data-state') === 'closed') fireEvent.click(level)
   }
   const card = await screen.findByRole('group', { name: 'Storm Aura' })

@@ -10,7 +10,7 @@ import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
-  getCharacterClassChoices,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import type { Class5e, ClassFeature } from '@/types/5etools'
@@ -84,7 +84,7 @@ test.each([
   ...(existsSync(configured) ? [configured] : []),
 ])('real %s normalizes independent source literals and preserves original targets', (file) => {
   const f = parse(file)
-  const choices = getCharacterClassChoices(f.cls, undefined, false, f.catalogs).filter(
+  const choices = getClassChoiceCandidates(f.cls, undefined, f.catalogs).filter(
     (choice) => choice.label === 'Natural Explorer',
   )
   expect(choices.map((choice) => choice.level)).toEqual([1, 6, 10])
@@ -251,7 +251,7 @@ test.each([
   })
   expect(getNaturalExplorerSources(f.catalogs).get(pool)).toBeUndefined()
   expect(
-    getCharacterClassChoices(f.cls, undefined, false, f.catalogs).filter(
+    getClassChoiceCandidates(f.cls, undefined, f.catalogs).filter(
       (choice) => choice.label === 'Natural Explorer',
     ),
   ).toEqual([])
@@ -269,7 +269,7 @@ test('raw UID defaults and canonical row fields keep the same exact target', () 
   })
   expect(getNaturalExplorerSources(f.catalogs).get(pool)).toBeTruthy()
   expect(
-    getCharacterClassChoices(f.cls, undefined, false, f.catalogs).filter(
+    getClassChoiceCandidates(f.cls, undefined, f.catalogs).filter(
       (choice) => choice.label === 'Natural Explorer',
     ),
   ).toHaveLength(3)

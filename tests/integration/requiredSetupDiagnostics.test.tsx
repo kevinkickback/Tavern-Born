@@ -12,9 +12,10 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceFeatureCatalogs'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import { parseClassDocument, parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
@@ -25,13 +26,12 @@ import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
-import { installDeftDiagnosticSourceDouble } from '../fixtures/deftDiagnosticSourceDouble'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
-import { dragonSetupDocument, rangerSetupDocument } from '../fixtures/requiredSetupFixtures'
+import { optionalClassSources } from '../fixtures/optionalClassFeatureFixtures'
+import { dragonSetupDocument } from '../fixtures/requiredSetupFixtures'
 
 beforeEach(() => {
   resetCharacterStore()
-  installDeftDiagnosticSourceDouble()
 })
 afterEach(() => {
   cleanup()
@@ -150,81 +150,125 @@ test('readiness and the class controller agree across level, subclass removal, r
   )
 })
 
-test('class controller, Builder and readiness share filtered optional replacement decisions through refresh', async () => {
-  const doc = rangerSetupDocument(),
-    classes = parseClasses(doc) as Class5e[],
-    features = parseClassFeatures(doc) as ClassFeature[]
-  const data = makeGameDataFixture({ classes, classFeatures: features })
+function rangerSource(document = structuredClone(optionalClassSources)) {
+  const parsed = parseClassDocument(document)
+  const data = makeGameDataFixture({
+    classes: parsed.classes as Class5e[],
+    classFeatures: parsed.classFeatures as ClassFeature[],
+    optionalClassFeatureSources: parsed.optionalClassFeatureSources,
+  })
   data.lookups = buildGameDataLookups(data)
-  useGameDataStore.setState({ gameData: data })
-  const character = makeCharacterFixture({
+  return data
+}
+function adoptedRanger(data: ReturnType<typeof rangerSource>) {
+  const catalogs = buildClassChoiceFeatureCatalogs(data)
+  let character = makeCharacterFixture({
     allowedSources: ['PHB', 'TCE'],
     classProgression: [{ name: 'Ranger', source: 'PHB', levels: 1 }],
     variantRules: { optionalClassFeatures: true },
   })
+  expect(character.optionalClassFeatureAdoptions ?? []).toEqual([])
+  for (const name of ['deft explorer', 'favored foe']) {
+    const result = setOptionalClassAdoptionCommand(
+      character,
+      character.provenance,
+      catalogs,
+      {
+        owner: ['class', 'ranger', 'phb'],
+        target: `class-feature|${name}|ranger|phb|1|tce`,
+        earnedLevel: 1,
+      },
+      true,
+      [],
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    })
+  }
+  return character
+}
+
+test('class controller, Builder and readiness share filtered optional replacement decisions through refresh', async () => {
+  const data = rangerSource(),
+    character = adoptedRanger(data)
+  const cls = data.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
+  useGameDataStore.setState({ gameData: data })
   setActiveCharacter(character)
   const saved = JSON.stringify(useCharacterStore.getState().activeCharacter)
   const filteredProbe = renderHook(() => useClassChoiceFeatureCatalogs())
-  expect(filteredProbe.result.current.classFeatures).toHaveLength(4)
+  expect(filteredProbe.result.current.classFeatures.length).toBeGreaterThan(4)
+  const currentCatalog = (available: ClassFeature[]) => ({
+    ...emptyCatalogs,
+    ...buildClassChoiceFeatureCatalogs({ ...data, classFeatures: available }),
+  })
   const { result, rerender } = renderHook(
     ({ available }) =>
       useClassChoiceController({
         character,
-        viewingClassData: classes[0],
+        viewingClassData: cls,
         viewingClassLevel: 1,
         includeClassFeatureVariants: true,
-        catalogs: { ...emptyCatalogs, classFeatures: available, subclassFeatures: [] },
+        catalogs: currentCatalog(available),
       }),
-    { initialProps: { available: features } },
+    { initialProps: { available: data.classFeatures } },
   )
-  const readiness = (available: ClassFeature[]) =>
-    validateClassChoices(
+  const readiness = (available: ClassFeature[]) => {
+    const catalogs = currentCatalog(available)
+    return validateClassChoices(
       character,
-      createCharacterCalculationContext(character, { classesByKey: { 'Ranger|PHB': classes[0] } }),
-      {
-        ...emptyCatalogs,
-        classFeatures: available,
-        subclassFeatures: [],
-        itemPropertyByAbbr: {},
-        itemTypeByAbbr: {},
-        weaponProficiencies: [],
-      },
-    ).filter((issue) => issue.id.startsWith('class-choice-diagnostic:'))
-  expect(result.current.diagnostics.map((d) => d.featureName)).toEqual(['Deft Explorer'])
-  expect(readiness(features).map((issue) => issue.title)).toEqual([
-    'Review unresolved Deft Explorer choice',
-  ])
+      createCharacterCalculationContext(character, {
+        classesByKey: data.lookups!.classesByKey,
+        classChoiceClasses: data.classes,
+        classChoiceFeatureCatalogs: catalogs,
+      }),
+      { ...catalogs, itemPropertyByAbbr: {}, itemTypeByAbbr: {}, weaponProficiencies: [] },
+    )
+  }
+  expect(result.current.diagnostics).toEqual([])
+  expect(
+    result.current.choices.filter((row) => row.kind === 'proficiency').map((row) => row.label),
+  ).toEqual(['Canny expertise', 'Canny languages'])
+  expect(
+    readiness(data.classFeatures).filter((row) => row.title.startsWith('Restore or clear')),
+  ).toEqual([])
   rerender({ available: [] })
-  expect(result.current.diagnostics.map((d) => d.featureName).sort()).toEqual([
-    'Favored Enemy',
-    'Natural Explorer',
-  ])
-  expect(readiness([])).toHaveLength(2)
-  rerender({ available: features })
-  expect(result.current.diagnostics.map((d) => d.featureName)).toEqual(['Deft Explorer'])
+  expect(result.current.choices.filter((row) => row.kind === 'proficiency')).toEqual([])
+  expect(
+    readiness([])
+      .filter((row) => row.title.startsWith('Restore or clear'))
+      .map((row) => row.title)
+      .sort(),
+  ).toEqual(['Restore or clear Deft Explorer', 'Restore or clear Favored Foe'])
+  rerender({ available: data.classFeatures })
   render(
     <MemoryRouter initialEntries={['/build/class?class=Ranger%7CPHB&level=1']}>
       <BuildClassPage />
     </MemoryRouter>,
   )
-  if (!screen.queryByText(/requires Canny expertise/))
-    fireEvent.click(screen.getByRole('button', { name: /^Level 1 Features/ }))
-  expect(screen.getAllByText(/requires Canny expertise/)).toHaveLength(1)
-  await act(async () =>
+  if (!screen.queryByRole('group', { name: 'Canny expertise' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Level 1\b/ }))
+  expect(screen.getByRole('group', { name: 'Canny expertise' })).toBeTruthy()
+  expect(screen.getByRole('group', { name: 'Canny languages' })).toBeTruthy()
+  await act(async () => {
     useGameDataStore.setState({
       gameData: {
         ...data,
         classFeatures: [],
         lookups: buildGameDataLookups({ ...data, classFeatures: [] }),
       },
-    }),
-  )
+    })
+  })
   expect(filteredProbe.result.current.classFeatures).toEqual([])
-  expect(screen.queryByText(/requires Canny expertise/)).toBeNull()
-  expect(screen.getByText(/requires enemy and associated language/)).toBeTruthy()
-  expect(screen.getByText(/favored-terrain rules/)).toBeTruthy()
-  await act(async () => useGameDataStore.setState({ gameData: data }))
-  expect(screen.getAllByText(/requires Canny expertise/)).toHaveLength(1)
+  expect(screen.queryByRole('group', { name: 'Canny expertise' })).toBeNull()
+  expect(screen.getAllByText(/Source unavailable/)).toHaveLength(2)
+  expect(screen.queryByText(/requires enemy and associated language/)).toBeNull()
+  expect(screen.queryByText(/favored-terrain rules/)).toBeNull()
+  await act(async () => {
+    useGameDataStore.setState({ gameData: data })
+  })
+  expect(screen.getByRole('group', { name: 'Canny expertise' })).toBeTruthy()
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(saved)
 })
 
@@ -232,15 +276,15 @@ test.each([
   'Favored Foe',
   'Deft Explorer',
 ])('production Review and Builder preserve %s ambiguity through exact restoration', async (name) => {
-  const doc = rangerSetupDocument(),
-    original = doc.classFeature.find((feature) => feature!.name === name)!
+  const doc = structuredClone(optionalClassSources)
+  const original = doc.classFeature.find((row) => row.name === name && row.source === 'TCE')!
   const duplicateDoc = {
     ...doc,
     classFeature: [
       ...doc.classFeature,
       {
         ...original,
-        name: original.name.toUpperCase(),
+        name: name.toUpperCase(),
         className: ' RANGER ',
         classSource: '',
         source: ' tce ',
@@ -248,33 +292,12 @@ test.each([
       },
     ],
   }
-  const makeData = (document: typeof doc) => {
-    const data = makeGameDataFixture({
-      classes: parseClasses(document) as Class5e[],
-      classFeatures: parseClassFeatures(document) as ClassFeature[],
-    })
-    data.lookups = buildGameDataLookups(data)
-    return data
-  }
-  const ambiguous = makeData(duplicateDoc),
-    exact = makeData(doc)
+  const exact = rangerSource(doc),
+    ambiguous = rangerSource(duplicateDoc),
+    character = adoptedRanger(exact)
   useGameDataStore.setState({ gameData: ambiguous })
-  const character = characterPersistenceSchema.parse(
-    JSON.parse(
-      JSON.stringify(
-        makeCharacterFixture({
-          allowedSources: ['PHB', 'TCE'],
-          classProgression: [{ name: 'Ranger', source: 'PHB', levels: 1 }],
-          variantRules: { optionalClassFeatures: true },
-        }),
-      ),
-    ),
-  )
   setActiveCharacter(character)
   const saved = JSON.stringify(useCharacterStore.getState().activeCharacter)
-  const base = name === 'Favored Foe' ? 'Favored Enemy' : 'Natural Explorer'
-  const body =
-    name === 'Favored Foe' ? /requires enemy and associated language/ : /favored-terrain rules/
   render(
     <MemoryRouter initialEntries={['/build/review']}>
       <Routes>
@@ -283,18 +306,80 @@ test.each([
       </Routes>
     </MemoryRouter>,
   )
-  expect(screen.getByText(`Review unresolved ${base} choice`)).toBeTruthy()
+  expect(screen.getByText(`Restore or clear ${name}`)).toBeTruthy()
+  await act(async () => {
+    useGameDataStore.setState({ gameData: exact })
+  })
+  expect(screen.queryByText(`Restore or clear ${name}`)).toBeNull()
+  fireEvent.click(screen.getByText('Finish Canny expertise').closest('button')!)
+  expect(await screen.findByRole('heading', { name: 'Choose Canny expertise' })).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByText('Cancel', { selector: 'button' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  await act(async () => {
+    useGameDataStore.setState({ gameData: ambiguous })
+  })
+  expect(screen.getByText(/Source unavailable/)).toBeTruthy()
   if (name === 'Deft Explorer')
-    expect(screen.queryByText('Review unresolved Deft Explorer choice')).toBeNull()
-  await act(async () => useGameDataStore.setState({ gameData: exact }))
-  expect(screen.queryByText(`Review unresolved ${base} choice`)).toBeNull()
-  fireEvent.click(screen.getByText('Review unresolved Deft Explorer choice').closest('button')!)
-  expect(await screen.findByText(/requires Canny expertise/)).toBeTruthy()
-  await act(async () => useGameDataStore.setState({ gameData: ambiguous }))
-  expect(screen.getByText(body)).toBeTruthy()
-  if (name === 'Deft Explorer') expect(screen.queryByText(/requires Canny expertise/)).toBeNull()
-  await act(async () => useGameDataStore.setState({ gameData: exact }))
-  expect(screen.queryByText(body)).toBeNull()
-  expect(screen.getAllByText(/requires Canny expertise/)).toHaveLength(1)
+    expect(screen.queryByRole('group', { name: 'Canny expertise' })).toBeNull()
+  await act(async () => {
+    useGameDataStore.setState({ gameData: exact })
+  })
+  expect(screen.queryByText(/Source unavailable/)).toBeNull()
+  expect(screen.getByRole('group', { name: 'Canny expertise' })).toBeTruthy()
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(saved)
+})
+
+test('source-free recovery levels keep each adopted replacement independently clearable', async () => {
+  const data = rangerSource(),
+    character = adoptedRanger(data)
+  character.features = [
+    {
+      id: 'manual:independent',
+      name: 'Independent',
+      source: 'PHB',
+      description: 'Keep this feature.',
+    },
+  ]
+  const absent = {
+    ...data,
+    classFeatures: [],
+    lookups: buildGameDataLookups({ ...data, classFeatures: [] }),
+  }
+  useGameDataStore.setState({ gameData: absent })
+  setActiveCharacter(character)
+  render(
+    <MemoryRouter initialEntries={['/build/class?class=Ranger%7CPHB&level=1']}>
+      <BuildClassPage />
+    </MemoryRouter>,
+  )
+  const trigger = (
+    await screen.findByText('Level 1', { selector: '[data-slot="accordion-trigger"] span' })
+  ).closest('button')!
+  if (trigger.getAttribute('data-state') === 'closed') fireEvent.click(trigger)
+  expect(screen.getAllByText(/Source unavailable/)).toHaveLength(2)
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Natural Explorer' }), {
+    button: 0,
+    ctrlKey: false,
+  })
+  let saved = useCharacterStore.getState().activeCharacter!
+  expect(saved.optionalClassFeatureAdoptions?.map((row) => row.target)).toEqual([
+    'class-feature|favored foe|ranger|phb|1|tce',
+  ])
+  expect(saved.features).toEqual(character.features)
+  expect(screen.getAllByText(/Source unavailable/)).toHaveLength(1)
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Favored Enemy' }), {
+    button: 0,
+    ctrlKey: false,
+  })
+  saved = characterPersistenceSchema.parse(
+    JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
+  )
+  expect(saved.optionalClassFeatureAdoptions).toEqual([])
+  expect(saved.features).toEqual(character.features)
+  const before = JSON.stringify(saved)
+  await act(async () => {
+    useGameDataStore.setState({ gameData: data })
+  })
+  expect(useCharacterStore.getState().activeCharacter?.optionalClassFeatureAdoptions).toEqual([])
+  expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
 })

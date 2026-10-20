@@ -56,7 +56,7 @@ async function showCard() {
     !screen.queryByRole('group', { name: 'Dragon Ancestor' }) &&
     !screen.queryByRole('group', { name: 'Sorcerous Origin' })
   ) {
-    const level = await screen.findByRole('button', { name: /Level 1 Features/ })
+    const level = await screen.findByRole('button', { name: /Level 1\b/ })
     if (level.getAttribute('data-state') === 'closed') fireEvent.click(level)
   }
   return card()

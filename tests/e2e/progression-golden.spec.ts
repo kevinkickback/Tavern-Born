@@ -291,9 +291,9 @@ async function chooseBackgroundBonuses(page: Page) {
 
 async function chooseWeaponMastery(page: Page) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  await page.getByRole('button', { name: /Level 1 Features/ }).click()
+  await page.getByRole('button', { name: /Level 1\b/ }).click()
   await page
-    .getByRole('region', { name: /Level 1 Features/ })
+    .getByRole('region', { name: /Level 1\b/ })
     .getByRole('button', { name: 'Choose' })
     .click()
   const modal = page.getByRole('dialog', { name: 'Choose Weapon Mastery' })
@@ -352,7 +352,7 @@ async function levelClassTo(
 
 async function chooseSubclass(page: Page, level: number, name: string, dialogName: string) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  await page.getByRole('button', { name: new RegExp(`Level ${level} Features`) }).click()
+  await page.getByRole('button', { name: new RegExp(`Level ${level}\\b`) }).click()
   await page.getByRole('button', { name: 'Choose', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: dialogName })
   await dialog.getByRole('button').filter({ hasText: name }).click()
@@ -365,8 +365,8 @@ async function resolveAbilityScoreImprovements(page: Page, levels: number[]) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
 
   for (const [index, level] of levels.entries()) {
-    await page.getByRole('button', { name: new RegExp(`Level ${level} Features`) }).click()
-    const levelRegion = page.getByRole('region', { name: new RegExp(`Level ${level} Features`) })
+    await page.getByRole('button', { name: new RegExp(`Level ${level}\\b`) }).click()
+    const levelRegion = page.getByRole('region', { name: new RegExp(`Level ${level}\\b`) })
     await levelRegion.getByLabel('Ability Score Increase').click()
     await levelRegion.getByRole('button', { name: 'Apply' }).click()
 

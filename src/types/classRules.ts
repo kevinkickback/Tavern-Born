@@ -6,6 +6,7 @@ export type NormalizedCharacterChoiceKind =
   | 'optional-feature'
   | 'creature'
   | 'feature-option'
+  | 'proficiency'
 
 export type ChoiceOptionEntityType =
   | 'classFeature'
@@ -15,6 +16,9 @@ export type ChoiceOptionEntityType =
   | 'optionalFeature'
   | 'creature'
   | 'featureOption'
+  | 'proficiency'
+
+export type ClassProficiencyDomain = 'expertise' | 'languages' | 'tools' | 'skills'
 
 export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
@@ -50,6 +54,8 @@ export interface NormalizedCharacterChoice {
   id: string
   label: string
   kind: NormalizedCharacterChoiceKind
+  /** Named proficiency semantics; the granting feature remains a separate qualified target. */
+  proficiencyDomain?: ClassProficiencyDomain
   owner: {
     type: 'class' | 'subclass'
     name: string

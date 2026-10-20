@@ -7,6 +7,7 @@ import {
   BuildProficienciesTabsPanel,
   type ProficiencyTabValue,
 } from '@/pages/build/proficiencies/components/TabsPanel'
+import { buildToolChoiceSlots } from '@/pages/build/proficiencies/model/data'
 
 beforeAll(() => {
   Element.prototype.hasPointerCapture = () => false
@@ -96,6 +97,139 @@ async function selectSort(label: string) {
 }
 
 describe('BuildProficienciesTabsPanel category panels', () => {
+  test('the one-time hint follows owned circle actions without legacy slots and stays dismissed', async () => {
+    localStorage.removeItem('tb:hint-dismissed:skills-expertise')
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(30, 90, 100, 40))
+    const props = panelProps('skills', {
+      skills: [
+        {
+          name: 'stealth',
+          ability: 'dexterity',
+          proficient: true,
+          expertise: false,
+          modifierString: '+2',
+        },
+      ],
+      expertiseActions: {
+        stealth: [
+          {
+            id: 'class:add',
+            ownerId: 'rogue',
+            kind: 'class',
+            adding: true,
+            label: 'Use Expertise — Rogue (PHB), level 1',
+          },
+        ],
+      },
+      onExpertiseAction: vi.fn(),
+    })
+    const view = render(<BuildProficienciesTabsPanel {...props} />)
+    expect(
+      await screen.findByText('Click the circle beside a skill to add or remove Expertise.'),
+    ).toBeTruthy()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Dismiss hint' }))
+    view.unmount()
+    render(<BuildProficienciesTabsPanel {...props} />)
+    expect(
+      screen.queryByText('Click the circle beside a skill to add or remove Expertise.'),
+    ).toBeNull()
+    rect.mockRestore()
+    localStorage.removeItem('tb:hint-dismissed:skills-expertise')
+  })
+
+  test('mutes excluded unchosen skills only while a skill pool has capacity, preserving actions and other categories', () => {
+    const skills = ['arcana', 'stealth', 'nature'].map((name) => ({
+      name,
+      ability: 'dexterity',
+      proficient: false,
+      expertise: false,
+      modifierString: '+0',
+    }))
+    const first = choice('skills', ['Stealth'], [])
+    first.chooseCount = 1
+    const second = { ...choice('skills', ['Nature'], []), id: 'other:skills', chooseCount: 1 }
+    const props = panelProps('skills', {
+      skills,
+      ledger: { choices: [first, second], proficiencies: emptyProficiencies },
+    })
+    const { rerender } = render(<BuildProficienciesTabsPanel {...props} />)
+    const arcana = () => screen.getByRole('group', { name: 'Arcana proficiency' })
+    expect(arcana().className).toContain('bg-muted/30')
+    expect(arcana().querySelectorAll('svg')).toHaveLength(0)
+    expect(
+      screen.getByRole('button', { name: /Stealth.*DEX/i }).getAttribute('aria-disabled'),
+    ).toBe('false')
+    expect(screen.getByRole('button', { name: /Nature.*DEX/i }).getAttribute('aria-disabled')).toBe(
+      'false',
+    )
+    rerender(
+      <BuildProficienciesTabsPanel
+        {...props}
+        ledger={{
+          choices: [
+            { ...first, selected: ['Stealth'] },
+            { ...second, selected: ['Nature'] },
+          ],
+          proficiencies: emptyProficiencies,
+        }}
+      />,
+    )
+    expect(arcana().className).not.toContain('bg-muted/30')
+    rerender(
+      <BuildProficienciesTabsPanel
+        {...props}
+        ledger={{ choices: [choice('languages', ['Elvish'])], proficiencies: emptyProficiencies }}
+      />,
+    )
+    expect(arcana().className).not.toContain('bg-muted/30')
+    rerender(
+      <BuildProficienciesTabsPanel
+        {...props}
+        ledger={{ choices: [choice('skills', [])], proficiencies: emptyProficiencies }}
+      />,
+    )
+    expect(arcana().className).not.toContain('bg-muted/30')
+  })
+
+  test('a filled circle requires explicit confirmation even for one additional source', async () => {
+    const props = renderPanel('skills', {
+      skills: [
+        {
+          name: 'stealth',
+          ability: 'dexterity',
+          proficient: true,
+          expertise: true,
+          modifierString: '+4',
+        },
+      ],
+      expertiseActions: {
+        stealth: [
+          {
+            id: 'feat:add:bonus',
+            ownerId: 'bonus',
+            kind: 'feat',
+            adding: true,
+            label: 'Use Skill Expert (TCE) — Bonus feat',
+          },
+        ],
+      },
+      onExpertiseAction: vi.fn(),
+    })
+    const user = userEvent.setup()
+    const circle = screen.getByRole('button', { name: 'Choose expertise source: Stealth' })
+    expect(circle.getAttribute('aria-pressed')).toBe('true')
+    await user.click(circle)
+    expect(props.onExpertiseAction).not.toHaveBeenCalled()
+    expect(screen.getByText(/This skill already has Expertise/)).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(props.onExpertiseAction).not.toHaveBeenCalled()
+    await user.click(circle)
+    await user.click(screen.getByRole('menuitem', { name: 'Use Skill Expert (TCE) — Bonus feat' }))
+    expect(props.onExpertiseAction).toHaveBeenCalledExactlyOnceWith('stealth', 'feat:add:bonus')
+  })
+
   test('preserves skill states, choice actions, and expertise actions', async () => {
     const props = renderPanel('skills', {
       skills: [
@@ -197,6 +331,45 @@ describe('BuildProficienciesTabsPanel category panels', () => {
     await selectSort('Proficient first')
     expect(screen.getByText('Proficient')).toBeTruthy()
     expect(screen.getByText('Not Proficient')).toBeTruthy()
+  })
+
+  test('keeps dropdown-only tool options available without adding a direct-row action', async () => {
+    const toolChoice = { ...choice('tools', ['musical instrument']), chooseCount: 1 }
+    const slots = buildToolChoiceSlots({
+      choices: [toolChoice],
+      selectedTools: [],
+      toolSubtypeOptionsByKind: {
+        "artisan's tools": [],
+        'musical instrument': ['Lute'],
+        'gaming set': [],
+        tool: [],
+      },
+    })
+    const props = panelProps('tools', {
+      visibleToolCandidates: ['Lute', 'Disguise Kit'],
+      ledger: { choices: [toolChoice], proficiencies: emptyProficiencies },
+      dropdownToolSlots: slots,
+    })
+    const { rerender } = render(<BuildProficienciesTabsPanel {...props} />)
+    const lute = screen.getByTitle('Choose Lute in the tool dropdown')
+    const user = userEvent.setup()
+    expect(lute.title).toBe('Choose Lute in the tool dropdown')
+    expect(within(lute).getByText('Available')).toBeTruthy()
+    expect(lute.className).not.toContain('bg-muted/30')
+    await user.click(lute)
+    expect(props.onResolveChoiceSelection).not.toHaveBeenCalled()
+    await user.click(screen.getAllByRole('combobox')[0])
+    await user.click(screen.getByRole('option', { name: 'Lute' }))
+    expect(props.onResolveChoiceSelection).toHaveBeenCalledWith(
+      'tools',
+      'Lute',
+      true,
+      toolChoice.id,
+    )
+    rerender(<BuildProficienciesTabsPanel {...props} dropdownToolSlots={[]} />)
+    const unavailable = screen.getByText('Lute').closest('button')!
+    expect(within(unavailable).getByText('Unavailable')).toBeTruthy()
+    expect(unavailable.className).toContain('bg-muted/30')
   })
 
   test('preserves tool subtype and language type grouping', async () => {

@@ -23,6 +23,7 @@ import {
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
 import type { FeatureOptionSelectionState } from './featureOptionSelections'
+import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
 /** Other earned gains occupy their own literals, independent of saved order or the current edit. */
 export function scopeNaturalExplorerOptions(
@@ -77,7 +78,7 @@ export function getNaturalExplorerSelectionStates(
           ? getCharacterClassChoices(
               classData,
               undefined,
-              character.variantRules?.optionalClassFeatures ?? false,
+              createOptionalClassFeatureActivity(character, catalogs),
               catalogs,
             ).find(
               (candidate) =>

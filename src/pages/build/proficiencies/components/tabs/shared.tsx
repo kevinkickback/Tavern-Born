@@ -1,11 +1,17 @@
 import { ArrowCounterClockwise, Check, LockSimple, Plus } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export type ProficiencyRowState = 'chosen' | 'granted' | 'available' | 'unavailable'
 
-export const choiceSelectedClass = 'bg-primary/10 text-foreground hover:bg-primary/15'
-export const fixedSelectedClass = 'bg-success/10 text-foreground hover:bg-success/15'
+const choiceSelectedClass = 'bg-primary/10 text-foreground hover:bg-primary/15'
+const fixedSelectedClass = 'bg-success/10 text-foreground hover:bg-success/15'
+
+export function proficiencyRowClass(state: ProficiencyRowState, hasPendingChoices: boolean) {
+  if (state === 'chosen') return choiceSelectedClass
+  if (state === 'granted') return fixedSelectedClass
+  if (state === 'unavailable' && hasPendingChoices) return 'bg-muted/30 text-muted-foreground'
+  return 'bg-surface-raised text-foreground hover:bg-surface-hover'
+}
 
 export function formatProfLabel(value: string): string {
   return value
@@ -42,11 +48,9 @@ export function ProficiencyStatus({ state }: { state: ProficiencyRowState }) {
 
 export function ProficiencyStateIcon({
   state,
-  fallback,
   actionable = false,
 }: {
   state: ProficiencyRowState
-  fallback: ReactNode
   actionable?: boolean
 }) {
   if (state === 'chosen') {
@@ -61,5 +65,5 @@ export function ProficiencyStateIcon({
   if (state === 'available' && actionable) {
     return <Plus className="size-3.5 shrink-0" aria-hidden="true" />
   }
-  return fallback
+  return <span className="size-3.5 shrink-0" aria-hidden="true" />
 }

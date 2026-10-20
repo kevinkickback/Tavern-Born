@@ -18,9 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useSkillList, useSpellLookup } from '@/hooks/data/useGameData'
 import { getFeatureTypes } from '@/lib/5etools/classData'
+import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
+import { isSkilledFeatTarget } from '@/lib/5etools/featSkillRules'
 import {
   deriveFeatOptionSteps,
   deriveSpellStepsForClass,
@@ -30,8 +33,13 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
 import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
+import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
+import { getFeatExpertiseSkillPool } from '@/lib/character/featExpertiseSelections'
+import { canChangeSkilledSkills, getSkilledSkillPool } from '@/lib/character/featSkillSelections'
 import { assignSavedFeatSpells, createFeatSpellMatcher } from '@/lib/character/featSpellChoices'
+import { normalizeKey } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
@@ -217,12 +225,14 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
   onToggle,
   languages,
   skillNames,
+  eligibleSkills,
 }: {
   step: Extract<FeatOptionStep, { kind: 'proficiency' }>
   selected: string[]
   onToggle: (name: string) => void
   languages: Language5e[]
   skillNames: readonly string[]
+  eligibleSkills?: ReadonlySet<string>
 }) {
   const pool = useMemo(() => {
     if (step.optionPool && step.optionPool.length > 0) return step.optionPool
@@ -244,34 +254,52 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
         )}
       </p>
       <div className="border rounded-md max-h-64 overflow-y-auto divide-y divide-border/50">
-        {pool.map((name) => {
-          const isSelected = selected.includes(name)
-          const atLimit = selected.length >= step.count && !isSelected
-          const checkboxId = `prof-cb-${name.replace(/[^a-zA-Z0-9]/g, '-')}`
-          return (
-            <label
-              key={name}
-              htmlFor={checkboxId}
-              className={cn(
-                'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
-                isSelected
-                  ? 'border-l-accent bg-accent/10 text-foreground'
-                  : 'border-l-transparent hover:bg-muted/40',
-                atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-              )}
-            >
-              <Checkbox
-                id={checkboxId}
-                checked={isSelected}
-                onCheckedChange={() => !atLimit && onToggle(name)}
-                disabled={atLimit}
-                tabIndex={atLimit ? -1 : 0}
-                className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
-              />
-              <span className="text-sm capitalize">{name}</span>
-            </label>
+        {pool
+          .filter(
+            (name) =>
+              step.domain !== 'skills' ||
+              !eligibleSkills ||
+              eligibleSkills.has(normalizeKey(name)) ||
+              selected.some((pick) => normalizeKey(pick) === normalizeKey(name)),
           )
-        })}
+          .map((name) => {
+            const isSelected = selected.some((pick) => normalizeKey(pick) === normalizeKey(name))
+            const atLimit = selected.length >= step.count && !isSelected
+            const checkboxId = `prof-cb-${name.replace(/[^a-zA-Z0-9]/g, '-')}`
+            return (
+              <label
+                key={name}
+                htmlFor={checkboxId}
+                className={cn(
+                  'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                  isSelected
+                    ? 'border-l-accent bg-accent/10 text-foreground'
+                    : 'border-l-transparent hover:bg-muted/40',
+                  atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                )}
+              >
+                <Checkbox
+                  id={checkboxId}
+                  checked={isSelected}
+                  onCheckedChange={() =>
+                    !atLimit &&
+                    onToggle(
+                      selected.find((pick) => normalizeKey(pick) === normalizeKey(name)) ?? name,
+                    )
+                  }
+                  disabled={atLimit}
+                  tabIndex={atLimit ? -1 : 0}
+                  className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
+                />
+                <span className="text-sm capitalize">{name}</span>
+                {step.domain === 'skills' &&
+                  eligibleSkills &&
+                  !eligibleSkills.has(normalizeKey(name)) && (
+                    <span className="text-xs text-muted-foreground">Already proficient</span>
+                  )}
+              </label>
+            )
+          })}
       </div>
     </div>
   )
@@ -382,20 +410,24 @@ const ExpertiseStep = memo(function ExpertiseStep({
   onChange,
   proficientSkillNames,
   skillNames,
+  strict = false,
 }: {
   step: Extract<FeatOptionStep, { kind: 'expertise' }>
   value: string
   onChange: (v: string) => void
   proficientSkillNames: string[]
   skillNames: readonly string[]
+  strict?: boolean
 }) {
-  const pool = proficientSkillNames.length > 0 ? proficientSkillNames : skillNames
+  const pool = strict || proficientSkillNames.length > 0 ? proficientSkillNames : skillNames
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{step.label}</p>
       {proficientSkillNames.length === 0 && (
         <p className="text-xs text-warning-foreground">
-          No proficient skills found — showing all skills.
+          {strict
+            ? 'Choose skill proficiencies before selecting Expertise.'
+            : 'No proficient skills found — showing all skills.'}
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -520,6 +552,7 @@ export interface FeatOptionsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   feat: Feat5e
+  optionTarget?: FeatOptionTarget
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
   fixedSpellcastingClass?: string
@@ -533,6 +566,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   open,
   onOpenChange,
   feat,
+  optionTarget,
   proficientSkillNames = [],
   initialSelections,
   fixedSpellcastingClass,
@@ -541,7 +575,10 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
-  const { spells, optionalfeatures, languages } = useFilteredGameData()
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const calculation = useCharacterCalculationContext(activeCharacter)
+  const ownedExpertise = isKnownFeatExpertiseTarget(feat)
+  const { spells, optionalfeatures, languages, feats } = useFilteredGameData()
   const rawSpellLookup = useSpellLookup()
   const savedSpells = useMemo(
     () =>
@@ -566,6 +603,56 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     initWizardState(feat, initialSelections, validatedFixedSpellcastingClass, rawSpellLookup),
   )
   const { steps: allSteps, stepSels, unassignedSpells } = wizard
+  const newSkills = allSteps.flatMap((step, index) =>
+    step.kind === 'proficiency' && step.domain === 'skills' && Array.isArray(stepSels[index])
+      ? (stepSels[index] as string[])
+      : [],
+  )
+  const localExpertisePool = [
+    ...new Set([...proficientSkillNames, ...newSkills].map((name) => name.trim().toLowerCase())),
+  ].filter(
+    (name) =>
+      name === initialSelections?.expertiseSkill?.trim().toLowerCase() ||
+      !calculation?.character.proficiencies.expertise.some(
+        (skill) => skill.trim().toLowerCase() === name,
+      ),
+  )
+  const expertisePool =
+    ownedExpertise && activeCharacter && optionTarget
+      ? getFeatExpertiseSkillPool(
+          activeCharacter,
+          calculation?.character ?? activeCharacter,
+          optionTarget,
+          { ...initialSelections, skills: newSkills },
+          feats as Feat5e[],
+          skillNames,
+        )
+      : localExpertisePool
+  const skilled = isSkilledFeatTarget(feat)
+  const skilledPool = skilled
+    ? new Set(
+        activeCharacter && optionTarget
+          ? getSkilledSkillPool(
+              activeCharacter,
+              calculation?.character ?? activeCharacter,
+              optionTarget,
+              feats as Feat5e[],
+              skillNames,
+            )
+          : [],
+      )
+    : undefined
+  const validSkilledSelections =
+    !skilled ||
+    (!!activeCharacter &&
+      !!optionTarget &&
+      canChangeSkilledSkills(
+        activeCharacter,
+        calculation?.character ?? activeCharacter,
+        optionTarget,
+        { skills: newSkills },
+        feats as Feat5e[],
+      ))
 
   const currentStep = allSteps[stepIndex]
   const selectedElsewhere = useMemo(() => {
@@ -643,9 +730,20 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   )
 
   const buildSelections = useCallback((): FeatOptionSelections => {
-    const result: FeatOptionSelections = validatedFixedSpellcastingClass
-      ? { spellcastingClass: validatedFixedSpellcastingClass }
-      : {}
+    const result: FeatOptionSelections = {
+      ...(ownedExpertise ? initialSelections : {}),
+      ...(validatedFixedSpellcastingClass
+        ? { spellcastingClass: validatedFixedSpellcastingClass }
+        : {}),
+    }
+    if (ownedExpertise)
+      for (const step of allSteps) {
+        if (step.kind === 'proficiency') delete result[step.domain]
+        else if (step.kind === 'expertise') delete result.expertiseSkill
+        else if (step.kind === 'abilityScore') delete result.abilityScore
+        else if (step.kind === 'optionalFeature') delete result.optionalFeature
+        else if (step.kind === 'spells') delete result.spells
+      }
     const skills: string[] = []
     const languages: string[] = []
     const tools: string[] = []
@@ -699,7 +797,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     if (languages.length > 0) result.languages = languages
     if (tools.length > 0) result.tools = tools
     return result
-  }, [allSteps, stepSels, validatedFixedSpellcastingClass, initialSelections?.spells])
+  }, [allSteps, stepSels, validatedFixedSpellcastingClass, ownedExpertise, initialSelections])
 
   const isLast = stepIndex === allSteps.length - 1
   const stepValue = getStepValue(stepSels, stepIndex)
@@ -714,6 +812,18 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   )
   const canAdvance =
     !!currentStep &&
+    validSkilledSelections &&
+    (!ownedExpertise ||
+      (!isLast && currentStep.kind !== 'expertise') ||
+      allSteps.every(
+        (step, index) =>
+          step.kind !== 'expertise' ||
+          expertisePool.includes(
+            String(stepSels[index] ?? '')
+              .trim()
+              .toLowerCase(),
+          ),
+      )) &&
     isStepComplete(currentStep, stepSels, stepIndex) &&
     !hasMissingSpell &&
     (!isLast ||
@@ -898,11 +1008,16 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
           )}
           {currentStep.kind === 'proficiency' && (
             <ProficiencyPickStep
-              step={currentStep}
+              step={
+                skilled && currentStep.domain === 'skills'
+                  ? { ...currentStep, label: `Choose ${currentStep.count} skills` }
+                  : currentStep
+              }
               selected={Array.isArray(currentValue) ? currentValue : []}
               onToggle={(name) => toggleMulti(stepIndex, name, currentStep.count)}
               languages={languages}
               skillNames={skillNames}
+              eligibleSkills={skilledPool}
             />
           )}
           {currentStep.kind === 'abilityScore' && (
@@ -925,7 +1040,8 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               step={currentStep}
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(v) => setSingle(stepIndex, v)}
-              proficientSkillNames={proficientSkillNames}
+              proficientSkillNames={ownedExpertise ? expertisePool : proficientSkillNames}
+              strict={ownedExpertise}
               skillNames={skillNames}
             />
           )}
@@ -942,6 +1058,17 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
           </Button>
+          {ownedExpertise && Object.keys(initialSelections ?? {}).length > 0 && onClear && (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={!!clearDisabledReason}
+              title={clearDisabledReason}
+              onClick={onClear}
+            >
+              Clear saved setup
+            </Button>
+          )}
           <Button size="sm" disabled={!canAdvance} onClick={handleNext} className="gap-1.5">
             {isLast ? (
               <>

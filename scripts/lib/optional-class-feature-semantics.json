@@ -1,0 +1,548 @@
+{
+  "version": 1,
+  "authorityRule": {
+    "name": "Optional Class Features",
+    "source": "TCE",
+    "page": 24,
+    "ruleType": "O",
+    "entries": [
+      "You gain class features in the {@book Player's Handbook|PHB} when you reach certain levels in your class. An optional feature is an additional feature that you can gain beyond these.",
+      "Unlike the features in the {@book Player's Handbook|PHB}, you don't gain an optional feature automatically. Consulting with your DM, you decide whether to gain an optional feature if you meet the level requirement noted in the feature's description. These features can be selected separately from one another; you can use some, all, or none of them.",
+      "If you take an optional feature that replaces another feature, you gain no benefit from the replaced one and don't qualify for anything in the game that requires it."
+    ]
+  },
+  "knownOptionalTargets": [
+    {
+      "kind": "classFeature",
+      "target": "class-feature|bardic versatility|bard|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip formulas|wizard|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip versatility|cleric|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|cantrip versatility|druid|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|channel divinity: harness divine power|cleric|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|channel divinity: harness divine power|paladin|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|dedicated weapon|monk|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer improvement|ranger|phb|10|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer improvement|ranger|phb|6|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|deft explorer|ranger|phb|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|eldritch versatility|warlock|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|favored foe|ranger|phb|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|focused aim|monk|phb|5|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|instinctive pounce|barbarian|phb|7|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|ki-fueled attack|monk|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|magical guidance|sorcerer|phb|5|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|magical inspiration|bard|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|fighter|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|paladin|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|martial versatility|ranger|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|metamagic options|sorcerer|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|nature's veil|ranger|phb|10|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|optional rule: firearm proficiency|artificer|tce|1|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|primal awareness|ranger|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|primal knowledge|barbarian|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|quickened healing|monk|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|sorcerous versatility|sorcerer|phb|4|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|spellcasting focus|ranger|phb|2|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|steady aim|rogue|phb|3|tce"
+    },
+    {
+      "kind": "classFeature",
+      "target": "class-feature|wild companion|druid|phb|2|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|ambition (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|arcana|scag|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|death|dmg|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|forge|xge|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|grave|xge|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|knowledge|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|life|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|light|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|nature|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|order|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|peace|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|solidarity (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|strength (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|tempest|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|trickery|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|twilight|tce|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|war|phb|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|blessed strikes|cleric|phb|zeal (psa)|psa|8|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|maneuver options|fighter|phb|battle master|phb|3|tce"
+    },
+    {
+      "kind": "subclassFeature",
+      "target": "subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce"
+    }
+  ],
+  "pilot": {
+    "owner": ["class", "ranger", "phb"],
+    "classFields": [
+      "casterProgression",
+      "classFeatures",
+      "classTableGroups",
+      "edition",
+      "hasFluff",
+      "hasFluffImages",
+      "hd",
+      "multiclassing",
+      "name",
+      "optionalfeatureProgression",
+      "page",
+      "proficiency",
+      "reprintedAs",
+      "source",
+      "spellcastingAbility",
+      "spellsKnownProgression",
+      "srd",
+      "startingEquipment",
+      "startingProficiencies",
+      "subclassTitle"
+    ],
+    "declarations": [
+      {
+        "target": "class-feature|deft explorer|ranger|phb|1|tce",
+        "rawDeclaration": "Deft Explorer|Ranger||1|TCE"
+      },
+      {
+        "target": "class-feature|favored enemy|ranger|phb|1|phb",
+        "rawDeclaration": "Favored Enemy|Ranger||1"
+      },
+      {
+        "target": "class-feature|favored foe|ranger|phb|1|tce",
+        "rawDeclaration": "Favored Foe|Ranger||1|TCE"
+      },
+      {
+        "target": "class-feature|natural explorer|ranger|phb|1|phb",
+        "rawDeclaration": "Natural Explorer|Ranger||1"
+      },
+      {
+        "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+        "rawDeclaration": "Spellcasting Focus|Ranger||2|TCE"
+      },
+      {
+        "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+        "rawDeclaration": "Deft Explorer Improvement|Ranger||6|TCE"
+      },
+      {
+        "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+        "rawDeclaration": "Favored Enemy and Natural Explorer improvements|Ranger||6"
+      },
+      {
+        "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+        "rawDeclaration": "Deft Explorer Improvement|Ranger||10|TCE"
+      },
+      {
+        "target": "class-feature|natural explorer improvement|ranger|phb|10|phb",
+        "rawDeclaration": "Natural Explorer improvement|Ranger||10"
+      },
+      {
+        "target": "class-feature|favored enemy improvement|ranger|phb|14|phb",
+        "rawDeclaration": "Favored Enemy improvement|Ranger||14"
+      },
+      {
+        "target": "class-feature|foe slayer|ranger|phb|20|phb",
+        "rawDeclaration": "Foe Slayer|Ranger||20"
+      }
+    ],
+    "features": [
+      {
+        "target": "class-feature|deft explorer|ranger|phb|1|tce",
+        "sourceRecord": {
+          "name": "Deft Explorer",
+          "source": "TCE",
+          "page": 56,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 1,
+          "isClassFeatureVariant": true,
+          "entries": [
+            "{@i 1st-level ranger {@variantrule optional class features|tce|optional feature}, which replaces the Natural Explorer feature}",
+            "You are an unsurpassed explorer and survivor, both in the wilderness and in dealing with others on your travels. You gain the Canny benefit below, and you gain an additional benefit below when you reach 6th level and 10th level in this class.",
+            {
+              "name": "Canny",
+              "type": "entries",
+              "entries": [
+                "Choose one of your skill proficiencies. Your proficiency bonus is doubled for any ability check you make that uses the chosen skill.",
+                "You can also speak, read, and write two additional languages of your choice."
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "target": "class-feature|favored enemy|ranger|phb|1|phb",
+        "sourceRecord": {
+          "name": "Favored Enemy",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 1,
+          "entries": [
+            "Beginning at 1st level, you have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
+            "Choose a type of favored enemy: {@filter aberrations|bestiary|type=aberration}, {@filter beasts|bestiary|type=beast}, {@filter celestials|bestiary|type=celestial}, {@filter constructs|bestiary|type=construct}, {@filter dragons|bestiary|type=dragon}, {@filter elementals|bestiary|type=elemental}, {@filter fey|bestiary|type=fey}, {@filter fiends|bestiary|type=fiend}, {@filter giants|bestiary|type=giant}, {@filter monstrosities|bestiary|type=monstrosity}, {@filter oozes|bestiary|type=ooze}, {@filter plants|bestiary|type=plant}, or {@filter undead|bestiary|type=undead}. Alternatively, you can select two races of {@filter humanoid|bestiary|type=humanoid} (such as {@creature gnoll||gnolls} and {@creature orc||orcs}) as favored enemies.",
+            "You have advantage on Wisdom ({@skill Survival}) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all.",
+            "You choose one additional favored enemy, as well as an associated language, at 6th and 14th level. As you gain levels, your choices should reflect the types of monsters you have encountered on your adventures."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|favored foe|ranger|phb|1|tce",
+        "sourceRecord": {
+          "name": "Favored Foe",
+          "source": "TCE",
+          "page": 56,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 1,
+          "isClassFeatureVariant": true,
+          "entries": [
+            "{@i 1st-level ranger {@variantrule optional class features|tce|optional feature}, which replaces the Favored Enemy feature and works with the Foe Slayer feature}",
+            "When you hit a creature with an attack roll, you can call on your mystical bond with nature to mark the target as your favored enemy for 1 minute or until you lose your {@status concentration} (as if you were {@status concentration||concentrating} on a spell).",
+            "The first time on each of your turns that you hit the favored enemy and deal damage to it, including when you mark it, you can increase that damage by {@damage 1d4}.",
+            "You can use this feature to mark a favored enemy a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.",
+            "This feature's extra damage increases when you reach certain levels in this class: to {@damage 1d6} at 6th level and to {@damage 1d8} at 14th level."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|natural explorer|ranger|phb|1|phb",
+        "sourceRecord": {
+          "name": "Natural Explorer",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 1,
+          "entries": [
+            "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions. Choose one type of favored terrain: arctic, coast, desert, forest, grassland, mountain, swamp, or the Underdark. When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            {
+              "type": "list",
+              "items": [
+                "Difficult terrain doesn't slow your group's travel.",
+                "Your group can't become lost except by magical means.",
+                "Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+                "If you are traveling alone, you can move stealthily at a normal pace.",
+                "When you forage, you find twice as much food as you normally would.",
+                "While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+              ]
+            },
+            "You choose additional favored terrain types at 6th and 10th level."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+        "sourceRecord": {
+          "name": "Spellcasting Focus",
+          "source": "TCE",
+          "page": 56,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 2,
+          "isClassFeatureVariant": true,
+          "entries": [
+            "{@i 2nd-level ranger {@variantrule optional class features|tce|optional feature}}",
+            "You can use a {@item druidic focus|phb} as a spellcasting focus for your ranger spells. A druidic focus might be a sprig of mistletoe or holly, a wand or rod made of yew or another special wood, a staff drawn whole from a living tree, or an object incorporating feathers, fur, bones, and teeth from sacred animals."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|deft explorer improvement|ranger|phb|6|tce",
+        "sourceRecord": {
+          "name": "Deft Explorer Improvement",
+          "source": "TCE",
+          "page": 56,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 6,
+          "isClassFeatureVariant": true,
+          "entries": [
+            "You gain an additional benefit when you reach 6th level in this class.",
+            {
+              "type": "entries",
+              "name": "Roving",
+              "entries": [
+                "Your walking speed increases by 5, and you gain a climbing speed and a swimming speed equal to your walking speed."
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+        "sourceRecord": {
+          "name": "Favored Enemy and Natural Explorer improvements",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 6,
+          "entries": [
+            "At 6th level, you gain an additional favored terrain.",
+            "At 6th level, you choose one additional favored enemy, as well as an associated language. Your choice should reflect the types of monsters you have encountered on your adventures."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|deft explorer improvement|ranger|phb|10|tce",
+        "sourceRecord": {
+          "name": "Deft Explorer Improvement",
+          "source": "TCE",
+          "page": 56,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 10,
+          "isClassFeatureVariant": true,
+          "entries": [
+            "You gain an additional benefit when you reach 10th level in this class.",
+            {
+              "type": "entries",
+              "name": "Tireless",
+              "entries": [
+                "As an action, you can give yourself a number of temporary hit points equal to {@dice 1d8} + your Wisdom modifier (minimum of 1 temporary hit point). You can use this action a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.",
+                "In addition, whenever you finish a short rest, your {@condition exhaustion} level, if any, is decreased by 1."
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "target": "class-feature|natural explorer improvement|ranger|phb|10|phb",
+        "sourceRecord": {
+          "name": "Natural Explorer improvement",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 10,
+          "entries": ["You gain an additional favored terrain."]
+        }
+      },
+      {
+        "target": "class-feature|favored enemy improvement|ranger|phb|14|phb",
+        "sourceRecord": {
+          "name": "Favored Enemy improvement",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 14,
+          "entries": [
+            "At 14th level, you choose one additional favored enemy, as well as an associated language. Your choice should reflect the types of monsters you have encountered on your adventures."
+          ]
+        }
+      },
+      {
+        "target": "class-feature|foe slayer|ranger|phb|20|phb",
+        "sourceRecord": {
+          "name": "Foe Slayer",
+          "source": "PHB",
+          "page": 89,
+          "srd": true,
+          "className": "Ranger",
+          "classSource": "PHB",
+          "level": 20,
+          "entries": [
+            "At 20th level, you become an unparalleled hunter of your enemies. Once on each of your turns, you can add your Wisdom modifier to the attack roll or the damage roll of an attack you make against one of your favored enemies. You can choose to use this feature before or after the roll, but before any effects of the roll are applied."
+          ]
+        }
+      }
+    ],
+    "roots": [
+      {
+        "target": "class-feature|deft explorer|ranger|phb|1|tce",
+        "family": "favored-terrain",
+        "children": [
+          "class-feature|deft explorer improvement|ranger|phb|6|tce",
+          "class-feature|deft explorer improvement|ranger|phb|10|tce"
+        ],
+        "replaces": [
+          {
+            "target": "class-feature|natural explorer|ranger|phb|1|phb"
+          },
+          {
+            "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+            "facet": "favored-terrain",
+            "entryIndexes": [0]
+          },
+          {
+            "target": "class-feature|natural explorer improvement|ranger|phb|10|phb"
+          }
+        ],
+        "compatible": []
+      },
+      {
+        "target": "class-feature|favored foe|ranger|phb|1|tce",
+        "family": "favored-enemy-language",
+        "children": [],
+        "replaces": [
+          {
+            "target": "class-feature|favored enemy|ranger|phb|1|phb"
+          },
+          {
+            "target": "class-feature|favored enemy and natural explorer improvements|ranger|phb|6|phb",
+            "facet": "favored-enemy-language",
+            "entryIndexes": [1]
+          },
+          {
+            "target": "class-feature|favored enemy improvement|ranger|phb|14|phb"
+          }
+        ],
+        "compatible": ["class-feature|foe slayer|ranger|phb|20|phb"]
+      },
+      {
+        "target": "class-feature|spellcasting focus|ranger|phb|2|tce",
+        "children": [],
+        "replaces": [],
+        "compatible": []
+      }
+    ]
+  }
+}

@@ -9,7 +9,7 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import {
   buildClassChoiceFeatureCatalogs,
   collectSubclassFeatures,
-  getCharacterClassChoices,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
@@ -224,7 +224,11 @@ describe('subclass-feature copy materialization', () => {
     const raw = document(),
       before = structuredClone(raw),
       combined = parseClassDocument(raw)
-    expect(combined).toEqual({ classes: parseClasses(raw), classFeatures: parseClassFeatures(raw) })
+    expect(combined).toEqual({
+      classes: parseClasses(raw),
+      classFeatures: parseClassFeatures(raw),
+      optionalClassFeatureSources: [],
+    })
     const c = (combined.classes as Class5e[])[0],
       s = c.subclasses?.[0]
     expect(s?.subclassFeatureRefs?.[0].feature).toMatchObject({ classSource: 'XPHB', level: 3 })
@@ -260,7 +264,7 @@ describe('subclass-feature copy materialization', () => {
       itemTypeByAbbr: {},
       weaponProficiencies: [],
     }
-    const choice = getCharacterClassChoices(c, s, false).find((x) => x.label === 'Training')!
+    const choice = getClassChoiceCandidates(c, s).find((x) => x.label === 'Training')!
     expect(choice).toMatchObject({ level: 3, owner: { source: 'XPHB' } })
     let character = createEmptyCharacter({
       name: 'Copy control',

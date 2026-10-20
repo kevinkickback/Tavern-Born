@@ -23,6 +23,8 @@ export function createEmptyGameData(): GameData & {
     itemTypes: [],
     itemMasteries: [],
     classFeatures: [],
+    optionalClassFeatureSources: [],
+    optionalClassSections: [],
     creatures: [],
     actions: [],
     conditions: [],

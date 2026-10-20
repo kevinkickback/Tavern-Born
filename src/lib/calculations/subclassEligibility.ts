@@ -1,5 +1,6 @@
 import { LEGACY_SUBCLASS_PREREQUISITE_FIXUPS } from '@/lib/5etools/rulesetMetadata'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import type { Raw5ePrereq, Subclass5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
 
@@ -9,6 +10,7 @@ interface SubclassEligibilityParams {
   classSource?: string
   character: Character
   effectiveAbilityScores?: AbilityScores
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
 }
 
 interface LegacyRestriction {
@@ -21,12 +23,13 @@ export function isSubclassEligible({
   classSource = subclass.classSource,
   character,
   effectiveAbilityScores,
+  classChoiceFeatureCatalogs,
 }: SubclassEligibilityParams): boolean {
   const prerequisite = subclass.prerequisite as Raw5ePrereq[] | undefined
   if (Array.isArray(prerequisite) && prerequisite.length > 0) {
     return checkAllPrerequisites(
       { prerequisite },
-      buildPrerequisiteSnapshot({ character, effectiveAbilityScores }),
+      buildPrerequisiteSnapshot({ character, effectiveAbilityScores, classChoiceFeatureCatalogs }),
       { className, classSource },
     ).met
   }

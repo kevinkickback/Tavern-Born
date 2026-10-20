@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   DATA_FETCH_CONCURRENCY,
@@ -24,6 +25,67 @@ describe('5etools/dataLoader', () => {
     globalThis.fetch = originalFetch
     vi.useRealTimers()
     vi.unstubAllGlobals()
+  })
+
+  test.each([
+    'bundled',
+    'old external',
+    'confirmed external',
+  ] as const)('nested optional book is requested once only for a confirmed external capability: %s', async (mode) => {
+    const fixture = JSON.parse(
+      readFileSync('tests/fixtures/optionalClassSectionSources.json', 'utf8'),
+    )
+    const readJson = vi.fn(async (file: string) =>
+      file === 'books.json' ? fixture.books : file === 'book/book-tce.json' ? fixture.book : {},
+    )
+    const config =
+      mode === 'bundled'
+        ? {
+            type: 'bundled' as const,
+            path: 'srd/core',
+            packId: 'tavern-born-srd-core' as const,
+            packVersion: 'test',
+            isValid: true,
+          }
+        : {
+            type: 'local' as const,
+            path: 'C:\\data',
+            isValid: true,
+            ...(mode === 'confirmed external'
+              ? { availableResources: ['books.json', 'book/book-tce.json'] }
+              : {}),
+          }
+    const loaded = await new FiveEToolsDataLoader(config, {
+      type: config.type,
+      readJson,
+    }).loadAllData()
+    expect(readJson.mock.calls.filter(([file]) => file === 'book/book-tce.json')).toHaveLength(
+      mode === 'confirmed external' ? 1 : 0,
+    )
+    expect(loaded.optionalClassSections).toHaveLength(mode === 'confirmed external' ? 13 : 0)
+    if (mode === 'confirmed external')
+      expect(loaded.optionalClassSections!.every((row) => row.input && !row.diagnostic)).toBe(true)
+  })
+
+  test('optional book failure records current unavailability without reusing old section bodies or rejecting ordinary content', async () => {
+    const failure = vi.fn()
+    const readJson = vi.fn(async (file: string) => {
+      if (file === 'book/book-tce.json') throw Error('Unavailable book')
+      return { race: [{ name: 'Human', source: 'PHB' }] }
+    })
+    const loaded = await new FiveEToolsDataLoader(
+      {
+        type: 'local',
+        path: 'C:\\data',
+        isValid: true,
+        availableResources: ['races.json', 'book/book-tce.json'],
+      },
+      { type: 'local', readJson },
+    ).loadAllData({ onResourceFailure: failure })
+    expect(loaded.races).toHaveLength(1)
+    expect(loaded.optionalClassSections).toHaveLength(13)
+    expect(loaded.optionalClassSections!.every((row) => !row.input && !!row.diagnostic)).toBe(true)
+    expect(failure).toHaveBeenCalledWith('book/book-tce.json', { required: false })
   })
 
   test('reads bundled resources through the restricted Electron bridge', async () => {

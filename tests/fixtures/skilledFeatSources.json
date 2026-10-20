@@ -1,0 +1,49 @@
+[
+  {
+    "name": "Skilled",
+    "source": "PHB",
+    "page": 170,
+    "reprintedAs": ["Skilled|XPHB"],
+    "skillToolLanguageProficiencies": [
+      {
+        "choose": [
+          {
+            "from": ["anySkill", "anyTool"],
+            "count": 3
+          }
+        ]
+      }
+    ],
+    "entries": [
+      "You gain proficiency in any combination of three {@table skills|phb} or {@filter tools|items|type=tool;artisan's tools;instrument;gaming set;vehicle (land);vehicle (water)} of your choice."
+    ]
+  },
+  {
+    "name": "Skilled",
+    "source": "XPHB",
+    "page": 201,
+    "srd52": true,
+    "basicRules2024": true,
+    "category": "O",
+    "repeatable": true,
+    "repeatableHidden": true,
+    "skillToolLanguageProficiencies": [
+      {
+        "choose": [
+          {
+            "from": ["anySkill", "anyTool"],
+            "count": 3
+          }
+        ]
+      }
+    ],
+    "entries": [
+      "You gain proficiency in any combination of three {@table Skill List; Skills|XPHB|skills} or {@filter tools|items|type=tool;artisan's tools;instrument;gaming set} of your choice.",
+      {
+        "type": "entries",
+        "name": "Repeatable",
+        "entries": ["You can take this feat more than once."]
+      }
+    ]
+  }
+]

@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import type { CompactPane } from '@/components/ui/SplitPane'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
@@ -8,6 +9,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup, useFeatLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
+import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import {
@@ -15,7 +17,13 @@ import {
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
-import { getFeatSelectionKey } from '@/lib/character/commands/featCommandIdentity'
+import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
+import {
+  getFeatOptionOwnerKey,
+  getFeatSelectionKey,
+} from '@/lib/character/commands/featCommandIdentity'
+import { getFeatSetupFocusKey, getFeatSetupOwners } from '@/lib/character/featSetupOwners'
+import { getFeatSetupStatus, isFeatSetupComplete } from '@/lib/character/featSetupProgress'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   getFixedFeatOptionKey,
@@ -43,8 +51,9 @@ export type FeatOptionsTarget = Feat5e & {
   provenanceChoiceId?: string
   classFeatChoiceId?: string
   selectionKind?: FeatSelectionKind
+  initialOptions?: FeatOptionSelections
 }
-export type SelectedFeatIdentity = { name: string; source: string }
+export type SelectedFeatIdentity = { name: string; source: string; ownerKey?: string }
 
 export function getChoiceFeatSelections(
   choice: ChoiceRecord,
@@ -75,7 +84,6 @@ export function useFeatsPageController() {
     replaceFeatSelections,
     replaceBonusFeatSelections,
     removeFeatChoiceSelection,
-    commitFeatWithOptions,
     editFeatWithOptions,
     clearFeatWithOptions,
   } = useFeatProvenanceMutations()
@@ -84,13 +92,37 @@ export function useFeatsPageController() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const linkedFeatName = searchParams.get('feat')
   const linkedFeatSource = searchParams.get('source')
-  const hasLinkedFeat = !!linkedFeatName && !!linkedFeatSource
+  const exactFocus = searchParams.get('featOwner')
+  const requestedOwner =
+    character && exactFocus
+      ? getFeatSetupOwners(calculationContext?.character ?? character, feats as Feat5e[]).find(
+          (owner) => owner.focusKey === exactFocus,
+        )
+      : undefined
+  const focusedOwner =
+    requestedOwner &&
+    linkedFeatName &&
+    linkedFeatSource &&
+    getFeatSelectionKey(requestedOwner.target) ===
+      getFeatSelectionKey({ name: linkedFeatName, source: linkedFeatSource })
+      ? requestedOwner
+      : undefined
+  const hasLinkedFeat =
+    exactFocus !== null ? !!focusedOwner : !!linkedFeatName && !!linkedFeatSource
   const focusLinkedConfiguration = searchParams.get('focus') === 'feat'
   const [compactPane, setCompactPane] = useState<CompactPane>(
     hasLinkedFeat && !focusLinkedConfiguration ? 'right' : 'left',
   )
   const [selectedFeat, setSelectedFeat] = useState<SelectedFeatIdentity | null>(() =>
-    hasLinkedFeat ? { name: linkedFeatName, source: linkedFeatSource } : null,
+    focusedOwner
+      ? {
+          name: focusedOwner.target.name,
+          source: focusedOwner.target.source,
+          ownerKey: focusedOwner.focusKey,
+        }
+      : hasLinkedFeat && linkedFeatName && linkedFeatSource
+        ? { name: linkedFeatName, source: linkedFeatSource }
+        : null,
   )
   const [featView, setFeatView] = useState<FeatView>(() => {
     const linkedView = searchParams.get('view')
@@ -98,6 +130,39 @@ export function useFeatsPageController() {
   })
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<FeatOptionsTarget | null>(null)
+  const isSetupComplete = useCallback(
+    (
+      ref: { name: string; source?: string },
+      options?: FeatOptionSelections,
+      owner: Omit<FeatOptionTarget, 'name' | 'source'> = { selectionKind: 'ordinary' },
+    ) => {
+      if (character && isKnownFeatExpertiseTarget(ref))
+        return getFeatSetupStatus(
+          character,
+          calculationContext?.character ?? character,
+          { name: ref.name, source: ref.source, ...owner },
+          feats as Feat5e[],
+        ).complete
+      const matches = (feats as Feat5e[]).filter(
+        (feat) => getFeatSelectionKey(feat) === getFeatSelectionKey(ref),
+      )
+      return isFeatSetupComplete(matches.length === 1 ? matches[0] : undefined, options)
+    },
+    [feats, character, calculationContext],
+  )
+  const currentOptions = useCallback(
+    (target: FeatOptionsTarget) => {
+      const current = useCharacterStore.getState().activeCharacter
+      return current
+        ? getFeatSetupOwners(current, feats as Feat5e[]).find(
+            (owner) =>
+              getFeatSelectionKey(owner.target) === getFeatSelectionKey(target) &&
+              getFeatOptionOwnerKey(owner.target) === getFeatOptionOwnerKey(target),
+          )?.options
+        : undefined
+    },
+    [feats],
+  )
   const [featEditCandidate, setFeatEditCandidate] = useState<{
     feat5e: FeatOptionsTarget
     priorOptions: FeatOptionSelections
@@ -106,13 +171,45 @@ export function useFeatsPageController() {
     feat5e: FeatOptionsTarget
     priorOptions: FeatOptionSelections
   } | null>(null)
+  const focusedFeatOwnerKey = focusedOwner?.focusKey
+  const focusedName = focusedOwner?.target.name
+  const focusedSource = focusedOwner?.target.source
+  const focusedView = focusedOwner?.view
+  useEffect(() => {
+    if (exactFocus === null) {
+      if (linkedFeatName && linkedFeatSource)
+        setSelectedFeat({ name: linkedFeatName, source: linkedFeatSource })
+      return
+    }
+    setSelectedFeat(
+      focusedFeatOwnerKey && focusedName && focusedSource
+        ? { name: focusedName, source: focusedSource, ownerKey: focusedFeatOwnerKey }
+        : null,
+    )
+    if (focusedView) setFeatView(focusedView)
+    setCompactPane('left')
+    setFeatOptionsTarget(null)
+    setFeatEditCandidate(null)
+    setFeatEditTarget(null)
+  }, [
+    exactFocus,
+    focusedFeatOwnerKey,
+    focusedName,
+    focusedSource,
+    focusedView,
+    linkedFeatName,
+    linkedFeatSource,
+  ])
   const classLookup = useClassLookup()
 
-  const handleSelectFeat = useCallback((featName: string, featSource: string) => {
-    setSelectedFeat({ name: featName, source: featSource })
-    setDetailCollapsed(false)
-    setCompactPane('right')
-  }, [])
+  const handleSelectFeat = useCallback(
+    (featName: string, featSource: string, ownerKey?: string) => {
+      setSelectedFeat({ name: featName, source: featSource, ownerKey })
+      setDetailCollapsed(false)
+      setCompactPane('right')
+    },
+    [],
+  )
 
   const classProgression = useMemo(() => getCharacterClassEntries(character), [character])
   const totalFeatSlots = useMemo(
@@ -134,8 +231,9 @@ export function useFeatsPageController() {
         character,
         classProgression,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
+        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
       }),
-    [character, classProgression, calculationContext?.abilityScores.total],
+    [character, classProgression, calculationContext],
   )
 
   const {
@@ -174,13 +272,33 @@ export function useFeatsPageController() {
               sourceLabel: `${tag.sourceType}: ${tag.sourceName}`,
               sourceDisplayLabel: `${tag.sourceType}: ${getRacialSourceDisplayName(character, tag)}`,
               featData: resolved.feat,
+              optionsSaved:
+                character?.fixedFeatOptions?.[
+                  getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
+                ] !== undefined,
+              optionsComplete: isSetupComplete(
+                resolved,
+                character?.fixedFeatOptions?.[
+                  getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
+                ],
+                { fixedGrant: true, grantVariant: resolved.variant },
+              ),
               grantVariant: resolved.variant,
               variantLabel: resolved.variantLabel,
               fixedSpellcastingClass: resolved.fixedSpellcastingClass,
+              focusKey: getFeatSetupFocusKey(
+                {
+                  name: resolved.name,
+                  source: resolved.source,
+                  fixedGrant: true,
+                  grantVariant: resolved.variant,
+                },
+                tag,
+              ),
             }
           }),
       ),
-    [character, ledger.feats, feats, rawFeats],
+    [character, ledger.feats, feats, rawFeats, isSetupComplete],
   )
   const { originFixedFeats, racialFixedFeats } = useMemo(
     () => ({
@@ -292,7 +410,7 @@ export function useFeatsPageController() {
             )
           : undefined)
       if (!feat5e) return
-      setFeatOptionsTarget({
+      const target: FeatOptionsTarget = {
         ...feat5e,
         grantVariant,
         fixedGrant,
@@ -303,9 +421,10 @@ export function useFeatsPageController() {
           fixedGrant || grantVariant !== undefined || provenanceChoiceId || classFeatChoiceId
             ? undefined
             : selectionKind,
-      })
+      }
+      setFeatOptionsTarget({ ...target, initialOptions: currentOptions(target) })
     },
-    [feats, rawFeatLookup],
+    [feats, rawFeatLookup, currentOptions],
   )
   const handleCompleteBonusSetup = useCallback(
     (name: string, source: string) =>
@@ -315,15 +434,37 @@ export function useFeatsPageController() {
   const handleFeatOptionsFinish = useCallback(
     (selections: FeatOptionSelections) => {
       if (!featOptionsTarget) return
-      commitFeatWithOptions(
+      if (
+        JSON.stringify(currentOptions(featOptionsTarget) ?? {}) !==
+        JSON.stringify(featOptionsTarget.initialOptions ?? {})
+      ) {
+        toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
+        setFeatOptionsTarget(null)
+        return
+      }
+      editFeatWithOptions(
         featOptionsTarget,
+        featOptionsTarget.initialOptions ?? {},
         selections,
         featOptionsTarget.fixedGrant ? rawSpells : (spells as Spell5e[]),
       )
       setFeatOptionsTarget(null)
     },
-    [featOptionsTarget, commitFeatWithOptions, rawSpells, spells],
+    [featOptionsTarget, currentOptions, editFeatWithOptions, rawSpells, spells],
   )
+  const handleFeatOptionsClear = useCallback(() => {
+    if (!featOptionsTarget || !featOptionsTarget.initialOptions) return
+    if (
+      JSON.stringify(currentOptions(featOptionsTarget) ?? {}) !==
+      JSON.stringify(featOptionsTarget.initialOptions)
+    ) {
+      toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
+      setFeatOptionsTarget(null)
+      return
+    }
+    clearFeatWithOptions(featOptionsTarget, featOptionsTarget.initialOptions)
+    setFeatOptionsTarget(null)
+  }, [featOptionsTarget, currentOptions, clearFeatWithOptions])
   const handleEditSetup = useCallback(
     (
       featName: string,
@@ -435,6 +576,14 @@ export function useFeatsPageController() {
   const handleEditFinish = useCallback(
     (selections: FeatOptionSelections) => {
       if (!featEditTarget) return
+      if (
+        JSON.stringify(currentOptions(featEditTarget.feat5e) ?? {}) !==
+        JSON.stringify(featEditTarget.priorOptions)
+      ) {
+        toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
+        setFeatEditTarget(null)
+        return
+      }
       editFeatWithOptions(
         featEditTarget.feat5e,
         featEditTarget.priorOptions,
@@ -443,7 +592,7 @@ export function useFeatsPageController() {
       )
       setFeatEditTarget(null)
     },
-    [featEditTarget, editFeatWithOptions, rawSpells, spells],
+    [featEditTarget, currentOptions, editFeatWithOptions, rawSpells, spells],
   )
 
   const handleEditClear = useCallback(() => {
@@ -457,7 +606,7 @@ export function useFeatsPageController() {
       new Set(
         (character?.feats ?? [])
           .filter((feat) => {
-            if (feat.options) return false
+            if (isSetupComplete(feat, feat.options)) return false
             const data = (feats as Feat5e[]).find(
               (candidate) => getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
             )
@@ -465,14 +614,14 @@ export function useFeatsPageController() {
           })
           .map(getFeatSelectionKey),
       ),
-    [character?.feats, feats],
+    [character?.feats, feats, isSetupComplete],
   )
   const pendingOptionBonusFeatIds = useMemo(
     () =>
       new Set(
         (character?.specialFeats ?? [])
           .filter((feat) => {
-            if (feat.options) return false
+            if (isSetupComplete(feat, feat.options, { selectionKind: 'bonus' })) return false
             const data = (feats as Feat5e[]).find(
               (candidate) => getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
             )
@@ -480,9 +629,12 @@ export function useFeatsPageController() {
           })
           .map(getFeatSelectionKey),
       ),
-    [character?.specialFeats, feats],
+    [character?.specialFeats, feats, isSetupComplete],
   )
-  const proficientSkillNames = character?.proficiencies?.skills ?? EMPTY_STRINGS
+  const proficientSkillNames =
+    calculationContext?.character.proficiencies.skills ??
+    character?.proficiencies.skills ??
+    EMPTY_STRINGS
   const configuredChoiceOptionCount = [...resolvedRacialChoices, ...resolvedOriginChoices].reduce(
     (count, choice) =>
       count + getChoiceFeatSelections(choice).filter((selection) => selection.options).length,
@@ -502,8 +654,8 @@ export function useFeatsPageController() {
     setShowEditHint(false)
     setHintDismissed(FEATS_EDIT_HINT_ID, true)
   }, [])
-  const pendingClassOptionCount = classProgressionFeats.filter(({ feat }) => {
-    if (feat.options) return false
+  const pendingClassOptionCount = classProgressionFeats.filter(({ choice, feat }) => {
+    if (isSetupComplete(feat, feat.options, { classFeatChoiceId: choice.id })) return false
     const data = (feats as Feat5e[]).find(
       (candidate) => getFeatSelectionKey(candidate) === getFeatSelectionKey(feat),
     )
@@ -513,7 +665,8 @@ export function useFeatsPageController() {
     (count, choice) =>
       count +
       getChoiceFeatSelections(choice).filter((selection) => {
-        if (selection.options) return false
+        if (isSetupComplete(selection, selection.options, { provenanceChoiceId: choice.id }))
+          return false
         const data = (feats as Feat5e[]).find(
           (candidate) =>
             !!selection.source?.trim() &&
@@ -539,6 +692,7 @@ export function useFeatsPageController() {
     fixedGrantedFeats.find((feat) => isSelectedFeat(selectedFeat, feat.name, feat.source))?.featData
 
   return {
+    focusedFeatOwnerKey,
     activeFeatData,
     activeFeatName,
     bonusFeats,
@@ -554,6 +708,7 @@ export function useFeatsPageController() {
     featEditCandidate,
     featEditTarget,
     featOptionsTarget,
+    isSetupComplete,
     feats: feats as Feat5e[],
     featView,
     getSourcesRowsBySection,
@@ -567,6 +722,7 @@ export function useFeatsPageController() {
     handleEditFinish,
     handleEditSetup,
     handleFeatOptionsFinish,
+    handleFeatOptionsClear,
     handleRemoveBonusFeat,
     handleRemoveFeat,
     handleRemoveGrantedChoice,

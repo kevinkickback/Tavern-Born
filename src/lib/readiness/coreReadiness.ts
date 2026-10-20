@@ -1,9 +1,12 @@
+import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
+import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
+import { getFeatSetupStatus, isFeatSetupComplete } from '@/lib/character/featSetupProgress'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
 import {
@@ -195,9 +198,10 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
 export function validateFeatSetup(
   character: Character,
   featsByKey: Readonly<Record<string, Feat5e>> | undefined,
+  featExpertiseFeats?: readonly Feat5e[],
 ): CharacterReadinessIssue[] {
   if (!featsByKey) return []
-  const featCatalog = Object.values(featsByKey)
+  const featCatalog = featExpertiseFeats ?? Object.values(featsByKey)
   const unresolvedFixedIssues: CharacterReadinessIssue[] = []
   const findFeat = (name: string, source?: string) => {
     const exact = featsByKey[getEntityLookupKey(name, source)]
@@ -213,11 +217,23 @@ export function validateFeatSetup(
     className?: string
     classLevel?: number
     ownerKey?: string
+    target: FeatOptionTarget
   }> = [
-    ...(character.feats ?? []),
-    ...(character.specialFeats ?? []).map((feat) => ({ ...feat, ownerKey: `bonus:${feat.id}` })),
+    ...(character.feats ?? []).map((feat) => ({
+      ...feat,
+      target: { ...feat, selectionKind: 'ordinary' as const },
+    })),
+    ...(character.specialFeats ?? []).map((feat) => ({
+      ...feat,
+      ownerKey: `bonus:${feat.id}`,
+      target: { ...feat, selectionKind: 'bonus' as const },
+    })),
     ...(character.classFeatChoices ?? []).flatMap((choice) =>
-      choice.feats.map((feat) => ({ ...feat, ownerKey: `class:${choice.id}` })),
+      choice.feats.map((feat) => ({
+        ...feat,
+        ownerKey: `class:${choice.id}`,
+        target: { ...feat, classFeatChoiceId: choice.id },
+      })),
     ),
     ...(character.provenance?.choices ?? [])
       .filter((choice) => choice.domain === 'feats')
@@ -225,6 +241,7 @@ export function validateFeatSetup(
         (choice.selectedRefs ?? choice.selected.map((name) => ({ name }))).map((selection) => ({
           ...selection,
           ownerKey: `choice:${choice.id}`,
+          target: { ...selection, provenanceChoiceId: choice.id },
         })),
       ),
   ]
@@ -261,6 +278,12 @@ export function validateFeatSetup(
             getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
           ],
         ownerKey: `fixed:${tag.sourceType}:${tag.sourceName}:${resolved.variant ?? ''}`,
+        target: {
+          name: resolved.name,
+          source: resolved.source,
+          fixedGrant: true,
+          grantVariant: resolved.variant,
+        },
       })
     }
   }
@@ -269,7 +292,10 @@ export function validateFeatSetup(
     ...unresolvedFixedIssues,
     ...candidates.flatMap((feat) => {
       const data = findFeat(feat.name, feat.source)
-      if (!data || !hasFeatOptions(data) || feat.options) return []
+      const complete = isKnownFeatExpertiseTarget(feat.target)
+        ? getFeatSetupStatus(character, character, feat.target, featCatalog).complete
+        : isFeatSetupComplete(data, feat.options)
+      if (!data || !hasFeatOptions(data) || complete) return []
       const featKey = getEntityLookupKey(data.name, data.source)
       return [
         readinessIssue(

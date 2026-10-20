@@ -178,7 +178,10 @@ export function applyManualProficiencyCommand(
 
   return reconcileExpertiseOwnership({
     characterPatch: {
-      proficiencies: domain === 'skills' ? reconcileSkillExpertise(proficiencies) : proficiencies,
+      proficiencies:
+        domain === 'skills' || domain === 'tools'
+          ? reconcileSkillExpertise(proficiencies)
+          : proficiencies,
     },
     provenanceUpdate,
   })
