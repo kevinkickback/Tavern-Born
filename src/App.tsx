@@ -123,10 +123,7 @@ function CloseConfirmDialog() {
   }, [])
 
   useEffect(() => {
-    window.electronAPI?.onConfirmClose(handleConfirmClose)
-    return () => {
-      window.electronAPI?.removeConfirmCloseListener(handleConfirmClose)
-    }
+    return window.electronAPI?.onConfirmClose(handleConfirmClose)
   }, [handleConfirmClose])
 
   return (

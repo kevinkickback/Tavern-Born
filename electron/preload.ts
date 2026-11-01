@@ -26,12 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('resources:readBundledJson', relativePath),
   getBundledManifest: () => ipcRenderer.invoke('resources:getBundledManifest'),
   setUnsavedChanges: (value: boolean) => ipcRenderer.send('state:setUnsavedChanges', value),
-  onConfirmClose: (callback: () => void) => {
-    ipcRenderer.on('app:confirmClose', callback)
-  },
-  removeConfirmCloseListener: (callback: () => void) => {
-    ipcRenderer.removeListener('app:confirmClose', callback)
-  },
+  onConfirmClose: (callback: () => void) => onIpcEvent('app:confirmClose', callback),
   forceClose: () => ipcRenderer.send('app:forceClose'),
   setTitleBarOverlay: (color: string, symbolColor: string, height: number) =>
     ipcRenderer.send('window:set-title-bar-overlay', { color, symbolColor, height }),
@@ -84,8 +79,7 @@ declare global {
       readBundledJson: (relativePath: string) => Promise<unknown>
       getBundledManifest: () => Promise<BundledSrdManifestSummary>
       setUnsavedChanges?: (value: boolean) => void
-      onConfirmClose: (callback: () => void) => void
-      removeConfirmCloseListener: (callback: () => void) => void
+      onConfirmClose: (callback: () => void) => () => void
       forceClose: () => void
       setTitleBarOverlay: (color: string, symbolColor: string, height: number) => void
       // Update methods

@@ -49,8 +49,9 @@ Entry point: [characterStore](../src/store/characterStore.ts).
    Draft edits and character selection do not rewrite the saved library.
 
 Electron receives unsaved state and requests confirmation before close. Preferences/layout do not
-contribute to character dirty state. The preload close callback still forwards the Electron event;
-stripping it with correct listener cleanup remains queued work, not a delivered security claim.
+contribute to character dirty state. The preload close subscription forwards no Electron event or
+payload and returns a cleanup function for its exact listener. The close dialog uses that function
+when unmounting, matching the other event-only preload subscriptions.
 
 See [State Management](state-management.md#saved-library-transactions) for hydration, overlapping
 saves, reload ordering, failure/retry and quarantine acknowledgement. Unfinished-input dismissal
