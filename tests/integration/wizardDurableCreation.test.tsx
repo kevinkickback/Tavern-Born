@@ -97,6 +97,9 @@ vi.mock('@/components/character/wizard/steps', () => ({
       <button type="button" onClick={() => onChange({ allowedSources: ['TCE', 'XGE'] })}>
         Restore sources
       </button>
+      <button type="button" onClick={() => onChange({ allowedSources: [] })}>
+        Clear sources
+      </button>
       <output aria-label="Sources">{data.allowedSources.join(',')}</output>
       <button
         type="button"
@@ -370,6 +373,74 @@ test.each([
   await user.click(screen.getByRole('button', { name: 'Toggle additional source' }))
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+test('explicit empty sources survive refresh while confirmation is open and reset on discard', async () => {
+  const user = userEvent.setup()
+  useGameDataStore.setState({
+    gameData: makeGameDataFixture({
+      sources: [
+        { abbreviation: 'PHB', name: 'Player Handbook', group: 'core' },
+        { abbreviation: 'XGE', name: 'Initial recommended source', group: 'supplement' },
+        { abbreviation: 'TCE', name: 'Test recommended source two', group: 'supplement' },
+        { abbreviation: 'HB', name: 'Test additional content', group: 'other' },
+      ],
+    }),
+  })
+  render(<WizardHarness />)
+  expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
+  await user.click(screen.getByRole('button', { name: 'Clear sources' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
+  await act(() =>
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        sources: [
+          { abbreviation: 'PHB', name: 'Player Handbook', group: 'core' },
+          { abbreviation: 'XGE', name: 'Refreshed recommended source', group: 'supplement' },
+          { abbreviation: 'TCE', name: 'Test recommended source two', group: 'supplement' },
+          { abbreviation: 'HB', name: 'Test additional content', group: 'other' },
+        ],
+      }),
+    }),
+  )
+  await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+  expect(screen.getByLabelText('Sources').textContent).toBe('')
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+  await user.click(screen.getByRole('button', { name: 'Restore sources' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
+  expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
+  await user.click(screen.getByRole('button', { name: 'Clear sources' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Discard changes' }))
+  await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
+  expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
+})
+
+test('clearing already empty sources remains a no-op for delayed defaults', async () => {
+  const user = userEvent.setup()
+  useGameDataStore.setState({
+    gameData: makeGameDataFixture({
+      sources: [{ abbreviation: 'PHB', name: 'Player Handbook', group: 'core' }],
+    }),
+  })
+  render(<WizardHarness />)
+  await user.click(screen.getByRole('button', { name: 'Clear sources' }))
+  await act(() =>
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        sources: [{ abbreviation: 'XGE', name: 'Late recommended source', group: 'supplement' }],
+      }),
+    }),
+  )
+  expect(screen.getByLabelText('Sources').textContent).toBe('XGE')
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByRole('alertdialog')).toBeNull()
 })
 
 test('keeps wizard input and permits retry after a delayed creation failure', async () => {

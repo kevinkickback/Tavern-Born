@@ -115,7 +115,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   useEffect(() => {
     if (!open) return
     setCharacterData((previous) => {
-      if ((previous.allowedSources?.length ?? 0) > 0) return previous
+      if ((previous.allowedSources?.length ?? 0) > 0 || 'allowedSources' in originalValues.current)
+        return previous
       const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
       if (!recommended) return previous
       const availableSources = new Set(wizardData.sources.map((source) => source.abbreviation))

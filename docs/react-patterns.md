@@ -53,6 +53,9 @@ do not require confirmation. Retire a field's original when its edit is reverted
 defaults stay pristine; a subsequent edit starts from the current value. Compare structured field
 contents and treat source-selection order as irrelevant. Successful creation resets directly;
 pending creation retains its dismissal protection.
+Automatic initialization must preserve an outstanding source edit, including an empty selection,
+through catalog refresh and discard confirmation. A no-op or fully reverted source choice still
+permits delayed default initialization.
 These behaviors belong to the wizard, rather than changing shared dialogs for other consumers.
 
 ---

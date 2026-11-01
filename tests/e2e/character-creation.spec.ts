@@ -186,6 +186,51 @@ test('reverted source choices remain pristine when recommended sources arrive la
   await expect(page.getByRole('alertdialog')).toHaveCount(0)
 })
 
+test('empty source selection survives refresh under discard confirmation', async ({ page }) => {
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-wizard-empty-sources', {
+    ...CHARACTER_CREATION_GAME_DATA,
+    sources: [
+      ...CHARACTER_CREATION_GAME_DATA.sources,
+      { abbreviation: 'XGE', name: 'Recommended source', group: 'supplement' },
+    ],
+  })
+  const newCharacter = page.getByRole('button', { name: 'New Character' }).first()
+  await newCharacter.click()
+  const wizard = page.getByRole('dialog', { name: 'Create New Character' })
+  await wizard.getByLabel('Character Name').fill('Preserved empty sources')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
+  await wizard.getByRole('button', { name: 'None', exact: true }).click()
+  await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
+  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
+  await expect(confirmation).toBeVisible()
+  await page.evaluate(async () => {
+    const modulePath = '/src/store/gameDataStore.ts'
+    const { useGameDataStore } = await import(modulePath)
+    const gameData = useGameDataStore.getState().gameData
+    useGameDataStore.setState({
+      gameData: {
+        ...gameData,
+        sources: [
+          ...gameData.sources,
+          { abbreviation: 'HB', name: 'Refresh additional content', group: 'other' },
+        ],
+      },
+    })
+  })
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(wizard.getByRole('button', { name: /Refresh additional content/ })).toBeVisible()
+  await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
+  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click()
+  await newCharacter.click()
+  await wizard.getByLabel('Character Name').fill('New wizard lifetime')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
+})
+
 test('Rules warnings remain visible while Additional Content scrolls', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-character-creation', GAME_DATA_WITH_MANY_SOURCES)
