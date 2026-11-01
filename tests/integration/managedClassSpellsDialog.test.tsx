@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { ManagedClassSpellsDialog } from '@/pages/build/class/components/ManagedClassSpellsDialog'
@@ -270,5 +271,38 @@ describe('Class spell Finish and current-state adapter', () => {
     expect(cleared.managedClassSpellChoices).toEqual([])
     expect(cleared.managedClassSpellRevision).toBe(1)
     expect(characterPersistenceSchema.safeParse(cleared).success).toBe(true)
+  })
+
+  test('Finish rejects an empty draft from a removed class lifetime and reopening captures the new one', async () => {
+    const errors = vi.spyOn(toast, 'error')
+    const bard = { name: 'Bard', source: 'PHB', levels: 1 }
+    const fighter = { name: 'Fighter', source: 'PHB', levels: 1 }
+    const original = { ...initial(), classProgression: [bard, fighter] }
+    install(original)
+    render(<Flow />)
+    await choose(1, 'Light')
+    await act(async () => {
+      for (const next of [[fighter], [bard, fighter]]) {
+        const latest = useCharacterStore.getState().activeCharacter!
+        const result = applyClassProgressionUpdate(latest, latest.provenance, next)
+        await useCharacterStore.getState().updateCharacter(latest.id, {
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        })
+      }
+    })
+    const restored = JSON.stringify(useCharacterStore.getState().activeCharacter)
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(errors).toHaveBeenLastCalledWith(expect.stringContaining('changed'))
+    expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(restored)
+    expect(screen.getByText('Light (PHB)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    await choose(1, 'Light')
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.managedClassSpellChoices?.[0].target).toEqual({ name: 'Light', source: 'PHB' })
+    expect(saved.managedClassSpellChoices?.[0].revision).toBe(2)
+    expect(saved.managedClassSpellRevision).toBe(2)
   })
 })

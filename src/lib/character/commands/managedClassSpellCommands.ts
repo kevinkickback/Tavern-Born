@@ -2,10 +2,12 @@ import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import {
+  getManagedClassSpellOwnerEntry,
   isManagedClassSpellProfile,
   isPlainSpellIdentityPart,
   managedClassSpellId,
 } from '@/lib/character/managedClassSpellIdentity'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { removeManagedClassSpellMaterialization } from '@/lib/character/managedClassSpellState'
 import {
   type ManagedClassSpellContext,
@@ -16,7 +18,7 @@ import {
   getInvalidManagedClassSpellPaths,
   isIndependentFixedClassSpell,
 } from '@/lib/schema/managedClassSpellValidation'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type {
   ClassSpellSelectionPolicy,
   ManagedClassSpellChoice,
@@ -191,27 +193,42 @@ export function setManagedClassSpellChoicesCommand(
     provenanceUpdate: projected.character.provenance,
   }
 }
-/** Intentional progression removal, independent of source filtering or current availability. */
-export function retainEarnedManagedClassSpells(character: Character): Character {
-  const removed = (character.managedClassSpellChoices ?? []).filter((choice) => {
-    const owner = choice.slot[0]
-    const entries = character.classProgression.filter(
-      (entry) =>
-        entry.name.trim().toLowerCase() === owner[1] &&
-        entry.source.trim().toLowerCase() === owner[2] &&
-        (owner[0] === 'class' ||
-          (entry.subclass?.trim().toLowerCase() === owner[3] &&
-            entry.subclassSource?.trim().toLowerCase() === owner[4])),
+/** Retire earned slot lifetimes independently of saved choices or current source availability. */
+export function retainEarnedManagedClassSpells(
+  character: Character,
+  nextProgression: CharacterClassEntry[],
+): Character {
+  const earnedIds = (progression: CharacterClassEntry[]) =>
+    new Set(
+      progression
+        .flatMap(getManagedClassSpellSlots)
+        .filter((slot) => getManagedClassSpellOwnerEntry(slot, progression))
+        .map(managedClassSpellId),
     )
-    return entries.length !== 1 || entries[0].levels < choice.slot[3]
-  })
-  if (!removed.length) return character
+  const nextIds = earnedIds(nextProgression)
+  const lostSlot = [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
+  const removed = (character.managedClassSpellChoices ?? []).filter(
+    (choice) => !nextIds.has(managedClassSpellId(choice.slot)),
+  )
+  const progressed = { ...character, classProgression: nextProgression }
+  if (!lostSlot && !removed.length) return progressed
   const ids = new Set(removed.map((choice) => managedClassSpellId(choice.slot)))
-  const inverse = removeManagedClassSpellMaterialization(character, removed)
+  const inverse = removed.length
+    ? removeManagedClassSpellMaterialization(progressed, removed)
+    : progressed
   return {
     ...inverse,
-    managedClassSpellChoices: character.managedClassSpellChoices?.filter(
-      (choice) => !ids.has(managedClassSpellId(choice.slot)),
+    ...(removed.length
+      ? {
+          managedClassSpellChoices: character.managedClassSpellChoices?.filter(
+            (choice) => !ids.has(managedClassSpellId(choice.slot)),
+          ),
+        }
+      : {}),
+    // At exhaustion new allocations already reject; removal must remain available without wrapping.
+    managedClassSpellRevision: Math.min(
+      (character.managedClassSpellRevision ?? 0) + 1,
+      Number.MAX_SAFE_INTEGER,
     ),
   }
 }

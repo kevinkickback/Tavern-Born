@@ -411,11 +411,10 @@ export function applyClassProgressionUpdate(
       !nextProgression.some((entry) => entry.name === old.name && entry.source === old.source),
   )
 
-  let workingCharacter = retainEarnedManagedClassSpells({
-    ...character,
-    classProgression: nextProgression,
-    provenance: ledger,
-  })
+  let workingCharacter = retainEarnedManagedClassSpells(
+    { ...character, provenance: ledger },
+    nextProgression,
+  )
   let provenanceUpdate = workingCharacter.provenance
   for (const removed of removedEntries) {
     workingCharacter = retractRemovedClassMaterializedState(
@@ -539,6 +538,7 @@ export function applyClassProgressionUpdate(
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
     managedClassSpellChoices: workingCharacter.managedClassSpellChoices,
+    managedClassSpellRevision: workingCharacter.managedClassSpellRevision,
     proficiencies: classChoiceGrants.proficiencies,
     abilityScores: workingCharacter.abilityScores,
   }

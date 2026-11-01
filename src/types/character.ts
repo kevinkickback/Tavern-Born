@@ -249,7 +249,7 @@ export interface Character {
 
   /** Exact level-earned class spell choices; source loss retains occupied reservations. */
   managedClassSpellChoices?: ManagedClassSpellChoice[]
-  /** Allocation watermark retained after Clear/removal so stale dialogs cannot match a new lifetime. */
+  /** Monotonic allocation/earned-slot lifetime watermark; Clear retains it and slot removal advances it. */
   managedClassSpellRevision?: number
 
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */

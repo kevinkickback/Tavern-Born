@@ -54,8 +54,12 @@ erase another conflicting field.
 
 The Class dialog drafts all rows until Finish. Cancel writes nothing. Finish checks every original
 occupied target/revision or empty-slot allocator watermark against one latest base, then commits once.
-Changed choices allocate a new global revision; Clear and intentional owner/gain removal preserve the
-watermark even when no choices remain. No-op, failure, source refresh and reads allocate nothing.
+Changed choices allocate a new global revision. An earned slot requires one exact owner. Intentional
+progression loss of any complete earned slot advances the watermark once, including empty slots;
+restoring the owner/gain does not restore the old lifetime. Clear retains the watermark even when
+no choices remain. No-op, failure, source refresh, reads and progression changes that lose no earned
+slot allocate nothing. At the safe-integer
+limit the watermark saturates: new allocations reject, while Clear and progression removal remain available.
 An empty slot cannot be reused by an older dialog after Add/Clear. Unrelated edits remain intact.
 Exact source-free Clear removes only the addressed owner and retains other class, fixed, racial,
 feat and Bonus contributions. Learned Prepare edits the same admitted choice; an unlearned Wizard

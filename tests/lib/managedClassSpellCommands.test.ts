@@ -826,7 +826,7 @@ describe('addressed current class spell choices', () => {
     profile(spoofed).fixedSpells = ['Light|PHB']
     expect(characterPersistenceSchema.safeParse(spoofed).success).toBe(true)
     expect(profile(projectManagedClassSpellState(spoofed, context).character).cantrips).toEqual([])
-    const removed = retainEarnedManagedClassSpells({ ...selected, classProgression: [] })
+    const removed = retainEarnedManagedClassSpells(selected, [])
     expect(removed.managedClassSpellChoices).toEqual([])
     expect(removed.provenance.spells).toEqual({})
     expect(

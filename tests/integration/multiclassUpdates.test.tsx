@@ -343,7 +343,9 @@ describe('Multiclass Updates', () => {
       expect(updated?.managedClassSpellChoices).toEqual(
         character.managedClassSpellChoices?.filter((row) => row.slot[0][1] === 'wizard'),
       )
-      expect(updated?.managedClassSpellRevision).toBe(character.managedClassSpellRevision)
+      expect(updated?.managedClassSpellRevision).toBe(
+        (character.managedClassSpellRevision ?? 0) + 1,
+      )
     })
   })
 
