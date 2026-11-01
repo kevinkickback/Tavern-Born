@@ -79,6 +79,21 @@ leveled target within that owner's access, and a current list path with optional
 Current independent fixed and native expanded paths may also qualify a target. Another multiclass
 owner's higher slots do not raise this limit. Context-free readers expose no saved daily benefit.
 
+Daily setup, learned-spellbook preparation and level-only selection are classified from the certified
+effective casting fields, rather than a second list of class names. Generated descriptors retain
+the source formula or complete progression and finite bounds derived over the supported levels and
+legal effective ability scores. Formula preparation uses the exact casting declaration's certified
+minimum after arithmetic flooring. The structured formula omits that minimum; generation recognizes
+one unambiguous preparation-capacity clause in that declaration's entries and rejects unsupported
+or conflicting meaning. Commands, learned preparation and current casting details share the same
+descriptor evaluator. Missing current certification supplies no preparation limit.
+
+New exact spell printings with supported audited routes enter the current pool through the shared
+parser and eligibility checks. Missing targets/routes/declarations suspend their benefit while
+preserving recoverable intent. The finite casting registry still requires reviewed registration for
+a new casting producer or changed source semantics; setup capacity does not authorize rest replacement
+quantity or create past gameplay events.
+
 New preparation uses the latest current effective ability and preparation limit. A desired no-op
 writes nothing; exact withdrawal remains source-free and preserves independent ownership. Source loss,
 Bonus/native edits, numeric edits and synchronization retain raw daily intent. Reduced capacity flags

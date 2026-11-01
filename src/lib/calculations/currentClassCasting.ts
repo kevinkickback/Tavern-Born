@@ -111,6 +111,13 @@ export function deriveCurrentClassCasting(
     abilityScores,
     effects,
     effectContext,
+    new Map(
+      entries.flatMap(({ entry, access }) =>
+        access.rule.preparation
+          ? [[toClassProfileId(entry.name, entry.source), access.rule.preparation] as const]
+          : [],
+      ),
+    ),
   ).map((detail) => ({
     ...detail,
     maxSpellLevel: entries.find(

@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs'
+import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import type { Class5e, ClassFeature } from '@/types/5etools'
+import type { CharacterClassEntry } from '@/types/character'
 import { makeGameDataFixture } from './gameDataFixtures'
 import type { OptionalDeclarationDocument } from './optionalClassDeclarationFixtures'
 
@@ -10,6 +13,16 @@ export const classCastingDocuments = (
     documents: Array<{ file: string; data: OptionalDeclarationDocument }>
   }
 ).documents
+
+/** Explicit registry input for arithmetic-detail tests; this is not current source certification. */
+export function makeRegisteredPreparationMap(entries: readonly CharacterClassEntry[]) {
+  return new Map(
+    entries.flatMap((entry) => {
+      const preparation = getClassSpellProfilePolicy(entry).rule?.preparation
+      return preparation ? [[toClassProfileId(entry.name, entry.source), preparation] as const] : []
+    }),
+  )
+}
 
 export function makeClassCastingLayer(
   file: string,

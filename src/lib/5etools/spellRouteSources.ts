@@ -9,11 +9,12 @@ import type {
   SpellRouteOccurrence,
 } from '@/types/spellRoutes'
 import { featureOptionRulesSignature } from './featureRulesSignature'
-import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+import { getFeatureSourceDigest } from './featureSourceAudit'
 
 type ObjectValue = Record<string, unknown>
 type Channel = ClassSpellRoute[5]
 type Target = [string, string]
+type SourceTarget = { name?: unknown; source?: unknown }
 const channels: Channel[] = ['class', 'classVariant']
 const object = (value: unknown): ObjectValue | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -28,7 +29,7 @@ const identity = (value: unknown): string | undefined =>
 const signature = (value: unknown) => featureOptionRulesSignature([value], false)
 const digest = (value: unknown) => getFeatureSourceDigest([value], false) ?? ''
 const keyOf = (value: unknown) => JSON.stringify(value)
-const targetOf = (spell: { name?: unknown; source?: unknown }): Target | undefined => {
+const targetOf = (spell: SourceTarget): Target | undefined => {
   const name = identity(spell.name),
     source = identity(spell.source)
   return name && source ? [name, source] : undefined
@@ -38,14 +39,28 @@ interface PreparedLookup {
   index: Map<string, SpellRouteLookupCandidate[]>
   malformedSources: Map<string, SpellRouteLookupCandidate[]>
 }
-/** Prepare current aliases once per parse, before a first-match lookup can discard evidence. */
-export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undefined {
+/** Prepare all current aliases for this document's targets, or the full lookup without a scope. */
+export function prepareSpellRouteLookup(
+  lookup?: object,
+  targets?: readonly SourceTarget[],
+): PreparedLookup | undefined {
   if (!lookup) return undefined
   const index = new Map<string, SpellRouteLookupCandidate[]>(),
     malformedSources = new Map<string, SpellRouteLookupCandidate[]>()
+  const selected = targets === undefined ? undefined : new Map<string, Set<string>>()
+  if (selected) {
+    for (const row of targets ?? []) {
+      const target = targetOf(row)
+      if (!target) continue
+      const names = selected.get(target[1]) ?? new Set<string>()
+      names.add(target[0])
+      selected.set(target[1], names)
+    }
+    if (!selected.size) return { index, malformedSources }
+  }
   for (const [source, names] of Object.entries(lookup)) {
     const sourceKey = identity(source)
-    if (!sourceKey) continue
+    if (!sourceKey || (selected && !selected.has(sourceKey))) continue
     const byName = object(names)
     if (!byName) {
       const rows = malformedSources.get(sourceKey) ?? []
@@ -55,7 +70,7 @@ export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undef
     }
     for (const [name, value] of Object.entries(byName)) {
       const nameKey = identity(name)
-      if (!nameKey) continue
+      if (!nameKey || (selected && !selected.get(sourceKey)?.has(nameKey))) continue
       const key = keyOf([nameKey, sourceKey])
       const rows = index.get(key) ?? []
       rows.push({ path: [source, name], value: clone(value) })
@@ -284,16 +299,23 @@ function decode(target: Target, input: SpellRouteInput): Decoded {
 
 const routingDigest = (target: Target, input: Pick<SpellRouteInput, 'embedded' | 'lookup'>) =>
   digest({ target, embedded: input.embedded, lookup: input.lookup })
-function build(target: Target, input: SpellRouteInput): ClassSpellRouteAudit {
-  const { routes, diagnostics } = decode(target, input)
+interface CheckedRoutes {
+  audit: ClassSpellRouteAudit
+  labels: Decoded['labels']
+}
+function build(target: Target, input: SpellRouteInput): CheckedRoutes {
+  const { routes, diagnostics, labels } = decode(target, input)
   return {
-    version: 1,
-    kind: 'class-spell-routes',
-    target,
-    input,
-    sourceDigest: digest({ version: 1, kind: 'class-spell-routes', target, input }),
-    sourceRoutes: routes,
-    diagnostics,
+    audit: {
+      version: 1,
+      kind: 'class-spell-routes',
+      target,
+      input,
+      sourceDigest: digest({ version: 1, kind: 'class-spell-routes', target, input }),
+      sourceRoutes: routes,
+      diagnostics,
+    },
+    labels,
   }
 }
 const auditFields = new Set([
@@ -306,13 +328,26 @@ const auditFields = new Set([
   'diagnostics',
 ])
 const inputFields = new Set(['origin', 'embedded', 'lookup', 'targetOccurrences'])
-function validated(spell: Spell5e): ClassSpellRouteAudit | undefined {
+/** Source envelopes are plain data with every required own enumerable field. */
+function exactDataFields(value: ObjectValue, fields: ReadonlySet<string>) {
+  const prototype = Object.getPrototypeOf(value)
+  if ((prototype !== Object.prototype && prototype !== null) || 'toJSON' in value) return false
+  const keys = Object.keys(value)
+  return (
+    keys.length === fields.size &&
+    keys.every((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      return fields.has(key) && descriptor && 'value' in descriptor
+    })
+  )
+}
+function validated(spell: Spell5e): CheckedRoutes | undefined {
   const target = targetOf(spell),
     value = object(spell.classSpellRouteSource)
   if (
     !target ||
     !value ||
-    !hasFeatureSourceShape(value, auditFields) ||
+    !exactDataFields(value, auditFields) ||
     value.version !== 1 ||
     value.kind !== 'class-spell-routes' ||
     signature(value.target) !== signature(target)
@@ -321,7 +356,7 @@ function validated(spell: Spell5e): ClassSpellRouteAudit | undefined {
   const raw = object(value.input)
   if (
     !raw ||
-    !hasFeatureSourceShape(raw, inputFields) ||
+    !exactDataFields(raw, inputFields) ||
     typeof raw.origin !== 'string' ||
     !raw.origin ||
     !Array.isArray(raw.targetOccurrences) ||
@@ -378,23 +413,33 @@ function validated(spell: Spell5e): ClassSpellRouteAudit | undefined {
     )
   )
     return undefined
+  const currentRoutingDigest = routingDigest(target, input)
   if (
     !input.targetOccurrences.some(
-      (row) =>
-        row.origin === input.origin && row.routingInputDigest === routingDigest(target, input),
+      (row) => row.origin === input.origin && row.routingInputDigest === currentRoutingDigest,
     )
   )
     return undefined
   const rebuilt = build(target, input)
-  return signature(rebuilt) === signature(value) ? rebuilt : undefined
+  const routes = signature(value.sourceRoutes)
+  const diagnostics = signature(value.diagnostics)
+  return /^[0-9a-f]{64}$/u.test(rebuilt.audit.sourceDigest) &&
+    value.sourceDigest === rebuilt.audit.sourceDigest &&
+    routes !== undefined &&
+    diagnostics !== undefined &&
+    routes === signature(rebuilt.audit.sourceRoutes) &&
+    diagnostics === signature(rebuilt.audit.diagnostics)
+    ? rebuilt
+    : undefined
 }
 
 function project<T extends Spell5e>(
   spell: T,
-  audit: ClassSpellRouteAudit | undefined,
+  checked: CheckedRoutes | undefined,
   sources?: readonly string[],
   current?: ReadonlySet<string | undefined>,
 ): T {
+  const audit = checked?.audit
   const classes = clone(object(spell.classes) ?? {}) as NonNullable<Spell5e['classes']>
   const allowed = sources?.length
     ? new Set(sources.map((value) => value.trim().toLowerCase()))
@@ -408,11 +453,10 @@ function project<T extends Spell5e>(
             allowed.has(source),
           )),
     ) ?? []
-  const decoded = audit ? decode(audit.target, audit.input) : undefined
   classes.fromClassList = []
   classes.fromClassListVariant = []
   for (const route of routes) {
-    const label = decoded?.labels.get(keyOf(route))
+    const label = checked?.labels.get(keyOf(route))
     if (label)
       (route[5] === 'class' ? classes.fromClassList : classes.fromClassListVariant).push(
         clone(label),
@@ -430,10 +474,10 @@ function project<T extends Spell5e>(
 }
 
 /** Lookup/layer reads preserve the current view; only explicit source filtering restores it. */
-function preserveCurrentRoutes<T extends Spell5e>(spell: T): T {
+function preserveCurrentRoutes<T extends Spell5e>(spell: T, checked: CheckedRoutes | undefined): T {
   if (!own(spell, 'classSpellRouteSource')) return spell
-  const audit = validated(spell)
-  if (!audit || !own(spell, 'classSpellRoutes')) return project(spell, audit)
+  const audit = checked?.audit
+  if (!audit || !own(spell, 'classSpellRoutes')) return project(spell, checked)
   const supported = new Set(audit.sourceRoutes.map(signature))
   const current = spell.classSpellRoutes
   const malformed =
@@ -444,7 +488,12 @@ function preserveCurrentRoutes<T extends Spell5e>(spell: T): T {
         (row[6] !== null && typeof row[6] !== 'string') ||
         !supported.has(signature(row)),
     )
-  const result = project(spell, audit, undefined, new Set(malformed ? [] : current.map(signature)))
+  const result = project(
+    spell,
+    checked,
+    undefined,
+    new Set(malformed ? [] : current.map(signature)),
+  )
   if (
     malformed ||
     (Array.isArray(spell.classSpellRouteDiagnostics) &&
@@ -468,9 +517,10 @@ export function parseSpellRouteSource<T extends Spell5e>(
 ): T {
   const target = targetOf(spell)
   const existing = own(spell, 'classSpellRouteSource')
-  const previous = existing ? validated(spell) : undefined
-  if (!target || (existing && !previous)) return project(spell, undefined)
-  if (previous && lookup === undefined) return project(spell, previous)
+  const checked = existing ? validated(spell) : undefined
+  const previous = checked?.audit
+  if (!target || (existing && !checked)) return project(spell, undefined)
+  if (checked && lookup === undefined) return project(spell, checked)
   const embedded =
     previous?.input.embedded ??
     (own(spell, 'classes')
@@ -485,12 +535,13 @@ export function parseSpellRouteSource<T extends Spell5e>(
         : { kind: 'present', candidates: lookupCandidates(lookup, target) },
     targetOccurrences: [],
   }
+  const previousRoutingDigest = previous && routingDigest(target, previous.input)
+  const nextRoutingDigest = routingDigest(target, input)
   input.targetOccurrences = previous?.input.targetOccurrences.map((row) =>
-    row.origin === previous.input.origin &&
-    row.routingInputDigest === routingDigest(target, previous.input)
-      ? { ...row, routingInputDigest: routingDigest(target, input) }
+    row.origin === previous.input.origin && row.routingInputDigest === previousRoutingDigest
+      ? { ...row, routingInputDigest: nextRoutingDigest }
       : row,
-  ) ?? [{ origin: input.origin, rowPath, routingInputDigest: routingDigest(target, input) }]
+  ) ?? [{ origin: input.origin, rowPath, routingInputDigest: nextRoutingDigest }]
   const audit = build(target, input)
   return project(spell, audit)
 }
@@ -500,7 +551,15 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
   spells: T[],
   origin = 'spell-layer',
 ): T[] {
-  spells = spells.map(preserveCurrentRoutes)
+  // These results belong only to this synchronous call's freshly projected rows.
+  // A later public read always validates its current package again.
+  const checkedRows = new Map<T, CheckedRoutes | undefined>()
+  spells = spells.map((spell) => {
+    const checked = own(spell, 'classSpellRouteSource') ? validated(spell) : undefined
+    const current = preserveCurrentRoutes(spell, checked)
+    checkedRows.set(current, checked)
+    return current
+  })
   const groups = new Map<string, Array<{ spell: T; index: number }>>()
   spells.forEach((spell, index) => {
     const target = targetOf(spell)
@@ -514,13 +573,14 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
   for (const rows of groups.values()) {
     if (rows.length < 2) continue
     const witnesses = new Map<string, SpellRouteOccurrence>()
-    const parsed = rows.map(({ spell, index }) =>
-      own(spell, 'classSpellRouteSource')
-        ? spell
-        : parseSpellRouteSource(spell, origin + '#' + index, String(index)),
-    )
+    const parsed = rows.map(({ spell, index }) => {
+      if (own(spell, 'classSpellRouteSource')) return spell
+      const current = parseSpellRouteSource(spell, origin + '#' + index, String(index))
+      checkedRows.set(current, validated(current))
+      return current
+    })
     for (const spell of parsed)
-      for (const witness of validated(spell)?.input.targetOccurrences ?? [])
+      for (const witness of checkedRows.get(spell)?.audit.input.targetOccurrences ?? [])
         witnesses.set(keyOf(witness), witness)
     // Repeated views retain existing context; distinct physical duplicate positions still count.
     while (witnesses.size < rows.length) {
@@ -534,7 +594,7 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
     }
     const occurrences = [...witnesses.values()].sort((a, b) => keyOf(a).localeCompare(keyOf(b)))
     parsed.forEach((spell, index) => {
-      const audit = validated(spell)
+      const audit = checkedRows.get(spell)?.audit
       replacements.set(
         rows[index].spell,
         audit

@@ -90,7 +90,7 @@ export function parseSpells(
   const obj = asObject(data)
   const spells = obj.spell ? asArray(obj.spell) : Array.isArray(data) ? data : []
   const origin = options?.origin ?? 'spell-document'
-  const routeLookup = prepareSpellRouteLookup(options?.sourceLookup)
+  const routeLookup = prepareSpellRouteLookup(options?.sourceLookup, spells.map(asObject))
   return auditSpellRouteMultiplicity(
     spells.map((spell, index) => {
       const enriched = enrichSpellFromLookup(asObject(spell), options?.sourceLookup)

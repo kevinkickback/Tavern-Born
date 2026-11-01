@@ -17,13 +17,13 @@ import {
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
 import {
   formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
-import { getPreparedSpellLimit } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
 import { addSpellGrant } from '@/lib/provenance/ledger'
@@ -339,7 +339,11 @@ export function projectManagedClassSpellState(
     const score = ability && context?.abilityScores?.[ability]
     const capacity =
       first && typeof score === 'number'
-        ? getPreparedSpellLimit(first.authority.effective, entry.levels, getAbilityModifier(score))
+        ? getClassPreparationLimit(
+            first.authority.rule.preparation,
+            entry.levels,
+            getAbilityModifier(score),
+          )
         : null
     const profile = profiles.find((row) => row.id === toClassProfileId(entry.name, entry.source))
     const independent =

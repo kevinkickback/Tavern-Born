@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { deriveSpellActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
@@ -11,11 +14,15 @@ import { removeSpellFromCharacter, setProfileSpells } from '@/lib/character/comm
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import type { Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 
 const { context, lookups } = makeManagedClassSpellFixtures()
 const initial = (name = 'Cleric', levels = 1) => {
@@ -50,6 +57,121 @@ const prepared = (character: Character) =>
   character.spells.spellProfiles.find((row) => row.id === profileId(character))!.preparedSpells
 
 describe('current daily class preparation and saved intent', () => {
+  test('a supported newly parsed spell works without a name branch and survives removal/restoration', () => {
+    const original = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
+      .spell[0]
+    const added = parseSpells(
+      [
+        {
+          ...original,
+          name: 'New Preparation Spell',
+          level: 1,
+          classes: { fromClassList: [{ name: 'Cleric', source: 'PHB' }] },
+        },
+      ],
+      { origin: 'synthetic-supported-preparation-addition' },
+    ) as Spell5e[]
+    const addedLookup = buildSpellLookup(added)
+    const withAdded = { ...context, spellsByKey: { ...context.spellsByKey, ...addedLookup } }
+    const character = initial()
+    character.abilityScores.wisdom = 8
+    const saved = apply(
+      character,
+      setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        profileId(character),
+        'New Preparation Spell|PHB',
+        true,
+        { ...withAdded, abilityScores: character.abilityScores },
+      ),
+    )
+    const before = JSON.stringify(saved)
+    for (const source of [withAdded, context, withAdded]) {
+      const current = projectManagedClassSpellState(saved, source)
+      expect(
+        current.dailyStatuses.find((row) => row.reference === 'New Preparation Spell|PHB')?.active,
+      ).toBe(source === withAdded)
+      expect(current.character.spells.spellProfiles[0].preparedSpells).toEqual(
+        source === withAdded ? ['New Preparation Spell|PHB'] : [],
+      )
+    }
+    expect(JSON.stringify(saved)).toBe(before)
+    expect(characterPersistenceSchema.safeParse(JSON.parse(before)).success).toBe(true)
+  })
+  test.each([
+    ['Cleric', 1, 'wisdom', 'Bless|PHB', 'Healing Word|PHB'],
+    ['Druid', 1, 'wisdom', 'Cure Wounds|PHB', 'Healing Word|PHB'],
+    ['Paladin', 2, 'charisma', 'Bless|PHB', 'Cure Wounds|PHB'],
+  ] as const)('honors the source minimum of one for low-ability %s and rejects a second', (name, levels, ability, first, second) => {
+    const source = 'PHB'
+    let character = makeCharacterFixture({ classProgression: [{ name, source, levels }] })
+    character.abilityScores[ability] = 1
+    character.spells.spellProfiles = ensureSpellProfiles(character)
+    const id = toClassProfileId(name, source)
+    const current = { ...context, abilityScores: character.abilityScores }
+    character = apply(
+      character,
+      setDailyClassSpellPreparedCommand(character, character.provenance, id, first, true, current),
+    )
+
+    expect(character.spells.spellProfiles.find((row) => row.id === id)?.preparedSpells).toEqual([
+      first,
+    ])
+    const projected = createCharacterCalculationContext(character, lookups, lookups)
+    expect(
+      projected.classCasting.details.find((row) => row.profileId === id)?.preparedSpellLimit,
+    ).toBe(1)
+    expect(projected.dailyClassSpellStatuses.find((row) => row.reference === first)?.active).toBe(
+      true,
+    )
+    expect(() =>
+      setDailyClassSpellPreparedCommand(character, character.provenance, id, second, true, current),
+    ).toThrow(/limit/)
+    const empty = {
+      ...lookups,
+      classChoiceFeatureCatalogs: { ...context.catalogs, classCastingSources: [] },
+    }
+    expect(
+      createCharacterCalculationContext(character, empty, lookups).classCasting.details,
+    ).toEqual([])
+    expect(
+      createCharacterCalculationContext(character, lookups, lookups).classCasting.details[0]
+        .preparedSpellLimit,
+    ).toBe(1)
+  })
+
+  test('TCE Artificer capacity also honors its source minimum before a spell is selected', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Artificer', source: 'TCE', levels: 1 }],
+    })
+    character.abilityScores.intelligence = 1
+    character.spells.spellProfiles = ensureSpellProfiles(character)
+    const current = createCharacterCalculationContext(character, lookups, lookups)
+    expect(current.classCasting.details[0].preparedSpellLimit).toBe(1)
+  })
+
+  test('Wizard learned preparation and casting details use the same source minimum', () => {
+    const entry = { name: 'Wizard', source: 'PHB', levels: 1 }
+    const character = makeCharacterFixture({ classProgression: [entry] })
+    character.abilityScores.intelligence = 1
+    const saved = authorManagedClassSpellFixture(character, makeManagedClassSpellFixtures(), [
+      {
+        owner: entry,
+        domain: 'class-spellbook',
+        gain: 1,
+        targets: [{ name: 'Shield', source: 'PHB', prepare: true }],
+      },
+    ])
+    const projected = createCharacterCalculationContext(saved, lookups, lookups)
+    expect(projected.classCasting.details[0].preparedSpellLimit).toBe(1)
+    expect(projected.managedClassSpellStatuses[0].prepared).toBe(true)
+    expect(projected.character.spells.spellProfiles[0].preparedSpells).toEqual(['Shield|PHB'])
+    expect(characterPersistenceSchema.safeParse(JSON.parse(JSON.stringify(saved))).success).toBe(
+      true,
+    )
+  })
+
   test.each([
     ['Cleric', 1],
     ['Paladin', 2],

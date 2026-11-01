@@ -358,6 +358,15 @@
             "count": 1
           }
         ]
+      },
+      "preparation": {
+        "mode": "daily",
+        "ability": "int",
+        "capacity": {
+          "kind": "progression",
+          "values": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
+        },
+        "maximumByLevel": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
       }
     },
     {
@@ -561,6 +570,18 @@
             "level": 14,
             "count": 1
           }
+        ]
+      },
+      "preparation": {
+        "mode": "daily",
+        "ability": "int",
+        "capacity": {
+          "kind": "formula",
+          "formula": "<$level$> / 2 + <$int_mod$>",
+          "minimum": 1
+        },
+        "maximumByLevel": [
+          10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20
         ]
       }
     },
@@ -1217,6 +1238,17 @@
           }
         ]
       },
+      "preparation": {
+        "mode": "level",
+        "ability": "cha",
+        "capacity": {
+          "kind": "progression",
+          "values": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22]
+        },
+        "maximumByLevel": [
+          4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22
+        ]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "bard", "xphb"],
@@ -1544,6 +1576,18 @@
           }
         ]
       },
+      "preparation": {
+        "mode": "daily",
+        "ability": "wis",
+        "capacity": {
+          "kind": "formula",
+          "formula": "<$level$> + <$wis_mod$>",
+          "minimum": 1
+        },
+        "maximumByLevel": [
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+        ]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "cleric", "phb"],
@@ -1869,6 +1913,17 @@
           }
         ]
       },
+      "preparation": {
+        "mode": "daily",
+        "ability": "wis",
+        "capacity": {
+          "kind": "progression",
+          "values": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22]
+        },
+        "maximumByLevel": [
+          4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22
+        ]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "cleric", "xphb"],
@@ -2183,6 +2238,18 @@
             "level": 10,
             "count": 1
           }
+        ]
+      },
+      "preparation": {
+        "mode": "daily",
+        "ability": "wis",
+        "capacity": {
+          "kind": "formula",
+          "formula": "<$level$> + <$wis_mod$>",
+          "minimum": 1
+        },
+        "maximumByLevel": [
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
         ]
       },
       "declarationAlternatives": [
@@ -2509,6 +2576,17 @@
             "level": 10,
             "count": 1
           }
+        ]
+      },
+      "preparation": {
+        "mode": "daily",
+        "ability": "wis",
+        "capacity": {
+          "kind": "progression",
+          "values": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22]
+        },
+        "maximumByLevel": [
+          4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22
         ]
       },
       "declarationAlternatives": [
@@ -3524,6 +3602,15 @@
             "count": 1
           }
         ]
+      },
+      "preparation": {
+        "mode": "level",
+        "ability": "int",
+        "capacity": {
+          "kind": "progression",
+          "values": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
+        },
+        "maximumByLevel": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
       }
     },
     {
@@ -3785,6 +3872,15 @@
             "count": 1
           }
         ]
+      },
+      "preparation": {
+        "mode": "level",
+        "ability": "wis",
+        "capacity": {
+          "kind": "progression",
+          "values": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
+        },
+        "maximumByLevel": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
       }
     },
     {
@@ -3915,6 +4011,18 @@
         "preparedSpellsChange": "class"
       },
       "domains": {},
+      "preparation": {
+        "mode": "daily",
+        "ability": "cha",
+        "capacity": {
+          "kind": "formula",
+          "formula": "<$level$> / 2 + <$cha_mod$>",
+          "minimum": 1
+        },
+        "maximumByLevel": [
+          10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20
+        ]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "paladin", "phb"],
@@ -4183,6 +4291,15 @@
         "preparedSpellsChange": "class"
       },
       "domains": {},
+      "preparation": {
+        "mode": "daily",
+        "ability": "cha",
+        "capacity": {
+          "kind": "progression",
+          "values": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
+        },
+        "maximumByLevel": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "paladin", "xphb"],
@@ -4751,6 +4868,15 @@
         "preparedSpellsChange": "class"
       },
       "domains": {},
+      "preparation": {
+        "mode": "daily",
+        "ability": "wis",
+        "capacity": {
+          "kind": "progression",
+          "values": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
+        },
+        "maximumByLevel": [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "ranger", "xphb"],
@@ -5720,6 +5846,15 @@
             "count": 1
           }
         ]
+      },
+      "preparation": {
+        "mode": "level",
+        "ability": "int",
+        "capacity": {
+          "kind": "progression",
+          "values": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
+        },
+        "maximumByLevel": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
       }
     },
     {
@@ -6490,6 +6625,17 @@
             "level": 20,
             "count": 1
           }
+        ]
+      },
+      "preparation": {
+        "mode": "level",
+        "ability": "cha",
+        "capacity": {
+          "kind": "progression",
+          "values": [2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22]
+        },
+        "maximumByLevel": [
+          2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22
         ]
       },
       "declarationAlternatives": [
@@ -8441,6 +8587,15 @@
           }
         ]
       },
+      "preparation": {
+        "mode": "level",
+        "ability": "cha",
+        "capacity": {
+          "kind": "progression",
+          "values": [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15]
+        },
+        "maximumByLevel": [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15]
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "warlock", "xphb"],
@@ -8983,6 +9138,18 @@
             "level": 20,
             "count": 2
           }
+        ]
+      },
+      "preparation": {
+        "mode": "spellbook",
+        "ability": "int",
+        "capacity": {
+          "kind": "formula",
+          "formula": "<$level$> + <$int_mod$>",
+          "minimum": 1
+        },
+        "maximumByLevel": [
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
         ]
       },
       "declarationAlternatives": [
@@ -9570,6 +9737,17 @@
             "level": 20,
             "count": 2
           }
+        ]
+      },
+      "preparation": {
+        "mode": "spellbook",
+        "ability": "int",
+        "capacity": {
+          "kind": "progression",
+          "values": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25]
+        },
+        "maximumByLevel": [
+          4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25
         ]
       },
       "declarationAlternatives": [

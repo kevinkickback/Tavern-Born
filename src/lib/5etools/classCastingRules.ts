@@ -7,19 +7,6 @@ import type { CastingProducerRule } from './classCastingStructure'
 export const CLASS_CASTING_PRODUCERS =
   generated.producers as unknown as readonly CastingProducerRule[]
 
-// These exact full-list preparation producers differ from level-earned lists and Wizard learning.
-export const DAILY_CLASS_CASTING_OWNERS = [
-  ['class', 'artificer', 'tce'],
-  ['class', 'artificer', 'efa'],
-  ['class', 'cleric', 'phb'],
-  ['class', 'cleric', 'xphb'],
-  ['class', 'druid', 'phb'],
-  ['class', 'druid', 'xphb'],
-  ['class', 'paladin', 'phb'],
-  ['class', 'paladin', 'xphb'],
-  ['class', 'ranger', 'xphb'],
-] as const
-
 const norm = (value?: string) => value?.trim().toLowerCase() ?? ''
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 const ordinary = CLASS_CASTING_PRODUCERS.filter((row) => !row.domains['class-arcanum'])
@@ -76,7 +63,7 @@ export function getClassSpellProfilePolicy(entry: CharacterClassEntry) {
     ? 'spellbook'
     : rule?.domains['class-known']
       ? 'known'
-      : DAILY_CLASS_CASTING_OWNERS.some((owner) => same(owner, parent))
+      : rule?.preparation?.mode === 'daily'
         ? 'daily'
         : 'none'
   return { rule, mode } as const

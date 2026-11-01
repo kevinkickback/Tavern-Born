@@ -1,3 +1,4 @@
+import type { ClassPreparationRule } from '@/types/classCasting'
 import { getParsedClassSpellSlotProgression } from './classSpellSlotTable'
 import {
   getOptionalDeclarationOwner,
@@ -20,6 +21,7 @@ export interface CastingProducerRule {
   parent: string
   suppliers: Record<string, 'class' | 'subclass'>
   domains: Partial<Record<CastingDomain, CastingGain[]>>
+  preparation?: ClassPreparationRule
   schools?: readonly string[]
   unrestrictedGains?: readonly number[]
 }

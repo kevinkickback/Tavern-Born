@@ -1,8 +1,8 @@
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
 import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import { getPreparedSpellLimit } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
@@ -71,7 +71,11 @@ export function setDailyClassSpellPreparedCommand(
   const score = ability && context?.abilityScores?.[ability]
   const capacity =
     access && typeof score === 'number'
-      ? getPreparedSpellLimit(access.effective, access.entry.levels, getAbilityModifier(score))
+      ? getClassPreparationLimit(
+          access.rule.preparation,
+          access.entry.levels,
+          getAbilityModifier(score),
+        )
       : null
   const count = new Set(
     current.preparedSpells

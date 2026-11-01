@@ -63,6 +63,7 @@ try {
     'scripts/lib/class-casting-source.mjs',
     'scripts/lib/class-casting-semantics.json',
     'src/lib/5etools/classCastingStructure.ts',
+    'src/lib/5etools/classPreparationStructure.ts',
     'src/lib/5etools/parsers/classes.ts',
     'src/lib/5etools/classData.ts',
     'package-lock.json',
