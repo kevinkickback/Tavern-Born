@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { buildPrerequisiteSnapshot, checkPrerequisite } from '@/lib/calculations/prerequisites'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import type { Class5e, Race5e } from '@/types/5etools'
+import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassCastingLayer } from '../fixtures/classCastingFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 describe('effective ability score consumers', () => {
   test('uses one effective score set for rules, spellcasting, and both PDF projections', () => {
@@ -14,14 +16,7 @@ describe('effective ability score consumers', () => {
       source: 'PHB',
       ability: [{ dex: 2 }],
     } as Race5e
-    const wizard = {
-      name: 'Wizard',
-      source: 'PHB',
-      hd: { faces: 6 },
-      spellcastingAbility: 'int',
-      casterProgression: 'full',
-      preparedSpells: '<$level$> + <$int_mod$>',
-    } as Class5e
+    const data = makeClassCastingLayer('class/class-wizard.json')
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
       race: 'Elf',
@@ -66,11 +61,13 @@ describe('effective ability score consumers', () => {
       hitPoints: { current: 0, temporary: 0 },
     })
     const lookups = {
-      classesByKey: buildClassLookup([wizard]),
+      classesByKey: buildClassLookup(data.classes),
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(data),
       racesByKey: buildRaceLookup([elf]),
     }
 
-    const viewModel = createCharacterSheetViewModel(character, lookups)
+    const viewModel = createCurrentCharacterSheetViewModel(character, lookups)
     const prerequisiteSnapshot = buildPrerequisiteSnapshot({
       character,
       effectiveAbilityScores: viewModel.effectiveAbilityScores,

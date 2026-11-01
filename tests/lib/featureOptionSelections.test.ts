@@ -20,10 +20,7 @@ import {
   summarizeFeatureOptionSelection,
 } from '@/lib/character/featureOptionSelections'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { detectSourceConflicts } from '@/lib/sourceConflicts'
 import type { Class5e, ClassFeature } from '@/types/5etools'
@@ -34,6 +31,7 @@ import {
   pruneFeatureOptionDeclaration,
   selectFeatureOption,
 } from '../fixtures/featureOptionFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { dragonSetupDocument } from '../fixtures/requiredSetupFixtures'
 
 function state(character: Character, fixture: ReturnType<typeof makeFeatureOptionFixture>) {
@@ -50,7 +48,7 @@ function issues(character: Character, fixture: ReturnType<typeof makeFeatureOpti
   )
 }
 function sheet(character: Character, fixture: ReturnType<typeof makeFeatureOptionFixture>) {
-  return createCharacterSheetViewModel(character, {
+  return createCurrentCharacterSheetViewModel(character, {
     ...fixture.data.lookups!,
     classChoiceFeatureCatalogs: fixture.catalogs,
   })

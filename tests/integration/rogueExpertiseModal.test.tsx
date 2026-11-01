@@ -189,11 +189,12 @@ test.each([
       name: 'Choose',
     }),
   )
-  expect(modal().getByText(/Choose up to 2 proficient options\./)).toBeTruthy()
-  expect(modal().getByRole('link', { name: 'Choose proficiencies' }).getAttribute('href')).toBe(
+  const pending = modal()
+  expect(pending.getByText(/Choose up to 2 proficient options\./)).toBeTruthy()
+  expect(pending.getByRole('link', { name: 'Choose proficiencies' }).getAttribute('href')).toBe(
     '/build/proficiencies',
   )
-  fireEvent.click(modal().getByRole('link', { name: 'Choose proficiencies' }))
+  fireEvent.click(pending.getByRole('link', { name: 'Choose proficiencies' }))
   expect(screen.queryByRole('region', { name: 'Expertise choices' })).toBeNull()
   expect(screen.queryByRole('dialog')).toBeNull()
   const marker = skillCircle('Stealth', 'No expertise: Stealth')
@@ -218,7 +219,12 @@ test.each([
   expect(skillCircle('Stealth', 'Remove expertise: Stealth').getAttribute('aria-pressed')).toBe(
     'true',
   )
-  const sources = within(screen.getByRole('heading', { name: /^Sources/ })).getByRole('button', {
+  const sourceSection = screen
+    .getByText('Sources', { exact: true })
+    .closest('[data-slot="accordion-item"]') as HTMLElement
+  const sources = within(
+    within(sourceSection).getByRole('heading', { name: /^Sources/ }),
+  ).getByRole('button', {
     name: /^Sources/,
   })
   if (sources.getAttribute('data-state') === 'closed') fireEvent.click(sources)

@@ -54,6 +54,7 @@ export function useClassProvenanceMutations() {
         spellsByKey: calculationContext?.lookups.primary.spellsByKey,
         rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        spellContext: calculationContext?.classChoices.spellContext,
       })
       updateCharacter(character.id, {
         ...result.characterPatch,

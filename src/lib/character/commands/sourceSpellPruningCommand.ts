@@ -1,5 +1,6 @@
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
+import { isManagedClassSpellTag } from '@/lib/character/managedClassSpellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
@@ -47,7 +48,8 @@ export function pruneNonracialSpellSelections(
 ): CharacterCommandResult {
   const removals: Array<{ profile: SpellProfile; targets: Set<string> }> = []
   const spellProfiles = character.spells.spellProfiles.map((profile) => {
-    if (profile.type === 'racial') return profile
+    if (profile.type === 'racial' || profile.type === 'class') return profile
+    // Saved numeric relations remain recoverable; current read projection suspends their benefits.
     const fixed = new Set(
       (profile.fixedSpells ?? []).map((reference) => getSpellReferenceKey(reference)),
     )
@@ -91,6 +93,7 @@ export function pruneNonracialSpellSelections(
     Object.entries(ledger.spells).flatMap(([name, tags]) => {
       const retained = tags.filter(
         (tag) =>
+          isManagedClassSpellTag(tag) ||
           !removals.some(
             ({ profile, targets }) =>
               isProfileChoiceOwner(tag, profile, character) &&

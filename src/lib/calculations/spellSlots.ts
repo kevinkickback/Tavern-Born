@@ -155,11 +155,12 @@ export function getSpellSlotsFromClassData(
   return result
 }
 
-export function getStandardSpellSlotsFromClassData(
+/** Return the actual selected table provider so source-aware consumers can validate its authority. */
+export function getStandardSpellSlotProvider(
   classes: Iterable<Class5e>,
   casterLevel: number,
   ruleset: SpellSlotRuleset,
-): SpellSlotsResult | null {
+): { classData: Class5e; slots: SpellSlotsResult } | null {
   const source = ruleset === '2024' ? 'XPHB' : 'PHB'
   const candidates = Array.from(classes).filter(
     (classData) =>
@@ -172,10 +173,18 @@ export function getStandardSpellSlotsFromClassData(
   )
   for (const candidate of candidates) {
     const slots = getSpellSlotsFromClassData(candidate, casterLevel)
-    if (slots !== null) return slots
+    if (slots !== null) return { classData: candidate, slots }
   }
 
   return null
+}
+
+export function getStandardSpellSlotsFromClassData(
+  classes: Iterable<Class5e>,
+  casterLevel: number,
+  ruleset: SpellSlotRuleset,
+): SpellSlotsResult | null {
+  return getStandardSpellSlotProvider(classes, casterLevel, ruleset)?.slots ?? null
 }
 
 export function validateParsedSpellSlotProgressions(classes: Class5e[]): void {

@@ -31,6 +31,10 @@ import {
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
 import {
+  type ManagedClassSpellContext,
+  projectManagedClassSpellState,
+} from '@/lib/character/managedClassSpells'
+import {
   getOptionalClassPoolSection,
   getOptionalClassPoolSelectionSection,
 } from '@/lib/character/optionalClassAdoptionRules'
@@ -66,6 +70,7 @@ export interface ClassChoiceAuthority {
   classes: readonly Class5e[]
   catalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
+  spellContext?: ManagedClassSpellContext
 }
 
 function currentLiteralChoice(
@@ -279,6 +284,7 @@ export function retainSavedFeatureOptionsCommand(
         selection,
         authority?.catalogs ??
           (registeredPool ? { classes: [], classFeatures: [], subclassFeatures: [] } : undefined),
+        authority?.spellContext,
       )
   const grants = {
     features: featureGrants?.features ?? character.features,
@@ -455,6 +461,10 @@ export function applyClassChoiceSelectionCommand(
     const active = getEffectiveClassChoiceFeatureRoutes(
       { ...character, classChoiceSelections: next },
       authority?.catalogs,
+      projectManagedClassSpellState(
+        { ...character, classChoiceSelections: next },
+        { ...authority?.spellContext, catalogs: authority?.catalogs },
+      ).character.spells.spellProfiles,
     )
     const prior = new Set((existingSelection?.selected ?? []).map(getClassChoiceOptionKey))
     if (
@@ -542,6 +552,7 @@ export function reconcileClassChoiceSelectionGrants(
   ledger: ProvenanceLedger,
   selections: readonly CharacterClassChoiceSelection[],
   catalogs?: ClassChoiceFeatureCatalogs,
+  spellContext?: ManagedClassSpellContext,
 ): Pick<CharacterCommandResult, 'provenanceUpdate'> & {
   features: Feature[]
   proficiencies: Character['proficiencies']
@@ -549,6 +560,10 @@ export function reconcileClassChoiceSelectionGrants(
   const routes = getEffectiveClassChoiceFeatureRoutes(
     { ...character, classChoiceSelections: [...selections] },
     catalogs,
+    projectManagedClassSpellState(
+      { ...character, provenance: ledger, classChoiceSelections: [...selections] },
+      { ...spellContext, catalogs },
+    ).character.spells.spellProfiles,
   )
   const activeSelections = selections
     .filter((selection) => !selection.inactive)
@@ -612,12 +627,19 @@ function reconcileChoiceMutationGrants(
   selections: readonly CharacterClassChoiceSelection[],
   choice: { kind: NormalizedCharacterChoice['kind']; id?: string; choiceId?: string },
   catalogs?: ClassChoiceFeatureCatalogs,
+  spellContext?: ManagedClassSpellContext,
 ) {
   if (
     choice.kind !== 'proficiency' &&
     !isClassProficiencyChoiceId(choice.id ?? choice.choiceId ?? '')
   )
-    return reconcileClassChoiceSelectionGrants(character, ledger, selections, catalogs)
+    return reconcileClassChoiceSelectionGrants(
+      character,
+      ledger,
+      selections,
+      catalogs,
+      spellContext,
+    )
   const state = reconcileClassProficiencyGrants(character, ledger, selections)
   return {
     features: character.features,
@@ -651,6 +673,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     classChoiceSelections,
     choice,
     authority?.catalogs,
+    authority?.spellContext,
   )
   const withSelections: Character = {
     ...character,

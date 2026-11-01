@@ -574,6 +574,7 @@ export class FiveEToolsDataLoader {
             classes: parsedClasses,
             features: parsedFeatures,
             optionalClassFeatureSources: parsedDocument.optionalClassFeatureSources,
+            classCastingSources: parsedDocument.classCastingSources,
           }
         } catch (error) {
           if (isAbortError(error)) throw error
@@ -583,6 +584,7 @@ export class FiveEToolsDataLoader {
             classes: [] as GameData['classes'],
             features: [] as GameData['classFeatures'],
             optionalClassFeatureSources: [] as NonNullable<GameData['optionalClassFeatureSources']>,
+            classCastingSources: [] as NonNullable<GameData['classCastingSources']>,
           }
         }
       },
@@ -600,6 +602,7 @@ export class FiveEToolsDataLoader {
     gameData.optionalClassFeatureSources = classResults.flatMap(
       (result) => result.optionalClassFeatureSources,
     )
+    gameData.classCastingSources = classResults.flatMap((result) => result.classCastingSources)
   }
 
   private async loadSpellData(

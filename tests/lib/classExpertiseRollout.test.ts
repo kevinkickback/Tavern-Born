@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
-import { getExpertiseSlotsFromClasses } from '@/lib/calculations/skills'
 import { resolveClassProficiencyOptions } from '@/lib/character/classProficiencyOptions'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { getClassProficiencyWorkflow } from '@/lib/character/classProficiencyWorkflow'
@@ -44,7 +43,6 @@ test.each([
 ] as const)('%s %s gains retain independent quotas, pending state and strict reopen', (name, source, level, expected) => {
   const f = makeClassProficiencyFixture(name, source, level)
   expect(f.choices.map((row) => [row.level, row.maximumSelections])).toEqual(expected)
-  expect(getExpertiseSlotsFromClasses(f.character.classProgression, { selected: f.cls })).toBe(0)
   const blank = { ...f.character, proficiencies: { ...f.character.proficiencies, skills: [] } }
   expect(
     getClassProficiencyWorkflow(blank, f.data.classes, f.catalogs).every(

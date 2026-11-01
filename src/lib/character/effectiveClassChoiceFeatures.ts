@@ -5,7 +5,7 @@ import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
-import type { Character, Feature } from '@/types/character'
+import type { Character, Feature, SpellProfile } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import {
   getClassChoiceFeatureId,
@@ -24,6 +24,7 @@ import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivi
 function buildEffectiveClassChoiceFeatureRoutes(
   character: Character,
   catalogs?: ClassChoiceFeatureCatalogs,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ) {
   const activity = createOptionalClassFeatureActivity(character, catalogs)
   const choices = new Map(
@@ -123,7 +124,10 @@ function buildEffectiveClassChoiceFeatureRoutes(
     if (!row.guarded) accepted.add(index)
   })
   const baseSnapshot = contributions.some((row) => row.guarded)
-    ? buildEffectivePrerequisiteSnapshot({ character: { ...character, features: seed } })
+    ? buildEffectivePrerequisiteSnapshot({
+        character: { ...character, features: seed },
+        effectiveSpellProfiles,
+      })
     : undefined
   for (let round = 0; round <= contributions.length; round++) {
     if (!baseSnapshot) break
@@ -161,11 +165,18 @@ function buildEffectiveClassChoiceFeatureRoutes(
 const noCatalog = {}
 const cache = new WeakMap<
   Character,
-  WeakMap<object, ReturnType<typeof buildEffectiveClassChoiceFeatureRoutes>>
+  WeakMap<
+    object,
+    {
+      profiles?: readonly SpellProfile[]
+      result: ReturnType<typeof buildEffectiveClassChoiceFeatureRoutes>
+    }
+  >
 >()
 export function getEffectiveClassChoiceFeatureRoutes(
   character: Character,
   catalogs?: ClassChoiceFeatureCatalogs,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ) {
   let entries = cache.get(character)
   if (!entries) {
@@ -174,17 +185,18 @@ export function getEffectiveClassChoiceFeatureRoutes(
   }
   const key = catalogs ?? noCatalog
   const old = entries.get(key)
-  if (old) return old
-  const next = buildEffectiveClassChoiceFeatureRoutes(character, catalogs)
-  entries.set(key, next)
+  if (old && old.profiles === effectiveSpellProfiles) return old.result
+  const next = buildEffectiveClassChoiceFeatureRoutes(character, catalogs, effectiveSpellProfiles)
+  entries.set(key, { profiles: effectiveSpellProfiles, result: next })
   return next
 }
 
 export function projectEffectiveClassChoiceFeatures(
   character: Character,
   catalogs?: ClassChoiceFeatureCatalogs,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ): Character {
-  const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs, effectiveSpellProfiles)
   const features = character.features.filter(
     (row) => !row.id.startsWith('class-choice:') || routes.featureIds.has(row.id),
   )

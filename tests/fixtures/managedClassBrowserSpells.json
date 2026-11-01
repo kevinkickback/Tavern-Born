@@ -1,0 +1,206 @@
+{
+  "spells": [
+    {
+      "name": "Chromatic Orb",
+      "source": "PHB",
+      "level": 1,
+      "school": "V",
+      "time": [
+        {
+          "number": 1,
+          "unit": "action"
+        }
+      ],
+      "range": {
+        "type": "point",
+        "distance": {
+          "type": "feet",
+          "amount": 90
+        }
+      },
+      "components": {
+        "v": true,
+        "s": true,
+        "m": {
+          "text": "a diamond worth at least 50 gp",
+          "cost": 5000
+        }
+      },
+      "duration": [
+        {
+          "type": "instant"
+        }
+      ]
+    },
+    {
+      "name": "Hex",
+      "source": "PHB",
+      "level": 1,
+      "school": "E",
+      "time": [
+        {
+          "number": 1,
+          "unit": "bonus"
+        }
+      ],
+      "range": {
+        "type": "point",
+        "distance": {
+          "type": "feet",
+          "amount": 90
+        }
+      },
+      "components": {
+        "v": true,
+        "s": true,
+        "m": "the petrified eye of a newt"
+      },
+      "duration": [
+        {
+          "type": "timed",
+          "duration": {
+            "type": "hour",
+            "amount": 1
+          },
+          "concentration": true
+        }
+      ]
+    }
+  ],
+  "sourceLookup": {
+    "phb": {
+      "chromatic orb": {
+        "class": {
+          "PHB": {
+            "Sorcerer": true,
+            "Wizard": true
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Monk": {
+              "AU": {
+                "Mystic Arts": {
+                  "name": "Warrior of the Mystic Arts"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Wizard": {
+              "XPHB": {
+                "Evoker": {
+                  "name": "Evoker"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "SCC": {
+            "Prismari Student": true
+          }
+        },
+        "feat": {
+          "EFA": {
+            "Aberrant Dragonmark": true,
+            "Boon of Siberys": true
+          },
+          "ERLW": {
+            "Aberrant Dragonmark": true
+          },
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "XPHB": {
+            "Magic Initiate": true
+          },
+          "BGG": {
+            "Rune Shaper": true
+          },
+          "SCC": {
+            "Strixhaven Initiate": true
+          }
+        }
+      },
+      "hex": {
+        "class": {
+          "PHB": {
+            "Warlock": true
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true
+          },
+          "DSotDQ": {
+            "Divinely Favored": true,
+            "Initiate of High Sorcery": true
+          },
+          "TCE": {
+            "Fey Touched": true
+          },
+          "XPHB": {
+            "Fey-Touched": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "ABH": {
+            "Vampire Touched": true
+          }
+        },
+        "race": {
+          "PSZ": {
+            "Elf (Zendikar; Mul Daya Nation)": {
+              "baseName": "Elf (Zendikar)",
+              "baseSource": "PSZ"
+            }
+          },
+          "VRGR": {
+            "Hexblood": true
+          }
+        }
+      }
+    }
+  }
+}

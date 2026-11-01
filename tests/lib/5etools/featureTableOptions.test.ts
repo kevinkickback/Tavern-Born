@@ -16,6 +16,7 @@ import {
 } from '@/lib/5etools/featureTableOptions'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
@@ -207,7 +208,7 @@ describe('source-backed feature table options', () => {
     expect(characterPersistenceSchema.parse(saved).classChoiceSelections).toEqual(
       patch.classChoiceSelections,
     )
-    expect(saved.schemaVersion).toBe(11)
+    expect(saved.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
     const missingRef = structuredClone(saved)
     delete missingRef.classChoiceSelections![0].selected[0].ref
     expect(characterPersistenceSchema.safeParse(missingRef).success).toBe(false)

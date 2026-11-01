@@ -38,9 +38,22 @@ describe('expertise ownership controls', () => {
         onFocusChange={vi.fn()}
         onExpandDetails={vi.fn()}
         onResolveChoiceSelection={vi.fn()}
-        onToggleExpertise={toggle}
-        availableExpertiseSlots={2}
-        usedExpertiseSlots={1}
+        onExpertiseAction={toggle}
+        expertiseActions={
+          owner === 'manual'
+            ? {
+                arcana: [
+                  {
+                    id: 'manual:remove',
+                    ownerId: 'manual',
+                    kind: 'manual',
+                    adding: false,
+                    label: 'Remove expertise: Arcana',
+                  },
+                ],
+              }
+            : {}
+        }
       />,
     )
     const control = screen.getByTitle(

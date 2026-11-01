@@ -6,10 +6,7 @@ import {
   setOptionalClassAdoptionCommand,
 } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import type { Character, OptionalClassFeatureAdoption } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -17,6 +14,7 @@ import {
   makeOptionalDeclarationCatalog,
   optionalDeclarationSources,
 } from '../fixtures/optionalClassDeclarationFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const make = (root: (typeof OPTIONAL_NATIVE_ROOTS)[number], adopt = false) => {
   const document = optionalDeclarationSources.documents.find((document) =>
@@ -239,7 +237,7 @@ test('native adopted subclass summaries derive current exact features without ma
     classChoiceClasses: data.classes,
     classChoiceFeatureCatalogs: catalogs,
   }
-  const vm = createCharacterSheetViewModel(character, input)
+  const vm = createCurrentCharacterSheetViewModel(character, input)
   for (const view of [vm, withoutSheetDescriptions(vm)]) {
     expect(
       view.optionalClassFeatureSummaries?.some((row) => row.compactText === 'Blessed Strikes'),
@@ -247,7 +245,7 @@ test('native adopted subclass summaries derive current exact features without ma
     expect(view.featuresSummary).toContain('Blessed Strikes')
     expect(view.classFeaturesSummary2014).toContain('Blessed Strikes')
   }
-  const off = createCharacterSheetViewModel(
+  const off = createCurrentCharacterSheetViewModel(
     { ...character, variantRules: { optionalClassFeatures: false } },
     input,
   )

@@ -63,7 +63,7 @@ export function SpellNameTooltip({
         event.stopPropagation()
         pinPreview(descriptor, event.currentTarget, true)
       }}
-      className="cursor-help truncate border-b border-dotted border-muted-foreground/60 bg-transparent p-0 text-left text-sm hover:border-accent"
+      className="max-w-full cursor-help truncate border-b border-dotted border-muted-foreground/60 bg-transparent p-0 text-left text-sm hover:border-accent"
     >
       {displayName}
     </button>

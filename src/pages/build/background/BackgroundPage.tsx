@@ -196,6 +196,7 @@ export function BuildBackgroundPage() {
         character,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        effectiveSpellProfiles: calculationContext?.character.spells.spellProfiles,
       }),
     [character, calculationContext],
   )

@@ -18,6 +18,7 @@ export function getOptionalCharacterSheetPages(
       viewModel.character.spells.spellProfiles.some(
         (profile) =>
           (profile.type === 'class' &&
+            !viewModel.unearnedClassSpellProfiles.includes(profile.id) &&
             !viewModel.spellcastingDetails.some((detail) => detail.profileId === profile.id)) ||
           (profile.choices?.length ?? 0) > 0,
       ),

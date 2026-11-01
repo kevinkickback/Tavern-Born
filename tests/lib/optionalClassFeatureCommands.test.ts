@@ -10,15 +10,13 @@ import {
   setOptionalClassAdoptionCommand,
 } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSourceData } from '../fixtures/optionalClassFeatureFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const apply = (character: Character, result: CharacterCommandResult) =>
   characterPersistenceSchema.parse({
@@ -64,7 +62,7 @@ test('real adopted passive roots and earned children reach full and names-only P
     classChoiceClasses: data.classes,
     classChoiceFeatureCatalogs: catalogs,
   }
-  const vm = createCharacterSheetViewModel(character, input)
+  const vm = createCurrentCharacterSheetViewModel(character, input)
   for (const view of [vm, withoutSheetDescriptions(vm)])
     for (const summary of [view.featuresSummary, view.classFeaturesSummary2014]) {
       for (const name of [
@@ -80,12 +78,12 @@ test('real adopted passive roots and earned children reach full and names-only P
   expect(vm.featuresSummary).toContain('Tireless')
   expect(withoutSheetDescriptions(vm).featuresSummary).not.toContain('Roving')
   expect(character.features).toEqual([])
-  const off = createCharacterSheetViewModel(
+  const off = createCurrentCharacterSheetViewModel(
     { ...character, variantRules: { optionalClassFeatures: false } },
     input,
   )
   expect(off.optionalClassFeatureSummaries).toEqual([])
-  const unavailable = createCharacterSheetViewModel(character, {
+  const unavailable = createCurrentCharacterSheetViewModel(character, {
     ...input,
     classChoiceFeatureCatalogs: { ...catalogs, optionalClassFeatureSources: [] },
   })
@@ -95,7 +93,7 @@ test('real adopted passive roots and earned children reach full and names-only P
       (row) => !(row.name === 'Deft Explorer Improvement' && row.level === 10),
     )
   })
-  const childView = createCharacterSheetViewModel(character, {
+  const childView = createCurrentCharacterSheetViewModel(character, {
     ...input,
     classChoiceFeatureCatalogs: lostChild.catalogs,
   })
@@ -105,9 +103,9 @@ test('real adopted passive roots and earned children reach full and names-only P
     'Favored Foe',
     'Spellcasting Focus',
   ])
-  expect(createCharacterSheetViewModel(character, input).optionalClassFeatureSummaries).toEqual(
-    vm.optionalClassFeatureSummaries,
-  )
+  expect(
+    createCurrentCharacterSheetViewModel(character, input).optionalClassFeatureSummaries,
+  ).toEqual(vm.optionalClassFeatureSummaries)
   expect(JSON.stringify(character)).toBe(before)
 })
 
@@ -180,7 +178,7 @@ test('OFF/ON reconciles only explicit adoption; missing adoption with old comple
   })
   expect(on.proficiencies.expertise).toEqual(character.proficiencies.expertise)
   const legacy = { ...character, optionalClassFeatureAdoptions: undefined }
-  const vm = createCharacterSheetViewModel(legacy, {
+  const vm = createCurrentCharacterSheetViewModel(legacy, {
     ...f.data.lookups!,
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,

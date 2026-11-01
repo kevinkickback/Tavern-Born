@@ -4,7 +4,6 @@ import {
   decodeSubclassFeatureReference,
   getClassFeatureIdentity,
   getClassFeatureReferenceLevel,
-  getClassFeatureTextLookupKey,
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
@@ -35,7 +34,6 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
-import { deriveSpellProfileState } from '@/lib/character/spellProfileState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -54,8 +52,8 @@ import type {
   Character,
   Equipment,
   Feat,
-  Feature,
   OptionalClassFeatureOwner,
+  SpellProfile,
 } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
@@ -64,6 +62,7 @@ import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
+import { ensureSpellProfiles } from './spellProfiles.profiles'
 import { deriveStormAuraActions } from './stormAuraActions'
 
 function isWeapon(item: Equipment): boolean {
@@ -104,6 +103,7 @@ export interface WeaponActionProjectionContext {
 }
 
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
+  effectiveSpellProfiles?: readonly SpellProfile[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
   raceResolution?: ResolvedRaceReference
@@ -168,19 +168,20 @@ export function inferRulesTextActionKind(
 export function deriveSpellActions(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
-  options: Pick<CharacterActionProjectionContext, 'classes' | 'race' | 'raceResolution'> = {},
+  options: Pick<
+    CharacterActionProjectionContext,
+    'classes' | 'race' | 'raceResolution' | 'effectiveSpellProfiles'
+  > = {},
 ): CharacterAction[] {
   const classesById = new Map<string, Class5e>()
   for (const classData of options.classes ?? []) {
     classesById.set(toClassProfileId(classData.name, classData.source), classData)
   }
-  const profiles = deriveSpellProfileState(
-    character,
-    classesById,
-    options.race,
-    options.raceResolution,
-    { spellsByKey },
-  ).spells.spellProfiles
+  const profiles =
+    options.effectiveSpellProfiles ??
+    ensureSpellProfiles(character, undefined, options.race, {
+      raceResolution: options.raceResolution,
+    })
 
   const preparationRequiredByProfile = new Map<string, boolean>()
   for (const entry of getCharacterClassEntries(character)) {
@@ -218,6 +219,7 @@ export function deriveSpellActions(
         !!profile.alwaysPrepared || !requiresPreparation || preparedKeys.has(spellKey(reference)),
       )
     }
+    for (const reference of profile.preparedSpells) addSpell(reference, true)
   }
 
   return [...spellStates.values()].flatMap(({ reference, active }) => {
@@ -246,6 +248,7 @@ type RulesTextActionContext = Pick<
   | 'classes'
   | 'availableClasses'
   | 'classChoiceFeatureCatalogs'
+  | 'effectiveSpellProfiles'
   | 'feats'
   | 'classFeaturesByKey'
   | 'optionalFeaturesByKey'
@@ -262,48 +265,16 @@ function rulesTextAction(
   return [{ id, name, kind, description, source, active: true }]
 }
 
-function resolveStoredFeatureDescription(
-  feature: Feature,
-  context: RulesTextActionContext,
-  classFeatures: ReadonlyMap<string, ClassFeature | null>,
-): string {
-  const key = getEntityLookupKey(feature.name, feature.source)
-  const classFeature = classFeatures.get(key.toLowerCase())
-  const parsed =
-    classFeature === undefined
-      ? (context.optionalFeaturesByKey?.[key] as OptionalFeatureLike | undefined)
-      : classFeature
-  const parsedDescription = renderEntriesToText(parsed?.entries)
-  return parsedDescription || feature.description
-}
-
-function deriveStoredFeatureActions(
-  character: Character,
-  context: RulesTextActionContext,
-): CharacterAction[] {
-  const classFeatures = new Map<string, ClassFeature | null>()
-  const identities = new Set<string>()
-  for (const feature of Object.values(context.classFeaturesByKey ?? {})) {
-    const identity = getClassFeatureIdentity(feature)
-    if (identity) {
-      if (identities.has(identity)) continue
-      identities.add(identity)
-    }
-    const key =
-      getClassFeatureTextLookupKey(feature) ??
-      getEntityLookupKey(feature.name, feature.source).toLowerCase()
-    if (!classFeatures.has(key)) classFeatures.set(key, feature)
-    else if (classFeatures.get(key) !== feature) classFeatures.set(key, null)
-  }
+function deriveStoredFeatureActions(character: Character): CharacterAction[] {
   return character.features
     .filter((feature) => !feature.id.startsWith('class-choice:'))
     .flatMap((feature) =>
-      rulesTextAction(
-        `feature:${feature.id}`,
-        feature.name,
-        resolveStoredFeatureDescription(feature, context, classFeatures),
-        { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
-      ),
+      rulesTextAction(`feature:${feature.id}`, feature.name, feature.description, {
+        kind: 'other',
+        name: feature.name,
+        source: feature.source,
+        entityId: feature.id,
+      }),
     )
 }
 
@@ -340,7 +311,11 @@ function deriveClassFeatureActions(
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
   const activity = createOptionalClassFeatureActivity(character, context.classChoiceFeatureCatalogs)
-  const routes = getEffectiveClassChoiceFeatureRoutes(character, context.classChoiceFeatureCatalogs)
+  const routes = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    context.classChoiceFeatureCatalogs,
+    context.effectiveSpellProfiles,
+  )
   const addAction = (
     owner: string,
     target: string,
@@ -530,7 +505,7 @@ export function deriveRulesTextActions(
   race: Race5e | undefined,
   context: RulesTextActionContext = {},
 ): CharacterAction[] {
-  const featureActions = deriveStoredFeatureActions(character, context)
+  const featureActions = deriveStoredFeatureActions(character)
   const classFeatureActions = deriveClassFeatureActions(character, context)
   const featActions = deriveFeatActions(character, context)
   const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(

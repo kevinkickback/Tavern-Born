@@ -2,6 +2,7 @@ import { CaretRight, Check } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
 import {
@@ -144,6 +145,7 @@ export function optionalClassFeaturesOwnDiagnostic(
 
 export function OptionalClassFeatures(props: OptionalClassFeaturesProps) {
   const { character, activity, renderContent, onSelectFeature } = props
+  const calculation = useCharacterCalculationContext(character)
   const catalogs = activity.catalogs
   const rows = getVisibleOptionalClassFeatures(props)
   if (!rows.length) return null
@@ -165,6 +167,7 @@ export function OptionalClassFeatures(props: OptionalClassFeaturesProps) {
         request,
         adopt,
         getOptionalClassFamilyKeys(character, request),
+        calculation?.classChoices.spellContext,
       )
       if (Object.keys(result.characterPatch).length)
         useCharacterStore.getState().updateCharacter(latest.id, {

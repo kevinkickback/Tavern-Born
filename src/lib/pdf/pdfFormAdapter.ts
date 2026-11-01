@@ -114,8 +114,7 @@ export async function fillCharacterSheetDocument(
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
   const form = pdfDoc.getForm()
-  const cleanupProfile =
-    options.cleanupProfile ?? (options.templateId === '2014' ? 'mpmb-2014' : 'standard')
+  const cleanupProfile = options.cleanupProfile ?? 'standard'
   const missingFields: string[] = []
   const excludedPages = options.excludedPageIndices ?? []
   const excludedWidgets = new Set(

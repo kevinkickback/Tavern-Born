@@ -16,7 +16,12 @@ import {
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { AbilityScores, Character, CharacterClassChoiceSelection } from '@/types/character'
+import type {
+  AbilityScores,
+  Character,
+  CharacterClassChoiceSelection,
+  SpellProfile,
+} from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import type { CharacterEffect } from '@/types/effects'
 import {
@@ -127,6 +132,7 @@ function hasSelectedFire(
   catalogs: ClassChoiceFeatureCatalogs,
   classLookup: CurrentConditionalSources['classLookup'],
   effectiveAbilityScores?: Partial<AbilityScores>,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ): CharacterClassChoiceSelection | undefined {
   const choice = current.choice
   if (!choice) return undefined
@@ -170,6 +176,7 @@ function hasSelectedFire(
     character,
     classLookup,
     effectiveAbilityScores,
+    effectiveSpellProfiles,
     classChoiceFeatureCatalogs: catalogs,
   })
   for (const option of selection.selected) {
@@ -220,6 +227,7 @@ export function deriveConditionalProficiencyNotes(
   character: Character,
   catalogs?: ClassChoiceFeatureCatalogs,
   effectiveAbilityScores?: Partial<AbilityScores>,
+  effectiveSpellProfiles?: readonly SpellProfile[],
 ): CharacterEffect[] {
   if (!catalogs) return []
   const effects: CharacterEffect[] = []
@@ -249,6 +257,7 @@ export function deriveConditionalProficiencyNotes(
             catalogs,
             sources.classLookup,
             effectiveAbilityScores,
+            effectiveSpellProfiles,
           )
         : undefined
     if (current.rule.family === 'fire-rune' && !selection) continue

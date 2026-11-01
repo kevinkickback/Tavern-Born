@@ -1,16 +1,9 @@
 export type CharacterSheetEdition = '2014' | '2024'
 type CharacterSheetVariant = 'official' | 'custom'
 
-export type ResolvedCharacterSheetTemplateId = `${CharacterSheetEdition}-${CharacterSheetVariant}`
+export type CharacterSheetTemplateId = `${CharacterSheetEdition}-${CharacterSheetVariant}`
 
-/**
- * The edition-only values remain accepted as compatibility aliases while callers and saved links
- * migrate to explicit edition-and-variant IDs. They always resolve to the custom template that the
- * old route represented.
- */
-export type CharacterSheetTemplateId = ResolvedCharacterSheetTemplateId | CharacterSheetEdition
-
-type CharacterSheetMappingId = ResolvedCharacterSheetTemplateId
+type CharacterSheetMappingId = CharacterSheetTemplateId
 export type CharacterSheetCleanupProfile = 'standard' | 'mpmb-2014'
 
 type OptionalCharacterSheetPageId = 'spells' | 'companion' | 'notes'
@@ -47,7 +40,7 @@ interface CharacterSheetAttribution {
 }
 
 export interface CharacterSheetTemplate {
-  id: ResolvedCharacterSheetTemplateId
+  id: CharacterSheetTemplateId
   edition: CharacterSheetEdition
   variant: CharacterSheetVariant
   editionLabel: string

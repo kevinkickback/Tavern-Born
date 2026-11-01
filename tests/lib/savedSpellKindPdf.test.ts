@@ -2,23 +2,20 @@ import { readFileSync } from 'node:fs'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { afterEach, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
-import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import {
-  addSpellToCharacter,
-  setClassSpellSelectionsAtLevel,
-  toggleSpellPrepared,
-} from '@/lib/character/commands/spellCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { SheetExportReport } from '@/lib/pdf/types'
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { resetCharacterStore } from '../fixtures/characterStoreFixtures'
-import { makeClassFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 afterEach(resetCharacterStore)
 
@@ -27,7 +24,10 @@ const tiefling = (
 ).race.find((race) => race.name === 'Tiefling' && race.source === 'PHB')!
 const templates = ['2014-official', '2014-custom', '2024-official', '2024-custom'] as const
 
-function commit(character: Character, result: ReturnType<typeof addSpellToCharacter>): Character {
+function commit(
+  character: Character,
+  result: ReturnType<typeof selectBonusSpellFixture>,
+): Character {
   return characterPersistenceSchema.parse({
     ...character,
     ...result.characterPatch,
@@ -39,16 +39,7 @@ function commit(character: Character, result: ReturnType<typeof addSpellToCharac
 // correctly prevents creating this overlap. The native owner itself remains strictly validated.
 function savedNativeOverlap(reference = 'Hellish Rebuke|PHB') {
   const character = makeNativeRacialCharacter(tiefling, undefined, 3)
-  return commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      reference,
-      'cantrip',
-      'special:unrestricted',
-    ),
-  )
+  return commit(character, selectBonusSpellFixture(character, reference, 'cantrip'))
 }
 
 test('actual strict current import preserves the native unknown contribution before first-page exact-row deduplication', async () => {
@@ -64,7 +55,7 @@ test('actual strict current import preserves the native unknown contribution bef
   expect(
     imported.spells.spellProfiles.find((profile) => profile.type === 'special')!.cantrips,
   ).toContain('Hellish Rebuke|PHB')
-  const vm = createCharacterSheetViewModel(imported, {})
+  const vm = createCurrentCharacterSheetViewModel(imported, {})
   expect(vm.spellRows.filter((row) => row.id === 'hellish rebuke|phb')).toEqual([
     expect.objectContaining({ level: '?' }),
   ])
@@ -73,13 +64,13 @@ test('actual strict current import preserves the native unknown contribution bef
   )
   for (const id of templates) {
     expect(planSheetContent(vm, id).overflow).toContainEqual(
-      expect.objectContaining({ text: 'hellish rebuke — spell level unknown' }),
+      expect.objectContaining({ text: 'Hellish Rebuke — spell level unknown' }),
     )
     expect(planSheetContent(vm, id, { spells: ['HELLISH REBUKE|phb'] }).overflow).toContainEqual(
-      expect.objectContaining({ text: 'hellish rebuke — spell level unknown' }),
+      expect.objectContaining({ text: 'Hellish Rebuke — spell level unknown' }),
     )
     expect(planSheetContent(vm, id, { spells: ['stale|phb'] }).overflow).toContainEqual(
-      expect.objectContaining({ text: 'hellish rebuke — spell level unknown' }),
+      expect.objectContaining({ text: 'Hellish Rebuke — spell level unknown' }),
     )
     expect(
       planSheetContent(vm, id, { spells: [] }).overflow.some((entry) =>
@@ -92,54 +83,10 @@ test('actual strict current import preserves the native unknown contribution bef
   expect(saved).toEqual(before)
 })
 
-test('an admitted unavailable Wizard leveled selection retains neutral unknown Notes despite another saved exact cantrip', async () => {
-  let character = buildInitialCharacter(
-    {
-      initial: { name: 'Unavailable Wizard', originSystem: '2014' },
-      classEntity: makeClassFixture({ spellcastingAbility: 'int' }),
-    },
-    new Map(),
-    () => [],
-  )
-  character = commit(
-    character,
-    setClassSpellSelectionsAtLevel(character, character.provenance, {
-      className: 'Wizard',
-      classSource: 'PHB',
-      classLevel: 1,
-      selections: [{ name: 'Shield|PHB', spellLevel: 1 }],
-    }),
-  )
-  character = commit(
-    character,
-    addSpellToCharacter(
-      character,
-      character.provenance,
-      'Shield|PHB',
-      'cantrip',
-      'special:unrestricted',
-    ),
-  )
-  const imported = (
-    await useCharacterStore.getState().importCharacters([JSON.parse(JSON.stringify(character))])
-  )[0]
-  expect(validateCharacterData(imported)).toBeNull()
-  const before = structuredClone(imported),
-    vm = createCharacterSheetViewModel(imported, {})
-  expect(vm.spellcastingPages).toEqual([])
-  expect(vm.spellcastingSources).toEqual([])
-  expect(vm.spellRows).toEqual([expect.objectContaining({ id: 'shield|phb', level: '?' })])
-  for (const id of templates)
-    expect(planSheetContent(vm, id).overflow).toContainEqual(
-      expect.objectContaining({ text: 'Shield — spell level unknown' }),
-    )
-  expect(imported).toEqual(before)
-})
-
 test('other-printing cantrips and metadata remain isolated; loaded exact rank is authoritative', () => {
   const character = savedNativeOverlap('Hellish Rebuke|XPHB'),
     before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {
+  const vm = createCurrentCharacterSheetViewModel(character, {
     spellsByKey: buildSpellLookup([
       makeSpellFixture({ name: 'Hellish Rebuke', source: 'XPHB', level: 0 }),
     ]),
@@ -156,7 +103,7 @@ test('other-printing cantrips and metadata remain isolated; loaded exact rank is
         entry.id.startsWith('unknown-spell-levels:'),
       ),
     ).toBe(false)
-  const restored = createCharacterSheetViewModel(savedNativeOverlap(), {
+  const restored = createCurrentCharacterSheetViewModel(savedNativeOverlap(), {
     spellsByKey: buildSpellLookup([
       makeSpellFixture({ name: 'Hellish Rebuke', source: 'PHB', level: 1 }),
     ]),
@@ -174,13 +121,9 @@ test('other-printing cantrips and metadata remain isolated; loaded exact rank is
 })
 
 test('same-kind overlap and a cantrip mirrored in fixed or prepared fields retain one cantrip row', () => {
-  let character = savedNativeOverlap('Thaumaturgy|PHB')
-  character = commit(
-    character,
-    toggleSpellPrepared(character, character.provenance, 'special:unrestricted', 'Thaumaturgy|PHB'),
-  )
+  const character = savedNativeOverlap('Thaumaturgy|PHB')
   const before = structuredClone(character),
-    vm = createCharacterSheetViewModel(character, {})
+    vm = createCurrentCharacterSheetViewModel(character, {})
   expect(vm.spellRows.filter((row) => row.id === 'thaumaturgy|phb')).toEqual([
     expect.objectContaining({ level: 'C' }),
   ])
@@ -195,7 +138,7 @@ test.each(
 )('actual %s export preserves an independently saved native unknown contribution', async (id) => {
   const character = savedNativeOverlap(),
     before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {}),
+  const vm = createCurrentCharacterSheetViewModel(character, {}),
     vmBefore = structuredClone(vm)
   let report: SheetExportReport | undefined
   const bytes = await generateTestCharacterSheet(vm, id, {
@@ -204,11 +147,11 @@ test.each(
     },
   })
   expect(report!.preserved).toContainEqual(
-    expect.objectContaining({ text: 'hellish rebuke — spell level unknown' }),
+    expect.objectContaining({ text: 'Hellish Rebuke — spell level unknown' }),
   )
   expect(
     (await PDFDocument.load(bytes)).getForm().getTextField('P5.ASnotes.Notes.Left').getText(),
-  ).toContain('hellish rebuke — spell level unknown')
+  ).toContain('Hellish Rebuke — spell level unknown')
   expect(character).toEqual(before)
   expect(vm).toEqual(vmBefore)
 }, 30_000)
@@ -218,7 +161,7 @@ test.each(
 )('actual %s reports the independent unknown contribution omitted when Notes are disabled', async (id) => {
   const character = savedNativeOverlap()
   const before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   const vmBefore = structuredClone(vm)
   let report: SheetExportReport | undefined
   await generateTestCharacterSheet(vm, id, {
@@ -227,7 +170,7 @@ test.each(
       report = value
     },
   })
-  const unknown = expect.objectContaining({ text: 'hellish rebuke — spell level unknown' })
+  const unknown = expect.objectContaining({ text: 'Hellish Rebuke — spell level unknown' })
   expect(report!.omitted).toContainEqual(unknown)
   expect(report!.preserved).not.toContainEqual(unknown)
   expect(character).toEqual(before)

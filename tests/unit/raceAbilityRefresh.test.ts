@@ -6,13 +6,13 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { applyRaceAsiChoicesCommand } from '@/lib/character/commands/raceCommands'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getAbilityBonusRows, makeSourceTag } from '@/lib/provenance'
 import { getSelectedRaceAbilityChoices } from '@/lib/provenance/raceOwnership'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { selectRace } from '../fixtures/racialAbilityCharacter'
 
 const choice = (from: string[], amount = 1, count = 1) => ({ choose: { from, amount, count } })
@@ -225,7 +225,7 @@ test('current explicit intent, readiness, immutable PDF and missing-data project
   })
   expect(getAbilityBonusRows(edited.provenance).map((row) => row.itemName)).toEqual(['WIS +1'])
   const before = structuredClone(saved)
-  const pdf = createCharacterSheetViewModel(edited, lookups)
+  const pdf = createCurrentCharacterSheetViewModel(edited, lookups)
   expect(pdf.effectiveAbilityScores.wisdom).toBe(11)
   expect(createCharacterCalculationContext(edited, {}).abilityScores.racialBonuses).toEqual({
     wisdom: 1,

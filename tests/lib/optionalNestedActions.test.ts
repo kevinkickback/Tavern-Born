@@ -2,12 +2,10 @@ import { expect, test } from 'vitest'
 import { OPTIONAL_NATIVE_ROOTS } from '@/lib/5etools/optionalClassNativeRules'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const roots = OPTIONAL_NATIVE_ROOTS.filter(
   (root) =>
@@ -87,7 +85,7 @@ test.each(
     ],
   }
   expect(actions(independent).map((action) => action.id)).toEqual(['feature:independent-action'])
-  const vm = createCharacterSheetViewModel(character, {
+  const vm = createCurrentCharacterSheetViewModel(character, {
     ...data.lookups!,
     classChoiceClasses: data.classes,
     classChoiceFeatureCatalogs: catalogs,

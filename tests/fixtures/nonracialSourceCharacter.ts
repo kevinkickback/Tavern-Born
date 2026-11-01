@@ -1,22 +1,21 @@
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import {
-  addSpellToCharacter,
-  setClassSpellSelectionsAtLevel,
-} from '@/lib/character/commands/spellCommands'
 import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import { selectBonusSpellFixture } from './bonusSpellSelection'
+import { makeManagedClassSpellFixtures } from './managedClassSpellFixtures'
 
 export function makeNonracialSourceCharacter(originSystem: '2014' | '2024' = '2024'): Character {
   const source = originSystem === '2024' ? 'XPHB' : 'PHB'
   const className = originSystem === '2024' ? 'Cleric' : 'Wizard'
-  const removedSpell = originSystem === '2024' ? 'Toll the Dead|XGE' : 'Booming Blade|SCAG'
-  const retainedSpell = originSystem === '2024' ? 'Toll the Dead|XPHB' : 'Booming Blade|TCE'
+  const removedSpell = 'Toll the Dead|XGE'
+  const retainedSpell = 'Toll the Dead|XPHB'
   const initial = buildInitialCharacter(
     {
       initial: {
         name: 'Class source pruning',
         originSystem,
-        allowedSources: originSystem === '2024' ? ['XGE'] : ['SCAG', 'TCE'],
+        allowedSources: originSystem === '2024' ? ['XGE'] : ['XGE', 'XPHB'],
       },
       race: { name: 'Human', source } as Race5e,
       classEntity: {
@@ -33,23 +32,30 @@ export function makeNonracialSourceCharacter(originSystem: '2014' | '2024' = '20
     new Map(),
     () => [],
   )
-  const selection = setClassSpellSelectionsAtLevel(initial, initial.provenance, {
-    className,
-    classSource: source,
-    classLevel: 1,
-    selections: [{ name: removedSpell, spellLevel: 0 }],
-  })
+  const [name, targetSource] = removedSpell.split('|')
+  const selection = setManagedClassSpellChoiceCommand(
+    initial,
+    initial.provenance,
+    {
+      slot: [
+        ['class', className.toLowerCase(), source.toLowerCase()],
+        'class-cantrip',
+        `class-feature|spellcasting|${className.toLowerCase()}|${source.toLowerCase()}|1|${source.toLowerCase()}`,
+        1,
+        0,
+      ],
+      expected: null,
+      expectedEmptyRevision: 0,
+      target: { name, source: targetSource },
+      policy: 'ignore-class-list',
+    },
+    makeManagedClassSpellFixtures().context,
+  )
   const character = {
     ...initial,
     ...selection.characterPatch,
     provenance: selection.provenanceUpdate,
   }
-  const manual = addSpellToCharacter(
-    character,
-    character.provenance,
-    retainedSpell,
-    'cantrip',
-    'special:unrestricted',
-  )
+  const manual = selectBonusSpellFixture(character, retainedSpell, 'cantrip')
   return { ...character, ...manual.characterPatch, provenance: manual.provenanceUpdate }
 }

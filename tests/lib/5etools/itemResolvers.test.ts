@@ -20,7 +20,7 @@ describe('item reference resolution', () => {
     expect(resolveItemReferences([reference, {}], lookup)).toEqual([undefined, undefined])
   })
 
-  test('preserves literal fields, request trimming, aligned misses and source-less ordering', () => {
+  test('preserves literal fields, request trimming, aligned misses and unresolved manual names', () => {
     const later = item('Sword', 'Z')
     const first = item('Sword', 'A')
     const duplicate = item('Sword', 'A')
@@ -57,8 +57,8 @@ describe('item reference resolution', () => {
       later,
       undefined,
       undefined,
-      first,
-      first,
+      undefined,
+      undefined,
       lowercase,
       undefined,
       delimiterName,
@@ -77,7 +77,7 @@ describe('item reference resolution', () => {
     expect(resolveItemReferences([references[0]], lookup)).toEqual([first])
   })
 
-  test('retains the first source-less value when locale ordering ties', () => {
+  test('does not infer a source even when locale ordering ties', () => {
     const first = item('Sword', 'É')
     const second = item('Sword', 'E\u0301')
     expect(first.source.localeCompare(second.source)).toBe(0)
@@ -87,8 +87,8 @@ describe('item reference resolution', () => {
     ])
     expect(
       resolveItemReferences([{ name: 'Sword' }, { name: 'Sword', source: second.source }], lookup),
-    ).toEqual([first, second])
-    expect(resolveItemReference({ name: 'Sword' }, lookup)).toBe(first)
+    ).toEqual([undefined, second])
+    expect(resolveItemReference({ name: 'Sword' }, lookup)).toBeUndefined()
   })
 
   test('observes same-size edits, field changes, removal, restoration and cloned maps', () => {
@@ -103,7 +103,7 @@ describe('item reference resolution', () => {
     const check = (expected: Item5e | undefined) => {
       const actual = resolveItemReferences(refs, lookup)
       expect(actual[0]).toBe(expected)
-      expect(actual[1]).toBe(expected)
+      expect(actual[1]).toBeUndefined()
       expect(resolveItemReference(refs[0], lookup)).toBe(expected)
     }
     check(first)
@@ -115,16 +115,16 @@ describe('item reference resolution', () => {
     second.name = 'Other'
     check(replacement)
     replacement.source = 'Z'
-    expect(resolveItemReferences(refs, lookup)).toEqual([undefined, replacement])
+    expect(resolveItemReferences(refs, lookup)).toEqual([undefined, undefined])
     const cloned = structuredClone(lookup)
-    expect(resolveItemReferences(refs, cloned)).toEqual([undefined, replacement])
+    expect(resolveItemReferences(refs, cloned)).toEqual([undefined, undefined])
     lookup.clear()
     check(undefined)
     lookup.set('restored', first)
     check(first)
     expect(resolveItemReferences(refs, new Map([['new-map', replacement]]))).toEqual([
       undefined,
-      replacement,
+      undefined,
     ])
   })
 
@@ -146,7 +146,7 @@ describe('item reference resolution', () => {
         ],
         lookup,
       ),
-    ).toEqual([first, second, first, undefined])
+    ).toEqual([first, second, undefined, undefined])
     expect(values).toHaveBeenCalledTimes(1)
     values.mockClear()
     expect(resolveItemReferences([{}, { name: ' ' }], lookup)).toEqual([undefined, undefined])

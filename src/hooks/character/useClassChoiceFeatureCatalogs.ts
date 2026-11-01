@@ -15,6 +15,7 @@ export function useClassChoiceFeatureCatalogs() {
     optionalfeatures,
     optionalClassFeatureSources,
     optionalClassSections,
+    classCastingSources,
   } = useFilteredGameData()
   return useMemo(
     () =>
@@ -29,6 +30,7 @@ export function useClassChoiceFeatureCatalogs() {
         optionalfeatures,
         optionalClassFeatureSources,
         optionalClassSections,
+        classCastingSources,
       }),
     [
       classes,
@@ -41,6 +43,7 @@ export function useClassChoiceFeatureCatalogs() {
       optionalfeatures,
       optionalClassFeatureSources,
       optionalClassSections,
+      classCastingSources,
     ],
   )
 }

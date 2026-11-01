@@ -153,28 +153,33 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const calculation = useCharacterCalculationContext(character)
   const viewModel = useMemo(
     () =>
-      character
-        ? createCharacterSheetViewModel(character, {
-            sourceCatalog: filteredData.sources,
-            classChoiceClasses: filteredData.classes,
-            classChoiceFeatureCatalogs,
-            classesByKey,
-            classFeaturesByKey,
-            optionalFeaturesByKey,
-            racesByKey,
-            backgroundsByKey,
-            spellsByKey,
-            featsByKey,
-            featExpertiseFeats: filteredData.feats,
-            creaturesByKey,
-            itemLookup,
-            itemPropertyByAbbr,
-            organizations,
-          })
+      character && calculation
+        ? createCharacterSheetViewModel(
+            character,
+            {
+              sourceCatalog: filteredData.sources,
+              classChoiceClasses: filteredData.classes,
+              classChoiceFeatureCatalogs,
+              classesByKey,
+              classFeaturesByKey,
+              optionalFeaturesByKey,
+              racesByKey,
+              backgroundsByKey,
+              spellsByKey,
+              featsByKey,
+              featExpertiseFeats: filteredData.feats,
+              creaturesByKey,
+              itemLookup,
+              itemPropertyByAbbr,
+              organizations,
+            },
+            calculation.lookups.primary,
+          )
         : null,
     [
       backgroundsByKey,
       character,
+      calculation,
       classFeaturesByKey,
       classChoiceFeatureCatalogs,
       filteredData.classes,

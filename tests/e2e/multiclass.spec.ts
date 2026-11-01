@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '../../src/lib/schema/characterSchemaVersion'
+import { makeClassCastingData } from '../fixtures/classCastingFixtures'
 import {
   ensureStartupPromptResolved,
   seedAppState,
@@ -291,9 +292,16 @@ test('@focused multiclass spellcasting shows the persisted shared slot pool', as
       },
     },
   }
+  const casting = makeClassCastingData()
   await seedAppState(page, {
     sourcePath: 'e2e-multiclass-seed',
-    gameData: MULTICLASS_GAME_DATA,
+    gameData: {
+      ...MULTICLASS_GAME_DATA,
+      classes: casting.classes,
+      classFeatures: casting.classFeatures,
+      classCastingSources: casting.classCastingSources,
+      lookups: undefined,
+    },
     characters: [multiclassCaster],
     activeCharacterId: multiclassCaster.id,
   })

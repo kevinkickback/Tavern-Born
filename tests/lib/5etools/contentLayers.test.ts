@@ -7,11 +7,11 @@ import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Class5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference, NormalizedClassRules } from '@/types/classRules'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 describe('game-data content layers', () => {
   test.each([
@@ -485,7 +485,7 @@ describe('game-data content layers', () => {
       deriveRulesTextActions(character, undefined, { classes: composed.classes }),
     ).toHaveLength(restored ? 1 : 0)
     expect(
-      createCharacterSheetViewModel(character, {
+      createCurrentCharacterSheetViewModel(character, {
         classesByKey: buildClassLookup(composed.classes),
       }).actions,
     ).toHaveLength(restored ? 1 : 0)

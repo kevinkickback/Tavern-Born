@@ -12,6 +12,7 @@ import {
   commitFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { applyFeatGrant } from '@/lib/provenance'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
@@ -23,6 +24,34 @@ import type { Class5e, Feat5e, Subclass5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
+
+function installCasting(name: string, subclassName?: string) {
+  const fixture = makeManagedClassSpellFixtures()
+  const classData = fixture.data.classes.find((row) => row.name === name && row.source === 'PHB')!
+  const subclass = classData.subclasses?.find(
+    (row) => row.name === subclassName && row.source === 'PHB',
+  )
+  const gameData = { ...fixture.data, spells: fixture.spells }
+  gameData.lookups = buildGameDataLookups(gameData)
+  useGameDataStore.setState({ gameData })
+  const character = makeCharacterFixture({
+    classProgression: [
+      {
+        name,
+        source: 'PHB',
+        levels: 3,
+        ...(subclass ? { subclass: subclass.name, subclassSource: subclass.source } : {}),
+      },
+    ],
+  })
+  useCharacterStore.setState({
+    activeCharacter: character,
+    activeCharacterId: character.id,
+    characters: [character],
+  })
+  return { classData, subclass, fixture }
+}
 
 describe('class page controllers', () => {
   beforeEach(() => {
@@ -100,88 +129,29 @@ describe('class page controllers', () => {
     ])
   })
 
-  test('keeps replacement-only spell levels available', () => {
-    const classEntity = makeClassFixture({
-      spellcastingAbility: 'cha',
-      cantripProgression: [2, 2],
-      spellsKnownProgression: [2, 2],
-    })
-
-    const { result } = renderHook(() => useClassSpellChoiceController(classEntity))
-
-    expect(result.current.choicesByLevel.get(2)).toMatchObject({
-      cantrips: 0,
-      spells: 0,
-      canSwap: true,
+  test('finite schedules do not invent replacement-event choices at a level with no gains', () => {
+    const { classData } = installCasting('Sorcerer')
+    const { result } = renderHook(() => useClassSpellChoiceController(classData))
+    expect(result.current.choicesByLevel.has(12)).toBe(false)
+    expect(result.current.choicesByLevel.get(1)).toMatchObject({
+      cantrips: 4,
+      spells: 2,
+      maxSpellLevel: 1,
     })
   })
 
-  test('derives level-three spell choices from the 2014 Arcane Trickster subclass', () => {
-    const arcaneTrickster = {
-      name: 'Arcane Trickster',
-      shortName: 'Arcane Trickster',
-      source: 'PHB',
-      className: 'Rogue',
-      classSource: 'PHB',
-      spellcastingAbility: 'int',
-      casterProgression: '1/3',
-      cantripProgression: [0, 0, 2],
-      spellsKnownProgression: [0, 0, 3],
-    } as Subclass5e
-    const rogue = makeClassFixture({
-      name: 'Rogue',
-      casterProgression: undefined,
-      spellcastingAbility: undefined,
-      classTableGroups: [],
-      subclasses: [arcaneTrickster],
-    })
-    const wizard = makeClassFixture()
-
-    const { result } = renderHook(() =>
-      useClassSpellChoiceController(rogue, arcaneTrickster, [wizard]),
-    )
-
+  test.each([
+    ['Rogue', 'Arcane Trickster'],
+    ['Fighter', 'Eldritch Knight'],
+  ])('derives actual %s/%s casting gains', (name, subclassName) => {
+    const { classData, subclass } = installCasting(name, subclassName)
+    const { result } = renderHook(() => useClassSpellChoiceController(classData, subclass))
     expect(result.current.choicesByLevel.get(3)).toMatchObject({
       cantrips: 2,
       spells: 3,
       maxSpellLevel: 1,
-      canSwap: true,
     })
   })
-
-  test('derives level-three spell choices from the 2014 Eldritch Knight subclass', () => {
-    const eldritchKnight = {
-      name: 'Eldritch Knight',
-      shortName: 'Eldritch Knight',
-      source: 'PHB',
-      className: 'Fighter',
-      classSource: 'PHB',
-      spellcastingAbility: 'int',
-      casterProgression: '1/3',
-      cantripProgression: [0, 0, 2],
-      spellsKnownProgression: [0, 0, 3],
-    } as Subclass5e
-    const fighter = makeClassFixture({
-      name: 'Fighter',
-      casterProgression: undefined,
-      spellcastingAbility: undefined,
-      classTableGroups: [],
-      subclasses: [eldritchKnight],
-    })
-    const wizard = makeClassFixture()
-
-    const { result } = renderHook(() =>
-      useClassSpellChoiceController(fighter, eldritchKnight, [wizard]),
-    )
-
-    expect(result.current.choicesByLevel.get(3)).toMatchObject({
-      cantrips: 2,
-      spells: 3,
-      maxSpellLevel: 1,
-      canSwap: true,
-    })
-  })
-
   test('adds a later ASI feat without replacing the earlier class feat', () => {
     const classEntity = useGameDataStore.getState().gameData?.classes[0]
     const classLookup = useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {}
@@ -342,82 +312,65 @@ describe('class page controllers', () => {
     expect(result.current.optionsPendingFeat).toMatchObject(second)
   })
 
-  test('adds a later-level spell choice without replacing earlier class-profile spells', () => {
-    const current = useCharacterStore.getState().activeCharacter
-    const classEntity = useGameDataStore.getState().gameData?.classes[0]
-    if (!current || !classEntity) throw new Error('Expected Wizard fixtures')
-    const character = makeCharacterFixture({
-      ...current,
-      spells: {
-        ...current.spells,
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 4)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt', 'Mage Hand', 'Prestidigitation'],
-            spellsKnown: [
-              'Detect Magic',
-              'Feather Fall',
-              'Mage Armor',
-              'Magic Missile',
-              'Shield',
-              'Sleep',
-            ],
-            preparedSpells: ['Mage Armor', 'Magic Missile', 'Shield', 'Sleep'],
-            alwaysPrepared: false,
-          },
-          {
-            id: 'special:unrestricted',
-            type: 'special',
-            label: 'Bonus Spells',
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
+  test('later addressed Finish retains the earlier learned choice through strict reopen', () => {
+    const { classData, fixture } = installCasting('Wizard')
+    let character = useCharacterStore.getState().activeCharacter!
+    const selected = setManagedClassSpellChoiceCommand(
+      character,
+      character.provenance,
+      {
+        slot: [
+          ['class', 'wizard', 'phb'],
+          'class-spellbook',
+          'class-feature|spellcasting|wizard|phb|1|phb',
+          1,
+          0,
         ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Shield', source: 'PHB' },
+        policy: 'default',
       },
+      fixture.context,
+    )
+    character = characterPersistenceSchema.parse({
+      ...character,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
     })
     useCharacterStore.setState({
-      characters: [character],
-      activeCharacterId: character.id,
       activeCharacter: character,
+      activeCharacterId: character.id,
+      characters: [character],
     })
-
-    const { result } = renderHook(() => useClassSpellChoiceController(classEntity))
-    act(() => {
-      result.current.setClassSpellSelectionsAtLevel('Wizard', 'PHB', 2, [
-        { name: 'Arcane Lock', spellLevel: 2 },
-        { name: 'Misty Step', spellLevel: 2 },
-      ])
-    })
-
-    const profile = useCharacterStore
-      .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (candidate) => candidate.id === 'class:Wizard|PHB',
-      )
-    expect(profile?.cantrips).toEqual(['Fire Bolt', 'Mage Hand', 'Prestidigitation'])
-    expect(profile?.spellsKnown).toEqual(
-      expect.arrayContaining([
-        'Detect Magic',
-        'Feather Fall',
-        'Mage Armor',
-        'Magic Missile',
-        'Shield',
-        'Sleep',
-        'Arcane Lock',
-        'Misty Step',
-      ]),
+    const { result } = renderHook(() => useClassSpellChoiceController(classData))
+    act(() =>
+      result.current.finishClassSpellChoices(
+        ['Magic Missile', 'Mage Armor'].map((name, ordinal) => ({
+          slot: [
+            ['class', 'wizard', 'phb'],
+            'class-spellbook',
+            'class-feature|spellcasting|wizard|phb|1|phb',
+            2,
+            ordinal,
+          ],
+          expected: null,
+          expectedEmptyRevision: 1,
+          target: { name, source: 'PHB' },
+          policy: 'default',
+        })),
+      ),
     )
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.managedClassSpellChoices).toHaveLength(3)
     expect(
-      useCharacterStore.getState().activeCharacter?.provenance?.spells['arcane lock']?.[0],
-    ).toMatchObject({ sourceRef: 'PHB', spellGrantedAtLevel: 2 })
+      saved.spells.spellProfiles.find((row) => row.className === 'Wizard')?.spellsKnown,
+    ).toEqual(['Shield|PHB', 'Magic Missile|PHB', 'Mage Armor|PHB'])
+    expect(saved.provenance.spells['magic missile'][0]).toMatchObject({
+      spellGrantedAtLevel: 2,
+      spellAttributionMode: 'exact',
+    })
   })
-
   test('does not inherit the primary subclass when viewing another class', () => {
     const character = makeCharacterFixture({
       classProgression: [

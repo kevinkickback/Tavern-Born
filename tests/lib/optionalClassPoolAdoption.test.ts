@@ -23,14 +23,12 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 const apply = (character: Character, result: CharacterCommandResult) =>
   characterPersistenceSchema.parse({
@@ -320,12 +318,12 @@ test('book sections reach derived Review/PDF descriptions without fake class UID
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const vm = createCharacterSheetViewModel(actor, input)
+  const vm = createCurrentCharacterSheetViewModel(actor, input)
   expect(vm.featuresSummary).toContain('Fighting Style Options')
   expect(vm.featuresSummary).toContain('Interception')
   expect(withoutSheetDescriptions(vm).featuresSummary).toContain('Fighting Style Options')
   expect(
-    createCharacterSheetViewModel(
+    createCurrentCharacterSheetViewModel(
       { ...actor, variantRules: { optionalClassFeatures: false } },
       input,
     ).featuresSummary,
@@ -459,7 +457,7 @@ test('new invocation commands require current level and closed Pact prerequisite
       classChoiceClasses: f.data.classes,
       classChoiceFeatureCatalogs: catalogs,
     }
-    const vm = createCharacterSheetViewModel(current, input)
+    const vm = createCurrentCharacterSheetViewModel(current, input)
     expect(vm.featuresSummary).not.toContain('Rebuke of the Talisman:')
     expect(withoutSheetDescriptions(vm).featuresSummary).not.toContain('Rebuke of the Talisman')
     expect(

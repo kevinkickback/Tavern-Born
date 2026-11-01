@@ -23,10 +23,7 @@ import { applySkillExpertiseActionCommand } from '@/lib/character/commands/skill
 import { applySkillProficiencyActionCommand } from '@/lib/character/commands/skillProficiencyCommands'
 import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
 import { getSkillProficiencyChoices } from '@/lib/character/skillProficiencyChoices'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { applyClassGrants } from '@/lib/provenance/applyClassGrants'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -38,6 +35,7 @@ import {
   makeOptionalSkillFixture,
   PRIMAL_TARGET,
 } from '../fixtures/optionalSkillFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 type Fixture = ReturnType<typeof makeOptionalSkillFixture>
 const model = (f: Fixture, character = f.character) =>
@@ -264,7 +262,7 @@ test('shared workflow/calculation and both PDF descriptions use the same saved s
   expect(
     getClassProficiencyWorkflow(saved, f.data.classes, f.catalogs).map((row) => row.level),
   ).toEqual([3, 10])
-  const sheet = createCharacterSheetViewModel(saved, {
+  const sheet = createCurrentCharacterSheetViewModel(saved, {
     ...f.data.lookups!,
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,

@@ -15,7 +15,6 @@ import { useSkills } from '@/hooks/character/useSkills'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
-import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applySkillExpertiseActionCommand } from '@/lib/character/commands/skillExpertiseCommands'
 import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
@@ -27,6 +26,7 @@ import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
+import { manualExpertiseFixtureGrant } from '../fixtures/manualProficiency'
 import { makeOptionalClassSourceData } from '../fixtures/optionalClassFeatureFixtures'
 
 beforeEach(() => {
@@ -344,7 +344,7 @@ test('Bard uses owned Expertise while Canny preserves overlap through removal of
   f.data.classes.push(...(bard.classes as Class5e[]).filter((entry) => entry.source === 'PHB'))
   f.data.classFeatures.push(...(bard.classFeatures as ClassFeature[]))
   f.data.lookups = buildGameDataLookups(f.data)
-  const manual = toggleExpertiseCommand(f.character, f.character.provenance!, 'survival')
+  const manual = manualExpertiseFixtureGrant(f.character, f.character.provenance!, 'survival')
   const before = {
     ...f.character,
     ...manual.characterPatch,
@@ -355,13 +355,24 @@ test('Bard uses owned Expertise while Canny preserves overlap through removal of
   useGameDataStore.setState({ gameData: f.data })
   setActiveCharacter(saved)
   const { result } = renderHook(() => useSkills())
-  expect(result.current.availableExpertiseSlots).toBe(0)
-  expect(result.current.usedExpertiseSlots).toBe(1)
   const modifier = result.current.skills.find((skill) => skill.name === 'survival')!.modifier
   await act(async () => {
-    result.current.toggleExpertise('survival')
+    const authority = {
+      classes: f.data.classes,
+      feats: f.data.feats,
+      catalogs: buildClassChoiceFeatureCatalogs(f.data),
+    }
+    const removed = applySkillExpertiseActionCommand(
+      active(),
+      'survival',
+      'manual:remove',
+      authority,
+    )
+    useCharacterStore.getState().updateCharacter(active().id, {
+      ...removed.characterPatch,
+      provenance: removed.provenanceUpdate,
+    })
   })
-  expect(result.current.usedExpertiseSlots).toBe(0)
   expect(result.current.skills.find((skill) => skill.name === 'survival')!.modifier).toBe(modifier)
   expect(
     active().provenance!.proficiencies.expertise!.survival.map((tag) => tag.sourceType),
@@ -372,7 +383,7 @@ test('Bard uses owned Expertise while Canny preserves overlap through removal of
     catalogs: buildClassChoiceFeatureCatalogs(f.data),
   }
   const model = getSkillExpertiseChoices(active(), authority)
-  expect(model.actions.nature.some((action) => action.kind === 'legacy' && action.adding)).toBe(
+  expect(model.actions.nature.some((action) => action.kind === 'manual' && action.adding)).toBe(
     false,
   )
   const action = model.actions.nature.find(
@@ -385,7 +396,6 @@ test('Bard uses owned Expertise while Canny preserves overlap through removal of
       provenance: selected.provenanceUpdate,
     })
   })
-  expect(result.current.usedExpertiseSlots).toBe(0)
   expect(active().proficiencies.expertise).toContain('nature')
   expect(active().classChoiceSelections?.find((row) => row.className === 'Bard')).toMatchObject({
     classSource: 'PHB',

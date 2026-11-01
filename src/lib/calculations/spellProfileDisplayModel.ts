@@ -1,5 +1,7 @@
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice, SpellProfile } from '@/types/character'
 import { countUniqueSpellNames } from './spellProfiles.profiles'
@@ -38,7 +40,6 @@ export interface SpellProfileLike {
   fixedSpells?: string[]
   alwaysPreparedSpells?: string[]
   preparedSpells?: string[]
-  spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
 export interface SpellcastingDetailLike {
@@ -55,7 +56,6 @@ export interface SpellProfileDisplayModel {
   profile: SpellProfileLike
   detail?: SpellcastingDetailLike
   items: SpellListItem[]
-  swappedByAddedName: Map<string, { removed: string; level: number }>
   isRacial: boolean
   isBonusProfile: boolean
   isLevelOnly: boolean
@@ -81,6 +81,7 @@ export interface SpellProfileDisplayModel {
 
 interface BuildSpellProfileDisplayModelsOptions {
   spellProfiles: SpellProfileLike[]
+  managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
   detailsByProfileId: ReadonlyMap<string, SpellcastingDetailLike>
   groupedItems: ReadonlyMap<string, SpellListItem[]>
   preparedCasterItemsByProfile?: ReadonlyMap<string, PreparedCasterSpellItem[]>
@@ -88,6 +89,7 @@ interface BuildSpellProfileDisplayModelsOptions {
 
 export function buildSpellProfileDisplayModels({
   spellProfiles,
+  managedClassSpellStatuses = [],
   detailsByProfileId,
   groupedItems,
   preparedCasterItemsByProfile,
@@ -102,11 +104,6 @@ export function buildSpellProfileDisplayModels({
     const hasUnfulfilledChoices = unfulfilledChoices.length > 0
     if (isRacial && items.length === 0 && !hasUnfulfilledChoices) return []
     if (profile.type === 'class' && !detail) return []
-
-    const swappedByAddedName = new Map<string, { removed: string; level: number }>()
-    for (const [level, swap] of Object.entries(profile.spellSwaps ?? {})) {
-      swappedByAddedName.set(swap.added, { removed: swap.removed, level: Number(level) })
-    }
 
     const isLevelOnly = profile.type === 'class' && !!detail?.isLevelOnlyPreparedCaster
     const isTruePrepared = profile.type === 'class' && !!detail?.isTruePreparedCaster
@@ -143,12 +140,25 @@ export function buildSpellProfileDisplayModels({
           (left, right) => left - right,
         )
       : []
-    const currentCantrips = countUniqueSpellNames(
-      items.filter((item) => item.kind === 'cantrip' && !item.isFixed).map((item) => item.name),
-    )
-    const currentSpells = countUniqueSpellNames(
-      items.filter((item) => item.kind === 'spell' && !item.isFixed).map((item) => item.name),
-    )
+    const classSelections =
+      profile.type === 'class'
+        ? managedClassSpellStatuses.filter(
+            (status) =>
+              status.active &&
+              status.choice.slot[0][1] === normalizeOwnerIdentity(profile.className) &&
+              status.choice.slot[0][2] === normalizeOwnerIdentity(profile.classSource),
+          )
+        : undefined
+    const currentCantrips = classSelections
+      ? classSelections.filter((status) => status.choice.slot[1] === 'class-cantrip').length
+      : countUniqueSpellNames(
+          items.filter((item) => item.kind === 'cantrip' && !item.isFixed).map((item) => item.name),
+        )
+    const currentSpells = classSelections
+      ? classSelections.filter((status) => status.choice.slot[1] !== 'class-cantrip').length
+      : countUniqueSpellNames(
+          items.filter((item) => item.kind === 'spell' && !item.isFixed).map((item) => item.name),
+        )
     const missingCantrips =
       detail?.cantripLimit == null ? 0 : Math.max(0, detail.cantripLimit - currentCantrips)
     const missingSpells =
@@ -171,7 +181,6 @@ export function buildSpellProfileDisplayModels({
         profile,
         detail,
         items,
-        swappedByAddedName,
         isRacial,
         isBonusProfile: profile.id === SPECIAL_SPELL_PROFILE_ID,
         isLevelOnly,
@@ -184,7 +193,7 @@ export function buildSpellProfileDisplayModels({
         levels,
         availableLevels,
         displayedTotal: isTruePrepared
-          ? currentCantrips + availableClassSpells.length
+          ? items.filter((item) => item.kind === 'cantrip').length + availableClassSpells.length
           : items.length,
         missingCantrips,
         missingSpells,

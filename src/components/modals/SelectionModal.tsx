@@ -69,11 +69,14 @@ export interface SelectionModalProps<T> {
   /** Labels for saved selections whose catalog items are currently unavailable. */
   unavailableSelectionLabels?: ReadonlyMap<string, string>
   countUnavailableSelections?: boolean
-  getConfirmationError?: (selectedIds: ReadonlySet<string>) => string | undefined
+  getConfirmationError?: (
+    selectedIds: ReadonlySet<string>,
+    filters: ActiveFilters,
+  ) => string | undefined
   initialFilters?: ActiveFilters
   /** Controllers with multi-step setup own successful confirmation and closing. */
   closeOnConfirm?: boolean
-  onConfirm: (selectedIds: string[], selectedItems: T[]) => void
+  onConfirm: (selectedIds: string[], selectedItems: T[], filters: ActiveFilters) => void
 }
 
 function buildInitialFilters(sections: FilterSection[]): ActiveFilters {
@@ -248,10 +251,10 @@ function SelectionModalInner<T>({
     resetScroll()
   }
 
-  const confirmationError = getConfirmationError?.(selectedIds)
+  const confirmationError = getConfirmationError?.(selectedIds, activeFilters)
   const handleConfirm = () => {
     if (confirmationError) return
-    onConfirm([...selectedIds], selectedItems)
+    onConfirm([...selectedIds], selectedItems, activeFilters)
     if (closeOnConfirm) onClose()
   }
 

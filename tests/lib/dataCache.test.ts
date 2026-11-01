@@ -59,7 +59,7 @@ describe('writeGameDataCache', () => {
     idbGetMock.mockResolvedValue(null)
   })
 
-  test('schema56 retains route witnesses through JSON and fingerprints changes in source diagnostics', async () => {
+  test('schema57 retains route witnesses through JSON and fingerprints changes in source diagnostics', async () => {
     const fixture = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
     const data = makeGameData()
     data.spells = parseSpells([fixture.spell[0], fixture.spell[0]], {
@@ -68,7 +68,7 @@ describe('writeGameDataCache', () => {
     }) as GameData['spells']
     const before = computeGameDataFingerprint(data)
     const entry = await writeGameDataCache(data, config)
-    expect(entry.cacheSchemaVersion).toBe(56)
+    expect(entry.cacheSchemaVersion).toBe(57)
     idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
     const cached = (await readGameDataCache())!
     expect(filterSpellRouteSources(cached.data.spells[0], ['PHB', 'TCE']).classSpellRoutes).toEqual(
@@ -80,7 +80,7 @@ describe('writeGameDataCache', () => {
       origin: 'cache-fixture',
     }) as GameData['spells']
     expect(computeGameDataFingerprint(data)).not.toBe(before)
-    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 55 })
+    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 56 })
     await expect(readGameDataCache()).resolves.toBeNull()
   })
 

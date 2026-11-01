@@ -14,11 +14,11 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 const identityFields = [
   'name',
@@ -228,7 +228,9 @@ describe('subclass-feature copy materialization', () => {
       classes: parseClasses(raw),
       classFeatures: parseClassFeatures(raw),
       optionalClassFeatureSources: [],
+      classCastingSources: expect.any(Array),
     })
+    expect(combined.classCastingSources.every((row) => !row.verified)).toBe(true)
     const c = (combined.classes as Class5e[])[0],
       s = c.subclasses?.[0]
     expect(s?.subclassFeatureRefs?.[0].feature).toMatchObject({ classSource: 'XPHB', level: 3 })
@@ -308,7 +310,7 @@ describe('subclass-feature copy materialization', () => {
       selected: [{ ref: 'option|cleric|phb|legacy|phb|1|phb', source: 'PHB' }],
     })
     expect(
-      createCharacterSheetViewModel(character, {
+      createCurrentCharacterSheetViewModel(character, {
         ...lookups,
         classChoiceFeatureCatalogs: catalogs,
       }).actions.some((a) => a.name === 'Option'),

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildClassSpellLevelKey,
-  buildClassSpellSelectionsByLevel,
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
   collectKnownSpells,
@@ -9,13 +8,11 @@ import {
   evaluatePreparedSpellsFormula,
   getPreparedSpellLimit,
   getSpellProfileSelectionCounts,
-  inferClassSpellAttributionLevels,
   isSpellOnClassList,
   isSpellOnSubclassList,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
 } from '@/lib/calculations/spellProfiles'
-import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
@@ -58,7 +55,7 @@ describe('spellProfiles', () => {
       'class:Cleric|PHB',
       SPECIAL_SPELL_PROFILE_ID,
     ])
-    expect(profiles[0].cantrips).toEqual(['Mage Hand'])
+    expect(profiles[0].cantrips).toEqual([])
     expect(profiles[2].alwaysPrepared).toBe(true)
     expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
   })
@@ -90,7 +87,7 @@ describe('spellProfiles', () => {
     })
   })
 
-  test('ensureSpellProfiles merges subclass grants into the parent class profile', () => {
+  test('unproved subclass rows cannot grant spells in a context-free profile read', () => {
     const character = makeCharacterFixture({
       classProgression: [
         {
@@ -147,16 +144,16 @@ describe('spellProfiles', () => {
     const classProfile = profiles.find((profile) => profile.id === 'class:Fighter|PHB')
 
     expect(profiles.some((profile) => profile.id.startsWith('subclass:'))).toBe(false)
-    expect(classProfile?.spellsKnown).toEqual(expect.arrayContaining(['mage armor', 'shield']))
-    expect(classProfile?.fixedSpells).toEqual(expect.arrayContaining(['mage armor', 'shield']))
-    expect(classProfile?.alwaysPreparedSpells).toEqual(['shield'])
+    expect(classProfile?.spellsKnown).toEqual([])
+    expect(classProfile?.fixedSpells).toBeUndefined()
+    expect(classProfile?.alwaysPreparedSpells).toBeUndefined()
 
     const known = collectKnownSpells(profiles)
-    expect(known.preparedSpells).toContain('shield')
+    expect(known.preparedSpells).not.toContain('shield')
     expect(known.preparedSpells).not.toContain('mage armor')
   })
 
-  test('preserves class-owned spells and cantrips that overlap a removed subclass grant', () => {
+  test('context-free reads cannot infer class choice ownership from saved fixed rows or old tags', () => {
     const classTag = {
       sourceType: 'class' as const,
       sourceName: 'Sorcerer',
@@ -196,12 +193,12 @@ describe('spellProfiles', () => {
 
     const [profile] = ensureSpellProfiles(character)
 
-    expect(profile.cantrips).toEqual(['Mage Hand'])
-    expect(profile.spellsKnown).toEqual(['Dispel Magic'])
+    expect(profile.cantrips).toEqual([])
+    expect(profile.spellsKnown).toEqual([])
     expect(profile.fixedSpells).toBeUndefined()
   })
 
-  test('ensureSpellProfiles models Battle Smith spells as locked, always-prepared Artificer spells', () => {
+  test('unproved Battle Smith labels alone do not grant fixed or prepared spells', () => {
     const character = makeCharacterFixture({
       classProgression: [
         {
@@ -241,9 +238,9 @@ describe('spellProfiles', () => {
     const profiles = ensureSpellProfiles(character, classesById)
     const artificer = profiles.find((profile) => profile.id === 'class:Artificer|PHB')
 
-    expect(artificer?.spellsKnown).toEqual(expect.arrayContaining(['heroism', 'shield']))
-    expect(artificer?.fixedSpells).toEqual(expect.arrayContaining(['heroism', 'shield']))
-    expect(artificer?.alwaysPreparedSpells).toEqual(expect.arrayContaining(['heroism', 'shield']))
+    expect(artificer?.spellsKnown).toEqual([])
+    expect(artificer?.fixedSpells).toBeUndefined()
+    expect(artificer?.alwaysPreparedSpells).toBeUndefined()
   })
 
   test('buildClassSpellLevelKey includes class source to avoid multiclass collisions', () => {
@@ -317,7 +314,7 @@ describe('spellProfiles', () => {
       },
     })
 
-    const known = collectKnownSpells(ensureSpellProfiles(character))
+    const known = collectKnownSpells(character.spells.spellProfiles)
     expect(known.cantrips).toEqual(expect.arrayContaining(['Mage Hand', 'Guidance']))
     expect(known.spellsKnown).toEqual(expect.arrayContaining(['Shield', 'Fireball']))
     expect(known.preparedSpells).toEqual(expect.arrayContaining(['Shield', 'Fireball', 'Guidance']))
@@ -478,6 +475,8 @@ describe('spellProfiles', () => {
           name: 'Fighter',
           source: 'PHB',
           casterProgression: 'none',
+          spellSlotProgression: undefined,
+          classTableGroups: [],
           subclasses: [
             {
               name: 'Eldritch Knight',
@@ -651,499 +650,6 @@ describe('spellProfiles', () => {
     expect(details[0].spellSaveDC).toBe(14)
     expect(details[0].spellAttackBonus).toBe(6)
     expect(details[0].isPreparedCaster).toBe(false)
-  })
-
-  test('inferClassSpellAttributionLevels assigns to lowest eligible level with capacity', () => {
-    const wizard = makeClassFixture({
-      name: 'Wizard',
-      source: 'PHB',
-      spellcastingAbility: 'int',
-      cantripProgression: [3, 3, 3, 4, 4],
-      spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
-      casterProgression: 'full',
-    })
-
-    const spellLevelByName = new Map<string, number>([
-      ['Scorching Ray', 2],
-      ['Misty Step', 2],
-      ['Counterspell', 3],
-    ])
-
-    const assignments = inferClassSpellAttributionLevels({
-      classData: wizard,
-      classLevel: 5,
-      newSpellNames: ['Scorching Ray', 'Misty Step', 'Counterspell'],
-      spellLevelByName,
-      existingAttributions: [
-        { spellName: 'Magic Missile', grantedAtLevel: 1 },
-        { spellName: 'Shield', grantedAtLevel: 1 },
-        { spellName: 'Sleep', grantedAtLevel: 1 },
-        { spellName: 'Find Familiar', grantedAtLevel: 1 },
-        { spellName: 'Identify', grantedAtLevel: 1 },
-        { spellName: 'Detect Magic', grantedAtLevel: 1 },
-      ],
-    })
-
-    expect(assignments).toEqual([
-      { spellName: 'Misty Step', grantedAtLevel: 3 },
-      { spellName: 'Scorching Ray', grantedAtLevel: 3 },
-      { spellName: 'Counterspell', grantedAtLevel: 5 },
-    ])
-  })
-
-  test('inferClassSpellAttributionLevels uses cantrip capacity independently', () => {
-    const wizard = makeClassFixture({
-      name: 'Wizard',
-      source: 'PHB',
-      spellcastingAbility: 'int',
-      cantripProgression: [3, 3, 3, 4],
-      spellsKnownProgressionFixed: [6, 2, 2, 2],
-      casterProgression: 'full',
-    })
-
-    const spellLevelByName = new Map<string, number>([
-      ['Light', 0],
-      ['Fire Bolt', 0],
-      ['Mage Hand', 0],
-      ['Prestidigitation', 0],
-    ])
-
-    const assignments = inferClassSpellAttributionLevels({
-      classData: wizard,
-      classLevel: 4,
-      newSpellNames: ['Light'],
-      spellLevelByName,
-      existingAttributions: [
-        { spellName: 'Fire Bolt', grantedAtLevel: 1 },
-        { spellName: 'Mage Hand', grantedAtLevel: 1 },
-        { spellName: 'Prestidigitation', grantedAtLevel: 1 },
-      ],
-    })
-
-    expect(assignments).toEqual([{ spellName: 'Light', grantedAtLevel: 4 }])
-  })
-
-  test('buildClassSpellSelectionsByLevel reconstructs class-level picks from provenance attribution', () => {
-    const baseProvenance = makeBaseProvenance()
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 5)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt'],
-            spellsKnown: ['Magic Missile', 'Fireball'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-          {
-            id: SPECIAL_SPELL_PROFILE_ID,
-            type: 'special',
-            label: SPECIAL_SPELL_PROFILE_LABEL,
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: makeCharacterFixture().spells.spellSlots,
-      },
-      provenance: {
-        ...baseProvenance,
-        spells: {
-          'fire bolt': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'magic missile': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          fireball: [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 5,
-              spellAttributionMode: 'inferred-lowest-eligible',
-            },
-          ],
-        },
-      },
-    })
-
-    const byLevel = buildClassSpellSelectionsByLevel({
-      character,
-      className: 'Wizard',
-      classSource: 'PHB',
-    })
-
-    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile'])
-    expect(byLevel.get(5)).toEqual(['Fireball'])
-  })
-
-  test('buildClassSpellSelectionsByLevel excludes swap-added spells from level selections', () => {
-    const baseProvenance = makeBaseProvenance()
-    // Scenario: at level 3 the user swapped Shield→Absorb Elements.
-    // Absorb Elements has provenance at level 3 but should NOT count as a
-    // level-3 selection — the swap is independent of new spell choices.
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 3)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt'],
-            spellsKnown: ['Magic Missile', 'Absorb Elements'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-            spellSwaps: { 3: { removed: 'Shield', added: 'Absorb Elements' } },
-          },
-          {
-            id: SPECIAL_SPELL_PROFILE_ID,
-            type: 'special',
-            label: SPECIAL_SPELL_PROFILE_LABEL,
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: makeCharacterFixture().spells.spellSlots,
-      },
-      provenance: {
-        ...baseProvenance,
-        spells: {
-          'fire bolt': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'magic missile': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'absorb elements': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 3,
-              spellAttributionMode: 'exact',
-            },
-          ],
-        },
-      },
-    })
-
-    const byLevel = buildClassSpellSelectionsByLevel({
-      character,
-      className: 'Wizard',
-      classSource: 'PHB',
-    })
-
-    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile'])
-    // Level 3 should have NO selections — Absorb Elements entered via swap, not choice.
-    expect(byLevel.has(3)).toBe(false)
-  })
-
-  test('buildClassSpellSelectionsByLevel keeps original level slot filled after swap when replacement inherits old level', () => {
-    const baseProvenance = makeBaseProvenance()
-    // Scenario: Shield (picked at level 1) is swapped out at level 3 for Absorb Elements.
-    // The replacement should still occupy the original level-1 spell pick slot.
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 3)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt'],
-            spellsKnown: ['Magic Missile', 'Absorb Elements'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-            spellSwaps: { 3: { removed: 'Shield', added: 'Absorb Elements' } },
-          },
-          {
-            id: SPECIAL_SPELL_PROFILE_ID,
-            type: 'special',
-            label: SPECIAL_SPELL_PROFILE_LABEL,
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: makeCharacterFixture().spells.spellSlots,
-      },
-      provenance: {
-        ...baseProvenance,
-        spells: {
-          'fire bolt': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'magic missile': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'absorb elements': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-        },
-      },
-    })
-
-    const byLevel = buildClassSpellSelectionsByLevel({
-      character,
-      className: 'Wizard',
-      classSource: 'PHB',
-    })
-
-    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile', 'Absorb Elements'])
-    expect(byLevel.has(3)).toBe(false)
-  })
-
-  test('spellSwaps survives schema validation and buildClassSpellSelectionsByLevel still excludes swap spells', () => {
-    const baseProvenance = makeBaseProvenance()
-    // Simulate the EXACT character state after the swap onConfirm handler:
-    // - spellsKnown: Shield removed, Absorb Elements added
-    // - spellSwaps: records the swap at level 3
-    // - provenance: Shield provenance still lingers (stale closure overwrites
-    //   the removal), Absorb Elements has provenance at level 3
-    const rawCharacter = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 3)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt'],
-            spellsKnown: ['Magic Missile', 'Absorb Elements'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-            spellSwaps: { 3: { removed: 'Shield', added: 'Absorb Elements' } },
-          },
-          {
-            id: SPECIAL_SPELL_PROFILE_ID,
-            type: 'special',
-            label: SPECIAL_SPELL_PROFILE_LABEL,
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: makeCharacterFixture().spells.spellSlots,
-      },
-      provenance: {
-        ...baseProvenance,
-        spells: {
-          'fire bolt': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'magic missile': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          // Shield provenance lingers due to stale closure overwrite
-          shield: [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 1,
-              spellAttributionMode: 'exact',
-            },
-          ],
-          'absorb elements': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-              spellGrantedAtLevel: 3,
-              spellAttributionMode: 'exact',
-            },
-          ],
-        },
-      },
-    })
-
-    // Step 1: Schema must preserve spellSwaps
-    const parsed = characterPersistenceSchema.safeParse(rawCharacter)
-    expect(parsed.success).toBe(true)
-    const character = parsed.data!
-    const classProfile = character.spells.spellProfiles.find((p) => p.id === 'class:Wizard|PHB')
-    expect(classProfile?.spellSwaps).toBeDefined()
-    expect(classProfile?.spellSwaps).toEqual({
-      3: { removed: 'Shield', added: 'Absorb Elements' },
-    })
-
-    // Step 2: ensureSpellProfiles must preserve spellSwaps
-    const profiles = ensureSpellProfiles(character)
-    const ensuredProfile = profiles.find((p) => p.id === 'class:Wizard|PHB')
-    expect(ensuredProfile?.spellSwaps).toBeDefined()
-    expect(ensuredProfile?.spellSwaps).toEqual({
-      3: { removed: 'Shield', added: 'Absorb Elements' },
-    })
-
-    // Step 3: buildClassSpellSelectionsByLevel must exclude swap at level 3
-    const byLevel = buildClassSpellSelectionsByLevel({
-      character,
-      className: 'Wizard',
-      classSource: 'PHB',
-    })
-    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile'])
-    expect(byLevel.has(3)).toBe(false)
-  })
-
-  test('buildClassSpellSelectionsByLevel excludes class-profile spells without provenance level attribution', () => {
-    const baseProvenance = makeBaseProvenance()
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 3)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Mage Hand'],
-            spellsKnown: ['Shield'],
-            preparedSpells: [],
-            alwaysPrepared: false,
-          },
-          {
-            id: SPECIAL_SPELL_PROFILE_ID,
-            type: 'special',
-            label: SPECIAL_SPELL_PROFILE_LABEL,
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: makeCharacterFixture().spells.spellSlots,
-      },
-      provenance: {
-        ...baseProvenance,
-        spells: {
-          'mage hand': [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-            },
-          ],
-          shield: [
-            {
-              sourceType: 'class',
-              sourceName: 'Wizard',
-              sourceRef: 'PHB',
-              grantType: 'choice',
-              label: 'Wizard',
-            },
-          ],
-        },
-      },
-    })
-
-    const byLevel = buildClassSpellSelectionsByLevel({
-      character,
-      className: 'Wizard',
-      classSource: 'PHB',
-    })
-
-    expect(Array.from(byLevel.entries())).toEqual([])
   })
 
   test('evaluatePreparedSpellsFormula evaluates wizard formula with level + INT modifier', () => {

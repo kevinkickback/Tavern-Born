@@ -98,7 +98,7 @@
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Special (Unrestricted)",
+        "label": "Bonus Spells",
         "cantrips": [],
         "spellsKnown": [],
         "preparedSpells": [],
@@ -483,6 +483,8 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Ranger",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22ranger%22%2C%22phb%22%5D%2C%22class-known%22%2C%22class-feature%7Cspellcasting%7Cranger%7Cphb%7C2%7Cphb%22%2C2%2C0%5D",
+          "grantSource": "PHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
         }
@@ -494,6 +496,8 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Ranger",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22ranger%22%2C%22phb%22%5D%2C%22class-known%22%2C%22class-feature%7Cspellcasting%7Cranger%7Cphb%7C2%7Cphb%22%2C2%2C1%5D",
+          "grantSource": "PHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
         }
@@ -505,6 +509,8 @@
           "sourceRef": "PHB",
           "grantType": "choice",
           "label": "Ranger",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22ranger%22%2C%22phb%22%5D%2C%22class-known%22%2C%22class-feature%7Cspellcasting%7Cranger%7Cphb%7C2%7Cphb%22%2C3%2C0%5D",
+          "grantSource": "PHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
         }
@@ -553,7 +559,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -644,5 +650,65 @@
       "ownerType": "race",
       "values": []
     }
-  }
+  },
+  "managedClassSpellChoices": [
+    {
+      "slot": [
+        [
+          "class",
+          "ranger",
+          "phb"
+        ],
+        "class-known",
+        "class-feature|spellcasting|ranger|phb|2|phb",
+        2,
+        0
+      ],
+      "target": {
+        "name": "Alarm",
+        "source": "PHB"
+      },
+      "revision": 1,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "ranger",
+          "phb"
+        ],
+        "class-known",
+        "class-feature|spellcasting|ranger|phb|2|phb",
+        2,
+        1
+      ],
+      "target": {
+        "name": "Animal Friendship",
+        "source": "PHB"
+      },
+      "revision": 2,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "ranger",
+          "phb"
+        ],
+        "class-known",
+        "class-feature|spellcasting|ranger|phb|2|phb",
+        3,
+        0
+      ],
+      "target": {
+        "name": "Cure Wounds",
+        "source": "PHB"
+      },
+      "revision": 3,
+      "policy": "default"
+    }
+  ],
+  "managedClassSpellRevision": 3
 }

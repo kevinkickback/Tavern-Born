@@ -28,6 +28,7 @@ import {
 } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
+import type { ClassSpellSelectionPolicy } from '@/types/classCasting'
 
 export interface SpellSelectionModalProps {
   open: boolean
@@ -46,11 +47,13 @@ export interface SpellSelectionModalProps {
   subclassName?: string
   subclassSource?: string
   classListOverrides?: Set<string>
+  /** Authoritative current default list. Explicit empty denies every target unless bypassed. */
+  classListReferences?: ReadonlySet<string>
   /** Complete allowed targets, independently of class-list visibility controls. */
   allowedSpellReferences?: ReadonlySet<string>
   /** Racial choices have exact targets and one homogeneous selection quota. */
   selectionMode?: 'catalog' | 'racial-choice'
-  onConfirm: (names: string[]) => void
+  onConfirm: (names: string[], policy: ClassSpellSelectionPolicy) => void
 }
 
 const EMPTY_SPELL_NAMES = new Set<string>()
@@ -180,6 +183,7 @@ function matchSpell(
   enforceClassList: boolean,
   strictLevels: boolean,
   characterSpellKeys?: ReadonlySet<string>,
+  classListReferences?: ReadonlySet<string>,
 ): boolean {
   if (
     characterSpellKeys?.has(getSpellSelectionId(spell)) &&
@@ -190,10 +194,12 @@ function matchSpell(
 
   if (
     enforceClassList &&
-    className &&
-    !isSpellOnClassList(spell, className, classSource) &&
-    !isSpellOnSubclassList(spell, className, classSource, subclassName, subclassSource) &&
-    !classListOverrides?.has(getSpellSelectionId(spell))
+    (classListReferences !== undefined
+      ? !classListReferences.has(getSpellSelectionId(spell))
+      : className &&
+        !isSpellOnClassList(spell, className, classSource) &&
+        !isSpellOnSubclassList(spell, className, classSource, subclassName, subclassSource) &&
+        !classListOverrides?.has(getSpellSelectionId(spell)))
   ) {
     return false
   }
@@ -324,6 +330,7 @@ export function SpellSelectionModal({
   subclassName,
   subclassSource,
   classListOverrides,
+  classListReferences,
   allowedSpellReferences,
   selectionMode = 'catalog',
   onConfirm,
@@ -373,7 +380,7 @@ export function SpellSelectionModal({
   )
 
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
-  const hasClassName = !!className
+  const hasClassName = !!className || classListReferences !== undefined
   const visibilityFilter = buildVisibilityFilter(hasCharSpells, hasClassName)
   const filterSections = useMemo(
     () => [
@@ -386,7 +393,10 @@ export function SpellSelectionModal({
   )
 
   const effectiveInitialFilters = hasCharSpells
-    ? { ...initialFilters, visibility: new Set(['hide-known']) }
+    ? {
+        ...initialFilters,
+        visibility: new Set([...(initialFilters?.visibility ?? []), 'hide-known']),
+      }
     : initialFilters
 
   const getCategoryCount = (category: CategoryLimit<Spell5e>, selectedIds: ReadonlySet<string>) =>
@@ -448,6 +458,7 @@ export function SpellSelectionModal({
           !activeFilters.visibility?.has('ignore-class-list'),
           !!allowedLevels,
           characterSpellKeys,
+          classListReferences,
         )
       }
       filterSections={filterSections}
@@ -456,7 +467,13 @@ export function SpellSelectionModal({
       initialSelectedIds={initialSelectedIds}
       unavailableSelectionLabels={unavailableSelectionLabels}
       countUnavailableSelections={retainUnavailable}
-      getConfirmationError={(ids) => {
+      getConfirmationError={(ids, filters) => {
+        if (
+          classListReferences !== undefined &&
+          !filters.visibility?.has('ignore-class-list') &&
+          [...ids].some((id) => !classListReferences.has(id))
+        )
+          return 'Choose spells from the current class list or enable Ignore class restrictions.'
         if (!retainUnavailable && [...ids].some((id) => !availableIds.has(id))) {
           return 'Restore the unavailable spells in Game Data or remove their selections before confirming.'
         }
@@ -465,7 +482,7 @@ export function SpellSelectionModal({
         }
       }}
       initialFilters={effectiveInitialFilters}
-      onConfirm={(ids, selectedItems) => {
+      onConfirm={(ids, selectedItems, filters) => {
         const initialReferences = new Map(
           initialSelectedIds.map((id, index) => [id, initialSelectedNames[index]]),
         )
@@ -480,6 +497,7 @@ export function SpellSelectionModal({
             ...selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
             ...retained,
           ]),
+          filters.visibility?.has('ignore-class-list') ? 'ignore-class-list' : 'default',
         )
       }}
     />

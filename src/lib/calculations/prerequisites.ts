@@ -13,7 +13,11 @@ export function buildPrerequisiteSnapshot({
   return buildEffectivePrerequisiteSnapshot({
     ...params,
     character: params.character
-      ? projectEffectiveClassChoiceFeatures(params.character, classChoiceFeatureCatalogs)
+      ? projectEffectiveClassChoiceFeatures(
+          params.character,
+          classChoiceFeatureCatalogs,
+          params.effectiveSpellProfiles,
+        )
       : null,
   })
 }

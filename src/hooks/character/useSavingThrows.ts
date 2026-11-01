@@ -8,12 +8,10 @@ import { useCharacterStore } from '@/store/characterStore'
 
 export interface SavingThrowsState {
   savingThrows: SavingThrowResult[]
-  toggleProficiency: (ability: AbilityName) => void
 }
 
 export function useSavingThrows(): SavingThrowsState {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
   const calculationContext = useCharacterCalculationContext(activeCharacter)
@@ -40,19 +38,5 @@ export function useSavingThrows(): SavingThrowsState {
     [abilityModifiers, proficientSavingThrows, proficiencyBonus, calculationContext],
   )
 
-  const toggleProficiency = (ability: AbilityName) => {
-    if (!activeCharacter) return
-    const current = activeCharacter.proficiencies?.savingThrows ?? []
-    const updated = current.includes(ability)
-      ? current.filter((a) => a !== ability)
-      : [...current, ability]
-    updateCharacter(activeCharacter.id, {
-      proficiencies: {
-        ...activeCharacter.proficiencies,
-        savingThrows: updated,
-      },
-    })
-  }
-
-  return { savingThrows, toggleProficiency }
+  return { savingThrows }
 }

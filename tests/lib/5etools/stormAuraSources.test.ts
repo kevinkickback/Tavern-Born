@@ -5,7 +5,7 @@ import {
   deriveStormAuraEffects,
   getStormAuraSelectionStates,
 } from '@/lib/character/stormAuraSelections'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 import { makeStormAuraFixture, selectStormAura } from '../../fixtures/stormAuraFixtures'
 
 const path = 'data/class/class-barbarian.json'
@@ -41,7 +41,7 @@ test.skipIf(!existsSync(path)).each(cases)(
     }).filter((action) => action.source.kind === 'subclass')
     expect(actions[0]).toMatchObject({ name: `Storm Aura — ${environment}`, kind: 'bonus-action' })
     expect(actions[0].description).toContain('but not through total cover')
-    const vm = createCharacterSheetViewModel(saved, {
+    const vm = createCurrentCharacterSheetViewModel(saved, {
       ...fixture.data.lookups!,
       classChoiceClasses: fixture.data.classes,
       classChoiceFeatureCatalogs: fixture.catalogs,

@@ -11,7 +11,7 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { addManualEquipmentBatchCommand } from '@/lib/character/commands/equipmentCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
   readGameDataCache,
@@ -23,6 +23,7 @@ import type { DataSourceConfig, GameData } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { loadMagicTemplates, shieldTemplate } from '../fixtures/magicVariantFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 vi.unmock('@/lib/storage/idb-storage')
 
@@ -305,9 +306,10 @@ describe('raw template cache and concrete character persistence', () => {
       const reopened = useCharacterStore.getState().activeCharacter!
       expect(reopened.equipment).toEqual(equipment)
       expect(reopened.provenance).toEqual(ledger)
-      expect(reopened.schemaVersion).toBe(11)
+      expect(reopened.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
       expect(
-        createCharacterSheetViewModel(reopened, refreshed.lookups!).magicItems[0]?.description,
+        createCurrentCharacterSheetViewModel(reopened, refreshed.lookups!).magicItems[0]
+          ?.description,
       ).toBe('Player shield notes.')
       expect(refreshed.lookups?.itemLookup.get('+1 shield|dmg')).toMatchObject({ type: 'S', ac: 3 })
     }

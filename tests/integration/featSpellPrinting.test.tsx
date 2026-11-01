@@ -13,6 +13,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNonracialSourceCharacter } from '../fixtures/nonracialSourceCharacter'
+import { finishBonusSelection } from '../fixtures/spellEditing'
 
 const feat = { name: 'Magic Initiate', source: 'XPHB', fixedGrant: true, grantVariant: 'cleric' }
 const options = { spells: ['Toll the Dead|XGE'] }
@@ -117,7 +118,7 @@ test('the mutation boundary independently protects the exact feat target', () =>
   const before = install()
   const { result } = renderHook(() => {
     const character = useCharacterStore((state) => state.activeCharacter)!
-    return useSpellProfileMutations(character.spells.spellProfiles, new Map())
+    return useSpellProfileMutations(character.spells.spellProfiles)
   })
   act(() =>
     result.current.removeSpellFromProfile('special:unrestricted', 'Toll the Dead|XGE', 'cantrip'),
@@ -211,15 +212,11 @@ test.each(
   expect(useGameDataStore.getState().gameData?.spells).toBe(data.spells)
   const { result } = renderHook(() => {
     const slots = useSpellSlots()
-    return useSpellProfileMutations(slots.spellProfiles, slots.spellcastingDetailByProfileId)
+    return useSpellProfileMutations(slots.spellProfiles)
   })
   act(() => {
     if (action === 'add')
-      result.current.addSpellToProfile(
-        'special:unrestricted',
-        'Light|XPHB',
-        level === 0 ? 'spell' : 'cantrip',
-      )
+      finishBonusSelection(result.current, 'Light|XPHB', level === 0 ? 'spell' : 'cantrip')
     else
       result.current.setProfileSpells(
         'special:unrestricted',

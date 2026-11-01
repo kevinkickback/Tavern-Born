@@ -10,7 +10,13 @@ import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
+import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
 import { projectEffectiveClassChoiceFeatures } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  type ManagedClassSpellContext,
+  type ManagedClassSpellStatus,
+  projectManagedClassSpellState,
+} from '@/lib/character/managedClassSpells'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import {
   deriveRacialDefenseEffects,
@@ -44,6 +50,7 @@ import {
   getCharacterEffectResolutionContext,
   getCharacterEffects,
 } from './characterEffects'
+import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
@@ -94,9 +101,13 @@ export interface CharacterCalculationContext {
     classes: readonly Class5e[]
     catalogs?: ClassChoiceFeatureCatalogs
     feats?: readonly Feat5e[]
+    spellContext?: ManagedClassSpellContext
   }
   feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
+  managedClassSpellStatuses: readonly ManagedClassSpellStatus[]
+  dailyClassSpellStatuses: readonly DailyClassSpellStatus[]
+  classCasting: ReturnType<typeof deriveCurrentClassCasting>
   initiativeModifier: number
   senses: readonly EffectiveSense[]
   equipment: CharacterEquipmentCalculationState
@@ -293,20 +304,7 @@ export function createCharacterCalculationContext(
   primaryLookups: EntityLookupSet,
   rawLookups?: EntityLookupSet,
 ): CharacterCalculationContext {
-  character = projectEffectiveClassChoiceFeatures(
-    character,
-    primaryLookups.classChoiceFeatureCatalogs,
-  )
   const rawItemsAuthoritative = rawLookups?.itemLookup !== undefined
-  character = refreshClassProficiencyState(
-    character,
-    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {}),
-    {
-      ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
-      featExpertiseFeats:
-        primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
-    },
-  )
   rawLookups ??= primaryLookups
   const raceResolution = resolveRaceReference(
     {
@@ -337,6 +335,36 @@ export function createCharacterCalculationContext(
     spellsByKey: primaryLookups.spellsByKey,
     rawSpellsByKey: rawLookups.spellsByKey,
   })
+  const managedSpellContext = {
+    catalogs: primaryLookups.classChoiceFeatureCatalogs,
+    spellsByKey: primaryLookups.spellsByKey,
+    currentRaceResolution: resolveRaceReference(
+      {
+        name: character.race,
+        source: character.raceSource,
+        subraceName: character.subrace,
+        subraceSource: character.subraceSource,
+      },
+      primaryLookups,
+      primaryLookups,
+    ),
+  }
+  const dailyIntentSource = character
+  character = projectManagedClassSpellState(character, managedSpellContext).character
+  character = projectEffectiveClassChoiceFeatures(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    character.spells.spellProfiles,
+  )
+  character = refreshClassProficiencyState(
+    character,
+    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {}),
+    {
+      ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
+      featExpertiseFeats:
+        primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
+    },
+  )
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },
     primaryLookups,
@@ -363,6 +391,7 @@ export function createCharacterCalculationContext(
     classes: choiceClasses,
     catalogs: choiceCatalogs,
     feats: primaryLookups.featExpertiseFeats,
+    spellContext: managedSpellContext,
   }
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
   const baseSourceEffects = [
@@ -381,10 +410,24 @@ export function createCharacterCalculationContext(
     background,
     baseSourceEffects,
   )
+  const managedSpells = projectManagedClassSpellState(
+    character,
+    {
+      ...managedSpellContext,
+      abilityScores: abilityScores.total,
+    },
+    dailyIntentSource,
+  )
+  character = managedSpells.character
   // These explanatory notes cannot feed back into numeric ability or prerequisite calculations.
   const sourceEffects = [
     ...baseSourceEffects,
-    ...deriveConditionalProficiencyNotes(character, choiceCatalogs, abilityScores.total),
+    ...deriveConditionalProficiencyNotes(
+      character,
+      choiceCatalogs,
+      abilityScores.total,
+      character.spells.spellProfiles,
+    ),
   ]
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 
@@ -401,6 +444,16 @@ export function createCharacterCalculationContext(
     classChoices,
     feats: resolvedFeats,
     abilityScores,
+    managedClassSpellStatuses: managedSpells.statuses,
+    dailyClassSpellStatuses: managedSpells.dailyStatuses,
+    classCasting: deriveCurrentClassCasting(
+      character,
+      choiceCatalogs,
+      abilityScores.total,
+      effects,
+      effectResolutionContext,
+      dailyIntentSource,
+    ),
     initiativeModifier: Math.trunc(
       resolveNumericEffect(
         abilityScores.modifiers.dexterity,

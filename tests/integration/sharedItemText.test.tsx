@@ -12,7 +12,7 @@ import {
   removeManualEquipmentCommand,
 } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries } from '@/lib/compendiumEntries'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
   readGameDataCache,
@@ -27,6 +27,7 @@ import type { ItemEntry5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { firePotion, itemTextTypes, resistanceFragments } from '../fixtures/itemEntryFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 // Exercise the real acknowledged IndexedDB boundary rather than the shared UI storage mock.
 vi.unmock('@/lib/storage/idb-storage')
@@ -119,10 +120,10 @@ describe('shared item text consumers and persistence', () => {
     expect(entry.description).toContain('resistance to fire damage')
     show(<CompendiumEntryDetails selectedEntry={entry} />)
     expect(screen.getByText(expected)).toBeTruthy()
-    const vm = createCharacterSheetViewModel(character, data.lookups!)
+    const vm = createCurrentCharacterSheetViewModel(character, data.lookups!)
     expect(vm.magicItems[0].description).toBe('Player-written description.')
     expect(
-      createCharacterSheetViewModel(
+      createCurrentCharacterSheetViewModel(
         { ...character, equipment: [{ ...character.equipment[0], description: '' }] },
         data.lookups!,
       ).magicItems[0].description,
@@ -182,7 +183,7 @@ describe('shared item text consumers and persistence', () => {
       const reopened = useCharacterStore.getState().activeCharacter!
       expect(reopened.equipment).toEqual(equipment)
       expect(reopened.provenance).toEqual(originalLedger)
-      const descriptions = createCharacterSheetViewModel(
+      const descriptions = createCurrentCharacterSheetViewModel(
         reopened,
         refreshed.lookups!,
       ).magicItems.map((item) => item.description)
@@ -206,6 +207,6 @@ describe('shared item text consumers and persistence', () => {
     const final = useCharacterStore.getState().activeCharacter!
     expect(final.equipment).toEqual([equipment[1]])
     expect(Object.values(final.provenance!.equipment).flat()).not.toHaveLength(0)
-    expect(final.schemaVersion).toBe(11)
+    expect(final.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
   })
 })

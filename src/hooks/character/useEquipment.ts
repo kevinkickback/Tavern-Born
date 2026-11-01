@@ -6,11 +6,8 @@ import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
-  addManualEquipmentCommand,
-  addManualEquipmentEntryCommand,
   removeManualEquipmentCommand,
 } from '@/lib/character/commands/equipmentCommands'
-import { generateEquipmentId } from '@/lib/character/ids'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import type { Currency, Equipment } from '@/types/character'
@@ -31,8 +28,6 @@ export interface EquipmentState {
   attunedCount: number
   currency: Currency
   totalCurrencyCopper: number
-  addItem: (item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>) => void
-  addFromGameData: (item5e: Item5e) => void
   addManyFromGameData: (items: readonly Item5e[]) => void
   removeItem: (id: string) => void
   updateItem: (id: string, patch: Partial<Equipment>) => void
@@ -78,45 +73,6 @@ export function useEquipment(): EquipmentState {
     (list: Equipment[]) => {
       if (!character) return
       updateCharacter(character.id, { equipment: list })
-    },
-    [character, updateCharacter],
-  )
-
-  const addItem = useCallback(
-    (item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>) => {
-      if (!character) return
-      const newItem: Equipment = {
-        id: generateEquipmentId(),
-        quantity: 1,
-        equipped: false,
-        attuned: false,
-        ...item,
-      }
-      const result = addManualEquipmentEntryCommand(
-        character,
-        character.provenance ?? emptyProvenance(),
-        newItem,
-      )
-      updateCharacter(character.id, {
-        ...result.characterPatch,
-        provenance: result.provenanceUpdate,
-      })
-    },
-    [character, updateCharacter],
-  )
-
-  const addFromGameData = useCallback(
-    (item5e: Item5e) => {
-      if (!character) return
-      const result = addManualEquipmentCommand(
-        character,
-        character.provenance ?? emptyProvenance(),
-        item5e,
-      )
-      updateCharacter(character.id, {
-        ...result.characterPatch,
-        provenance: result.provenanceUpdate,
-      })
     },
     [character, updateCharacter],
   )
@@ -223,8 +179,6 @@ export function useEquipment(): EquipmentState {
     attunedCount,
     currency,
     totalCurrencyCopper,
-    addItem,
-    addFromGameData,
     addManyFromGameData,
     removeItem,
     updateItem,

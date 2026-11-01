@@ -2,12 +2,12 @@ import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
-import {
-  createCharacterSheetViewModel,
-  withoutSheetDescriptions,
-} from '@/lib/pdf/characterSheetViewModel'
+import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'
 import { makeKnowledgeFixture } from '../fixtures/knowledgeProficiencyFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 test.each(
   (
@@ -51,8 +51,10 @@ test.each(
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const baseline = createCharacterSheetViewModel(f.character, input).skillByName.get('arcana')!
-  const vm = createCharacterSheetViewModel(saved, input)
+  const baseline = createCurrentCharacterSheetViewModel(f.character, input).skillByName.get(
+    'arcana',
+  )!
+  const vm = createCurrentCharacterSheetViewModel(saved, input)
   expect(vm.skillByName.get('arcana')!.modifier).toBe(baseline.modifier + 4)
   if (source === 'PHB') expect(vm.proficienciesSummary).toContain('Languages: elvish, dwarvish')
   else expect(vm.toolProficiencies).toEqual([f.data.items[0].name.toLowerCase()])
@@ -60,7 +62,7 @@ test.each(
   const form = (await PDFDocument.load(await generateTestCharacterSheet(view, template))).getForm()
   const modifier = view.skillByName.get('arcana')!.modifier
   expect(form.getTextField(field).getText()).toBe(modifier >= 0 ? `+${modifier}` : String(modifier))
-  const missing = createCharacterSheetViewModel(saved, {
+  const missing = createCurrentCharacterSheetViewModel(saved, {
     ...input,
     classChoiceFeatureCatalogs: { ...f.catalogs, classes: [] },
   })

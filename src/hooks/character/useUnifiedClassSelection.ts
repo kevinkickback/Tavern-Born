@@ -36,6 +36,7 @@ export function useUnifiedClassSelection() {
         spellsByKey: calculationContext?.lookups.primary.spellsByKey,
         rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        spellContext: calculationContext?.classChoices.spellContext,
       })
 
       updateCharacter(character.id, {
@@ -74,6 +75,7 @@ export function useUnifiedClassSelection() {
           spellsByKey: calculationContext?.lookups.primary.spellsByKey,
           rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
           classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+          spellContext: calculationContext?.classChoices.spellContext,
         },
       )
 

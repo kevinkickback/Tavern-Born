@@ -3,15 +3,17 @@ import { describe, expect, test } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { SheetExportReport } from '@/lib/pdf/types'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 function model() {
-  return createCharacterSheetViewModel(createEmptyCharacter({ name: 'Overflow review' }), {})
+  return createCurrentCharacterSheetViewModel(createEmptyCharacter({ name: 'Overflow review' }), {})
 }
 function attacks(vm: ReturnType<typeof model>) {
   vm.weaponRows = Array.from({ length: 8 }, (_, index) => ({
@@ -85,7 +87,7 @@ describe('Automatic sheet content and lossless overflow', () => {
     const classes = ['Wizard', 'Cleric', 'Fighter', 'Barbarian'].map((name, index) =>
       makeClassFixture({ name, source: 'PHB', hd: { number: 1, faces: 6 + index * 2 } }),
     )
-    const vm = createCharacterSheetViewModel(
+    const vm = createCurrentCharacterSheetViewModel(
       createEmptyCharacter({
         classProgression: classes.map((entry) => ({
           name: entry.name,
@@ -140,7 +142,7 @@ describe('Automatic sheet content and lossless overflow', () => {
         },
       ],
     })
-    const vm = createCharacterSheetViewModel(character, {})
+    const vm = createCurrentCharacterSheetViewModel(character, {})
     let report: SheetExportReport | undefined
     const full = await PDFDocument.load(
       await generateTestCharacterSheet(vm, '2014-custom', {
@@ -222,7 +224,7 @@ describe('Automatic sheet content and lossless overflow', () => {
       },
     ]
     character.details.backstory = 'A traveler from the coast.'
-    const vm = createCharacterSheetViewModel(character, {})
+    const vm = createCurrentCharacterSheetViewModel(character, {})
     attacks(vm)
     const before = structuredClone(vm)
     const doc = await PDFDocument.load(

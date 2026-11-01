@@ -1,9 +1,20 @@
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
 import type { Class5e, GameData, Raw5ePrereq } from '@/types/5etools'
 import type { AbilityName, Character, SpellProfile } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedClassRules } from '@/types/classRules'
 import { makeCharacterFixture } from './characterFixtures'
 import { makeGameDataFixture, makeSpellFixture } from './gameDataFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from './managedClassSpellFixtures'
+import { makeOptionalClassSectionData } from './optionalClassSectionFixtures'
+
+const managedFixture = makeManagedClassSpellFixtures()
+const sectionFixture = makeOptionalClassSectionData()
 
 interface ExpectedSpellcastingDetail {
   profileId: string
@@ -98,6 +109,46 @@ function classProfile(
 }
 
 function withLookups(gameData: GameData): GameData {
+  // Keep representative equipment/choice mechanics, with actual current casting inputs and proofs.
+  gameData.classes = gameData.classes.map((row) => {
+    const current = (
+      row.name === 'Warlock' ? sectionFixture.data : managedFixture.data
+    ).classes.find((cls) => cls.name === row.name && cls.source === row.source)
+    return current?.spellcastingAbility
+      ? {
+          ...current,
+          normalizedRules: row.name === 'Warlock' ? current.normalizedRules : row.normalizedRules,
+        }
+      : row
+  })
+  gameData.classFeatures = [
+    ...[...managedFixture.data.classFeatures, ...sectionFixture.data.classFeatures].filter(
+      (feature) =>
+        !gameData.classFeatures.some(
+          (row) =>
+            row.name === feature.name &&
+            row.className === feature.className &&
+            row.source === feature.source,
+        ),
+    ),
+    ...gameData.classFeatures,
+  ]
+  gameData.classCastingSources = managedFixture.data.classCastingSources
+  gameData.optionalfeatures = sectionFixture.data.optionalfeatures
+  gameData.optionalClassFeatureSources = sectionFixture.data.optionalClassFeatureSources
+  gameData.optionalClassSections = sectionFixture.data.optionalClassSections
+  gameData.classFeatures = gameData.classFeatures.filter(
+    (row, index, rows) =>
+      rows.findIndex(
+        (candidate) =>
+          candidate.name === row.name &&
+          candidate.className === row.className &&
+          candidate.classSource === row.classSource &&
+          candidate.level === row.level &&
+          candidate.source === row.source,
+      ) === index,
+  )
+  gameData.spells = managedFixture.spells
   gameData.lookups = buildGameDataLookups(gameData)
   return gameData
 }
@@ -209,7 +260,7 @@ const dwarfMartialData = withLookups(
   }),
 )
 
-const elfWizardCharacter = standardCharacter({
+let elfWizardCharacter = standardCharacter({
   id: 'representative-elf-wizard',
   name: 'Elf Wizard Fixture',
   race: 'Elf',
@@ -263,10 +314,7 @@ const elfWizardCharacter = standardCharacter({
   ],
   spells: {
     ...makeCharacterFixture().spells,
-    spellProfiles: [
-      classProfile('Wizard', 'PHB', { cantrips: ['Mage Hand'], preparedSpells: ['Magic Missile'] }),
-      specialProfile(),
-    ],
+    spellProfiles: [classProfile('Wizard', 'PHB'), specialProfile()],
   },
 })
 
@@ -320,7 +368,7 @@ const cleric2024 = {
   normalizedRules: { ...EMPTY_RULES, choices: [divineOrder] },
 } as Class5e
 
-const clericCharacter = standardCharacter({
+let clericCharacter = standardCharacter({
   id: 'representative-2024-cleric',
   name: '2024 Cleric Fixture',
   originSystem: '2024',
@@ -400,13 +448,7 @@ const clericCharacter = standardCharacter({
   ],
   spells: {
     ...makeCharacterFixture().spells,
-    spellProfiles: [
-      classProfile('Cleric', 'XPHB', {
-        cantrips: ['Guidance', 'Light', 'Thaumaturgy'],
-        preparedSpells: ['Cure Wounds'],
-      }),
-      specialProfile(),
-    ],
+    spellProfiles: [classProfile('Cleric', 'XPHB'), specialProfile()],
   },
 })
 
@@ -492,7 +534,7 @@ const druid2024 = {
   normalizedRules: { ...EMPTY_RULES, asiLevels: [4], choices: [primalOrder, elementalFury] },
 } as Class5e
 
-const druidCharacter = standardCharacter({
+let druidCharacter = standardCharacter({
   id: 'representative-2024-druid',
   name: '2024 Druid Fixture',
   originSystem: '2024',
@@ -593,13 +635,7 @@ const druidCharacter = standardCharacter({
   ],
   spells: {
     ...makeCharacterFixture().spells,
-    spellProfiles: [
-      classProfile('Druid', 'XPHB', {
-        cantrips: ['Guidance', 'Produce Flame', 'Shillelagh'],
-        preparedSpells: ['Cure Wounds'],
-      }),
-      specialProfile(),
-    ],
+    spellProfiles: [classProfile('Druid', 'XPHB'), specialProfile()],
   },
 })
 
@@ -796,7 +832,7 @@ const focusItem = {
   bonusSpellSaveDc: '+1',
 }
 
-const multiclassCharacter = standardCharacter({
+let multiclassCharacter = standardCharacter({
   id: 'representative-multiclass-spellcaster',
   name: 'Multiclass Spellcaster Fixture',
   race: 'Human',
@@ -870,8 +906,8 @@ const multiclassCharacter = standardCharacter({
   spells: {
     ...makeCharacterFixture().spells,
     spellProfiles: [
-      classProfile('Wizard', 'PHB', { preparedSpells: ['Magic Missile'] }),
-      classProfile('Warlock', 'PHB', { spellsKnown: ['Hex'] }),
+      classProfile('Wizard', 'PHB'),
+      classProfile('Warlock', 'PHB'),
       specialProfile(),
     ],
     spellSlots: { 1: { max: 4, used: 1 }, 2: { max: 3, used: 1 } },
@@ -903,6 +939,139 @@ const multiclassData = withLookups(
     ],
   }),
 )
+
+function wizardPlans(owner: Character['classProgression'][number]) {
+  return [
+    {
+      owner,
+      domain: 'class-cantrip' as const,
+      gain: 1,
+      targets: ['Mage Hand', 'Fire Bolt', 'Ray of Frost'].map((name) => ({ name, source: 'PHB' })),
+    },
+    {
+      owner,
+      domain: 'class-cantrip' as const,
+      gain: 4,
+      targets: [{ name: 'Light', source: 'PHB' }],
+    },
+    {
+      owner,
+      domain: 'class-spellbook' as const,
+      gain: 1,
+      targets: [
+        'Magic Missile',
+        'Shield',
+        'Mage Armor',
+        'Detect Magic',
+        'Sleep',
+        'Find Familiar',
+      ].map((name) => ({
+        name,
+        source: 'PHB',
+        ...(name === 'Magic Missile' ? { prepare: true as const } : {}),
+      })),
+    },
+    {
+      owner,
+      domain: 'class-spellbook' as const,
+      gain: 2,
+      targets: ['Burning Hands', 'Charm Person'].map((name) => ({ name, source: 'PHB' })),
+    },
+    {
+      owner,
+      domain: 'class-spellbook' as const,
+      gain: 3,
+      targets: ['Misty Step', 'Invisibility'].map((name) => ({ name, source: 'PHB' })),
+    },
+    {
+      owner,
+      domain: 'class-spellbook' as const,
+      gain: 4,
+      targets: ['Mirror Image', 'Web'].map((name) => ({ name, source: 'PHB' })),
+    },
+  ]
+}
+elfWizardCharacter = authorManagedClassSpellFixture(
+  elfWizardCharacter,
+  managedFixture,
+  wizardPlans(elfWizardCharacter.classProgression[0]),
+)
+clericCharacter = authorManagedClassSpellFixture(
+  clericCharacter,
+  managedFixture,
+  [
+    {
+      owner: clericCharacter.classProgression[0],
+      domain: 'class-cantrip',
+      gain: 1,
+      targets: ['Guidance', 'Light', 'Thaumaturgy'].map((name) => ({ name, source: 'XPHB' })),
+    },
+  ],
+  [{ profileId: 'class:Cleric|XPHB', reference: 'Cure Wounds|XPHB' }],
+)
+druidCharacter = authorManagedClassSpellFixture(
+  druidCharacter,
+  managedFixture,
+  [
+    {
+      owner: druidCharacter.classProgression[0],
+      domain: 'class-cantrip',
+      gain: 1,
+      targets: ['Guidance', 'Shillelagh'].map((name) => ({ name, source: 'XPHB' })),
+    },
+    {
+      owner: druidCharacter.classProgression[0],
+      domain: 'class-cantrip',
+      gain: 4,
+      targets: [{ name: 'Produce Flame', source: 'XPHB' }],
+    },
+  ],
+  [{ profileId: 'class:Druid|XPHB', reference: 'Cure Wounds|XPHB' }],
+)
+multiclassCharacter = authorManagedClassSpellFixture(multiclassCharacter, managedFixture, [
+  ...wizardPlans(multiclassCharacter.classProgression[0]),
+  {
+    owner: multiclassCharacter.classProgression[1],
+    domain: 'class-cantrip',
+    gain: 1,
+    targets: ['Eldritch Blast', 'Mage Hand'].map((name) => ({ name, source: 'PHB' })),
+  },
+  {
+    owner: multiclassCharacter.classProgression[1],
+    domain: 'class-known',
+    gain: 1,
+    targets: ['Hellish Rebuke', 'Charm Person'].map((name) => ({ name, source: 'PHB' })),
+  },
+  {
+    owner: multiclassCharacter.classProgression[1],
+    domain: 'class-known',
+    gain: 2,
+    targets: [{ name: 'Comprehend Languages', source: 'PHB' }],
+  },
+])
+
+const multiclassCatalogs = buildClassChoiceFeatureCatalogs(multiclassData)
+const invocationChoice = getClassChoiceCandidates(
+  multiclassData.classes.find((row) => row.name === 'Warlock')!,
+  undefined,
+  multiclassCatalogs,
+).find((row) => row.id === 'class:warlock|phb|choice:eldritch-invocations|2')!
+multiclassCharacter = {
+  ...multiclassCharacter,
+  ...applyClassChoiceSelectionCommand(
+    multiclassCharacter,
+    invocationChoice,
+    [
+      { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+      { entityType: 'optionalFeature', name: 'Agonizing Blast', source: 'PHB' },
+    ],
+    {
+      classes: multiclassData.classes,
+      catalogs: multiclassCatalogs,
+      spellContext: managedFixture.context,
+    },
+  ),
+}
 
 export const REPRESENTATIVE_CHARACTER_FIXTURES: RepresentativeCharacterFixture[] = [
   {

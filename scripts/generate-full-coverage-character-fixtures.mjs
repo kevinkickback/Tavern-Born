@@ -171,74 +171,16 @@ function buildSpellProfiles(progression, edition) {
     edition,
   )
   const clericCantrips = selectClassSpells('Cleric', cleric.source, edition, { 0: 4 })
-  const clericPreparedByClassLevel =
-    edition === '2024'
-      ? new Map([
-          [1, selectClassSpells('Cleric', cleric.source, edition, { 1: 4 }, lifeDomainSpells)],
-          [
-            2,
-            selectClassSpells('Cleric', cleric.source, edition, { 1: 5 }, lifeDomainSpells).slice(
-              4,
-              5,
-            ),
-          ],
-          [3, selectClassSpells('Cleric', cleric.source, edition, { 2: 1 }, lifeDomainSpells)],
-          [
-            4,
-            selectClassSpells('Cleric', cleric.source, edition, { 2: 2 }, lifeDomainSpells).slice(
-              1,
-              2,
-            ),
-          ],
-          [5, selectClassSpells('Cleric', cleric.source, edition, { 3: 2 }, lifeDomainSpells)],
-        ])
-      : new Map()
-  const clericPrepared =
-    edition === '2024'
-      ? [...clericPreparedByClassLevel.values()].flat()
-      : selectClassSpells('Cleric', cleric.source, edition, { 1: 3, 2: 3, 3: 2 }, lifeDomainSpells)
+  const clericPrepared = selectClassSpells(
+    'Cleric',
+    cleric.source,
+    edition,
+    edition === '2024' ? { 1: 5, 2: 2, 3: 2 } : { 1: 3, 2: 3, 3: 2 },
+    lifeDomainSpells,
+  )
   const bonusCantrips = wizardCantripCandidates.slice(-2)
   const bonusSpell = selectClassSpells('Wizard', wizard.source, edition, { 1: 7 }).slice(-1)
   const spellAttributions = [
-    ...[...wizardSelectionsByClassLevel.entries()].flatMap(([classLevel, references]) =>
-      references.map((reference) => ({
-        reference,
-        sourceType: 'class',
-        sourceName: wizard.name,
-        sourceRef: wizard.source,
-        grantType: 'choice',
-        spellGrantedAtLevel: classLevel,
-        spellAttributionMode: 'exact',
-      })),
-    ),
-    ...clericCantrips.map((reference, index) => ({
-      reference,
-      sourceType: 'class',
-      sourceName: cleric.name,
-      sourceRef: cleric.source,
-      grantType: 'choice',
-      spellGrantedAtLevel: index < 3 ? 1 : 4,
-      spellAttributionMode: 'exact',
-    })),
-    ...(edition === '2024'
-      ? [...clericPreparedByClassLevel.entries()].flatMap(([classLevel, references]) =>
-          references.map((reference) => ({
-            reference,
-            sourceType: 'class',
-            sourceName: cleric.name,
-            sourceRef: cleric.source,
-            grantType: 'choice',
-            spellGrantedAtLevel: classLevel,
-            spellAttributionMode: 'exact',
-          })),
-        )
-      : clericPrepared.map((reference) => ({
-          reference,
-          sourceType: 'class',
-          sourceName: cleric.name,
-          sourceRef: cleric.source,
-          grantType: 'choice',
-        }))),
     ...lifeDomainSpells.map((reference) => ({
       reference,
       sourceType: 'subclass',
@@ -269,7 +211,7 @@ function buildSpellProfiles(progression, edition) {
       fixedSpells: lifeDomainSpells,
       alwaysPreparedSpells: lifeDomainSpells,
       cantrips: clericCantrips,
-      spellsKnown: edition === '2024' ? [...lifeDomainSpells, ...clericPrepared] : lifeDomainSpells,
+      spellsKnown: lifeDomainSpells,
       preparedSpells: clericPrepared,
       alwaysPrepared: false,
     },
@@ -296,7 +238,38 @@ function buildSpellProfiles(progression, edition) {
     })),
   )
 
-  return { profiles, spellAttributions, racialChoiceReference: wizardCantripCandidates[5] }
+  const managedSelections = [...wizardSelectionsByClassLevel.entries()].flatMap(
+    ([gain, references]) => {
+      const ordinals = { 'class-cantrip': 0, 'class-spellbook': 0 }
+      return references.map((reference) => {
+        const domain = wizardCantrips.includes(reference) ? 'class-cantrip' : 'class-spellbook'
+        return {
+          entry: wizard,
+          gain,
+          domain,
+          ordinal: ordinals[domain]++,
+          reference,
+          prepare: wizardPrepared.includes(reference),
+        }
+      })
+    },
+  )
+  managedSelections.push(
+    ...clericCantrips.map((reference, index) => ({
+      entry: cleric,
+      gain: index < 3 ? 1 : 4,
+      domain: 'class-cantrip',
+      ordinal: index < 3 ? index : 0,
+      reference,
+    })),
+  )
+  return {
+    profiles,
+    spellAttributions,
+    managedSelections,
+    dailyPreparation: { entry: cleric, references: clericPrepared },
+    racialChoiceReference: wizardCantripCandidates[5],
+  }
 }
 
 function resolveArmorType(type) {
@@ -945,6 +918,8 @@ function buildFixture(seed, edition) {
     profiles: mappedProfiles,
     spellAttributions,
     racialChoiceReference,
+    managedSelections,
+    dailyPreparation,
   } = buildSpellProfiles(progression, edition)
   const mappedFeats = buildFeatSelections(seed, edition)
   const mappedSpecialFeats = buildSpecialFeats(seed, edition, mappedProfiles)
@@ -1088,6 +1063,7 @@ function buildFixture(seed, edition) {
     manualActions: seed.manualActions ?? [],
   }
 
+  fixture = authorManagedSpellState(fixture, managedSelections, dailyPreparation)
   const raceResolution = getNativeFixtureResolution(fixture)
   for (const [field, selectionKind] of [
     ['feats', 'ordinary'],
@@ -1157,6 +1133,89 @@ function getNativeFixtureResolution(fixture) {
     mergedRace: nativeParent,
     subraceIsNested: !!nativeChild,
   }
+}
+
+/** Author new format12 choices through the runtime actor; no persisted acquisition inference. */
+function authorManagedSpellState(input, selections, dailyPreparation) {
+  let character = {
+    ...input,
+    managedClassSpellChoices: [],
+    managedClassSpellRevision: 0,
+    spells: {
+      ...input.spells,
+      spellProfiles: input.spells.spellProfiles.map((profile) =>
+        profile.type === 'class'
+          ? { ...profile, cantrips: [], spellsKnown: [], preparedSpells: [] }
+          : profile,
+      ),
+    },
+    provenance: {
+      ...input.provenance,
+      spells: Object.fromEntries(
+        Object.entries(input.provenance.spells).flatMap(([name, tags]) => {
+          const retained = tags.filter(
+            (tag) => !['class', 'subclass'].includes(tag.sourceType) || tag.grantType !== 'choice',
+          )
+          return retained.length ? [[name, retained]] : []
+        }),
+      ),
+    },
+  }
+  const catalogs = buildClassChoiceFeatureCatalogs(parsedCastingData)
+  const lookups = {
+    classesByKey: buildClassLookup(parsedCastingData.classes),
+    classChoiceClasses: parsedCastingData.classes,
+    classChoiceFeatureCatalogs: catalogs,
+    spellsByKey: nativeSpellLookup,
+  }
+  const abilityScores = createCharacterCalculationContext(character, lookups).abilityScores.total
+  const context = {
+    catalogs,
+    spellsByKey: nativeSpellLookup,
+    currentRaceResolution: getNativeFixtureResolution(character),
+    abilityScores,
+  }
+  if (selections.length) {
+    const result = setManagedClassSpellChoicesCommand(
+      character,
+      character.provenance,
+      selections.map((selection) => {
+        const rule = getClassSpellProfilePolicy(selection.entry).rule
+        if (!rule) throw new Error('Missing finite fixture casting owner.')
+        const [name, source] = selection.reference.split('|')
+        return {
+          slot: [
+            rule.declaration.owner,
+            selection.domain,
+            rule.declaration.target,
+            selection.gain,
+            selection.ordinal,
+          ],
+          expected: null,
+          expectedEmptyRevision: 0,
+          target: { name, source },
+          policy: 'default',
+          ...(selection.prepare ? { prepare: true } : {}),
+        }
+      }),
+      context,
+    )
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
+  if (dailyPreparation)
+    for (const reference of dailyPreparation.references) {
+      const entry = dailyPreparation.entry
+      const result = setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        `class:${entry.name}|${entry.source}`,
+        reference,
+        true,
+        context,
+      )
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+  return character
 }
 
 function buildCompanionFixture(baseFixture, edition) {
@@ -1263,7 +1322,7 @@ function buildCompanionFixture(baseFixture, edition) {
   const spellReferences = selectClassSpells('Ranger', ranger.source, edition, {
     1: edition === '2024' ? 4 : 3,
   })
-  const spellLevels = edition === '2024' ? [1, 1, 2, 3] : [2, 2, 3]
+  const spellLevels = [2, 2, 3]
   const provenance = emptyProvenance()
   provenance.abilityBonuses = baseFixture.provenance.abilityBonuses.filter(
     (record) => record.sourceTag.sourceType !== 'feat',
@@ -1299,16 +1358,6 @@ function buildCompanionFixture(baseFixture, edition) {
       )
     }
   }
-  spellReferences.forEach((reference, index) => {
-    addLedgerGrant(
-      provenance.spells,
-      reference,
-      makeTag('class', ranger.name, 'choice', ranger.source, {
-        spellGrantedAtLevel: spellLevels[index],
-        spellAttributionMode: 'exact',
-      }),
-    )
-  })
   for (const selection of selected) {
     if (selection.inactive) continue
     for (const option of selection.selected) {
@@ -1459,9 +1508,22 @@ function buildCompanionFixture(baseFixture, edition) {
       manualActions: [],
     }),
   )
-  const resolution = getNativeFixtureResolution(fixture)
+  const authored = authorManagedSpellState(
+    fixture,
+    edition === '2014'
+      ? spellReferences.map((reference, index) => ({
+          entry: progression[0],
+          gain: spellLevels[index],
+          domain: 'class-known',
+          ordinal: index < 2 ? index : 0,
+          reference,
+        }))
+      : [],
+    edition === '2024' ? { entry: progression[0], references: spellReferences } : undefined,
+  )
+  const resolution = getNativeFixtureResolution(authored)
   return refreshRacialDefenseState(
-    refreshNativeRacialSpellState(fixture, resolution),
+    refreshNativeRacialSpellState(authored, resolution),
     resolution.parentRace,
     resolution.subraceData,
   )
@@ -1532,6 +1594,13 @@ const runtime = await createServer({
 let parseRaces,
   parseSpells,
   buildSpellLookup,
+  buildClassLookup,
+  composeGameDataLayers,
+  createEmptyGameData,
+  createCharacterCalculationContext,
+  getClassSpellProfilePolicy,
+  setManagedClassSpellChoicesCommand,
+  setDailyClassSpellPreparedCommand,
   deriveNativeRacialSpellProfiles,
   reconcileNativeRacialSpellLedger,
   refreshNativeRacialSpellState,
@@ -1555,7 +1624,23 @@ try {
     '/src/lib/character/racialDefenseState.ts',
   ))
   ;({ parseSpells } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/spells.ts'))
-  ;({ buildSpellLookup } = await runtime.ssrLoadModule('/src/lib/5etools/lookups.ts'))
+  ;({ buildSpellLookup, buildClassLookup } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/lookups.ts',
+  ))
+  ;({ composeGameDataLayers } = await runtime.ssrLoadModule('/src/lib/5etools/contentLayers.ts'))
+  ;({ createEmptyGameData } = await runtime.ssrLoadModule('/src/lib/5etools/emptyGameData.ts'))
+  ;({ createCharacterCalculationContext } = await runtime.ssrLoadModule(
+    '/src/lib/calculations/characterCalculationContext.ts',
+  ))
+  ;({ getClassSpellProfilePolicy } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/classCastingRules.ts',
+  ))
+  ;({ setManagedClassSpellChoicesCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/managedClassSpellCommands.ts',
+  ))
+  ;({ setDailyClassSpellPreparedCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/dailyClassSpellCommands.ts',
+  ))
   ;({
     deriveNativeRacialSpellProfiles,
     reconcileNativeRacialSpellLedger,
@@ -1594,6 +1679,18 @@ try {
 const nativeRaces = parseRaces(racePayload)
 const parsedFixtureSpells = parseSpells(spells, { sourceLookup: spellSourceLookup })
 const nativeSpellLookup = buildSpellLookup(parsedFixtureSpells)
+const parsedCastingData = composeGameDataLayers(
+  classPayloads.map((payload, index) => {
+    const parsed = parseClassDocument(payload, `fixture-author:${index}`)
+    return {
+      ...createEmptyGameData(),
+      classes: parsed.classes,
+      classFeatures: parsed.classFeatures,
+      classCastingSources: parsed.classCastingSources,
+      optionalClassFeatureSources: parsed.optionalClassFeatureSources,
+    }
+  }),
+)
 
 if (process.argv.includes('--complete-class-setup')) {
   // Narrow repair mode preserves the three unrelated fixture files byte for byte.

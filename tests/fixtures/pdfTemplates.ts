@@ -4,8 +4,21 @@ import {
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
-import type { CharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import {
+  type CharacterSheetLookupSet,
+  type CharacterSheetViewModel,
+  createCharacterSheetViewModel,
+} from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
+import type { Character } from '@/types/character'
+
+/** Test inputs explicitly represent the current catalog and the retained text catalog together. */
+export function createCurrentCharacterSheetViewModel(
+  character: Character,
+  currentLookups: CharacterSheetLookupSet,
+) {
+  return createCharacterSheetViewModel(character, currentLookups, currentLookups)
+}
 
 /** Full source forms exercise the low-level adapter's original external field contracts. */
 export function sourceTemplateBytes(id: CharacterSheetTemplateId) {

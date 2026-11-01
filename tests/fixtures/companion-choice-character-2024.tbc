@@ -80,12 +80,7 @@
         "className": "Ranger",
         "classSource": "XPHB",
         "cantrips": [],
-        "spellsKnown": [
-          "Alarm|XPHB",
-          "Animal Friendship|XPHB",
-          "Cure Wounds|XPHB",
-          "Detect Magic|XPHB"
-        ],
+        "spellsKnown": [],
         "preparedSpells": [
           "Alarm|XPHB",
           "Animal Friendship|XPHB",
@@ -97,7 +92,7 @@
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Special (Unrestricted)",
+        "label": "Bonus Spells",
         "cantrips": [],
         "spellsKnown": [],
         "preparedSpells": [],
@@ -497,50 +492,6 @@
       ]
     },
     "spells": {
-      "alarm": [
-        {
-          "sourceType": "class",
-          "sourceName": "Ranger",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Ranger",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "animal friendship": [
-        {
-          "sourceType": "class",
-          "sourceName": "Ranger",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Ranger",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "cure wounds": [
-        {
-          "sourceType": "class",
-          "sourceName": "Ranger",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Ranger",
-          "spellGrantedAtLevel": 2,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "detect magic": [
-        {
-          "sourceType": "class",
-          "sourceName": "Ranger",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Ranger",
-          "spellGrantedAtLevel": 3,
-          "spellAttributionMode": "exact"
-        }
-      ],
       "dancing lights": [
         {
           "sourceType": "subrace",
@@ -596,7 +547,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -691,6 +642,8 @@
       "values": []
     }
   },
+  "managedClassSpellChoices": [],
+  "managedClassSpellRevision": 0,
   "backgroundAsiBlockIndex": 0,
   "backgroundAsiChoices": [
     "dexterity",

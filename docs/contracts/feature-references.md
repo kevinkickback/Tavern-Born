@@ -153,7 +153,7 @@ Barbarian owners retain the original PHB targets. Both the declared intro-to-Aur
 current owner-scoped source parents must qualify before any option is eligible. A structured
 `subclass-options:` ID binds the
 actual owner, exact Aura target, environment group and earned gain. Strict admission checks this
-new saved relation without requiring live catalogs; character format 11 stays additive.
+new saved relation without requiring live catalogs; these relations remain additive within character format 12.
 
 One choice governs earned Storm Soul, Shielding Storm and Raging Storm. Shared filtered source
 resolution supplies Builder, readiness, retained details, calculations, Actions and both PDF
@@ -221,7 +221,7 @@ or action is granted; other conditional Ranger prose retains its source presenta
 The shared selector handles Choose/Edit, unchanged confirmation, Cancel, per-gain Replace/Clear
 and removal-only recovery after source/class loss. Confirmation validates current source authority
 and distinctness against the latest character. Other earned gains and independent/manual grants
-survive replacement/removal. Character format 11 stays additive; parsed cache invalidation rebuilds
+survive replacement/removal. These relations remain additive within character format 12; parsed cache invalidation rebuilds
 normalization and source audits. Complete Ranger automation and legal levels 1–20 remain unqualified.
 
 ## Canny proficiencies
@@ -245,8 +245,8 @@ does not certify every offered language as legal in a particular campaign.
 
 Canny grants no underlying skill. A new language cannot already be independently known; later
 independent overlap preserves the saved Canny intent. Existing expertise stays doubled, never
-quadrupled. Remaining pooled expertise slots count only manual or untracked expertise; removing a
-manual owner through overlap frees its slot while Canny or a feat can keep the benefit. Clearing
+quadrupled. Removing an independent manual owner through overlap leaves Canny or a feat's benefit
+intact; it does not create an unowned class allowance. Clearing
 Canny retracts only its own tags and preserves independent grants and the sibling choice domain.
 
 Pure commands recheck current source authority, eligibility and quotas, then apply intent and
@@ -260,7 +260,7 @@ both PDF families use the same effective character and provenance. Shared Choose
 unchanged confirmation and removal-only recovery preserve these boundaries. Canny is passive and
 introduces no action or new generic prerequisite semantics.
 
-Character format 11 remains additive. Offline admission validates the reserved identity, owner,
+These relations remain additive within character format 12. Offline admission validates the reserved identity, owner,
 domain, slot, quota and bidirectional applied-tag relation while allowing unavailable intent without
 applied tags. [Parsed cache invalidation](../data-ingestion.md#cache-compatibility) rebuilds source
 normalization. Adopted TCE Roving/Tireless visibility follows the earned child activity above;
@@ -289,12 +289,12 @@ Each target requires one complete audited body/shape and one unconditional retai
 Explicit fields must agree with the UID; actual selected owner and target owner remain separate.
 Empty filtered authority, conflicting producers or changed rules fail closed. Existing Canny IDs,
 three-part named option tuples and modal flow stay compatible. PHB Rogue tools use the explicit
-`["proficiency","expertise","tool",canonicalName]` tuple. Format 11 strict admission validates its
+`["proficiency","expertise","tool",canonicalName]` tuple. Current strict admission validates its
 owner, target, slot, quota and applied provenance. Parsed cache 47 rebuilds the adapters.
 
-All registered selectable class targets stop contributing legacy pooled additions, independently
-of current source availability. Unregistered printings retain their pooled behavior. Existing
-manual/untracked expertise remains removable and is never allocated to a guessed Rogue gain.
+Class and feat choices allocate their own Expertise quotas; there is no pooled or name-inferred
+class allowance. Unregistered printings cannot allocate arbitrary choices. Independent manual or
+untracked Expertise remains removable and is never allocated to a guessed Rogue gain.
 Missing source or proficiency retains intent and suspends the dependent benefit; restoration
 re-evaluates it. Intentional class removal, replacement or level-down removes the removed gains.
 Tools badges/details, Sources/Review and both PDF families use effective ownership. Custom 2014
@@ -309,8 +309,8 @@ Class/Feat editors reopen the same saved choices. Skills has separate proficienc
 remaining-choice counts. Expertise counts source quotas once, subtracts retained skill/tool intent,
 and does not promise that every remaining choice has an eligible skill yet. Sources uses the same
 short source-type notes as other proficiencies (class, feat, and so on), with selected skill/tool and
-retained inactive state. The source chooser retains exact feature/feat, printing and owner/gain labels. Legacy
-pooled/manual controls remain separate and do not acquire guessed Rogue ownership. Within each
+retained inactive state. The source chooser retains exact feature/feat, printing and owner/gain labels.
+Manual removal is an explicit action in that same control. Within each
 selectable Proficiencies category, unselected entries excluded from every remaining pool are muted
 while that category has choices left. Once those choices are filled, normal styling returns.
 Rows reserve a consistent leading slot for contextual choice/check/removal and granted/lock icons;
@@ -319,7 +319,7 @@ small gap to keep each Expertise circle visually attached to its own skill. Empt
 whenever no permitted action exists for that skill, including exhausted allowances and ineligible
 skills; filled circles remain visible. The one-time Expertise hint only explains clicking the
 circle to add or remove Expertise. It follows actual circle actions, including owned class and
-feat choices, rather than legacy slot capacity alone, and retains its saved dismissal.
+feat choices and manual removal, and retains its saved dismissal.
 
 ## Other selectable class Expertise
 

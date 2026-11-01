@@ -19,11 +19,13 @@ import type {
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
+import type { ClassCastingSourceProof } from '@/types/classCasting'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 
 export interface ClassChoiceFeatureCatalogs {
   classes?: readonly Class5e[]
   optionalClassFeatureSources?: readonly OptionalClassFeatureSourceProof[]
+  classCastingSources?: readonly ClassCastingSourceProof[]
   optionalClassSections?: readonly OptionalClassSectionSource[]
   skills?: readonly unknown[]
   languages?: readonly Language5e[]
@@ -58,6 +60,7 @@ export type ScopedClassChoiceFeatureCatalogs = Pick<
   | 'optionalFeatures'
   | 'optionalFeatureCandidates'
   | 'optionalClassFeatureSources'
+  | 'classCastingSources'
   | 'optionalClassSections'
 >
 const scopedCatalogCache = new WeakMap<
@@ -88,6 +91,7 @@ export function scopeClassChoiceFeatureCatalogs(
     languages: catalogs.languages,
     classes: catalogs.classes,
     optionalClassFeatureSources: catalogs.optionalClassFeatureSources,
+    classCastingSources: catalogs.classCastingSources,
     optionalClassSections: catalogs.optionalClassSections,
     proficiencyTools: catalogs.proficiencyTools,
     allConcreteTools: catalogs.allConcreteTools,
@@ -115,6 +119,7 @@ export function buildClassChoiceFeatureCatalogs(
         | 'feats'
         | 'optionalfeatures'
         | 'optionalClassFeatureSources'
+        | 'classCastingSources'
         | 'optionalClassSections'
       >
     >,
@@ -143,6 +148,7 @@ export function buildClassChoiceFeatureCatalogs(
   return {
     classes: data.classes,
     optionalClassFeatureSources: data.optionalClassFeatureSources ?? [],
+    classCastingSources: data.classCastingSources ?? [],
     optionalClassSections: data.optionalClassSections ?? [],
     skills: data.skills ?? [],
     languages: data.languages ?? [],

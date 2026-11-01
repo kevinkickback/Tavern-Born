@@ -115,7 +115,7 @@ function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<string,
   }, {})
 }
 
-function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass5e> {
+export function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass5e> {
   return classes.reduce<Record<string, Subclass5e>>((lookup, cls) => {
     for (const subclass of cls.subclasses ?? []) {
       const key = getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source)

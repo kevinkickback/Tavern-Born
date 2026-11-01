@@ -49,7 +49,7 @@ function parseNativeSpellToken(token: string) {
     (token.match(/#/g)?.length ?? 0) > 1
   )
     throw new Error('Invalid native spell token.')
-  const parsed = parseSpellToken(token, { preserveSource: true, defaultSource: 'PHB' })
+  const parsed = parseSpellToken(token)
   if (!parsed.name.trim() || parsed.name.startsWith('|'))
     throw new Error('Invalid native spell token.')
   return parsed

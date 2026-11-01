@@ -232,6 +232,7 @@ export function useFeatsPageController() {
         classProgression,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        effectiveSpellProfiles: calculationContext?.character.spells.spellProfiles,
       }),
     [character, classProgression, calculationContext],
   )

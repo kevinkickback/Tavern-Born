@@ -384,27 +384,22 @@
         "alwaysPrepared": false
       },
       {
+        "id": "class:Fighter|XPHB",
+        "type": "class",
+        "label": "Fighter (Lv 5)",
+        "className": "Fighter",
+        "classSource": "XPHB",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": false
+      },
+      {
         "id": "class:Cleric|XPHB",
         "type": "class",
         "label": "Cleric (Lv 5)",
         "className": "Cleric",
         "classSource": "XPHB",
-        "fixedSpells": [
-          "Bless|XPHB",
-          "Cure Wounds|XPHB",
-          "Lesser Restoration|XPHB",
-          "Spiritual Weapon|XPHB",
-          "Beacon of Hope|XPHB",
-          "Revivify|XPHB"
-        ],
-        "alwaysPreparedSpells": [
-          "Bless|XPHB",
-          "Cure Wounds|XPHB",
-          "Lesser Restoration|XPHB",
-          "Spiritual Weapon|XPHB",
-          "Beacon of Hope|XPHB",
-          "Revivify|XPHB"
-        ],
         "cantrips": [
           "Guidance|XPHB",
           "Light|XPHB",
@@ -412,21 +407,12 @@
           "Resistance|XPHB"
         ],
         "spellsKnown": [
-          "Bless|XPHB",
-          "Cure Wounds|XPHB",
-          "Lesser Restoration|XPHB",
-          "Spiritual Weapon|XPHB",
-          "Beacon of Hope|XPHB",
-          "Revivify|XPHB",
-          "Bane|XPHB",
-          "Command|XPHB",
-          "Create or Destroy Water|XPHB",
-          "Detect Evil and Good|XPHB",
-          "Detect Magic|XPHB",
-          "Aid|XPHB",
-          "Augury|XPHB",
-          "Animate Dead|XPHB",
-          "Aura of Vitality|XPHB"
+          "aid|xphb",
+          "bless|xphb",
+          "cure wounds|xphb",
+          "lesser restoration|xphb",
+          "mass healing word|xphb",
+          "revivify|xphb"
         ],
         "preparedSpells": [
           "Bane|XPHB",
@@ -439,18 +425,28 @@
           "Animate Dead|XPHB",
           "Aura of Vitality|XPHB"
         ],
+        "fixedSpells": [
+          "aid|xphb",
+          "bless|xphb",
+          "cure wounds|xphb",
+          "lesser restoration|xphb",
+          "mass healing word|xphb",
+          "revivify|xphb"
+        ],
+        "alwaysPreparedSpells": [
+          "aid|xphb",
+          "bless|xphb",
+          "cure wounds|xphb",
+          "lesser restoration|xphb",
+          "mass healing word|xphb",
+          "revivify|xphb"
+        ],
         "alwaysPrepared": false
       },
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Special (Unrestricted)",
-        "fixedSpells": [
-          "Bless|XPHB",
-          "Friends|XPHB",
-          "Light|XPHB",
-          "Detect Magic|XPHB"
-        ],
+        "label": "Bonus Spells",
         "cantrips": [
           "Friends|XPHB",
           "Light|XPHB"
@@ -460,6 +456,12 @@
           "Detect Magic|XPHB"
         ],
         "preparedSpells": [],
+        "fixedSpells": [
+          "Bless|XPHB",
+          "Friends|XPHB",
+          "Light|XPHB",
+          "Detect Magic|XPHB"
+        ],
         "alwaysPrepared": true
       },
       {
@@ -2947,112 +2949,26 @@
       ]
     },
     "spells": {
-      "acid splash": [
+      "light": [
         {
           "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceName": "Cleric",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard",
+          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C1%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
-        }
-      ],
-      "blade ward": [
+        },
         {
-          "sourceType": "class",
-          "sourceName": "Wizard",
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
           "sourceRef": "XPHB",
           "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "chill touch": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "alarm": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "burning hands": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "charm person": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "chromatic orb": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "color spray": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "comprehend languages": [
-        {
-          "sourceType": "class",
-          "sourceName": "Wizard",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
+          "label": "Magic Initiate",
+          "grantVariant": "selection:bonus",
+          "grantSource": "XPHB"
         }
       ],
       "detect magic": [
@@ -3062,16 +2978,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 2,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C2%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
@@ -3086,6 +2993,192 @@
           "grantSource": "XPHB"
         }
       ],
+      "aid": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        }
+      ],
+      "bless": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        },
+        {
+          "sourceType": "feat",
+          "sourceName": "Fey-Touched",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fey-Touched",
+          "grantVariant": "selection:ordinary",
+          "grantSource": "XPHB"
+        }
+      ],
+      "cure wounds": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        }
+      ],
+      "lesser restoration": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        }
+      ],
+      "mass healing word": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        }
+      ],
+      "revivify": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain",
+          "grantSource": "xphb"
+        }
+      ],
+      "acid splash": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blade ward": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C1%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chill touch": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C2%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "alarm": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "burning hands": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C1%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "charm person": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C2%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chromatic orb": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C3%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "color spray": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C4%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "comprehend languages": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C1%2C5%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
       "disguise self": [
         {
           "sourceType": "class",
@@ -3093,6 +3186,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C2%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 2,
           "spellAttributionMode": "exact"
@@ -3105,6 +3199,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C3%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
@@ -3117,6 +3212,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C3%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 3,
           "spellAttributionMode": "exact"
@@ -3129,6 +3225,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C4%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
@@ -3150,6 +3247,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C4%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
@@ -3162,16 +3260,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 4,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C4%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
@@ -3184,16 +3273,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 5,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C5%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
@@ -3206,6 +3286,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C5%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 5,
           "spellAttributionMode": "exact"
@@ -3218,6 +3299,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C6%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 6,
           "spellAttributionMode": "exact"
@@ -3230,6 +3312,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C6%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 6,
           "spellAttributionMode": "exact"
@@ -3242,6 +3325,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C7%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 7,
           "spellAttributionMode": "exact"
@@ -3254,6 +3338,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C7%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 7,
           "spellAttributionMode": "exact"
@@ -3266,6 +3351,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C8%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 8,
           "spellAttributionMode": "exact"
@@ -3278,6 +3364,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C8%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 8,
           "spellAttributionMode": "exact"
@@ -3290,6 +3377,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C9%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 9,
           "spellAttributionMode": "exact"
@@ -3302,6 +3390,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C9%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 9,
           "spellAttributionMode": "exact"
@@ -3314,6 +3403,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C10%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
@@ -3326,6 +3416,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C10%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
@@ -3338,6 +3429,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Wizard",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22wizard%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22class-feature%7Cspellcasting%7Cwizard%7Cxphb%7C1%7Cxphb%22%2C10%2C1%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 10,
           "spellAttributionMode": "exact"
@@ -3350,30 +3442,10 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C1%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
-        }
-      ],
-      "light": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        },
-        {
-          "sourceType": "feat",
-          "sourceName": "Magic Initiate",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Magic Initiate",
-          "grantVariant": "selection:bonus",
-          "grantSource": "XPHB"
         }
       ],
       "mending": [
@@ -3383,6 +3455,7 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C1%2C2%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 1,
           "spellAttributionMode": "exact"
@@ -3395,150 +3468,10 @@
           "sourceRef": "XPHB",
           "grantType": "choice",
           "label": "Cleric",
+          "grantVariant": "class-spell-choice:%5B%5B%22class%22%2C%22cleric%22%2C%22xphb%22%5D%2C%22class-cantrip%22%2C%22class-feature%7Cspellcasting%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C4%2C0%5D",
           "grantSource": "XPHB",
           "spellGrantedAtLevel": 4,
           "spellAttributionMode": "exact"
-        }
-      ],
-      "bane": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "command": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "create or destroy water": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "detect evil and good": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 1,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "aid": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 3,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "aura of vitality": [
-        {
-          "sourceType": "class",
-          "sourceName": "Cleric",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Cleric",
-          "grantSource": "XPHB",
-          "spellGrantedAtLevel": 5,
-          "spellAttributionMode": "exact"
-        }
-      ],
-      "bless": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
-        },
-        {
-          "sourceType": "feat",
-          "sourceName": "Fey-Touched",
-          "sourceRef": "XPHB",
-          "grantType": "choice",
-          "label": "Fey-Touched",
-          "grantVariant": "selection:ordinary",
-          "grantSource": "XPHB"
-        }
-      ],
-      "cure wounds": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
-        }
-      ],
-      "lesser restoration": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
-        }
-      ],
-      "spiritual weapon": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
-        }
-      ],
-      "beacon of hope": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
-        }
-      ],
-      "revivify": [
-        {
-          "sourceType": "subclass",
-          "sourceName": "Life Domain",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Life Domain",
-          "grantSource": "XPHB"
         }
       ],
       "friends": [
@@ -4317,7 +4250,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "hitPoints": {
     "current": 121,
     "temporary": 17
@@ -4665,6 +4598,648 @@
       "values": []
     }
   },
+  "managedClassSpellChoices": [
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Acid Splash",
+        "source": "XPHB"
+      },
+      "revision": 1,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Blade Ward",
+        "source": "XPHB"
+      },
+      "revision": 2,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Chill Touch",
+        "source": "XPHB"
+      },
+      "revision": 3,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Alarm",
+        "source": "XPHB"
+      },
+      "revision": 4,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Burning Hands",
+        "source": "XPHB"
+      },
+      "revision": 5,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Charm Person",
+        "source": "XPHB"
+      },
+      "revision": 6,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        3
+      ],
+      "target": {
+        "name": "Chromatic Orb",
+        "source": "XPHB"
+      },
+      "revision": 7,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        4
+      ],
+      "target": {
+        "name": "Color Spray",
+        "source": "XPHB"
+      },
+      "revision": 8,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        1,
+        5
+      ],
+      "target": {
+        "name": "Comprehend Languages",
+        "source": "XPHB"
+      },
+      "revision": 9,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        2,
+        0
+      ],
+      "target": {
+        "name": "Detect Magic",
+        "source": "XPHB"
+      },
+      "revision": 10,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        2,
+        1
+      ],
+      "target": {
+        "name": "Disguise Self",
+        "source": "XPHB"
+      },
+      "revision": 11,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        3,
+        0
+      ],
+      "target": {
+        "name": "Alter Self",
+        "source": "XPHB"
+      },
+      "revision": 12,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        3,
+        1
+      ],
+      "target": {
+        "name": "Arcane Lock",
+        "source": "XPHB"
+      },
+      "revision": 13,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Dancing Lights",
+        "source": "XPHB"
+      },
+      "revision": 14,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Arcane Vigor",
+        "source": "XPHB"
+      },
+      "revision": 15,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        4,
+        1
+      ],
+      "target": {
+        "name": "Augury",
+        "source": "XPHB"
+      },
+      "revision": 16,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        5,
+        0
+      ],
+      "target": {
+        "name": "Animate Dead",
+        "source": "XPHB"
+      },
+      "revision": 17,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        5,
+        1
+      ],
+      "target": {
+        "name": "Bestow Curse",
+        "source": "XPHB"
+      },
+      "revision": 18,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        6,
+        0
+      ],
+      "target": {
+        "name": "Blink",
+        "source": "XPHB"
+      },
+      "revision": 19,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        6,
+        1
+      ],
+      "target": {
+        "name": "Clairvoyance",
+        "source": "XPHB"
+      },
+      "revision": 20,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        7,
+        0
+      ],
+      "target": {
+        "name": "Arcane Eye",
+        "source": "XPHB"
+      },
+      "revision": 21,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        7,
+        1
+      ],
+      "target": {
+        "name": "Banishment",
+        "source": "XPHB"
+      },
+      "revision": 22,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        8,
+        0
+      ],
+      "target": {
+        "name": "Blight",
+        "source": "XPHB"
+      },
+      "revision": 23,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        8,
+        1
+      ],
+      "target": {
+        "name": "Charm Monster",
+        "source": "XPHB"
+      },
+      "revision": 24,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        9,
+        0
+      ],
+      "target": {
+        "name": "Animate Objects",
+        "source": "XPHB"
+      },
+      "revision": 25,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        9,
+        1
+      ],
+      "target": {
+        "name": "Bigby's Hand",
+        "source": "XPHB"
+      },
+      "revision": 26,
+      "policy": "default",
+      "prepare": true
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        10,
+        0
+      ],
+      "target": {
+        "name": "Elementalism",
+        "source": "XPHB"
+      },
+      "revision": 27,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        10,
+        0
+      ],
+      "target": {
+        "name": "Circle of Power",
+        "source": "XPHB"
+      },
+      "revision": 28,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "wizard",
+          "xphb"
+        ],
+        "class-spellbook",
+        "class-feature|spellcasting|wizard|xphb|1|xphb",
+        10,
+        1
+      ],
+      "target": {
+        "name": "Cloudkill",
+        "source": "XPHB"
+      },
+      "revision": 29,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|xphb|1|xphb",
+        1,
+        0
+      ],
+      "target": {
+        "name": "Guidance",
+        "source": "XPHB"
+      },
+      "revision": 30,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|xphb|1|xphb",
+        1,
+        1
+      ],
+      "target": {
+        "name": "Light",
+        "source": "XPHB"
+      },
+      "revision": 31,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|xphb|1|xphb",
+        1,
+        2
+      ],
+      "target": {
+        "name": "Mending",
+        "source": "XPHB"
+      },
+      "revision": 32,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "class",
+          "cleric",
+          "xphb"
+        ],
+        "class-cantrip",
+        "class-feature|spellcasting|cleric|xphb|1|xphb",
+        4,
+        0
+      ],
+      "target": {
+        "name": "Resistance",
+        "source": "XPHB"
+      },
+      "revision": 33,
+      "policy": "default"
+    }
+  ],
+  "managedClassSpellRevision": 33,
   "backgroundAsiBlockIndex": 0,
   "backgroundAsiChoices": [
     "dexterity",

@@ -3,25 +3,23 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { buildRacialSpellcastingDetails } from '@/lib/calculations/spellProfiles.casting'
-import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { setClassSpellSelectionsAtLevel } from '@/lib/character/commands/spellCommands'
 import {
   mapOfficial2014SpellPage,
   OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL,
   paginateOfficial2014SpellPages,
 } from '@/lib/pdf/characterSheetMapping2014Official'
-import {
-  buildCharacterSheetFieldMap,
-  createCharacterSheetViewModel,
-} from '@/lib/pdf/characterSheetPdf'
+import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { SheetExportReport } from '@/lib/pdf/types'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
-import { makeClassFixture, makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 afterEach(cleanup)
 
@@ -92,7 +90,7 @@ function caster() {
 test('effective scores and global/profile/conditional effects give independent racial UI and PDF numbers without class slot pools', () => {
   const character = caster()
   const before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   expect(vm.spellcastingDetails).toEqual([])
   expect(
     vm.spellcastingSources.map((source) => ({
@@ -148,7 +146,7 @@ test('effective scores and global/profile/conditional effects give independent r
 
 test('community 2014 and both 2024 summaries keep actual owners and report secondary casting capacity', () => {
   const character = caster()
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   const community = buildCharacterSheetFieldMap(vm, '2014-custom')
   expect(community.textFields['Spell save DC 1']).toBe('16')
   expect(community.textFields['Spell save DC 2']).toBe('18')
@@ -181,7 +179,7 @@ test.each([
 ] as const)('actual %s export preserves unknown leveled targets in notes and independent racial casting', async (id) => {
   const character = caster()
   const before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   let report: SheetExportReport | undefined
   const bytes = await generateTestCharacterSheet(vm, id, {
     pages: { notes: true },
@@ -229,7 +227,7 @@ test.each([
 ] as const)('default %s exports retain secondary casting details without unknown spell levels', async (id) => {
   const character = caster()
   const before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {
+  const vm = createCurrentCharacterSheetViewModel(character, {
     spellsByKey: buildSpellLookup([
       makeSpellFixture({ name: 'parent light', source: 'PHB', level: 0 }),
       makeSpellFixture({ name: 'child light', source: 'XPHB', level: 0 }),
@@ -272,7 +270,7 @@ test('an unselected casting ability has unknown numbers despite global numeric m
   const character = caster()
   character.spells.spellProfiles.find((profile) => profile.raceName === 'Child')!.castingAbility =
     undefined
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   expect(
     vm.spellcastingSources.find((source) => source.sourceName === 'Parent (Child)'),
   ).toMatchObject({
@@ -294,7 +292,7 @@ test('a competing cantrip printing cannot fill missing leveled spell metadata or
     components: { v: true },
     entries: [],
   }
-  const vm = createCharacterSheetViewModel(character, {
+  const vm = createCurrentCharacterSheetViewModel(character, {
     spellsByKey: { 'missing ward|XPHB': spell, 'missing ward': spell },
   })
   const row = vm.spellRows.find((row) => row.id === 'missing ward|phb')!
@@ -338,7 +336,7 @@ test.each([
     ],
   })
   const before = structuredClone(character)
-  const vm = createCharacterSheetViewModel(character, {})
+  const vm = createCurrentCharacterSheetViewModel(character, {})
   const vmBefore = structuredClone(vm)
   const plan = planSheetContent(vm, id)
   expect(plan.groups.find((group) => group.id === 'spells')!.selected).toHaveLength(30)
@@ -385,43 +383,3 @@ test.each([
   expect(character).toEqual(before)
   expect(vm).toEqual(vmBefore)
 }, 30_000)
-
-test('automatic 2024 notes preserve an unprepared Wizard spell with unavailable exact metadata', () => {
-  const wizard = makeClassFixture({ spellcastingAbility: 'int' })
-  const initial = buildInitialCharacter(
-    {
-      initial: { name: 'Unprepared caster', originSystem: '2024' },
-      race: { name: 'Human', source: 'XPHB' },
-      classEntity: wizard,
-      background: { name: 'Acolyte', source: 'XPHB' },
-    },
-    new Map(),
-    () => [],
-  )
-  const result = setClassSpellSelectionsAtLevel(initial, initial.provenance, {
-    className: 'Wizard',
-    classSource: 'PHB',
-    classLevel: 1,
-    selections: [{ name: 'Missing Ward|PHB', spellLevel: 1 }],
-  })
-  const character = characterPersistenceSchema.parse({
-    ...initial,
-    ...result.characterPatch,
-    provenance: result.provenanceUpdate,
-  })
-  const vm = createCharacterSheetViewModel(character, { classesByKey: { 'wizard|phb': wizard } })
-  expect(vm.spellRows).toContainEqual(
-    expect.objectContaining({ name: 'Missing Ward', level: '?', prepared: false }),
-  )
-  expect(planSheetContent(vm, '2024-official').overflow).toContainEqual(
-    expect.objectContaining({
-      title: 'Wizard: spells with unknown levels',
-      text: 'Missing Ward — spell level unknown',
-    }),
-  )
-  expect(
-    planSheetContent(vm, '2024-official', { spells: [] }).overflow.some((entry) =>
-      entry.id.startsWith('unknown-spell-levels:'),
-    ),
-  ).toBe(false)
-})

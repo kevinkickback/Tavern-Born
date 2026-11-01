@@ -5,12 +5,12 @@ import {
   removeManualActionCommand,
   upsertManualActionCommand,
 } from '@/lib/character/commands/actionCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { CharacterAction } from '@/types/actions'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function fixture() {
   const classes = [
@@ -40,7 +40,7 @@ function fixture() {
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
   })
   const view = (saved = character) =>
-    createCharacterSheetViewModel(saved, { classesByKey: buildClassLookup(classes) })
+    createCurrentCharacterSheetViewModel(saved, { classesByKey: buildClassLookup(classes) })
   const reopen = () => characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
   return { classes, character, view, reopen }
 }

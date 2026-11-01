@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { ClassFeatureReference } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 function observe(
   uid: unknown,
@@ -36,7 +36,8 @@ function observe(
   const before = structuredClone({ character, classes })
   const actions = deriveRulesTextActions(character, undefined, { classes })
   expect(
-    createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).actions,
+    createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+      .actions,
   ).toEqual(actions)
   expect({ character, classes }).toEqual(before)
   return actions
@@ -148,7 +149,8 @@ describe('automatic class-action gain levels', () => {
       { name: 'School Action', kind: 'reaction', source: { kind: 'subclass', source: 'TCE' } },
     ])
     expect(
-      createCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) }).actions,
+      createCurrentCharacterSheetViewModel(character, { classesByKey: buildClassLookup(classes) })
+        .actions,
     ).toEqual(actions)
   })
 })

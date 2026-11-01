@@ -184,13 +184,8 @@ interface BuildProficienciesTabsPanelProps {
   onFocusChange: (focus: ProfFocus) => void
   onExpandDetails: () => void
   onResolveChoiceSelection: ResolveChoiceSelection
-  onToggleExpertise: (skillName: string) => void
-  /** Total expertise slots from class features (Rogue, Bard, etc.). */
-  availableExpertiseSlots: number
-  /** Number of skills currently marked with expertise. */
-  usedExpertiseSlots: number
-  expertiseActions?: Record<string, SkillExpertiseAction[]>
-  onExpertiseAction?: (skill: string, actionId: string) => void
+  expertiseActions: Record<string, SkillExpertiseAction[]>
+  onExpertiseAction: (skill: string, actionId: string) => void
   proficiencyActions?: Record<string, SkillProficiencyAction[]>
   onProficiencyAction?: (skill: string, actionId: string) => void
   classSkillChoicesRemaining?: number
@@ -220,9 +215,6 @@ export function BuildProficienciesTabsPanel({
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
-  onToggleExpertise,
-  availableExpertiseSlots,
-  usedExpertiseSlots,
   expertiseActions,
   onExpertiseAction,
   proficiencyActions,
@@ -251,9 +243,7 @@ export function BuildProficienciesTabsPanel({
   const [showExpertiseHint, setShowExpertiseHint] = useState(
     () => !isHintDismissed('skills-expertise'),
   )
-  const hasExpertiseAction = expertiseActions
-    ? Object.values(expertiseActions).some((actions) => actions.length > 0)
-    : availableExpertiseSlots > 0
+  const hasExpertiseAction = Object.values(expertiseActions).some((actions) => actions.length > 0)
   const expertiseHintPos = useAnchoredHintPosition({
     enabled: showExpertiseHint && hasExpertiseAction,
     selector: EXPERTISE_HINT_SELECTOR,
@@ -440,9 +430,6 @@ export function BuildProficienciesTabsPanel({
             onFocusChange={onFocusChange}
             onExpandDetails={onExpandDetails}
             onResolveChoiceSelection={onResolveChoiceSelection}
-            onToggleExpertise={onToggleExpertise}
-            availableExpertiseSlots={availableExpertiseSlots}
-            usedExpertiseSlots={usedExpertiseSlots}
             expertiseActions={expertiseActions}
             onExpertiseAction={onExpertiseAction}
             proficiencyActions={proficiencyActions}

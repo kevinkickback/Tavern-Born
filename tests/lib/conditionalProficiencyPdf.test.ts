@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import { getCharacterSheetTemplate } from '@/lib/pdf/characterSheetTemplates'
 import {
-  createCharacterSheetViewModel,
+  type createCharacterSheetViewModel,
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
@@ -15,7 +15,10 @@ import {
   makeNaturalExplorerFixture,
   selectNaturalExplorer,
 } from '../fixtures/naturalExplorerFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 function twoNotes() {
   const f = makeConditionalCharacterFixture()
@@ -27,7 +30,7 @@ function twoNotes() {
     subclass: 'Draconic Bloodline',
     subclassSource: 'PHB',
   })
-  const vm = createCharacterSheetViewModel(character, f.input)
+  const vm = createCurrentCharacterSheetViewModel(character, f.input)
   const effects = deriveConditionalProficiencyNotes(character, f.catalogs)
   expect(vm.proficiencyCheckNotes).toHaveLength(2)
   return { ...f, character, vm, effects }
@@ -55,7 +58,7 @@ test.each(
   let character = terrain.selectTerrain(1, 'Forest', f.character)
   character = terrain.selectTerrain(6, 'Coast', character)
   character = terrain.selectTerrain(10, 'Arctic', character)
-  f.vm = createCharacterSheetViewModel(character, f.input)
+  f.vm = createCurrentCharacterSheetViewModel(character, f.input)
   f.effects = deriveConditionalProficiencyNotes(character, f.catalogs)
   expect(f.vm.proficiencyCheckNotes).toHaveLength(3)
   let report: SheetExportReport | undefined
@@ -174,8 +177,8 @@ test('terrain text changes with a stable ID invalidate old export evidence and k
     classChoiceClasses: f.data.classes,
     classChoiceFeatureCatalogs: f.catalogs,
   }
-  const old = createCharacterSheetViewModel(first, input)
-  const vm = createCharacterSheetViewModel(second, input)
+  const old = createCurrentCharacterSheetViewModel(first, input)
+  const vm = createCurrentCharacterSheetViewModel(second, input)
   expect(vm.proficiencyCheckNotes![0].effectId).toBe(old.proficiencyCheckNotes![0].effectId)
   expect(vm.proficiencyCheckNotes![0].text).toContain('Forest, Coast')
   expect(withoutSheetDescriptions(vm).classFeaturesSummary2014).toContain(

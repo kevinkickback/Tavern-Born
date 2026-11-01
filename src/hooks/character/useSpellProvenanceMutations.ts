@@ -1,92 +1,86 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
-  type ClassSpellSelectionInput,
-  setClassSpellSelectionsAtLevel as setClassSpellSelectionsAtLevelCommand,
-  swapClassSpellAtLevel as swapClassSpellAtLevelCommand,
-} from '@/lib/character/commands/spellCommands'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+  type ManagedClassSpellRequest,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
+import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export function useSpellProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const sourceData = useGameDataStore((state) => state.gameData)
   const calculationContext = useCharacterCalculationContext(character)
 
-  const ledger = useMemo<ProvenanceLedger>(
-    () => character?.provenance ?? emptyProvenance(),
-    [character],
-  )
-
-  const setClassSpellSelectionsAtLevel = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      classLevel: number,
-      selections: ClassSpellSelectionInput[],
-    ) => {
-      if (!character || !classSource) return
-      const result = setClassSpellSelectionsAtLevelCommand(character, ledger, {
-        className,
-        classSource,
-        classLevel,
-        selections,
+  const finishClassSpellChoices = useCallback(
+    (requests: readonly ManagedClassSpellRequest[]) => {
+      const latest = useCharacterStore.getState().activeCharacter
+      if (!latest || !character || latest.id !== character.id)
+        throw new RangeError('The character changed. Reopen the spell choices.')
+      const grants = requests.some((request) => {
+        if (!request.target) return false
+        const old = latest.managedClassSpellChoices?.find(
+          (choice) => managedClassSpellId(choice.slot) === managedClassSpellId(request.slot),
+        )
+        const same =
+          old &&
+          getSpellReferenceKey(old.target.name, old.target.source) ===
+            getSpellReferenceKey(request.target.name, request.target.source) &&
+          old.policy === request.policy
+        const prepare = request.prepare === undefined ? old?.prepare : request.prepare || undefined
+        return !same || (prepare !== old?.prepare && !(old?.prepare && !prepare))
       })
-      const native = refreshNativeRacialSpellState(
-        { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
-        calculationContext?.raceResolution,
-        {
-          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
-          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
-        },
+      if (
+        grants &&
+        (!calculationContext ||
+          !hasCurrentCharacterSourceContext(
+            latest,
+            character,
+            useGameDataStore.getState().gameData,
+            sourceData,
+          ))
       )
-      updateCharacter(character.id, {
+        throw new RangeError('The spell sources changed. Reopen the choices before confirming.')
+      const current =
+        grants && calculationContext
+          ? createCharacterCalculationContext(
+              latest,
+              calculationContext.lookups.primary,
+              calculationContext.lookups.raw,
+            )
+          : undefined
+      const result = setManagedClassSpellChoicesCommand(
+        latest,
+        latest.provenance,
+        requests,
+        current
+          ? { ...current.classChoices.spellContext, abilityScores: current.abilityScores.total }
+          : undefined,
+      )
+      if (!Object.keys(result.characterPatch).length) return
+      const next = current
+        ? refreshNativeRacialSpellState(
+            { ...latest, ...result.characterPatch, provenance: result.provenanceUpdate },
+            current.raceResolution,
+            {
+              spellsByKey: current.lookups.primary.spellsByKey,
+              rawSpellsByKey: current.lookups.raw.spellsByKey,
+            },
+          )
+        : undefined
+      useCharacterStore.getState().updateCharacter(latest.id, {
         ...result.characterPatch,
-        spells: native.spells,
-        provenance: native.provenance,
+        ...(next ? { spells: next.spells } : {}),
+        provenance: next?.provenance ?? result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter, calculationContext],
+    [character, sourceData, calculationContext],
   )
 
-  const swapClassSpellAtLevel = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      swapAtLevel: number,
-      removedName: string,
-      addedName: string,
-      addedSpellSchool?: string,
-    ) => {
-      if (!character || !classSource) return
-      const result = swapClassSpellAtLevelCommand(character, ledger, {
-        className,
-        classSource,
-        swapAtLevel,
-        removedName,
-        addedName,
-        addedSpellSchool,
-      })
-      const native = refreshNativeRacialSpellState(
-        { ...character, ...result.characterPatch, provenance: result.provenanceUpdate },
-        calculationContext?.raceResolution,
-        {
-          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
-          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
-        },
-      )
-      updateCharacter(character.id, {
-        ...result.characterPatch,
-        spells: native.spells,
-        provenance: native.provenance,
-      })
-    },
-    [character, ledger, updateCharacter, calculationContext],
-  )
-
-  return {
-    setClassSpellSelectionsAtLevel,
-    swapClassSpellAtLevel,
-  }
+  return { finishClassSpellChoices }
 }

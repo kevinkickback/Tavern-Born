@@ -40,11 +40,8 @@ interface SkillsPanelProps {
   onFocusChange: ProficiencyPanelCallbacks['onFocusChange']
   onExpandDetails: ProficiencyPanelCallbacks['onExpandDetails']
   onResolveChoiceSelection: ResolveChoiceSelection
-  onToggleExpertise: (skillName: string) => void
-  availableExpertiseSlots: number
-  usedExpertiseSlots: number
-  expertiseActions?: Record<string, SkillExpertiseAction[]>
-  onExpertiseAction?: (skill: string, actionId: string) => void
+  expertiseActions: Record<string, SkillExpertiseAction[]>
+  onExpertiseAction: (skill: string, actionId: string) => void
   proficiencyActions?: Record<string, SkillProficiencyAction[]>
   onProficiencyAction?: (skill: string, actionId: string) => void
   classSkillChoicesRemaining?: number
@@ -58,9 +55,6 @@ export function SkillsPanel({
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
-  onToggleExpertise,
-  availableExpertiseSlots,
-  usedExpertiseSlots,
   expertiseActions,
   onExpertiseAction,
   proficiencyActions,
@@ -132,22 +126,10 @@ export function SkillsPanel({
                     ))
               const canDeselect = isChoiceSelected
               const excludedWhileChoosing = hasPendingSkillChoices && !isSelected && !canSelect
-              const canAddExpertise =
-                isSelected && !skill.expertise && usedExpertiseSlots < availableExpertiseSlots
-              const hasIndependentExpertise = (
-                ledger.proficiencies.expertise?.[normName] ?? []
-              ).some((tag) => tag.sourceType !== 'manual' || tag.sourceName !== 'User Choice')
-              const hasManualExpertise = (ledger.proficiencies.expertise?.[normName] ?? []).some(
-                (tag) => tag.sourceType === 'manual' && tag.sourceName === 'User Choice',
-              )
-              const canRemoveExpertise =
-                isSelected && skill.expertise && (hasManualExpertise || !hasIndependentExpertise)
-              const actions = expertiseActions?.[normName] ?? []
+              const actions = expertiseActions[normName] ?? []
               const chooseSource =
                 actions.length > 1 || (skill.expertise && actions.some((action) => action.adding))
-              const canToggleExpertise = expertiseActions
-                ? actions.length > 0
-                : canAddExpertise || canRemoveExpertise
+              const canToggleExpertise = actions.length > 0
               const rowState: ProficiencyRowState = isChoiceSelected
                 ? 'chosen'
                 : isSelected
@@ -172,27 +154,19 @@ export function SkillsPanel({
                   type="button"
                   disabled={!canToggleExpertise}
                   aria-pressed={skill.expertise}
-                  aria-label={`${expertiseActions && chooseSource ? 'Choose expertise source' : actions[0]?.adding ? 'Add expertise' : actions.length ? 'Remove expertise' : canRemoveExpertise ? 'Remove expertise' : canAddExpertise ? 'Add expertise' : skill.expertise ? 'Expertise' : 'No expertise'}: ${formatProfLabel(skill.name)}`}
+                  aria-label={`${chooseSource ? 'Choose expertise source' : actions[0]?.adding ? 'Add expertise' : actions.length ? 'Remove expertise' : skill.expertise ? 'Expertise' : 'No expertise'}: ${formatProfLabel(skill.name)}`}
                   tabIndex={canToggleExpertise ? 0 : -1}
                   data-expertise-hint={canToggleExpertise ? 'true' : undefined}
                   title={
                     chooseSource
                       ? 'Choose an Expertise source'
                       : (actions[0]?.label ??
-                        (canRemoveExpertise
-                          ? `Remove expertise: ${formatProfLabel(skill.name)}`
-                          : canAddExpertise
-                            ? `Add expertise: ${formatProfLabel(skill.name)}`
-                            : hasIndependentExpertise
-                              ? 'Expertise granted by another source'
-                              : undefined))
+                        (skill.expertise ? 'Expertise granted by another source' : undefined))
                   }
                   onClick={() => {
                     if (!canToggleExpertise) return
-                    if (expertiseActions) {
-                      if (!chooseSource && actions.length === 1)
-                        onExpertiseAction?.(skill.name, actions[0].id)
-                    } else onToggleExpertise(skill.name)
+                    if (!chooseSource && actions.length === 1)
+                      onExpertiseAction(skill.name, actions[0].id)
                   }}
                   className={cn(
                     'min-w-10 px-3 self-stretch flex items-center justify-center border-r border-current/20 shrink-0 focus-visible:outline-none',
@@ -277,7 +251,7 @@ export function SkillsPanel({
                         {actions.map((action) => (
                           <DropdownMenuItem
                             key={action.id}
-                            onSelect={() => onExpertiseAction?.(skill.name, action.id)}
+                            onSelect={() => onExpertiseAction(skill.name, action.id)}
                           >
                             {action.label}
                           </DropdownMenuItem>

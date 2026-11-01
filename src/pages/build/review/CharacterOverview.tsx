@@ -44,7 +44,6 @@ import {
 } from '@/lib/calculations/spellUtils'
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
-import { projectEffectiveClassChoiceFeatures } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   createOptionalClassFeatureActivity,
   getActiveOptionalClassFeatureDeclarations,
@@ -283,10 +282,7 @@ export function CharacterOverview({
       (feature.source === calculation.raceResolution.mergedRace?.source &&
         resolvedRaceTraits.some((trait) => trait.name === feature.name)),
   )
-  const otherFeatures = projectEffectiveClassChoiceFeatures(
-    character,
-    calculation.classChoices.catalogs,
-  ).features.filter((feature) => !racialFeatures.includes(feature))
+  const otherFeatures = character.features.filter((feature) => !racialFeatures.includes(feature))
   const optionalActivity = createOptionalClassFeatureActivity(
     character,
     calculation.classChoices.catalogs,

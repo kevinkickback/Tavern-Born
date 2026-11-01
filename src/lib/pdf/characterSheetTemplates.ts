@@ -2,7 +2,6 @@ import type {
   CharacterSheetEdition,
   CharacterSheetTemplate,
   CharacterSheetTemplateId,
-  ResolvedCharacterSheetTemplateId,
 } from './types'
 
 export const CHARACTER_SHEET_TEMPLATES = [
@@ -105,27 +104,20 @@ export const CHARACTER_SHEET_TEMPLATES = [
 
 const TEMPLATE_BY_ID = Object.fromEntries(
   CHARACTER_SHEET_TEMPLATES.map((template) => [template.id, template as CharacterSheetTemplate]),
-) as Record<ResolvedCharacterSheetTemplateId, CharacterSheetTemplate>
-
-function resolveCharacterSheetTemplateId(
-  templateId: CharacterSheetTemplateId,
-): ResolvedCharacterSheetTemplateId {
-  if (templateId === '2014' || templateId === '2024') return `${templateId}-custom`
-  return templateId
-}
+) as Record<CharacterSheetTemplateId, CharacterSheetTemplate>
 
 export function getCharacterSheetTemplate(
   templateId: CharacterSheetTemplateId,
 ): CharacterSheetTemplate {
-  return TEMPLATE_BY_ID[resolveCharacterSheetTemplateId(templateId)]
+  return TEMPLATE_BY_ID[templateId]
 }
 
 export function getDefaultCharacterSheetTemplateId(
   edition: CharacterSheetEdition = '2024',
-): ResolvedCharacterSheetTemplateId {
+): CharacterSheetTemplateId {
   return `${edition}-custom`
 }
 
 export function getCharacterSheetAttributionAnchor(templateId: CharacterSheetTemplateId): string {
-  return `character-sheet-pdf-${resolveCharacterSheetTemplateId(templateId)}`
+  return `character-sheet-pdf-${templateId}`
 }

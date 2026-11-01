@@ -69,14 +69,6 @@ export function getClassFeatureIdentity(feature: ClassFeatureIdentityInput): str
     : undefined
 }
 
-/** Text enrichment for an unbound saved feature; this key cannot establish action ownership. */
-export function getClassFeatureTextLookupKey(
-  feature: ClassFeatureIdentityInput,
-): string | undefined {
-  const identity = normalizeClassFeatureIdentity(feature)
-  return identity ? `${identity.name}|${identity.source}` : undefined
-}
-
 /** Encoded identity is authoritative; only rows without a UID use materialized levels. */
 export function getClassFeatureReferenceLevel(
   ref: Pick<ClassFeatureReference, 'ref' | 'level' | 'feature'>,

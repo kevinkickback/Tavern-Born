@@ -152,7 +152,8 @@ runtime source/CSS project patterns. Keep both views; test-only imports must not
 
 Review each production finding against its actual consumers before removal or gate rollout:
 
-- Preserve the documented provenance test aggregators and their equipment adapter.
+- Preserve the documented provenance test aggregators and their exercised domain hooks; retired
+  adapter methods with no production or test caller do not belong to that harness.
 - Preserve `classChoiceCoverage.ts` for corpus capability reporting.
 - Rest preview and spell-slot mutation modules have domain tests but no current page consumer;
   their future play-feature role requires a product decision before wiring or removing them.

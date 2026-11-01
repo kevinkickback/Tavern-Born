@@ -63,7 +63,7 @@ describe('SelectionModal', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(['499'], [items[499]]))
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(['499'], [items[499]], {}))
   })
 })
 

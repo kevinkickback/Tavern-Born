@@ -3,7 +3,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { AdjustmentsPage } from '@/pages/adjustments/AdjustmentsPage'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -12,6 +11,7 @@ import type { Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore } from '../fixtures/characterStoreFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 import { defenseSelection, manualFire } from '../fixtures/racialDefenseCharacter'
 
 function install(races: Race5e[]) {
@@ -72,7 +72,9 @@ test('Review and PDF keep independent fire while exact refresh removes acid/pois
   const reopened = characterPersistenceSchema.parse(
     JSON.parse(JSON.stringify(useCharacterStore.getState().characters[0])),
   )
-  expect(createCharacterSheetViewModel(reopened, {}).defensiveTraits).toEqual(['fire resistance'])
+  expect(createCurrentCharacterSheetViewModel(reopened, {}).defensiveTraits).toEqual([
+    'fire resistance',
+  ])
 })
 
 test('Adjustments retains exact parent attribution offline; raw filtered ancestry does not retract defenses', async () => {

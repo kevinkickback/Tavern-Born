@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest'
-import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
 import {
   applyClassChoiceSelectionCommand,
@@ -18,6 +17,10 @@ import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { Class5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  authorManagedClassSpellFixture,
+  makeManagedClassSpellFixtures,
+} from '../fixtures/managedClassSpellFixtures'
 import { optionalClassSources } from '../fixtures/optionalClassFeatureFixtures'
 import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
 
@@ -149,26 +152,23 @@ describe('class choice commands', () => {
     expect(invocations.selectionCountByLevel).toEqual([
       0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8,
     ])
-    const authority = { classes: data.classes, catalogs }
-    const spells = makeCharacterFixture().spells
-    const levelTwo = makeCharacterFixture({
+    const fixture = makeManagedClassSpellFixtures()
+    const authority = {
+      classes: data.classes,
+      catalogs: { ...catalogs, classCastingSources: fixture.data.classCastingSources },
+      spellContext: fixture.context,
+    }
+    const initial = makeCharacterFixture({
       classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
-      spells: {
-        ...spells,
-        spellProfiles: [
-          {
-            id: toClassProfileId('Warlock', 'PHB'),
-            type: 'class',
-            label: 'Warlock',
-            className: 'Warlock',
-            classSource: 'PHB',
-            cantrips: ['Eldritch blast|PHB'],
-            spellsKnown: [],
-            preparedSpells: [],
-          },
-        ],
-      },
     })
+    const levelTwo = authorManagedClassSpellFixture(initial, fixture, [
+      {
+        owner: initial.classProgression[0],
+        domain: 'class-cantrip',
+        gain: 1,
+        targets: [{ name: 'Eldritch Blast', source: 'PHB' }],
+      },
+    ])
     expect(() =>
       applyClassChoiceSelectionCommand(levelTwo, invocations, [
         { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },

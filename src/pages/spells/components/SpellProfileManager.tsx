@@ -1,4 +1,4 @@
-import { ArrowsLeftRight, BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
+import { BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
@@ -19,11 +19,8 @@ import {
   type SpellListItem,
   type SpellProfileLike,
 } from '@/lib/calculations/spellProfileDisplayModel'
-import {
-  formatSpellDisplayName,
-  formatSpellLevel,
-  getSchoolName,
-} from '@/lib/calculations/spellUtils'
+import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
+import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
@@ -114,7 +111,6 @@ interface SpellRowProps {
   item: SpellListItem
   spell?: Spell5e
   sourceContext?: string
-  swap?: { removed: string; level: number }
   selected?: boolean
   preparation?: {
     prepared: boolean
@@ -132,11 +128,9 @@ const SpellRow = memo(function SpellRow({
   item,
   spell,
   sourceContext,
-  swap,
   selected = false,
   preparation,
   removable = false,
-  getSpellByName,
   onRemoveSpell,
   renderSpellName,
 }: SpellRowProps) {
@@ -159,20 +153,6 @@ const SpellRow = memo(function SpellRow({
         </span>
       ) : null}
       <div className="flex shrink-0 items-center gap-1.5">
-        {swap ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
-                <ArrowsLeftRight className="h-3.5 w-3.5" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Swapped from{' '}
-              {formatSpellDisplayName(swap.removed, getSpellByName(swap.removed)?.name)} at level{' '}
-              {swap.level}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
         {preparation ? (
           <button
             type="button"
@@ -230,7 +210,6 @@ interface KnownSpellLevelGroupProps {
   title: string
   items: SpellListItem[]
   span: { xlSpan: number; xxlSpan: number }
-  swappedByAddedName: Map<string, { removed: string; level: number }>
   selectionSourceByProfileAndSpell: Map<string, string>
   canPrepare?: (item: SpellListItem) => boolean
   getSpellByName: (spellName: string) => Spell5e | undefined
@@ -243,7 +222,6 @@ const KnownSpellLevelGroup = memo(function KnownSpellLevelGroup({
   title,
   items,
   span,
-  swappedByAddedName,
   selectionSourceByProfileAndSpell,
   canPrepare,
   getSpellByName,
@@ -263,7 +241,6 @@ const KnownSpellLevelGroup = memo(function KnownSpellLevelGroup({
             item={item}
             spell={spell}
             sourceContext={sourceContext}
-            swap={swappedByAddedName.get(item.name)}
             preparation={
               showPreparation
                 ? {
@@ -296,6 +273,7 @@ interface SpellProfileManagerProps {
   groupedItems: Map<string, SpellListItem[]>
   selectionSourceByProfileAndSpell: Map<string, string>
   preparedCasterItemsByProfile?: Map<string, PreparedCasterSpellItem[]>
+  managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
   getSpellByName: (spellName: string) => Spell5e | undefined
   onTogglePrepared: (profileId: string, spellName: string) => void
   onRemoveSpell: (item: SpellListItem) => void
@@ -315,6 +293,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
   groupedItems,
   selectionSourceByProfileAndSpell,
   preparedCasterItemsByProfile,
+  managedClassSpellStatuses,
   getSpellByName,
   onTogglePrepared,
   onRemoveSpell,
@@ -339,8 +318,15 @@ export const SpellProfileManager = memo(function SpellProfileManager({
         detailsByProfileId,
         groupedItems,
         preparedCasterItemsByProfile,
+        managedClassSpellStatuses,
       }),
-    [spellProfiles, detailsByProfileId, groupedItems, preparedCasterItemsByProfile],
+    [
+      spellProfiles,
+      detailsByProfileId,
+      groupedItems,
+      preparedCasterItemsByProfile,
+      managedClassSpellStatuses,
+    ],
   )
 
   return (
@@ -360,7 +346,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
             const {
               profile,
               items,
-              swappedByAddedName,
               isRacial,
               isBonusProfile,
               unfulfilledChoices,
@@ -471,7 +456,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="bg-transparent pb-0">
+                <AccordionContent className="@container bg-transparent pb-0">
                   {isBonusProfile && !showDefaultEmptyState ? (
                     <div className="flex items-center justify-end pt-3">
                       <Button
@@ -558,7 +543,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                       title="Cantrips"
                                       items={items.filter((item) => item.level === 0)}
                                       span={span}
-                                      swappedByAddedName={swappedByAddedName}
                                       selectionSourceByProfileAndSpell={
                                         selectionSourceByProfileAndSpell
                                       }
@@ -653,7 +637,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                       title="Cantrips"
                                       items={items.filter((item) => item.level === 0)}
                                       span={span}
-                                      swappedByAddedName={swappedByAddedName}
                                       selectionSourceByProfileAndSpell={
                                         selectionSourceByProfileAndSpell
                                       }
@@ -680,7 +663,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                     title={`${formatSpellLevel(level)}s`}
                                     items={levelItems}
                                     span={span}
-                                    swappedByAddedName={swappedByAddedName}
                                     selectionSourceByProfileAndSpell={
                                       selectionSourceByProfileAndSpell
                                     }

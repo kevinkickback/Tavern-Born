@@ -24,6 +24,7 @@ import type { Class5e, ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 vi.mock('@/components/PdfCanvasPreview', () => ({
   PdfCanvasPreview: () => <div>PDF preview</div>,
@@ -52,7 +53,7 @@ describe('CharacterSheetPage', () => {
   function renderPage() {
     return render(
       <MemoryRouter>
-        <CharacterSheetPage templateId="2014" />
+        <CharacterSheetPage templateId="2014-custom" />
       </MemoryRouter>,
     )
   }
@@ -324,7 +325,7 @@ describe('CharacterSheetPage', () => {
         description: 'As an action, light a beacon.',
       },
     ])
-    expect(createCharacterSheetViewModel(character, complete).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, complete).actions).toEqual(initial)
     expect(
       deriveRulesTextActions(character, undefined, {
         classes: [wizard],
@@ -343,18 +344,18 @@ describe('CharacterSheetPage', () => {
     for (const available of [[competingWizard, bard], [bard, competingWizard], [wizard]]) {
       const lookups = install(available)
       expect(result.current).toEqual([])
-      expect(createCharacterSheetViewModel(character, lookups).actions).toEqual([])
+      expect(createCurrentCharacterSheetViewModel(character, lookups).actions).toEqual([])
     }
     const restored = install(classes)
     expect(result.current).toEqual(initial)
-    expect(createCharacterSheetViewModel(character, restored).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, restored).actions).toEqual(initial)
     const unavailableCompetitor = {
       ...structuredClone(competingWizard),
       subclasses: competingWizard.subclasses.map((subclass) => ({ ...subclass, source: 'TCE' })),
     }
     const filtered = install([unavailableCompetitor, bard])
     expect(result.current).toEqual(initial)
-    expect(createCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
+    expect(createCurrentCharacterSheetViewModel(character, filtered).actions).toEqual(initial)
     renderPage()
     expect(
       vi.mocked(createCharacterSheetViewModel).mock.results.slice(-1)[0]?.value.actions,
@@ -366,7 +367,7 @@ describe('CharacterSheetPage', () => {
         classFeatures: [],
       }),
     }
-    expect(createCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
+    expect(createCurrentCharacterSheetViewModel(character, explicitEmpty).actions).toEqual([])
   })
 
   test('Actions and PDF honor current reprint suppression across source casing', () => {
@@ -511,7 +512,12 @@ describe('CharacterSheetPage', () => {
       allowedSources: ['PHB', 'TCE'],
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
       features: [
-        { id: 'saved-signal', name: 'Signal', source: 'TCE', description: 'Saved signal.' },
+        {
+          id: 'saved-signal',
+          name: 'Signal',
+          source: 'TCE',
+          description: 'As a reaction, use the saved signal.',
+        },
       ],
     })
     const choice = classes[0].normalizedRules!.choices[0]
@@ -550,13 +556,13 @@ describe('CharacterSheetPage', () => {
     const rawData = makeGameDataFixture({ classes, classFeatures: [signal] })
     rawData.lookups = buildGameDataLookups(rawData)
     expect(
-      createCharacterSheetViewModel(character, rawData.lookups).actions.some(
+      createCurrentCharacterSheetViewModel(character, rawData.lookups).actions.some(
         (action) => action.id === chosen.id,
       ),
     ).toBe(false)
     const empty = buildClassChoiceFeatureCatalogs({ classes, classFeatures: [] })
     expect(
-      createCharacterSheetViewModel(character, {
+      createCurrentCharacterSheetViewModel(character, {
         ...rawData.lookups,
         classChoiceFeatureCatalogs: empty,
       }).actions.some((action) => action.id === chosen.id),
@@ -588,17 +594,15 @@ describe('CharacterSheetPage', () => {
   test.each([
     'class',
     'optional',
-  ] as const)('exports the same uniquely resolved %s feature action as Actions', (kind) => {
+  ] as const)('exports saved custom prose independently of matching %s catalog rules', (kind) => {
     const { character } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
-    const expected = kind === 'class' ? 'bonus-action' : 'action'
+    const expected = 'reaction'
     const id = 'feature:saved-shared'
     const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe(expected)
-    expect(actions[0]?.description).toContain(
-      kind === 'class' ? 'catalog maneuver' : 'optional rules',
-    )
+    expect(actions[0]?.description).toContain('saved maneuver')
     if (kind === 'class') {
       expect(
         result.current.filter((action) => action.name.toLowerCase() === 'shared'),
@@ -609,7 +613,7 @@ describe('CharacterSheetPage', () => {
     expect(exportedSavedActions(id)).toEqual(actions)
   })
 
-  test('preserves ambiguous saved class rules in both Actions and PDF without optional fallback', () => {
+  test('preserves custom prose with ambiguous catalog records in both Actions and PDF', () => {
     const { character } = installFeatureCatalog('class', true)
     const { result } = renderHook(() => useCharacterActions(character))
     const actions = result.current.filter((action) => action.id === 'feature:saved-shared')
@@ -624,14 +628,12 @@ describe('CharacterSheetPage', () => {
   test.each([
     'class',
     'optional',
-  ] as const)('refreshes exported actions when only the %s feature lookup changes', (kind) => {
+  ] as const)('keeps custom exported actions independent when the %s feature lookup changes', (kind) => {
     const { character, gameData } = installFeatureCatalog(kind)
     const { result } = renderHook(() => useCharacterActions(character))
     renderPage()
     const id = 'feature:saved-shared'
-    expect(result.current.find((action) => action.id === id)?.kind).toBe(
-      kind === 'class' ? 'bonus-action' : 'action',
-    )
+    expect(result.current.find((action) => action.id === id)?.kind).toBe('reaction')
     const key = kind === 'class' ? 'classFeaturesByKey' : 'optionalFeaturesByKey'
     const lookup = gameData.lookups![key]
     const updatedLookup = Object.fromEntries(
@@ -649,7 +651,7 @@ describe('CharacterSheetPage', () => {
     const actions = result.current.filter((action) => action.id === id)
     expect(actions).toHaveLength(1)
     expect(actions[0]?.kind).toBe('reaction')
-    expect(actions[0]?.description).toContain('refreshed catalog rules')
+    expect(actions[0]?.description).toContain('saved maneuver')
     expect(exportedSavedActions(id)).toEqual(actions)
   })
 
@@ -707,15 +709,34 @@ describe('CharacterSheetPage', () => {
       blockingCount: 0,
     }
     vi.mocked(getPdfExportPreflight).mockReturnValueOnce(result).mockReturnValueOnce(result)
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const user = userEvent.setup()
-    renderPage()
-    await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
-    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
-    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
-    expect(screen.queryByRole('alertdialog')).toBeNull()
-    expect(click).toHaveBeenCalledOnce()
-    click.mockRestore()
+    // Object URLs are the browser download boundary; the generated Blob stays real.
+    const objectUrl = 'blob:character-sheet-test'
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue(objectUrl)
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    let download: { href: string; filename: string } | undefined
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      download = { href: this.href, filename: this.download }
+    })
+    try {
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
+      await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+      await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+      expect(click).toHaveBeenCalledOnce()
+      expect(createObjectURL).toHaveBeenCalledOnce()
+      expect(createObjectURL.mock.calls[0]?.[0]).toBeInstanceOf(Blob)
+      expect(createObjectURL.mock.calls[0]?.[0]).toMatchObject({ size: 3, type: 'application/pdf' })
+      expect(download).toEqual({ href: objectUrl, filename: 'Fixture Character.pdf' })
+      expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith(objectUrl)
+    } finally {
+      click.mockRestore()
+      createObjectURL.mockRestore()
+      revokeObjectURL.mockRestore()
+    }
   })
 
   test('changing optional pages invalidates the preview and passes choices to export', async () => {

@@ -119,7 +119,7 @@ earlier root. Current filtered ancestors may omit only unrelated qualified subcl
 preserving prose, metadata, order and the requested path. Unattached nested class references still
 require the exact current candidate collection. Empty current indexes remain authoritative.
 Winning owner/body identities replace their proof too, including absent or invalid incoming proof.
-Existing proficiency/body audits remain independent. Parsed cache56 retains these serializable
+Existing proficiency/body audits remain independent. Parsed cache57 retains these serializable
 records. Copies are materialized within their source document; replacing a different owner without
 providing a winning consumed body does not re-materialize an omitted copied owner. The
 development semantic input is separate from ordinary generation; runtime rules retain
@@ -135,6 +135,30 @@ expansions. Metamagic Options and Maneuver Options require their exact current s
 and structured progression; these dependency records remain standard features and never become
 optional adoptions or additional selections. Their absence suspends only the expanded route,
 retaining saved intent for exact restoration.
+
+Numeric casting declarations use a separate `classCastingSources` collection. The shared declaration
+resolver retains exact actual owners and requested feature targets; ordinary casting never becomes an
+optional adoption merely by sharing that resolver. Additional raw exact-one proofs bind consumed
+parent-class progression, preparation and table inputs. Parsed slot arrays must agree with the
+production table derivation. When a subclass uses the standard-table fallback, current authority
+validates the actual helper-selected provider against the finite supported provider catalog; it does
+not choose a different provider from an approved-only subset. Winning parent/provider layers replace
+their proofs even when incoming proof is absent. Empty current evidence denies authority.
+Exact licensed bundled declarations and full native declarations are alternative whole packages
+within one producer; they never add another quota or saved slot identity. Raw auditing checks every
+known package before projection. Current resolution first checks the complete evidence group for
+closed shape, known certificates, one origin, one row per alternative and exactly one verified
+package, then validates that package's complete owner/root/body. Unknown or conflicting evidence
+cannot disappear through alternative filtering. Winning layers replace the entire group, so native
+parent metadata cannot be stitched to a different bundled feature body.
+The finite registry distinguishes level-earned cantrips/known spells, Wizard spellbook increments
+and separate Arcanum gains; daily leveled preparation creates no historical numeric acquisition.
+Declaration and dependency qualification alone do not create character spell choices or usage events.
+Ordinary `generate-class-casting-rules.mjs` checks the separate reviewed semantic input before writing
+rules and its source/helper manifest; it never recaptures semantic authority on source drift.
+The runtime registry shares repeated certificate and identity strings through generated constants.
+Its complete values and field order must equal the canonical JSON registry; this changes only emitted
+representation. The generator checks both outputs and includes the runtime module in its helper hashes.
 
 - The loader uses one bounded worker pool (maximum six requests), including expanded class/spell
   indexes. Do not replace it with unbounded `Promise.all`.
@@ -243,7 +267,7 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **56**, owned by [dataCache](../src/lib/storage/dataCache.ts);
+The current parsed cache schema is **57**, owned by [dataCache](../src/lib/storage/dataCache.ts);
 use that constant when changing code. Old increment numbers are not the current version.
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized

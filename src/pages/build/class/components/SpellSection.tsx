@@ -1,4 +1,4 @@
-import { ArrowsClockwise, MagicWand } from '@phosphor-icons/react'
+import { MagicWand } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
@@ -16,13 +16,10 @@ interface BuildClassSpellSectionProps {
   level: number
   spellGain: SpellGain
   chosenNames: string[]
+  unavailableCount?: number
   spellByReference: Map<string, Spell5e>
   detailCollapsed: boolean
-  hasExistingKnown: boolean
-  requiredSelectionsComplete: boolean
-  swapDoneAtLevel: boolean
   onOpenSpellPicker: (level: number) => void
-  onOpenSpellSwap: (level: number) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   getOrdinalForm: (n: number) => string
@@ -32,13 +29,10 @@ export function BuildClassSpellSection({
   level,
   spellGain,
   chosenNames,
+  unavailableCount = 0,
   spellByReference,
   detailCollapsed,
-  hasExistingKnown,
-  requiredSelectionsComplete,
-  swapDoneAtLevel,
   onOpenSpellPicker,
-  onOpenSpellSwap,
   onSelectFeature,
   onExpandDetails,
   getOrdinalForm,
@@ -55,6 +49,9 @@ export function BuildClassSpellSection({
               {hasNewSelections ? 'Spell Selection' : 'Spell Replacement'}
             </div>
             <div className="text-xs text-muted-foreground">
+              {unavailableCount > 0
+                ? `${unavailableCount} saved choice${unavailableCount === 1 ? '' : 's'} unavailable · `
+                : ''}
               {hasNewSelections
                 ? [
                     spellGain.cantrips > 0 &&
@@ -77,22 +74,6 @@ export function BuildClassSpellSection({
               onClick={() => onOpenSpellPicker(level)}
             >
               {chosenNames.length > 0 ? 'Edit' : 'Choose'}
-            </Button>
-          )}
-          {spellGain.canSwap && hasExistingKnown && requiredSelectionsComplete && (
-            <Button
-              variant={swapDoneAtLevel ? 'ghost' : 'outline'}
-              size="sm"
-              className="h-7 text-xs gap-1"
-              aria-label={
-                swapDoneAtLevel
-                  ? `Change spell replacement for level ${level}`
-                  : `Replace a spell for level ${level}`
-              }
-              onClick={() => onOpenSpellSwap(level)}
-            >
-              <ArrowsClockwise className="h-3 w-3" />
-              {swapDoneAtLevel ? 'Change replacement' : 'Replace a spell'}
             </Button>
           )}
         </div>

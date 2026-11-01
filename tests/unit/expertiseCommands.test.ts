@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
 import { applyManualProficiencyCommand } from '@/lib/character/commands/equipmentCommands'
-import { toggleExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
+import { removeManualExpertiseCommand } from '@/lib/character/commands/expertiseCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
@@ -10,6 +10,7 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { manualExpertiseFixtureGrant } from '../fixtures/manualProficiency'
 
 describe('expertise commands', () => {
   test.each([
@@ -49,7 +50,7 @@ describe('expertise commands', () => {
       }
     const selected = applyCharacterCommandResult(
       character,
-      toggleExpertiseCommand(character, ledger, 'Arcana'),
+      manualExpertiseFixtureGrant(character, ledger, 'Arcana'),
     )
     const result =
       kind === 'manual'
@@ -73,7 +74,7 @@ describe('expertise commands', () => {
     expect(result.characterPatch.proficiencies).toMatchObject({ skills: [], expertise: [] })
     expect(result.provenanceUpdate.proficiencies.expertise).toEqual({})
   })
-  test('manual expertise toggles atomically and preserves a separate feat owner', () => {
+  test('manual removal cannot remove a separate feat owner', () => {
     const character = makeCharacterFixture()
     const feat = { name: 'Training', source: 'PHB', fixedGrant: true }
     const configured = applyCharacterCommandResult(
@@ -83,7 +84,7 @@ describe('expertise commands', () => {
     const snapshot = structuredClone(configured)
     const clicked = applyCharacterCommandResult(
       configured,
-      toggleExpertiseCommand(configured, configured.provenance, ' ARCANA '),
+      removeManualExpertiseCommand(configured, configured.provenance, ' ARCANA '),
     )
     expect(clicked.proficiencies.expertise).toEqual(['arcana'])
     expect(clicked.provenance.proficiencies.expertise?.arcana).toEqual(
@@ -107,12 +108,12 @@ describe('expertise commands', () => {
     }
     let ledger = addGrant(character.provenance, 'expertise', 'Arcana', manual)
     ledger = addGrant(ledger, 'expertise', 'Arcana', featOwner)
-    const result = toggleExpertiseCommand(character, ledger, 'Arcana')
+    const result = removeManualExpertiseCommand(character, ledger, 'Arcana')
     expect(result.characterPatch.proficiencies?.expertise).toEqual(['arcana'])
     expect(result.provenanceUpdate.proficiencies.expertise?.arcana).toEqual([featOwner])
   })
 
-  test('adds/removes a manual selection without changing proficiency or unowned legacy fields', () => {
+  test('withdraws admitted manual state without changing proficiency or unrelated fields', () => {
     const character = makeCharacterFixture({
       proficiencies: {
         ...makeCharacterFixture().proficiencies,
@@ -122,17 +123,17 @@ describe('expertise commands', () => {
     })
     const selected = applyCharacterCommandResult(
       character,
-      toggleExpertiseCommand(character, character.provenance, 'Arcana'),
+      manualExpertiseFixtureGrant(character, character.provenance, 'Arcana'),
     )
     expect(selected.provenance.proficiencies.expertise?.arcana).toEqual([
       makeSourceTag('manual', 'User Choice', 'choice'),
     ])
-    const cleared = toggleExpertiseCommand(selected, selected.provenance, 'Arcana')
+    const cleared = removeManualExpertiseCommand(selected, selected.provenance, 'Arcana')
     expect(cleared.characterPatch.proficiencies?.expertise).toEqual([])
     expect(cleared.characterPatch.proficiencies?.skills).toEqual(['arcana'])
     expect(cleared.provenanceUpdate.proficiencies.expertise).toEqual({})
     expect(
-      toggleExpertiseCommand(character, character.provenance, 'Stealth').characterPatch,
+      removeManualExpertiseCommand(character, character.provenance, 'Stealth').characterPatch,
     ).toEqual({})
   })
 

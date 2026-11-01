@@ -2,12 +2,14 @@ import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { OPTIONAL_CLASS_FEATURE_RULES } from '@/lib/5etools/optionalClassFeatureRules'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCannyFixture, selectCanny } from '../fixtures/cannyFixtures'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSourceData } from '../fixtures/optionalClassFeatureFixtures'
-import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 test.each(
   (['2014-official', '2014-custom', '2024-official', '2024-custom'] as const).flatMap((template) =>
@@ -39,7 +41,7 @@ test.each(
     })
   }
   const before = JSON.stringify(character)
-  const vm = createCharacterSheetViewModel(character, {
+  const vm = createCurrentCharacterSheetViewModel(character, {
     ...data.lookups!,
     classChoiceClasses: data.classes,
     classChoiceFeatureCatalogs: catalogs,
@@ -103,7 +105,7 @@ test.each(
   const catalogs = available
     ? f.catalogs
     : { ...f.catalogs, classFeatures: [], classFeatureCandidates: new Map() }
-  const vm = createCharacterSheetViewModel(saved, {
+  const vm = createCurrentCharacterSheetViewModel(saved, {
     ...inputs,
     classChoiceFeatureCatalogs: catalogs,
   })
@@ -113,7 +115,7 @@ test.each(
   const languageField =
     id === '2014-official' ? 'ProficienciesLang' : id === '2014-custom' ? 'Language 1' : 'Text_91'
   const modifier = vm.skillByName.get('survival')!.modifier
-  const expected = createCharacterSheetViewModel(f.character, inputs).skillByName.get(
+  const expected = createCurrentCharacterSheetViewModel(f.character, inputs).skillByName.get(
     'survival',
   )!.modifier
   expect(modifier).toBe(expected + (available ? 2 : 0))

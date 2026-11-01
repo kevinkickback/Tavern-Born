@@ -8,6 +8,7 @@ import {
   getClassChoiceCandidates,
 } from '@/lib/character/classChoiceOptions'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Class5e } from '@/types/5etools'
@@ -37,6 +38,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     availableClasses: readonly Class5e[]
     allClasses: readonly Class5e[]
     classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
+    spellContext?: ManagedClassSpellContext
   },
   includeVariants: boolean,
 ): CharacterCommandResult {
@@ -98,6 +100,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
     ledger,
     classChoiceSelections,
     catalogs.classChoiceFeatureCatalogs,
+    catalogs.spellContext,
   )
   let workingCharacter: Character = {
     ...character,
