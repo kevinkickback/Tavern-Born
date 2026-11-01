@@ -458,28 +458,30 @@ describe('individually adopted class spell lists using existing selection actors
 })
 
 test.each([
-  ['2014-official', false],
-  ['2014-official', true],
-  ['2024-official', false],
-  ['2024-official', true],
-] as const)('optional daily spells reach actual %s PDF, namesOnly=%s', async (template, namesOnly) => {
+  ['2014-official', false, true],
+  ['2014-official', false, false],
+  ['2014-official', true, true],
+  ['2014-official', true, false],
+  ['2024-official', false, true],
+  ['2024-official', false, false],
+  ['2024-official', true, true],
+  ['2024-official', true, false],
+] as const)('optional daily spells reach actual %s PDF, namesOnly=%s, active=%s', async (template, namesOnly, active) => {
   const f = setup(1),
     saved = select(1, adopt(f.character, f.adoption))
-  for (const active of [true, false]) {
-    const model = createCharacterSheetViewModel(
-      { ...saved, variantRules: { optionalClassFeatures: active } },
-      fixture.lookups,
-      fixture.lookups,
-    )
-    const bytes = await generateTestCharacterSheet(
-      namesOnly ? withoutSheetDescriptions(model) : model,
-      template,
-    )
-    const text = (await PDFDocument.load(bytes))
-      .getForm()
-      .getFields()
-      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-      .join('\n')
-    expect(text.includes('Aura of Vitality')).toBe(active)
-  }
+  const model = createCharacterSheetViewModel(
+    { ...saved, variantRules: { optionalClassFeatures: active } },
+    fixture.lookups,
+    fixture.lookups,
+  )
+  const bytes = await generateTestCharacterSheet(
+    namesOnly ? withoutSheetDescriptions(model) : model,
+    template,
+  )
+  const text = (await PDFDocument.load(bytes))
+    .getForm()
+    .getFields()
+    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    .join('\n')
+  expect(text.includes('Aura of Vitality')).toBe(active)
 })

@@ -42,14 +42,15 @@ test('@focused Class spell-list adoption uses the existing Spells preparation an
   await expect(choice).not.toBeChecked()
   await choice.check()
   await page.getByRole('link', { name: 'Spells', exact: true }).click()
-  await expect(page.getByRole('button', { name: /Edit Cleric preparation/ })).toHaveCount(0)
-  await expect(page.getByText(/saved reservations/)).toHaveCount(0)
   const row = page
     .getByRole('region', { name: /Cleric/ })
     .getByRole('button', { name: 'Aura of Vitality', exact: true })
     .locator('xpath=../..')
   await row.getByTitle('Not prepared — click to prepare').click()
   await expect(row.getByTitle('Prepared — click to unprepare')).toBeVisible()
+  // Check the excluded editor/reservation UI after Spells has rendered, not on its loading fallback.
+  await expect(page.getByRole('button', { name: /Edit Cleric preparation/ })).toHaveCount(0)
+  await expect(page.getByText(/saved reservations/)).toHaveCount(0)
   await page.getByRole('button', { name: 'Save character', exact: true }).click()
   await expect
     .poll(async () => {

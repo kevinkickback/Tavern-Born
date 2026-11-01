@@ -29,9 +29,9 @@ members suspend only their own option. Saved unavailable picks retain their occu
 recovery details, while their managed benefits/provenance, Actions, prerequisites and PDF suspend.
 Standard options, independent providers and manual rows keep their own authority.
 
-The eight PHB Additional Spells sections use the same Class addition controls and exact book-section
-adoptions. Current section descriptors supply their actual owner, root level and source-qualified
-members. An active adoption permits only matching current spell-list routes; it never learns,
+The eight TCE Additional Spells sections for PHB classes use the same Class addition controls and
+exact book-section adoptions. Current section descriptors supply their actual owner, root level and
+source-qualified members. An active adoption permits only matching current spell-list routes; it never learns,
 prepares or grants every listed spell, increases quota or bypasses an owner's spell-level access.
 Numeric learning, Wizard spellbook preparation and existing daily preparation keep their own
 selection contracts. Independent base, subclass, native and explicit list-bypass paths survive
