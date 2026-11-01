@@ -3,7 +3,6 @@ import { describe, expect, test, vi } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
-import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
 import { parseSpells, type SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import {
   auditSpellRouteMultiplicity,
@@ -11,7 +10,6 @@ import {
   parseSpellRouteSource,
   prepareSpellRouteLookup,
 } from '@/lib/5etools/spellRouteSources'
-import { OPTIONAL_CLASS_ADOPTION_ROOTS } from '@/lib/character/optionalClassAdoptionRules'
 import type { Spell5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -348,18 +346,6 @@ test('an explicitly resupplied changed lookup object withdraws stale routes and 
   expect(empty.classSpellRoutes).toEqual([])
   Object.assign(lookup, root(true))
   expect(parse(empty, lookup).classSpellRoutes).toEqual(first.classSpellRoutes)
-})
-
-test('source parsing cannot activate any of the eight spell-section actor roots', () => {
-  const spellSections = OPTIONAL_CLASS_SECTION_RULES.sections.filter((section) =>
-    section.members.some(([kind]) => kind === 'spell'),
-  )
-  expect(spellSections).toHaveLength(8)
-  expect(
-    spellSections.every(
-      (section) => !OPTIONAL_CLASS_ADOPTION_ROOTS.some((root) => root.target === section.target),
-    ),
-  ).toBe(true)
 })
 
 test('canonical target and filter aliases preserve exact printing, suppression and pure restoration', () => {

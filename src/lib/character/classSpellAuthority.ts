@@ -62,7 +62,11 @@ function routeAllowed(
   const section = spellSections.find((row) => equal(row.owner, owner))
   if (
     !allowOptional ||
-    !section?.members.some(([, name, source]) => name === route[1] && source === route[2])
+    !section?.members.some(
+      ([kind, name, source]) =>
+        kind === 'spell' &&
+        getSpellReferenceKey(name, source) === getSpellReferenceKey(route[1], route[2]),
+    )
   )
     return false
   return createOptionalClassFeatureActivity(character, context.catalogs).states.some(

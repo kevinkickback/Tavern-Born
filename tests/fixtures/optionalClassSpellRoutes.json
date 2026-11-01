@@ -1,0 +1,971 @@
+{
+  "sourceLookup": {
+    "phb": {
+      "command": {
+        "class": {
+          "PHB": {
+            "Cleric": true,
+            "Paladin": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Bard": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "PHB": {
+            "Bard": {
+              "XGE": {
+                "Glamour": {
+                  "name": "College of Glamour"
+                }
+              }
+            },
+            "Cleric": {
+              "PHB": {
+                "Knowledge": {
+                  "name": "Knowledge Domain"
+                }
+              },
+              "PSA": {
+                "Knowledge (PSA)": {
+                  "name": "Knowledge Domain (PSA)"
+                }
+              },
+              "TCE": {
+                "Order": {
+                  "name": "Order Domain"
+                }
+              }
+            },
+            "Paladin": {
+              "SCAG": {
+                "Crown": {
+                  "name": "Oath of the Crown"
+                }
+              },
+              "XGE": {
+                "Conquest": {
+                  "name": "Oath of Conquest"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            },
+            "Warlock": {
+              "PHB": {
+                "Fiend": {
+                  "name": "The Fiend"
+                }
+              }
+            }
+          },
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Cleric": {
+              "PSA": {
+                "Knowledge (PSA)": {
+                  "name": "Knowledge Domain (PSA)"
+                }
+              },
+              "TCE": {
+                "Order": {
+                  "name": "Order Domain"
+                }
+              }
+            },
+            "Paladin": {
+              "SCAG": {
+                "Crown": {
+                  "name": "Oath of the Crown"
+                }
+              },
+              "XGE": {
+                "Conquest": {
+                  "name": "Oath of Conquest"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "GGR": {
+            "Azorius Functionary": true,
+            "Orzhov Representative": true
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          },
+          "DSotDQ": {
+            "Divinely Favored": true
+          },
+          "TCE": {
+            "Fey Touched": true
+          },
+          "XPHB": {
+            "Fey-Touched": true,
+            "Magic Initiate": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "BGG": {
+            "Rune Shaper": true
+          },
+          "SCC": {
+            "Strixhaven Initiate": true
+          },
+          "ABH": {
+            "Vampire Touched": true
+          }
+        },
+        "reward": {
+          "GGR": {
+            "Azorius Charm": true
+          },
+          "MOT": {
+            "Klothys's Devotee": true
+          }
+        }
+      },
+      "aura of vitality": {
+        "class": {
+          "PHB": {
+            "Paladin": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Cleric": {
+              "definedInSources": ["TCE"]
+            },
+            "Druid": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "TCE": {
+            "Artificer": {
+              "TCE": {
+                "Battle Smith": {
+                  "name": "Battle Smith"
+                }
+              }
+            }
+          },
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Cleric": {
+              "TCE": {
+                "Twilight": {
+                  "name": "Twilight Domain"
+                }
+              }
+            },
+            "Paladin": {
+              "SCAG": {
+                "Crown": {
+                  "name": "Oath of the Crown"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Cleric": {
+              "TCE": {
+                "Twilight": {
+                  "name": "Twilight Domain"
+                }
+              }
+            },
+            "Paladin": {
+              "SCAG": {
+                "Crown": {
+                  "name": "Oath of the Crown"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "SCC": {
+            "Quandrix Student": true
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true
+          }
+        },
+        "race": {
+          "ERLW": {
+            "Halfling (Mark of Healing)": {
+              "baseName": "Halfling",
+              "baseSource": "PHB"
+            }
+          }
+        },
+        "reward": {
+          "GGR": {
+            "Selesnya Charm": true
+          }
+        }
+      },
+      "protection from evil and good": {
+        "class": {
+          "PHB": {
+            "Cleric": true,
+            "Paladin": true,
+            "Warlock": true,
+            "Wizard": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Druid": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Ranger": {
+              "XGE": {
+                "Horizon Walker": {
+                  "name": "Horizon Walker"
+                },
+                "Monster Slayer": {
+                  "name": "Monster Slayer"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            },
+            "Wizard": {
+              "XPHB": {
+                "Abjurer": {
+                  "name": "Abjurer"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Paladin": {
+              "PHB": {
+                "Devotion": {
+                  "name": "Oath of Devotion"
+                }
+              }
+            },
+            "Ranger": {
+              "XGE": {
+                "Horizon Walker": {
+                  "name": "Horizon Walker"
+                },
+                "Monster Slayer": {
+                  "name": "Monster Slayer"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              },
+              "TCE": {
+                "Clockwork Soul": {
+                  "name": "Clockwork Soul"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          },
+          "DSotDQ": {
+            "Divinely Favored": true,
+            "Initiate of High Sorcery": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "XPHB": {
+            "Magic Initiate": true
+          },
+          "SCC": {
+            "Strixhaven Initiate": true
+          }
+        }
+      },
+      "prayer of healing": {
+        "class": {
+          "PHB": {
+            "Cleric": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Paladin": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          }
+        },
+        "race": {
+          "ERLW": {
+            "Halfling (Mark of Healing)": {
+              "baseName": "Halfling",
+              "baseSource": "PHB"
+            }
+          }
+        }
+      },
+      "entangle": {
+        "class": {
+          "PHB": {
+            "Druid": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Ranger": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "GGR": {
+            "Golgari Agent": true
+          },
+          "SCC": {
+            "Quandrix Student": true
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          },
+          "DSotDQ": {
+            "Divinely Favored": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "XPHB": {
+            "Magic Initiate": true
+          },
+          "BGG": {
+            "Rune Shaper": true
+          },
+          "SCC": {
+            "Strixhaven Initiate": true
+          }
+        },
+        "race": {
+          "EGW": {
+            "Halfling (Lotusden)": {
+              "baseName": "Halfling",
+              "baseSource": "PHB"
+            }
+          }
+        }
+      },
+      "grease": {
+        "class": {
+          "PHB": {
+            "Wizard": true
+          },
+          "TCE": {
+            "Artificer": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Sorcerer": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Monk": {
+              "AU": {
+                "Mystic Arts": {
+                  "name": "Warrior of the Mystic Arts"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Wizard": {
+              "AU": {
+                "Conjurer": {
+                  "name": "Conjurer"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "EFA": {
+            "Aberrant Dragonmark": true,
+            "Boon of Siberys": true
+          },
+          "ERLW": {
+            "Aberrant Dragonmark": true
+          },
+          "TCE": {
+            "Artificer Initiate": true
+          },
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "XPHB": {
+            "Magic Initiate": true
+          },
+          "SCC": {
+            "Strixhaven Initiate": true
+          }
+        }
+      },
+      "mislead": {
+        "class": {
+          "PHB": {
+            "Bard": true,
+            "Wizard": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Warlock": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "PHB": {
+            "Cleric": {
+              "TCE": {
+                "Twilight": {
+                  "name": "Twilight Domain"
+                }
+              }
+            },
+            "Ranger": {
+              "TCE": {
+                "Fey Wanderer": {
+                  "name": "Fey Wanderer"
+                }
+              }
+            },
+            "Sorcerer": {
+              "DSotDQ": {
+                "Lunar": {
+                  "name": "Lunar Sorcery"
+                }
+              }
+            }
+          },
+          "XPHB": {
+            "Cleric": {
+              "TCE": {
+                "Twilight": {
+                  "name": "Twilight Domain"
+                }
+              }
+            },
+            "Sorcerer": {
+              "DSotDQ": {
+                "Lunar": {
+                  "name": "Lunar Sorcery"
+                }
+              }
+            },
+            "Wizard": {
+              "XPHB": {
+                "Illusionist": {
+                  "name": "Illusionist"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "AU": {
+            "Boon of Magic School Mastery": true
+          }
+        },
+        "race": {
+          "ERLW": {
+            "Elf (Mark of Shadow)": {
+              "baseName": "Elf",
+              "baseSource": "PHB"
+            }
+          }
+        },
+        "reward": {
+          "BMT": {
+            "Charm of the Rogue": true
+          }
+        }
+      },
+      "augury": {
+        "class": {
+          "PHB": {
+            "Cleric": true
+          }
+        },
+        "classVariant": {
+          "PHB": {
+            "Druid": {
+              "definedInSources": ["TCE"]
+            },
+            "Wizard": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "PHB": {
+            "Barbarian": {
+              "XGE": {
+                "Ancestral Guardian": {
+                  "name": "Path of the Ancestral Guardian"
+                }
+              }
+            },
+            "Cleric": {
+              "PHB": {
+                "Knowledge": {
+                  "name": "Knowledge Domain"
+                }
+              },
+              "PSA": {
+                "Knowledge (PSA)": {
+                  "name": "Knowledge Domain (PSA)"
+                }
+              }
+            },
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            }
+          },
+          "XPHB": {
+            "Barbarian": {
+              "XGE": {
+                "Ancestral Guardian": {
+                  "name": "Path of the Ancestral Guardian"
+                }
+              }
+            },
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Cleric": {
+              "PSA": {
+                "Knowledge (PSA)": {
+                  "name": "Knowledge Domain (PSA)"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Sorcerer": {
+              "XGE": {
+                "Divine Soul": {
+                  "name": "Divine Soul"
+                }
+              }
+            },
+            "Wizard": {
+              "XPHB": {
+                "Diviner": {
+                  "name": "Diviner"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "DSotDQ": {
+            "Adept of the White Robes": true,
+            "Divinely Favored": true
+          },
+          "AU": {
+            "Boon of Magic School Mastery": true,
+            "Magic Connoisseur": true
+          }
+        }
+      }
+    },
+    "tce": {
+      "mind sliver": {
+        "classVariant": {
+          "PHB": {
+            "Sorcerer": {
+              "definedInSources": ["TCE"]
+            },
+            "Warlock": {
+              "definedInSources": ["TCE"]
+            },
+            "Wizard": {
+              "definedInSources": ["TCE"]
+            }
+          }
+        },
+        "subclass": {
+          "XPHB": {
+            "Bard": {
+              "XPHB": {
+                "Lore": {
+                  "name": "College of Lore"
+                }
+              }
+            },
+            "Cleric": {
+              "AU": {
+                "Arcana": {
+                  "name": "Arcana Domain"
+                }
+              }
+            },
+            "Fighter": {
+              "XPHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Monk": {
+              "AU": {
+                "Mystic Arts": {
+                  "name": "Warrior of the Mystic Arts"
+                }
+              }
+            },
+            "Rogue": {
+              "XPHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Wizard": {
+              "AU": {
+                "Enchanter": {
+                  "name": "Enchanter"
+                }
+              }
+            }
+          },
+          "PHB": {
+            "Cleric": {
+              "SCAG": {
+                "Arcana": {
+                  "name": "Arcana Domain"
+                }
+              }
+            },
+            "Fighter": {
+              "PHB": {
+                "Eldritch Knight": {
+                  "name": "Eldritch Knight"
+                }
+              }
+            },
+            "Rogue": {
+              "PHB": {
+                "Arcane Trickster": {
+                  "name": "Arcane Trickster"
+                }
+              }
+            },
+            "Sorcerer": {
+              "TCE": {
+                "Aberrant Mind": {
+                  "name": "Aberrant Mind"
+                }
+              }
+            }
+          }
+        },
+        "feat": {
+          "EFA": {
+            "Aberrant Dragonmark": true
+          },
+          "ERLW": {
+            "Aberrant Dragonmark": true
+          },
+          "AU": {
+            "Arcane Warrior": true
+          },
+          "FRHoF": {
+            "Cold Caster": true
+          },
+          "DSotDQ": {
+            "Initiate of High Sorcery": true
+          },
+          "PHB": {
+            "Magic Initiate": true
+          },
+          "XPHB": {
+            "Magic Initiate": true
+          }
+        },
+        "optionalfeature": {
+          "PHB": {
+            "Pact of the Tome": {
+              "featureType": ["PB"]
+            }
+          },
+          "XPHB": {
+            "Pact of the Tome": {
+              "featureType": ["EI"]
+            }
+          }
+        },
+        "race": {
+          "PHB": {
+            "Elf (High)": {
+              "baseName": "Elf",
+              "baseSource": "PHB"
+            }
+          },
+          "XPHB": {
+            "Elf": true
+          },
+          "SCAG": {
+            "Half-Elf (Variant; Moon Elf or Sun Elf Descent)": {
+              "baseName": "Half-Elf",
+              "baseSource": "PHB"
+            }
+          },
+          "EFA": {
+            "Khoravar": true
+          },
+          "MPMM": {
+            "Kobold": true
+          },
+          "PSX": {
+            "Merfolk (Ixalan; Blue)": {
+              "baseName": "Merfolk",
+              "baseSource": "PSZ"
+            }
+          },
+          "PSZ": {
+            "Merfolk (Zendikar; Ula Creed)": {
+              "baseName": "Merfolk",
+              "baseSource": "PSZ"
+            }
+          }
+        }
+      }
+    }
+  }
+}
