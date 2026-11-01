@@ -14,6 +14,7 @@ import { getFeatureSourceDigest } from './featureSourceAudit'
 type ObjectValue = Record<string, unknown>
 type Channel = ClassSpellRoute[5]
 type Target = [string, string]
+type SourceTarget = { name?: unknown; source?: unknown }
 const channels: Channel[] = ['class', 'classVariant']
 const object = (value: unknown): ObjectValue | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -28,7 +29,7 @@ const identity = (value: unknown): string | undefined =>
 const signature = (value: unknown) => featureOptionRulesSignature([value], false)
 const digest = (value: unknown) => getFeatureSourceDigest([value], false) ?? ''
 const keyOf = (value: unknown) => JSON.stringify(value)
-const targetOf = (spell: { name?: unknown; source?: unknown }): Target | undefined => {
+const targetOf = (spell: SourceTarget): Target | undefined => {
   const name = identity(spell.name),
     source = identity(spell.source)
   return name && source ? [name, source] : undefined
@@ -38,14 +39,28 @@ interface PreparedLookup {
   index: Map<string, SpellRouteLookupCandidate[]>
   malformedSources: Map<string, SpellRouteLookupCandidate[]>
 }
-/** Prepare current aliases once per parse, before a first-match lookup can discard evidence. */
-export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undefined {
+/** Prepare all current aliases for this document's targets, or the full lookup without a scope. */
+export function prepareSpellRouteLookup(
+  lookup?: object,
+  targets?: readonly SourceTarget[],
+): PreparedLookup | undefined {
   if (!lookup) return undefined
   const index = new Map<string, SpellRouteLookupCandidate[]>(),
     malformedSources = new Map<string, SpellRouteLookupCandidate[]>()
+  const selected = targets === undefined ? undefined : new Map<string, Set<string>>()
+  if (selected) {
+    for (const row of targets ?? []) {
+      const target = targetOf(row)
+      if (!target) continue
+      const names = selected.get(target[1]) ?? new Set<string>()
+      names.add(target[0])
+      selected.set(target[1], names)
+    }
+    if (!selected.size) return { index, malformedSources }
+  }
   for (const [source, names] of Object.entries(lookup)) {
     const sourceKey = identity(source)
-    if (!sourceKey) continue
+    if (!sourceKey || (selected && !selected.has(sourceKey))) continue
     const byName = object(names)
     if (!byName) {
       const rows = malformedSources.get(sourceKey) ?? []
@@ -55,7 +70,7 @@ export function prepareSpellRouteLookup(lookup?: object): PreparedLookup | undef
     }
     for (const [name, value] of Object.entries(byName)) {
       const nameKey = identity(name)
-      if (!nameKey) continue
+      if (!nameKey || (selected && !selected.get(sourceKey)?.has(nameKey))) continue
       const key = keyOf([nameKey, sourceKey])
       const rows = index.get(key) ?? []
       rows.push({ path: [source, name], value: clone(value) })

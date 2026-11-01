@@ -8,6 +8,8 @@ import { parseSpells, type SpellSourceLookup } from '@/lib/5etools/parsers/spell
 import {
   auditSpellRouteMultiplicity,
   filterSpellRouteSources,
+  parseSpellRouteSource,
+  prepareSpellRouteLookup,
 } from '@/lib/5etools/spellRouteSources'
 import { OPTIONAL_CLASS_ADOPTION_ROOTS } from '@/lib/character/optionalClassAdoptionRules'
 import type { Spell5e } from '@/types/5etools'
@@ -99,6 +101,117 @@ test('one current lookup index is prepared per multi-spell parse invocation', ()
   expect(parseSpells(native.spell, { sourceLookup: lookup })).toEqual(first)
   expect(enumerations).toBe(2)
   expect(source).toEqual(before)
+})
+
+const parseWithFullLookup = (spells: Spell5e[], lookup: SpellSourceLookup) => {
+  const prepared = prepareSpellRouteLookup(lookup)
+  return auditSpellRouteMultiplicity(
+    spells.map((spell, index) =>
+      parseSpellRouteSource(spell, 'route-test', String(index), prepared),
+    ),
+    'route-test',
+  )
+}
+
+test('document scope preserves complete printing aliases and malformed matching sources', () => {
+  const revised = { ...structuredClone(aid), source: 'XPHB' }
+  const added = { ...structuredClone(aid), name: 'New spell', source: 'NEW' }
+  const spells = [aid, revised, added]
+  const lookup: SpellSourceLookup = {
+    ...root({ definedInSources: ['TCE', null] }),
+    ' PHB ': {
+      ' AID ': { class: { PHB: { Cleric: true } }, classVariant: { PHB: { Ranger: false } } },
+    },
+    xphb: { aid: { class: { XPHB: { Cleric: true } } } },
+    new: { 'new spell': { class: { NEW: { 'New class': true } } } },
+  }
+  Object.assign(lookup, { ' phb ': false })
+  const before = structuredClone(lookup)
+  const actual = parseSpells(spells, { sourceLookup: lookup, origin: 'route-test' }) as Spell5e[]
+  expect(actual).toEqual(parseWithFullLookup(spells, lookup))
+  expect(actual[0].classSpellRoutes).toEqual([route('cleric', 'phb')])
+  expect(actual[0].classSpellRouteDiagnostics).toContainEqual({
+    code: 'invalid-lookup-container',
+    path: '[" phb "]',
+  })
+  expect(actual[1].classSpellRoutes).toEqual([
+    ['classSpellRoute', 'aid', 'xphb', 'cleric', 'xphb', 'class', null],
+  ])
+  expect(actual[2].classSpellRoutes).toEqual([
+    ['classSpellRoute', 'new spell', 'new', 'new class', 'new', 'class', null],
+  ])
+  expect(lookup).toEqual(before)
+})
+
+test('scoping skips unrelated source scans and target clones without retaining cross-call approval', () => {
+  const lookup = root(true)
+  const unrelated = { class: { PHB: { Wizard: true } } }
+  lookup.phb.unrelated = unrelated
+  let unrelatedSourceScans = 0
+  lookup.OTHER = new Proxy(
+    { unrelated },
+    {
+      ownKeys(value) {
+        unrelatedSourceScans++
+        return Reflect.ownKeys(value)
+      },
+    },
+  )
+  const clone = vi.spyOn(globalThis, 'structuredClone')
+  try {
+    const initial = parse(aid, lookup)
+    expect(initial.classSpellRoutes).toContainEqual(route('cleric', 'phb'))
+    expect(unrelatedSourceScans).toBe(0)
+    expect(clone.mock.calls.some(([value]) => value === unrelated)).toBe(false)
+    const owners = (lookup.phb.aid as { class: { PHB: Record<string, unknown> } }).class.PHB
+    owners.Cleric = false
+    expect(parse(aid, lookup).classSpellRoutes).toEqual([route('ranger', 'phb', 'classVariant')])
+    owners.Cleric = true
+    expect(parse(aid, lookup)).toEqual(initial)
+    expect(parse(aid, {}).classSpellRoutes).toEqual([])
+    delete lookup.phb.aid
+    expect(parse(aid, lookup).classSpellRoutes).toEqual([])
+    lookup.phb.aid = root(true).phb.aid
+    expect(parse(aid, lookup)).toEqual(initial)
+  } finally {
+    clone.mockRestore()
+  }
+})
+
+test('explicit empty and invalid target scopes do not prepare unrelated evidence', () => {
+  const clone = vi.spyOn(globalThis, 'structuredClone')
+  try {
+    for (const targets of [
+      [],
+      [{ name: 'Aid', source: '' }],
+      [{ name: 'Aid|PHB', source: 'PHB' }],
+    ]) {
+      const prepared = prepareSpellRouteLookup(root(true), targets)!
+      expect(prepared.index.size).toBe(0)
+      expect(prepared.malformedSources.size).toBe(0)
+    }
+    expect(parseSpells([], { sourceLookup: root(true) })).toEqual([])
+    expect(clone).not.toHaveBeenCalled()
+    expect(prepareSpellRouteLookup(root(true))!.index.size).toBe(1)
+  } finally {
+    clone.mockRestore()
+  }
+})
+
+test('new source and name aliases in the same lookup are re-read and exactly restored', () => {
+  const lookup = root(true)
+  const initial = parse(aid, lookup)
+  lookup[' PHB '] = {
+    ' AID ': {
+      class: { PHB: { Cleric: false } },
+      classVariant: { PHB: { Ranger: true } },
+    },
+  }
+  const changed = parse(aid, lookup)
+  expect(changed).toEqual(parseWithFullLookup([aid], lookup)[0])
+  expect(changed.classSpellRoutes).toEqual([route('ranger', 'phb', 'classVariant')])
+  delete lookup[' PHB ']
+  expect(parse(aid, lookup)).toEqual(initial)
 })
 
 test('source-excluded targets avoid cloning while eligible invalid audits still fail closed', () => {
