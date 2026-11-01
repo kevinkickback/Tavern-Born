@@ -1,7 +1,17 @@
 import { Warning } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
@@ -46,6 +56,28 @@ function getDefaultAbilityScoresForMethod(method: string): Record<string, number
   return makeDefaultAbilityScores(POINT_BUY_MIN)
 }
 
+function sameWizardValue(left: unknown, right: unknown, sourceSelection = false): boolean {
+  if (left === right) return true
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
+  if (Array.isArray(left) !== Array.isArray(right)) return false
+  if (sourceSelection && Array.isArray(left) && Array.isArray(right)) {
+    return sameWizardValue([...left].sort(), [...right].sort())
+  }
+  const keys = Object.keys(left)
+  const otherKeys = Object.keys(right)
+  return (
+    keys.length === otherKeys.length &&
+    keys.every(
+      (key) =>
+        otherKeys.includes(key) &&
+        sameWizardValue(
+          (left as Record<string, unknown>)[key],
+          (right as Record<string, unknown>)[key],
+        ),
+    )
+  )
+}
+
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
@@ -53,6 +85,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const gameData = useGameDataStore((state) => state.gameData)
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
+  const originalValues = useRef<Record<string, unknown>>({})
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const discardOrigin = useRef<HTMLElement | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
   const { isPending: isCreating, run: runCreation } = useAsyncAction()
@@ -80,7 +115,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   useEffect(() => {
     if (!open) return
     setCharacterData((previous) => {
-      if ((previous.allowedSources?.length ?? 0) > 0) return previous
+      if ((previous.allowedSources?.length ?? 0) > 0 || 'allowedSources' in originalValues.current)
+        return previous
       const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
       if (!recommended) return previous
       const availableSources = new Set(wizardData.sources.map((source) => source.abbreviation))
@@ -93,6 +129,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   }, [open, wizardData.sources])
 
   const resetAndClose = () => {
+    discardOrigin.current = null
+    setConfirmDiscard(false)
+    originalValues.current = {}
     setCurrentStep(1)
     setCharacterData(INITIAL_CHARACTER_DATA)
     setValidationError(null)
@@ -101,18 +140,25 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   }
 
   const handleClose = () => {
-    if (!isCreating) resetAndClose()
+    if (isCreating) return
+    const hasUnsavedInput = Object.entries(originalValues.current).some(
+      ([key, value]) =>
+        !sameWizardValue(
+          value,
+          characterData[key as keyof CharacterWizardData],
+          key === 'allowedSources',
+        ),
+    )
+    if (hasUnsavedInput) {
+      discardOrigin.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      setConfirmDiscard(true)
+    } else resetAndClose()
   }
 
   const handleFinish = () =>
     runCreation(
       async () => {
-        const raceResolution = wizardData.resolveRace({
-          name: characterData.race,
-          source: characterData.raceSource,
-          subraceName: characterData.subrace,
-          subraceSource: characterData.subraceSource,
-        })
         const classEntity = wizardData.resolveClass({
           name: characterData.class,
           source: characterData.classSource,
@@ -200,6 +246,23 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         normalizedUpdates.abilityScoreMethod,
       )
     }
+    for (const [key, value] of Object.entries(normalizedUpdates)) {
+      if (
+        key in originalValues.current &&
+        sameWizardValue(value, originalValues.current[key], key === 'allowedSources')
+      ) {
+        delete originalValues.current[key]
+      } else if (
+        !(key in originalValues.current) &&
+        !sameWizardValue(
+          value,
+          characterData[key as keyof CharacterWizardData],
+          key === 'allowedSources',
+        )
+      ) {
+        originalValues.current[key] = characterData[key as keyof CharacterWizardData]
+      }
+    }
     setCharacterData((previous) => ({ ...previous, ...normalizedUpdates }))
     setValidationError(null)
     const nextInvalidFields = new Set(invalidFields)
@@ -215,10 +278,20 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     subraceName: characterData.subrace,
     subraceSource: characterData.subraceSource,
   })
+  const Step = [
+    BasicsStep,
+    RulesStep,
+    RaceStep,
+    ClassStep,
+    BackgroundStep,
+    AbilityScoresStep,
+    ReviewStep,
+  ][currentStep - 1]
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
+        onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}
         aria-busy={isCreating}
         className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane"
@@ -242,55 +315,17 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   <AlertDescription>{validationError}</AlertDescription>
                 </Alert>
               )}
-              {currentStep === 1 && (
-                <BasicsStep
+              {Step && (
+                <Step
                   data={characterData}
                   onChange={updateCharacterData}
                   invalidFields={invalidFields}
-                />
-              )}
-              {currentStep === 2 && (
-                <RulesStep
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  sources={wizardData.sources}
                   contentAvailability={variantRuleAvailability}
                   isBundledSrd={isBundledSrd}
-                  invalidFields={invalidFields}
-                />
-              )}
-              {currentStep === 3 && (
-                <RaceStep
-                  data={characterData}
-                  onChange={updateCharacterData}
                   races={wizardData.races}
-                />
-              )}
-              {currentStep === 4 && (
-                <ClassStep
                   recursiveLookup={wizardData.recursiveLookup}
-                  data={characterData}
-                  onChange={updateCharacterData}
                   classes={wizardData.classes}
-                />
-              )}
-              {currentStep === 5 && (
-                <BackgroundStep
-                  data={characterData}
-                  onChange={updateCharacterData}
                   backgrounds={wizardData.backgrounds}
-                />
-              )}
-              {currentStep === 6 && (
-                <AbilityScoresStep
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  raceResolution={raceResolution}
-                />
-              )}
-              {currentStep === 7 && (
-                <ReviewStep
-                  data={characterData}
                   raceResolution={raceResolution}
                   sources={wizardData.sources}
                   variantRuleAvailability={variantRuleAvailability}
@@ -307,6 +342,32 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             />
           </div>
         </div>
+        <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+          <AlertDialogContent
+            onCloseAutoFocus={(event) => {
+              if (discardOrigin.current?.isConnected) {
+                event.preventDefault()
+                discardOrigin.current.focus()
+              }
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard character creation?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your unsaved character details and choices will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep editing</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={resetAndClose}
+              >
+                Discard changes
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   )

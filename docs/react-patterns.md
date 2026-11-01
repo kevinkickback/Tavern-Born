@@ -39,6 +39,27 @@ useEffect(() => { if (open) setMountKey(k => k + 1) }, [open])
 
 ---
 
+## Creation Wizard Dismissal
+
+The character-creation wizard prevents outside pointer interactions from dismissing the dialog,
+preserving its current step and entered input. When idle, Cancel, the close button and Escape close an
+untouched wizard immediately. Remaining changes request the shared discard confirmation, with Keep
+editing initially focused. Keep editing or Escape closes only that confirmation, preserves the wizard
+and returns focus to the initiating control. Only confirmed discard resets entered information.
+
+Track original values for fields changed through the wizard update callback, including normalized
+ability-method scores. Automatic source defaults do not count as edits; no-op and fully reverted edits
+do not require confirmation. Retire a field's original when its edit is reverted so later automatic
+defaults stay pristine; a subsequent edit starts from the current value. Compare structured field
+contents and treat source-selection order as irrelevant. Successful creation resets directly;
+pending creation retains its dismissal protection.
+Automatic initialization must preserve an outstanding source edit, including an empty selection,
+through catalog refresh and discard confirmation. A no-op or fully reverted source choice still
+permits delayed default initialization.
+These behaviors belong to the wizard, rather than changing shared dialogs for other consumers.
+
+---
+
 ## Lazy useState Initializers for One-Time Setup
 
 When a component conditionally mounts (e.g. inside `{condition && <Modal />}`), React already resets state on unmount. Use lazy `useState` initializers instead of a `useEffect` that re-runs on every open:

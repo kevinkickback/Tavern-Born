@@ -85,7 +85,7 @@ export function AppLoadingOverlay() {
   if (isReady) {
     statusLine = 'App is ready'
   } else if (!hasHydrated) {
-    statusLine = 'Loading the app…'
+    statusLine = 'Warming up the dice...'
   } else if (isBackgroundRefreshing) {
     statusLine = isProgressComplete
       ? 'Finalizing game data update…'
