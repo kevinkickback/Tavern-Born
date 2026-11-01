@@ -8,6 +8,7 @@ import {
 } from '@/lib/calculations/spellProfiles'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeRegisteredPreparationMap } from '../fixtures/classCastingFixtures'
 import {
   makeClassFixture,
   makeXphbBardFixture,
@@ -151,6 +152,9 @@ describe('2024 spellcasting profiles', () => {
       character,
       new Map([[`class:${className}|XPHB`, makeClass()]]),
       character.abilityScores,
+      [],
+      {},
+      makeRegisteredPreparationMap(character.classProgression),
     )
 
     expect(details).toHaveLength(1)
@@ -178,6 +182,9 @@ describe('2024 spellcasting profiles', () => {
         character,
         new Map([['class:Wizard|PHB', wizard]]),
         character.abilityScores,
+        [],
+        {},
+        makeRegisteredPreparationMap(character.classProgression),
       )[0],
     ).toMatchObject({
       isPreparedCaster: true,

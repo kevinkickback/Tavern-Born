@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   CLASS_CASTING_PRODUCERS,
-  DAILY_CLASS_CASTING_OWNERS,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
 import {
@@ -246,8 +245,17 @@ describe('strict numeric class spell identity and saved inverse', () => {
   })
 
   test('pure profile policy distinguishes all nine daily owners, Wizard learning and seven genuine overlays', () => {
-    expect(DAILY_CLASS_CASTING_OWNERS).toHaveLength(9)
-    for (const [, name, source] of DAILY_CLASS_CASTING_OWNERS)
+    for (const [name, source] of [
+      ['artificer', 'tce'],
+      ['artificer', 'efa'],
+      ['cleric', 'phb'],
+      ['cleric', 'xphb'],
+      ['druid', 'phb'],
+      ['druid', 'xphb'],
+      ['paladin', 'phb'],
+      ['paladin', 'xphb'],
+      ['ranger', 'xphb'],
+    ])
       expect(getClassSpellProfilePolicy({ name, source, levels: 1 }).mode).toBe('daily')
     for (const source of ['phb', 'xphb'])
       expect(getClassSpellProfilePolicy({ name: 'wizard', source, levels: 1 }).mode).toBe(

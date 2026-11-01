@@ -14,6 +14,24 @@ export async function deriveClassCastingRegistry(
   const casting = await server.ssrLoadModule('/src/lib/5etools/classCastingStructure.ts')
   /** @type {typeof import('../../src/lib/5etools/classCastingStructure.ts').classifyCastingDomains} */
   const classifyCastingDomains = casting.classifyCastingDomains
+  const { deriveClassPreparationRule, getDeclaredPreparationMinimum } = await server.ssrLoadModule(
+    '/src/lib/5etools/classPreparationStructure.ts',
+  )
+  const preparationFor = (effective, relation) => {
+    const feature = relation.features.filter((row) => row.target === relation.target)
+    if (feature.length !== 1) throw Error('Ambiguous preparation declaration ' + relation.target)
+    const preparation = deriveClassPreparationRule(
+      effective,
+      getDeclaredPreparationMinimum(feature[0].body.entries),
+    )
+    if (
+      (effective.preparedSpells !== undefined ||
+        effective.preparedSpellsProgression !== undefined) &&
+      !preparation
+    )
+      throw Error('Unsupported preparation meaning ' + relation.target)
+    return preparation
+  }
   const { parseClassDocument } = await server.ssrLoadModule('/src/lib/5etools/parsers/classes.ts')
   const { getEffectiveSpellcastingClassData } = await server.ssrLoadModule(
     '/src/lib/5etools/classData.ts',
@@ -91,6 +109,7 @@ export async function deriveClassCastingRegistry(
     const domains = arcanum
       ? { 'class-arcanum': [{ level: relation.level, count: 1, spellLevel: arcanumLevel }] }
       : classifyCastingDomains(effective)
+    const preparation = arcanum ? undefined : preparationFor(effective, relation)
     const suppliers = Object.fromEntries(
       [
         'spellcastingAbility',
@@ -118,6 +137,7 @@ export async function deriveClassCastingRegistry(
       parent: casting.castingParentKey(relation.owner),
       suppliers,
       domains,
+      ...(preparation ? { preparation } : {}),
       ...(phbSchool ? { schools: phbSchool, unrestrictedGains: [3, 8, 14, 20] } : {}),
     }
   })
@@ -149,6 +169,12 @@ export async function deriveClassCastingRegistry(
     const parent = parents.find((row) => JSON.stringify(row.owner) === producer.parent)
     if (!parent || cls.length !== 1 || !casting.castingParsedParentMatches(cls[0], parent))
       throw Error('Bundled casting dependency differs ' + key)
+    if (
+      declarations.optionalDeclarationDigest(
+        producer.domains['class-arcanum'] ? undefined : preparationFor(cls[0], relation),
+      ) !== declarations.optionalDeclarationDigest(producer.preparation)
+    )
+      throw Error('Bundled preparation meaning differs ' + key)
     const alternative = declarations.summarizeOptionalDeclarationCertificate(relation)
     if (
       declarations.optionalDeclarationDigest(alternative.path) !==

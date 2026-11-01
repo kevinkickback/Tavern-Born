@@ -482,3 +482,107 @@ test('filtered explicit empty view survives lookups, exact source restoration is
   expect(filterSpellRouteSources(legacy, ['PHB'])).toBe(legacy)
   expect(Object.values(buildSpellLookup([legacy]))[0]).toBe(legacy)
 })
+
+test.each([
+  'version',
+  'kind',
+  'target',
+  'input',
+  'sourceDigest',
+  'sourceRoutes',
+  'diagnostics',
+] as const)('a required audit field %s cannot be missing or inherited', (field) => {
+  for (const inherit of [false, true]) {
+    const spell = structuredClone(parse(aid, root(true)))
+    const audit = spell.classSpellRouteSource!
+    const value = audit[field]
+    delete (audit as unknown as Record<string, unknown>)[field]
+    if (inherit) Object.setPrototypeOf(audit, { [field]: value })
+    expect(filterSpellRouteSources(spell).classSpellRoutes).toEqual([])
+    expect(Object.values(buildSpellLookup([spell]))[0].classSpellRoutes).toEqual([])
+  }
+})
+
+test('non-data or unknown audit envelopes cannot borrow a checked packet', () => {
+  const original = parse(aid, root(true))
+  for (const change of [
+    (spell: Spell5e) => Object.assign(spell.classSpellRouteSource!, { unknown: undefined }),
+    (spell: Spell5e) =>
+      Object.defineProperty(spell.classSpellRouteSource!, 'toJSON', {
+        value: () => null,
+      }),
+    (spell: Spell5e) =>
+      Object.defineProperty(spell.classSpellRouteSource!.input, 'toJSON', {
+        value: () => null,
+      }),
+    (spell: Spell5e) => {
+      const audit = spell.classSpellRouteSource!
+      const digest = audit.sourceDigest
+      Object.defineProperty(audit, 'sourceDigest', { enumerable: true, get: () => digest })
+    },
+    (spell: Spell5e) => {
+      const audit = spell.classSpellRouteSource!
+      audit.sourceDigest = ''
+    },
+    (spell: Spell5e) => {
+      const cyclic: unknown[] = []
+      cyclic.push(cyclic)
+      spell.classSpellRouteSource!.sourceRoutes = cyclic as never
+    },
+    (spell: Spell5e) => {
+      const cyclic: Record<string, unknown> = {}
+      cyclic.self = cyclic
+      spell.classSpellRouteSource!.input.embedded = { kind: 'present', value: cyclic }
+    },
+  ]) {
+    const changed = structuredClone(original)
+    change(changed)
+    for (const rows of [
+      [changed, original],
+      [original, changed],
+    ]) {
+      const checked = auditSpellRouteMultiplicity(rows)
+      expect(checked.every((spell) => spell.classSpellRoutes?.length === 0)).toBe(true)
+    }
+    expect(filterSpellRouteSources(changed).classSpellRoutes).toEqual([])
+  }
+  const nullPrototype = structuredClone(original)
+  Object.setPrototypeOf(nullPrototype.classSpellRouteSource!, null)
+  expect(filterSpellRouteSources(nullPrototype)).toEqual(original)
+})
+
+test('every public operation rereads nested proof and current-view changes and exact restoration', () => {
+  const spell = structuredClone(parse(aid, root(true)))
+  const before = structuredClone(spell)
+  expect(Object.values(buildSpellLookup([spell]))[0]).toEqual(before)
+  const input = spell.classSpellRouteSource!.input.lookup
+  if (input.kind !== 'present') throw Error('Expected actual lookup input')
+  const owners = (input.candidates[0].value as { class: { PHB: Record<string, unknown> } }).class
+    .PHB
+  owners.Cleric = false
+  expect(Object.values(buildSpellLookup([spell]))[0].classSpellRoutes).toEqual([])
+  owners.Cleric = true
+  expect(Object.values(buildSpellLookup([spell]))[0]).toEqual(before)
+  spell.classSpellRoutes = []
+  expect(Object.values(buildSpellLookup([spell]))[0].classSpellRoutes).toEqual([])
+  expect(
+    composeGameDataLayers([makeGameDataFixture({ spells: [spell] })]).spells[0].classSpellRoutes,
+  ).toEqual([])
+  expect(filterSpellRouteSources(spell)).toEqual(before)
+  spell.classSpellRoutes = structuredClone(before.classSpellRoutes)
+  expect(Object.values(buildSpellLookup([spell]))[0]).toEqual(before)
+  expect(spell).toEqual(before)
+})
+
+test('same-object duplicate positions remain ambiguous without tainting a later independent read', () => {
+  const spell = parse(aid, root(true))
+  const before = JSON.stringify(spell)
+  const duplicates = auditSpellRouteMultiplicity([spell, spell])
+  expect(duplicates).toHaveLength(2)
+  expect(duplicates.every((row) => row.classSpellRoutes?.length === 0)).toBe(true)
+  expect(
+    duplicates.every((row) => row.classSpellRouteSource!.input.targetOccurrences.length >= 2),
+  ).toBe(true)
+  expect(Object.values(buildSpellLookup([spell]))[0]).toEqual(spell)
+  expect(JSON.stringify(spell)).toBe(before)
+})

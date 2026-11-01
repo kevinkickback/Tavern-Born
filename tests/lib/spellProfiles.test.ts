@@ -14,6 +14,7 @@ import {
   SPECIAL_SPELL_PROFILE_LABEL,
 } from '@/lib/calculations/spellProfiles'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeRegisteredPreparationMap } from '../fixtures/classCastingFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 function makeBaseProvenance() {
@@ -583,6 +584,9 @@ describe('spellProfiles', () => {
       character,
       new Map([['class:Fighter|XPHB', fighter]]),
       character.abilityScores,
+      [],
+      {},
+      makeRegisteredPreparationMap(character.classProgression),
     )
 
     expect(details[0]).toMatchObject({
@@ -645,7 +649,14 @@ describe('spellProfiles', () => {
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
+    const details = buildSpellcastingClassDetails(
+      character,
+      classesById,
+      character.abilityScores,
+      [],
+      {},
+      makeRegisteredPreparationMap(character.classProgression),
+    )
     expect(details).toHaveLength(1)
     expect(details[0].spellSaveDC).toBe(14)
     expect(details[0].spellAttackBonus).toBe(6)
@@ -768,7 +779,14 @@ describe('spellProfiles', () => {
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
+    const details = buildSpellcastingClassDetails(
+      character,
+      classesById,
+      character.abilityScores,
+      [],
+      {},
+      makeRegisteredPreparationMap(character.classProgression),
+    )
     expect(details).toHaveLength(1)
     expect(details[0].isPreparedCaster).toBe(true)
     expect(details[0].knownSpellLimit).toBe(14)

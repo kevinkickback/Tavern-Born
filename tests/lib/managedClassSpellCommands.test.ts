@@ -766,11 +766,24 @@ describe('addressed current class spell choices', () => {
     character = add(character, 'Shield|PHB', slot(wizard, 'class-spellbook', 1, 0), true)
     character = add(character, 'Grease|PHB', slot(wizard, 'class-spellbook', 1, 1), true)
     expect(profile(character, 'Wizard').preparedSpells).toEqual(['Shield|PHB', 'Grease|PHB'])
-    const reduced = projectManagedClassSpellState(character, {
+    const reducedProjection = projectManagedClassSpellState(character, {
       ...context,
       abilityScores: { ...character.abilityScores, intelligence: 8 },
-    }).character
-    expect(profile(reduced, 'Wizard').preparedSpells).toEqual([])
+    })
+    const reduced = reducedProjection.character
+    expect(profile(reduced, 'Wizard').preparedSpells).toEqual(['Shield|PHB'])
+    expect(
+      reducedProjection.statuses.map((status) => [
+        status.choice.target.name,
+        status.choice.slot[4],
+        status.active,
+        status.prepared,
+      ]),
+    ).toEqual([
+      ['Shield', 0, true, true],
+      ['Grease', 1, true, false],
+    ])
+    expect(reduced.managedClassSpellRevision).toBe(character.managedClassSpellRevision)
     expect(reduced.managedClassSpellChoices?.every((choice) => choice.prepare)).toBe(true)
     expect(characterPersistenceSchema.safeParse(reduced).success).toBe(true)
     const restored = projectManagedClassSpellState(reduced, {

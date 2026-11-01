@@ -8,6 +8,17 @@ export interface ClassCastingSourceProof {
   verified: boolean
 }
 
+/** Source-derived setup capacity; this does not authorize a level-up or rest replacement. */
+export interface ClassPreparationRule {
+  mode: 'daily' | 'spellbook' | 'level'
+  ability: string
+  capacity:
+    | { kind: 'formula'; formula: string; minimum: number }
+    | { kind: 'progression'; values: readonly number[] }
+  /** Finite intent bounds over the supported levels and legal effective ability scores. */
+  maximumByLevel: readonly number[]
+}
+
 export type ClassSpellOwner =
   | ['class', string, string]
   | ['subclass', string, string, string, string]

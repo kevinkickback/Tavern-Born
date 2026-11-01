@@ -1,7 +1,6 @@
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { safeEvalArithmetic } from '@/lib/calculations/formulaEval'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
@@ -15,7 +14,12 @@ import {
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
+import type { ClassPreparationRule } from '@/types/classCasting'
 import type { CharacterEffect } from '@/types/effects'
+import { getClassPreparationLimit } from './preparedSpellLimits'
+
+export { evaluatePreparedSpellsFormula, getPreparedSpellLimit } from './preparedSpellLimits'
+
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { toClassProfileId } from './spellProfiles.constants'
 
@@ -128,73 +132,6 @@ function getKnownSpellLimit(classData: Class5e | undefined, level: number): numb
   }
 
   return null
-}
-
-/**
- * Parse and evaluate a 5etools prepared spells formula.
- */
-export function evaluatePreparedSpellsFormula(
-  formula: string | undefined,
-  characterLevel: number,
-  abilityModifiers: Record<string, number>,
-): number | null {
-  if (!formula || typeof formula !== 'string') return null
-
-  try {
-    const result = formula
-      .replace(/<\$level\$>/g, String(characterLevel))
-      .replace(/<\$int_mod\$>/g, String(abilityModifiers.intelligence ?? 0))
-      .replace(/<\$wis_mod\$>/g, String(abilityModifiers.wisdom ?? 0))
-      .replace(/<\$cha_mod\$>/g, String(abilityModifiers.charisma ?? 0))
-      .replace(/<\$str_mod\$>/g, String(abilityModifiers.strength ?? 0))
-      .replace(/<\$dex_mod\$>/g, String(abilityModifiers.dexterity ?? 0))
-      .replace(/<\$con_mod\$>/g, String(abilityModifiers.constitution ?? 0))
-
-    const evalResult = safeEvalArithmetic(result)
-
-    if (typeof evalResult === 'number' && Number.isFinite(evalResult)) {
-      return Math.max(0, Math.floor(evalResult))
-    }
-  } catch {}
-
-  return null
-}
-
-export function getPreparedSpellLimit(
-  classData: Class5e | undefined,
-  characterLevel: number,
-  spellcastingAbilityModifier: number | null,
-): number | null {
-  if (!classData?.spellcastingAbility) return null
-
-  const progression = getProgressionArray(classData.preparedSpellsProgression)
-  if (progression) {
-    return progression[characterLevel - 1] ?? progression[progression.length - 1] ?? null
-  }
-
-  if (!classData.preparedSpells) {
-    return null
-  }
-
-  if (spellcastingAbilityModifier === null) {
-    return null
-  }
-
-  const abilityModifiers: Record<string, number> = {
-    strength: 0,
-    dexterity: 0,
-    constitution: 0,
-    intelligence: 0,
-    wisdom: 0,
-    charisma: 0,
-  }
-
-  const normalizedAbility = normalizeAbilityName(classData.spellcastingAbility)
-  if (normalizedAbility) {
-    abilityModifiers[normalizedAbility] = spellcastingAbilityModifier
-  }
-
-  return evaluatePreparedSpellsFormula(classData.preparedSpells, characterLevel, abilityModifiers)
 }
 
 function getClassMaxSpellLevel(
@@ -313,6 +250,7 @@ export function buildSpellcastingClassDetails(
   effectiveAbilityScores: AbilityScores,
   effects: readonly CharacterEffect[] = [],
   effectContext: EffectResolutionContext = {},
+  preparationByProfile: ReadonlyMap<string, ClassPreparationRule> = new Map(),
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
   const totalLevel = getTotalCharacterLevel(character)
@@ -342,7 +280,7 @@ export function buildSpellcastingClassDetails(
       const levelOnlyPrepared = isLevelOnlyPreparedCaster(effectiveSpellcastingData)
 
       const preparedSpellLimit = preparedCaster
-        ? getPreparedSpellLimit(effectiveSpellcastingData, entry.levels, mod)
+        ? getClassPreparationLimit(preparationByProfile.get(profileId), entry.levels, mod)
         : null
 
       const progressionKnownSpellLimit = getKnownSpellLimit(effectiveSpellcastingData, entry.levels)
