@@ -9,9 +9,12 @@ import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSection
 import type { CharacterClassChoiceSelection } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
-// Spell-list sections are enabled with the managed spell-intent boundary, not by option-pool work.
 const OPTIONAL_CLASS_POOL_SECTIONS = OPTIONAL_CLASS_SECTION_RULES.sections.filter(
   (row) => row.progression && row.members.every(([kind]) => kind === 'optionalFeature'),
+)
+const adoptionSections = OPTIONAL_CLASS_SECTION_RULES.sections.filter(
+  (row) =>
+    OPTIONAL_CLASS_POOL_SECTIONS.includes(row) || row.members.every(([kind]) => kind === 'spell'),
 )
 export const OPTIONAL_CLASS_ADOPTION_ROOTS: readonly OptionalNativeAdoptionRoot[] = [
   ...OPTIONAL_CLASS_FEATURE_RULES.roots.map(
@@ -21,7 +24,7 @@ export const OPTIONAL_CLASS_ADOPTION_ROOTS: readonly OptionalNativeAdoptionRoot[
           row.target === root.target && JSON.stringify(row.owner) === JSON.stringify(root.owner),
       )!,
   ),
-  ...OPTIONAL_CLASS_POOL_SECTIONS.map((row) => ({
+  ...adoptionSections.map((row) => ({
     owner: row.owner,
     target: row.target,
     name: row.name,

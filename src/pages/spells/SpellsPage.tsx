@@ -256,7 +256,6 @@ export function SpellsPage() {
                   entry,
                   spell,
                   context ?? {},
-                  { allowOptional: false },
                 ))),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))

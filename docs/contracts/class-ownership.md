@@ -28,6 +28,19 @@ choice IDs identify these routes; display labels do not authorize them. Missing/
 members suspend only their own option. Saved unavailable picks retain their occupied slots and
 recovery details, while their managed benefits/provenance, Actions, prerequisites and PDF suspend.
 Standard options, independent providers and manual rows keep their own authority.
+
+The eight PHB Additional Spells sections use the same Class addition controls and exact book-section
+adoptions. Current section descriptors supply their actual owner, root level and source-qualified
+members. An active adoption permits only matching current spell-list routes; it never learns,
+prepares or grants every listed spell, increases quota or bypasses an owner's spell-level access.
+Numeric learning, Wizard spellbook preparation and existing daily preparation keep their own
+selection contracts. Independent base, subclass, native and explicit list-bypass paths survive
+loss of an optional path. Clear/OFF/source loss retains saved spell setup for current re-evaluation
+and recovery; intentional owner loss still performs exact cleanup. New Class adoption rejects
+captured source authority after a catalog or source-settings change, while Clear stays source-free.
+Ordinary Warlock known slots do not gain access to the section's Arcanum-level spells; specialist
+selection and gameplay replacement events remain separate.
+
 Structured pool prerequisites use a finite projection seeded from independent providers, then
 current qualified choice contributions. Saved managed rows cannot satisfy their own requirements
 or bootstrap a cycle. New/retargeted command picks must qualify in the complete proposed set;

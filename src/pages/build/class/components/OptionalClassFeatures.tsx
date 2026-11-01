@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
   getClassChoiceDeclaration,
   getClassChoiceFeatureTarget,
@@ -21,6 +22,7 @@ import {
 } from '@/lib/character/optionalClassFeatureIdentity'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Character,
   OptionalClassFeatureAdoption,
@@ -146,6 +148,7 @@ export function optionalClassFeaturesOwnDiagnostic(
 export function OptionalClassFeatures(props: OptionalClassFeaturesProps) {
   const { character, activity, renderContent, onSelectFeature } = props
   const calculation = useCharacterCalculationContext(character)
+  const sourceData = useGameDataStore((state) => state.gameData)
   const catalogs = activity.catalogs
   const rows = getVisibleOptionalClassFeatures(props)
   if (!rows.length) return null
@@ -160,6 +163,16 @@ export function OptionalClassFeatures(props: OptionalClassFeaturesProps) {
     const latest = useCharacterStore.getState().activeCharacter
     if (!latest || latest.id !== character.id) return
     try {
+      if (
+        adopt &&
+        !hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        )
+      )
+        throw new RangeError('The sources changed. Review the optional features before choosing.')
       const result = setOptionalClassAdoptionCommand(
         latest,
         latest.provenance,

@@ -75,7 +75,8 @@ completion counts. No saved activity snapshot or old-file ownership inference is
 
 The finite daily owners retain exact `preparedSpells` intent in their parent profiles. Effective
 preparation requires a current certified casting declaration, earned class level, exact enabled
-leveled target within that owner's access, and a current list path with optional-only routes denied.
+leveled target within that owner's access, and a current list path. An optional-only PHB/TCE route
+requires that owner's explicitly adopted, current Additional Spells section and exact member printing.
 Current independent fixed and native expanded paths may also qualify a target. Another multiclass
 owner's higher slots do not raise this limit. Context-free readers expose no saved daily benefit.
 
@@ -99,8 +100,11 @@ writes nothing; exact withdrawal remains source-free and preserves independent o
 Bonus/native edits, numeric edits and synchronization retain raw daily intent. Reduced capacity flags
 an over-limit list without silently deleting or reordering it. Daily intent has no numeric revision,
 ordinal or inferred acquisition history. Full daily selection history, rest/acquisition events,
-Arcanum and other specialist spell grants remain separate; the eight optional spell roots remain
-disabled until their complete consumer behavior is supported.
+Arcanum and other specialist spell grants remain separate. Additional Spells adoption changes only
+list eligibility; it neither prepares/learns spells automatically nor adds selection or casting quota.
+OFF, adoption Clear and unavailable sources retain existing setup while suspending only paths with
+no remaining authority. Exact restoration rechecks that setup. The existing Spells list, preparation
+toggles and unavailable-choice recovery handle these states without a separate preparation editor.
 
 ## Shared effective view
 
