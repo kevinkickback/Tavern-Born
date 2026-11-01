@@ -65,7 +65,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
-    expect(screen.getByText('Loading the app…')).toBeTruthy()
+    expect(screen.getByText('Warming up the dice...')).toBeTruthy()
   })
 
   test('AppLoadingOverlay makes underlying app content inert while startup is blocked', () => {
@@ -82,7 +82,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(appContent?.hasAttribute('inert')).toBe(true)
     expect(appContent?.getAttribute('aria-hidden')).toBe('true')
     expect(screen.getByRole('dialog', { name: 'Tavern Born' })).toBe(document.activeElement)
-    expect(screen.getByRole('status').textContent).toContain('Loading the app…')
+    expect(screen.getByRole('status').textContent).toContain('Warming up the dice...')
   })
 
   test('AppLoadingOverlay renders progress details during foreground loading', () => {

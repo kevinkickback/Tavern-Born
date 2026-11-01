@@ -58,6 +58,134 @@ const CHARACTER_CREATION_GAME_DATA: GameData = {
 
 test.use({ viewport: { width: 1280, height: 720 } })
 
+test('outside clicks retain wizard input and portalled choices remain usable', async ({ page }) => {
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-wizard-dismissal', CHARACTER_CREATION_GAME_DATA)
+  await page.getByRole('button', { name: 'New Character' }).first().click()
+  const dialog = page.getByRole('dialog', { name: 'Create New Character' })
+  await dialog.getByLabel('Character Name').fill('Retained Wizard Hero')
+
+  await dialog.getByRole('combobox', { name: 'Gender' }).click()
+  await page.getByRole('option', { name: 'Non-binary', exact: true }).click()
+  await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  await expect(dialog.getByText('Step 2 of 7').first()).toBeVisible()
+
+  const dialogBounds = await dialog.boundingBox()
+  if (!dialogBounds || dialogBounds.x <= 1) throw new Error('Expected space outside the wizard')
+  await page.mouse.click(dialogBounds.x / 2, 10)
+
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Step 2 of 7').first()).toBeVisible()
+  await dialog.getByRole('button', { name: 'Back' }).click()
+  await expect(dialog.getByLabel('Character Name')).toHaveValue('Retained Wizard Hero')
+  await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
+
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await page
+    .getByRole('alertdialog', { name: 'Discard character creation?' })
+    .getByRole('button', { name: 'Discard changes' })
+    .click()
+  await expect(dialog).toBeHidden()
+  await page.getByRole('button', { name: 'New Character' }).first().click()
+  await expect(dialog.getByLabel('Character Name')).toHaveValue('')
+  await expect(dialog.getByText('Step 1 of 7').first()).toBeVisible()
+})
+
+test('wizard exit confirmation keeps focus and input until discard is confirmed', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-wizard-discard', CHARACTER_CREATION_GAME_DATA)
+  const newCharacter = page.getByRole('button', { name: 'New Character' }).first()
+  await newCharacter.click()
+  const wizard = page.getByRole('dialog', { name: 'Create New Character' })
+  await wizard.getByLabel('Character Name').fill('Temporary name')
+  await wizard.getByLabel('Character Name').fill('')
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(wizard).toBeHidden()
+  await newCharacter.click()
+
+  const gender = wizard.getByRole('combobox', { name: 'Gender' })
+  await gender.click()
+  await page.getByRole('option', { name: 'Non-binary', exact: true }).click()
+  await gender.click()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await expect(gender).toBeFocused()
+  await page.keyboard.press('Escape')
+
+  const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
+  const keepEditing = confirmation.getByRole('button', { name: 'Keep editing' })
+  const discard = confirmation.getByRole('button', { name: 'Discard changes' })
+  await expect(keepEditing).toBeFocused()
+  await expect(wizard).toHaveCount(0)
+  await page.keyboard.press('Tab')
+  await expect(discard).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(keepEditing).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(confirmation).toBeHidden()
+  await expect(gender).toBeFocused()
+  await expect(gender).toHaveText('Non-binary')
+  await expect(wizard.getByLabel('Character Name')).toHaveValue('')
+
+  const cancel = wizard.getByRole('button', { name: 'Cancel' })
+  await cancel.click()
+  await page.mouse.click(5, 5)
+  await expect(confirmation).toBeVisible()
+  await keepEditing.click()
+  await expect(cancel).toBeFocused()
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click()
+  await discard.click()
+  await expect(wizard).toBeHidden()
+  await newCharacter.click()
+  await expect(gender).toHaveText('Female')
+  await expect(wizard.getByLabel('Character Name')).toHaveValue('')
+  await page.keyboard.press('Escape')
+  await expect(wizard).toBeHidden()
+  await expect(confirmation).toHaveCount(0)
+})
+
+test('reverted source choices remain pristine when recommended sources arrive later', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-wizard-late-sources', {
+    ...CHARACTER_CREATION_GAME_DATA,
+    sources: [
+      ...CHARACTER_CREATION_GAME_DATA.sources,
+      { abbreviation: 'HB', name: 'Test additional content', group: 'other' },
+    ],
+  })
+  await page.getByRole('button', { name: 'New Character' }).first().click()
+  const wizard = page.getByRole('dialog', { name: 'Create New Character' })
+  await wizard.getByLabel('Character Name').fill('Temporary name')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  const additionalSource = wizard.getByRole('button', { name: /Test additional content/ })
+  await additionalSource.click()
+  await additionalSource.click()
+  await wizard.getByRole('button', { name: 'Back' }).click()
+  await wizard.getByLabel('Character Name').fill('')
+  await page.evaluate(async () => {
+    const modulePath = '/src/store/gameDataStore.ts'
+    const { useGameDataStore } = await import(modulePath)
+    const gameData = useGameDataStore.getState().gameData
+    useGameDataStore.setState({
+      gameData: {
+        ...gameData,
+        sources: [
+          ...gameData.sources,
+          { abbreviation: 'XGE', name: 'Late recommended source', group: 'supplement' },
+        ],
+      },
+    })
+  })
+  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await expect(wizard).toBeHidden()
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+})
+
 test('Rules warnings remain visible while Additional Content scrolls', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-character-creation', GAME_DATA_WITH_MANY_SOURCES)
