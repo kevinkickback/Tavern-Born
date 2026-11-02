@@ -1,4 +1,5 @@
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
@@ -291,6 +292,32 @@ export function validateFeatSetup(
   return [
     ...unresolvedFixedIssues,
     ...candidates.flatMap((feat) => {
+      if (
+        feat.target.classFeatChoiceId &&
+        getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '')
+      ) {
+        const selection = character.classChoiceSelections?.find(
+          (row) => row.choiceId === feat.target.classFeatChoiceId,
+        )
+        if (
+          selection?.selected.some(
+            (option) =>
+              option.entityType === 'feat' &&
+              option.name.trim().toLowerCase() === feat.name.trim().toLowerCase() &&
+              option.source?.trim().toLowerCase() === feat.source?.trim().toLowerCase(),
+          )
+        )
+          return []
+        return [
+          readinessIssue(
+            `feat:unsupported-class-spells:${feat.target.classFeatChoiceId}:${feat.name}`,
+            'blocking',
+            'sources',
+            `Review ${feat.name} class ownership`,
+            'This class-owned spell feat needs its exact Fighting Style selection; its spell setup cannot use the ordinary feat spell route.',
+          ),
+        ]
+      }
       const data = findFeat(feat.name, feat.source)
       const complete = isKnownFeatExpertiseTarget(feat.target)
         ? getFeatSetupStatus(character, character, feat.target, featCatalog).complete

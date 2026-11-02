@@ -62,7 +62,11 @@ export function buildSpellSelectionSourceMap(params: {
               row.grantVariant === managedClassSpellId(choice.slot) &&
               getSpellReferenceKey(spellName, row.grantSource) === getSpellReferenceKey(spellName),
           )
-          return tag ? [`${tag.sourceName} (${tag.sourceRef}) Lv. ${choice.slot[3]} Choice`] : []
+          return tag
+            ? [
+                `${tag.label !== tag.sourceName ? `${tag.label} — ` : ''}${tag.sourceName} (${tag.sourceRef}) Lv. ${choice.slot[3]} Choice`,
+              ]
+            : []
         })
         const norm = normalizeOwnerIdentity
         const entry = classProgression.find(

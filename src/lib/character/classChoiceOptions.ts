@@ -37,6 +37,10 @@ import {
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
 import {
+  getClassFeatureSpellSemantics,
+  hasDeclaredClassFeatSpellContext,
+} from '@/lib/5etools/featureSpellSemantics'
+import {
   type FeatureTableDefinition,
   type FeatureTableOption,
   resolveFeatureTableOption,
@@ -831,6 +835,26 @@ export function resolveClassChoiceOptions(
     }
   const byKey = new Map(
     resolved
+      .map((option) => {
+        if (
+          !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
+          option.reference.entityType !== 'feat' ||
+          !getClassFeatureSpellSemantics(
+            'feat',
+            option.reference.name,
+            option.reference.source ?? '',
+          )
+        )
+          return option
+        const candidates = catalogs.feats.filter(
+          (feat) =>
+            normalized(feat.name) === normalized(option.reference.name) &&
+            normalized(feat.source) === normalized(option.reference.source),
+        )
+        return candidates.length === 1 && hasDeclaredClassFeatSpellContext(choice, candidates[0])
+          ? { ...option, prerequisite: undefined }
+          : { ...option, availability: 'retained' as const }
+      })
       .filter((option) => {
         if (
           !poolSection ||

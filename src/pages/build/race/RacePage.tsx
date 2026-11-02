@@ -181,6 +181,7 @@ export function BuildRacePage() {
         character,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        classChoicePrerequisites: calculationContext?.classChoices.prerequisites,
         effectiveSpellProfiles: calculationContext?.character.spells.spellProfiles,
       }),
     [character, calculationContext],

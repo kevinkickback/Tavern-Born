@@ -1,4 +1,5 @@
-import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
+import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -22,7 +23,7 @@ export function decodeManagedClassSpellId(value: string): ManagedClassSpellSlot 
   if (!value.startsWith(MANAGED_CLASS_SPELL_PREFIX)) return undefined
   try {
     const slot = JSON.parse(decodeURIComponent(value.slice(MANAGED_CLASS_SPELL_PREFIX.length)))
-    return getManagedClassSpellRule(slot) && managedClassSpellId(slot) === value ? slot : undefined
+    return isManagedClassSpellSlot(slot) && managedClassSpellId(slot) === value ? slot : undefined
   } catch {
     return undefined
   }
@@ -55,6 +56,7 @@ export function getManagedClassSpellOwnerEntry(
 export function makeManagedClassSpellTag(
   choice: ManagedClassSpellChoice,
   entry?: CharacterClassEntry,
+  featureName?: string,
 ): SpellSourceTag {
   const [owner] = choice.slot
   const name = owner[0] === 'class' ? (entry?.name ?? owner[1]) : (entry?.subclass ?? owner[3])
@@ -62,6 +64,9 @@ export function makeManagedClassSpellTag(
     owner[0] === 'class' ? (entry?.source ?? owner[2]) : (entry?.subclassSource ?? owner[4])
   return {
     ...makeSourceTag(owner[0], name, 'choice', source),
+    ...(choice.slot[1] === 'feature-cantrip'
+      ? { label: featureName ?? decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2] ?? name }
+      : {}),
     grantVariant: managedClassSpellId(choice.slot),
     grantSource: choice.target.source,
     spellGrantedAtLevel: choice.slot[3],
@@ -80,7 +85,9 @@ export function matchesManagedClassSpellTag(
     tag.sourceType === owner[0] &&
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
-    tag.label === tag.sourceName &&
+    (choice.slot[1] === 'feature-cantrip'
+      ? normalizeOwnerIdentity(tag.label) === decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2]
+      : tag.label === tag.sourceName) &&
     tag.grantType === 'choice' &&
     tag.spellGrantedAtLevel === choice.slot[3] &&
     tag.spellAttributionMode === 'exact' &&

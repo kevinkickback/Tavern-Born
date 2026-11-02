@@ -138,7 +138,7 @@ describe('individually adopted class spell lists using existing selection actors
     expect(hasCurrentClassSpellListRoute(f.character, f.entry, spell, fixture.context)).toBe(false)
     expect(() => select(index, f.character)).toThrow()
     const adopted = adopt(f.character, f.adoption)
-    expect(adopted.schemaVersion).toBe(12)
+    expect(adopted.schemaVersion).toBe(13)
     expect(adopted.managedClassSpellChoices).toBeUndefined()
     expect(adopted.spells).toEqual(f.character.spells)
     expect(hasCurrentClassSpellListRoute(adopted, f.entry, spell, fixture.context)).toBe(true)

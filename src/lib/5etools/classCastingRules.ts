@@ -2,6 +2,7 @@ import type { CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import generated from './classCastingRuntime.generated'
 import type { CastingProducerRule } from './classCastingStructure'
+import { isSelectedFeatureSpellSlot } from './selectedFeatureSpellIdentity'
 
 /** Pure finite authority for saved identities; current rules must still prove live entitlement. */
 export const CLASS_CASTING_PRODUCERS =
@@ -41,6 +42,7 @@ export const DECLARED_CASTING_LISTS: Readonly<
 export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
   if (!Array.isArray(slot) || slot.length !== 5) return undefined
   const [owner, domain, target, level, ordinal] = slot
+  if (domain === 'feature-cantrip') return undefined
   if (!['class-cantrip', 'class-known', 'class-spellbook'].includes(domain)) return undefined
   const rule = ordinary.find(
     (row) => same(row.declaration.owner, owner) && row.declaration.target === target,
@@ -50,6 +52,10 @@ export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
     ? { rule, gain }
     : undefined
 }
+
+/** Admission checks the feature protocol structurally; it never grants current authority. */
+export const isManagedClassSpellSlot = (slot: ManagedClassSpellSlot) =>
+  !!getManagedClassSpellRule(slot) || isSelectedFeatureSpellSlot(slot)
 
 export function getClassSpellProfilePolicy(entry: CharacterClassEntry) {
   const parent = ['class', norm(entry.name), norm(entry.source)]

@@ -32,7 +32,12 @@ export function useClassSpellChoiceController(
     }
     const currentCatalogs = calculation?.classChoices.catalogs
     const catalogs = currentCatalogs && { ...currentCatalogs }
-    for (const slot of getManagedClassSpellSlots(entry)) {
+    for (const slot of getManagedClassSpellSlots(
+      entry,
+      character ?? undefined,
+      catalogs,
+      calculation?.classChoices.prerequisites,
+    )) {
       const owner = slot[0]
       const scoped =
         catalogs &&
@@ -51,7 +56,7 @@ export function useClassSpellChoiceController(
           owner,
           slot[2],
           finite.rule.declaration.level,
-          slot[1],
+          slot[1] as 'class-cantrip' | 'class-known' | 'class-spellbook',
           slot[3],
         )
       const gain = choices.get(slot[3]) ?? {
@@ -61,12 +66,12 @@ export function useClassSpellChoiceController(
         canSwap: false,
       }
       gain.maxSpellLevel = Math.max(gain.maxSpellLevel, authority?.maxSpellLevel ?? 0)
-      if (slot[1] === 'class-cantrip') gain.cantrips++
+      if (slot[1] === 'class-cantrip' || slot[1] === 'feature-cantrip') gain.cantrips++
       else gain.spells++
       choices.set(slot[3], gain)
     }
     return choices
-  }, [calculation, viewingClassData, viewingSubclassData])
+  }, [calculation, character, viewingClassData, viewingSubclassData])
 
   return {
     choicesByLevel,

@@ -1,0 +1,278 @@
+{
+  "optionalfeature": [
+    {
+      "name": "Blessed Warrior",
+      "source": "TCE",
+      "page": 52,
+      "reprintedAs": [
+        {
+          "uid": "Blessed Warrior|XPHB",
+          "tag": "feat"
+        }
+      ],
+      "isClassFeatureVariant": true,
+      "featureType": ["FS:P"],
+      "additionalSpells": [
+        {
+          "ability": "cha",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=cleric",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "entries": [
+        "You learn two cantrips of your choice from the {@filter cleric spell list|spells|level=0|class=Cleric}. They count as paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a level in this class, you can replace one of these cantrips with another cantrip from the cleric spell list."
+      ]
+    },
+    {
+      "name": "Druidic Warrior",
+      "source": "TCE",
+      "page": 57,
+      "reprintedAs": [
+        {
+          "uid": "Druidic Warrior|XPHB",
+          "tag": "feat"
+        }
+      ],
+      "isClassFeatureVariant": true,
+      "featureType": ["FS:R"],
+      "additionalSpells": [
+        {
+          "ability": "wis",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=druid",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "entries": [
+        "You learn two cantrips of your choice from the {@filter druid spell list|spells|level=0|class=druid}. They count as ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a level in this class, you can replace one of these cantrips with another cantrip from the druid spell list."
+      ]
+    }
+  ],
+  "feat": [
+    {
+      "name": "Blessed Warrior",
+      "source": "XPHB",
+      "page": 110,
+      "category": "FS:P",
+      "prerequisite": [
+        {
+          "otherSummary": {
+            "entry": "When Gaining the Level 2 Paladin \"Fighting Style\" Feature",
+            "entrySummary": "Special"
+          }
+        }
+      ],
+      "additionalSpells": [
+        {
+          "ability": "cha",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=cleric",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "entries": [
+        "You learn two {@filter Cleric cantrips|spells|level=0|class=Cleric} of your choice. {@spell Guidance|XPHB} and {@spell Sacred Flame|XPHB} are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip."
+      ]
+    },
+    {
+      "name": "Defense",
+      "source": "XPHB",
+      "page": 209,
+      "srd52": true,
+      "basicRules2024": true,
+      "category": "FS",
+      "prerequisite": [
+        {
+          "feature": ["Fighting Style"]
+        }
+      ],
+      "entries": [
+        "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}."
+      ]
+    },
+    {
+      "name": "Druidic Warrior",
+      "source": "XPHB",
+      "page": 120,
+      "category": "FS:R",
+      "prerequisite": [
+        {
+          "otherSummary": {
+            "entry": "When Gaining the Level 2 Ranger \"Fighting Style\" Feature",
+            "entrySummary": "Special"
+          }
+        }
+      ],
+      "additionalSpells": [
+        {
+          "ability": "wis",
+          "known": {
+            "_": [
+              {
+                "choose": "level=0|class=druid",
+                "count": 2
+              }
+            ]
+          }
+        }
+      ],
+      "entries": [
+        "You learn two {@filter Druid cantrips|spells|level=0|class=druid} of your choice. {@spell Guidance|XPHB} and {@spell Starry Wisp|XPHB} are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip."
+      ]
+    }
+  ],
+  "classFeature": [
+    {
+      "name": "Fighting Style",
+      "source": "PHB",
+      "page": 82,
+      "srd": true,
+      "className": "Paladin",
+      "classSource": "PHB",
+      "level": 2,
+      "entries": [
+        "At 2nd level, you adopt a particular style of fighting as your specialty. Choose one of the following options. You can't take the same Fighting Style option more than once, even if you get to choose again.",
+        {
+          "type": "options",
+          "count": 1,
+          "entries": [
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Defense"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Dueling"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Great Weapon Fighting"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Protection"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Blessed Warrior|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Blind Fighting|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Interception|TCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fighting Style",
+      "source": "XPHB",
+      "page": 110,
+      "srd52": true,
+      "basicRules2024": true,
+      "className": "Paladin",
+      "classSource": "XPHB",
+      "level": 2,
+      "entries": [
+        "You gain a {@filter Fighting Style feat|feats|category=FS} of your choice. Instead of choosing one of those feats, you can choose the option below.",
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "refFeat",
+              "feat": "Blessed Warrior|XPHB"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fighting Style",
+      "source": "PHB",
+      "page": 89,
+      "srd": true,
+      "className": "Ranger",
+      "classSource": "PHB",
+      "level": 2,
+      "entries": [
+        "At 2nd level, you adopt a particular style of fighting as your specialty. Choose one of the following options. You can't take a Fighting Style option more than once, even if you later get to choose again.",
+        {
+          "type": "options",
+          "count": 1,
+          "entries": [
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Archery"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Defense"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Dueling"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Two-Weapon Fighting"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Blind Fighting|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Druidic Warrior|TCE"
+            },
+            {
+              "type": "refOptionalfeature",
+              "optionalfeature": "Thrown Weapon Fighting|TCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fighting Style",
+      "source": "XPHB",
+      "page": 120,
+      "srd52": true,
+      "basicRules2024": true,
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "level": 2,
+      "entries": [
+        "You gain a {@filter Fighting Style feat|feats|category=FS} of your choice. Instead of choosing one of those feats, you can choose the option below.",
+        {
+          "type": "entries",
+          "entries": [
+            {
+              "type": "refFeat",
+              "feat": "Druidic Warrior|XPHB"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

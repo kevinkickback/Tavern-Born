@@ -47,6 +47,7 @@ import {
   getOptionalClassFixedSpellNamesAtGain,
   type OptionalClassFixedSpellStatus,
 } from './optionalClassFixedSpells'
+import { getSelectedFeatureCantripPool } from './selectedFeatureSpells'
 
 export interface ManagedClassSpellStatus {
   choice: ManagedClassSpellChoice
@@ -62,6 +63,7 @@ function resolveSlot(
   classes: readonly Class5e[] = currentClasses(character, context),
   gainAuthority = getClassCastingGainAuthority,
 ) {
+  if (slot[1] === 'feature-cantrip') return 'Use this selected feature’s spell choices.'
   const finite = getManagedClassSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
   if (!finite) return 'The saved class spell ownership is invalid.'
@@ -144,6 +146,8 @@ export function getManagedClassSpellPool(
   slot: ManagedClassSpellSlot,
   sourceContext?: ManagedClassSpellContext,
 ) {
+  if (slot[1] === 'feature-cantrip')
+    return getSelectedFeatureCantripPool(character, slot, sourceContext)
   const context = sourceContext?.catalogs
     ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
     : sourceContext
@@ -239,12 +243,14 @@ export function projectManagedClassSpellState(
     entry: CharacterClassEntry
     authority: NonNullable<ReturnType<typeof getClassCastingGainAuthority>>
   }> = []
+  const featurePools = new Map<string, ReturnType<typeof getSelectedFeatureCantripPool>>()
   for (const choice of character.managedClassSpellChoices ?? []) {
     const status: ManagedClassSpellStatus = { choice, active: false }
     statuses.push(status)
     const deny = (reason: string) => {
       status.reason = reason
     }
+    if (choice.slot[1] === 'feature-cantrip') continue
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
       : resolveSlot(character, choice.slot, context, classes, gainAuthority)
@@ -369,7 +375,15 @@ export function projectManagedClassSpellState(
         ? { ...profile, [field]: [...profile[field], reference] }
         : profile,
     )
-    provenance = addSpellGrant(provenance, reference, makeManagedClassSpellTag(choice, entry))
+    provenance = addSpellGrant(
+      provenance,
+      reference,
+      makeManagedClassSpellTag(
+        choice,
+        entry,
+        featurePools.get(JSON.stringify(choice.slot.slice(0, 4)))?.featureName,
+      ),
+    )
   }
   // Learned preparation requests reserve capacity in stable gain/ordinal order, even if source-dormant.
   for (const entry of character.classProgression) {
@@ -434,8 +448,71 @@ export function projectManagedClassSpellState(
     },
     context,
   )
+  // Qualify feature grants only after rebuilding every independent spell provider.
+  const independentSpellProfiles = daily.character.spells.spellProfiles
+  profiles = independentSpellProfiles
+  provenance = daily.character.provenance
+  for (const status of statuses.filter((row) => row.choice.slot[1] === 'feature-cantrip')) {
+    const { choice } = status
+    const deny = (reason: string) => {
+      status.reason = reason
+    }
+    const key = JSON.stringify(choice.slot.slice(0, 4))
+    let pool = featurePools.get(key)
+    if (!pool) {
+      pool = getSelectedFeatureCantripPool(
+        character,
+        [choice.slot[0], choice.slot[1], choice.slot[2], choice.slot[3], 0],
+        { ...context, independentSpellProfiles },
+      )
+      featurePools.set(key, pool)
+    }
+    const entry = getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)
+    if (invalid || !entry || pool.reason) {
+      deny(
+        invalid
+          ? 'The saved class spell ownership is invalid.'
+          : (pool.reason ?? 'Restore the class owner.'),
+      )
+      continue
+    }
+    if (choice.slot[4] >= pool.count) {
+      deny('This choice exceeds the feature’s current count.')
+      continue
+    }
+    if (
+      !pool.spells.some(
+        (spell) =>
+          getSpellReferenceKey(spell.name, spell.source) ===
+          getSpellReferenceKey(choice.target.name, choice.target.source),
+      )
+    ) {
+      deny('Restore the exact selected cantrip printing and its current feature spell list.')
+      continue
+    }
+    status.active = true
+    const reference = formatSpellReference(choice.target.name, choice.target.source)
+    profiles = profiles.map((profile) =>
+      profile.id === toClassProfileId(entry.name, entry.source) &&
+      !profile.cantrips.some(
+        (target) => getSpellReferenceKey(target) === getSpellReferenceKey(reference),
+      )
+        ? { ...profile, cantrips: [...profile.cantrips, reference] }
+        : profile,
+    )
+    provenance = addSpellGrant(
+      provenance,
+      reference,
+      makeManagedClassSpellTag(choice, entry, pool.featureName),
+    )
+  }
   return {
-    character: daily.character,
+    character: {
+      ...daily.character,
+      provenance,
+      spells: { ...daily.character.spells, spellProfiles: profiles },
+    },
+    independentSpellProfiles,
     statuses,
     dailyStatuses: daily.statuses,
     optionalFixedStatuses,

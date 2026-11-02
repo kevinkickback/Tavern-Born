@@ -122,6 +122,52 @@ function currentLiteralChoice(
     return resolveHistoricalProficiencyChoice(character, current)
   }
   if (!isFeatureLiteralChoiceId(choice.id)) {
+    if (choice.source.field.endsWith(':entries.filter-alternative-v1') && selected.length) {
+      const owner = findOwner(character, choice)
+      const cls = authority && findClassReference(choice.owner, authority.classes)
+      const current =
+        cls &&
+        owner &&
+        authority?.catalogs &&
+        getCharacterClassChoices(
+          cls,
+          getSelectedSubclassData(cls, owner),
+          createOptionalClassFeatureActivity(character, authority.catalogs),
+          authority.catalogs,
+        ).find((row) => row.id === choice.id)
+      if (!current || !authority?.catalogs)
+        throw new RangeError('Restore the current source for this class choice.')
+      const options = resolveClassChoiceOptions(
+        current,
+        {
+          ...createClassChoiceCatalogs(authority.catalogs),
+          feats: authority.feats ?? authority.catalogs.featExpertiseFeats ?? [],
+        },
+        [],
+        owner?.levels ?? 0,
+        character,
+      )
+      const eligible = new Set(
+        options
+          .filter((row) => row.availability === 'eligible')
+          .map((row) => getClassChoiceOptionKey(row.reference)),
+      )
+      const prior = new Set(
+        (
+          character.classChoiceSelections?.find((row) => row.choiceId === current.id)?.selected ??
+          []
+        ).map(getClassChoiceOptionKey),
+      )
+      if (
+        selected.some(
+          (option) =>
+            !eligible.has(getClassChoiceOptionKey(option)) &&
+            !prior.has(getClassChoiceOptionKey(option)),
+        )
+      )
+        throw new RangeError('This class choice changed. Review its current alternatives.')
+      return current
+    }
     if (getOptionalClassPoolSection(choice)) {
       const owner = findOwner(character, choice)
       const cls = authority && findClassReference(choice.owner, authority.classes)
@@ -461,10 +507,13 @@ export function applyClassChoiceSelectionCommand(
     const active = getEffectiveClassChoiceFeatureRoutes(
       { ...character, classChoiceSelections: next },
       authority?.catalogs,
-      projectManagedClassSpellState(
-        { ...character, classChoiceSelections: next },
-        { ...authority?.spellContext, catalogs: authority?.catalogs },
-      ).character.spells.spellProfiles,
+      {
+        effectiveAbilityScores: authority?.spellContext?.abilityScores,
+        effectiveSpellProfiles: projectManagedClassSpellState(
+          { ...character, classChoiceSelections: next },
+          { ...authority?.spellContext, catalogs: authority?.catalogs },
+        ).independentSpellProfiles,
+      },
     )
     const prior = new Set((existingSelection?.selected ?? []).map(getClassChoiceOptionKey))
     if (
@@ -560,10 +609,13 @@ export function reconcileClassChoiceSelectionGrants(
   const routes = getEffectiveClassChoiceFeatureRoutes(
     { ...character, classChoiceSelections: [...selections] },
     catalogs,
-    projectManagedClassSpellState(
-      { ...character, provenance: ledger, classChoiceSelections: [...selections] },
-      { ...spellContext, catalogs },
-    ).character.spells.spellProfiles,
+    {
+      effectiveAbilityScores: spellContext?.abilityScores,
+      effectiveSpellProfiles: projectManagedClassSpellState(
+        { ...character, provenance: ledger, classChoiceSelections: [...selections] },
+        { ...spellContext, catalogs },
+      ).independentSpellProfiles,
+    },
   )
   const activeSelections = selections
     .filter((selection) => !selection.inactive)

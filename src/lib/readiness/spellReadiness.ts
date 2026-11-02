@@ -9,6 +9,7 @@ import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles.c
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
 import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
@@ -97,6 +98,23 @@ export function validateSpells(
       status,
     ]),
   )
+  const featureSetups = getSelectedFeatureCantripSetups(
+    character,
+    calculation.classChoices.catalogs,
+    calculation.classChoices.prerequisites,
+  )
+  for (const setup of featureSetups) {
+    if (!setup.reason || (setup.offered && setup.count)) continue
+    issues.push(
+      readinessIssue(
+        `spells:feature-source:${JSON.stringify([setup.owner, setup.producer, setup.level])}`,
+        'blocking',
+        'sources',
+        `Review ${setup.name} spell choices`,
+        setup.reason,
+      ),
+    )
+  }
   for (const grant of calculation.optionalFixedSpellStatuses) {
     if (grant.active) continue
     issues.push(
@@ -111,7 +129,12 @@ export function validateSpells(
   }
   for (const entry of character.classProgression) {
     const groups = new Map<string, ReturnType<typeof getManagedClassSpellSlots>>()
-    for (const slot of getManagedClassSpellSlots(entry)) {
+    for (const slot of getManagedClassSpellSlots(
+      entry,
+      character,
+      calculation.classChoices.catalogs,
+      calculation.classChoices.prerequisites,
+    )) {
       const key = JSON.stringify(slot.slice(0, 4))
       groups.set(key, [...(groups.get(key) ?? []), slot])
     }
@@ -121,7 +144,12 @@ export function validateSpells(
       if (active === slots.length) continue
       const unavailable = rows.flatMap((row) => (row && !row.active ? [row] : []))
       const level = slots[0][3]
-      const kind = slots[0][1] === 'class-cantrip' ? 'cantrip' : 'spell'
+      const kind =
+        slots[0][1] === 'feature-cantrip'
+          ? `${featureSetups.find((setup) => setup.producer === slots[0][2])?.name ?? 'feature'} cantrip`
+          : slots[0][1] === 'class-cantrip'
+            ? 'cantrip'
+            : 'spell'
       issues.push(
         readinessIssue(
           `spells:managed:${managedClassSpellId(slots[0])}`,

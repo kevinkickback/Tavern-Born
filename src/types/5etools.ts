@@ -1,3 +1,4 @@
+import type { AdditionalSpellBlock, AdditionalSpellSchedule } from './additionalSpells'
 import type { ClassCastingSourceProof } from './classCasting'
 
 export interface Race5e {
@@ -165,28 +166,8 @@ export interface Subclass5e {
   [key: string]: unknown
 }
 
-export type RaceSpellItem =
-  | string
-  | { choose: string | { from: string[]; count?: number }; count?: number }
-export type RaceSpellSchedule = Record<
-  string,
-  | RaceSpellItem[]
-  | {
-      _?: RaceSpellItem[]
-      will?: RaceSpellItem[]
-      ritual?: RaceSpellItem[]
-      daily?: Record<string, RaceSpellItem[]>
-      rest?: Record<string, RaceSpellItem[]>
-    }
->
-export interface RaceAdditionalSpells {
-  name?: string
-  innate?: RaceSpellSchedule
-  known?: RaceSpellSchedule
-  prepared?: RaceSpellSchedule
-  expanded?: Record<string, string[]>
-  ability?: string | { choose: string[] }
-}
+export type RaceSpellSchedule = AdditionalSpellSchedule
+export type RaceAdditionalSpells = AdditionalSpellBlock
 
 export interface SubclassAdditionalSpells {
   prepared?: Record<string, string[]>
@@ -275,6 +256,7 @@ export interface OptionalFeatureLike {
   source?: string
   featureType?: string | string[]
   entries?: unknown[]
+  additionalSpells?: AdditionalSpellBlock[]
   prerequisite?: Raw5ePrereq[]
   conditionalProficiencySourceAudit?: {
     version: 1

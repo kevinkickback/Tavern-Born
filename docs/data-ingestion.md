@@ -188,6 +188,12 @@ Prefer structure supplied by 5etools. When upstream exposes a rule only as prose
 be narrow, ruleset/source-qualified, versioned, diagnostic when uncertain, and overridden by parsed
 structured data whenever that becomes available.
 
+The shared additional-spell normalizer preserves supported blocks, choices, counts, filters,
+abilities and schedules without assigning an actor. Race adapters retain their suite/level
+conventions; selected Class feature adapters establish actual ownership and supported missing
+semantics separately. Unknown syntax cannot partially grant benefits. A successfully parsed block
+does not certify arbitrary prose conditions or acquisition events; see [feature spell selection](contracts/spell-selection.md#selected-feature-cantrips).
+
 Do not:
 
 - edit `data/`;
@@ -267,7 +273,7 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **57**, owned by [dataCache](../src/lib/storage/dataCache.ts);
+The current parsed cache schema is **58**, owned by [dataCache](../src/lib/storage/dataCache.ts);
 use that constant when changing code. Old increment numbers are not the current version.
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized

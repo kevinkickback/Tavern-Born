@@ -229,7 +229,7 @@ export function validateClassChoices(
       const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(
         character,
         choiceCatalogs,
-        calculation.character.spells.spellProfiles,
+        calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
       const count = eligibleOptionKeys

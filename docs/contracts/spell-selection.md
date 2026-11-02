@@ -17,7 +17,7 @@ not make them selectable.
 
 ## Numeric class choices
 
-Format12 owns ordinary cantrips, known spells and Wizard spellbook entries through
+Format13 owns ordinary cantrips, known spells and Wizard spellbook entries through
 `managedClassSpellChoices`. A slot is `[actualOwner, domain, exactDeclaration, earnedClassLevel, ordinal]`.
 The finite casting registry and current source certificates determine supported gains, quantities,
 levels, declared lists and school limits. An ability field or an unqualified class label supplies no
@@ -75,6 +75,47 @@ the occupied intent, list policy, preparation request, revision and allocator. E
 reactivates it. Class/Spells recovery and readiness show dormant choices; they do not satisfy active
 completion counts. No saved activity snapshot or old-file ownership inference is used.
 
+## Selected feature cantrips
+
+Supported selected Class optional-feature and feat cantrips use the same atomic editor, revision
+allocator and strict ownership relation in a separate `feature-cantrip` domain. Counts, filters and
+ability come from the current shared additional-spell normalizer. They add no ordinary cantrip quota.
+The first actor supports one fixed-ability block containing one direct `known._` cantrip choice;
+mixed grants, suites and unknown syntax remain explicitly unsupported. Declared pools have no
+class-list bypass. Current exact spell routes/printings and source permission remain mandatory.
+
+Plain class filters follow the pinned upstream joined-filter policy: class sources must be standard,
+and variant routes also require a present, standard defining source. Static SourceUtil/Parser source
+metadata is adapted separately from feature semantics. Dynamic Brew/Prerelease plugin registries and
+decorated requested class labels remain unsupported; route names retain upstream parenthesis handling.
+
+TCE Blessed Warrior/Druidic Warrior and their XPHB Class feat alternatives attribute choices to the
+actual Paladin/Ranger profile. Their source expresses that attribution and replacement timing only
+in prose, so narrow source-qualified semantics attest the complete current prose and supported root
+shape independently of structured count/filter/ability. A changed ability must agree with current
+class casting; the feature cannot override the rest of its class profile. Unknown conditions, such
+as Book of Shadows requirements, are not inferred from similar-looking spell-choice syntax.
+
+The XPHB Fighting Style source explicitly offers a nested feat reference instead of its filtered
+feat pick. A strict versioned source/shape adapter adds that exact current reference to the existing
+single-choice pool. It neither broadens feat categories nor adds another quota. Changed or ambiguous
+alternative relationships remain diagnostic; commands recheck the latest union before new selections.
+The exact XPHB prose-only acquisition prerequisite is interpreted only in that current declared
+Class context, with its complete prerequisite payload checked. The generic prerequisite reader
+continues to reject unsupported conditions elsewhere. TCE options keep the existing guarded pool
+checks, so supported structured prerequisites can change without an absence fingerprint.
+
+Choice addresses remain stable while supported count/filter/ability values change. Current target
+eligibility is reevaluated; a reduced count suspends excess intent and exact regrowth can restore it.
+Intentional granting selection/owner/earned-level removal retires its choices and editor lifetime,
+including an empty selection, while source suspension preserves intent without allocating revisions.
+Shared Class, Spells, readiness, Actions, Review and PDF projections consume the same active union
+and feature-qualified provenance. Unselected styles create no setup obligation.
+
+This is initial setup/correction, not a gameplay replacement-event ledger. Reopening an editor or
+gaining another class level grants no swap event. Enforcing the one-replacement-per-class-level
+allowance and other acquisition/rest events remains separate work.
+
 ## Existing daily preparation
 
 The finite daily owners retain exact `preparedSpells` intent in their parent profiles. Effective
@@ -112,8 +153,12 @@ toggles and unavailable-choice recovery handle these states without a separate p
 
 ## Shared effective view
 
-One calculation character owns current profiles and matching provenance. Known numeric and qualified
-daily spells seed guarded feature closure before effective ability/preparation calculation. Actions,
+One calculation character owns current profiles and matching provenance. Current ordinary numeric,
+fixed, native, Bonus, feat and qualified daily spells form an independent prerequisite seed. Effective
+ability scores come from the existing race/background/ASI/feat/item/manual calculation. Selected
+feature spells qualify against that seed, then join the effective union; their own or mutually
+dependent choices cannot bootstrap qualification. Class routes and their current consumers share
+the explicit independent score/profile context. Missing qualification context remains unsupported. Actions,
 prerequisites, readiness, Review and both PDF editions consume that same effective union. PDF receives
 current filtered authority as a required argument separately from retained text lookups; an unavailable ordinary class spell
 does not become an active export row. Generic Bonus and native APIs cannot create numeric class rows.

@@ -1,4 +1,5 @@
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
@@ -551,6 +552,12 @@ export function commitFeatOptionsCommand(
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
   if (
+    feat.classFeatChoiceId &&
+    getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '') &&
+    selections.spells?.length
+  )
+    throw new RangeError('Configure this feature’s cantrips in the Class spell choices.')
+  if (
     !isFeatOptionTargetActive(character, feat) ||
     !hasActiveFeatChoiceSetupTarget(ledger, feat) ||
     (feat.selectionKind && getRepeatedFeatOptionDomains(selections).length > 0)
@@ -625,6 +632,12 @@ function commitResolvedFeatOptions(
   selections: FeatOptionSelections,
   resolvedSpells: FeatSpellSelection[],
 ): CharacterCommandResult {
+  if (
+    feat.classFeatChoiceId &&
+    getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '') &&
+    selections.spells?.length
+  )
+    throw new RangeError('Configure this feature’s cantrips in the Class spell choices.')
   const sourceTag = getFeatOptionSourceTag(feat)
   let provenanceUpdate = ledger
   const existingSpecial = character.spells.spellProfiles.find(

@@ -28,7 +28,10 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
-import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  type ClassChoicePrerequisiteContext,
+  getEffectiveClassChoiceFeatureRoutes,
+} from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   createOptionalClassFeatureActivity,
   getActiveOptionalClassFeatureDeclarations,
@@ -104,6 +107,7 @@ export interface WeaponActionProjectionContext {
 
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   effectiveSpellProfiles?: readonly SpellProfile[]
+  classChoicePrerequisites?: ClassChoicePrerequisiteContext
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
   raceResolution?: ResolvedRaceReference
@@ -248,7 +252,7 @@ type RulesTextActionContext = Pick<
   | 'classes'
   | 'availableClasses'
   | 'classChoiceFeatureCatalogs'
-  | 'effectiveSpellProfiles'
+  | 'classChoicePrerequisites'
   | 'feats'
   | 'classFeaturesByKey'
   | 'optionalFeaturesByKey'
@@ -314,7 +318,7 @@ function deriveClassFeatureActions(
   const routes = getEffectiveClassChoiceFeatureRoutes(
     character,
     context.classChoiceFeatureCatalogs,
-    context.effectiveSpellProfiles,
+    context.classChoicePrerequisites,
   )
   const addAction = (
     owner: string,
