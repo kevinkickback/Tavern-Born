@@ -8027,7 +8027,11 @@
             }
           ]
         }
-      ]
+      ],
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
+      }
     },
     {
       "declaration": {
@@ -8177,7 +8181,11 @@
             }
           ]
         }
-      ]
+      ],
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
+      }
     },
     {
       "declaration": {
@@ -8327,7 +8335,11 @@
             }
           ]
         }
-      ]
+      ],
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
+      }
     },
     {
       "declaration": {

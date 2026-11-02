@@ -254,9 +254,14 @@ export function mapCharacterSheet2024(
       : ''
     textFields[`Text_${182 + index}`] = row
       ? compactSpellText(
-          variant === 'official'
-            ? [row.duration, row.components].filter(Boolean).join('; ')
-            : [row.range, row.components].filter(Boolean).join('; '),
+          [
+            variant === 'official'
+              ? [row.duration, row.components].filter(Boolean).join('; ')
+              : [row.range, row.components].filter(Boolean).join('; '),
+            row.castingNote,
+          ]
+            .filter(Boolean)
+            .join('; '),
         )
       : ''
     if (variant === 'official')

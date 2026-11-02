@@ -54,6 +54,7 @@ export interface ManagedClassSpellStatus {
   active: boolean
   reason?: string
   prepared?: boolean
+  castingNote?: string
 }
 
 function resolveSlot(
@@ -97,6 +98,19 @@ function resolveSlot(
     ].every((source) => permitted(allowed, source))
   )
     return 'Restore the source for this casting feature and its spell slots.'
+  const dependency = authority.rule.requiresDeclaration
+  if (dependency) {
+    const introduction = gainAuthority(
+      catalog,
+      owner,
+      dependency.target,
+      dependency.level,
+      slot[1],
+      dependency.level,
+    )
+    if (!introduction || !permitted(allowed, introduction.declaration.feature.source))
+      return 'Restore the introductory casting feature for this spell choice.'
+  }
   const fixedAtGain = getEarnedSubclassSpellGrants(
     classes.find(
       (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
@@ -120,7 +134,9 @@ function targetError(
   if (
     slot[1] === 'class-cantrip'
       ? spell.level !== 0
-      : spell.level < 1 || spell.level > state.authority.maxSpellLevel
+      : slot[1] === 'class-arcanum'
+        ? spell.level !== state.authority.maxSpellLevel
+        : spell.level < 1 || spell.level > state.authority.maxSpellLevel
   )
     return 'This spell is outside the level available for this choice.'
   if (
@@ -157,6 +173,7 @@ export function getManagedClassSpellPool(
       spells: [] as Spell5e[],
       defaultReferences: new Set<string>(),
       maxSpellLevel: 0,
+      allowedLevels: [] as number[],
       reason: state,
       schools: undefined,
       privileged: false,
@@ -189,6 +206,12 @@ export function getManagedClassSpellPool(
         .map((spell) => getSpellReferenceKey(spell.name, spell.source)),
     ),
     maxSpellLevel: state.authority.maxSpellLevel,
+    allowedLevels:
+      slot[1] === 'class-cantrip'
+        ? [0]
+        : slot[1] === 'class-arcanum'
+          ? [state.authority.maxSpellLevel]
+          : Array.from({ length: state.authority.maxSpellLevel }, (_, index) => index + 1),
     reason: undefined,
     schools: state.authority.rule.schools,
     privileged: state.privileged,
@@ -286,6 +309,9 @@ export function projectManagedClassSpellState(
       continue
     }
     status.active = true
+    if (choice.slot[1] === 'class-arcanum')
+      status.castingNote =
+        'Mystic Arcanum — once per long rest, without expending a spell slot. Uses are not tracked.'
     active.push({ choice, entry, authority })
   }
   // Saved fixed tags are intent, just like saved profile cells. Only the current
@@ -364,7 +390,7 @@ export function projectManagedClassSpellState(
       ]),
     })
   }
-  for (const { choice, entry } of active) {
+  for (const { choice, entry, authority } of active) {
     const reference = formatSpellReference(choice.target.name, choice.target.source)
     const field = choice.slot[1] === 'class-cantrip' ? 'cantrips' : 'spellsKnown'
     profiles = profiles.map((profile) =>
@@ -381,7 +407,9 @@ export function projectManagedClassSpellState(
       makeManagedClassSpellTag(
         choice,
         entry,
-        featurePools.get(JSON.stringify(choice.slot.slice(0, 4)))?.featureName,
+        choice.slot[1] === 'class-arcanum'
+          ? authority.declaration.feature.name
+          : featurePools.get(JSON.stringify(choice.slot.slice(0, 4)))?.featureName,
       ),
     )
   }

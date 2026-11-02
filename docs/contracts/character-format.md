@@ -30,6 +30,12 @@ Current counts, spell filters, ability and source activity remain derived rather
 Ordinary numeric uniqueness remains intact; different feature entitlements may independently own the
 same exact profile member, with one reserved tag per owner. Removing one retains surviving owners.
 
+Arcanum uses an additive `class-arcanum` domain with the same allocator and exact declaration/gain
+address. Each entitlement may independently own a profile member and reserved tag; ordinary numeric
+uniqueness is unchanged. It has no `prepare` request or saved cast-use counter. Existing valid format13
+relations retain their meaning; no version change, conversion or materialized-row inference is needed.
+Its current source and casting limits are described in [Arcanum setup](spell-selection.md#mystic-arcanum-setup).
+
 Format13 gives Class-owned Warrior spell setup one managed protocol. Its Class feat mirror cannot
 also carry the former aggregate feat-option spell setup in Special. Ordinary, Bonus and fixed feat
 owners retain their existing setup. Earlier formats are rejected without conversion; the existing

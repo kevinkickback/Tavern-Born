@@ -32,6 +32,7 @@ import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
 } from '@/lib/character/effectiveClassChoiceFeatures'
+import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import {
   createOptionalClassFeatureActivity,
   getActiveOptionalClassFeatureDeclarations,
@@ -63,6 +64,7 @@ import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
+import { getManagedSpellCastingNotes } from './managedSpellCasting'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -107,6 +109,7 @@ export interface WeaponActionProjectionContext {
 
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   effectiveSpellProfiles?: readonly SpellProfile[]
+  managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
   classChoicePrerequisites?: ClassChoicePrerequisiteContext
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
@@ -174,7 +177,7 @@ export function deriveSpellActions(
   spellsByKey: Readonly<Record<string, Spell5e>>,
   options: Pick<
     CharacterActionProjectionContext,
-    'classes' | 'race' | 'raceResolution' | 'effectiveSpellProfiles'
+    'classes' | 'race' | 'raceResolution' | 'effectiveSpellProfiles' | 'managedClassSpellStatuses'
   > = {},
 ): CharacterAction[] {
   const classesById = new Map<string, Class5e>()
@@ -220,7 +223,11 @@ export function deriveSpellActions(
     for (const reference of profile.spellsKnown) {
       addSpell(
         reference,
-        !!profile.alwaysPrepared || !requiresPreparation || preparedKeys.has(spellKey(reference)),
+        !!profile.alwaysPrepared ||
+          !requiresPreparation ||
+          preparedKeys.has(spellKey(reference)) ||
+          getManagedSpellCastingNotes(options.managedClassSpellStatuses ?? [], reference, profile)
+            .length > 0,
       )
     }
     for (const reference of profile.preparedSpells) addSpell(reference, true)
@@ -234,10 +241,12 @@ export function deriveSpellActions(
         id: `spell:${encodeURIComponent(`${spell.name}|${spell.source}`)}`,
         name: spell.name,
         kind: spellActionKind(spell.time[0]?.unit),
-        description: renderEntriesToText([
-          ...(spell.entries ?? []),
-          ...(spell.entriesHigherLevel ?? []),
-        ]),
+        description: [
+          ...getManagedSpellCastingNotes(options.managedClassSpellStatuses ?? [], reference),
+          renderEntriesToText([...(spell.entries ?? []), ...(spell.entriesHigherLevel ?? [])]),
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
         source: { kind: 'spell', name: spell.name, source: spell.source },
         active,
         inactiveReason: active ? undefined : 'Not prepared',

@@ -10,6 +10,7 @@ import {
   isPlainSpellIdentityPart,
   isPlainSpellReference,
   managedClassSpellId,
+  managedClassSpellUniquenessGroup,
   matchesManagedClassSpellTag,
 } from '@/lib/character/managedClassSpellIdentity'
 import { hasSavedSelectedFeatureSpellOwner } from '@/lib/character/selectedFeatureSpellOwnership'
@@ -42,7 +43,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     const id = managedClassSpellId(choice.slot)
     const key = JSON.stringify([
       choice.slot[0].slice(1, 3),
-      choice.slot[1] === 'feature-cantrip' ? choice.slot[2] : null,
+      managedClassSpellUniquenessGroup(choice.slot),
       getSpellNameKey(choice.target.name),
     ])
     if (
@@ -122,7 +123,9 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
             (field === 'cantrips'
               ? choice.slot[1] === 'class-cantrip' || choice.slot[1] === 'feature-cantrip'
               : field === 'spellsKnown'
-                ? choice.slot[1] === 'class-known' || choice.slot[1] === 'class-spellbook'
+                ? choice.slot[1] === 'class-known' ||
+                  choice.slot[1] === 'class-spellbook' ||
+                  choice.slot[1] === 'class-arcanum'
                 : choice.slot[1] === 'class-spellbook' && choice.prepare === true),
         )
         if (!fixed && !(field === 'preparedSpells' && mode === 'daily') && owned.length < 1)

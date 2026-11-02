@@ -75,6 +75,27 @@ the occupied intent, list policy, preparation request, revision and allocator. E
 reactivates it. Class/Spells recovery and readiness show dormant choices; they do not satisfy active
 completion counts. No saved activity snapshot or old-file ownership inference is used.
 
+## Mystic Arcanum setup
+
+Certified Arcanum gains reuse the managed editor and saved relation in the separate `class-arcanum`
+domain. The source-qualified parent's fixed-by-level map supplies each gain's count and exact spell
+level. These choices add neither ordinary known/prepared quota nor high-level Pact slots. The picker
+and command require the exact gained spell level even with Ignore class restrictions; that existing
+numeric policy bypasses only list membership. Current optional spell-list routes retain their adoption
+and exact source requirements.
+
+The finite source registry still certifies the declaration's meaning. PHB gain declarations repeat
+their casting clause; XPHB higher gains inherit it from their same-owner level-11 introduction. Those
+higher choices require both current declarations. Missing or changed parent, declaration, introduction,
+target or permitted route suspends benefits while retaining saved intent. Exact restoration rechecks
+without allocating revisions. Clear and intentional gain/owner loss follow the existing exact inverse
+and editor-lifetime protocol; old profile membership never becomes an Arcanum choice by inference.
+
+Current active grants supply shared Spells, Actions and PDF annotations for once-per-long-rest casting
+without expending a spell slot. Uses are not tracked. Independent casting paths retain their own rules.
+This supports initial selection/correction; spent-use/reset accounting and level-up replacement events
+remain separate. New source producers and unknown prose meanings still require reviewed certification.
+
 ## Selected feature cantrips
 
 Supported selected Class optional-feature and feat cantrips use the same atomic editor, revision
@@ -145,7 +166,7 @@ writes nothing; exact withdrawal remains source-free and preserves independent o
 Bonus/native edits, numeric edits and synchronization retain raw daily intent. Reduced capacity flags
 an over-limit list without silently deleting or reordering it. Daily intent has no numeric revision,
 ordinal or inferred acquisition history. Full daily selection history, rest/acquisition events,
-Arcanum and other specialist spell grants remain separate. Additional Spells adoption changes only
+other specialist spell grants remain separate. Additional Spells adoption changes only
 list eligibility; it neither prepares/learns spells automatically nor adds selection or casting quota.
 OFF, adoption Clear and unavailable sources retain existing setup while suspending only paths with
 no remaining authority. Exact restoration rechecks that setup. The existing Spells list, preparation

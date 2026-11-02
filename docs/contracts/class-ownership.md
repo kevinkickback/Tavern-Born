@@ -38,8 +38,9 @@ selection contracts. Independent base, subclass, native and explicit list-bypass
 loss of an optional path. Clear/OFF/source loss retains saved spell setup for current re-evaluation
 and recovery; intentional owner loss still performs exact cleanup. New Class adoption rejects
 captured source authority after a catalog or source-settings change, while Clear stays source-free.
-Ordinary Warlock known slots do not gain access to the section's Arcanum-level spells; specialist
-selection and gameplay replacement events remain separate.
+Ordinary Warlock known slots do not gain access to the section's Arcanum-level spells. Separate
+[Arcanum setup](spell-selection.md#mystic-arcanum-setup) enforces each exact gained level; gameplay
+replacement events remain separate.
 
 PHB Ranger's adopted TCE Primal Awareness derives fixed known-spell grants from its current
 certified level table. A narrow adapter is necessary because this declaration has no structured

@@ -141,7 +141,12 @@ const SpellRow = memo(function SpellRow({
         selected ? 'bg-primary/10 hover:bg-primary/15' : 'bg-workspace-pane hover:bg-surface-hover',
       )}
     >
-      <div className="min-w-0 flex-1">{renderSpellName({ item, spell, sourceContext })}</div>
+      <div className="min-w-0 flex-1">
+        {renderSpellName({ item, spell, sourceContext })}
+        {item.castingNote && (
+          <p className="mt-1 text-xs text-muted-foreground">{item.castingNote}</p>
+        )}
+      </div>
       {spell?.school ? (
         <span
           className={cn(

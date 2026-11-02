@@ -43,8 +43,9 @@ export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
   if (!Array.isArray(slot) || slot.length !== 5) return undefined
   const [owner, domain, target, level, ordinal] = slot
   if (domain === 'feature-cantrip') return undefined
-  if (!['class-cantrip', 'class-known', 'class-spellbook'].includes(domain)) return undefined
-  const rule = ordinary.find(
+  if (!['class-cantrip', 'class-known', 'class-spellbook', 'class-arcanum'].includes(domain))
+    return undefined
+  const rule = CLASS_CASTING_PRODUCERS.find(
     (row) => same(row.declaration.owner, owner) && row.declaration.target === target,
   )
   const gain = rule?.domains[domain]?.find((row) => row.level === level)

@@ -256,6 +256,7 @@ export function getSelectedFeatureCantripPool(
       spells.map((spell) => getSpellReferenceKey(spell.name, spell.source)),
     ),
     maxSpellLevel: 0,
+    allowedLevels: [0],
     reason,
     schools: undefined,
     privileged: false,

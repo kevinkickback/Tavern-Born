@@ -149,7 +149,9 @@ export function validateSpells(
           ? `${featureSetups.find((setup) => setup.producer === slots[0][2])?.name ?? 'feature'} cantrip`
           : slots[0][1] === 'class-cantrip'
             ? 'cantrip'
-            : 'spell'
+            : slots[0][1] === 'class-arcanum'
+              ? 'Mystic Arcanum'
+              : 'spell'
       issues.push(
         readinessIssue(
           `spells:managed:${managedClassSpellId(slots[0])}`,

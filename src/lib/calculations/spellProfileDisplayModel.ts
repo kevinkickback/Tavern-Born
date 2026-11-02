@@ -19,6 +19,7 @@ export interface SpellListItem {
   prepared: boolean
   isFixed?: boolean
   removable?: boolean
+  castingNote?: string
 }
 
 export interface PreparedCasterSpellItem {
