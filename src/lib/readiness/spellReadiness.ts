@@ -97,6 +97,18 @@ export function validateSpells(
       status,
     ]),
   )
+  for (const grant of calculation.optionalFixedSpellStatuses) {
+    if (grant.active) continue
+    issues.push(
+      readinessIssue(
+        `spells:optional-fixed:${JSON.stringify([grant.owner, grant.target, grant.level, grant.reference])}`,
+        'blocking',
+        'sources',
+        `Restore ${grant.featureName} spell: ${grant.reference}`,
+        grant.reason ?? 'Restore the exact granted spell printing.',
+      ),
+    )
+  }
   for (const entry of character.classProgression) {
     const groups = new Map<string, ReturnType<typeof getManagedClassSpellSlots>>()
     for (const slot of getManagedClassSpellSlots(entry)) {

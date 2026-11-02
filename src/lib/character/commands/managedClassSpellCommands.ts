@@ -1,5 +1,5 @@
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import {
   getManagedClassSpellOwnerEntry,
@@ -13,6 +13,7 @@ import {
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
+import { getOptionalClassFixedSpellNamesAtGain } from '@/lib/character/optionalClassFixedSpells'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
   getInvalidManagedClassSpellPaths,
@@ -172,6 +173,16 @@ export function setManagedClassSpellChoicesCommand(
     ? projectManagedClassSpellState(proposed, context)
     : { character: proposed, statuses: [] }
   for (const edit of grants) {
+    if (
+      !edit.sameTarget &&
+      edit.request.target &&
+      getOptionalClassFixedSpellNamesAtGain(character, edit.request.slot, context?.catalogs).has(
+        getSpellNameKey(edit.request.target.name),
+      )
+    )
+      throw new RangeError(
+        'Choose another spell; this class already grants that spell at this level.',
+      )
     const status = projected.statuses.find(
       (row) => managedClassSpellId(row.choice.slot) === edit.id,
     )

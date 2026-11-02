@@ -42,6 +42,11 @@ import {
   managedClassSpellId,
 } from './managedClassSpellIdentity'
 import { stripManagedClassSpellState } from './managedClassSpellState'
+import {
+  getOptionalClassFixedSpellGrants,
+  getOptionalClassFixedSpellNamesAtGain,
+  type OptionalClassFixedSpellStatus,
+} from './optionalClassFixedSpells'
 
 export interface ManagedClassSpellStatus {
   choice: ManagedClassSpellChoice
@@ -154,12 +159,18 @@ export function getManagedClassSpellPool(
     }
   const allowed = sources(character)
   const targets = new Map<string, Spell5e | undefined>()
+  const optionalFixed = getOptionalClassFixedSpellNamesAtGain(character, slot, context?.catalogs)
   for (const spell of Object.values(context?.spellsByKey ?? {})) {
     const key = getSpellReferenceKey(spell.name, spell.source)
     targets.set(key, targets.has(key) ? undefined : spell)
   }
   const spells = [...targets.values()].flatMap((spell) =>
-    spell && permitted(allowed, spell.source) && !targetError(spell, slot, state) ? [spell] : [],
+    spell &&
+    permitted(allowed, spell.source) &&
+    !targetError(spell, slot, state) &&
+    !optionalFixed.has(getSpellNameKey(spell.name))
+      ? [spell]
+      : [],
   )
   return {
     spells,
@@ -307,6 +318,46 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
+  const optionalFixedStatuses: OptionalClassFixedSpellStatus[] = []
+  for (const grant of getOptionalClassFixedSpellGrants(character, context?.catalogs)) {
+    const spell = targets.get(getSpellReferenceKey(grant.reference))
+    const reason =
+      !spell || !permitted(allowed, spell.source)
+        ? 'Restore the exact spell printing from the enabled content.'
+        : undefined
+    optionalFixedStatuses.push({ ...grant, active: !reason, ...(reason ? { reason } : {}) })
+    if (reason) continue
+    const entry = character.classProgression.find(
+      (entry) => norm(entry.name) === grant.owner[1] && norm(entry.source) === grant.owner[2],
+    )
+    if (!entry) continue
+    const add = (references: string[]) =>
+      references.some(
+        (reference) => getSpellReferenceKey(reference) === getSpellReferenceKey(grant.reference),
+      )
+        ? references
+        : [...references, grant.reference]
+    profiles = profiles.map((profile) =>
+      profile.id === toClassProfileId(entry.name, entry.source)
+        ? {
+            ...profile,
+            spellsKnown: add(profile.spellsKnown),
+            fixedSpells: add(profile.fixedSpells ?? []),
+          }
+        : profile,
+    )
+    provenance = addSpellGrant(provenance, grant.reference, {
+      ...makeSourceTag('class', entry.name, 'fixed', entry.source),
+      label: grant.featureName,
+      grantSource: parseSpellReference(grant.reference).source,
+      grantVariant: JSON.stringify([
+        'optional-class-spell',
+        grant.owner,
+        grant.target,
+        grant.level,
+      ]),
+    })
+  }
   for (const { choice, entry } of active) {
     const reference = formatSpellReference(choice.target.name, choice.target.source)
     const field = choice.slot[1] === 'class-cantrip' ? 'cantrips' : 'spellsKnown'
@@ -383,5 +434,10 @@ export function projectManagedClassSpellState(
     },
     context,
   )
-  return { character: daily.character, statuses, dailyStatuses: daily.statuses }
+  return {
+    character: daily.character,
+    statuses,
+    dailyStatuses: daily.statuses,
+    optionalFixedStatuses,
+  }
 }
