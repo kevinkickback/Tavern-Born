@@ -1,4 +1,4 @@
-import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { getManagedClassSpellRule, isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
@@ -23,10 +23,11 @@ export const managedClassSpellId = (slot: ManagedClassSpellSlot) =>
 export const managedClassSpellUniquenessGroup = (slot: ManagedClassSpellSlot) =>
   slot[1] === 'feature-cantrip' || slot[1] === 'class-arcanum' ? slot[2] : null
 
-export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) =>
-  slot[1] === 'class-arcanum'
-    ? slot[2].split('|')[1].replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
-    : undefined
+export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
+  if (slot[1] !== 'class-arcanum') return undefined
+  const declaration = getManagedClassSpellRule(slot)?.rule.declaration
+  return declaration?.target.split('|')[1]?.replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+}
 
 export function decodeManagedClassSpellId(value: string): ManagedClassSpellSlot | undefined {
   if (!value.startsWith(MANAGED_CLASS_SPELL_PREFIX)) return undefined

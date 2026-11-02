@@ -5,7 +5,10 @@ import {
   retainEarnedManagedClassSpells,
   setManagedClassSpellChoicesCommand,
 } from '@/lib/character/commands/managedClassSpellCommands'
-import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import {
+  getManagedClassSpellFeatureLabel,
+  managedClassSpellId,
+} from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import {
   getManagedClassSpellPool,
@@ -255,6 +258,43 @@ describe('source-qualified Mystic Arcanum setup', () => {
     dormant.spells.spellProfiles[0].spellsKnown = []
     expect(characterPersistenceSchema.safeParse(dormant).success).toBe(true)
   })
+
+  for (const source of ['PHB', 'XPHB'] as const) {
+    test.each([
+      'not-a-feature',
+      'class-feature|',
+      'class-feature|unknown|warlock|xphb|11|xphb',
+      'class-feature|mystic arcanum|warlock|phb|11|xphb',
+    ])(`${source} rejects malformed saved declaration %s without throwing or guessing its label`, (target) => {
+      const start = initial(source)
+      const saved = commit(start, [request(start, address(source))])
+      expect(
+        getManagedClassSpellFeatureLabel(saved.managedClassSpellChoices![0].slot),
+      ).toBeDefined()
+      for (const relation of ['matched', 'unmatched', 'dormant']) {
+        const malformed = structuredClone(saved)
+        const choice = malformed.managedClassSpellChoices![0]
+        const oldId = managedClassSpellId(choice.slot)
+        choice.slot[2] = target
+        if (relation === 'matched') {
+          for (const tags of Object.values(malformed.provenance.spells))
+            for (const tag of tags)
+              if (tag.grantVariant === oldId) tag.grantVariant = managedClassSpellId(choice.slot)
+        } else if (relation === 'dormant') {
+          malformed.provenance.spells = {}
+          malformed.spells.spellProfiles.find((profile) => profile.type === 'class')!.spellsKnown =
+            []
+        }
+        let valid: boolean | undefined
+        expect(() => {
+          valid = characterPersistenceSchema.safeParse(malformed).success
+        }).not.toThrow()
+        expect(valid).toBe(false)
+        expect(getManagedClassSpellFeatureLabel(choice.slot)).toBeUndefined()
+      }
+      expect(characterPersistenceSchema.safeParse(saved).success).toBe(true)
+    })
+  }
 
   test('Clear is source-free, preserves independent fixed and Bonus copies, and invalidates an older empty Add', () => {
     const start = initial()
