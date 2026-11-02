@@ -192,37 +192,37 @@ describe('source-owned Primal Awareness knowledge grants', () => {
     expect(project(saved).optionalFixedStatuses[0].active).toBe(true)
   })
 
-  test('changed table/body and duplicate owner cannot certify the feature', () => {
-    const saved = adopt(initial())
-    for (const change of [
-      (
-        document: Parameters<
-          NonNullable<Parameters<typeof makePrimalAwarenessSpellFixtures>[0]>
-        >[0],
-      ) => {
+  test.each<{ name: string; change: (document: OptionalDeclarationDocument) => void }>([
+    {
+      name: 'feature body',
+      change: (document) => {
         const feature = document.classFeature.find((row) => row.name === 'Primal Awareness')!
         ;(feature.entries as unknown[]).push('changed meaning')
       },
-      (
-        document: Parameters<
-          NonNullable<Parameters<typeof makePrimalAwarenessSpellFixtures>[0]>
-        >[0],
-      ) => {
+    },
+    {
+      name: 'grant table',
+      change: (document) => {
         const feature = document.classFeature.find((row) => row.name === 'Primal Awareness')!
         const table = (feature.entries as Array<{ type?: string; rows?: unknown[][] }>).find(
           (row) => row?.type === 'table',
         )!
         table.rows![0][0] = '4th'
       },
-    ]) {
-      const context = makePrimalAwarenessSpellFixtures(change).context
-      expect(project(saved, context).optionalFixedStatuses).toEqual([])
-      expect(
-        createOptionalClassFeatureActivity(saved, context.catalogs).states.find(
-          (row) => row.root.target === adoption.target,
-        )?.state,
-      ).toBe('unavailable')
-    }
+    },
+  ])('changed $name cannot certify the feature', ({ change }) => {
+    const saved = adopt(initial())
+    const context = makePrimalAwarenessSpellFixtures(change).context
+    expect(project(saved, context).optionalFixedStatuses).toEqual([])
+    expect(
+      createOptionalClassFeatureActivity(saved, context.catalogs).states.find(
+        (row) => row.root.target === adoption.target,
+      )?.state,
+    ).toBe('unavailable')
+  })
+
+  test('duplicate owner cannot certify the feature', () => {
+    const saved = adopt(initial())
     const duplicate = {
       ...saved,
       classProgression: [...saved.classProgression, ...saved.classProgression],
@@ -456,17 +456,20 @@ function ensureContextFree(character: Character) {
 }
 
 test.each([
-  '2014-official',
-  '2024-official',
-] as const)('Primal Awareness appears in actual %s full and names-only PDFs', async (template) => {
+  ['2014-official', false],
+  ['2014-official', true],
+  ['2024-official', false],
+  ['2024-official', true],
+] as const)('Primal Awareness appears in actual %s PDF, namesOnly=%s', async (template, namesOnly) => {
   const model = createCharacterSheetViewModel(adopt(initial()), fixture.lookups, fixture.lookups)
-  for (const view of [model, withoutSheetDescriptions(model)]) {
-    const bytes = await generateTestCharacterSheet(view, template)
-    const text = (await PDFDocument.load(bytes))
-      .getForm()
-      .getFields()
-      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-      .join('\n')
-    expect(text).toContain('Speak with Animals')
-  }
+  const bytes = await generateTestCharacterSheet(
+    namesOnly ? withoutSheetDescriptions(model) : model,
+    template,
+  )
+  const text = (await PDFDocument.load(bytes))
+    .getForm()
+    .getFields()
+    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    .join('\n')
+  expect(text).toContain('Speak with Animals')
 })
