@@ -21,6 +21,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemTextContext } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
+import { getManagedSpellCastingNotes } from '@/lib/calculations/managedSpellCasting'
 import { getNativeRacialSpellOwners } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
@@ -296,6 +297,11 @@ export function SpellsPage() {
       }
 
       for (const name of profile.spellsKnown) {
+        const castingNote = getManagedSpellCastingNotes(
+          calculationContext?.managedClassSpellStatuses ?? [],
+          name,
+          profile,
+        ).join(' ')
         const spell = resolveSpellReferenceFromMap(name, spellByName)
         const spellKey = getSpellNameKey(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
@@ -313,6 +319,7 @@ export function SpellsPage() {
           name,
           level: spell?.level ?? 1,
           kind: 'spell',
+          castingNote,
           prepared,
           isFixed: isFixedProfileSpell(profile, ledger, name),
         })
@@ -329,7 +336,7 @@ export function SpellsPage() {
       if (a.level !== b.level) return a.level - b.level
       return a.name.localeCompare(b.name)
     })
-  }, [detailsByProfileId, ledger, spellByName, spellProfiles])
+  }, [calculationContext, detailsByProfileId, ledger, spellByName, spellProfiles])
 
   const groupedItems = useMemo(() => {
     const map = new Map<string, SpellListItem[]>()

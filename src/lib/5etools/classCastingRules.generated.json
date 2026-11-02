@@ -7970,6 +7970,10 @@
           }
         ]
       },
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "warlock", "xphb"],
@@ -8120,6 +8124,10 @@
           }
         ]
       },
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
+      },
       "declarationAlternatives": [
         {
           "owner": ["class", "warlock", "xphb"],
@@ -8269,6 +8277,10 @@
             "spellLevel": 9
           }
         ]
+      },
+      "requiresDeclaration": {
+        "target": "class-feature|mystic arcanum|warlock|xphb|11|xphb",
+        "level": 11
       },
       "declarationAlternatives": [
         {

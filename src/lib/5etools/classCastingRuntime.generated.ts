@@ -5613,6 +5613,7 @@ const registry = {
         preparedSpellsChange: s32,
       },
       domains: { 'class-arcanum': [{ level: 13, count: 1, spellLevel: 7 }] },
+      requiresDeclaration: { target: s26, level: 11 },
       declarationAlternatives: [
         {
           owner: [s32, s48, s38],
@@ -5720,6 +5721,7 @@ const registry = {
         preparedSpellsChange: s32,
       },
       domains: { 'class-arcanum': [{ level: 15, count: 1, spellLevel: 8 }] },
+      requiresDeclaration: { target: s26, level: 11 },
       declarationAlternatives: [
         {
           owner: [s32, s48, s38],
@@ -5827,6 +5829,7 @@ const registry = {
         preparedSpellsChange: s32,
       },
       domains: { 'class-arcanum': [{ level: 17, count: 1, spellLevel: 9 }] },
+      requiresDeclaration: { target: s26, level: 11 },
       declarationAlternatives: [
         {
           owner: [s32, s48, s38],

@@ -19,6 +19,15 @@ export const isPlainSpellReference = (reference: string) => {
 export const managedClassSpellId = (slot: ManagedClassSpellSlot) =>
   MANAGED_CLASS_SPELL_PREFIX + encodeURIComponent(JSON.stringify(slot))
 
+/** Feature entitlements are independent of ordinary numeric uniqueness. */
+export const managedClassSpellUniquenessGroup = (slot: ManagedClassSpellSlot) =>
+  slot[1] === 'feature-cantrip' || slot[1] === 'class-arcanum' ? slot[2] : null
+
+export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) =>
+  slot[1] === 'class-arcanum'
+    ? slot[2].split('|')[1].replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+    : undefined
+
 export function decodeManagedClassSpellId(value: string): ManagedClassSpellSlot | undefined {
   if (!value.startsWith(MANAGED_CLASS_SPELL_PREFIX)) return undefined
   try {
@@ -64,8 +73,14 @@ export function makeManagedClassSpellTag(
     owner[0] === 'class' ? (entry?.source ?? owner[2]) : (entry?.subclassSource ?? owner[4])
   return {
     ...makeSourceTag(owner[0], name, 'choice', source),
-    ...(choice.slot[1] === 'feature-cantrip'
-      ? { label: featureName ?? decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2] ?? name }
+    ...(choice.slot[1] === 'feature-cantrip' || choice.slot[1] === 'class-arcanum'
+      ? {
+          label:
+            featureName ??
+            getManagedClassSpellFeatureLabel(choice.slot) ??
+            decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2] ??
+            name,
+        }
       : {}),
     grantVariant: managedClassSpellId(choice.slot),
     grantSource: choice.target.source,
@@ -85,9 +100,13 @@ export function matchesManagedClassSpellTag(
     tag.sourceType === owner[0] &&
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
-    (choice.slot[1] === 'feature-cantrip'
-      ? normalizeOwnerIdentity(tag.label) === decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2]
-      : tag.label === tag.sourceName) &&
+    (choice.slot[1] === 'class-arcanum'
+      ? normalizeOwnerIdentity(tag.label) ===
+        normalizeOwnerIdentity(getManagedClassSpellFeatureLabel(choice.slot))
+      : choice.slot[1] === 'feature-cantrip'
+        ? normalizeOwnerIdentity(tag.label) ===
+          decodeSelectedFeatureSpellAddress(choice.slot[2])?.[2]
+        : tag.label === tag.sourceName) &&
     tag.grantType === 'choice' &&
     tag.spellGrantedAtLevel === choice.slot[3] &&
     tag.spellAttributionMode === 'exact' &&

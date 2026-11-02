@@ -56,7 +56,7 @@ export function useClassSpellChoiceController(
           owner,
           slot[2],
           finite.rule.declaration.level,
-          slot[1] as 'class-cantrip' | 'class-known' | 'class-spellbook',
+          slot[1] as 'class-cantrip' | 'class-known' | 'class-spellbook' | 'class-arcanum',
           slot[3],
         )
       const gain = choices.get(slot[3]) ?? {

@@ -23,6 +23,7 @@ import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
 import type { EffectResolutionContext } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
+import { getManagedSpellCastingNotes } from '@/lib/calculations/managedSpellCasting'
 import {
   type EffectiveMovement,
   formatEffectiveMovement,
@@ -57,6 +58,8 @@ import {
   getFeatureOptionSelectionStates,
   summarizeFeatureOptionSelectionGroups,
 } from '@/lib/character/featureOptionSelections'
+import { isManagedClassSpellProfile } from '@/lib/character/managedClassSpellIdentity'
+import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import {
   createOptionalClassFeatureActivity,
   getActiveOptionalClassFeatureDeclarations,
@@ -125,6 +128,7 @@ interface CharacterSheetSpellRow {
   duration: string
   range: string
   components: string
+  castingNote?: string
   notes: string
   concentration: boolean
   ritual: boolean
@@ -199,6 +203,7 @@ export interface CharacterSheetViewModel {
   featuresSummary: string
   featureOptionSummaries?: Array<{ text: string; compactText: string }>
   optionalClassFeatureSummaries?: Array<{ text: string; compactText: string }>
+  managedSpellCastingSummaries?: string[]
   proficiencyCheckNotes?: ProficiencyCheckNoteRow[]
   equipmentSummary: string
   proficienciesSummary: string
@@ -379,6 +384,7 @@ function withFeatureOptionSummaries(
   descriptions: boolean,
   notes: readonly ProficiencyCheckNoteRow[] = [],
   optionalFeatures: NonNullable<CharacterSheetViewModel['optionalClassFeatureSummaries']> = [],
+  castingSummaries: readonly string[] = [],
 ): string {
   return [
     summary,
@@ -387,6 +393,7 @@ function withFeatureOptionSummaries(
       descriptions ? selection.text : selection.compactText,
     ),
     ...notes.map((row) => row.text),
+    ...castingSummaries,
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -403,6 +410,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       false,
       vm.proficiencyCheckNotes,
       vm.optionalClassFeatureSummaries,
+      vm.managedSpellCastingSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(vm.character, false),
@@ -410,6 +418,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       false,
       vm.proficiencyCheckNotes,
       vm.optionalClassFeatureSummaries,
+      vm.managedSpellCastingSummaries,
     ),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
@@ -561,6 +570,7 @@ function buildSpellRows(
   profiles: Character['spells']['spellProfiles'],
   spellsByKey: Readonly<Record<string, Spell5e>>,
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
+  statuses: readonly ManagedClassSpellStatus[],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
   const cantrips = new Set<string>()
@@ -592,6 +602,9 @@ function buildSpellRows(
       ...(alwaysReady ? [...profile.spellsKnown, ...(profile.fixedSpells ?? [])] : []),
     ])
       prepared.add(getSpellReferenceKey(reference))
+    for (const reference of profile.spellsKnown)
+      if (getManagedSpellCastingNotes(statuses, reference, profile).length)
+        prepared.add(getSpellReferenceKey(reference))
   }
   const references = profiles.flatMap((profile) => [
     ...(profile.cantrips ?? []),
@@ -610,6 +623,7 @@ function buildSpellRows(
       const spell = resolveSpellReference(reference, spellsByKey)
       const separator = reference.lastIndexOf('|')
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
+      const castingNote = getManagedSpellCastingNotes(statuses, reference).join(' ')
       return {
         id: getSpellReferenceKey(reference),
         name: spell?.name ?? fallbackName,
@@ -629,9 +643,13 @@ function buildSpellRows(
         duration: spell ? formatDuration(spell.duration) : '',
         range: spell ? formatRange(spell.range) : '',
         components: spell ? formatComponents(spell.components) : '',
-        notes: spell
-          ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}`
-          : '',
+        castingNote,
+        notes: [
+          spell ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}` : '',
+          castingNote,
+        ]
+          .filter(Boolean)
+          .join('; '),
         concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
         ritual: isRitualSpell(spell),
         material: !!spell?.components?.m,
@@ -842,6 +860,7 @@ export function createCharacterSheetViewModel(
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
     effectiveSpellProfiles: character.spells.spellProfiles,
+    managedClassSpellStatuses: calculationContext.managedClassSpellStatuses,
     classChoicePrerequisites: calculationContext.classChoices.prerequisites,
     race: raceResolution.mergedRace,
     raceResolution,
@@ -880,6 +899,12 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
+  const managedSpellCastingSummaries = calculationContext.managedClassSpellStatuses.flatMap(
+    (status) =>
+      status.active && status.castingNote
+        ? [`${status.choice.target.name} (${status.choice.target.source}): ${status.castingNote}`]
+        : [],
+  )
 
   return {
     character,
@@ -887,6 +912,7 @@ export function createCharacterSheetViewModel(
     level,
     featureOptionSummaries,
     optionalClassFeatureSummaries,
+    managedSpellCastingSummaries,
     proficiencyCheckNotes,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
@@ -928,6 +954,7 @@ export function createCharacterSheetViewModel(
       character.spells.spellProfiles,
       rawLookups.spellsByKey ?? {},
       spellcastingDetails,
+      calculationContext.managedClassSpellStatuses,
     ),
     spellcastingPages: spellcastingSources.map((detail, index) => ({
       detail,
@@ -939,6 +966,13 @@ export function createCharacterSheetViewModel(
         ),
         rawLookups.spellsByKey ?? {},
         spellcastingDetails,
+        calculationContext.managedClassSpellStatuses.filter((status) =>
+          character.spells.spellProfiles.some(
+            (profile) =>
+              profile.id === detail.profileId &&
+              isManagedClassSpellProfile(status.choice.slot, profile),
+          ),
+        ),
       ),
     })),
     spellSlots: calculationContext.classCasting.slots,
@@ -959,6 +993,7 @@ export function createCharacterSheetViewModel(
       true,
       proficiencyCheckNotes,
       optionalClassFeatureSummaries,
+      managedSpellCastingSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(character),
@@ -966,6 +1001,7 @@ export function createCharacterSheetViewModel(
       true,
       proficiencyCheckNotes,
       optionalClassFeatureSummaries,
+      managedSpellCastingSummaries,
     ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)

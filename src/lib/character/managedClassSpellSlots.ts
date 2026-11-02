@@ -1,4 +1,7 @@
-import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
+import {
+  CLASS_CASTING_PRODUCERS,
+  getClassSpellProfilePolicy,
+} from '@/lib/5etools/classCastingRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
@@ -46,7 +49,25 @@ export function getManagedClassSpellSlots(
           .map((choice) => choice.slot),
       ].filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]) && slot[3] <= entry.levels)
     : []
+  const arcanum = CLASS_CASTING_PRODUCERS.flatMap((producer) =>
+    (producer.domains['class-arcanum'] ?? []).flatMap((gain) =>
+      gain.level <= entry.levels
+        ? Array.from(
+            { length: gain.count },
+            (_, ordinal): ManagedClassSpellSlot => [
+              producer.declaration.owner,
+              'class-arcanum',
+              producer.declaration.target,
+              gain.level,
+              ordinal,
+            ],
+          ).filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]))
+        : [],
+    ),
+  )
   return [
-    ...new Map([...ordinary, ...feature].map((slot) => [managedClassSpellId(slot), slot])).values(),
+    ...new Map(
+      [...ordinary, ...arcanum, ...feature].map((slot) => [managedClassSpellId(slot), slot]),
+    ).values(),
   ]
 }

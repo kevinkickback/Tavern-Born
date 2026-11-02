@@ -68,7 +68,13 @@ const managedClassSpellChoiceSchema = z
   .object({
     slot: z.tuple([
       optionalClassAdoptionSchema.shape.owner,
-      z.enum(['class-cantrip', 'class-known', 'class-spellbook', 'feature-cantrip']),
+      z.enum([
+        'class-cantrip',
+        'class-known',
+        'class-spellbook',
+        'class-arcanum',
+        'feature-cantrip',
+      ]),
       z
         .string()
         .trim()

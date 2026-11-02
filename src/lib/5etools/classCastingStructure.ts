@@ -24,6 +24,29 @@ export interface CastingProducerRule {
   preparation?: ClassPreparationRule
   schools?: readonly string[]
   unrestrictedGains?: readonly number[]
+  /** A prose-only shared casting clause lives in another exact same-owner declaration. */
+  requiresDeclaration?: { target: string; level: number }
+}
+
+/** Numeric entitlement from the parent map; this alone does not certify the feature's meaning. */
+export function getFixedLevelCastingGain(value: unknown, level: number): CastingGain | undefined {
+  if (
+    !Number.isSafeInteger(level) ||
+    level < 1 ||
+    level > 20 ||
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value)
+  )
+    return undefined
+  const row = (value as Row)[String(level)]
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return undefined
+  const cells = Object.entries(row)
+  if (cells.length !== 1) return undefined
+  const [key, count] = cells[0]
+  if (!/^[1-9]$/.test(key) || !Number.isSafeInteger(count) || (count as number) < 1)
+    return undefined
+  return { level, count: count as number, spellLevel: Number(key) }
 }
 export interface CastingParentRule {
   owner: ['class', string, string]

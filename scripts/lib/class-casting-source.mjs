@@ -97,18 +97,11 @@ export async function deriveClassCastingRegistry(
       relation.owner[0] === 'class' &&
       relation.owner[1] === 'warlock' &&
       relation.target.startsWith('class-feature|mystic arcanum')
-    const arcanumLevel = 6 + (relation.level - 11) / 2
-    if (
+    const arcanumGain =
       arcanum &&
-      (![11, 13, 15, 17].includes(relation.level) ||
-        JSON.stringify(
-          Object.entries(effective.spellsKnownProgressionFixedByLevel?.[relation.level] ?? {}),
-        ) !== JSON.stringify([[String(arcanumLevel), 1]]))
-    )
-      throw Error('Unsupported Arcanum schedule ' + relation.target)
-    const domains = arcanum
-      ? { 'class-arcanum': [{ level: relation.level, count: 1, spellLevel: arcanumLevel }] }
-      : classifyCastingDomains(effective)
+      casting.getFixedLevelCastingGain(effective.spellsKnownProgressionFixedByLevel, relation.level)
+    if (arcanum && !arcanumGain) throw Error('Unsupported Arcanum schedule ' + relation.target)
+    const domains = arcanum ? { 'class-arcanum': [arcanumGain] } : classifyCastingDomains(effective)
     const preparation = arcanum ? undefined : preparationFor(effective, relation)
     const suppliers = Object.fromEntries(
       [
@@ -137,6 +130,15 @@ export async function deriveClassCastingRegistry(
       parent: casting.castingParentKey(relation.owner),
       suppliers,
       domains,
+      // XPHB higher declarations omit the casting clause; their complete meaning depends on intro11.
+      ...(arcanum && relation.owner[2] === 'xphb' && relation.level > 11
+        ? {
+            requiresDeclaration: {
+              target: 'class-feature|mystic arcanum|warlock|xphb|11|xphb',
+              level: 11,
+            },
+          }
+        : {}),
       ...(preparation ? { preparation } : {}),
       ...(phbSchool ? { schools: phbSchool, unrestrictedGains: [3, 8, 14, 20] } : {}),
     }

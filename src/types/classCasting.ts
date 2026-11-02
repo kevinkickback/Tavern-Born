@@ -26,6 +26,7 @@ export type ManagedClassSpellDomain =
   | 'class-cantrip'
   | 'class-known'
   | 'class-spellbook'
+  | 'class-arcanum'
   | 'feature-cantrip'
 export type ManagedClassSpellSlot = [
   ClassSpellOwner,

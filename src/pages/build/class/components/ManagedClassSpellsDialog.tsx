@@ -18,7 +18,11 @@ import {
 } from '@/lib/calculations/spellIdentity'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import type { ManagedClassSpellRequest } from '@/lib/character/commands/managedClassSpellCommands'
-import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import {
+  getManagedClassSpellFeatureLabel,
+  managedClassSpellId,
+  managedClassSpellUniquenessGroup,
+} from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import {
   getManagedClassSpellPool,
@@ -95,17 +99,17 @@ export function ManagedClassSpellsDialog({
           !scoped.has(managedClassSpellId(choice.slot)) &&
           choice.slot[0][1] === rows[0]?.slot[0][1] &&
           choice.slot[0][2] === rows[0]?.slot[0][2] &&
-          (selected?.slot[1] === 'feature-cantrip'
-            ? choice.slot[2] === selected.slot[2]
-            : choice.slot[1] !== 'feature-cantrip'),
+          (!selected ||
+            managedClassSpellUniquenessGroup(choice.slot) ===
+              managedClassSpellUniquenessGroup(selected.slot)),
       )
       .map((choice) => choice.target.name),
     ...rows.flatMap((row, index) =>
       index !== picker &&
       row.target &&
-      (selected?.slot[1] === 'feature-cantrip'
-        ? row.slot[2] === selected.slot[2]
-        : row.slot[1] !== 'feature-cantrip')
+      (!selected ||
+        managedClassSpellUniquenessGroup(row.slot) ===
+          managedClassSpellUniquenessGroup(selected.slot))
         ? [row.target.name]
         : [],
     ),
@@ -136,9 +140,7 @@ export function ManagedClassSpellsDialog({
     }
   }
   const allowedLevels = new Set(
-    selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
-      ? ['0']
-      : Array.from({ length: pool?.maxSpellLevel ?? 0 }, (_, index) => String(index + 1)),
+    pool?.allowedLevels?.map(String) ?? (selected?.slot[1] === 'feature-cantrip' ? ['0'] : []),
   )
   return (
     <>
@@ -163,9 +165,11 @@ export function ManagedClassSpellsDialog({
                 getSpellReferenceKey(row.old.target.name, row.old.target.source) ===
                   getSpellReferenceKey(row.target.name, row.target.source)
               const kind =
-                row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
-                  ? 'Cantrip'
-                  : 'Spell'
+                row.slot[1] === 'class-arcanum'
+                  ? 'Mystic Arcanum'
+                  : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
+                    ? 'Cantrip'
+                    : 'Spell'
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
@@ -175,7 +179,10 @@ export function ManagedClassSpellsDialog({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">
-                        {featureNames.get(row.slot[2]) ?? kind} {row.slot[4] + 1}
+                        {featureNames.get(row.slot[2]) ??
+                          getManagedClassSpellFeatureLabel(row.slot) ??
+                          kind}{' '}
+                        {row.slot[4] + 1}
                       </p>
                       <p className="font-medium">
                         {row.target ? `${row.target.name} (${row.target.source})` : 'Not chosen'}

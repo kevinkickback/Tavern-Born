@@ -295,7 +295,7 @@ describe('strict numeric class spell identity and saved inverse', () => {
     expect(parse(wrongPrinting).success).toBe(false)
   })
 
-  test('every finite numeric slot has canonical encoding; Arcanum has no actor identity', () => {
+  test('every finite numeric slot, including Arcanum, has canonical encoding', () => {
     for (const row of CLASS_CASTING_PRODUCERS)
       for (const [domain, gains] of Object.entries(row.domains))
         for (const gain of gains!) {
@@ -306,9 +306,7 @@ describe('strict numeric class spell identity and saved inverse', () => {
             gain.level,
             0,
           ] as ManagedClassSpellChoice['slot']
-          expect(!!decodeManagedClassSpellId(managedClassSpellId(candidate))).toBe(
-            domain !== 'class-arcanum',
-          )
+          expect(decodeManagedClassSpellId(managedClassSpellId(candidate))).toEqual(candidate)
         }
     expect(
       decodeManagedClassSpellId(managedClassSpellId(slot).replace('%5B', '%5b')),
