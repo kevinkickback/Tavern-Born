@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { withoutSheetDescriptions } from '@/lib/pdf/characterSheetViewModel'

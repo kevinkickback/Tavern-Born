@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test, vi } from 'vitest'
 import { parseRaces } from '@/lib/5etools/parsers/races'

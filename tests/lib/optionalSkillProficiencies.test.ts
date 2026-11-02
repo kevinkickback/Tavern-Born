@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'

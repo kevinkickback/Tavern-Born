@@ -16,11 +16,8 @@ the [retained PDF sources](../scripts/pdf-sources/README.md).
 
 Preview and download use the same completed export. Changes to character data, game data, template,
 or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
-The view model uses the shared spell-state projection for profiles, fixed racial ownership, rows
-and actions. Exact restored rules data refreshes this export snapshot together; unavailable exact
-race or child data retains saved spell state. The saved character is not mutated by export.
-Independent class and special profiles retain their saved selections and preparation metadata;
-the racial rules refresh does not replace them during export.
+The view model uses the [shared spell-state projection](state-management.md#spell-state), including
+source-loss/restoration behavior. Export never mutates saved spell state or independent owners.
 
 The export page supplies the raw class-feature and optional-feature lookup catalogs through named
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and
@@ -59,7 +56,7 @@ modules only and serializes once. Omitted modules contribute no artwork, fields,
   summaries, or **Continue in notes**, unless explicitly disabled.
 - Users may include blank pages or omit populated supplements.
 
-**Customize PDF** uses a single-open accordion and bounded lists. Automatic selection prefers
+Automatic selection prefers
 equipped attacks/inventory, ready spells, active actions, and attuned/equipped magic items. Each
 group shows its capacity and supports manual selections or Automatic reset. Choices use stable
 source-qualified spell IDs or entity/action IDs. Removed IDs are ignored; an entirely stale
@@ -81,9 +78,7 @@ Description and overflow controls are independent:
   main-sheet box, plus a reference to the actual continuation page.
 
 Only overrides persist in `sheetExportPreferences.ts`, keyed by character/template; automatic
-choices are recomputed. Preferences never enter character files. **Optional Pages** contains
-checkable page names. A shared, resettable one-time hint covers both controls and dismisses when
-either opens. Zoom lives in the footer opposite attribution.
+choices are recomputed. Preferences never enter character files.
 
 ## Fitting and overflow
 

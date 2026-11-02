@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from 'vitest'
 import { OPTIONAL_NATIVE_ROOTS } from '@/lib/5etools/optionalClassNativeRules'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'

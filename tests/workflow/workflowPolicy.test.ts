@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
@@ -6,6 +7,31 @@ const readWorkflow = (name: string) =>
   readFile(resolve(process.cwd(), '.github', 'workflows', name), 'utf8')
 
 describe('trusted workflow policy', () => {
+  test.each([
+    'success',
+    'failure',
+    'cancelled',
+    'skipped',
+    '',
+    'unexpected',
+    undefined,
+  ])('required browser aggregate fails closed for result %s', async (result) => {
+    const workflow = await readWorkflow('ci.yml')
+    const aggregate = workflow.slice(workflow.indexOf('\n  e2e:'))
+    expect(aggregate).toContain('needs: [browser]')
+    expect(aggregate).toContain('always() && !github.event.pull_request.draft')
+    expect(workflow).toContain('fail-fast: false')
+    expect(workflow).not.toContain('continue-on-error')
+    const command = aggregate.match(/run: node -e "([^"]+)"/)?.[1]
+    if (!command) throw new Error('The required aggregate command is missing')
+    const env = { ...process.env }
+    delete env.BROWSER_RESULT
+    if (result !== undefined) env.BROWSER_RESULT = result
+    const child = spawnSync(process.execPath, ['-e', command], { env, encoding: 'utf8' })
+    expect(child.error).toBeUndefined()
+    expect(child.status).toBe(result === 'success' ? 0 : 1)
+  })
+
   test('runs protected CI for pull requests targeting main without a custom merge workflow', async () => {
     const workflow = await readWorkflow('ci.yml')
 
@@ -211,7 +237,7 @@ describe('trusted workflow policy', () => {
     const workflows = [ciWorkflow, releaseWorkflow]
 
     expect(workflows.every((workflow) => !workflow.includes('ubuntu-latest'))).toBe(true)
-    expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(2)
+    expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(3)
     expect(releaseWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(4)
     expect(releaseWorkflow).toContain('os: [windows-latest, macos-latest, ubuntu-26.04]')
   })

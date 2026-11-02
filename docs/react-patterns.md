@@ -1,172 +1,64 @@
-# React Patterns
+# React patterns
 
-Established conventions for React hooks and rendering in this codebase.
+Keep canonical rules in pure domain modules and writes in commands. Components coordinate
+interaction; hooks adapt stores and derive view models. See the [architecture map](architecture-map.md).
 
----
+## Stable empty-array fallbacks
 
-## Stable Empty-Array Fallbacks
+Use module-level empty arrays when a fallback participates in memo dependencies or memoized props.
+A fresh `?? []` inside a computation is harmless; a fresh dependency defeats memoization.
 
-`?? []` creates a new array reference every render. When the result is used as a `useMemo`/`useCallback` dependency or passed as a prop to a `memo`-wrapped child, the new reference defeats memoization.
+## Key prop for component reset
 
-```tsx
-// ❌ new [] every render when character.feats is undefined
-const feats = character?.feats ?? []
-const memoized = useMemo(() => compute(feats), [feats])
+Use a key when a subtree must reset its local state. Conditional unmounting already resets state;
+avoid effects and counters that duplicate that lifecycle.
 
-// ✅ same reference every render
-const EMPTY_FEATS: Feat[] = []
-const feats = character?.feats ?? EMPTY_FEATS
-const memoized = useMemo(() => compute(feats), [feats])
-```
+## Lazy useState initializers for one-time setup
 
-`?? []` inside a `useMemo`/`useCallback` body (not as a dep) is fine — it only affects the computation, not dep comparison.
+Initialize mount-local derived state with a lazy initializer. Use an effect only when later changes
+must update it, with an explicit policy for preserving entered input.
 
----
+## Large selection lists
 
-## Key Prop for Component Reset
+`SelectionModal` virtualizes the complete filtered result set with stable item IDs. Search, filters
+and virtualizer state stay local; canonical catalogs stay in `gameDataStore`. Incremental batches
+must not replace the full virtual range. Use `Number.POSITIVE_INFINITY` for an uncapped category.
 
-When a modal or subtree needs to reset its internal state on open/close, use a `key` prop — not `useEffect` + a counter.
+## Ref-based dep narrowing for trigger-only effects
 
-```tsx
-// ❌ extra render cycle, effect noise
-const [mountKey, setMountKey] = useState(0)
-useEffect(() => { if (open) setMountKey(k => k + 1) }, [open])
-<Inner key={mountKey} />
+An effect that intentionally runs only for a specific trigger may read other current values through
+refs. Name the trigger in the exhaustive-dependencies suppression and verify that unrelated store
+writes cannot retrigger a mutation loop. This is a narrow safeguard, not a general dependency escape.
 
-// ✅ React handles the reset declaratively
-<Inner key={String(open)} />
-```
+## Content page layout
 
----
+Use [workspace layouts](contracts/workspaces.md) for pane state, accessible tabs and portrait
+coordinates. Character draft and pending-write preservation belongs to the
+[store contract](state-management.md#saved-library-transactions).
 
-## Creation Wizard Dismissal
+## Feature controller hooks
 
-The character-creation wizard prevents outside pointer interactions from dismissing the dialog,
-preserving its current step and entered input. When idle, Cancel, the close button and Escape close an
-untouched wizard immediately. Remaining changes request the shared discard confirmation, with Keep
-editing initially focused. Keep editing or Escape closes only that confirmation, preserves the wizard
-and returns focus to the initiating control. Only confirmed discard resets entered information.
-
-Track original values for fields changed through the wizard update callback, including normalized
-ability-method scores. Automatic source defaults do not count as edits; no-op and fully reverted edits
-do not require confirmation. Retire a field's original when its edit is reverted so later automatic
-defaults stay pristine; a subsequent edit starts from the current value. Compare structured field
-contents and treat source-selection order as irrelevant. Successful creation resets directly;
-pending creation retains its dismissal protection.
-Automatic initialization must preserve an outstanding source edit, including an empty selection,
-through catalog refresh and discard confirmation. A no-op or fully reverted source choice still
-permits delayed default initialization.
-These behaviors belong to the wizard, rather than changing shared dialogs for other consumers.
-
----
-
-## Lazy useState Initializers for One-Time Setup
-
-When a component conditionally mounts (e.g. inside `{condition && <Modal />}`), React already resets state on unmount. Use lazy `useState` initializers instead of a `useEffect` that re-runs on every open:
-
-```tsx
-// ❌ re-initializes on mount AND on subsequent prop changes
-const [steps, setSteps] = useState<Step[]>([])
-useEffect(() => { setSteps(deriveSteps(feat)) }, [feat, open])
-
-// ✅ runs once on mount; component unmounts/remounts to reset
-const [steps, setSteps] = useState<Step[]>(() => deriveSteps(feat))
-```
-
----
-
-## Large Selection Lists
-
-`SelectionModal` virtualizes its complete filtered result set with `@tanstack/react-virtual`. Keep search, filters, and virtualizer state local to the modal, use stable item IDs for virtual row keys, and keep the canonical item arrays in `gameDataStore`. Do not replace the complete virtual range with incremental batches: the scrollbar and any result must remain available immediately.
-
-Selection cards that show a source badge place it in the upper-right card header. Use
-`Number.POSITIVE_INFINITY` for an uncapped selection category; the shared modal displays it as `∞`
-and skips the selection limit check.
-
----
-
-## Ref-Based Dep Narrowing for Trigger-Only Effects
-
-When a `useEffect` should run only when a specific trigger changes (e.g. "when the selected race key changes"), but needs access to current values of other variables, use refs to read the current values without adding them to the dep array.
-
-```tsx
-// ❌ fires on every character update (character in deps → updateCharacter writes → re-fires)
-useEffect(() => {
-  if (!character || !selectedRace || selectedSubrace) return
-  applySubraceChange(selectedRace, subraces[0])
-}, [character, selectedRace, selectedSubrace, subraces, applySubraceChange, updateCharacter])
-
-// ✅ fires only when selectedRaceKey changes
-const characterRef = useRef(character)
-characterRef.current = character
-const subracesRef = useRef(subraces)
-subracesRef.current = subraces
-
-// biome-ignore lint/correctness/useExhaustiveDependencies: selectedRaceKey is the trigger
-useEffect(() => {
-  const char = characterRef.current
-  const currentSubraces = subracesRef.current
-  if (!char || !selectedRaceKey) return
-  // ...
-}, [selectedRaceKey, applySubraceChange, updateCharacter])
-```
-
-Only suppress the Biome exhaustive-deps rule when the pattern is intentional and the suppression comment explains the trigger dep by name.
-
----
-
-## Content Page Layout
-
-Use [Workspace layouts](contracts/workspaces.md) for shared panes, responsive behavior, tabs and
-portrait coordinates. Keep canonical rules out of layout components.
-
-## Feature Controller Hooks
-
-When a route coordinates multiple independently changing domains, extract one controller hook per
-domain. A controller owns its picker/modal state, derives its view model through pure `src/lib/`
-functions, and exposes command-backed actions. Keep the route responsible for section arrangement,
-pane state, and cross-domain presentation only.
-
-`BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
-under `src/pages/build/class/hooks/`. Its generic class-choice controller also resolves normalized
-choice descriptors from the selected class and subclass into source-qualified view models while the
-pure resolver remains in `src/lib/character/classChoiceOptions.ts`. Creature and subclass-feature
-catalogs follow the same resolver path as item, feat, and optional-feature choices. Do not move
-canonical rules into a controller; rules remain pure calculations or commands.
-
-Class-choice option cards consume the resolver's type-specific presentation projection instead of
-interpreting raw 5etools entities in React. Creature facts share the Compendium's 5etools formatter;
-feature, feat, and item summaries remain data-driven and preserve source-qualified identity.
+Extract one controller per independently changing domain. Controllers own picker/modal state,
+invoke pure resolvers and expose command-backed actions; routes arrange sections and shared panes.
+`src/pages/build/class/hooks/` provides examples. Type-specific choice presentation comes from the
+resolver, preserving complete source-qualified identities rather than interpreting raw data in React.
 
 ### Subclass configuration
 
-Stable initial subclass choices appear inside the subclass-grant feature beside the selected
-subclass badge, with their own Choose/Edit buttons. Grouping uses the current variant-filtered,
-source-qualified owner and earned subclass level, a fixed complete selection-count schedule, and
-never-replaced, nonrepeatable choices. Later, cumulative or regularly changing choices retain
-independent controls. Classic Ranger's Companion is initial setup; Primal Companion changes after
-a long rest, and Storm Aura changes at class levels.
+Group only stable, initial, never-replaced nonrepeatable choices under the exact current subclass
+and earned gain. Later, cumulative or regularly changing choices remain independent. Confirmation
+may sequence missing setup through the shared modal; visits, refresh and configured reselect do not.
+Cancel preserves the subclass and reachable missing choices. Nested setup completes before the next
+picker opens. Character, owner, level, variant or catalog changes end a pending sequence.
+Readiness requires current subclass resolution; unavailable saved choices retain recovery controls.
+Do not add a saved parent/child status mirror.
 
-Explicit subclass confirmation opens missing setup through the existing shared class-choice modal,
-one configuration at a time. The class-choice controller owns confirmation and advancement; the
-shared modal keeps automatic confirmation closing as the default for its other consumers. Nested
-feat configuration finishes or dismisses before the next setup picker opens.
-Cancel leaves the subclass selected and the required choice reachable;
-Confirm advances once, even when cleared. Configured reselect, page mount and refresh do not start
-setup. Character, owner, level, variant or source-catalog changes end a pending setup sequence.
-Grouping preserves exact choice readiness links and completeness. Completion requires the selected
-subclass to resolve in current source data; catalog loss leaves the parent incomplete without
-changing its saved selection. Source-unavailable saved choices
-keep their independent recovery controls. No saved parent/child mirror or identity migration is added.
+## Rules preview manager
 
-## Rules Preview Manager
-
-Interactive 5etools content uses GameContent and the shared manager. The full chain, pin, portal,
-hover/keyboard and scrolling contracts live in [Rules previews](contracts/rules-previews.md).
-Creator race/class TraitTooltip wrappers still need qualification/consolidation; this architecture
-rule is not evidence that every current path complies.
+Interactive 5etools content uses `GameContent` and the
+[shared preview contract](contracts/rules-previews.md), which also records the creator integration limit.
 
 ## Spell presentation
 
-See [Spell selection](contracts/spell-selection.md) for class/racial casting displays, class-list
-restrictions and known-spell picker behavior. State writes follow [State Management](state-management.md#spell-state).
+Use [spell selection](contracts/spell-selection.md) for selection restrictions and
+[spell state](state-management.md#spell-state) for write ownership.

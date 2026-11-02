@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'

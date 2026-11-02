@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'

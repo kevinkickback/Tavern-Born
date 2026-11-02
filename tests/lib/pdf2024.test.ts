@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
 import { PDFDocument, PDFName, PDFTextField } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'

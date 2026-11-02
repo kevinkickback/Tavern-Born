@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { existsSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'

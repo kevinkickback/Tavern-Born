@@ -1,22 +1,31 @@
-import { resolve } from 'node:path'
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vitest/config'
+import { createRendererConfig } from './config/renderer'
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+const domTests = [
+  'tests/{hooks,store,integration}/**/*.{test,spec}.{ts,tsx}',
+  'tests/**/*.{test,spec}.tsx',
+]
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': resolve(projectRoot, 'src'),
-    },
-  },
+  ...createRendererConfig(),
   test: {
-    environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['tests/e2e/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['tests/**/*.{test,spec}.{ts,tsx}'],
+          exclude: domTests,
+        },
+      },
+      {
+        extends: true,
+        test: { name: 'dom', environment: 'jsdom', include: domTests },
+      },
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
@@ -28,9 +37,6 @@ export default defineConfig({
         functions: 57,
         lines: 63,
       },
-    },
-    alias: {
-      '@': resolve(projectRoot, 'src'),
     },
   },
 })

@@ -74,7 +74,7 @@
     },
     {
       "file": "scripts/generate-optional-class-declaration-rules.mjs",
-      "sha256": "1ffbe52d639f4abb7f1568221029aef7fd12b53f15f3d1f24915e6a982906488"
+      "sha256": "263ff51ab401852036a1abccbe8066fd334c860b7d494dd31e05a583bfaf06ed"
     },
     {
       "file": "scripts/lib/optional-class-declaration-semantics.json",
@@ -274,11 +274,11 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "8b39e0abd33c626e9b45917062bcde27e85480de4fafc647d3be8a3143e682d0"
+      "sha256": "ea54884e5505ef8337581c250ddbb718e41a54430efc2b3df392721d138d6e45"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "edf0fc867c449e7ae5eac9dc24ed41bd2584affef293085d17806edc99ee607e"
+      "sha256": "e8aa570decf9e6528c1726218818735b0fcdae549c2e04a726772ec3dff01b74"
     },
     {
       "file": "src/types/classRules.ts",

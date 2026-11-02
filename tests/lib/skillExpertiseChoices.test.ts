@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'

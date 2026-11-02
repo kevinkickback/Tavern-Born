@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'

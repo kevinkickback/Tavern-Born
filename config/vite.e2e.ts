@@ -1,20 +1,16 @@
-import { resolve } from 'node:path'
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
+import { createRendererConfig } from './renderer'
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+const renderer = createRendererConfig()
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  ...renderer,
   server: {
     // Match development: private build/review trees must not delay browser-test startup.
     watch: { ignored: ['**/.tmp/**'] },
   },
   resolve: {
-    alias: {
-      '@': resolve(projectRoot, 'src'),
-    },
+    ...renderer.resolve,
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { decodePDFRawStream, PDFArray, PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'

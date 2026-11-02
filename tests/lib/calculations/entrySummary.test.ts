@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { getClassSummary, getEntitySummary, getRaceSummary } from '@/lib/calculations/entrySummary'
 

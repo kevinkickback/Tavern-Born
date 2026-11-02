@@ -1,19 +1,17 @@
-import { resolve } from 'node:path'
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
 import electron from 'vite-plugin-electron/simple'
+import { createRendererConfig } from './config/renderer'
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+const renderer = createRendererConfig()
 
 // https://vite.dev/config/
 export default defineConfig({
+  ...renderer,
   // Required for Electron: loadFile() uses file:// — relative paths must be used
   // so all asset references resolve from the dist/ directory, not the filesystem root.
   base: './',
   plugins: [
-    react(),
-    tailwindcss(),
+    ...renderer.plugins,
     electron({
       main: {
         entry: 'electron/main.ts',
@@ -68,9 +66,7 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: {
-      '@': resolve(projectRoot, 'src'),
-    },
+    ...renderer.resolve,
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {

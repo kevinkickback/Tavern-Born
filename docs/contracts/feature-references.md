@@ -84,9 +84,7 @@ Feature wildcard/template transformations are unsupported and fail explicitly. E
 shared copy operations retain their supported semantics. External cross-file feature-copy dependencies
 and class-feature copies are outside this adapter's scope.
 
-A parsed-cache rebuild restores previously empty copied bodies; saved character format11 is unchanged.
-Restored text and nested declarations flow into the existing catalogs, Actions and PDF projections.
-Materialization does not itself implement prose-only choices or qualify complete character journeys.
+Copy materialization supplies source content, not prose-only mechanics or complete journey qualification.
 
 ## Source-backed feature options
 
@@ -102,13 +100,9 @@ Equivalent producer copies agree; conflicting, malformed, missing or filtered so
 borrow an embedded/raw fallback. Audited source uncertainty is computed after copy materialization
 and before first-match enrichment. Derived uncertainty metadata is excluded from action rule identity.
 
-Builder, readiness, retained Overview details and both PDF summaries share this resolution.
-They display the selected damage type and, once earned and source-verified, Elemental Affinity's
-conditional Charisma bonus to one damage roll and optional one-sorcery-point, one-hour resistance.
-Description-off summaries retain the selected name and verified damage type; unavailable rows
-contribute no related context. They omit conditional rule prose.
-They do not materialize an action, permanent resistance or a universal spell bonus. Fixed language,
-interaction and Draconic Resilience rules retain their existing source presentation.
+Verified ancestry selections supply their selected damage type and earned Elemental Affinity context
+through shared projections. They create no action, permanent resistance or universal spell bonus.
+Names-only summaries omit conditional prose; unavailable rows supply no related context.
 
 Missing source rules retain saved intent. Even a wholly pruned declaration produces a routed
 restore-or-remove state for an existing saved selection. The same modal permits keeping/removing
@@ -117,9 +111,8 @@ selection; opening, Cancel and unchanged confirmation preserve its saved spellin
 dirty state. Confirmation rechecks current source options. Clear/subclass removal/level rollback
 retract only this owner's intent and preserve independently owned benefits.
 
-This additive category uses character format11 and parsed cache43. Strict admission validates
-the saved tuple/category/owner/slot relation without a catalog; live rules still govern entitlement.
-Natural Explorer uses the separate literal-group boundary below; general passive automation remains outside these adapters.
+Strict admission validates saved tuple/category/owner/slot relations without a catalog; current rules
+still govern entitlement. Natural Explorer uses the separate literal-group boundary below.
 
 ## Required setup diagnostics
 
@@ -208,21 +201,11 @@ Authorized commands reconcile persisted hints; unchanged confirmation preserves 
 Dormant intent retains names and gains marked
 Inactive, with no eligible options, conditional facts, quota or recovery demand.
 
-Builder, readiness, Overview, source/availability checks and both PDF families use these boundaries.
-Unavailable grant warnings keep complete target and earned-level identity in navigation and list keys,
-including explicit enclosing declarations that earn distinct targets at the same level. A saved
-recovery replaces only its matching owner/grant/earned warning; unsaved gains remain unresolved.
-Selected summaries keep conditional Intelligence/Wisdom proficiency and the full hour-or-more
-travel qualifiers once per owner family, omitting alternative terrain names and future instructions.
-Compact exports retain selected terrain names, gains and activity. The gain 6 Favored Enemy/language
-paragraph does not become a terrain benefit. No global expertise, movement, resistance, travel state
-or action is granted; other conditional Ranger prose retains its source presentation.
-
-The shared selector handles Choose/Edit, unchanged confirmation, Cancel, per-gain Replace/Clear
-and removal-only recovery after source/class loss. Confirmation validates current source authority
-and distinctness against the latest character. Other earned gains and independent/manual grants
-survive replacement/removal. These relations remain additive within character format 12; parsed cache invalidation rebuilds
-normalization and source audits. Complete Ranger automation and legal levels 1–20 remain unqualified.
+Selected terrain summaries retain conditional INT/WIS proficiency and the hour-or-more travel
+qualifiers once per owner family. Compact exports keep names, gains and activity. The gain6
+Favored Enemy/language paragraph is not a terrain benefit. No global Expertise, movement, resistance,
+travel state or action is granted. Recovery identifies the exact owner/grant/earned gain; saved
+recovery replaces only that gain's warning. Complete Ranger automation remains unqualified.
 
 ## Canny proficiencies
 
@@ -249,18 +232,12 @@ quadrupled. Removing an independent manual owner through overlap leaves Canny or
 intact; it does not create an unowned class allowance. Clearing
 Canny retracts only its own tags and preserves independent grants and the sibling choice domain.
 
-Pure commands recheck current source authority, eligibility and quotas, then apply intent and
-owned materialization atomically. Read projections strip owned tags before recomputing effective
-benefits. Proficiency-only edits and recovery preserve unrelated features and the supplied feature
-ownership ledger instead of rebuilding other selected features. Read projections never invent manual
-ownership or write saves. Source loss or optional deactivation
-suspends Canny benefits; exact restoration reactivates retained intent. Underlying skill loss
-suspends only that expertise. Builder/readiness, skill modifiers, Languages/Sources, Review and
-both PDF families use the same effective character and provenance. Shared Choose/Edit/Cancel/Clear,
-unchanged confirmation and removal-only recovery preserve these boundaries. Canny is passive and
-introduces no action or new generic prerequisite semantics.
+The shared proficiency projection removes cached owned contributions, then derives current effective
+benefits without changing saved intent. Source/adoption loss suspends Canny; underlying skill loss
+suspends only its Expertise. Exact restoration re-evaluates it. Commands preserve unrelated feature
+ownership and independent/manual contributions. Canny adds no action or generic prerequisite semantics.
 
-These relations remain additive within character format 12. Offline admission validates the reserved identity, owner,
+Offline admission validates the reserved identity, owner,
 domain, slot, quota and bidirectional applied-tag relation while allowing unavailable intent without
 applied tags. [Parsed cache invalidation](../data-ingestion.md#cache-compatibility) rebuilds source
 normalization. Adopted TCE Roving/Tireless visibility follows the earned child activity above;
@@ -269,14 +246,8 @@ separate mechanics boundaries. Revised XPHB Deft Explorer keeps its standard sel
 
 ## Rogue Expertise and pending setup
 
-The four audited Rogue Expertise targets (PHB and XPHB, levels 1 and 6) use the existing shared modal
-and controller on Class. Proficiencies also edits the same source-owned choices through a skill's
-Expertise circle. Each gain keeps its
-own quota of two. Class shows progress and a link to underlying proficiency setup. Empty or partial
-choices can remain pending; navigation and ordinary proficiency selection never force a modal.
-Links preserve exact owner, printing, gain and choice ID. Class's proficiency reminder appears only
-while actual proficiency choices remain. Cancel and visits do not write; partial confirmation, unchanged Edit, Clear and source-unavailable
-removal preserve the existing owned-choice boundaries.
+The audited PHB/XPHB Rogue Expertise gains at levels1/6 each allocate two choices. Empty/partial
+intent remains pending; Class and Proficiencies edit the same exact owner/target/gain choices.
 
 PHB allows proficient skills and proficient thieves' tools within one shared quota. Level 6 chooses
 more proficiencies distinct from that owner's earlier gain. XPHB allows proficient skills only and
@@ -290,7 +261,7 @@ Explicit fields must agree with the UID; actual selected owner and target owner 
 Empty filtered authority, conflicting producers or changed rules fail closed. Existing Canny IDs,
 three-part named option tuples and modal flow stay compatible. PHB Rogue tools use the explicit
 `["proficiency","expertise","tool",canonicalName]` tuple. Current strict admission validates its
-owner, target, slot, quota and applied provenance. Parsed cache 47 rebuilds the adapters.
+owner, target, slot, quota and applied provenance.
 
 Class and feat choices allocate their own Expertise quotas; there is no pooled or name-inferred
 class allowance. Unregistered printings cannot allocate arbitrary choices. Independent manual or
@@ -300,26 +271,11 @@ re-evaluates it. Intentional class removal, replacement or level-down removes th
 Tools badges/details, Sources/Review and both PDF families use effective ownership. Custom 2014
 keeps narrow tool names and writes named tool expertise mechanics before defensive Extra Notes.
 
-Skills show one larger Expertise circle, filled only when effective expertise applies, independent
-of ordinary proficiency. An empty circle with one permissible add or a unique removal updates its
-actual owner immediately. Multiple actions, or any add on an already-filled circle, require an
-explicit source chooser; opening or dismissing it makes no change. Adding another source spends
-that source's allowance and leaves the circle filled. Removing one contributor preserves the others.
-Class/Feat editors reopen the same saved choices. Skills has separate proficiency and Expertise
-remaining-choice counts. Expertise counts source quotas once, subtracts retained skill/tool intent,
-and does not promise that every remaining choice has an eligible skill yet. Sources uses the same
-short source-type notes as other proficiencies (class, feat, and so on), with selected skill/tool and
-retained inactive state. The source chooser retains exact feature/feat, printing and owner/gain labels.
-Manual removal is an explicit action in that same control. Within each
-selectable Proficiencies category, unselected entries excluded from every remaining pool are muted
-while that category has choices left. Once those choices are filled, normal styling returns.
-Rows reserve a consistent leading slot for contextual choice/check/removal and granted/lock icons;
-other rows leave that slot empty instead of showing a default category icon. Skill columns have a
-small gap to keep each Expertise circle visually attached to its own skill. Empty circles are muted
-whenever no permitted action exists for that skill, including exhausted allowances and ineligible
-skills; filled circles remain visible. The one-time Expertise hint only explains clicking the
-circle to add or remove Expertise. It follows actual circle actions, including owned class and
-feat choices and manual removal, and retains its saved dismissal.
+Shared proficiency controls address the actual contributor. A unique permitted add to an empty
+circle or unique removal may commit directly; multiple contributors or any add to an already-filled
+circle require an explicit source choice. Opening or
+dismissing the chooser never writes. Removing one contributor preserves the others. Remaining-choice
+counts use source quotas and retained intent, without promising that an eligible target exists.
 
 ## Other selectable class Expertise
 
@@ -379,8 +335,7 @@ dependent Expertise in one projection; exact restoration reactivates the same sa
 class/subclass or earned-level removal clears only that owner's choices. Independent grants survive.
 The artisan pool comes from the referenced structured item group and qualified members, intersected
 with the current filtered concrete artisan-tool vocabulary. Losing the final equivalent tool printing
-suspends that tool only. Class progress, circles, commands, readiness, Review and PDF use this authority.
-If a known selected printing's required source cannot qualify before setup, Class and readiness show
+suspends that tool only. If a known selected printing's required source cannot qualify before setup, Class and readiness show
 an unverified-source warning at the certified gain. A saved recovery for that full owner/target/gain
 replaces the same warning; source absence never silently certifies the setup as complete.
 
@@ -433,7 +388,7 @@ false answer retains an empty setup record with no fallback capacity. True permi
 ordinary skill from the feature's tagged fallback pool, including an independently known skill.
 Clearing that skill retains the answer; correcting the answer removes only its former fallback.
 Filtering sources retains inactive setup, while intentional subclass/earned-level removal clears it.
-Re-earning requires a new explicit answer. This is an additive, narrowly validated format-11 relation.
+Re-earning requires a new explicit answer. This relation has narrow structural admission checks.
 
 TCE Artificer Tool Expertise doubles checks with every currently proficient concrete mundane tool.
 It grants no tool, item or selectable slot. The shared current vocabulary uses production-resolved
@@ -454,7 +409,6 @@ skill/Expertise pairs; independent tags cannot complete a missing fixed half. Au
 also require the underlying saved tool proficiency and an offline recognized name. These tags grant
 no removable choice. The shared projection applies fixed and paired foundations before dependent
 Expertise, and commands preserve genuinely preexisting manual owners before first fixed ownership.
-Class progress, circles, Sources, calculations and both sheet editions share the resulting values.
 Conditional benefits remain separate from unconditional Expertise.
 
 ### Conditional proficiency checks
