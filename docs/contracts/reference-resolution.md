@@ -109,6 +109,13 @@ options-container edges and disabled supplemental printings. Normal suppression 
 referring root, ancestor or leaf before rules are rebuilt. Missing or conflicting declarations cannot
 be replenished from another printing or retained recovery details.
 
+Ambiguous raw feature declarations retain attached descriptive details with an explicit conflict
+marker. Composition preserves that winning declaration without refilling it from another layer.
+These details cannot authorize dependency retention or reprint suppression; existing independently
+audited rule domains continue to apply their own source validation. Dependency admission validates
+the complete ancestor path, so a valid later declaration cannot authorize an invalid earlier path.
+An explicitly empty reference list remains authoritative over its representation mirrors.
+
 Subclass reprints use their short name, parent class name/printing and subclass printing. The current
 catalog must resolve that complete tuple to one actual owner before it can hide an older owner.
 Owner suppression keys remain separate from feature targets: a reprinted subclass never suppresses

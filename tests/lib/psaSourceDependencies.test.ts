@@ -128,7 +128,11 @@ function automaticLayer(mode: 'unique' | 'duplicate' | 'missing' = 'unique') {
     subclassSource: 'PHB',
     source: 'PHB',
     level: 6,
-    entries: ['As an action, recall the declared lesson.'],
+    entries: [
+      mode === 'duplicate'
+        ? 'As an action, recall this ambiguous winning declaration.'
+        : 'As an action, recall the declared lesson.',
+    ],
   }
   const parsed = parseClassDocument({
     class: [{ name: 'Cleric', source: 'XPHB', classFeatures: [] }],
@@ -168,7 +172,10 @@ test('an ambiguous automatic target cannot be refilled from an earlier layer, bu
   const ambiguous = composeGameDataLayers([base, automaticLayer('duplicate')])
   const reference = ambiguous.classes[0].subclasses![0].subclassFeatureRefs![1]
   expect(reference.sourceIdentityConflict).toBe(true)
-  expect(reference.feature).toBeUndefined()
+  expect(reference.feature?.sourceIdentityConflict).toBe(true)
+  expect(reference.feature?.entries).toEqual([
+    'As an action, recall this ambiguous winning declaration.',
+  ])
   const result = DataFilter.filterClasses(ambiguous.classes, { sources: ['XPHB', 'TCE'] })[0]
     .subclasses![0]
   expect(result.subclassFeatureRefs!.map((r) => r.name)).toEqual(['Study'])
@@ -245,4 +252,76 @@ test('a copied owner cannot hide competing raw copy bases', () => {
   const subclass = classes[0].subclasses!.find((s) => s.name === 'Study')!
   expect(subclass.sourceIdentityConflict).toBe(true)
   expect(subclass.subclassFeatureRefs).toEqual([])
+})
+
+test.each([
+  'clean',
+  'conflicting-root',
+  'valid-later-path',
+  'empty-refs',
+] as const)('automatic dependencies require their complete current ancestor path: %s', (mode) => {
+  const leafRef = 'Automatic Insight|Cleric|PHB|Study|PHB|6|PHB'
+  const root = (name: string, level: number) => ({
+    name,
+    source: 'TCE',
+    className: 'Cleric',
+    classSource: 'XPHB',
+    subclassShortName: 'Study',
+    subclassSource: 'TCE',
+    level,
+    entries: [{ type: 'refSubclassFeature', subclassFeature: leafRef }],
+  })
+  const parsed = parseClassDocument({
+    class: [{ name: 'Cleric', source: 'XPHB' }],
+    subclass: [
+      {
+        name: 'Study',
+        shortName: 'Study',
+        source: 'TCE',
+        className: 'Cleric',
+        classSource: 'XPHB',
+        subclassFeatures: [
+          'Study|Cleric|XPHB|Study|TCE|3|TCE',
+          ...(mode === 'valid-later-path' ? ['Later Study|Cleric|XPHB|Study|TCE|17|TCE'] : []),
+        ],
+      },
+    ],
+    subclassFeature: [
+      root('Study', 3),
+      root('Later Study', 17),
+      {
+        name: 'Automatic Insight',
+        source: 'PHB',
+        className: 'Cleric',
+        classSource: 'PHB',
+        subclassShortName: 'Study',
+        subclassSource: 'PHB',
+        level: 6,
+        entries: ['As an action, invoke the ancient lesson.'],
+      },
+    ],
+  })
+  const classes = parsed.classes as Class5e[]
+  const owner = classes[0].subclasses![0]
+  if (mode === 'conflicting-root' || mode === 'valid-later-path')
+    owner.subclassFeatureRefs![0].className = 'Other'
+  if (mode === 'empty-refs') owner.subclassFeatureRefs = []
+  const filtered = DataFilter.filterClasses(classes, { sources: ['XPHB', 'TCE'] })[0].subclasses![0]
+  const retained = collectUnconditionalFeatureReferences(
+    filtered.subclassFeatureRefs!,
+    'subclassFeature',
+  ).filter((row) => row.target.includes('automatic insight'))
+  expect(retained.map((row) => row.level)).toEqual(
+    mode === 'clean' ? [6] : mode === 'valid-later-path' ? [17] : [],
+  )
+  expect(retained.every((row) => !!row.reference.feature)).toBe(true)
+  if (mode !== 'clean') expect(JSON.stringify(filtered.entries)).not.toContain('Automatic Insight')
+  if (mode !== 'clean')
+    expect(
+      JSON.stringify(filtered.levelFeatures?.find((group) => group.level === 3)),
+    ).not.toContain('Automatic Insight')
+  if (mode === 'valid-later-path')
+    expect(JSON.stringify(filtered.levelFeatures?.find((group) => group.level === 17))).toContain(
+      'Automatic Insight',
+    )
 })

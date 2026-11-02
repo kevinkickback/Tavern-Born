@@ -101,6 +101,7 @@ export function createDeclarationSourceAccess<Kind extends string>(
       Object.entries(row)
         .filter(
           ([key]) =>
+            key !== 'sourceIdentityConflict' &&
             !(root && featureDerived.has(key)) &&
             !(
               key === 'feature' &&

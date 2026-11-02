@@ -99,7 +99,9 @@ function resolveSubclassFeatureRecord(
   const matches = subclassFeatureRecords
     .map(asObject)
     .filter((feature) => getSubclassFeatureIdentity(feature) === identity)
-  return matches.length > 1 ? { sourceIdentityConflict: true } : { feature: matches[0] }
+  return matches.length > 1
+    ? { feature: { ...matches[0], sourceIdentityConflict: true }, sourceIdentityConflict: true }
+    : { feature: matches[0] }
 }
 
 function parseSubclassFeatureReference(
@@ -114,11 +116,11 @@ function parseSubclassFeatureReference(
     parsedRef,
     subclassFeatureRecords,
   )
-  if (sourceIdentityConflict) return { ...parsedRef, sourceIdentityConflict }
   if (!feature) return parsedRef
 
   return {
     ...parsedRef,
+    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
     source:
       typeof feature.source === 'string' && feature.source.length > 0
         ? feature.source
@@ -377,10 +379,10 @@ function resolveInlineSubclassFeatureRef(
     parsedRef,
     subclassFeatureRecords,
   )
-  if (sourceIdentityConflict) return { ...entry, sourceIdentityConflict }
   if (!feature) return entry
   return {
     ...entry,
+    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
     feature: Array.isArray(feature.entries)
       ? {
           ...feature,

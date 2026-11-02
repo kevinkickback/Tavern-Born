@@ -15,9 +15,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
   // Shared source-dependency and exact reprint identity guards.
-  // Measured 6,284,836 B; smallest independently reviewed whole-KiB allowance.
+  // Measured 6,285,280 B; smallest independently reviewed whole-KiB allowance.
   rendererCode: 6138 * KIB,
-  // Synchronous source/owner/target authority: measured 1,092,911 B.
+  // Synchronous source/owner/target authority: measured 1,093,325 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
   initialRendererScript: 1068 * KIB,
   initialStylesheet: 185 * KIB,

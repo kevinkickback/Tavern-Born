@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { DRAGON_ANCESTOR_REF, ELEMENTAL_AFFINITY_REF } from '@/lib/5etools/featureTableOptions'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import { makeFeatureOptionFixture, selectFeatureOption } from '../../fixtures/featureOptionFixtures'
@@ -48,6 +50,18 @@ describe('audited literal source producer boundary', () => {
     expect(fixture.choice!.options).toHaveLength(10)
     const parsed = fixture.catalogs.subclassFeatures.find((row) => row.name === 'Dragon Ancestor')!
     expect(parsed.featureOptionSourceConflict).toBeUndefined()
+    const saved = selectFeatureOption(fixture)
+    const composed = composeGameDataLayers([fixture.data])
+    expect(
+      getFeatureOptionSelectionStates(
+        saved,
+        composed.classes,
+        buildClassChoiceFeatureCatalogs(composed),
+      )[0].details[0],
+    ).toMatchObject({
+      damageType: 'Fire',
+      available: true,
+    })
   })
   test.each([
     'name',
@@ -119,6 +133,10 @@ describe('audited literal source producer boundary', () => {
       (row) => row.name === 'Enclosing action',
     )!
     const nested = action.entries![1] as { feature: SubclassFeature }
+    expect(nested).toMatchObject({
+      sourceIdentityConflict: true,
+      feature: { sourceIdentityConflict: true },
+    })
     expect(nested.feature.featureOptionSourceConflict).toBe(true)
     const cls = (parsed.classes as Class5e[]).find((row) => row.source === 'PHB')!
     expect(
@@ -131,6 +149,8 @@ describe('audited literal source producer boundary', () => {
     )
     const cleared = structuredClone(action.entries!)
     delete (cleared[1] as { feature: SubclassFeature }).feature.featureOptionSourceConflict
+    delete (cleared[1] as { sourceIdentityConflict?: true }).sourceIdentityConflict
+    delete (cleared[1] as { feature: SubclassFeature }).feature.sourceIdentityConflict
     expect(
       getFeatureActionGroupId(
         'Sorcerer|PHB',

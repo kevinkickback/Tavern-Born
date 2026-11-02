@@ -202,6 +202,7 @@ function pruneNestedSubclassFeatureRecords(
 
   const record = value as Record<string, unknown>
   let nestedSource = fallbackSource
+  let dependencyPath = unconditional
   if (record.type === 'refSubclassFeature') {
     const identity = subclassFeatureIdentity(
       record as unknown as SubclassFeatureReference,
@@ -217,6 +218,7 @@ function pruneNestedSubclassFeatureRecords(
       )
     )
       return removedNestedSubclassFeature
+    dependencyPath &&= !!identity.dependencyTarget
   }
 
   const filteredEntries = Object.entries(record).flatMap(([key, entry]) => {
@@ -224,7 +226,7 @@ function pruneNestedSubclassFeatureRecords(
       entry,
       include,
       nestedSource,
-      unconditional && record.type !== 'options',
+      dependencyPath && record.type !== 'options',
     )
     return filtered === removedNestedSubclassFeature ? [] : [[key, filtered] as const]
   })
@@ -235,9 +237,15 @@ function pruneNestedSubclassFeatures(
   feature: SubclassFeature,
   include: SubclassFeatureInclusion,
   fallbackSource: string,
+  dependencyPath: boolean,
 ): SubclassFeature {
   if (feature.entries === undefined) return feature
-  const entries = pruneNestedSubclassFeatureRecords(feature.entries, include, fallbackSource)
+  const entries = pruneNestedSubclassFeatureRecords(
+    feature.entries,
+    include,
+    fallbackSource,
+    dependencyPath,
+  )
   return {
     ...feature,
     entries: entries === removedNestedSubclassFeature ? [] : (entries as unknown[]),
@@ -248,31 +256,51 @@ function filterSubclassContent(
   subclass: Subclass5e,
   include: SubclassFeatureInclusion,
 ): Pick<Subclass5e, 'subclassFeatures' | 'subclassFeatureRefs' | 'levelFeatures'> {
-  const prune = (feature: SubclassFeature) =>
+  const directTargets = subclass.subclassFeatureRefs
+    ? new Set(
+        subclass.subclassFeatureRefs.flatMap((reference) => {
+          const identity = subclassFeatureIdentity(reference, subclass.source)
+          return reference.feature && identity.dependencyTarget ? [identity.dependencyTarget] : []
+        }),
+      )
+    : undefined
+  const directDependency = (target: string | undefined) =>
+    !!target && (!directTargets || directTargets.has(target))
+  const prune = (feature: SubclassFeature, dependencyPath: boolean) =>
     pruneNestedSubclassFeatures(
       feature,
       include,
       subclassFeatureIdentity(feature, subclass.source).source,
+      dependencyPath,
     )
   const subclassFeatures = subclass.subclassFeatures?.flatMap((feature) => {
     const identity = subclassFeatureIdentity(feature, subclass.source)
-    if (!include(identity.name, identity.source, identity.target, identity.dependencyTarget))
-      return []
-    return [typeof feature === 'string' ? feature : prune(feature)]
+    const dependencyTarget = directDependency(identity.dependencyTarget)
+      ? identity.dependencyTarget
+      : undefined
+    if (!include(identity.name, identity.source, identity.target, dependencyTarget)) return []
+    return [typeof feature === 'string' ? feature : prune(feature, !!dependencyTarget)]
   }) as typeof subclass.subclassFeatures
   const subclassFeatureRefs = subclass.subclassFeatureRefs?.flatMap((reference) => {
     const identity = subclassFeatureIdentity(reference, subclass.source)
     if (!include(identity.name, identity.source, identity.target, identity.dependencyTarget))
       return []
-    return [reference.feature ? { ...reference, feature: prune(reference.feature) } : reference]
+    return [
+      reference.feature
+        ? { ...reference, feature: prune(reference.feature, !!identity.dependencyTarget) }
+        : reference,
+    ]
   })
   const levelFeatures = subclass.levelFeatures
     ?.map((group) => ({
       ...group,
       features: group.features.flatMap((feature) => {
         const identity = subclassFeatureIdentity(feature, subclass.source)
-        return include(identity.name, identity.source, identity.target, identity.dependencyTarget)
-          ? [prune(feature)]
+        const dependencyTarget = directDependency(identity.dependencyTarget)
+          ? identity.dependencyTarget
+          : undefined
+        return include(identity.name, identity.source, identity.target, dependencyTarget)
+          ? [prune(feature, !!dependencyTarget)]
           : []
       }),
     }))
@@ -351,17 +379,15 @@ function rebuildFilteredClassRules(classData: Class5e, originalClassData: Class5
         0,
       ) ?? 0) !==
         (subclass.levelFeatures?.reduce((total, group) => total + group.features.length, 0) ?? 0)
+    const hasReferenceDeclarations = originalSubclass?.subclassFeatureRefs !== undefined
     const shouldRebuild =
-      (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0 ||
-      originalDirectRefs.length > 0 ||
-      directContentWasFiltered
-    const featureRefs =
-      (originalSubclass?.subclassFeatureRefs?.length ?? 0) > 0
-        ? (subclass.subclassFeatureRefs ?? [])
-        : filteredDirectRefs
+      hasReferenceDeclarations || originalDirectRefs.length > 0 || directContentWasFiltered
+    const featureRefs = hasReferenceDeclarations
+      ? (subclass.subclassFeatureRefs ?? [])
+      : filteredDirectRefs
     return {
       ...subclass,
-      entries: originalSubclass?.subclassFeatureRefs?.length
+      entries: hasReferenceDeclarations
         ? getSubclassIntroEntries(subclass, subclass.subclassFeatureRefs ?? [])
         : subclass.entries,
       normalizedRules: shouldRebuild
@@ -557,8 +583,15 @@ export class DataFilter {
               subclass.sourceIdentityConflict !== true
                 ? new Set(
                     collectUnconditionalFeatureReferences(
-                      subclass.subclassFeatureRefs ??
-                        directSubclassFeatureReferences(cls, subclass),
+                      filterSubclassContent(
+                        {
+                          ...subclass,
+                          subclassFeatureRefs:
+                            subclass.subclassFeatureRefs ??
+                            directSubclassFeatureReferences(cls, subclass),
+                        },
+                        (_name, _source, _target, dependencyTarget) => !!dependencyTarget,
+                      ).subclassFeatureRefs ?? [],
                       'subclassFeature',
                     )
                       .filter(

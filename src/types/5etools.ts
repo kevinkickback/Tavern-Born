@@ -202,7 +202,7 @@ export interface SubclassFeature {
 }
 
 export interface SubclassFeatureReference {
-  /** Exact target was ambiguous, rather than absent; composition must not refill it. */
+  /** Exact target was ambiguous; attached details do not authorize dependency retention. */
   sourceIdentityConflict?: true
   ref: string
   name: string
