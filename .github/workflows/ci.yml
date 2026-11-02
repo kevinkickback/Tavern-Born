@@ -1,4 +1,4 @@
-name: CI
+name: Pull request checks
 
 on:
   pull_request:
@@ -13,9 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Lint, type-check, coverage, and build
+  changes:
+    name: PR scope checks
     if: '!github.event.pull_request.draft'
+    runs-on: ubuntu-26.04
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Classify the complete pull request
+        id: scope
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci/classify-pr.ts
+      - name: Check documentation
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci/check-docs.ts
+
+  code:
+    name: Code checks & build
+    needs: [changes]
+    if: needs.changes.outputs.mode == 'code'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -30,16 +57,77 @@ jobs:
         run: npm run check:health
       - name: Lint
         run: npx biome ci .
-      - name: Type-check
-        run: npx tsc -b
-      - name: Build
+      - name: Type-check and build
         run: npm run build
       - name: Enforce bundle budgets
         run: npm run check:bundle
-      - name: Test with coverage thresholds
-        run: npm run test:coverage
-      - name: Upload coverage report
+
+  coverage:
+    name: Coverage tests (part ${{ matrix.part }} of 2)
+    needs: [changes]
+    if: needs.changes.outputs.mode == 'code'
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Collect coverage for this part
+        run: npm run test:coverage -- --config config/vitest.coverage-shard.ts --shard=${{ matrix.part }}/2 --reporter=default --reporter=blob --outputFile.blob=reports/vitest/blob-${{ matrix.part }}.json
+      - name: Preserve coverage evidence
         if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-part-${{ matrix.part }}
+          path: reports/vitest/blob-${{ matrix.part }}.json
+          if-no-files-found: error
+
+  quality:
+    name: Code checks, build & coverage
+    if: ${{ always() && !github.event.pull_request.draft }}
+    needs: [changes, code, coverage]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: ${{ needs.changes.outputs.mode == 'code' && 'npm' || '' }}
+      - name: Require appropriate code checks
+        env:
+          NEEDS_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/ci/check-results.ts quality
+      - run: npm ci
+        if: needs.changes.outputs.mode == 'code'
+      - name: Collect both coverage reports
+        if: needs.changes.outputs.mode == 'code'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: coverage-part-*
+          path: reports/vitest
+          merge-multiple: true
+      - name: Verify coverage artifacts before reading
+        if: needs.changes.outputs.mode == 'code'
+        env:
+          COVERAGE_PARTS: '2'
+        run: node scripts/ci/coverage-guard.ts reports/vitest
+      - name: Merge coverage and enforce thresholds
+        if: needs.changes.outputs.mode == 'code'
+        env:
+          COVERAGE_PARTS: '2'
+        run: npx vitest run --config vitest.config.ts --merge-reports=reports/vitest --coverage --reporter=default --reporter=./scripts/ci/coverage-guard.ts
+      - name: Upload coverage report
+        if: ${{ always() && needs.changes.outputs.mode == 'code' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-report
@@ -47,10 +135,15 @@ jobs:
           if-no-files-found: ignore
           overwrite: true
 
-  e2e:
-    name: Browser end-to-end tests
-    if: '!github.event.pull_request.draft'
+  browser:
+    name: Browser tests (part ${{ matrix.part }} of 2)
+    needs: [changes]
+    if: needs.changes.outputs.mode == 'code'
     runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -63,18 +156,37 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run end-to-end tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.part }}/2
       - name: Build desktop application
+        if: matrix.part == 1
         run: npm run build
       - name: Run Electron smoke test
+        if: matrix.part == 1
         run: xvfb-run --auto-servernum npm run test:electron
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: playwright-report
+          name: playwright-report-part-${{ matrix.part }}
           path: |
             playwright-report
             test-results
           if-no-files-found: ignore
           overwrite: true
+
+  e2e:
+    name: Browser & desktop checks
+    if: ${{ always() && !github.event.pull_request.draft }}
+    needs: [changes, browser]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Require appropriate browser checks
+        env:
+          NEEDS_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/ci/check-results.ts browser

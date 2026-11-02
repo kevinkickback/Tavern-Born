@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
@@ -6,6 +7,35 @@ const readWorkflow = (name: string) =>
   readFile(resolve(process.cwd(), '.github', 'workflows', name), 'utf8')
 
 describe('trusted workflow policy', () => {
+  test.each([
+    'success',
+    'failure',
+    'cancelled',
+    'skipped',
+    '',
+    'unexpected',
+    undefined,
+  ])('required browser aggregate fails closed for result %s', async (result) => {
+    const workflow = await readWorkflow('ci.yml')
+    const aggregate = workflow.slice(workflow.indexOf('\n  e2e:'))
+    expect(aggregate).toContain('needs: [changes, browser]')
+    expect(aggregate).toContain('always() && !github.event.pull_request.draft')
+    expect(workflow).toContain('fail-fast: false')
+    expect(workflow).not.toContain('continue-on-error')
+    expect(aggregate).toContain('run: node scripts/ci/check-results.ts browser')
+    const env = { ...process.env }
+    env.NEEDS_RESULTS = JSON.stringify({
+      changes: { result: 'success', outputs: { mode: 'code' } },
+      browser: { result },
+    })
+    const child = spawnSync(process.execPath, ['scripts/ci/check-results.ts', 'browser'], {
+      env,
+      encoding: 'utf8',
+    })
+    expect(child.error).toBeUndefined()
+    expect(child.status).toBe(result === 'success' ? 0 : 1)
+  })
+
   test('runs protected CI for pull requests targeting main without a custom merge workflow', async () => {
     const workflow = await readWorkflow('ci.yml')
 
@@ -13,14 +43,14 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('branches: [main]')
     expect(workflow).not.toContain('branches: [dev, main]')
     expect(workflow).toContain("if: '!github.event.pull_request.draft'")
-    expect(workflow).toContain('name: Lint, type-check, coverage, and build')
-    expect(workflow).toContain('name: Browser end-to-end tests')
+    expect(workflow).toContain('name: Code checks, build & coverage')
+    expect(workflow).toContain('name: Browser & desktop checks')
     expect(workflow).toContain(
       ['group: ci-pr-$', '{{ github.event.pull_request.number }}'].join(''),
     )
     expect(workflow).toContain('cancel-in-progress: true')
     const bundleIndex = workflow.indexOf('name: Enforce bundle budgets')
-    const coverageIndex = workflow.indexOf('name: Test with coverage thresholds')
+    const coverageIndex = workflow.indexOf('name: Merge coverage and enforce thresholds')
     expect(bundleIndex).toBeGreaterThanOrEqual(0)
     expect(coverageIndex).toBeGreaterThanOrEqual(0)
     expect(bundleIndex).toBeLessThan(coverageIndex)
@@ -211,7 +241,7 @@ describe('trusted workflow policy', () => {
     const workflows = [ciWorkflow, releaseWorkflow]
 
     expect(workflows.every((workflow) => !workflow.includes('ubuntu-latest'))).toBe(true)
-    expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(2)
+    expect(ciWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(6)
     expect(releaseWorkflow.match(/runs-on: ubuntu-26\.04/g)).toHaveLength(4)
     expect(releaseWorkflow).toContain('os: [windows-latest, macos-latest, ubuntu-26.04]')
   })

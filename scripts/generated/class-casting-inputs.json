@@ -155,7 +155,7 @@
     },
     {
       "file": "scripts/generate-class-casting-rules.mjs",
-      "sha256": "98a1930282a73dff8dfe2c0b50e492152af4d1c856acae0881bdf55954d7a620"
+      "sha256": "cde9bfa0bae005057bb3b83ec8721074349ddb4fe5000f9ac4ee98453297d6c3"
     },
     {
       "file": "scripts/lib/class-casting-semantics.json",

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from 'vitest'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildClassLookup } from '@/lib/5etools/lookups'

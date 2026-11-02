@@ -75,23 +75,11 @@ features/actions retain their own identity; source/name-wide filtering cannot re
 unsupported prerequisite conditions remain unsupported. Adoption does not certify unrelated runtime
 movement, resources, combat, companion scaling or complete class progression mechanics.
 
-The Class selector pane keeps the viewed class icon, level and selected subclass above its scrolling
-level list;
-the multiclass switcher remains in its pane header. Each level shows its feature count and pending
-selection count, or “All choices made” with a checkmark when complete. Exclusive standard/optional
-replacements have a separate tab group per declared
-owner/family/gain. Selecting a tab records that adoption through the shared command; keyboard focus
-alone does not select it. Tabs display the feature name and selected checkmark. Only the active side's
-current setup appears inside its panel. Additional features retain independent checkboxes on selectable
-surfaces. The checkbox alone changes adoption; the separate feature-name area opens current source-backed
-details without toggling it, including before adoption. Details require the exact offered addition's
-owner, target and earned level, and disappear when that source or eligibility is lost. Do not repeat the
-plain addition below its card; retain genuine setup choices and diagnostics. Setup cards and ordinary
-feature-name buttons open the rules inspector without duplicate
-View links. Class choice modal summaries use readable option labels while retaining canonical saved
-references; concise expertise hints preserve each feature's allowance and coupled benefits.
-Full declared identities associate displayed features with
-their group; matching names alone cannot move setup between owners or replacement families.
+Inspection never adopts a feature: only an explicit adoption action commits it. Focus alone cannot
+select a replacement. Details require the exact current offered owner, target and earned level.
+Displayed grouping uses complete declared identities; matching names cannot move setup across owners
+or families. The subclass parent's setup completeness survives grouping.
+
 Normalized setup uses its actual owner type to decode the declaring feature UID, including legacy
 subclass filter rows carrying a class-reference field prefix. Recognized malformed declarations or
 explicit name/source/gain conflicts cannot fall back to a generic earned choice. Copied feature

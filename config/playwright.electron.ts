@@ -1,7 +1,8 @@
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
-  testDir: './tests/electron-smoke',
+  testDir: '../tests/electron-smoke',
+  outputDir: '../test-results/electron',
   testMatch: '**/*.ts',
   forbidOnly: !!process.env.CI,
   retries: 0,

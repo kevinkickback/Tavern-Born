@@ -9,7 +9,7 @@ are not carried forward through breaking changes while preparing for 1.0. Older 
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.
 Current output is normalized by `characterPersistenceSchema` before persistence.
 
-Format12 replaces ordinary numeric class spell selections with `managedClassSpellChoices` and a
+Numeric class spell intent uses `managedClassSpellChoices` and a
 monotonic `managedClassSpellRevision` allocator. Each choice has its actual class/subclass owner,
 domain, exact casting declaration, earned class level and ordinal; it saves an exact target printing,
 positive revision, class-list policy and optional learned preparation request. It saves no applied
@@ -19,9 +19,7 @@ duplicate spell/slot identities, counters and preparation relationships reject w
 An intent may have no materialized profile membership or reserved tag while its source is unavailable.
 A learned preparation request may remain saved without a prepared member when capacity or source
 access is suspended. Materialized numeric rows and reserved tags must still own each other exactly.
-An admitted relation establishes saved ownership, never current source access. Older numeric profile
-rows, inferred attribution and `spellSwaps` are not converted or accepted. Format11 files must be
-recreated, as with other prerelease breaking changes. See [class spell selection](spell-selection.md).
+An admitted relation establishes saved ownership, never current source access. Inferred numeric ownership and `spellSwaps` are not accepted. See [class spell selection](spell-selection.md).
 The additive `optionalClassFeatureAdoptions` collection binds the actual full class/subclass owner,
 complete reviewed target and enclosing earned gain. Strict admission rejects unknown roots, children
 as roots, duplicate identities and conflicting families. Absence is unselected; no adoption or
@@ -45,15 +43,13 @@ Discontinued subclass-specific flags and unknown settings are rejected, includin
 with current settings; they are not converted or silently discarded. Current optional defaults
 are unchanged, and unsupported library records retain their original exportable contents.
 
-The current format retains canonical owned action IDs, exact manual/PDF selection matching, and no earlier-ID
-compatibility. Schema 8 prerelease saves are rejected by the version cutoff; no ID conversion is
-performed. See [automatic feature actions](../provenance.md#automatic-feature-actions).
+Owned actions require canonical exact IDs; there are no earlier-ID conversion aliases.
+See [automatic feature actions](../provenance.md#automatic-feature-actions).
 
 The current schema also requires independent ordinary/bonus feat setup ownership and a complete relation between
 saved options, owned benefits and materialized proficiencies/spells. One printing may appear once in
 each collection; duplicate printings in one collection, unqualified setup tags, orphan ownership and
-missing/contradictory benefits reject without loaded rules. Schema 7's shared selected-copy owner
-cannot establish this relation by relabeling its version; recreate those prerelease characters.
+missing/contradictory benefits reject without loaded rules.
 See [feat ownership](../provenance.md#feat-setup-ownership) for the command contract.
 
 Configured racial/background feat choices also require a saved printing, and their setup benefit
@@ -65,7 +61,7 @@ child. Every racial provenance tag and choice belongs to that selection; a child
 Racial ability choices use canonical encoded full owner references and dense numeric block ordinals
 within each represented owner. Array order does not change block identity; integer amounts are
 explicit, and selections/status agree with the bounded saved player slots. Ambiguous or incoherent
-records are rejected rather than repaired. Schema 4 did not validate those block associations.
+records are rejected rather than repaired.
 Revised (2024) origin saves contain no racial ability grants or choice blocks; independent
 background, class and manual ability ownership remains supported.
 Racial spell profiles persist player suite/ability/target setup and a typed current applied snapshot.
@@ -98,28 +94,16 @@ state preserves references, timestamps and save state after strict admission; di
 for explicit Save, while clean corrections become durable only after acknowledgment. Immutable views
 and PDF do not write inactive library entries. New native suite/ability/target setup needs complete
 live owner rules; established missing targets and offline Clear retain the saved-snapshot contract.
-The Spells page keeps suite, casting-ability and target controls in its Racial view, including before
-any target is selected. Fixed suites without setup choices have no extra status-only card. The right
-casting summary remains read-only; opening or switching views never mutates the character.
-
 Matching current-format saves are supported regardless of age, and new 2014/2024 characters are both
-supported. Schema 2–10 characters must be recreated; merely relabeling a version cannot establish
-native ownership. Incompatible originals remain untouched in durable quarantine and exportable
-through hydration, rejected imports in either order, retry and later successful library writes.
-There are no prerelease converters, flattened-profile adapters or age-based rejection.
+supported. Incompatible originals remain untouched in durable exportable quarantine through hydration,
+rejected imports, retry and later successful library writes. Relabeling a version cannot establish
+ownership. There are no prerelease converters, flattened-profile adapters or age-based rejection.
 
-Schema 10 rejects duplicate special targets within or across kind lists and mismatched fixed
-membership/nonmanual special grants without loading catalogs. It adds no per-owner historical kind
-or conversion. Format 9 originals remain untouched and exportable through the same quarantine and
-recovery paths; changing their version alone cannot legalize contradictory memberships.
-
-Format 11 requires an exact selected-context racial defense snapshot whenever a race is selected,
-including empty fixed-grant arrays with explicit parent/child field ownership. Empty unselected
-drafts carry no snapshot. Strict admission rejects foreign/orphan contexts, malformed or duplicate
-targets, duplicate manual effect IDs, and manual IDs in the reserved racial-defense namespace.
-The old unowned `damageResistances`, `damageImmunities` and `conditionImmunities` fields are rejected,
-including after version relabeling. Format 10 originals remain untouched and exportable through the
-existing quarantine/recovery flow; there is no migration or historical ownership inference.
+Special profiles reject duplicate targets within/across kind lists and mismatched nonmanual
+materialization without requiring catalogs. Selecting a race requires an exact selected-context
+`racialDefenses` snapshot, including empty grants with explicit parent/child field ownership.
+Unselected drafts carry none. Foreign/orphan contexts, duplicate targets/manual effect IDs, reserved
+racial-defense manual IDs and unowned defense arrays reject without historical ownership inference.
 
 For a breaking change, update together:
 

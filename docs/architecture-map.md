@@ -68,14 +68,7 @@ corrections and must preserve dirty-draft behavior.
 
 ### Spellcasting
 
-- `useSpellSlots` is read-only derived state.
-- `useSpellProfileMutations` owns profile add/remove/prepare/racial-choice writes and commits spell
-  state with provenance atomically.
-- `useSpellProvenanceMutations` owns class-page per-level selection and replacement commands.
-- Native racial profiles, typed applied targets and their exact provenance are evaluated together
-  by the pure native spell module; owner-local controls remain separate from granted rows.
-- Shared effect-aware casting numbers serve both UI and PDF. Class limits and shared/Pact slot
-  maxima remain class-specific; racial casting adds neither fake class levels nor slot pools.
+See [spell state](state-management.md#spell-state) for intent, derived casting and mutation adapters.
 
 ### Parsed game data
 
@@ -89,9 +82,8 @@ exception into another resolver. See [Reference resolution](contracts/reference-
 User-facing 5etools content goes through `GameContent`, which provides sanitization and source-aware
 recursive previews. PDFs and compact noninteractive projections may use the lower-level string
 renderer explicitly. Preview positioning and the shared pinned/transient chain belong to
-RulesPreviewManager and
-Floating UI helpers. Creator TraitTooltip wrappers still provide an independent outer shell;
-[shared integration](contracts/rules-previews.md) is required and not yet qualified across all paths.
+RulesPreviewManager and Floating UI helpers. The [preview contract](contracts/rules-previews.md)
+records current creator integration limits.
 
 ### Assets and responsive workspaces
 
@@ -102,19 +94,10 @@ centered width convention; `SplitPane` owns compact one-pane behavior and deskto
 
 ## Current high-level flows
 
-- Character creation composes the same race, class, and background commands used by edit pages.
-- Class changes retract unavailable choices, ASIs, spell grants, and replacement events atomically.
-- Level changes reconcile those grants in a class command, then calculate effective maximum HP
-  from the projected character and its resolved game data before refilling or clamping current HP.
-- HP and AC are live derivations plus explicit adjustments/overrides; their header modals do not
-  take ownership of class progression or equipment.
-- Character actions and effects are view-neutral projections shared by Review, Builder, and PDF.
-- Character duplicate/export/import operates on complete current-format records.
-- The Compendium is an editorial entity index, not an index of every repeated class-feature
-  definition. It includes canonical creature stat blocks and context-qualified subclass features so
-  character-option references can be browsed independently of the builder. Creature field ordering
-  and section semantics are adapted from the upstream 5etools bestiary renderer into a pure view
-  model under `src/lib/5etools/`; React owns only Tavern Born's presentation.
+[Data flow](data-flow.md) owns startup, domain mutation, draft/save and update sequences.
+The Compendium indexes editorial entities, including canonical creatures and context-qualified
+subclass features, rather than every repeated feature definition. Its creature model adapts the
+upstream 5etools bestiary renderer; React owns presentation.
 
 ## Dependency guardrails
 

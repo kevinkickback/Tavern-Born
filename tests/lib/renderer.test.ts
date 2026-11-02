@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { renderEntriesToText } from '@/lib/entryText'
 import { renderEntry } from '@/lib/renderer'

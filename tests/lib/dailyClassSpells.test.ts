@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'

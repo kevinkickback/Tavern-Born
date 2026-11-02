@@ -26,7 +26,7 @@ const pilot = JSON.parse(
   fs.readFileSync('src/lib/5etools/optionalClassFeatureRules.generated.json', 'utf8'),
 )
 const server = await createServer({
-  configFile: 'vite.config.e2e.ts',
+  configFile: 'config/vite.e2e.ts',
   server: { middlewareMode: true, watch: null },
   appType: 'custom',
   logLevel: 'silent',

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getProficiencyCheckNoteRows } from '@/lib/calculations/proficiencyCheckNotes'

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'

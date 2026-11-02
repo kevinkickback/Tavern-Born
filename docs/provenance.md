@@ -110,26 +110,9 @@ Starting packages and manual inventory/proficiency changes use equipment command
 identity, chosen concrete generic item, inventory record, currency, and ledger change atomically.
 Replacing a background package removes its prior items/currency before applying the new package.
 
-## Invariants
+## Verification
 
-- No orphaned materialized grant after its final owner is removed.
-- No lost value while another source still owns it.
-- No separate component-level provenance patch after a domain mutation.
-- Every automatic grant has an explainable source label.
-- Every reversible choice has stable owner metadata.
-- Unknown/ambiguous parser input remains diagnostic rather than becoming a grant.
-
-## Testing
-
-Test pure commands first. Cover:
-
-- initial grant;
-- replacement/source change;
-- removal and level-down;
-- overlapping owners;
-- manual-grant preservation;
-- atomic materialized + ledger output;
-- source-qualified identity collisions.
-
-Use hook integration tests only for adapter/store behavior or cross-domain composition. Avoid tests
-that mutate the ledger separately from the materialized state; that is not a supported workflow.
+Test pure commands for initial, replacement/removal and overlapping owners, including manual grants
+and exact source collisions. Assert materialization and ledger together. Hook tests protect adapter
+or cross-domain boundaries, never unsupported separate ledger writes. Every grant needs an
+explainable owner; ambiguous parser input remains diagnostic.

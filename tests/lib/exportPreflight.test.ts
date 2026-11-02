@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { buildRaceLookup } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers'

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { decodePDFRawStream, PDFDocument, PDFRawStream } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { getProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'

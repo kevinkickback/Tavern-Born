@@ -21,7 +21,7 @@ const seed = JSON.parse(
   fs.readFileSync('scripts/lib/optional-class-declaration-semantics.json', 'utf8'),
 )
 const server = await createServer({
-  configFile: 'vite.config.e2e.ts',
+  configFile: 'config/vite.e2e.ts',
   server: { middlewareMode: true, watch: null },
   appType: 'custom',
   logLevel: 'silent',

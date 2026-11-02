@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { afterEach, expect, test } from 'vitest'

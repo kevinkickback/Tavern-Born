@@ -45,7 +45,7 @@ const format = (file, source) =>
 // Ordinary generation verifies the separately reviewed finite meaning; it never refreshes this seed.
 const seed = JSON.parse(fs.readFileSync('scripts/lib/class-casting-semantics.json', 'utf8'))
 const server = await createServer({
-  configFile: 'vite.config.e2e.ts',
+  configFile: 'config/vite.e2e.ts',
   server: { middlewareMode: true, watch: null },
   appType: 'custom',
   logLevel: 'silent',

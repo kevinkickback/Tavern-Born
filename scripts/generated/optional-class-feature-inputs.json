@@ -74,7 +74,7 @@
   "helpers": [
     {
       "file": "scripts/generate-optional-class-feature-rules.mjs",
-      "sha256": "b465a5c7893cf37bf027ca947f004af94c0b282a9c08a1934a91dfa6f0b3d4c6"
+      "sha256": "807497088adae387fddfe70705d3001d712c0a9614166f2794e0ebd26c04f6eb"
     },
     {
       "file": "scripts/lib/optional-class-feature-source.mjs",

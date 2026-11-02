@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { PDFDict, PDFDocument, PDFDropdown, PDFName, PDFTextField } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'

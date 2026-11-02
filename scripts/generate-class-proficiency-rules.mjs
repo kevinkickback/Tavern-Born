@@ -45,7 +45,7 @@ validateExpertiseRule(rules)
 const book = read('book/book-xphb.json')
 const languages = deriveLanguagePool(book)
 const server = await createServer({
-  configFile: 'vite.config.e2e.ts',
+  configFile: 'config/vite.e2e.ts',
   server: { middlewareMode: true, watch: null },
   appType: 'custom',
   logLevel: 'silent',

@@ -9,9 +9,7 @@ Entry points: useDataInit, gameDataStore, dataLoader and dataCache.
 1. IndexedDB hydrates preferences and lightweight source configuration. Theme bootstrap applies
    local-storage colors before React paints and reconciles them after hydration.
 2. The immutable Included SRD is always the base. One authorized local folder or HTTPS root may
-   supply additional content. First successful bundled load offers a one-time welcome; continuing
-   needs no external setup. Add/Change Additional Content opens the existing chooser, whose Back
-   action returns to the introduction without acknowledging it.
+   add content; no external setup is required.
 3. A usable parsed cache supplies initial data. Required startup refresh keeps the startup overlay
    active until success/failure; editing cannot begin against a catalog awaiting replacement.
    Hydration, cache, connection and resource progress remain distinct. Later Settings refreshes are modeless.
@@ -30,8 +28,7 @@ cache before Chromium startup to avoid stale Vite chunks, and Vite excludes .tmp
 Packaged apps retain normal HTTP caching. Source/assets/Electron watching remains active.
 
 See [Ingestion](data-ingestion.md) for transport capabilities, required/optional resources, layering
-and cache admission. The Included SRD summary presents SRD document versions, rules and offline
-availability; internal cache/pack metadata stays out of that user flow.
+and cache admission.
 
 ## Character draft and save
 
@@ -49,13 +46,12 @@ Entry point: [characterStore](../src/store/characterStore.ts).
    Draft edits and character selection do not rewrite the saved library.
 
 Electron receives unsaved state and requests confirmation before close. Preferences/layout do not
-contribute to character dirty state. The preload close subscription forwards no Electron event or
-payload and returns a cleanup function for its exact listener. The close dialog uses that function
-when unmounting, matching the other event-only preload subscriptions.
+make characters dirty. Event-only preload subscriptions expose no native payload and return cleanup
+for their exact listener; consumers must unsubscribe on unmount.
 
 See [State Management](state-management.md#saved-library-transactions) for hydration, overlapping
-saves, reload ordering, failure/retry and quarantine acknowledgement. Unfinished-input dismissal
-before creation is a separate open requirement from protection during a pending write.
+saves, reload ordering, failure/retry and quarantine acknowledgement. Before submission, the creation
+wizard confirms discarding remaining edits; pending creation also preserves input and blocks dismissal.
 
 ## Domain mutation and derived values
 
@@ -78,7 +74,6 @@ intentional spell choices and their ownership without retracting independent/fix
 
 Core PHB/XPHB is implicit. Bundled public items stay available under the shared player-item policy;
 DMG/MM/XDMG/XMM provenance does not enable those full books or create selectable sourcebook choices.
-Bundled-only selection surfaces hide source counts and direct additional-content setup to Settings.
 See [Ruleset compatibility](contracts/reference-resolution.md#ruleset-compatibility),
 [Source removal](contracts/reference-resolution.md#source-removal) and [Native racial spells](contracts/racial-ownership.md#native-racial-spells)
 for exact source/printing removal, owner-specific pruning and restoration behavior. Other source
@@ -86,10 +81,8 @@ conflicts are reported rather than silently rewritten.
 
 ## Rules content and previews
 
-GameContent renders supported structured entries as sanitized interactive content with source-aware
-recursive lookup. RulesPreviewManager owns its shared pinned/transient chain. Creator TraitTooltip
-wrappers still own a separate outer tooltip; [shared preview integration](contracts/rules-previews.md)
-remains required work. Static PDF/compact projections may use the lower-level renderer explicitly.
+Interactive content uses sanitized `GameContent` and the [shared preview contract](contracts/rules-previews.md).
+Static PDF/compact projections may use the lower-level renderer explicitly.
 
 ## Character format compatibility
 

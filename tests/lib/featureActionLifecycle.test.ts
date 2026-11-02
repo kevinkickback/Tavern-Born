@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { deriveCharacterActions } from '@/lib/calculations/actions'

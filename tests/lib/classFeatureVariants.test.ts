@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { getSubclassFeatureGroups } from '@/lib/5etools/classData'

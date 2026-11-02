@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { buildPrerequisiteSnapshot, checkPrerequisite } from '@/lib/calculations/prerequisites'

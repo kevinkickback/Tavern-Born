@@ -78,7 +78,7 @@
     },
     {
       "file": "scripts/generate-optional-class-native-rules.mjs",
-      "sha256": "5cdc2561b8d1bed2dad2d675e53d6c318589b1e2504c7160d91492c6caaabd4d"
+      "sha256": "e9e9ddfa80acea8669c367083ac5dbfd1ac1244444d8cd762b994d9abc4f1eb3"
     },
     {
       "file": "scripts/lib/optional-class-declaration-semantics.json",
@@ -102,11 +102,11 @@
     },
     {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "95bc5b17a6152d837ea37031bbf56de140b3b8f2429b0071d43a7ab712b8c668"
+      "sha256": "63d38516c4af20037a8ba7bbd46e87037f9f611973c52c50495e45fae0c18602"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "6d8bd3d37b672fcdc421a54c7c05776650ecc9fdd18d2995a333c260c7a4368c"
+      "sha256": "aa775a1fa6d0b90b6205e157a35952a6fbec60afd4c12cf611abe0ac2b071daf"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
@@ -114,7 +114,7 @@
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "1d7609710dc61f55f5971c8d2ff41c3096cf30b1856aa0963010b0d92e4f8325"
+      "sha256": "d0239f8634882248c1352d681b97b64ecf2964879cf7cf82ade7b2ae087a156f"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -370,11 +370,11 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "8b39e0abd33c626e9b45917062bcde27e85480de4fafc647d3be8a3143e682d0"
+      "sha256": "ea54884e5505ef8337581c250ddbb718e41a54430efc2b3df392721d138d6e45"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "edf0fc867c449e7ae5eac9dc24ed41bd2584affef293085d17806edc99ee607e"
+      "sha256": "e8aa570decf9e6528c1726218818735b0fcdae549c2e04a726772ec3dff01b74"
     },
     {
       "file": "src/types/classRules.ts",
