@@ -120,7 +120,7 @@ export function projectDailyClassSpellIntent(
           : !Number.isInteger(spell.level) || spell.level < 1 || spell.level > access.maxSpellLevel
             ? 'This spell is outside the level available to this class.'
             : !fixed && !hasCurrentClassSpellListRoute(current, access.entry, spell, context ?? {})
-              ? 'Restore this class spell list or its independent spell-list grant.'
+              ? 'Restore this class spell list, its optional feature selection, or an independent spell-list grant.'
               : undefined
       statuses.push({
         profileId: profile.id,
