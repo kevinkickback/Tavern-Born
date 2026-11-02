@@ -10,8 +10,8 @@ Keep dependencies behind their foundation, then reconcile descendants with the a
 
 The **Main Protection** ruleset requires an up-to-date branch, a PR, and both checks at the final head:
 
-- **Lint, type-check, coverage, and build**
-- **Browser end-to-end tests**
+- **Code checks, build & coverage**
+- **Browser & desktop checks**
 
 Do not bypass protection or push directly to main. Native auto-merge and automatic head-branch
 deletion are enabled; passing checks alone never opts a PR into merge. Automatic advisory review
@@ -31,7 +31,7 @@ disposition. A feature merge does not authorize a release.
 5. After both exact-head checks and review disposition, enable protected squash auto-merge only with
    merge authorization. Verify the actual merge, synchronize main and update related issues.
 
-For executable changes under `.github/workflows/**`, `.github/scripts/**` or `scripts/check-release.mjs`,
+For executable changes under `.github/workflows/**`, `.github/scripts/**`, `scripts/ci/**` or `scripts/check-release.mjs`,
 review the complete script/workflow diff and advisory findings before auto-merge. A check name cannot
 establish trust in its changed producer. Honor applicable maintainer/CODEOWNERS requirements; add
 required CODEOWNERS approval when a second maintainer is available. Self-approval does not replace it.
@@ -43,23 +43,36 @@ question. Run local external-data/platform checks CI cannot exercise; broaden lo
 shared bootstrap, persistence, security or unresolved integration risk. `npm run check:pr` remains a
 complete local option, without automatically repeating the final CI matrix.
 
-Documentation-only changes need text, links/anchors, whitespace and scope review. Every final PR
-head still requires both CI checks. Preserve coverage floors, meaningful assertions, timeouts and
-bundle budgets; intentional budget changes require review of measured artifacts. Do not repeat
-successful validation without a new change, failure or unresolved concern.
+Every final PR head needs both required checks and advisory disposition. Preserve coverage floors,
+meaningful assertions, timeouts and bundle budgets; intentional budget changes need measured review.
+Do not repeat successful validation without a new change, failure or unresolved concern.
 
-`ci.yml` runs on non-draft PRs targeting main with pinned actions, Node 24 and Ubuntu 26.04:
+`ci.yml` runs on non-draft PRs targeting main with pinned actions, Node 24 and Ubuntu 26.04. Scope
+checks classify the complete PR diff and validate tracked Markdown targets, anchors and whitespace.
+Only root `README.md`, Markdown under `docs/`, `build/README.md` and `scripts/pdf-sources/README.md`
+qualify for documentation-only validation. Mixed changes, runtime resources/notices, configuration,
+dependencies and unknown paths receive full checks. Both sides of a rename count. Routing eligibility
+does not authorize a README edit.
 
 | Job | Work |
 | --- | --- |
-| Quality | Architecture/dead-code checks, lint, type-checking production build, bundle budgets, coverage |
-| Browser shards 1 and 2 | Disjoint halves of the complete Playwright suite, one worker per job |
-| Browser aggregate | Required check; succeeds only when the complete browser matrix succeeds |
+| PR scope checks | Whole-PR classification and dependency-free documentation validation |
+| Code checks & build | Architecture/dead-code checks, lint, type-checking build and bundle budgets |
+| Coverage tests (parts 1 and 2) | Disjoint native Vitest parts, four workers each, preserving blob evidence |
+| Code checks, build & coverage | Required gate; verifies code workers and merges complete coverage with the normal global floors |
+| Browser tests (parts 1 and 2) | Disjoint Playwright parts, one worker each; part 1 also builds desktop and runs Electron smoke |
+| Browser & desktop checks | Required gate for the complete browser matrix |
 
-Shard 1 also builds the desktop app and runs Electron smoke under a virtual display. The aggregate
-runs even after dependency failure/cancellation and rejects every result except success. Each shard
-keeps separate failure diagnostics. New runs cancel older runs for the PR; only the final head qualifies.
+Code/build, coverage parts and browser parts run independently after scope checks. Coverage collection
+uses `config/vitest.coverage-shard.ts`; partial coverage has no independent threshold decision. The
+required merge uses normal `vitest.config.ts`, checks both reports against dynamic test/source inventories,
+and rejects missing, corrupt, duplicate or incomplete evidence before enforcing the existing floors.
 
+For a documentation-only PR, scope/document checks run and build/runtime workers skip. Both required
+gates accept those skips only for that verified mode. On a code PR, every corresponding worker must
+succeed. Gates run after dependency failure/cancellation and reject missing or unexpected results.
+Browser parts keep separate failure diagnostics. A new PR run cancels its predecessor; final-head
+checks qualify merge readiness. Required-name changes must be coordinated with branch protection.
 Root `vite.config.ts`, `vitest.config.ts` and `playwright.config.ts` retain normal tool discovery.
 `config/renderer.ts` shares renderer plugins/alias setup; `config/vite.e2e.ts` serves browser tests and
 data generators, and `config/playwright.electron.ts` configures desktop smoke. Root `index.html` is

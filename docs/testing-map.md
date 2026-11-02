@@ -80,7 +80,12 @@ needed; it is not an automatic duplicate of completed-head CI. Add broader local
 concrete cross-cutting uncertainty, shared setup/security changes or CI gaps. After a correction,
 rerun affected checks; repeat successful broad validation only for a new change, failure or concern.
 Documentation-only work uses text, links/anchors and scope checks plus independent review.
-Every published final head still needs both required CI checks and advisory disposition.
+Every published final head needs both required CI gates and advisory disposition. Documentation-only
+PRs use the scope/text/link path described in [CI validation](cicd-workflow.md#validation).
+
+CI splits the complete Vitest suite across two native coverage parts. Its collection-only config
+preserves source coverage but leaves the threshold decision to the required combined report under
+the normal root config. Ordinary local `test:coverage` remains a complete run with the same floors.
 
 Electron smoke requires a display on Linux. It skips local Windows builds 26200–26399 because of
 upstream Electron issue 52098 (`0x80000003` during sandboxed child initialization). Keep CI coverage;
