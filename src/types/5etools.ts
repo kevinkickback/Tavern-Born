@@ -45,6 +45,8 @@ interface MulticlassRequirements {
 }
 
 export interface Class5e {
+  /** Winning source package has competing declarations; cannot authorize new dependencies. */
+  sourceIdentityConflict?: true
   name: string
   source: string
   page?: number
@@ -98,6 +100,8 @@ export interface Class5e {
 }
 
 export interface ClassFeature {
+  /** Raw winning-package multiplicity cannot be erased by a later lookup projection. */
+  sourceIdentityConflict?: true
   name: string
   source: string
   page?: number
@@ -136,6 +140,8 @@ export interface ClassFeatureReference {
 }
 
 export interface Subclass5e {
+  /** Parser/layer ambiguity remains explicit after identity Maps and copy materialization. */
+  sourceIdentityConflict?: true
   /** Parser-derived source occurrence/copy certificate; never saved on a character. */
   subclassProficiencySourceAudit?: import('@/lib/5etools/subclassProficiencyCertificates').SubclassProficiencySourceAudit
   name: string
@@ -196,6 +202,8 @@ export interface SubclassFeature {
 }
 
 export interface SubclassFeatureReference {
+  /** Exact target was ambiguous, rather than absent; composition must not refill it. */
+  sourceIdentityConflict?: true
   ref: string
   name: string
   source?: string

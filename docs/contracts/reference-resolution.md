@@ -100,6 +100,23 @@ regardless of the optional same-edition reprint preference. Source compatibility
 the shared domain helper before filtering and in both source-selection surfaces; components must not
 recreate this policy.
 
+A source-enabled supplemental subclass explicitly declared under an XPHB parent may retain its
+current direct and unconditional nested PHB subclass-feature dependencies. These remain exact
+declared targets, including their original owner fields and levels; they do not enable PHB as a
+character source or make other PHB options selectable. Dependency retention requires an unambiguous
+current parent/owner and agreement between the original reference and attached feature. It excludes
+options-container edges and disabled supplemental printings. Normal suppression still removes the
+referring root, ancestor or leaf before rules are rebuilt. Missing or conflicting declarations cannot
+be replenished from another printing or retained recovery details.
+
+Subclass reprints use their short name, parent class name/printing and subclass printing. The current
+catalog must resolve that complete tuple to one actual owner before it can hide an older owner.
+Owner suppression keys remain separate from feature targets: a reprinted subclass never suppresses
+an explicitly referenced same-named feature merely by sharing its label and book. Feature reprints
+keep their complete canonical target identities. Preference availability and suppression use the
+same loaded-target graph; missing/ambiguous targets and cycles without a usable exit do not establish
+a newer printing. Supported reprint declarations are strings; unknown object/tag forms are not inferred.
+
 Downstream UI uses `useFilteredGameData()`, `useWizardGameData()`, or named hooks from
 `useGameData.ts`. Use lookup maps for exact references rather than repeated array scans.
 Filtering class or subclass feature references also rebuilds their normalized rules, so the class

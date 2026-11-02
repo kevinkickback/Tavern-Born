@@ -384,7 +384,7 @@ describe('CharacterSheetPage', () => {
       classSource: 'PHB',
       level: 1,
       entries: ['As an action, use the old signal.'],
-      reprintedAs: ['Signal|Bard|TCE|1|TCE'],
+      reprintedAs: ['Signal|Bard|PHB|1|TCE'],
     }
     const newer = {
       ...old,

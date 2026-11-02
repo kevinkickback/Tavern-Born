@@ -46,8 +46,6 @@ const fixedTargets = new Set(
 const subclassRoots = SUBCLASS_PROFICIENCY_CHECKPOINT.roots.filter((root) =>
   root.paths.some((path) => fixedTargets.has(path.target)),
 )
-const subclassOwners = new Map(subclassRoots.map((root) => [JSON.stringify(root.owner), root]))
-const subclassParents = new Set(subclassRoots.map((root) => JSON.stringify(root.owner.slice(0, 2))))
 const consumedSubclassTargets = new Set(
   subclassRoots
     .flatMap((root) => [root.intro, ...root.paths.flatMap((path) => path.refs)])
@@ -165,14 +163,16 @@ export function auditFixedLayerMultiplicity<T extends object>(
   const counts = new Map<string, number>()
   for (const row of records) {
     const key = identity(row)
-    if (known(key)) counts.set(key!, (counts.get(key!) ?? 0) + 1)
+    if (key) counts.set(key, (counts.get(key) ?? 0) + 1)
   }
   return records.map((row) => {
     const key = identity(row)
-    if (!known(key) || (counts.get(key!) ?? 0) < 2) return row
+    if (!key || (counts.get(key) ?? 0) < 2) return row
+    if (!known(key)) return { ...row, sourceIdentityConflict: true }
     const old = (row as Record<string, unknown>).fixedProficiencySourceAudit
     return {
       ...row,
+      sourceIdentityConflict: true,
       fixedProficiencySourceAudit:
         old && typeof old === 'object'
           ? { ...old, verified: false }
@@ -181,7 +181,7 @@ export function auditFixedLayerMultiplicity<T extends object>(
   })
 }
 
-/** Audit finite subclass contexts before class/feature Maps erase competing raw producers. */
+/** Preserve competing source owners before class Maps; also audit finite proficiency producers. */
 export function auditProficiencySubclassLayerMultiplicity(classes: readonly Class5e[]): Class5e[] {
   const parents = new Map<string, number>()
   const owners = new Map<string, number>()
@@ -202,10 +202,10 @@ export function auditProficiencySubclassLayerMultiplicity(classes: readonly Clas
   }
   for (const cls of classes) {
     const parent = ownerKey(cls)
-    if (subclassParents.has(parent)) parents.set(parent, (parents.get(parent) ?? 0) + 1)
+    parents.set(parent, (parents.get(parent) ?? 0) + 1)
     for (const subclass of cls.subclasses ?? []) {
       const owner = JSON.stringify(getSubclassProficiencyOwner(subclass))
-      if (subclassOwners.has(owner)) owners.set(owner, (owners.get(owner) ?? 0) + 1)
+      owners.set(owner, (owners.get(owner) ?? 0) + 1)
     }
     visit(cls.subclasses)
   }
@@ -221,7 +221,17 @@ export function auditProficiencySubclassLayerMultiplicity(classes: readonly Clas
       )
       .map((root) => JSON.stringify(root.owner)),
   )
-  if (!ambiguousTargets.size && !ambiguousOwners.size) return [...classes]
+  const competingParents = new Set(
+    [...parents].filter(([, count]) => count > 1).map(([key]) => key),
+  )
+  const competingOwners = new Set([...owners].filter(([, count]) => count > 1).map(([key]) => key))
+  if (
+    !ambiguousTargets.size &&
+    !ambiguousOwners.size &&
+    !competingParents.size &&
+    !competingOwners.size
+  )
+    return [...classes]
   // Keep every mirror of a producer invalid, including the inputs used for later re-enrichment.
   const corrected = structuredClone(classes) as Class5e[]
   const changed = new WeakSet<object>()
@@ -240,7 +250,13 @@ export function auditProficiencySubclassLayerMultiplicity(classes: readonly Clas
     Object.values(value).forEach(invalidate)
   }
   for (const cls of corrected) {
+    if (competingParents.has(ownerKey(cls))) cls.sourceIdentityConflict = true
     for (const subclass of cls.subclasses ?? []) {
+      if (
+        cls.sourceIdentityConflict ||
+        competingOwners.has(JSON.stringify(getSubclassProficiencyOwner(subclass)))
+      )
+        subclass.sourceIdentityConflict = true
       if (ambiguousOwners.has(JSON.stringify(getSubclassProficiencyOwner(subclass)))) {
         const audit = subclass.subclassProficiencySourceAudit
         subclass.subclassProficiencySourceAudit = audit

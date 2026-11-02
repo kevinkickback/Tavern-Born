@@ -4,6 +4,7 @@ import {
   decodeSubclassFeatureReference,
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
+  isExactSubclassFeatureReference,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { getSubclassIntroEntries } from '@/lib/5etools/subclassContent'
@@ -22,7 +23,9 @@ import type {
   SubclassFeature,
   SubclassFeatureReference,
 } from '@/types/5etools'
+import { getSubclassReprintKey } from './reprints'
 import { filterSpellRouteSources } from './spellRouteSources'
+import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 export interface RaceFilters {
   sources?: string[]
@@ -97,12 +100,18 @@ const isSuppressed = (
   return suppressedKeys.has(`${name}|${source}`)
 }
 
-type SubclassFeatureInclusion = (name: string | undefined, source: string) => boolean
+type SubclassFeatureInclusion = (
+  name: string | undefined,
+  source: string,
+  target?: string,
+  dependencyTarget?: string,
+) => boolean
 
 function buildFeatureSuppressionCheck(keys: ReadonlySet<string> | undefined) {
   const normalized = new Set(keys ? [...keys].map((key) => key.trim().toLowerCase()) : [])
-  return (name: string | undefined, source: string) =>
-    normalized.has(`${name?.trim() ?? ''}|${source.trim()}`.toLowerCase())
+  return (name: string | undefined, source: string, target?: string) =>
+    normalized.has(`${name?.trim() ?? ''}|${source.trim()}`.toLowerCase()) ||
+    (!!target && normalized.has(target))
 }
 
 const removedNestedSubclassFeature = Symbol('removedNestedSubclassFeature')
@@ -110,11 +119,12 @@ const removedNestedSubclassFeature = Symbol('removedNestedSubclassFeature')
 function classFeatureIdentity(
   feature: string | ClassFeature | ClassFeatureReference,
   fallbackSource: string,
-): { name: string | undefined; source: string } {
+): { name: string | undefined; source: string; target?: string } {
   const decoded = typeof feature === 'string' ? decodeClassFeatureReference(feature) : feature
   const identity = getClassFeatureIdentity(decoded)
   return {
     name: decoded.name,
+    target: identity,
     source: identity
       ? identity.split('|').slice(-1)[0].toUpperCase()
       : typeof feature === 'string'
@@ -126,11 +136,43 @@ function classFeatureIdentity(
 function subclassFeatureIdentity(
   feature: string | SubclassFeature | SubclassFeatureReference,
   fallbackSource: string,
-): { name: string | undefined; source: string } {
-  const decoded = typeof feature === 'string' ? decodeSubclassFeatureReference(feature) : feature
+): { name: string | undefined; source: string; target?: string; dependencyTarget?: string } {
+  const record =
+    typeof feature === 'string' ? undefined : (feature as unknown as Record<string, unknown>)
+  const uid =
+    typeof feature === 'string'
+      ? feature
+      : record?.type === 'refSubclassFeature'
+        ? record.subclassFeature
+        : record?.ref
+  const attached = record?.feature as SubclassFeature | undefined
+  const decoded =
+    typeof uid === 'string' && uid.trim()
+      ? decodeSubclassFeatureReference(uid)
+      : typeof feature === 'string'
+        ? decodeSubclassFeatureReference(feature)
+        : record?.type === 'refSubclassFeature' && attached
+          ? attached
+          : feature
   const identity = getSubclassFeatureIdentity(decoded)
+  const exact =
+    !!identity &&
+    record?.sourceIdentityConflict !== true &&
+    record?.featureOptionSourceConflict !== true &&
+    (!record ||
+      (uid === undefined && record.type !== 'refSubclassFeature') ||
+      (typeof uid === 'string' &&
+        (uid.trim()
+          ? isExactSubclassFeatureReference(record, uid)
+          : record.type !== 'refSubclassFeature'))) &&
+    (!attached ||
+      (getSubclassFeatureIdentity(attached) === identity &&
+        attached.featureOptionSourceConflict !== true &&
+        attached.sourceIdentityConflict !== true))
   return {
     name: decoded.name,
+    target: identity,
+    ...(exact ? { dependencyTarget: identity } : {}),
     source: identity
       ? identity.split('|').slice(-1)[0].toUpperCase()
       : typeof feature === 'string'
@@ -143,10 +185,16 @@ function pruneNestedSubclassFeatureRecords(
   value: unknown,
   include: SubclassFeatureInclusion,
   fallbackSource: string,
+  unconditional = true,
 ): unknown | typeof removedNestedSubclassFeature {
   if (Array.isArray(value)) {
     return value.flatMap((entry) => {
-      const filtered = pruneNestedSubclassFeatureRecords(entry, include, fallbackSource)
+      const filtered = pruneNestedSubclassFeatureRecords(
+        entry,
+        include,
+        fallbackSource,
+        unconditional,
+      )
       return filtered === removedNestedSubclassFeature ? [] : [filtered]
     })
   }
@@ -155,25 +203,29 @@ function pruneNestedSubclassFeatureRecords(
   const record = value as Record<string, unknown>
   let nestedSource = fallbackSource
   if (record.type === 'refSubclassFeature') {
-    const embeddedFeature =
-      record.feature && typeof record.feature === 'object'
-        ? (record.feature as Record<string, unknown>)
-        : undefined
     const identity = subclassFeatureIdentity(
-      typeof record.subclassFeature === 'string' && record.subclassFeature.trim()
-        ? record.subclassFeature
-        : ((embeddedFeature as SubclassFeature | undefined) ?? {
-            name: '',
-            source: fallbackSource,
-          }),
+      record as unknown as SubclassFeatureReference,
       fallbackSource,
     )
     nestedSource = identity.source
-    if (!include(identity.name, nestedSource)) return removedNestedSubclassFeature
+    if (
+      !include(
+        identity.name,
+        nestedSource,
+        identity.target,
+        unconditional ? identity.dependencyTarget : undefined,
+      )
+    )
+      return removedNestedSubclassFeature
   }
 
   const filteredEntries = Object.entries(record).flatMap(([key, entry]) => {
-    const filtered = pruneNestedSubclassFeatureRecords(entry, include, nestedSource)
+    const filtered = pruneNestedSubclassFeatureRecords(
+      entry,
+      include,
+      nestedSource,
+      unconditional && record.type !== 'options',
+    )
     return filtered === removedNestedSubclassFeature ? [] : [[key, filtered] as const]
   })
   return Object.fromEntries(filteredEntries)
@@ -204,12 +256,14 @@ function filterSubclassContent(
     )
   const subclassFeatures = subclass.subclassFeatures?.flatMap((feature) => {
     const identity = subclassFeatureIdentity(feature, subclass.source)
-    if (!include(identity.name, identity.source)) return []
+    if (!include(identity.name, identity.source, identity.target, identity.dependencyTarget))
+      return []
     return [typeof feature === 'string' ? feature : prune(feature)]
   }) as typeof subclass.subclassFeatures
   const subclassFeatureRefs = subclass.subclassFeatureRefs?.flatMap((reference) => {
-    const identity = subclassFeatureIdentity(reference.ref?.trim() || reference, subclass.source)
-    if (!include(identity.name, identity.source)) return []
+    const identity = subclassFeatureIdentity(reference, subclass.source)
+    if (!include(identity.name, identity.source, identity.target, identity.dependencyTarget))
+      return []
     return [reference.feature ? { ...reference, feature: prune(reference.feature) } : reference]
   })
   const levelFeatures = subclass.levelFeatures
@@ -217,7 +271,9 @@ function filterSubclassContent(
       ...group,
       features: group.features.flatMap((feature) => {
         const identity = subclassFeatureIdentity(feature, subclass.source)
-        return include(identity.name, identity.source) ? [prune(feature)] : []
+        return include(identity.name, identity.source, identity.target, identity.dependencyTarget)
+          ? [prune(feature)]
+          : []
       }),
     }))
     .filter((group) => group.features.length > 0)
@@ -358,7 +414,7 @@ export class DataFilter {
       const identity = classFeatureIdentity(feature, '')
       return (
         (sources.size === 0 || sources.has(identity.source.toUpperCase())) &&
-        !featureIsSuppressed(identity.name, identity.source)
+        !featureIsSuppressed(identity.name, identity.source, identity.target)
       )
     })
   }
@@ -471,12 +527,60 @@ export class DataFilter {
               subclass.source,
             )
             const isExplicitlyAllowed = Boolean(filters.allowedSubclassKeys?.has(key))
-            const isNestedSourceAllowed = (source: string) =>
+            // A retained supplement's declared automatic dependencies are not selectable PHB options.
+            const parentKey = getSubclassKey(cls.name, cls.source, subclass.name, subclass.source)
+            const uniqueParent =
+              classes.filter(
+                (c) =>
+                  c.name.trim().toLowerCase() === cls.name.trim().toLowerCase() &&
+                  c.source.trim().toLowerCase() === cls.source.trim().toLowerCase(),
+              ).length === 1
+            const uniqueOwner =
+              (cls.subclasses ?? []).filter(
+                (s) =>
+                  getSubclassKey(
+                    s.className,
+                    s.classSource ?? '',
+                    s.name,
+                    s.source,
+                  ).toLowerCase() === parentKey.toLowerCase(),
+              ).length === 1
+            const dependencyTargets =
+              cls.source.trim().toUpperCase() === 'XPHB' &&
+              subclass.className?.trim().toLowerCase() === cls.name.trim().toLowerCase() &&
+              subclass.classSource?.trim().toUpperCase() === 'XPHB' &&
+              !['PHB', 'XPHB'].includes(subclass.source.trim().toUpperCase()) &&
+              sourcesUpper.has(subclass.source.trim().toUpperCase()) &&
+              uniqueParent &&
+              uniqueOwner &&
+              cls.sourceIdentityConflict !== true &&
+              subclass.sourceIdentityConflict !== true
+                ? new Set(
+                    collectUnconditionalFeatureReferences(
+                      subclass.subclassFeatureRefs ??
+                        directSubclassFeatureReferences(cls, subclass),
+                      'subclassFeature',
+                    )
+                      .filter(
+                        (row) =>
+                          row.kind === 'subclassFeature' &&
+                          !!row.reference.feature &&
+                          getSubclassFeatureIdentity(row.reference.feature) === row.target,
+                      )
+                      .map((row) => row.target),
+                  )
+                : new Set<string>()
+            const isNestedSourceAllowed = (source: string, dependencyTarget?: string) =>
               sourcesUpper.has(source.toUpperCase()) ||
-              (isExplicitlyAllowed && source.toUpperCase() === subclass.source.toUpperCase())
+              (isExplicitlyAllowed && source.toUpperCase() === subclass.source.toUpperCase()) ||
+              (source.toUpperCase() === 'PHB' &&
+                !!dependencyTarget &&
+                dependencyTargets.has(dependencyTarget))
             return {
               ...subclass,
-              ...filterSubclassContent(subclass, (_name, source) => isNestedSourceAllowed(source)),
+              ...filterSubclassContent(subclass, (_name, source, _target, dependencyTarget) =>
+                isNestedSourceAllowed(source, dependencyTarget),
+              ),
             }
           }),
       }))
@@ -490,22 +594,30 @@ export class DataFilter {
           ...cls,
           classFeatures: cls.classFeatures?.filter((feature) => {
             const identity = classFeatureIdentity(feature, cls.source)
-            return !featureIsSuppressed(identity.name, identity.source)
+            return !featureIsSuppressed(identity.name, identity.source, identity.target)
           }) as typeof cls.classFeatures,
           classFeatureRefs: cls.classFeatureRefs?.filter((reference) => {
             const identity = classFeatureIdentity(reference.ref?.trim() || reference, cls.source)
-            return !featureIsSuppressed(identity.name, identity.source)
+            return !featureIsSuppressed(identity.name, identity.source, identity.target)
           }),
           subclasses: cls.subclasses
             ?.filter(
-              (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
+              (subclass) =>
+                !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys) &&
+                !filters.suppressedKeys?.has(
+                  getSubclassReprintKey({
+                    ...subclass,
+                    className: subclass.className || cls.name,
+                    classSource: subclass.classSource || cls.source,
+                  }) ?? '',
+                ),
             )
             .map((subclass) => {
               return {
                 ...subclass,
                 ...filterSubclassContent(
                   subclass,
-                  (name, source) => !featureIsSuppressed(name, source),
+                  (name, source, target) => !featureIsSuppressed(name, source, target),
                 ),
               }
             }),

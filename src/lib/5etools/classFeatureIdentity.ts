@@ -13,6 +13,21 @@ interface SubclassFeatureIdentityInput extends ClassFeatureIdentityInput {
   subclassSource?: unknown
 }
 
+/** Actual selected owner identity is distinct from a referenced feature's encoded target. */
+export function getSubclassOwnerIdentity(
+  value: Record<string, unknown>,
+): [string, string, string, string] | undefined {
+  const parts = ['className', 'classSource', 'name', 'source'].map((field) => value[field])
+  return parts.every((part) => typeof part === 'string' && part.trim())
+    ? (parts.map((part) => (part as string).trim().toLowerCase()) as [
+        string,
+        string,
+        string,
+        string,
+      ])
+    : undefined
+}
+
 function sourceKey(value: unknown, fallback: string): string | undefined {
   if (value === undefined) return fallback
   return typeof value === 'string' ? value.trim().toLowerCase() || fallback : undefined
@@ -132,6 +147,32 @@ export function getSubclassFeatureIdentity(
         identity.source,
       ].join('|')
     : undefined
+}
+
+/** Explicit reference fields must agree with the requested UID independently. */
+export function isExactSubclassFeatureReference(
+  value: Record<string, unknown>,
+  uid: string,
+): boolean {
+  const decoded = decodeSubclassFeatureReference(uid)
+  if (!getSubclassFeatureIdentity(decoded)) return false
+  const fields = [
+    'name',
+    'source',
+    'className',
+    'classSource',
+    'subclassShortName',
+    'subclassSource',
+    'level',
+  ] as const
+  return fields.every(
+    (field) =>
+      value[field] === undefined ||
+      (typeof decoded[field] === 'number'
+        ? value[field] === decoded[field]
+        : typeof value[field] === 'string' &&
+          value[field].trim().toLowerCase() === String(decoded[field]).trim().toLowerCase()),
+  )
 }
 
 /** Never repair a malformed encoded subclass level with materialized metadata. */

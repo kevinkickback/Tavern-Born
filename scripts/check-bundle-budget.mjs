@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared spell choices plus source-qualified Arcanum setup and casting consumers.
-  // Measured 6,280,248 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6134 * KIB,
-  // Synchronous source/ownership/prerequisite authority: measured 1,088,323 B.
+  // Shared source-dependency and exact reprint identity guards.
+  // Measured 6,284,836 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6138 * KIB,
+  // Synchronous source/owner/target authority: measured 1,092,911 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
-  initialRendererScript: 1063 * KIB,
+  initialRendererScript: 1068 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

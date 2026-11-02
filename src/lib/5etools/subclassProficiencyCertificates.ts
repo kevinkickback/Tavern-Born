@@ -1,8 +1,13 @@
 import type { SubclassFeature, SubclassFeatureReference } from '@/types/5etools'
-import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
+import {
+  decodeSubclassFeatureReference,
+  getSubclassFeatureIdentity,
+  getSubclassOwnerIdentity,
+  isExactSubclassFeatureReference as isExactSubclassProficiencyReference,
+} from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 
-export type SubclassProficiencyOwner = [string, string, string, string]
+type SubclassProficiencyOwner = [string, string, string, string]
 export interface SubclassProficiencyPath {
   target: string
   refs: string[]
@@ -46,15 +51,7 @@ export function getSubclassCopyLookupKey(value: Record<string, unknown>): string
     : undefined
 }
 
-export function getSubclassProficiencyOwner(
-  value: Record<string, unknown>,
-): SubclassProficiencyOwner | undefined {
-  const fields = ['className', 'classSource', 'name', 'source'] as const
-  const parts = fields.map((field) => value[field])
-  return parts.every((part) => typeof part === 'string' && part.trim())
-    ? (parts.map((part) => (part as string).trim().toLowerCase()) as SubclassProficiencyOwner)
-    : undefined
-}
+export const getSubclassProficiencyOwner = getSubclassOwnerIdentity
 
 export const subclassProficiencyDigest = (value: unknown) => getFeatureSourceDigest([value], false)
 export function subclassProficiencyMetadata(value: Record<string, unknown>, root = false) {
@@ -75,31 +72,7 @@ export function subclassProficiencyMetadata(value: Record<string, unknown>, root
   return Object.fromEntries(Object.entries(value).filter(([key]) => !derived.has(key)))
 }
 
-/** Every explicit identity field agrees independently; an otherwise unique UID cannot repair it. */
-export function isExactSubclassProficiencyReference(
-  value: Record<string, unknown>,
-  uid: string,
-): boolean {
-  const decoded = decodeSubclassFeatureReference(uid)
-  if (!getSubclassFeatureIdentity(decoded)) return false
-  const identityFields = [
-    'name',
-    'source',
-    'className',
-    'classSource',
-    'subclassShortName',
-    'subclassSource',
-    'level',
-  ] as const
-  return identityFields.every(
-    (field) =>
-      value[field] === undefined ||
-      (typeof decoded[field] === 'number'
-        ? value[field] === decoded[field]
-        : typeof value[field] === 'string' &&
-          value[field].trim().toLowerCase() === String(decoded[field]).trim().toLowerCase()),
-  )
-}
+export { isExactSubclassProficiencyReference }
 
 /** Traverse the production UID shape without changing target printing or enclosing earned level. */
 export function collectSubclassProficiencyPaths(
