@@ -202,7 +202,7 @@ Dormant intent retains names and gains marked
 Inactive, with no eligible options, conditional facts, quota or recovery demand.
 
 Selected terrain summaries retain conditional INT/WIS proficiency and the hour-or-more travel
-qualifiers once per owner family. Compact exports keep names, gains and activity. The gain6
+qualifiers once per owner family. Compact exports keep names, gains and activity. The gain 6
 Favored Enemy/language paragraph is not a terrain benefit. No global Expertise, movement, resistance,
 travel state or action is granted. Recovery identifies the exact owner/grant/earned gain; saved
 recovery replaces only that gain's warning. Complete Ranger automation remains unqualified.
@@ -246,7 +246,7 @@ separate mechanics boundaries. Revised XPHB Deft Explorer keeps its standard sel
 
 ## Rogue Expertise and pending setup
 
-The audited PHB/XPHB Rogue Expertise gains at levels1/6 each allocate two choices. Empty/partial
+The audited PHB/XPHB Rogue Expertise gains at levels 1 and 6 each allocate two choices. Empty/partial
 intent remains pending; Class and Proficiencies edit the same exact owner/target/gain choices.
 
 PHB allows proficient skills and proficient thieves' tools within one shared quota. Level 6 chooses
