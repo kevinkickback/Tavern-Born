@@ -39,7 +39,6 @@ import {
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
 import { hasCurrentClassSpellListRoute } from '@/lib/character/classSpellAuthority'
 import { getDailyClassSpellAccess } from '@/lib/character/dailyClassSpells'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   findFocusedProvenanceChoice,
   getReadinessFocus,
@@ -200,23 +199,6 @@ export function SpellsPage() {
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),
     [spellcastingDetails],
   )
-
-  const subclassSpellSources = useMemo(() => {
-    const sourceMap = new Map<string, string>()
-    if (!character) return sourceMap
-
-    for (const entry of getCharacterClassEntries(character)) {
-      if (!entry.subclass) continue
-      const profileId = toClassProfileId(entry.name, entry.source)
-      const grants = spellProfiles.find((profile) => profile.id === profileId)?.fixedSpells ?? []
-      for (const reference of grants) {
-        const attribution = `Subclass: ${entry.subclass}`
-        sourceMap.set(`${profileId}|${reference}`, attribution)
-      }
-    }
-
-    return sourceMap
-  }, [character, spellProfiles])
 
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
@@ -418,16 +400,13 @@ export function SpellsPage() {
   )
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
-    const map = buildSpellSelectionSourceMap({
+    return buildSpellSelectionSourceMap({
       spellProfiles,
       ledger,
       choices: character?.managedClassSpellChoices,
+      classProgression: character?.classProgression,
     })
-    for (const [key, attribution] of subclassSpellSources) {
-      map.set(key, [map.get(key), attribution].filter(Boolean).join('; '))
-    }
-    return map
-  }, [spellProfiles, ledger, subclassSpellSources, character?.managedClassSpellChoices])
+  }, [spellProfiles, ledger, character?.classProgression, character?.managedClassSpellChoices])
 
   const spellSourceRows = useMemo(() => {
     const rows = getSourcesRowsBySection('spells')

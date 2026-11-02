@@ -41,6 +41,17 @@ captured source authority after a catalog or source-settings change, while Clear
 Ordinary Warlock known slots do not gain access to the section's Arcanum-level spells; specialist
 selection and gameplay replacement events remain separate.
 
+PHB Ranger's adopted TCE Primal Awareness derives fixed known-spell grants from its current
+certified level table. A narrow adapter is necessary because this declaration has no structured
+`additionalSpells`; its complete source certificate verifies the table and meaning before use.
+The shared spell-token parser supplies the upstream PHB default only for omitted printings.
+Earned grants join the parent Ranger profile and feature-qualified provenance without ordinary
+known-spell quota or a new saved choice. Earlier independent numeric ownership remains active,
+including a choice made at the same gain before adoption; new redundant choices at an already
+granted gain are rejected. Clear/OFF/source loss retracts only the optional grants, and restoration
+derives them again. An unavailable exact earned spell produces a readiness recovery duty rather
+than falling back to another printing. Separate free-cast resources and rest tracking are not implemented.
+
 Structured pool prerequisites use a finite projection seeded from independent providers, then
 current qualified choice contributions. Saved managed rows cannot satisfy their own requirements
 or bootstrap a cycle. New/retargeted command picks must qualify in the complete proposed set;

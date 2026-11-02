@@ -41,6 +41,10 @@ Fixed spells already granted by the selected class/subclass at a gain cannot con
 An earlier valid choice may later overlap an independent fixed grant without losing either owner.
 Fixed subclass tokens use the upstream PHB default only when their printing is omitted; explicit
 printings stay exact. Current fixed profiles and provenance derive from the same earned provider.
+Primal Awareness's fixed knowledge grants follow the same current-source projection; their
+[optional feature ownership](class-ownership.md#individual-optional-class-features) preserves
+established numeric choices while excluding new redundant selections. Fixed spell labels use
+their actual class-feature or subclass provenance.
 
 Each record saves its exact target, revision, `default` or `ignore-class-list` policy, and optional
 `prepare:true` for a learned spellbook entry. The explicit bypass changes only list eligibility;

@@ -2,7 +2,7 @@ import {
   isManagedClassSpellProfile,
   managedClassSpellId,
 } from '@/lib/character/managedClassSpellIdentity'
-import { normalizeKey } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Character, SpellProfile } from '@/types/character'
 import type { ManagedClassSpellChoice } from '@/types/classCasting'
 import { getSpellReferenceKey } from './spellIdentity'
@@ -35,8 +35,9 @@ export function buildSpellSelectionSourceMap(params: {
   spellProfiles: SpellProfile[]
   ledger: Character['provenance']
   choices?: readonly ManagedClassSpellChoice[]
+  classProgression?: Character['classProgression']
 }): Map<string, string> {
-  const { spellProfiles, ledger, choices = [] } = params
+  const { spellProfiles, ledger, choices = [], classProgression = [] } = params
   const map = new Map<string, string>()
 
   for (const profile of spellProfiles) {
@@ -63,6 +64,35 @@ export function buildSpellSelectionSourceMap(params: {
           )
           return tag ? [`${tag.sourceName} (${tag.sourceRef}) Lv. ${choice.slot[3]} Choice`] : []
         })
+        const norm = normalizeOwnerIdentity
+        const entry = classProgression.find(
+          (entry) =>
+            norm(entry.name) === norm(profile.className) &&
+            norm(entry.source) === norm(profile.classSource),
+        )
+        for (const tag of tags) {
+          if (
+            tag.grantType !== 'fixed' ||
+            getSpellReferenceKey(spellName, tag.grantSource ?? '') !==
+              getSpellReferenceKey(spellName)
+          )
+            continue
+          if (
+            tag.sourceType === 'class' &&
+            norm(tag.sourceName) === norm(profile.className) &&
+            norm(tag.sourceRef) === norm(profile.classSource)
+          )
+            labels.push(
+              `Class: ${tag.sourceName}${tag.label !== tag.sourceName ? ` — ${tag.label}` : ''}`,
+            )
+          if (
+            tag.sourceType === 'subclass' &&
+            entry?.subclass &&
+            norm(tag.sourceName) === norm(entry.subclass) &&
+            norm(tag.sourceRef) === norm(entry.subclassSource)
+          )
+            labels.push(`Subclass: ${tag.sourceName}`)
+        }
         if (labels.length) map.set(key, [...new Set(labels)].join('; '))
         continue
       }
