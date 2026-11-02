@@ -146,7 +146,7 @@ Barbarian owners retain the original PHB targets. Both the declared intro-to-Aur
 current owner-scoped source parents must qualify before any option is eligible. A structured
 `subclass-options:` ID binds the
 actual owner, exact Aura target, environment group and earned gain. Strict admission checks this
-new saved relation without requiring live catalogs; these relations remain additive within character format 12.
+new saved relation without requiring live catalogs; admission follows the [current character format](character-format.md).
 
 One choice governs earned Storm Soul, Shielding Storm and Raging Storm. Shared filtered source
 resolution supplies Builder, readiness, retained details, calculations, Actions and both PDF

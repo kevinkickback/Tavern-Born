@@ -49,6 +49,8 @@ export interface SpellSelectionModalProps {
   classListOverrides?: Set<string>
   /** Authoritative current default list. Explicit empty denies every target unless bypassed. */
   classListReferences?: ReadonlySet<string>
+  /** Declared feature pools have no class-list bypass; their exact target limits still apply. */
+  allowClassListBypass?: boolean
   /** Complete allowed targets, independently of class-list visibility controls. */
   allowedSpellReferences?: ReadonlySet<string>
   /** Racial choices have exact targets and one homogeneous selection quota. */
@@ -333,6 +335,7 @@ export function SpellSelectionModal({
   classListReferences,
   allowedSpellReferences,
   selectionMode = 'catalog',
+  allowClassListBypass = true,
   onConfirm,
 }: SpellSelectionModalProps) {
   const spells = useMemo(() => {
@@ -381,7 +384,10 @@ export function SpellSelectionModal({
 
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
   const hasClassName = !!className || classListReferences !== undefined
-  const visibilityFilter = buildVisibilityFilter(hasCharSpells, hasClassName)
+  const visibilityFilter = buildVisibilityFilter(
+    hasCharSpells,
+    hasClassName && allowClassListBypass,
+  )
   const filterSections = useMemo(
     () => [
       buildLevelFilter(spells, allowedLevels),
@@ -497,7 +503,9 @@ export function SpellSelectionModal({
             ...selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
             ...retained,
           ]),
-          filters.visibility?.has('ignore-class-list') ? 'ignore-class-list' : 'default',
+          allowClassListBypass && filters.visibility?.has('ignore-class-list')
+            ? 'ignore-class-list'
+            : 'default',
         )
       }}
     />

@@ -2,6 +2,7 @@ import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { projectOwnedProficiencies } from '@/lib/character/classProficiencyFoundation'
 import { captureFixedProficiencyManualOwners } from '@/lib/character/fixedProficiencyOwnership'
+import { retainSelectedFeatureSpellIntent } from '@/lib/character/managedClassSpellState'
 import { addGrant } from '@/lib/provenance/ledger'
 import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -12,6 +13,26 @@ export function projectProficiencyCommandResult(
   result: CharacterCommandResult,
   catalogs?: ClassChoiceFeatureCatalogs,
 ): CharacterCommandResult {
+  const retained = retainSelectedFeatureSpellIntent(before, {
+    ...before,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  if (
+    retained.managedClassSpellChoices !==
+      (result.characterPatch.managedClassSpellChoices ?? before.managedClassSpellChoices) ||
+    retained.managedClassSpellRevision !==
+      (result.characterPatch.managedClassSpellRevision ?? before.managedClassSpellRevision)
+  )
+    result = {
+      characterPatch: {
+        ...result.characterPatch,
+        managedClassSpellChoices: retained.managedClassSpellChoices,
+        managedClassSpellRevision: retained.managedClassSpellRevision,
+        spells: retained.spells,
+      },
+      provenanceUpdate: retained.provenance,
+    }
   if (!catalogs) return result
   let next: Character = { ...before, ...result.characterPatch, provenance: result.provenanceUpdate }
   const captured = captureFixedProficiencyManualOwners(

@@ -3,12 +3,16 @@ import {
   CLASS_CASTING_PRODUCERS,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
+import { selectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import {
   decodeManagedClassSpellId,
   makeManagedClassSpellTag,
   managedClassSpellId,
 } from '@/lib/character/managedClassSpellIdentity'
-import { stripManagedClassSpellState } from '@/lib/character/managedClassSpellState'
+import {
+  removeManagedClassSpellMaterialization,
+  stripManagedClassSpellState,
+} from '@/lib/character/managedClassSpellState'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -66,7 +70,7 @@ describe('strict numeric class spell identity and saved inverse', () => {
     expect(parse(character).success).toBe(false)
   })
   test('current format rejects eleven without conversion and admits exact dormant intent without catalogs', () => {
-    expect(CURRENT_CHARACTER_SCHEMA_VERSION).toBe(12)
+    expect(CURRENT_CHARACTER_SCHEMA_VERSION).toBe(13)
     const character = materialized()
     expect(parse(character).success).toBe(true)
     expect(parse({ ...character, schemaVersion: 11 }).success).toBe(false)
@@ -76,6 +80,73 @@ describe('strict numeric class spell identity and saved inverse', () => {
     expect(dormant.managedClassSpellChoices).toEqual([choice()])
     expect(dormant.provenance.spells).toEqual({})
     expect(dormant.spells.spellProfiles[0].cantrips).toEqual([])
+  })
+
+  test('generic saved feature and numeric owners share one member and have precise source-free inverses', () => {
+    // Structural persistence/inverse challenge for a future producer; this supplies no live rules.
+    // Current source projection must still prove any feature before granting its benefits.
+    const character = materialized()
+    const choiceId = 'class:bard|phb|choice:additional-cantrips|1'
+    character.classChoiceSelections = [
+      {
+        choiceId,
+        label: 'Additional cantrips',
+        kind: 'optional-feature',
+        className: 'Bard',
+        classSource: 'PHB',
+        classLevel: 1,
+        selected: [
+          { entityType: 'optionalFeature', name: 'Future teacher', source: 'HB', slotLevel: 1 },
+        ],
+      },
+    ]
+    const feature: ManagedClassSpellChoice = {
+      slot: [
+        ['class', 'bard', 'phb'],
+        'feature-cantrip',
+        selectedFeatureSpellAddress([
+          choiceId,
+          'optionalFeature',
+          'future teacher',
+          'hb',
+          null,
+          0,
+          0,
+        ]),
+        1,
+        0,
+      ],
+      target: { name: 'Light', source: 'PHB' },
+      revision: 2,
+      policy: 'default',
+    }
+    character.managedClassSpellChoices!.push(feature)
+    character.managedClassSpellRevision = 2
+    character.provenance.spells.light.push(
+      makeManagedClassSpellTag(feature, character.classProgression[0], 'Future teacher'),
+    )
+    expect(parse(character).success).toBe(true)
+    const numeric = character.managedClassSpellChoices![0]
+    for (const removed of [numeric, feature]) {
+      const result = removeManagedClassSpellMaterialization(character, [removed])
+      result.managedClassSpellChoices = result.managedClassSpellChoices!.filter(
+        (row) => row !== removed,
+      )
+      expect(result.spells.spellProfiles[0].cantrips).toEqual(['Light|PHB'])
+      expect(result.provenance.spells.light).toHaveLength(1)
+      expect(parse(result).success).toBe(true)
+      const empty = removeManagedClassSpellMaterialization(result, result.managedClassSpellChoices!)
+      empty.managedClassSpellChoices = []
+      expect(empty.spells.spellProfiles[0].cantrips).toEqual([])
+      expect(parse(empty).success).toBe(true)
+    }
+    const duplicate = structuredClone(character)
+    const extra = structuredClone(feature)
+    extra.slot[4] = 1
+    extra.revision = 3
+    duplicate.managedClassSpellChoices!.push(extra)
+    duplicate.managedClassSpellRevision = 3
+    expect(parse(duplicate).success).toBe(false)
   })
 
   test.each([

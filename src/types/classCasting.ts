@@ -22,7 +22,11 @@ export interface ClassPreparationRule {
 export type ClassSpellOwner =
   | ['class', string, string]
   | ['subclass', string, string, string, string]
-export type ManagedClassSpellDomain = 'class-cantrip' | 'class-known' | 'class-spellbook'
+export type ManagedClassSpellDomain =
+  | 'class-cantrip'
+  | 'class-known'
+  | 'class-spellbook'
+  | 'feature-cantrip'
 export type ManagedClassSpellSlot = [
   ClassSpellOwner,
   ManagedClassSpellDomain,

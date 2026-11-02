@@ -21,7 +21,7 @@ export function useRetainedCharacterDetails(character: Character, race?: Race5e)
         primary,
         raw,
         race,
-        calculation?.character.spells.spellProfiles,
+        calculation?.classChoices.prerequisites,
       ),
     [character, primary, raw, race, calculation],
   )

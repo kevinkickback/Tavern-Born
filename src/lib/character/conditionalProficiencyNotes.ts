@@ -34,6 +34,7 @@ import {
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
+import type { ClassChoicePrerequisiteContext } from './effectiveClassChoiceFeatures'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 
 const key = (parts: readonly string[]) =>
@@ -133,6 +134,7 @@ function hasSelectedFire(
   classLookup: CurrentConditionalSources['classLookup'],
   effectiveAbilityScores?: Partial<AbilityScores>,
   effectiveSpellProfiles?: readonly SpellProfile[],
+  classChoicePrerequisites?: ClassChoicePrerequisiteContext,
 ): CharacterClassChoiceSelection | undefined {
   const choice = current.choice
   if (!choice) return undefined
@@ -178,6 +180,7 @@ function hasSelectedFire(
     effectiveAbilityScores,
     effectiveSpellProfiles,
     classChoiceFeatureCatalogs: catalogs,
+    classChoicePrerequisites,
   })
   for (const option of selection.selected) {
     const slot = slots.indexOf(option.slotLevel)
@@ -228,6 +231,7 @@ export function deriveConditionalProficiencyNotes(
   catalogs?: ClassChoiceFeatureCatalogs,
   effectiveAbilityScores?: Partial<AbilityScores>,
   effectiveSpellProfiles?: readonly SpellProfile[],
+  classChoicePrerequisites?: ClassChoicePrerequisiteContext,
 ): CharacterEffect[] {
   if (!catalogs) return []
   const effects: CharacterEffect[] = []
@@ -258,6 +262,7 @@ export function deriveConditionalProficiencyNotes(
             sources.classLookup,
             effectiveAbilityScores,
             effectiveSpellProfiles,
+            classChoicePrerequisites,
           )
         : undefined
     if (current.rule.family === 'fire-rune' && !selection) continue

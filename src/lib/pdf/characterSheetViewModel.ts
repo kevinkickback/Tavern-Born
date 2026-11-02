@@ -765,7 +765,7 @@ export function createCharacterSheetViewModel(
   const activeClassRoutes = getEffectiveClassChoiceFeatureRoutes(
     character,
     primaryLookups.classChoiceFeatureCatalogs,
-    character.spells.spellProfiles,
+    calculationContext.classChoices.prerequisites,
   )
   const companions = (character.classChoiceSelections ?? [])
     .filter(
@@ -842,6 +842,7 @@ export function createCharacterSheetViewModel(
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
     effectiveSpellProfiles: character.spells.spellProfiles,
+    classChoicePrerequisites: calculationContext.classChoices.prerequisites,
     race: raceResolution.mergedRace,
     raceResolution,
     classes: resolvedClasses,

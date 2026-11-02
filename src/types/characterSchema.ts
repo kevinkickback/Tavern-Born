@@ -68,13 +68,13 @@ const managedClassSpellChoiceSchema = z
   .object({
     slot: z.tuple([
       optionalClassAdoptionSchema.shape.owner,
-      z.enum(['class-cantrip', 'class-known', 'class-spellbook']),
+      z.enum(['class-cantrip', 'class-known', 'class-spellbook', 'feature-cantrip']),
       z
         .string()
         .trim()
         .min(1)
         .max(1200)
-        .transform((value) => value.toLowerCase()),
+        .transform((value) => (value.startsWith('feature-spells:') ? value : value.toLowerCase())),
       z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
       z.number().int().nonnegative(),
     ]),

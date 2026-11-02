@@ -155,7 +155,10 @@ export function buildSpellProfileDisplayModels({
           items.filter((item) => item.kind === 'cantrip' && !item.isFixed).map((item) => item.name),
         )
     const currentSpells = classSelections
-      ? classSelections.filter((status) => status.choice.slot[1] !== 'class-cantrip').length
+      ? classSelections.filter(
+          (status) =>
+            status.choice.slot[1] === 'class-known' || status.choice.slot[1] === 'class-spellbook',
+        ).length
       : countUniqueSpellNames(
           items.filter((item) => item.kind === 'spell' && !item.isFixed).map((item) => item.name),
         )

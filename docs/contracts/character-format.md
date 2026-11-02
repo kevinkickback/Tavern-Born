@@ -2,7 +2,7 @@
 
 Current admission is implemented in [the version constant](../../src/lib/schema/characterSchemaVersion.ts),
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
-The current character format is **12**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
+The current character format is **13**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
 
 The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
 are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
@@ -20,6 +20,20 @@ An intent may have no materialized profile membership or reserved tag while its 
 A learned preparation request may remain saved without a prepared member when capacity or source
 access is suspended. Materialized numeric rows and reserved tags must still own each other exactly.
 An admitted relation establishes saved ownership, never current source access. Inferred numeric ownership and `spellSwaps` are not accepted. See [class spell selection](spell-selection.md).
+
+Selected feature cantrips reuse this protocol in a separate `feature-cantrip` domain. Its declaration
+field is a canonical versioned tuple containing the actual Class choice ID, exact producer type/name/source,
+reserved reference field, block and descriptor address. The first supported actor has one block/descriptor;
+the reference field is null for named optionalFeature/feat producers. Opaque IDs retain their bytes;
+identity name/source fields normalize. Saved Class selection and earned option level must match.
+Current counts, spell filters, ability and source activity remain derived rather than persisted as rules.
+Ordinary numeric uniqueness remains intact; different feature entitlements may independently own the
+same exact profile member, with one reserved tag per owner. Removing one retains surviving owners.
+
+Format13 gives Class-owned Warrior spell setup one managed protocol. Its Class feat mirror cannot
+also carry the former aggregate feat-option spell setup in Special. Ordinary, Bonus and fixed feat
+owners retain their existing setup. Earlier formats are rejected without conversion; the existing
+incompatible-original quarantine/export path preserves originals for recovery.
 The additive `optionalClassFeatureAdoptions` collection binds the actual full class/subclass owner,
 complete reviewed target and enclosing earned gain. Strict admission rejects unknown roots, children
 as roots, duplicate identities and conflicting families. Absence is unselected; no adoption or

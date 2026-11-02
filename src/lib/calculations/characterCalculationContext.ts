@@ -11,7 +11,10 @@ import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOpti
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
-import { projectEffectiveClassChoiceFeatures } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  type ClassChoicePrerequisiteContext,
+  projectEffectiveClassChoiceFeatures,
+} from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   type ManagedClassSpellContext,
   type ManagedClassSpellStatus,
@@ -103,6 +106,7 @@ export interface CharacterCalculationContext {
     catalogs?: ClassChoiceFeatureCatalogs
     feats?: readonly Feat5e[]
     spellContext?: ManagedClassSpellContext
+    prerequisites: ClassChoicePrerequisiteContext
   }
   feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
@@ -356,7 +360,7 @@ export function createCharacterCalculationContext(
   character = projectEffectiveClassChoiceFeatures(
     character,
     primaryLookups.classChoiceFeatureCatalogs,
-    character.spells.spellProfiles,
+    undefined,
   )
   character = refreshClassProficiencyState(
     character,
@@ -389,12 +393,6 @@ export function createCharacterCalculationContext(
   const choiceClasses =
     primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {})
   const choiceCatalogs = primaryLookups.classChoiceFeatureCatalogs
-  const classChoices = {
-    classes: choiceClasses,
-    catalogs: choiceCatalogs,
-    feats: primaryLookups.featExpertiseFeats,
-    spellContext: managedSpellContext,
-  }
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
   const baseSourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
@@ -420,7 +418,26 @@ export function createCharacterCalculationContext(
     },
     dailyIntentSource,
   )
-  character = managedSpells.character
+  const prerequisites = {
+    effectiveAbilityScores: abilityScores.total,
+    effectiveSpellProfiles: managedSpells.independentSpellProfiles,
+  }
+  const classChoices = {
+    classes: choiceClasses,
+    catalogs: choiceCatalogs,
+    feats: primaryLookups.featExpertiseFeats,
+    prerequisites,
+    spellContext: {
+      ...managedSpellContext,
+      abilityScores: abilityScores.total,
+      independentSpellProfiles: managedSpells.independentSpellProfiles,
+    },
+  }
+  character = projectEffectiveClassChoiceFeatures(
+    managedSpells.character,
+    choiceCatalogs,
+    prerequisites,
+  )
   // These explanatory notes cannot feed back into numeric ability or prerequisite calculations.
   const sourceEffects = [
     ...baseSourceEffects,
@@ -429,6 +446,7 @@ export function createCharacterCalculationContext(
       choiceCatalogs,
       abilityScores.total,
       character.spells.spellProfiles,
+      prerequisites,
     ),
   ]
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)

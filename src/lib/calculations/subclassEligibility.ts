@@ -1,6 +1,7 @@
 import { LEGACY_SUBCLASS_PREREQUISITE_FIXUPS } from '@/lib/5etools/rulesetMetadata'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import type { ClassChoicePrerequisiteContext } from '@/lib/character/effectiveClassChoiceFeatures'
 import type { Raw5ePrereq, Subclass5e } from '@/types/5etools'
 import type { AbilityScores, Character, SpellProfile } from '@/types/character'
 
@@ -11,6 +12,7 @@ interface SubclassEligibilityParams {
   character: Character
   effectiveAbilityScores?: AbilityScores
   classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
+  classChoicePrerequisites?: ClassChoicePrerequisiteContext
   effectiveSpellProfiles?: readonly SpellProfile[]
 }
 
@@ -25,6 +27,7 @@ export function isSubclassEligible({
   character,
   effectiveAbilityScores,
   classChoiceFeatureCatalogs,
+  classChoicePrerequisites,
   effectiveSpellProfiles,
 }: SubclassEligibilityParams): boolean {
   const prerequisite = subclass.prerequisite as Raw5ePrereq[] | undefined
@@ -35,6 +38,7 @@ export function isSubclassEligible({
         character,
         effectiveAbilityScores,
         classChoiceFeatureCatalogs,
+        classChoicePrerequisites,
         effectiveSpellProfiles,
       }),
       { className, classSource },

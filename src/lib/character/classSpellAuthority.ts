@@ -8,7 +8,7 @@ import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import type { Spell5e, Subclass5e } from '@/types/5etools'
-import type { AbilityScores, Character, CharacterClassEntry } from '@/types/character'
+import type { AbilityScores, Character, CharacterClassEntry, SpellProfile } from '@/types/character'
 import type { ClassSpellOwner } from '@/types/classCasting'
 import type { ClassSpellRoute } from '@/types/spellRoutes'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
@@ -18,6 +18,8 @@ export interface ManagedClassSpellContext {
   /** Current filtered spell authority only; raw text lookups cannot replenish missing targets. */
   spellsByKey?: Readonly<Record<string, Spell5e>>
   abilityScores?: AbilityScores
+  /** Current non-feature spell providers used to qualify selected feature grants. */
+  independentSpellProfiles?: readonly SpellProfile[]
   /** Resolved only from current filtered race data; retained raw text cannot authorize a list. */
   currentRaceResolution?: ResolvedRaceReference
 }

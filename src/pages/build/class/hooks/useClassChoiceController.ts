@@ -4,6 +4,7 @@ import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanc
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
@@ -417,7 +418,12 @@ export function useClassChoiceController({
               (!newlyAdded.reference.source || entry.source === newlyAdded.reference.source),
           )
         : undefined
-      if (feat && hasFeatOptions(feat)) onFeatOptionsRequired(feat, current.id)
+      if (
+        feat &&
+        hasFeatOptions(feat) &&
+        !getClassFeatureSpellSemantics('feat', feat.name, feat.source)
+      )
+        onFeatOptionsRequired(feat, current.id)
     }
     setRequest(null)
     setQueue((pending) =>

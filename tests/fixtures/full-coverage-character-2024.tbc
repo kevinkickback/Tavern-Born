@@ -4250,7 +4250,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "hitPoints": {
     "current": 121,
     "temporary": 17

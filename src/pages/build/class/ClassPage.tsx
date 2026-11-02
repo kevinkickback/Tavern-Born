@@ -221,7 +221,7 @@ export function BuildClassPage() {
         character,
         classChoiceCatalogs,
         origin,
-        calculation?.character.spells.spellProfiles,
+        calculation?.classChoices.prerequisites,
       )
     return current
       ? { ...resolved, ...current }

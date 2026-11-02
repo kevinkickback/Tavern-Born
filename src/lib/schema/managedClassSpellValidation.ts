@@ -1,7 +1,8 @@
 import {
   getClassSpellProfilePolicy,
-  getManagedClassSpellRule,
+  isManagedClassSpellSlot,
 } from '@/lib/5etools/classCastingRules'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   isManagedClassSpellProfile,
@@ -11,6 +12,7 @@ import {
   managedClassSpellId,
   matchesManagedClassSpellTag,
 } from '@/lib/character/managedClassSpellIdentity'
+import { hasSavedSelectedFeatureSpellOwner } from '@/lib/character/selectedFeatureSpellOwnership'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
@@ -38,9 +40,16 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   const revisions = new Set<number>()
   choices.forEach((choice, index) => {
     const id = managedClassSpellId(choice.slot)
-    const key = JSON.stringify([choice.slot[0].slice(1, 3), getSpellNameKey(choice.target.name)])
+    const key = JSON.stringify([
+      choice.slot[0].slice(1, 3),
+      choice.slot[1] === 'feature-cantrip' ? choice.slot[2] : null,
+      getSpellNameKey(choice.target.name),
+    ])
     if (
-      !getManagedClassSpellRule(choice.slot) ||
+      !isManagedClassSpellSlot(choice.slot) ||
+      (choice.slot[1] === 'feature-cantrip' &&
+        (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
+          choice.policy !== 'default')) ||
       !Number.isSafeInteger(choice.revision) ||
       choice.revision < 1 ||
       choice.revision > (watermark ?? 0) ||
@@ -111,12 +120,12 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
           (choice) =>
             getSpellReferenceKey(choice.target.name, choice.target.source) === key &&
             (field === 'cantrips'
-              ? choice.slot[1] === 'class-cantrip'
+              ? choice.slot[1] === 'class-cantrip' || choice.slot[1] === 'feature-cantrip'
               : field === 'spellsKnown'
-                ? choice.slot[1] !== 'class-cantrip'
+                ? choice.slot[1] === 'class-known' || choice.slot[1] === 'class-spellbook'
                 : choice.slot[1] === 'class-spellbook' && choice.prepare === true),
         )
-        if (!fixed && !(field === 'preparedSpells' && mode === 'daily') && owned.length !== 1)
+        if (!fixed && !(field === 'preparedSpells' && mode === 'daily') && owned.length < 1)
           invalid.push([...path, field, member])
       })
     }
@@ -145,7 +154,10 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         ? profiles.filter((profile) => isManagedClassSpellProfile(choice.slot, profile))
         : []
       const target = choice && getSpellReferenceKey(choice.target.name, choice.target.source)
-      const field = choice?.slot[1] === 'class-cantrip' ? 'cantrips' : 'spellsKnown'
+      const field =
+        choice?.slot[1] === 'class-cantrip' || choice?.slot[1] === 'feature-cantrip'
+          ? 'cantrips'
+          : 'spellsKnown'
       if (
         !choice ||
         name !== getSpellNameKey(name) ||
@@ -163,6 +175,15 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   const auditForeign = (tag: SourceTag, path: Path) => {
     if (isManagedClassSpellTag(tag)) invalid.push(path)
   }
+  // Format13 has one Class-owned Warrior setup protocol. Ordinary/Bonus/fixed feat owners remain
+  // independent; old-format originals are exported by the existing incompatible-record path.
+  for (const [index, owner] of (character.classFeatChoices ?? []).entries())
+    for (const [featIndex, feat] of owner.feats.entries())
+      if (
+        getClassFeatureSpellSemantics('feat', feat.name, feat.source) &&
+        feat.options?.spells?.length
+      )
+        invalid.push(['classFeatChoices', index, 'feats', featIndex, 'options', 'spells'])
   for (const [domain, values] of Object.entries(character.provenance.proficiencies))
     for (const [name, tags] of Object.entries(values as Record<string, SourceTag[]>))
       tags.forEach((tag, index) => {

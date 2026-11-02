@@ -23,6 +23,7 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
@@ -381,7 +382,12 @@ export function FeatsPage() {
                                     })
                                   }
                                   optionsConfigured={
-                                    !!feat.options &&
+                                    (!!feat.options ||
+                                      !!getClassFeatureSpellSemantics(
+                                        'feat',
+                                        feat.name,
+                                        feat.source,
+                                      )) &&
                                     (!needsOptions ||
                                       isSetupComplete(feat, feat.options, {
                                         classFeatChoiceId: choice.id,

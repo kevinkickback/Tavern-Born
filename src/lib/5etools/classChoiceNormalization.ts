@@ -28,6 +28,7 @@ import {
 import { normalizeClassProficiencyChoices } from './classProficiencyChoices'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
 import { getFeatureVariantMetadata } from './featureVariantMetadata'
+import { getFilteredFeatAlternative } from './filteredFeatAlternative'
 import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
 import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
@@ -903,6 +904,23 @@ function normalizeSingleFilterChoices(
     }
     const selectionCountByLevel = inferSelectionCounts(text, level, count)
     const maximumSelections = Math.max(...selectionCountByLevel)
+    const alternative = getFilteredFeatAlternative(
+      ref,
+      owner,
+      filter.entityType,
+      filter.categories,
+      maximumSelections,
+    )
+    if (alternative.present && !alternative.option)
+      diagnostics.push(
+        choiceDiagnostic(
+          owner,
+          ref,
+          level,
+          'unverified-required-choice',
+          'The explicit alternative to this filtered choice has unsupported or changed rules.',
+        ),
+      )
     choices.push({
       id: buildChoiceId(owner, ref.name, level),
       label: ref.name,
@@ -912,14 +930,14 @@ function normalizeSingleFilterChoices(
       minimumSelections: maximumSelections,
       maximumSelections,
       selectionCountByLevel,
-      options: [],
+      options: alternative.option ? [alternative.option] : [],
       optionFilter: filter,
       repeatable: false,
       replacement: inferReplacement(text),
       ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
       source: {
         kind: 'class-feature-options',
-        field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.filter`,
+        field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.filter${alternative.option ? '-alternative-v1' : ''}`,
       },
     })
   }

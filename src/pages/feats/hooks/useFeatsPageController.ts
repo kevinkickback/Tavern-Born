@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import type { CompactPane } from '@/components/ui/SplitPane'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
@@ -10,6 +10,7 @@ import { useClassLookup, useFeatLookup, useSpellLookup } from '@/hooks/data/useG
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
+import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import {
@@ -72,6 +73,7 @@ export function isSelectedFeat(
 }
 
 export function useFeatsPageController() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
@@ -136,7 +138,12 @@ export function useFeatsPageController() {
       options?: FeatOptionSelections,
       owner: Omit<FeatOptionTarget, 'name' | 'source'> = { selectionKind: 'ordinary' },
     ) => {
-      if (character && isKnownFeatExpertiseTarget(ref))
+      if (
+        character &&
+        (isKnownFeatExpertiseTarget(ref) ||
+          (owner.classFeatChoiceId &&
+            getClassFeatureSpellSemantics('feat', ref.name, ref.source ?? '')))
+      )
         return getFeatSetupStatus(
           character,
           calculationContext?.character ?? character,
@@ -232,6 +239,7 @@ export function useFeatsPageController() {
         classProgression,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
         classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+        classChoicePrerequisites: calculationContext?.classChoices.prerequisites,
         effectiveSpellProfiles: calculationContext?.character.spells.spellProfiles,
       }),
     [character, classProgression, calculationContext],
@@ -388,6 +396,21 @@ export function useFeatsPageController() {
     },
     [character, replaceBonusFeatSelections, selectedFeat],
   )
+  const openClassSpellSetup = useCallback(
+    (name: string, source: string, choiceId?: string) => {
+      if (!choiceId || !getClassFeatureSpellSemantics('feat', name, source)) return false
+      const owner = character?.classFeatChoices?.find((row) => row.id === choiceId)
+      const feat = owner?.feats.find(
+        (row) => getFeatSelectionKey(row) === getFeatSelectionKey({ name, source }),
+      )
+      if (owner && feat)
+        navigate(
+          `/build/class?${new URLSearchParams({ class: `${owner.className}|${owner.classSource}`, ...(feat.classLevel !== undefined ? { level: String(feat.classLevel) } : {}) })}`,
+        )
+      return true
+    },
+    [character, navigate],
+  )
   const handleCompleteSetup = useCallback(
     (
       featName: string,
@@ -398,6 +421,7 @@ export function useFeatsPageController() {
       fixedGrant?: boolean,
       selectionKind: FeatSelectionKind = 'ordinary',
     ) => {
+      if (openClassSpellSetup(featName, featSource, classFeatChoiceId)) return
       const feat5e =
         (feats as Feat5e[]).find(
           (feat) =>
@@ -425,7 +449,7 @@ export function useFeatsPageController() {
       }
       setFeatOptionsTarget({ ...target, initialOptions: currentOptions(target) })
     },
-    [feats, rawFeatLookup, currentOptions],
+    [feats, rawFeatLookup, currentOptions, openClassSpellSetup],
   )
   const handleCompleteBonusSetup = useCallback(
     (name: string, source: string) =>
@@ -475,6 +499,7 @@ export function useFeatsPageController() {
       classFeatChoiceId?: string,
       fixedGrant?: boolean,
     ) => {
+      if (openClassSpellSetup(featName, featSource, classFeatChoiceId)) return
       const feat5e =
         (feats as Feat5e[]).find(
           (feat) =>
@@ -545,6 +570,7 @@ export function useFeatsPageController() {
       character?.fixedFeatOptions,
       character?.provenance?.choices,
       character?.classFeatChoices,
+      openClassSpellSetup,
     ],
   )
   const handleEditBonusSetup = useCallback(

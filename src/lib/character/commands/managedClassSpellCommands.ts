@@ -1,4 +1,4 @@
-import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
+import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
 import {
@@ -67,8 +67,10 @@ export function setManagedClassSpellChoicesCommand(
   const addressed = new Set<string>()
   const edits = requests
     .map((request) => {
-      if (!getManagedClassSpellRule(request.slot))
+      if (!isManagedClassSpellSlot(request.slot))
         throw new RangeError('This class spell slot is invalid.')
+      if (request.slot[1] === 'feature-cantrip' && request.target && request.policy !== 'default')
+        throw new RangeError('Feature spell choices must use their declared spell list.')
       const id = managedClassSpellId(request.slot)
       if (addressed.has(id)) throw new RangeError('A spell choice was addressed more than once.')
       addressed.add(id)
@@ -174,6 +176,7 @@ export function setManagedClassSpellChoicesCommand(
     : { character: proposed, statuses: [] }
   for (const edit of grants) {
     if (
+      edit.request.slot[1] !== 'feature-cantrip' &&
       !edit.sameTarget &&
       edit.request.target &&
       getOptionalClassFixedSpellNamesAtGain(character, edit.request.slot, context?.catalogs).has(
@@ -212,14 +215,20 @@ export function retainEarnedManagedClassSpells(
   const earnedIds = (progression: CharacterClassEntry[]) =>
     new Set(
       progression
-        .flatMap(getManagedClassSpellSlots)
+        .flatMap((entry) => getManagedClassSpellSlots(entry))
         .filter((slot) => getManagedClassSpellOwnerEntry(slot, progression))
         .map(managedClassSpellId),
     )
   const nextIds = earnedIds(nextProgression)
   const lostSlot = [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
-  const removed = (character.managedClassSpellChoices ?? []).filter(
-    (choice) => !nextIds.has(managedClassSpellId(choice.slot)),
+  const removed = (character.managedClassSpellChoices ?? []).filter((choice) =>
+    choice.slot[1] === 'feature-cantrip'
+      ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
+        !nextProgression.some(
+          (entry) =>
+            getManagedClassSpellOwnerEntry(choice.slot, [entry]) && entry.levels >= choice.slot[3],
+        )
+      : !nextIds.has(managedClassSpellId(choice.slot)),
   )
   const progressed = { ...character, classProgression: nextProgression }
   if (!lostSlot && !removed.length) return progressed

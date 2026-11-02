@@ -1,4 +1,4 @@
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
 import type { ManagedClassSpellChoice } from '@/types/classCasting'
@@ -7,6 +7,10 @@ import {
   isManagedClassSpellTag,
   managedClassSpellId,
 } from './managedClassSpellIdentity'
+import {
+  getSavedSelectedFeatureSpellProducers,
+  hasSavedSelectedFeatureSpellOwner,
+} from './selectedFeatureSpellOwnership'
 
 /** Source-free inverse for precisely addressed ownership; every other saved relation is retained. */
 export function removeManagedClassSpellMaterialization(
@@ -19,6 +23,16 @@ export function removeManagedClassSpellMaterialization(
     if (!targets.length) return profile
     const keep = (reference: string) =>
       isIndependentFixedClassSpell(profile, reference) ||
+      (character.managedClassSpellChoices ?? []).some(
+        (choice) =>
+          !ids.has(managedClassSpellId(choice.slot)) &&
+          isManagedClassSpellProfile(choice.slot, profile) &&
+          (character.provenance.spells[getSpellNameKey(choice.target.name)] ?? []).some(
+            (tag) => tag.grantVariant === managedClassSpellId(choice.slot),
+          ) &&
+          getSpellReferenceKey(choice.target.name, choice.target.source) ===
+            getSpellReferenceKey(reference),
+      ) ||
       !targets.some(
         (choice) =>
           getSpellReferenceKey(choice.target.name, choice.target.source) ===
@@ -41,6 +55,33 @@ export function removeManagedClassSpellMaterialization(
     ...character,
     spells: { ...character.spells, spellProfiles },
     provenance: { ...character.provenance, spells },
+  }
+}
+
+/** Intentional selected-producer loss retires empty and occupied editor lifetimes without sources. */
+export function retainSelectedFeatureSpellIntent(before: Character, next: Character): Character {
+  const current = getSavedSelectedFeatureSpellProducers(next)
+  const lost = [...getSavedSelectedFeatureSpellProducers(before)].some((key) => !current.has(key))
+  const removed = (next.managedClassSpellChoices ?? []).filter(
+    (choice) =>
+      choice.slot[1] === 'feature-cantrip' && !hasSavedSelectedFeatureSpellOwner(next, choice.slot),
+  )
+  if (!lost && !removed.length) return next
+  const stripped = removeManagedClassSpellMaterialization(next, removed)
+  const ids = new Set(removed.map((choice) => managedClassSpellId(choice.slot)))
+  return {
+    ...stripped,
+    ...(removed.length
+      ? {
+          managedClassSpellChoices: next.managedClassSpellChoices?.filter(
+            (choice) => !ids.has(managedClassSpellId(choice.slot)),
+          ),
+        }
+      : {}),
+    managedClassSpellRevision:
+      next.managedClassSpellRevision !== before.managedClassSpellRevision
+        ? next.managedClassSpellRevision
+        : Math.min((next.managedClassSpellRevision ?? 0) + 1, Number.MAX_SAFE_INTEGER),
   }
 }
 

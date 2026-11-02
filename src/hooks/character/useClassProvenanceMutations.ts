@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
   applyClassChoiceSelectionWithGrantsCommand,
@@ -106,12 +107,19 @@ export function useClassProvenanceMutations() {
       )
         throw new RangeError('Source rules changed. Review the current choice before confirming.')
       if (!latest) return
+      const current =
+        calculationContext &&
+        createCharacterCalculationContext(
+          latest,
+          calculationContext.lookups.primary,
+          calculationContext.lookups.raw,
+        )
       const result = applyClassChoiceSelectionWithGrantsCommand(
         latest,
         latest.provenance,
         choice,
         selected,
-        calculationContext?.classChoices,
+        current?.classChoices,
       )
       if (Object.keys(result.characterPatch).length === 0) return
       updateCharacter(latest.id, {
@@ -128,19 +136,26 @@ export function useClassProvenanceMutations() {
       const latest = useCharacterStore.getState().activeCharacter
       if (!latest || latest.id !== character.id)
         throw new RangeError('The active character changed. Review the saved choice.')
-      const result = retainSavedFeatureOptionsCommand(
-        latest,
-        latest.provenance,
-        choiceId,
-        keys,
+      const current =
+        calculationContext &&
         hasCurrentCharacterSourceContext(
           latest,
           character,
           useGameDataStore.getState().gameData,
           sourceData,
         )
-          ? calculationContext?.classChoices
-          : undefined,
+          ? createCharacterCalculationContext(
+              latest,
+              calculationContext.lookups.primary,
+              calculationContext.lookups.raw,
+            )
+          : undefined
+      const result = retainSavedFeatureOptionsCommand(
+        latest,
+        latest.provenance,
+        choiceId,
+        keys,
+        current?.classChoices,
         expectedSelectionHandle,
       )
       if (Object.keys(result.characterPatch).length === 0) return
