@@ -278,6 +278,44 @@ describe('coverage completeness guard', () => {
     Object.assign(value[file].b, { 0: [1, 0] })
     expect(() => validateCoverageMap(value, [file])).not.toThrow()
   })
+  test.each([1, 2])('preserves a native implicit-else difference of -%s', (hit) => {
+    const value = coverage()
+    Object.assign(value[file].branchMap, {
+      0: { type: 'if', loc, locations: [loc, { start: {}, end: {} }] },
+    })
+    Object.assign(value[file].b, { 0: [hit, -hit] })
+    expect(() => validateCoverageMap(value, [file])).not.toThrow()
+    expect(value[file].b).toEqual({ 0: [hit, -hit] })
+  })
+  test('rejects negative counts outside the native implicit-else derivation', () => {
+    for (const [type, locations, counts] of [
+      ['if', [loc, loc], [1, -1]],
+      ['cond-expr', [loc, { start: {}, end: {} }], [1, -1]],
+      ['if', [{ start: {}, end: {} }, loc], [-1, 1]],
+      [
+        'if',
+        [
+          { start: {}, end: {} },
+          { start: {}, end: {} },
+        ],
+        [1, -1],
+      ],
+      ['if', [loc, { start: {}, end: {} }], [1, -2]],
+      ['if', [loc, { start: {}, end: {} }], [1, -0.5]],
+      ['if', [loc, { start: {}, end: {} }], [1, Number.NEGATIVE_INFINITY]],
+      ['if', [loc, { start: {}, end: {} }], [1, -Number.MAX_SAFE_INTEGER - 1]],
+      ['if', [loc, { start: {}, end: {} }], [-1, -1]],
+    ]) {
+      const value = coverage()
+      Object.assign(value[file].branchMap, { 0: { type, loc, locations } })
+      Object.assign(value[file].b, { 0: counts })
+      expect(() => validateCoverageMap(value, [file])).toThrow()
+    }
+    const value = coverage()
+    Object.assign(value[file].fnMap, { 0: { loc, decl: loc } })
+    Object.assign(value[file].f, { 0: -1 })
+    expect(() => validateCoverageMap(value, [file])).toThrow()
+  })
   test('retains constructor parameter-property source-map boundaries', () => {
     const value = coverage()
     Object.assign(value[file].statementMap[0], {

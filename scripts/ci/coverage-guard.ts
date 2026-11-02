@@ -22,15 +22,41 @@ function location(value: unknown): boolean {
 
 const hits = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0
 
-function branchLocation(value: unknown): boolean {
-  // An implicit else branch has no source range in native Istanbul/V8 maps.
+function implicitElseLocation(value: unknown): boolean {
   return (
-    location(value) ||
-    (record(value) &&
-      record(value.start) &&
-      record(value.end) &&
-      Object.keys(value.start).length === 0 &&
-      Object.keys(value.end).length === 0)
+    record(value) &&
+    record(value.start) &&
+    record(value.end) &&
+    Object.keys(value.start).length === 0 &&
+    Object.keys(value.end).length === 0
+  )
+}
+
+function branchCoverage(counts: unknown, metadata: unknown): boolean {
+  if (
+    !Array.isArray(counts) ||
+    !record(metadata) ||
+    !location(metadata.loc) ||
+    !Array.isArray(metadata.locations) ||
+    metadata.locations.length !== counts.length ||
+    !metadata.locations.every((value) => location(value) || implicitElseLocation(value))
+  )
+    return false
+  const locations = metadata.locations
+  return counts.every(
+    (value, index) =>
+      hits(value) ||
+      // The native converter derives an absent else as parent hits minus consequent hits.
+      // Preserve its possible negative result; native reporting still counts it as uncovered.
+      (Number.isSafeInteger(value) &&
+        Number(value) < 0 &&
+        metadata.type === 'if' &&
+        counts.length === 2 &&
+        index === 1 &&
+        location(locations[0]) &&
+        implicitElseLocation(locations[1]) &&
+        hits(counts[0]) &&
+        Number(value) >= -Number(counts[0])),
   )
 }
 
@@ -73,16 +99,7 @@ export function validateCoverageMap(value: unknown, expectedFiles: string[]): vo
           (!hits(count) || !record(item) || !location(item.loc) || !location(item.decl))
         )
           throw new Error('Invalid function coverage')
-        if (
-          countsKey === 'b' &&
-          (!Array.isArray(count) ||
-            !count.every(hits) ||
-            !record(item) ||
-            !location(item.loc) ||
-            !Array.isArray(item.locations) ||
-            item.locations.length !== count.length ||
-            !item.locations.every(branchLocation))
-        )
+        if (countsKey === 'b' && !branchCoverage(count, item))
           throw new Error(`Invalid branch coverage: ${file}:${id}`)
       }
     }
