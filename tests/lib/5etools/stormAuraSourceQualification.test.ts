@@ -30,6 +30,7 @@ test('canonical digest ignores object key order and attached enrichment, preserv
       entries: ['A', 'B'],
       feature: { entries: ['Enrichment'] },
       featureOptionSourceConflict: true,
+      sourceIdentityConflict: true,
     },
   ]
   const canonical = '[{"entries":["A","B"],"name":"Synthetic","type":"entries"}]'

@@ -48,6 +48,7 @@ const SOURCE_FIELDS = new Set([
   'page',
   'header',
   'featureOptionSourceConflict',
+  'sourceIdentityConflict',
 ])
 export function hasStormSourceShape(feature: ClassFeature | Record<string, unknown>): boolean {
   return hasFeatureSourceShape(feature, SOURCE_FIELDS)

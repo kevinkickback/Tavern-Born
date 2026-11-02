@@ -187,6 +187,7 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
     const subclasses = (classData.subclasses ?? []).map((subclass) => {
       let subclassChanged = false
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
+        if (reference.sourceIdentityConflict === true) return reference
         const identity = getSubclassFeatureIdentity(reference)
         const feature = identity ? subclassFeatures.get(identity) : undefined
         if (!feature || reference.feature === feature) return reference

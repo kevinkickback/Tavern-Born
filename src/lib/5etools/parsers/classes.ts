@@ -93,12 +93,15 @@ function parseClassFeatureReferences(
 function resolveSubclassFeatureRecord(
   ref: ParsedObject,
   subclassFeatureRecords: unknown[],
-): ParsedObject | undefined {
+): { feature?: ParsedObject; sourceIdentityConflict?: true } {
   const identity = getSubclassFeatureIdentity(ref)
-  if (!identity) return undefined
-  return subclassFeatureRecords
+  if (!identity) return {}
+  const matches = subclassFeatureRecords
     .map(asObject)
-    .find((feature) => getSubclassFeatureIdentity(feature) === identity)
+    .filter((feature) => getSubclassFeatureIdentity(feature) === identity)
+  return matches.length > 1
+    ? { feature: { ...matches[0], sourceIdentityConflict: true }, sourceIdentityConflict: true }
+    : { feature: matches[0] }
 }
 
 function parseSubclassFeatureReference(
@@ -109,11 +112,15 @@ function parseSubclassFeatureReference(
 
   const parsedRef = { ...decodeSubclassFeatureReference(rawRef) }
 
-  const feature = resolveSubclassFeatureRecord(parsedRef, subclassFeatureRecords)
+  const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
+    parsedRef,
+    subclassFeatureRecords,
+  )
   if (!feature) return parsedRef
 
   return {
     ...parsedRef,
+    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
     source:
       typeof feature.source === 'string' && feature.source.length > 0
         ? feature.source
@@ -368,10 +375,14 @@ function resolveInlineSubclassFeatureRef(
   const refStr = typeof entry.subclassFeature === 'string' ? entry.subclassFeature : ''
   if (!refStr) return entry
   const parsedRef = { ...decodeSubclassFeatureReference(refStr) }
-  const feature = resolveSubclassFeatureRecord(parsedRef, subclassFeatureRecords)
+  const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
+    parsedRef,
+    subclassFeatureRecords,
+  )
   if (!feature) return entry
   return {
     ...entry,
+    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
     feature: Array.isArray(feature.entries)
       ? {
           ...feature,

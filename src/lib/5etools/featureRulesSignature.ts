@@ -5,7 +5,12 @@ export function featureOptionRulesSignature(
 ): string | undefined {
   try {
     return JSON.stringify(entries, (key, value: unknown) => {
-      if (stripEnrichment && (key === 'feature' || key === 'featureOptionSourceConflict'))
+      if (
+        stripEnrichment &&
+        (key === 'feature' ||
+          key === 'featureOptionSourceConflict' ||
+          key === 'sourceIdentityConflict')
+      )
         return undefined
       const object =
         value && typeof value === 'object' && !Array.isArray(value)

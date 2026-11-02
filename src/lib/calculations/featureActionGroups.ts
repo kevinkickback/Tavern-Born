@@ -6,7 +6,7 @@ export function getFeatureActionGroupId(owner: string, target: string, entries: 
   const parts = target.split('|')
   const family = parts.filter((_, index) => index !== (parts[0] === 'subclass-feature' ? 6 : 4))
   const rules = JSON.stringify(entries, (key, value: unknown) =>
-    key === 'featureOptionSourceConflict'
+    key === 'featureOptionSourceConflict' || key === 'sourceIdentityConflict'
       ? undefined
       : value !== null && typeof value === 'object' && !Array.isArray(value)
         ? Object.fromEntries(

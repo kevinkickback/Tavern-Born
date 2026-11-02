@@ -7,17 +7,25 @@ const object = (value: unknown): SourceRecord =>
 
 /** Keep the production one-level subclass inheritance behavior shared with development tooling. */
 export function materializeSubclassCopies(subclasses: readonly unknown[]): SourceRecord[] {
-  const byIdentity = new Map<string, SourceRecord>()
+  const byIdentity = new Map<string, SourceRecord[]>()
   for (const value of subclasses) {
     const record = object(value)
     const key = getSubclassCopyLookupKey(record)
-    if (key && !byIdentity.has(key)) byIdentity.set(key, record)
+    if (key) byIdentity.set(key, [...(byIdentity.get(key) ?? []), record])
   }
   return subclasses.map((value) => {
     const record = object(value)
     const key = getSubclassCopyLookupKey(object(record._copy))
-    const base = key ? byIdentity.get(key) : undefined
-    return base ? { ...base, ...record } : record
+    const matches = key ? byIdentity.get(key) : undefined
+    if (matches && matches.length > 1) return { ...record, sourceIdentityConflict: true }
+    const base = matches?.[0]
+    return base
+      ? {
+          ...base,
+          ...record,
+          ...(base.sourceIdentityConflict === true ? { sourceIdentityConflict: true } : {}),
+        }
+      : record
   })
 }
 
