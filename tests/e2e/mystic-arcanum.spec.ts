@@ -5,12 +5,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeManagedClassSpellBrowserFixtures } from '../fixtures/managedClassSpellBrowserFixtures'
-import {
-  ensureStartupPromptResolved,
-  readPersistedCharacters,
-  seedAppState,
-  selectCharacterFromHome,
-} from './helpers/startup'
+import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from './helpers/startup'
 
 async function openSetup(page: Page) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
@@ -38,7 +33,6 @@ for (const source of ['PHB', 'XPHB'] as const) {
     character.spells.spellProfiles = ensureSpellProfiles(character)
     const sourcePath = `e2e-arcanum-${source}`
     await page.goto('/')
-    await ensureStartupPromptResolved(page, sourcePath, fixture.gameData)
     await seedAppState(page, {
       sourcePath,
       gameData: fixture.gameData,
