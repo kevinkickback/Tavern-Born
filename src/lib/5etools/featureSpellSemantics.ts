@@ -47,6 +47,8 @@ const fields = new Set([
   'name',
   'source',
   'page',
+  'srd52',
+  'basicRules2024',
   'reprintedAs',
   'isClassFeatureVariant',
   'featureType',

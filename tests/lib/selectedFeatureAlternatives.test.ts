@@ -5,6 +5,7 @@ import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { commitFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getSelectedFeatureCantripSlots } from '@/lib/character/selectedFeatureSpells'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -23,6 +24,63 @@ const authority = {
 }
 
 describe('XPHB explicit filtered alternatives', () => {
+  test.each([
+    ['Paladin', ['srd52']],
+    ['Ranger', ['srd52']],
+    ['Paladin', ['basicRules2024']],
+    ['Ranger', ['basicRules2024']],
+    ['Paladin', ['srd52', 'basicRules2024']],
+    ['Ranger', ['srd52', 'basicRules2024']],
+  ] as const)('%s accepts standard metadata additions %j without changing Warrior ownership', (name, markers) => {
+    // Actual neighboring Defense metadata, applied as an explicit supported-source evolution case.
+    // Current Warrior records themselves have neither marker.
+    const changed = makeWarriorSpellFixtures((source) => {
+      const neighbor = source.feat.find((row: { name: string }) => row.name === 'Defense')
+      for (const marker of markers) expect(neighbor[marker]).toBe(true)
+      for (const row of source.feat)
+        if (row.name !== 'Defense') for (const marker of markers) row[marker] = neighbor[marker]
+    })
+    let { character } = selectWarriorFixture(changed, name, 'XPHB')
+    const slots = getSelectedFeatureCantripSlots(character, changed.context.catalogs)
+    expect(slots).toHaveLength(2)
+    character = applyWarriorResult(
+      character,
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        slots.map((slot, index) => ({
+          slot,
+          expected: null,
+          expectedEmptyRevision: 0,
+          target: { name: index ? 'Resistance' : 'Guidance', source: 'XPHB' },
+          policy: 'default',
+        })),
+        changed.context,
+      ),
+    )
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(true)
+    expect(
+      projectManagedClassSpellState(character, changed.context).statuses.every((row) => row.active),
+    ).toBe(true)
+    const restricted = {
+      ...changed.context,
+      catalogs: {
+        ...changed.context.catalogs,
+        featExpertiseFeats: changed.context.catalogs.featExpertiseFeats!.map((row) => ({
+          ...row,
+          unknownMechanicalCondition: true,
+        })),
+      },
+    }
+    expect(
+      projectManagedClassSpellState(character, restricted).statuses.every((row) => !row.active),
+    ).toBe(true)
+    expect(
+      projectManagedClassSpellState(character, changed.context).statuses.every((row) => row.active),
+    ).toBe(true)
+    expect(character.managedClassSpellRevision).toBe(2)
+  })
+
   test('one current Class choice offers its explicit feat plus ordinary FS, without another quota', () => {
     const { character, choice } = selectWarriorFixture(fixture, 'Paladin', 'XPHB')
     expect(choice.options).toEqual([
