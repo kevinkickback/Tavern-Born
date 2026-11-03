@@ -2,13 +2,15 @@
 import fs from 'node:fs'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
+import { normalizeClassChoices } from '@/lib/5etools/classChoiceNormalization'
+import { decodeClassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { parsePsionics } from '@/lib/5etools/parsers/psionics'
 import { normalizePsionicChoices } from '@/lib/5etools/psionicChoices'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
-import { getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import { getPsionicChoiceId, PSIONIC_ROOT_REF } from '@/lib/5etools/psionicIdentity'
 import { getPsionicKey, resolvePsionic } from '@/lib/5etools/psionics'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -177,6 +179,29 @@ test('psionic target keys preserve literal field boundaries and require the exac
   expect(resolvePsionic({ name: ' beacon ', source: ' other ' }, records)).toBe(records[0])
 })
 
+test('required Psionics diagnostics survive alternate owner printings and canonical source restoration', () => {
+  const ref = decodeClassFeatureReference(PSIONIC_ROOT_REF)
+  for (const name of ['Mystic', ' Mystic '])
+    for (const source of [
+      'UATheMysticClass',
+      'AlternatePrinting',
+      ' uathemysticclass ',
+      'UATheMysticClass',
+    ]) {
+      const result = normalizeClassChoices({ name, source } as Class5e, [ref])
+      const diagnostics = result.diagnostics.filter((row) => row.featureName === 'Psionics')
+      expect(diagnostics).toHaveLength(1)
+      expect(diagnostics[0]).toMatchObject({
+        code: 'unverified-required-choice',
+        classSource: source,
+      })
+    }
+  const ranger = normalizeClassChoices({ name: 'Ranger', source: 'PHB' } as Class5e, [
+    decodeClassFeatureReference('Favored Enemy|Ranger|PHB|1|PHB'),
+  ])
+  expect(ranger.diagnostics.some((row) => row.featureName === 'Favored Enemy')).toBe(true)
+})
+
 describe.skipIf(!hasSource)('configured Mystic psionic actor and current-source lifecycle', () => {
   test('all current table counts and six order pools derive from source, with no Soul Knife bonus', () => {
     const data = catalog(),
@@ -201,6 +226,15 @@ describe.skipIf(!hasSource)('configured Mystic psionic actor and current-source 
       }
     }
     expect(cls.normalizedRules?.choices.filter((row) => row.kind === 'psionic')).toHaveLength(2)
+    for (const source of ['AlternatePrinting', 'UATheMysticClass']) {
+      const current = normalizeClassChoices({ ...cls, source }, cls.classFeatureRefs!)
+      expect(current.choices.filter((row) => row.kind === 'psionic')).toHaveLength(
+        source === 'UATheMysticClass' ? 2 : 0,
+      )
+      expect(current.diagnostics.filter((row) => row.featureName === 'Psionics')).toHaveLength(
+        source === 'UATheMysticClass' ? 0 : 1,
+      )
+    }
   })
   test('partial setup, unrestricted base discipline, separate bonus pool, strict reopen and runtime-only descriptions', () => {
     const data = catalog(),
@@ -247,6 +281,32 @@ describe.skipIf(!hasSource)('configured Mystic psionic actor and current-source 
     expect(
       projectEffectiveClassChoiceFeatures(base, catalogs).features.map((row) => row.name),
     ).toEqual([name])
+  })
+  test('unrelated unresolvable catalog rows cannot grant benefits or suspend an available earned selection', () => {
+    const data = catalog(),
+      character = pick(data, actor(), 'Psionic Talents', ['Beacon'])
+    const partial = {
+      ...data,
+      psionics: data.psionics!.map((row) =>
+        row.type === 'T' && row.name !== 'Beacon'
+          ? { ...row, entries: [], focus: undefined, modes: [] }
+          : row,
+      ),
+    }
+    const { catalogs, rows } = choices(partial, character)
+    expect(rows.filter((row) => row.owner.type === 'class')).toHaveLength(2)
+    expect(
+      getEffectiveClassChoiceFeatureRoutes(character, catalogs).contributions.map(
+        (row) => row.name,
+      ),
+    ).toEqual(['Beacon'])
+    expect(() => pick(partial, actor(), 'Psionic Talents', ['Mind Thrust'])).toThrow()
+    expect(
+      getEffectiveClassChoiceFeatureRoutes(
+        character,
+        choices(data, character).catalogs,
+      ).contributions.map((row) => row.name),
+    ).toEqual(['Beacon'])
   })
   test('an old acquisition slot is retained and suspended after the current table moves its gain', () => {
     const data = catalog()

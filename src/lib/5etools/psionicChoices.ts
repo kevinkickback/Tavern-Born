@@ -182,6 +182,8 @@ export function normalizePsionicChoices(
   const intro = currentSource(introTarget, owner, declarations, catalogs)
   const talents = tableCounts(classData, 'T'),
     disciplines = tableCounts(classData, 'D')
+  // Bound schedule expansion by catalog structure. Per-target eligibility stays separate so
+  // unrelated missing content does not suspend an otherwise available earned selection.
   const capacity = (type: string) =>
     catalogs?.psionics?.filter((row) => row.type === type && !row.psionicSourceConflict).length ?? 0
   const bounded =

@@ -34,6 +34,7 @@ import { getFilteredFeatAlternative } from './filteredFeatAlternative'
 import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
 import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
 import { normalizePsionicChoices } from './psionicChoices'
+import { PSIONIC_ROOT_TARGET } from './psionicIdentity'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 import { normalizeStormAuraChoices } from './stormAuraChoices'
 import {
@@ -989,7 +990,13 @@ export function normalizeClassChoices(
       ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
         (diagnostic) =>
           diagnostic.featureName !== 'Natural Explorer' &&
-          !(classData.name.toLowerCase() === 'mystic' && diagnostic.featureName === 'Psionics') &&
+          !(
+            (psionic.choices.length || psionic.diagnostics.length) &&
+            diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
+            getClassFeatureIdentity(
+              decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
+            ) === PSIONIC_ROOT_TARGET
+          ) &&
           diagnostic.featureName !== 'Favored Enemy' &&
           !(
             diagnostic.requiredChoice?.target.entityType === 'classFeature' &&

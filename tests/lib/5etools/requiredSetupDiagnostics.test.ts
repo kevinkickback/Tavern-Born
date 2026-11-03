@@ -477,9 +477,14 @@ describe('source-confirmed required setup', () => {
             'Tundra|Barbarian|PHB|Storm Herald|XGE|3|XGE',
           ])
         } else {
-          expect(rules!.choiceDiagnostics.filter((d) => d.requiredChoice)).toMatchObject([
-            { code: 'unsupported-required-choice', featureName, level },
-          ])
+          expect(rules!.choiceDiagnostics).toEqual([])
+          expect(rules!.choices.map((choice) => [choice.kind, choice.label, choice.level])).toEqual(
+            [
+              ['psionic', 'Psionic Disciplines', level],
+              ['psionic', 'Psionic Talents', level],
+            ],
+          )
+          expect(rules!.choices.map((choice) => choice.selectionCountByLevel[0])).toEqual([1, 1])
         }
         if (source === 'XPHB' && name === 'Sorcerer')
           expect(
