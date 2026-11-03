@@ -1,21 +1,31 @@
 import { useMemo, useRef, useState } from 'react'
-import { GameContent } from '@/components/editor/GameContent'
 import { ItemCard } from '@/components/modals/ItemSelectionModal'
 import { SelectionModal } from '@/components/modals/SelectionModal'
 import { Button } from '@/components/ui/button'
 import { useItemLookup, useItemTextContext } from '@/hooks/data/useGameData'
-import { iterateItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import type { GenericEquipmentChoice } from '@/lib/5etools/startingEquipment'
 import { startingItemKey } from '@/lib/5etools/startingEquipmentPolicy'
-import { cn } from '@/lib/utils'
 import type { StartingItemReference } from '@/types/character'
+
+// Presentation labels do not participate in eligibility or source matching.
+const choiceLabels: Readonly<Record<string, string>> = {
+  weaponsimple: 'Simple weapons',
+  weaponsimplemelee: 'Simple melee weapons',
+  weaponmartial: 'Martial weapons',
+  weaponmartialmelee: 'Martial melee weapons',
+  instrumentmusical: 'Musical instruments',
+  toolartisan: 'Artisan’s tools',
+  setgaming: 'Gaming sets',
+  focusspellcastingarcane: 'Arcane focus',
+  focusspellcastingholy: 'Holy symbol',
+  focusspellcastingdruidic: 'Druidic focus',
+}
 
 export interface GenericEquipmentSelectProps {
   choice: GenericEquipmentChoice
   value: readonly StartingItemReference[]
   onChange: (items: StartingItemReference[]) => void
   ariaLabel?: string
-  triggerClassName?: string
 }
 
 export function GenericEquipmentSelect({
@@ -23,7 +33,6 @@ export function GenericEquipmentSelect({
   value,
   onChange,
   ariaLabel = 'Choose a specific item',
-  triggerClassName,
 }: GenericEquipmentSelectProps) {
   const [open, setOpen] = useState(false)
   const confirmation = useRef(onChange)
@@ -50,25 +59,36 @@ export function GenericEquipmentSelect({
       .filter((ref) => !items.some((item) => startingItemKey(item) === startingItemKey(ref)))
       .map((ref) => [startingItemKey(ref), `${ref.name} (${ref.source})`]),
   )
+  const typeLabel =
+    choiceLabels[choice.token.toLowerCase()] ?? choice.token.replace(/([a-z])([A-Z])/g, '$1 $2')
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        aria-label={ariaLabel}
-        className={cn(
-          'mt-2 h-auto min-h-8 w-full justify-start whitespace-normal text-left text-xs',
-          triggerClassName,
-        )}
-        onClick={() => {
-          confirmation.current = onChange
-          setOpen(true)
-        }}
-      >
-        {value.length
-          ? `${value.map((ref) => `${ref.name} (${ref.source})`).join(', ')} — Change`
-          : `Choose ${choice.quantity} ${choice.token.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()} item${choice.quantity === 1 ? '' : 's'}…`}
-      </Button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-foreground">{typeLabel}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {value.length} / {choice.quantity} selected
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant={value.length ? 'outline' : 'default'}
+          size="sm"
+          aria-label={ariaLabel}
+          className="h-7 shrink-0 text-xs"
+          onClick={() => {
+            confirmation.current = onChange
+            setOpen(true)
+          }}
+        >
+          {value.length ? 'Edit' : 'Choose'}
+        </Button>
+      </div>
+      {unavailable.size > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Unavailable: {[...unavailable.values()].join(', ')}
+        </p>
+      )}
       {choice.diagnostic && (
         <p className="mt-1 text-xs text-muted-foreground">{choice.diagnostic}</p>
       )}
@@ -80,7 +100,7 @@ export function GenericEquipmentSelect({
         getItemId={startingItemKey}
         getItemLabel={(item) => `${item.name} (${item.source})`}
         renderCard={(item, selected) => (
-          <ItemCard item={item} isSelected={selected} textContext={textContext} />
+          <ItemCard item={item} isSelected={selected} textContext={textContext} fullDescription />
         )}
         matchItem={(item, search) =>
           `${item.name} ${item.source}`.toLowerCase().includes(search.toLowerCase())
@@ -96,20 +116,6 @@ export function GenericEquipmentSelect({
           [...ids].some((id) => !items.some((item) => startingItemKey(item) === id))
             ? 'Replace unavailable starting items before confirming.'
             : undefined
-        }
-        renderSelectionDetails={(selected) =>
-          selected.map((item) => (
-            <details
-              key={startingItemKey(item)}
-              className="mt-2 border-t border-border pt-2 text-xs"
-            >
-              <summary className="cursor-pointer font-medium">{item.name} rules</summary>
-              <GameContent
-                entry={[...iterateItemRulesEntries(item, textContext)]}
-                className="mt-2 text-xs"
-              />
-            </details>
-          ))
         }
         onConfirm={(_, selected, __, counts) =>
           confirmation.current(

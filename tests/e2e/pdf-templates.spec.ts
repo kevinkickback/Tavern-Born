@@ -2,9 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, type Page, test } from '@playwright/test'
-import { buildClassLookup, buildSpellLookup } from '@/lib/5etools/lookups'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import type { GameDataLookups } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import {
@@ -237,6 +235,16 @@ test('@focused exports every official and custom character-sheet template', asyn
     classes: casting.data.classes.filter((row) => ['Wizard', 'Cleric'].includes(row.name)),
     classFeatures: casting.data.classFeatures,
     classCastingSources: casting.data.classCastingSources,
+    itemProperties: Object.entries({
+      V: 'Versatile',
+      A: 'Ammunition',
+      H: 'Heavy',
+      '2H': 'Two-Handed',
+      F: 'Finesse',
+      L: 'Light',
+      T: 'Thrown',
+      LD: 'Loading',
+    }).map(([abbreviation, name]) => ({ abbreviation, name, source: 'PHB' })),
     // Leave unrelated native printings absent to retain the unknown-level Notes case.
     spells: casting.spells.filter((spell) =>
       targets.has(getSpellReferenceKey(spell.name, spell.source)),
@@ -254,23 +262,7 @@ test('@focused exports every official and custom character-sheet template', asyn
   await seedAppState(page, {
     sourcePath: 'e2e-pdf-templates',
     characters,
-    gameData: {
-      ...gameData,
-      lookups: {
-        classesByKey: buildClassLookup(gameData.classes),
-        spellsByKey: buildSpellLookup(gameData.spells),
-        itemPropertyByAbbr: {
-          V: 'Versatile',
-          A: 'Ammunition',
-          H: 'Heavy',
-          '2H': 'Two-Handed',
-          F: 'Finesse',
-          L: 'Light',
-          T: 'Thrown',
-          LD: 'Loading',
-        },
-      } as Partial<GameDataLookups> as GameDataLookups,
-    },
+    gameData,
   })
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-pdf-templates')

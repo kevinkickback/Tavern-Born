@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, test, vi } from 'vitest'
 import { parseItems } from '@/lib/5etools/parsers/basic'
 import { buildItemLookup, resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
-import { duplicateCharacter } from '@/lib/character/characterTransfer'
+import { duplicateCharacter, prepareCharacterImport } from '@/lib/character/characterTransfer'
+import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
 import {
   applyClassEquipmentChoiceCommand,
   applyClassProgressionUpdate,
@@ -20,10 +22,12 @@ import {
   reconcileStartingEquipmentGrant,
   setStartingCurrencyCommand,
 } from '@/lib/character/startingEquipmentGrants'
-import type { Class5e, Item5e } from '@/types/5etools'
+import { validateCharacterData } from '@/store/characterStore'
+import type { Background5e, Class5e, Item5e } from '@/types/5etools'
 import type { Character, Currency } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeConfiguredStartingEquipmentScenario } from '../fixtures/configuredStartingEquipmentFixtures'
 
 const gp = (value: number): Currency => ({ ...emptyStartingCurrency(), gp: value })
 const apply = (character: Character, result: CharacterCommandResult): Character =>
@@ -301,7 +305,9 @@ describe('starting equipment source, quantities and ownership', () => {
 
   test('exact source loss/restoration and item casing retain the owned ID, quantity and summary', () => {
     let c = actor()
+    c = apply(c, updateEquipmentQuantityCommand(c, c.provenance, c.equipment[0].id, 1))
     const before = c.equipment[0]
+    const ownedBefore = c.startingEquipmentGrants!.class!.items[0]
     const missing = createStartingEquipmentPolicy(
       c,
       { kind: 'class', name: fighter.name, source: fighter.source },
@@ -315,6 +321,7 @@ describe('starting equipment source, quantities and ownership', () => {
       }),
     )
     expect(c.equipment[0]).toEqual(before)
+    expect(c.startingEquipmentGrants!.class!.items[0]).toEqual(ownedBefore)
     expect(c.provenance.equipment.dagger).toHaveLength(1)
     const changed = items.map((item) =>
       item.name === 'Dagger' ? { ...item, name: ' DAGGER ', source: ' phb ' } : item,
@@ -332,6 +339,13 @@ describe('starting equipment source, quantities and ownership', () => {
       }),
     )
     expect(c.equipment[0]).toEqual(before)
+    expect(c.startingEquipmentGrants!.class!.items[0]).toMatchObject({
+      key: ownedBefore.key,
+      equipmentId: ownedBefore.equipmentId,
+      issuedQuantity: ownedBefore.issuedQuantity,
+      consumedQuantity: ownedBefore.consumedQuantity,
+      remainingQuantity: ownedBefore.remainingQuantity,
+    })
   })
 
   test('never-issued restored grants need explicit application; consumed grants do not', () => {
@@ -431,3 +445,309 @@ test('spent starting currency remains debited through lower/higher budgets, remo
   expect(characterPersistenceSchema.safeParse(corrupt).success).toBe(false)
   expect(() => setStartingCurrencyCommand(c, 'gp', Number.MAX_SAFE_INTEGER)).toThrow(RangeError)
 })
+
+test.each([
+  'class',
+  'background',
+] as const)('%s changed choices require the exact count without mutating the original', (role) => {
+  const ref = { name: 'Longsword', source: 'PHB' }
+  const other = { name: 'Warhammer', source: 'PHB' }
+  const background = {
+    name: 'Quartermaster',
+    source: 'PHB',
+    entries: [
+      {
+        name: 'Equipment:',
+        entries: ['{@filter martial weapons|items|source=phb|category=basic|type=martial weapon}'],
+      },
+    ],
+    startingEquipment: [{ _: [{ equipmentType: 'weaponMartial', quantity: 2 }] }],
+  } as Background5e
+  const key = role === 'class' ? '0:a:0' : '0:_:0'
+  const edit = (c: Character, refs: (typeof ref)[]) =>
+    apply(
+      c,
+      role === 'class'
+        ? applyClassEquipmentChoiceCommand(
+            c,
+            c.provenance,
+            fighter,
+            0,
+            'a',
+            lookup,
+            { [key]: refs },
+            policy(c),
+          )
+        : applyBackgroundSelectionCommand(c, c.provenance, background, [], lookup, { [key]: refs }),
+    )
+  const complete = edit(actor(), [ref, other])
+  const before = structuredClone(complete)
+  for (const invalid of [[ref], []]) {
+    expect(() => edit(complete, invalid)).toThrow(RangeError)
+    expect(complete).toEqual(before)
+  }
+  const pending = edit(actor(), [])
+  const savedPartial = characterPersistenceSchema.parse({
+    ...pending,
+    ...(role === 'class'
+      ? { classEquipmentItemChoices: { 'Fighter|PHB': { [key]: [ref] } } }
+      : { backgroundEquipmentItemChoices: { [key]: [ref] } }),
+  })
+  expect(() => edit(savedPartial, [ref])).not.toThrow()
+  expect(() => edit(pending, [ref])).toThrow(RangeError)
+  const same = edit(complete, [ref, ref])
+  expect(
+    same.equipment
+      .filter((item) => item.name === 'Longsword')
+      .reduce((sum, item) => sum + item.quantity, 0),
+  ).toBe(2)
+})
+
+test.each([
+  1, 2,
+])('retained consumed count %s survives declared quantity shrink, strict reopen and regrowth', (consumed) => {
+  let c = actor()
+  const id = c.startingEquipmentGrants!.class!.items[0].equipmentId
+  c = apply(c, updateEquipmentQuantityCommand(c, c.provenance, id, 2 - consumed))
+  const resize = (quantity: number) => {
+    const cls = {
+      ...fighter,
+      startingEquipment: { defaultData: [{ _: [{ item: 'Dagger|PHB', quantity }] }] },
+    }
+    const authority = createStartingEquipmentPolicy(
+      c,
+      { kind: 'class', name: cls.name, source: cls.source },
+      cls.startingEquipment,
+      items,
+    )
+    c = apply(
+      c,
+      applyClassEquipmentChoiceCommand(c, c.provenance, cls, 0, '_', lookup, undefined, authority),
+    )
+  }
+  resize(1)
+  expect(c.startingEquipmentGrants!.class!.items[0]).toMatchObject({
+    equipmentId: id,
+    issuedQuantity: 1,
+    consumedQuantity: consumed,
+    remainingQuantity: Math.max(0, 1 - consumed),
+  })
+  c = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(c)))
+  resize(2)
+  expect(c.startingEquipmentGrants!.class!.items[0]).toMatchObject({
+    equipmentId: id,
+    issuedQuantity: 2,
+    consumedQuantity: consumed,
+    remainingQuantity: 2 - consumed,
+  })
+  expect(c.equipment.find((item) => item.id === id)?.quantity ?? 0).toBe(2 - consumed)
+})
+
+test('consumption counts owned units only and preserves independent surplus and the other role', () => {
+  let c = actor()
+  const classId = c.startingEquipmentGrants!.class!.items[0].equipmentId
+  c = apply(
+    c,
+    applyBackgroundSelectionCommand(
+      c,
+      c.provenance,
+      {
+        name: 'Quartermaster',
+        source: 'PHB',
+        startingEquipment: [{ _: [{ item: 'Dagger|PHB', quantity: 2 }] }],
+      },
+      [],
+      lookup,
+    ),
+  )
+  const bgId = c.startingEquipmentGrants!.background!.items[0].equipmentId
+  c = apply(c, addManualEquipmentBatchCommand(c, c.provenance, [lookup.get('dagger|phb')!]))
+  c = apply(c, updateEquipmentQuantityCommand(c, c.provenance, classId, 5))
+  c = apply(c, updateEquipmentQuantityCommand(c, c.provenance, classId, 4))
+  expect(c.startingEquipmentGrants!.class!.items[0]).toMatchObject({
+    consumedQuantity: 1,
+    remainingQuantity: 1,
+  })
+  expect(c.startingEquipmentGrants!.background!.items[0]).toMatchObject({
+    equipmentId: bgId,
+    consumedQuantity: 0,
+    remainingQuantity: 2,
+  })
+  c = apply(c, applyClassProgressionUpdate(c, c.provenance, []))
+  expect(c.equipment.find((item) => item.id === classId)?.quantity).toBe(3)
+  expect(c.equipment.find((item) => item.id === bgId)?.quantity).toBe(2)
+  expect(c.equipment.reduce((sum, item) => sum + item.quantity, 0)).toBe(6)
+})
+
+test('strict admission requires truthful consumption rather than deriving a missing draft balance', () => {
+  const c = actor()
+  for (const consumedQuantity of [undefined, -1, 0.5, Number.MAX_SAFE_INTEGER + 1, 1]) {
+    const bad = structuredClone(c)
+    Object.assign(bad.startingEquipmentGrants!.class!.items[0], { consumedQuantity })
+    expect(characterPersistenceSchema.safeParse(bad).success).toBe(false)
+  }
+})
+
+test.each([
+  'class',
+  'background',
+] as const)('%s strict import rejects missing owned currency even when the wallet has enough funds', (role) => {
+  const base = actor()
+  const c = apply(
+    base,
+    role === 'class'
+      ? applyClassEquipmentChoiceCommand(
+          base,
+          base.provenance,
+          fighter,
+          0,
+          'b',
+          lookup,
+          undefined,
+          policy(base),
+        )
+      : applyBackgroundSelectionCommand(
+          base,
+          base.provenance,
+          {
+            name: 'Quartermaster',
+            source: 'PHB',
+            startingEquipment: [{ _: [{ value: 5000 }] }],
+          },
+          [],
+          lookup,
+        ),
+  )
+  expect(c.currency).toEqual(gp(55))
+  for (const remainingCurrency of [emptyStartingCurrency(), { ...gp(49), sp: 9, cp: 9 }, gp(51)]) {
+    const bad = structuredClone(c)
+    bad.startingEquipmentGrants![role]!.remainingCurrency = remainingCurrency
+    expect(characterPersistenceSchema.safeParse(bad).success).toBe(false)
+    const imported = prepareCharacterImport(
+      JSON.stringify(bad),
+      'invalid.tbc',
+      validateCharacterData,
+    )
+    expect(imported.characters).toEqual([])
+    expect(imported.failures).toHaveLength(1)
+  }
+  expect(duplicateCharacter(c).startingEquipmentGrants).toEqual(c.startingEquipmentGrants)
+})
+
+test('valid equal-value coin vectors survive refresh and owned spending before canonical package replacement', () => {
+  let c = actor()
+  const select = (option: string) => {
+    c = apply(
+      c,
+      applyClassEquipmentChoiceCommand(
+        c,
+        c.provenance,
+        fighter,
+        0,
+        option,
+        lookup,
+        undefined,
+        policy(c),
+      ),
+    )
+  }
+  select('b')
+  c = characterPersistenceSchema.parse({
+    ...c,
+    currency: { ...gp(5), sp: 500 },
+    startingEquipmentGrants: {
+      ...c.startingEquipmentGrants,
+      class: { ...c.startingEquipmentGrants!.class!, remainingCurrency: { ...gp(0), sp: 500 } },
+    },
+  })
+  select('b')
+  expect(c.startingEquipmentGrants!.class!.remainingCurrency).toEqual({ ...gp(0), sp: 500 })
+  for (const amount of [490, 600, 550])
+    c = characterPersistenceSchema.parse({ ...c, ...setStartingCurrencyCommand(c, 'sp', amount) })
+  expect(c.startingEquipmentGrants!.class).toMatchObject({
+    remainingCurrency: { ...gp(0), sp: 440 },
+    spentCopper: 600,
+  })
+  select('a')
+  expect(c.currency).toEqual({ ...gp(5), sp: 110 })
+  select('b')
+  expect(c.startingEquipmentGrants!.class).toMatchObject({
+    remainingCurrency: gp(44),
+    spentCopper: 600,
+  })
+  expect(c.currency).toEqual({ ...gp(49), sp: 110 })
+})
+
+test.skipIf(
+  !['data/class/class-fighter.json', 'data/items.json', 'data/items-base.json'].every(existsSync),
+)(
+  'configured Fighter retains consumption when repeated weapons are redistributed and restored',
+  () => {
+    const { data, character } = makeConfiguredStartingEquipmentScenario('2014')
+    const cls = data.classes.find((row) => row.name === 'Fighter' && row.source === 'PHB')!
+    const actualItems = [...data.items, ...data.itemsBase]
+    const actualLookup = buildItemLookup(actualItems)
+    const authority = (c: Character) =>
+      createStartingEquipmentPolicy(
+        c,
+        { kind: 'class', name: cls.name, source: cls.source },
+        cls.startingEquipment,
+        actualItems,
+      )
+    const slots = resolveClassEquipmentBlocks(
+      cls.startingEquipment,
+      actualLookup,
+      {},
+      authority(character),
+    ).flatMap((block) =>
+      Object.entries(block.options).flatMap(([option, pkg]) =>
+        (pkg.genericChoices ?? []).map((choice) => ({ block: block.index, option, choice })),
+      ),
+    )
+    const target = slots.find(
+      ({ choice }) =>
+        choice.quantity === 2 &&
+        ['Longsword', 'Warhammer'].every((name) =>
+          choice.candidates.some((ref) => ref.name === name && ref.source === 'PHB'),
+        ),
+    )!
+    expect(target).toBeDefined()
+    const ref = { name: 'Longsword', source: 'PHB' },
+      other = { name: 'Warhammer', source: 'PHB' }
+    const edit = (c: Character, refs: (typeof ref)[]) =>
+      apply(
+        c,
+        applyClassEquipmentChoiceCommand(
+          c,
+          c.provenance,
+          cls,
+          target.block,
+          target.option,
+          actualLookup,
+          { ...(c.classEquipmentItemChoices?.['Fighter|PHB'] ?? {}), [target.choice.key]: refs },
+          authority(c),
+        ),
+      )
+    const lot = (c: Character) =>
+      c.startingEquipmentGrants!.class!.items.find((item) => item.reference.name === 'Longsword')!
+    let c = edit(character, [ref, ref])
+    const id = lot(c).equipmentId
+    c = apply(c, updateEquipmentQuantityCommand(c, c.provenance, id, 0))
+    c = edit(c, [ref, other])
+    expect(lot(c)).toMatchObject({
+      equipmentId: id,
+      issuedQuantity: 1,
+      consumedQuantity: 2,
+      remainingQuantity: 0,
+    })
+    c = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(c)))
+    c = edit(c, [ref, ref])
+    expect(lot(c)).toMatchObject({
+      equipmentId: id,
+      issuedQuantity: 2,
+      consumedQuantity: 2,
+      remainingQuantity: 0,
+    })
+    expect(c.equipment.some((item) => item.id === id)).toBe(false)
+  },
+)

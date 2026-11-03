@@ -156,8 +156,10 @@ export function reconcileStartingEquipmentGrant(
     const issuedQuantity = desiredLot.item.quantity
     if (!Number.isSafeInteger(issuedQuantity) || issuedQuantity <= 0)
       throw new RangeError('Starting equipment quantity must be a positive safe integer.')
-    const consumed = old ? old.issuedQuantity - old.remainingQuantity : 0
-    const remainingQuantity = Math.max(0, issuedQuantity - consumed)
+    const consumedQuantity = old ? old.consumedQuantity : 0
+    if (!Number.isSafeInteger(consumedQuantity) || consumedQuantity < 0)
+      throw new RangeError('Starting equipment consumption must be a nonnegative safe integer.')
+    const remainingQuantity = Math.max(0, issuedQuantity - consumedQuantity)
     const equipmentId = old?.equipmentId ?? generateEquipmentId(occupied)
     occupied.add(equipmentId)
     const physical = equipment.find((item) => item.id === equipmentId)
@@ -184,6 +186,7 @@ export function reconcileStartingEquipmentGrant(
       reference: desiredLot.reference,
       equipmentId,
       issuedQuantity,
+      consumedQuantity,
       remainingQuantity,
     })
   }
@@ -266,11 +269,18 @@ export function updateStartingEquipmentQuantity(
     if (!grant) continue
     startingEquipmentGrants[role] = {
       ...grant,
-      items: grant.items.map((lot) =>
-        lot.equipmentId === id
-          ? { ...lot, remainingQuantity: Math.max(0, lot.remainingQuantity - consumed) }
-          : lot,
-      ),
+      items: grant.items.map((lot) => {
+        if (lot.equipmentId !== id) return lot
+        const ownedConsumed = Math.min(consumed, lot.remainingQuantity)
+        const consumedQuantity = lot.consumedQuantity + ownedConsumed
+        if (!Number.isSafeInteger(consumedQuantity))
+          throw new RangeError('Starting equipment consumption is too large.')
+        return {
+          ...lot,
+          consumedQuantity,
+          remainingQuantity: lot.remainingQuantity - ownedConsumed,
+        }
+      }),
     }
   }
   return {

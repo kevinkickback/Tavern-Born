@@ -21,7 +21,7 @@ async function pick(page: Page, name: string) {
   await dialog.getByRole('textbox', { name: /Search/ }).fill(name)
   await dialog
     .locator('button[aria-pressed]')
-    .filter({ hasText: name })
+    .filter({ has: page.getByText(name, { exact: true }) })
     .click({ position: { x: 8, y: 8 } })
 }
 
@@ -67,8 +67,12 @@ test('@focused starting packages support keyboard tabs, independent quantities, 
   await expect(dialog.locator('button[aria-pressed]')).toHaveCount(0)
   await pick(page, 'Longsword')
   await expect(dialog.getByText('3 lb', { exact: true })).toBeVisible()
-  await dialog.getByText('Longsword rules', { exact: true }).click()
-  await expect(dialog.getByText('Practice fixture rules.', { exact: true }).last()).toBeVisible()
+  await expect(dialog.getByText(/Practice fixture rules\./)).toBeVisible()
+  await expect(
+    dialog.getByText(/The second paragraph remains readable directly in the item card\./),
+  ).toBeVisible()
+  await expect(dialog.locator('details')).toHaveCount(0)
+  await expect(dialog.locator('p').filter({ hasText: 'Longsword (PHB)' })).toHaveCount(0)
   await dialog
     .getByRole('button', { name: 'Increase Longsword (PHB) quantity', exact: true })
     .click()
@@ -182,6 +186,13 @@ for (const edition of ['2014', '2024'] as const) {
     const source = edition === '2014' ? 'PHB' : 'XPHB'
     let dialog = await openPicker(page, 'Class', block)
     await pick(page, name)
+    if (edition === '2024') {
+      await expect(
+        dialog.getByRole('region', { name: 'Selected item quantities', exact: true }),
+      ).toHaveCount(0)
+      await expect(dialog.locator('p').filter({ hasText: `${name} (${source})` })).toHaveCount(0)
+      await expect(dialog.locator('details')).toHaveCount(0)
+    }
     if (edition === '2014')
       await dialog
         .getByRole('button', { name: `Increase ${name} (${source}) quantity`, exact: true })
@@ -209,9 +220,14 @@ for (const edition of ['2014', '2024'] as const) {
     await selectCharacterFromHome(page, character.name)
     await openClass(page)
     dialog = await openPicker(page, 'Class', block)
-    await expect(
-      dialog.getByRole('status', { name: `${name} (${source}) quantity`, exact: true }),
-    ).toHaveText(edition === '2014' ? '2' : '1')
+    if (edition === '2014')
+      await expect(
+        dialog.getByRole('status', { name: `${name} (${source}) quantity`, exact: true }),
+      ).toHaveText('2')
+    else
+      await expect(
+        dialog.locator('button[aria-pressed=true]').filter({ hasText: name }),
+      ).toBeVisible()
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
     expect((await saved()).startingEquipmentGrants).toEqual(before.startingEquipmentGrants)
   })
@@ -275,6 +291,120 @@ for (const change of ['catalog', 'tools'] as const) {
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
   })
 }
+
+test('@focused configured Sorcerer keeps each package, picker and result in its own choice group', async ({
+  page,
+}, info) => {
+  test.skip(
+    !['data/class/class-sorcerer.json', 'data/items.json', 'data/items-base.json'].every(
+      existsSync,
+    ),
+    'Configured Sorcerer sources are unavailable',
+  )
+  const { character, data } = makeConfiguredStartingEquipmentScenario('2014', 'Sorcerer')
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.goto('/')
+  await seedAppState(page, {
+    sourcePath: 'e2e-starting-sorcerer-layout',
+    gameData: data,
+    characters: [character],
+    activeCharacterId: character.id,
+  })
+  await page.reload()
+  await selectCharacterFromHome(page, character.name)
+  await openClass(page)
+  const card = page
+    .getByRole('button', { name: 'Starting Equipment', exact: true })
+    .locator('xpath=ancestor::*[@data-slot="accordion-item"][1]')
+  await expect(card.getByRole('group')).toHaveCount(3)
+  const first = card.getByRole('group', {
+    name: 'Class starting equipment choice 1 configuration',
+    exact: true,
+  })
+  await first.getByRole('tab', { name: 'Package B', exact: true }).click()
+  await expect(first.getByText('Simple weapons', { exact: true })).toBeVisible()
+  await expect(first.getByText('0 / 1 selected', { exact: true })).toBeVisible()
+  const dialog = await openPicker(page, 'Class')
+  await pick(page, 'Club')
+  await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(first.getByText('Club', { exact: true })).toBeVisible()
+  await expect(first.getByText('1 / 1 selected', { exact: true })).toBeVisible()
+  const second = card.getByRole('group', {
+    name: 'Class starting equipment choice 2 configuration',
+    exact: true,
+  })
+  const third = card.getByRole('group', {
+    name: 'Class starting equipment choice 3 configuration',
+    exact: true,
+  })
+  await expect(second.getByRole('tab', { name: 'Package A', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await expect(second.getByText('Component Pouch', { exact: true })).toBeVisible()
+  await expect(third.getByText("Dungeoneer's Pack", { exact: true })).toBeVisible()
+  await expect(
+    card
+      .getByRole('region', { name: 'Class starting equipment included equipment', exact: true })
+      .getByText('2× Dagger', { exact: true }),
+  ).toBeVisible()
+  expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await card.screenshot({ path: info.outputPath('sorcerer-starting-equipment.png') })
+  const equipmentColors = () =>
+    first.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        border: style.borderColor,
+        background: style.backgroundColor,
+        icon: getComputedStyle(element.querySelector('svg')!).color,
+        tabs: Array.from(element.querySelectorAll('[role="tablist"], [role="tab"]')).map((tab) => {
+          const tabStyle = getComputedStyle(tab)
+          return {
+            color: tabStyle.color,
+            background: tabStyle.backgroundColor,
+            border: tabStyle.borderColor,
+          }
+        }),
+      }
+    })
+  const fixedColors = await equipmentColors()
+  for (const accent of ['rose', 'green', 'violet'] as const) {
+    await page.evaluate(async (value) => {
+      const path = '/src/store/appPreferencesStore.ts'
+      const { useAppPreferencesStore } = await import(path)
+      useAppPreferencesStore.getState().setThemeAccent(value)
+    }, accent)
+    await expect(page.locator('#root')).toHaveAttribute('data-accent', accent)
+    expect(await equipmentColors()).toEqual(fixedColors)
+  }
+  await page.evaluate(async () => {
+    const path = '/src/store/appPreferencesStore.ts'
+    const { useAppPreferencesStore } = await import(path)
+    useAppPreferencesStore.getState().setThemeAccent('blue')
+    useAppPreferencesStore.getState().setThemeAppearance('light')
+  })
+  await expect(page.locator('#root')).toHaveAttribute('data-appearance', 'light')
+  await card.screenshot({
+    path: info.outputPath('sorcerer-starting-equipment-light.png'),
+    animations: 'disabled',
+  })
+  await page.screenshot({ path: info.outputPath('sorcerer-starting-equipment-light-page.png') })
+  await info.attach('equipment-theme-colors', {
+    body: JSON.stringify({ dark: fixedColors, light: await equipmentColors() }, null, 2),
+    contentType: 'application/json',
+  })
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () => {
+      const saved = characterPersistenceSchema.parse(
+        (await readPersistedCharacters(page)).find(
+          (row) => !!row && typeof row === 'object' && 'id' in row && row.id === character.id,
+        ),
+      )
+      return saved.classEquipmentItemChoices?.['Sorcerer|PHB']?.['0:b:0']
+    })
+    .toEqual([{ name: 'Club', source: 'PHB' }])
+})
 
 test('@focused narrow starting picker scrolls virtual rows and preserves exact selections through source loss', async ({
   page,

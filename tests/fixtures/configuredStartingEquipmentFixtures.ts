@@ -10,8 +10,11 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from './characterFixtures'
 
 /** Read configured source declarations at execution; their rule text stays outside Git. */
-export function makeConfiguredStartingEquipmentScenario(edition: '2014' | '2024') {
-  const name = edition === '2014' ? 'Fighter' : 'Cleric'
+export function makeConfiguredStartingEquipmentScenario(
+  edition: '2014' | '2024',
+  className?: 'Fighter' | 'Cleric' | 'Sorcerer',
+) {
+  const name = className ?? (edition === '2014' ? 'Fighter' : 'Cleric')
   const source = edition === '2014' ? 'PHB' : 'XPHB'
   const parsed = parseClassDocument(
     JSON.parse(readFileSync(`data/class/class-${name.toLowerCase()}.json`, 'utf8')),

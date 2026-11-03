@@ -64,7 +64,7 @@ export function getInvalidStartingEquipmentPaths(
       invalid.push(path)
     try {
       if (
-        currencyCopper(grant.remainingCurrency) >
+        currencyCopper(grant.remainingCurrency) !==
         Math.max(0, currencyCopper(grant.declaredCurrency) - grant.spentCopper)
       )
         invalid.push(path)
@@ -74,7 +74,7 @@ export function getInvalidStartingEquipmentPaths(
     const keys = new Set<string>()
     grant.items.forEach((lot, index) => {
       let valid =
-        lot.remainingQuantity <= lot.issuedQuantity &&
+        lot.remainingQuantity === Math.max(0, lot.issuedQuantity - lot.consumedQuantity) &&
         !keys.has(lot.key) &&
         !claimed.has(lot.equipmentId)
       keys.add(lot.key)

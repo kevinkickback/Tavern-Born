@@ -29,6 +29,24 @@ const props = {
     item.name.toLowerCase().includes(search.toLowerCase()),
 }
 
+test('a single-item choice swaps directly without quantity controls or a repeated footer name', async () => {
+  const onConfirm = vi.fn()
+  render(
+    <SelectionModal
+      {...props}
+      initialSelectedIds={['longsword|PHB']}
+      quantitySelection={{ max: 1, initialQuantities: { 'longsword|PHB': 1 } }}
+      swapOnLimit
+      onConfirm={onConfirm}
+    />,
+  )
+  expect(screen.queryByRole('region', { name: 'Selected item quantities' })).toBeNull()
+  expect(screen.getAllByText('Longsword', { exact: true })).toHaveLength(1)
+  fireEvent.click(await screen.findByRole('button', { name: 'Warhammer' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  expect(onConfirm).toHaveBeenCalledWith(['warhammer|PHB'], [items[1]], {}, { 'warhammer|PHB': 1 })
+})
+
 test('one card supports two copies; exact Confirm, decrement, search and independent second item', async () => {
   const onConfirm = vi.fn()
   render(<SelectionModal {...props} quantitySelection={{ max: 2 }} onConfirm={onConfirm} />)

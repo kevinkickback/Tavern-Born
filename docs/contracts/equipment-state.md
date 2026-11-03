@@ -18,8 +18,9 @@ not automatically promoted. Explicit base-Class selection establishes the new ow
 
 Each concrete starting choice saves an array of exact `{name, source}` references. A quantity of two
 permits different items or repeated references. Source-derived category, Basic/mundane, exact group
-and declared proficiency requirements govern the same picker, command and readiness policy. Explicit
-named groups require a concrete member; groups are never carried as inventory. Raw source-qualified
+and declared proficiency requirements govern the same picker, command and readiness policy. Changes
+must fill the exact declared count; unchanged unfinished selections can remain pending. Explicit named
+groups require a concrete member; groups are never carried as inventory. Raw source-qualified
 dependencies retained for an admitted owner do not enable an entire book or restrict ordinary Add Item.
 Missing or ambiguous rules leave setup pending; another printing cannot substitute.
 
@@ -32,7 +33,9 @@ XPHB “Quarterstaff” focus qualifier has no proven match within its declared 
 that package slot remains pending rather than substituting Wooden Staff or offering every member.
 
 `startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
-address, exact target, inventory ID, issued quantity and remaining owned quantity. It never merges
+address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and
+remaining owned quantity. A retained lot keeps `remaining = max(0, issued - consumed)` even when
+its current quantity shrinks and regrows; consumption may exceed that current quantity. It never merges
 into a manual or other-role row. Unchanged lots retain their ID and runtime fields; consumed/deleted
 copies do not return on refresh. Quantity increases are independent surplus; decreases consume owned
 copies first. Replacement subtracts only the remaining owned quantity from that exact row, preserving
@@ -47,14 +50,16 @@ Background currency each retain a declared amount, remaining owned coins and cum
 Wallet decreases consume starting coins first, Class then Background in the edited denomination;
 deposits are independent money. Package changes remove only owned unspent coins, then issue the new
 budget minus that role's cumulative spending, floored at zero. Spending survives lower/higher budgets,
-owner removal and re-add. No implicit denomination exchange occurs. All arithmetic uses safe integers;
-strict admission checks that combined owned balances fit the wallet and positive item lots fit exact
+owner removal and re-add. Wallet edits do not exchange denominations; a changed package budget issues
+its residual as GP/SP/CP. All arithmetic uses safe integers. Strict admission requires each role's
+remaining currency value to equal its declared value minus spending, floored at zero. It also checks
+that combined owned denominations fit the wallet and positive item lots fit exact
 physical rows. Choices, grants, wallet and provenance commit atomically.
 
 This supports deterministic structured packages and A/B gold alternatives. The separate 2014
 `goldAlternative` dice workflow remains manual; refresh never invents or rolls an amount. Structured
 currency takes precedence over inconsistent display prose (for example, the current Cleric XPHB
-declaration contains7000 copper despite its7GP prose). Managed source data is not silently corrected.
+declaration contains 7000 copper despite its 7 GP prose). Managed source data is not silently corrected.
 
 Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
 restrictions from either page applies the rule and unequips invalid armor in one character patch.

@@ -510,6 +510,8 @@ interface StartingEquipmentLot {
   reference: StartingEquipmentReference
   equipmentId: string
   issuedQuantity: number
+  /** Owned copies consumed during this continuously retained lot's lifetime. */
+  consumedQuantity: number
   remainingQuantity: number
 }
 

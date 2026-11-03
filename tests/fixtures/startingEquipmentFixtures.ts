@@ -45,7 +45,10 @@ export function makeStartingEquipmentScenario() {
       dmg1: '1d8',
       weight: 3,
       value: 1500,
-      entries: ['Practice fixture rules.'],
+      entries: [
+        'Practice fixture rules.',
+        'This longer equipment description includes handling, storage, maintenance and use. It continues past the short preview length so the starting picker must show the complete supplied text. The second paragraph remains readable directly in the item card.',
+      ],
     },
     {
       name: 'Warhammer',

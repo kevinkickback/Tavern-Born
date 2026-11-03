@@ -992,6 +992,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-1",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1003,6 +1004,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-2",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1014,6 +1016,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-3",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1025,6 +1028,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-4",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1036,6 +1040,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-5",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1047,6 +1052,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-6",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1058,6 +1064,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-7",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1069,6 +1076,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-8",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         }
       ],
@@ -1103,6 +1111,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-9",
           "issuedQuantity": 2,
+          "consumedQuantity": 0,
           "remainingQuantity": 2
         },
         {
@@ -1114,6 +1123,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-10",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1125,6 +1135,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-11",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         },
         {
@@ -1136,6 +1147,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-12",
           "issuedQuantity": 2,
+          "consumedQuantity": 0,
           "remainingQuantity": 2
         },
         {
@@ -1147,6 +1159,7 @@
           },
           "equipmentId": "companion-choice-character-2024-starting-13",
           "issuedQuantity": 1,
+          "consumedQuantity": 0,
           "remainingQuantity": 1
         }
       ],

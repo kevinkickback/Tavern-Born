@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Starting equipment ownership, current eligibility and shared quantity selection.
-  // Measured 6,386,526 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6237 * KIB,
-  // Synchronous strict ownership and current source authority: measured 1,166,389 B.
+  // Starting equipment ownership, current eligibility and shared feature-row selection.
+  // Measured 6,392,885 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6244 * KIB,
+  // Synchronous strict ownership and current source authority: measured 1,166,813 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
   initialRendererScript: 1140 * KIB,
   initialStylesheet: 185 * KIB,

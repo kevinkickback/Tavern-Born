@@ -522,6 +522,7 @@ const startingEquipmentGrantSchema = z
           ]),
           equipmentId: z.string().min(1),
           issuedQuantity: z.number().int().safe().positive(),
+          consumedQuantity: z.number().int().safe().nonnegative(),
           remainingQuantity: z.number().int().safe().nonnegative(),
         })
         .strict(),

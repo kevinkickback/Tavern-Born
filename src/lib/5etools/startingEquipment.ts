@@ -728,14 +728,16 @@ export function assertStartingEquipmentSelections(
     if (
       selected.length > choice.quantity ||
       (JSON.stringify(selected) !== JSON.stringify(previous[choice.key] ?? []) &&
-        selected.some(
-          (ref) =>
-            !choice.candidates.some(
-              (item) =>
-                item.source &&
-                startingItemKey({ name: item.name, source: item.source }) === startingItemKey(ref),
-            ),
-        ))
+        (selected.length !== choice.quantity ||
+          selected.some(
+            (ref) =>
+              !choice.candidates.some(
+                (item) =>
+                  item.source &&
+                  startingItemKey({ name: item.name, source: item.source }) ===
+                    startingItemKey(ref),
+              ),
+          )))
     ) {
       throw new RangeError(
         'A selected starting item no longer fits this choice. Review its current rules.',

@@ -78,7 +78,6 @@ export interface SelectionModalProps<T> {
   closeOnConfirm?: boolean
   /** Optional bounded quantities; ordinary selectors retain their existing Set semantics. */
   quantitySelection?: { max: number; initialQuantities?: Readonly<Record<string, number>> }
-  renderSelectionDetails?: (items: readonly T[]) => ReactNode
   onConfirm: (
     selectedIds: string[],
     selectedItems: T[],
@@ -126,7 +125,6 @@ function SelectionModalInner<T>({
   onConfirm,
   closeOnConfirm = true,
   quantitySelection,
-  renderSelectionDetails,
   onClose,
 }: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange'> & {
   onClose: () => void
@@ -565,7 +563,7 @@ function SelectionModalInner<T>({
           )}
         </div>
       </div>
-      {quantitySelection && selectedItems.length > 0 && (
+      {quantitySelection && quantitySelection.max > 1 && selectedItems.length > 0 && (
         <section
           className="max-h-44 shrink-0 overflow-y-auto border-t border-border bg-surface-raised px-5 py-3"
           aria-label="Selected item quantities"
@@ -617,7 +615,6 @@ function SelectionModalInner<T>({
               </div>
             )
           })}
-          {renderSelectionDetails?.(selectedItems)}
         </section>
       )}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-border bg-surface-raised px-5 py-3">
@@ -645,7 +642,9 @@ function SelectionModalInner<T>({
             )}
             {selectionHint && <div className="text-xs text-muted-foreground">{selectionHint}</div>}
           </div>
-          <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>
+          {!quantitySelection && (
+            <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>
+          )}
           {unavailableSelections.length > 0 && (
             <fieldset className="mt-2 flex flex-wrap gap-1" aria-label="Unavailable selected items">
               {unavailableSelections.map(({ id, label }) => (
