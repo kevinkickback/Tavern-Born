@@ -121,6 +121,8 @@ catalogs rather than expanding character source availability. Their current qual
 and exact PHB targets must resolve unambiguously; same-name revised feats/items cannot substitute.
 Named item and optional-feature multiplicity is retained before winning-layer Maps, including
 parsed cache, so duplicate source records cannot become authority through first-match selection.
+Existing origin-aware audits remain authoritative for certified optional-feature enrichment mirrors.
+Weapon property exclusions require current labels; absent metadata cannot enlarge the eligible pool.
 An explicitly absent dependency catalog stays absent. See [class setup ownership](class-ownership.md).
 
 Subclass reprints use their short name, parent class name/printing and subclass printing. The current

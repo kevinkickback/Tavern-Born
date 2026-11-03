@@ -23,6 +23,7 @@ import {
   isExactSubclassFeatureReference,
 } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import { getItemPropertyLabel } from './itemProperties'
 import {
   KENSEI_POOLS,
   type KenseiPool,
@@ -265,6 +266,8 @@ export function isLegacyChoiceItemEligible(
         (v) => key(v.name) === key(item.name) && key(v.source) === key(item.source),
       )) ||
     (!!choice.optionFilter &&
+      key(getItemPropertyLabel('H|PHB', catalog.itemPropertyByAbbr)) === 'heavy' &&
+      key(getItemPropertyLabel('S|PHB', catalog.itemPropertyByAbbr)) === 'special' &&
       matchesClassChoiceFilter(
         item,
         choice.optionFilter,
@@ -281,9 +284,16 @@ export function buildLegacySubclassChoiceCatalogs(
   data: GameData,
   classes: readonly Class5e[],
 ): LegacySubclassChoiceCatalog[] {
+  const owners = classes.flatMap((cls) =>
+    (cls.subclasses ?? []).flatMap((sub) => {
+      const choices = getLegacySubclassChoices(cls, sub, { classes })
+      return choices.length ? [{ cls, sub, choices }] : []
+    }),
+  )
+  if (!owners.length) return []
   const lookups = {
-    itemPropertyByAbbr: buildItemPropertyLookup(data.itemProperties),
-    itemTypeByAbbr: buildItemTypeLookup(data.itemTypes),
+    itemPropertyByAbbr: buildItemPropertyLookup(data.itemProperties ?? []),
+    itemTypeByAbbr: buildItemTypeLookup(data.itemTypes ?? []),
   }
   const unique = <T extends { name: string; source?: string }>(rows: readonly T[]) => {
     const counts = new Map<string, number>()
@@ -295,39 +305,30 @@ export function buildLegacySubclassChoiceCatalogs(
       (row) => counts.get(`${key(row.name)}|${key(row.source)}`) === 1 && unconflicted(row),
     )
   }
-  const items = unique(data.itemsBase),
+  const items = unique(data.itemsBase ?? []),
     optional = unique(
-      data.optionalfeatures.filter(
+      (data.optionalfeatures ?? []).filter(
         (v): v is OptionalFeatureLike =>
           !!v && typeof v === 'object' && 'name' in v && 'source' in v,
       ),
     )
-  return classes.flatMap((cls) =>
-    (cls.subclasses ?? []).flatMap((sub) => {
-      const choices = getLegacySubclassChoices(cls, sub, { classes })
-      if (!choices.length) return []
-      return [
-        {
-          ownerKey: getFeatureOwnerKey(cls.name, cls.source, sub.name, sub.source),
-          ...lookups,
-          items: items.filter((item) =>
-            choices.some(
-              (choice) =>
-                choice.kind === 'item' && isLegacyChoiceItemEligible(choice, item, lookups),
-            ),
-          ),
-          optionalFeatures: optional.filter((row) =>
-            choices.some((c) =>
-              c.options.some(
-                (v) =>
-                  v.entityType === 'optionalFeature' &&
-                  key(v.name) === key(row.name) &&
-                  key(v.source) === key(row.source),
-              ),
-            ),
-          ),
-        },
-      ]
-    }),
-  )
+  return owners.map(({ cls, sub, choices }) => ({
+    ownerKey: getFeatureOwnerKey(cls.name, cls.source, sub.name, sub.source),
+    ...lookups,
+    items: items.filter((item) =>
+      choices.some(
+        (choice) => choice.kind === 'item' && isLegacyChoiceItemEligible(choice, item, lookups),
+      ),
+    ),
+    optionalFeatures: optional.filter((row) =>
+      choices.some((c) =>
+        c.options.some(
+          (v) =>
+            v.entityType === 'optionalFeature' &&
+            key(v.name) === key(row.name) &&
+            key(v.source) === key(row.source),
+        ),
+      ),
+    ),
+  }))
 }

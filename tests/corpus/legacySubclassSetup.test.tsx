@@ -360,12 +360,21 @@ describe.runIf(available)('configured source-owned Swords and Kensei setup', () 
     'missing',
     'wrong-printing',
     'wrong-type',
+    'duplicate with unrelated audit',
   ])('Swords refuses an unavailable exact optional feature (%s) and retains its other option', (field) => {
     const changed = makeLegacySubclassData((raw) => {
       const row = raw.optional.optionalfeature.find(
         (v) => v.name === 'Dueling' && v.source === 'PHB',
       )!
-      if (field === 'duplicate') raw.optional.optionalfeature.push(structuredClone(row))
+      if (field === 'duplicate with unrelated audit')
+        row.conditionalProficiencySourceAudit = {
+          version: 1,
+          origin: 'same',
+          verified: true,
+          certificate: 'unrelated',
+        }
+      if (field === 'duplicate' || field === 'duplicate with unrelated audit')
+        raw.optional.optionalfeature.push(structuredClone(row))
       if (field === 'missing')
         raw.optional.optionalfeature = raw.optional.optionalfeature.filter((v) => v !== row)
       if (field === 'wrong-printing') row.source = 'TEST'
@@ -548,6 +557,65 @@ describe.runIf(available)('configured source-owned Swords and Kensei setup', () 
       confirm([option])
     })
     expect(useCharacterStore.getState().activeCharacter).toEqual(latest)
+  })
+  test.each([
+    'absent properties',
+    'empty properties',
+    'missing heavy',
+    'missing special',
+    'changed labels',
+  ])('unavailable property metadata (%s) suspends generic weapons without expanding eligibility', (mode) => {
+    const full = view('2024', 'Monk')
+    let a = pick(full, full.character, 'Kensei melee weapon', ['Longsword'])
+    a = pick(full, a, 'Kensei ranged weapon', ['Longbow'])
+    a = pick(full, a, 'Way of the Brush', ["Painter's Supplies"])
+    const changed = { ...raw }
+    if (mode === 'absent properties') delete (changed as Partial<GameData>).itemProperties
+    if (mode === 'empty properties') changed.itemProperties = []
+    if (mode === 'missing heavy' || mode === 'missing special')
+      changed.itemProperties = raw.itemProperties.filter(
+        (p) => p.abbreviation !== (mode === 'missing heavy' ? 'H' : 'S'),
+      )
+    if (mode === 'changed labels')
+      changed.itemProperties = raw.itemProperties.map((p) =>
+        ['H', 'S'].includes(p.abbreviation) ? { ...p, name: 'Unrecognized property' } : p,
+      )
+    const f = view('2024', 'Monk', 3, changed),
+      melee = f.choices.find((v) => v.label === 'Kensei melee weapon')!,
+      ranged = f.choices.find((v) => v.label === 'Kensei ranged weapon')!
+    expect(resolveClassChoiceOptions(melee, f.cat, [], 3, f.character)).toEqual([])
+    expect(
+      resolveClassChoiceOptions(ranged, f.cat, [], 3, f.character).map((v) => v.reference.name),
+    ).toEqual(['Longbow'])
+    expect(() =>
+      save(f, f.character, melee, [{ entityType: 'item', name: 'Greatsword', source: 'PHB' }]),
+    ).toThrow()
+    const suspended = refreshClassProficiencyState(a, f.d.classes, f.cat)
+    expect(suspended.proficiencies.weapons).not.toContain('longsword')
+    expect(suspended.proficiencies.weapons).toContain('longbow')
+    expect(suspended.proficiencies.tools).toContain("painter's supplies")
+    expect(
+      refreshClassProficiencyState(suspended, full.d.classes, full.cat).proficiencies.weapons,
+    ).toContain('longsword')
+    const bard = view('2024', 'Bard', 3, changed)
+    expect(
+      pick(bard, bard.character, 'Fighting Style', ['Dueling']).classChoiceSelections,
+    ).toHaveLength(1)
+  })
+  test('absent type labels retain canonical M/R classification through the existing shared fallback', () => {
+    const changed = { ...raw }
+    delete (changed as Partial<GameData>).itemTypes
+    const f = view('2024', 'Monk', 20, changed)
+    const counts = f.choices.map((c) => [
+      c.label,
+      resolveClassChoiceOptions(c, f.cat, [], 20, f.character).length,
+    ])
+    expect(Object.fromEntries(counts)).toEqual({
+      'Kensei melee weapon': 21,
+      'Kensei ranged weapon': 7,
+      'Additional Kensei weapons': 28,
+      'Way of the Brush': 2,
+    })
   })
   test('Longbow exception requires a current ranged weapon in initial and later pools', () => {
     const changed = makeLegacySubclassData((raw) => {

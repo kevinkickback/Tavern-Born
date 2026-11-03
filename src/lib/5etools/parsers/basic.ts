@@ -132,7 +132,7 @@ export function parseOptionalFeatures(data: unknown, sourceId?: string): unknown
   const obj = asObject(data)
   const rows = obj.optionalfeature ? asArray(obj.optionalfeature) : Array.isArray(data) ? data : []
   return auditConditionalOptionalFeatures(
-    auditFixedLayerMultiplicity(rows as object[], 'named'),
+    auditFixedLayerMultiplicity(rows as object[], 'optionalFeatures'),
     sourceId ?? `optional-feature-document:${subclassProficiencyDigest(data)}`,
   )
 }

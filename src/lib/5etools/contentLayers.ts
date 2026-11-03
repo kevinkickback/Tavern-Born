@@ -491,7 +491,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
             ? auditFixedLayerMultiplicity(layerValues as object[], key)
             : key === 'optionalfeatures'
               ? auditConditionalOptionalLayerMultiplicity(
-                  auditFixedLayerMultiplicity(layerValues as object[], 'named'),
+                  auditFixedLayerMultiplicity(layerValues as object[], 'optionalFeatures'),
                 )
               : key === 'spells'
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
