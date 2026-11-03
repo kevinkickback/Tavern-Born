@@ -59,6 +59,7 @@ const PREVIEW_HOVER_INTENT_DELAY = 120
 const PINNED_PREVIEW_ID = 'rules-preview-pinned'
 
 interface RulesPreviewContextValue {
+  portalContainer: HTMLElement | null
   cancelClose: () => void
   openPreview: (descriptor: RulesPreviewDescriptor, sourceElement: HTMLElement) => void
   pinPreview: (
@@ -67,14 +68,17 @@ interface RulesPreviewContextValue {
     focusPinned?: boolean,
   ) => void
   scheduleClose: () => void
+  setPortalHost: (host: HTMLElement | null) => void
 }
 
 const noOp = () => undefined
 const fallbackContext: RulesPreviewContextValue = {
+  portalContainer: null,
   cancelClose: noOp,
   openPreview: noOp,
   pinPreview: noOp,
   scheduleClose: noOp,
+  setPortalHost: noOp,
 }
 
 const RulesPreviewContext = createContext<RulesPreviewContextValue>(fallbackContext)
@@ -650,6 +654,14 @@ function PreviewCorridor({
 }
 
 export function RulesPreviewManager({ children }: { children: ReactNode }) {
+  const [portalRoot] = useState(() => {
+    if (typeof document === 'undefined') return null
+    const root = document.createElement('div')
+    root.dataset.rulesPreviewRoot = ''
+    root.className = 'contents'
+    return root
+  })
+  const portalHostRef = useRef<HTMLElement | null>(null)
   const uiScale = useAppPreferencesStore((state) => state.uiScale)
   const safeTop = getTitleBarSafeTop(uiScale)
   const [state, dispatch] = useReducer(rulesPreviewReducer, initialRulesPreviewState)
@@ -660,6 +672,7 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
   const intentTriggerRef = useRef<HTMLElement | null>(null)
   const previewSequenceRef = useRef(0)
   const returnFocusRef = useRef<HTMLElement | null>(null)
+  const returningFocusRef = useRef(false)
   const focusPinnedRef = useRef(false)
   stateRef.current = state
 
@@ -694,6 +707,52 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
     intentTriggerRef.current = null
   }, [])
 
+  const setPortalHost = useCallback(
+    (host: HTMLElement | null) => {
+      portalHostRef.current = host
+      if (!portalRoot) return
+      const target = host ?? document.body
+      if (portalRoot.parentElement === target) return
+      cancelClose()
+      cancelReferenceIntent()
+      dispatch({ type: 'close-chain' })
+      const focused = document.activeElement
+      const focusedPin =
+        focused instanceof HTMLElement &&
+        portalRoot.contains(focused) &&
+        focused.closest('[data-preview-pinned="true"]')
+          ? focused
+          : null
+      const scrollOffsets = Array.from(
+        portalRoot.querySelectorAll<HTMLElement>('[data-rules-preview-scroll]'),
+        (element) => ({ element, top: element.scrollTop, left: element.scrollLeft }),
+      )
+      // Move the stable portal before Radix hides the modal's siblings. Recreating the
+      // portal would remount immutable pins and lose their scroll/drag state.
+      target.appendChild(portalRoot)
+      for (const { element, top, left } of scrollOffsets) {
+        element.scrollTop = top
+        element.scrollLeft = left
+      }
+      if (focusedPin && document.activeElement !== focusedPin) {
+        returningFocusRef.current = true
+        try {
+          focusedPin.focus({ preventScroll: true })
+        } finally {
+          returningFocusRef.current = false
+        }
+      }
+    },
+    [cancelClose, cancelReferenceIntent, portalRoot],
+  )
+
+  useLayoutEffect(() => {
+    if (!portalRoot) return
+    const target = portalHostRef.current ?? document.body
+    if (portalRoot.parentElement !== target) target.appendChild(portalRoot)
+    return () => portalRoot.remove()
+  }, [portalRoot])
+
   useEffect(
     () => () => {
       cancelClose()
@@ -720,6 +779,7 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
 
   const openPreview = useCallback(
     (descriptor: RulesPreviewDescriptor, sourceElement: HTMLElement) => {
+      if (returningFocusRef.current) return
       cancelClose()
       const current = stateRef.current
       if (current.pinned?.descriptor.key === descriptor.key) {
@@ -854,9 +914,13 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       const target = event.target
-      const targetDialog =
-        target instanceof HTMLElement ? target.closest<HTMLElement>('[role="dialog"]') : null
-      if (targetDialog && !targetDialog.hasAttribute('data-rules-preview-layer')) return
+      const targetOverlay =
+        target instanceof HTMLElement
+          ? target.closest<HTMLElement>(
+              '[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"]',
+            )
+          : null
+      if (targetOverlay && !targetOverlay.hasAttribute('data-rules-preview-layer')) return
       const current = stateRef.current
       if (current.chain.length > 0) {
         event.preventDefault()
@@ -869,7 +933,14 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
       event.stopPropagation()
       dispatch({ type: 'close-pinned' })
       const returnFocus = returnFocusRef.current
-      if (returnFocus?.isConnected) returnFocus.focus()
+      if (returnFocus?.isConnected) {
+        returningFocusRef.current = true
+        try {
+          returnFocus.focus()
+        } finally {
+          returningFocusRef.current = false
+        }
+      }
     }
     document.addEventListener('keydown', handleEscape, true)
     return () => document.removeEventListener('keydown', handleEscape, true)
@@ -906,81 +977,87 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
   )
 
   const context = useMemo<RulesPreviewContextValue>(
-    () => ({ cancelClose, openPreview, pinPreview, scheduleClose }),
-    [cancelClose, openPreview, pinPreview, scheduleClose],
+    () => ({
+      cancelClose,
+      openPreview,
+      pinPreview,
+      scheduleClose,
+      setPortalHost,
+      portalContainer: portalRoot,
+    }),
+    [cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost, portalRoot],
   )
 
   const pinnedPreview = state.pinned
   const previewChain = state.chain
-  const portal =
-    typeof document === 'undefined'
-      ? null
-      : createPortal(
-          <>
-            {pinnedPreview ? (
-              <PreviewSurface
-                id={PINNED_PREVIEW_ID}
-                descriptor={pinnedPreview.descriptor}
-                emphasized={previewChain.length === 0}
-                hasChild={previewChain[0]?.parentId === PINNED_PREVIEW_ID}
-                layer="pinned"
-                onPinToggle={unpin}
-                position={pinnedPreview.position}
-                previewRef={pinnedRef}
-                safeTop={safeTop}
-                onPinnedPositionChange={movePinned}
-                onReferenceImmediate={(trigger) =>
-                  openReference(trigger, pinnedPreview.descriptor.recursiveLookup)
-                }
-                onReferenceIntent={(trigger) =>
-                  openReferenceWithIntent(trigger, pinnedPreview.descriptor.recursiveLookup)
-                }
-                onReferenceIntentCancel={cancelReferenceIntent}
-                onReferenceLeave={() => scheduleDescendantsClose(PINNED_PREVIEW_ID)}
-                onReferencePin={(trigger) =>
-                  pinReference(trigger, pinnedPreview.descriptor.recursiveLookup)
-                }
+  const portal = !portalRoot
+    ? null
+    : createPortal(
+        <>
+          {pinnedPreview ? (
+            <PreviewSurface
+              id={PINNED_PREVIEW_ID}
+              descriptor={pinnedPreview.descriptor}
+              emphasized={previewChain.length === 0}
+              hasChild={previewChain[0]?.parentId === PINNED_PREVIEW_ID}
+              layer="pinned"
+              onPinToggle={unpin}
+              position={pinnedPreview.position}
+              previewRef={pinnedRef}
+              safeTop={safeTop}
+              onPinnedPositionChange={movePinned}
+              onReferenceImmediate={(trigger) =>
+                openReference(trigger, pinnedPreview.descriptor.recursiveLookup)
+              }
+              onReferenceIntent={(trigger) =>
+                openReferenceWithIntent(trigger, pinnedPreview.descriptor.recursiveLookup)
+              }
+              onReferenceIntentCancel={cancelReferenceIntent}
+              onReferenceLeave={() => scheduleDescendantsClose(PINNED_PREVIEW_ID)}
+              onReferencePin={(trigger) =>
+                pinReference(trigger, pinnedPreview.descriptor.recursiveLookup)
+              }
+              cancelClose={cancelClose}
+              scheduleClose={scheduleClose}
+            />
+          ) : null}
+          {previewChain.map((preview, index) => (
+            <FloatingPreviewSurface
+              key={preview.id}
+              avoidElementIds={[
+                ...(pinnedPreview ? [PINNED_PREVIEW_ID] : []),
+                ...previewChain.slice(0, index).map((ancestor) => ancestor.id),
+              ].join('|')}
+              preview={preview}
+              emphasized={index === previewChain.length - 1}
+              hasChild={previewChain[index + 1]?.parentId === preview.id}
+              safeTop={safeTop}
+              onAnchorDisconnected={closeDisconnectedTransient}
+              onMove={moveTransient}
+              onPin={pinTransient}
+              onReferenceImmediate={openReference}
+              onReferenceIntent={openReferenceWithIntent}
+              onReferenceIntentCancel={cancelReferenceIntent}
+              onReferenceLeave={scheduleDescendantsClose}
+              onReferencePin={pinReference}
+              cancelClose={cancelClose}
+              scheduleClose={scheduleClose}
+            />
+          ))}
+          {previewChain.map((preview) =>
+            preview.parentId ? (
+              <PreviewCorridor
+                key={`corridor:${preview.id}`}
+                fromId={preview.parentId}
+                toId={preview.id}
                 cancelClose={cancelClose}
                 scheduleClose={scheduleClose}
               />
-            ) : null}
-            {previewChain.map((preview, index) => (
-              <FloatingPreviewSurface
-                key={preview.id}
-                avoidElementIds={[
-                  ...(pinnedPreview ? [PINNED_PREVIEW_ID] : []),
-                  ...previewChain.slice(0, index).map((ancestor) => ancestor.id),
-                ].join('|')}
-                preview={preview}
-                emphasized={index === previewChain.length - 1}
-                hasChild={previewChain[index + 1]?.parentId === preview.id}
-                safeTop={safeTop}
-                onAnchorDisconnected={closeDisconnectedTransient}
-                onMove={moveTransient}
-                onPin={pinTransient}
-                onReferenceImmediate={openReference}
-                onReferenceIntent={openReferenceWithIntent}
-                onReferenceIntentCancel={cancelReferenceIntent}
-                onReferenceLeave={scheduleDescendantsClose}
-                onReferencePin={pinReference}
-                cancelClose={cancelClose}
-                scheduleClose={scheduleClose}
-              />
-            ))}
-            {previewChain.map((preview) =>
-              preview.parentId ? (
-                <PreviewCorridor
-                  key={`corridor:${preview.id}`}
-                  fromId={preview.parentId}
-                  toId={preview.id}
-                  cancelClose={cancelClose}
-                  scheduleClose={scheduleClose}
-                />
-              ) : null,
-            )}
-          </>,
-          document.body,
-        )
+            ) : null,
+          )}
+        </>,
+        portalRoot,
+      )
 
   return (
     <RulesPreviewContext.Provider value={context}>

@@ -227,13 +227,19 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
                     {classFeatures.map((feature) => (
                       <TraitTooltip
                         key={`${feature.name}|${feature.source ?? ''}`}
+                        previewKey={JSON.stringify([
+                          'class-feature',
+                          selectedClass.name,
+                          selectedClass.source,
+                          feature.name,
+                          feature.source,
+                          feature.entries,
+                        ])}
                         name={feature.name}
+                        source={feature.source}
                         entries={feature.entries}
-                      >
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-md border border-border bg-muted/40 hover:bg-accent/10 hover:border-accent transition-colors cursor-help text-sm font-medium">
-                          {feature.name}
-                        </span>
-                      </TraitTooltip>
+                        recursiveLookup={recursiveLookup}
+                      />
                     ))}
                   </div>
                 </div>

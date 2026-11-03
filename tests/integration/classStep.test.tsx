@@ -5,10 +5,6 @@ import { ClassStep } from '@/components/character/wizard/steps/4-ClassStep'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Class5e } from '@/types/5etools'
 
-vi.mock('@/components/character/TraitTooltip', () => ({
-  TraitTooltip: ({ children }: { children: React.ReactNode }) => children,
-}))
-
 describe('ClassStep', () => {
   afterEach(() => {
     cleanup()

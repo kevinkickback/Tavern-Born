@@ -136,7 +136,9 @@ test('rules previews preserve their spawning surface in a bounded rolling chain'
     )
 
   expect(
-    await restrainedPreview.evaluate((element) => element.parentElement === document.body),
+    await restrainedPreview.evaluate(
+      (element) => element.closest('[data-rules-preview-root]')?.parentElement === document.body,
+    ),
   ).toBe(true)
 
   const rootBounds = await nestedPreview.boundingBox()

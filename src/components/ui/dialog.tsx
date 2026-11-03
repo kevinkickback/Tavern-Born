@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import XIcon from 'lucide-react/dist/esm/icons/x'
-import type { ComponentProps } from 'react'
+import type { ComponentProps, RefCallback } from 'react'
+import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 
 import { cn } from '@/lib/utils'
 
@@ -30,10 +31,18 @@ function DialogContent({
   children,
   onInteractOutside,
   closeDisabled = false,
+  rulesPreviewPortalRef,
   ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeDisabled?: boolean }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & {
+  closeDisabled?: boolean
+  rulesPreviewPortalRef?: RefCallback<HTMLDivElement>
+}) {
+  const { portalContainer } = useRulesPreview()
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal
+      data-slot="dialog-portal"
+      container={rulesPreviewPortalRef ? undefined : (portalContainer ?? undefined)}
+    >
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
@@ -47,7 +56,10 @@ function DialogContent({
           }
         }}
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+          'bg-background fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+          rulesPreviewPortalRef
+            ? 'inset-0 m-auto h-fit data-[state=open]:animate-[modal-preview-enter_200ms_ease-out] data-[state=closed]:animate-[modal-preview-exit_200ms_ease-in]'
+            : 'top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           className,
         )}
         {...props}
@@ -60,6 +72,13 @@ function DialogContent({
           <XIcon />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
+        {rulesPreviewPortalRef && (
+          <div
+            ref={rulesPreviewPortalRef}
+            data-rules-preview-host
+            className="pointer-events-none fixed inset-0"
+          />
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )
