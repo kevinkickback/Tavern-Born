@@ -30,6 +30,10 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceOptions'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
+import {
+  describeFavoredEnemyLanguage,
+  getFavoredEnemySelectionStates,
+} from './favoredEnemySelections'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery'
@@ -51,7 +55,8 @@ export interface FeatureOptionSelectionState {
   details: Array<{ name: string; damageType?: string; entries: unknown[]; available: boolean }>
   affinity?: { available: boolean; entries: unknown[] }
   storm?: StormAuraRules
-  literalGroup?: { family: string; group: string; gain: number }
+  literalGroup?: { family: string; group: string; gain: number; title?: string }
+  enemy?: { complete: boolean; languageAvailable: boolean }
   proficiency?: { domain: ClassProficiencyDomain }
   optionalPool?: boolean
 }
@@ -207,6 +212,7 @@ export function getFeatureOptionSelectionStates(
     ...literal,
     ...getStormAuraSelectionStates(character, classes, catalogs),
     ...getNaturalExplorerSelectionStates(character, classes, catalogs),
+    ...getFavoredEnemySelectionStates(character, classes, catalogs),
     ...getClassProficiencySelectionStates(character, classes, catalogs),
     ...getOptionalClassPoolSelectionStates(character, classes, catalogs),
   ]
@@ -277,15 +283,22 @@ export function summarizeFeatureOptionSelectionGroups(
     const group = states.filter((row) => row.literalGroup?.family === state.literalGroup?.family)
     const selected = group
       .flatMap((row) =>
-        row.details.map(
-          (detail) =>
-            `${detail.name} (level ${row.selection.classLevel}${row.selection.inactive ? '; Inactive' : detail.available ? '' : '; rules unavailable'})`,
-        ),
+        row.enemy
+          ? [
+              row.details.map((d) => d.name).join(', ') +
+                ` (level ${row.selection.classLevel}${row.selection.inactive ? '; Inactive' : row.recovery ? '; rules unavailable' : row.enemy.complete ? '' : '; setup pending'}) — ${describeFavoredEnemyLanguage(row.selection)}`,
+            ]
+          : row.details.map(
+              (detail) =>
+                `${detail.name} (level ${row.selection.classLevel}${row.selection.inactive ? '; Inactive' : detail.available ? '' : row.enemy && !row.recovery ? '; setup pending' : '; rules unavailable'})`,
+            ),
       )
       .join('; ')
-    const compactText = `Natural Explorer favored terrains: ${selected}`
+    const compactText = `${state.literalGroup.title ?? 'Natural Explorer favored terrains'}: ${selected}`
     const entries = group.flatMap((row) =>
-      row.details.filter((detail) => detail.available).flatMap((detail) => detail.entries),
+      (row.enemy ? row.details : row.details.filter((detail) => detail.available)).flatMap(
+        (detail) => detail.entries,
+      ),
     )
     summaries.push({
       compactText,

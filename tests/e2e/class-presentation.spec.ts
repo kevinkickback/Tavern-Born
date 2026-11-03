@@ -89,7 +89,7 @@ test('@focused Class header and replacement tabs preserve independent choices th
   await expect(modal.getByText('proficiency:expertise:survival', { exact: true })).toHaveCount(0)
   await page.screenshot({ path: '.tmp/optional38/class-compact-expertise-modal-v1.png' })
   await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
-  // Three Canny picks plus the existing unsupported Favored Enemy setup duty.
+  // Three Canny picks plus the coupled Favored Enemy setup duty.
   await expect(level.getByText('4 pending choices', { exact: true })).toBeVisible()
   await deft.focus()
   await page.keyboard.press('ArrowLeft')

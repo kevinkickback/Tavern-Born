@@ -1,6 +1,7 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
@@ -37,15 +38,18 @@ export function getEffectiveClassChoiceSelections(
       subclassSource: selection.subclassSource,
     })
     const proficiency = decodeClassProficiencyChoiceId(selection.choiceId)
+    const enemy = decodeFavoredEnemyChoiceId(selection.choiceId)
     const terrain = decodeNaturalExplorerChoiceId(selection.choiceId)
     const candidate = candidates.get(selection.choiceId)
-    const inactive = proficiency
-      ? activity.dormant(owner, proficiency.target)
-      : terrain
-        ? activity.suppressed(owner, terrain.grant, 'favored-terrain')
-        : candidate
-          ? !activity.choice(candidate)
-          : !!selection.inactive
+    const inactive = enemy
+      ? activity.suppressed(owner, enemy.grant, 'favored-enemy-language')
+      : proficiency
+        ? activity.dormant(owner, proficiency.target)
+        : terrain
+          ? activity.suppressed(owner, terrain.grant, 'favored-terrain')
+          : candidate
+            ? !activity.choice(candidate)
+            : !!selection.inactive
     if (!!selection.inactive === inactive) return selection
     if (inactive) return { ...selection, inactive: true }
     const { inactive: _hint, ...active } = selection

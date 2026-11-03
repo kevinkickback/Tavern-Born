@@ -3,14 +3,17 @@ import {
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { ownedClassProficiencyRule as classProficiencyRule } from '@/lib/5etools/ownedClassProficiencyRules'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { addGrant, emptyProvenance } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import {
+  getOwnedClassProficiencyOptions,
   isClassProficiencyTag,
   isValidClassProficiencySelection,
+  isValidOwnedClassProficiencySelection,
 } from '@/lib/schema/classProficiencyValidation'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import { reconcileExpertiseOwnership } from './expertiseOwnership'
@@ -54,6 +57,7 @@ export function retainClassProficiencyGrants(
         (row) => row.domain === 'expertise' && row.coupled,
       )
     const allowedDomain =
+      (domain === 'languages' && !!decodeFavoredEnemyChoiceId(selection.choiceId)) ||
       relation?.domain === domain ||
       (relation?.domain === 'expertise' && coupled && domain === 'skills')
     const removing = (name: string, tag: SourceTag) =>
@@ -124,6 +128,26 @@ export function grantClassProficiencySelection(
   selection: CharacterClassChoiceSelection,
   phase: 'all' | 'foundations' | 'expertise' = 'all',
 ): Character {
+  if (decodeFavoredEnemyChoiceId(selection.choiceId)) {
+    if (!isValidOwnedClassProficiencySelection(selection) || phase === 'expertise') return character
+    let provenance = character.provenance ?? emptyProvenance()
+    const proficiencies = { ...character.proficiencies }
+    for (const option of getOwnedClassProficiencyOptions(selection)) {
+      const name = decodeProficiencyOption(option)!.name
+      provenance = addGrant(provenance, 'languages', name, {
+        ...makeSourceTag(
+          selection.subclassName ? 'subclass' : 'class',
+          selection.subclassName ?? selection.className,
+          'choice',
+          selection.subclassSource ?? selection.classSource,
+        ),
+        grantVariant: selection.choiceId,
+      })
+      if (!proficiencies.languages.some((v) => canonicalProficiencyName(v) === name))
+        proficiencies.languages = [...proficiencies.languages, name]
+    }
+    return { ...character, proficiencies, provenance }
+  }
   if (!isValidClassProficiencySelection(selection)) return character
   const relation = decodeClassProficiencyChoiceId(selection.choiceId)!
   const rule = classProficiencyRule(relation.target)?.domains.find(
@@ -186,18 +210,25 @@ export function reconcileClassProficiencyGrants(
 ): Character {
   let captured = ledger
   for (const selection of selections) {
-    if (selection.inactive || !isValidClassProficiencySelection(selection)) continue
+    if (selection.inactive || !isValidOwnedClassProficiencySelection(selection)) continue
     const prior = character.classChoiceSelections?.find(
       (row) => row.choiceId === selection.choiceId,
     )
-    for (const option of selection.selected) {
+    for (const option of getOwnedClassProficiencyOptions(selection)) {
       const target = decodeProficiencyOption(option)!
-      if (prior?.selected.some((row) => decodeProficiencyOption(row)?.name === target.name))
-        continue
-      const relation = decodeClassProficiencyChoiceId(selection.choiceId)!
-      const paired = classProficiencyRule(relation.target)?.domains.some(
-        (row) => row.domain === 'expertise' && row.coupled,
+      if (
+        prior &&
+        getOwnedClassProficiencyOptions(prior).some(
+          (row) => decodeProficiencyOption(row)?.name === target.name,
+        )
       )
+        continue
+      const relation = decodeClassProficiencyChoiceId(selection.choiceId)
+      const paired =
+        relation &&
+        classProficiencyRule(relation.target)?.domains.some(
+          (row) => row.domain === 'expertise' && row.coupled,
+        )
       for (const domain of paired && target.domain === 'expertise'
         ? (['skills', 'expertise'] as const)
         : [target.domain]) {
@@ -221,7 +252,9 @@ export function reconcileClassProficiencyGrants(
   let result = { ...character, provenance: captured }
   const active = new Map(
     selections
-      .filter((selection) => !selection.inactive && isValidClassProficiencySelection(selection))
+      .filter(
+        (selection) => !selection.inactive && isValidOwnedClassProficiencySelection(selection),
+      )
       .map((selection) => [selection.choiceId, selection]),
   )
   const ownedIds = new Set(
@@ -240,7 +273,11 @@ export function reconcileClassProficiencyGrants(
       result.provenance,
       { choiceId },
       new Set(
-        selection?.selected.flatMap((option) => decodeProficiencyOption(option)?.name ?? []) ?? [],
+        selection
+          ? getOwnedClassProficiencyOptions(selection).flatMap(
+              (option) => decodeProficiencyOption(option)?.name ?? [],
+            )
+          : [],
       ),
     )
   }

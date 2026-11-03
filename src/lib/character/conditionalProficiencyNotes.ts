@@ -7,6 +7,11 @@ import {
   type ConditionalProficiencyRule,
 } from '@/lib/5etools/conditionalProficiencyRules'
 import { getConditionalOptionalSources } from '@/lib/5etools/conditionalProficiencySource'
+import {
+  decodeFavoredEnemyChoiceId,
+  FAVORED_ENEMY_TARGET,
+} from '@/lib/5etools/favoredEnemyIdentity'
+import { getFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
 import {
@@ -15,6 +20,7 @@ import {
 } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
+import { renderEntriesToText } from '@/lib/entryText'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type {
   AbilityScores,
@@ -35,6 +41,7 @@ import {
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
 import type { ClassChoicePrerequisiteContext } from './effectiveClassChoiceFeatures'
+import { getFavoredEnemySelectionStates } from './favoredEnemySelections'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 
 const key = (parts: readonly string[]) =>
@@ -235,6 +242,29 @@ export function deriveConditionalProficiencyNotes(
 ): CharacterEffect[] {
   if (!catalogs) return []
   const effects: CharacterEffect[] = []
+  for (const state of getFavoredEnemySelectionStates(character, catalogs.classes ?? [], catalogs)) {
+    if (!state.enemy?.complete) continue
+    const relation = decodeFavoredEnemyChoiceId(state.selection.choiceId)!
+    const context = getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET)?.entries?.[2]
+    if (!context) continue
+    effects.push({
+      id: 'proficiency-check-note:' + encodeURIComponent(state.selection.choiceId),
+      label: 'Favored Enemy — ' + state.selection.selected.map((o) => o.name).join(', '),
+      source: {
+        kind: state.selection.subclassName ? 'subclass' : 'class',
+        name: state.selection.subclassName ?? state.selection.className,
+        source: state.selection.subclassSource ?? state.selection.classSource,
+        entityId: relation.grant,
+        provenance: { choiceId: state.selection.choiceId },
+      },
+      target: {
+        kind: 'proficiency-check-note',
+        proficiencyType: 'any',
+        abilities: ['wisdom', 'intelligence'],
+      },
+      operation: { kind: 'conditional-note', note: renderEntriesToText([context]) },
+    })
+  }
   const sources = getCurrentOwners(catalogs)
   for (const current of sources.owners) {
     const parents = character.classProgression.filter(

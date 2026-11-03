@@ -32,6 +32,7 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { cn } from '@/lib/utils'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
+import { FavoredEnemySetup, type FavoredEnemySetupProps } from './FavoredEnemySetup'
 
 const ENTITY_LABELS = {
   classFeature: 'Class feature',
@@ -298,6 +299,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
 })
 
 interface ClassChoiceSelectionModalProps {
+  enemySetup?: FavoredEnemySetupProps
   historicalSetup?: {
     name: string
     alreadyProficient?: boolean
@@ -327,6 +329,7 @@ export function ClassChoiceSelectionModal({
   onClose,
   onConfirm,
   historicalSetup,
+  enemySetup,
 }: ClassChoiceSelectionModalProps) {
   const [editingHistory, setEditingHistory] = useState(false)
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
@@ -582,6 +585,7 @@ export function ClassChoiceSelectionModal({
     [maximumSelections, prerequisiteByOptionKey, removalOnly, initialSelectedIds],
   )
 
+  if (enemySetup) return <FavoredEnemySetup {...enemySetup} onClose={onClose} />
   if (
     historicalSetup &&
     !removalOnly &&

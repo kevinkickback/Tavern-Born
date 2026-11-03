@@ -18,7 +18,7 @@ import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/t
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
 import { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
-import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
+import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 
 export interface GameDataAvailabilityIndex {
   backgrounds: ReadonlySet<string>
@@ -208,11 +208,9 @@ export function characterUsesContentOutsideCatalog(
     return true
   }
   const literalStates = new Map(
-    getNaturalExplorerSelectionStates(
-      character,
-      index.choiceClasses ?? [],
-      index.featureOptions,
-    ).map((state) => [state.selection.choiceId, state]),
+    getFeatureOptionSelectionStates(character, index.choiceClasses ?? [], index.featureOptions).map(
+      (state) => [state.selection.choiceId, state],
+    ),
   )
   const proficiencyStates = new Map(
     getClassProficiencySelectionStates(

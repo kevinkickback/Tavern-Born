@@ -57,6 +57,15 @@ Natural Explorer uses the same feature-option category with a five-field source-
 `feature-literals:` owner/pool/group/grant/earned-level ID. Each earned terrain remains distinct,
 including dormant intent; see [favored terrain](feature-references.md#natural-explorer-favored-terrain).
 
+Favored Enemy adds optional `favoredEnemy` metadata on that category, required for its recognized
+literal family. One earned relation saves either a type literal or up to two campaign humanoid
+labels, explicit pair confirmation, and an optional spoken-language assertion or explicit none.
+Empty and incomplete setup remains saveable. Authored labels are never catalog race/creature IDs;
+the language uses the existing semantic proficiency name. Strict admission checks family dispatch,
+branch/count/owner/gain identity, distinct enemies, and exact language tags. Current source and
+language availability are derived. Existing format13 records retain their meaning without conversion.
+See [enemy setup](feature-references.md#favored-enemy-setup).
+
 Variant rules accept only the current settings: optional class features, average hit points,
 ability-score method, any-race subclasses, newer-printing preference, and equipment restrictions.
 Discontinued subclass-specific flags and unknown settings are rejected, including objects mixed

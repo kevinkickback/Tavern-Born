@@ -1,4 +1,14 @@
 import {
+  normalizeFavoredEnemyChoices,
+  resolveFavoredEnemyOption,
+} from '@/lib/5etools/favoredEnemyChoices'
+import {
+  decodeFavoredEnemyChoiceId,
+  FAVORED_ENEMY_GRANTS,
+  FAVORED_ENEMY_TARGET,
+} from '@/lib/5etools/favoredEnemyIdentity'
+import { getFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
+import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
@@ -107,6 +117,7 @@ import {
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
   availability: 'eligible' | 'retained'
+  setupComplete?: boolean
   entries: unknown[]
   masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
   weaponCategory?: string
@@ -138,6 +149,16 @@ export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): bool
   return option.availability === 'eligible'
 }
 
+export function getClassChoiceCompletionCount(
+  choice: Pick<NormalizedCharacterChoice, 'id'>,
+  views: readonly ClassChoiceOptionView[],
+) {
+  return decodeFavoredEnemyChoiceId(choice.id)
+    ? views.some((v) => v.setupComplete)
+      ? 1
+      : 0
+    : views.filter(isClassChoiceOptionEligible).length
+}
 export interface ClassChoiceCatalogs extends ClassChoiceFeatureCatalogs {
   creatures: readonly Creature5e[]
   feats: readonly Feat5e[]
@@ -647,7 +668,10 @@ export function resolveFeatureOptionEntity(
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): FeatureTableOption | SourceGroupOption | undefined {
   const target = decodeFeatureOptionReference(option)
-  if (target?.format === 'source-group') return resolveNaturalExplorerOption(option, catalogs)
+  if (target?.format === 'source-group')
+    return (
+      resolveNaturalExplorerOption(option, catalogs) ?? resolveFavoredEnemyOption(option, catalogs)
+    )
   if (!target || target.kind !== 'subclassFeature') return undefined
   const candidates =
     catalogs.subclassFeatureCandidates !== undefined
@@ -704,6 +728,9 @@ export function resolveClassChoiceFeatureEntity(
   return matches.length === 1 ? matches[0] : undefined
 }
 
+function isFavoredEnemyOption(o: NormalizedChoiceOptionReference) {
+  return decodeFeatureOptionReference(o)?.parentIdentity === FAVORED_ENEMY_TARGET
+}
 function resolveExplicitOption(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceCatalogs,
@@ -718,7 +745,13 @@ function resolveExplicitOption(
       entries: match.entries ?? [],
       presentation: {
         kind: 'feature',
-        featureTypeLabels: ['group' in match ? 'Favored terrain' : 'Dragon ancestry'],
+        featureTypeLabels: [
+          'group' in match
+            ? isFavoredEnemyOption(option)
+              ? 'Favored enemy'
+              : 'Favored terrain'
+            : 'Dragon ancestry',
+        ],
       },
       ...('group' in match
         ? { sourceGroup: { group: String(match.group) } }
@@ -780,10 +813,15 @@ export function resolveClassChoiceOptions(
       ).values(),
     ]
   }
-  const literal = decodeNaturalExplorerChoiceId(choice.id)
+  const enemy = decodeFavoredEnemyChoiceId(choice.id)
+  const literal = decodeNaturalExplorerChoiceId(choice.id) ?? enemy
   if (
     isFeatureLiteralChoiceId(choice.id) &&
-    (!literal || !getNaturalExplorerSources(catalogs).get(literal.grant))
+    (!literal ||
+      !(enemy
+        ? getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET) &&
+          getFavoredEnemySources(catalogs).get(literal.grant)
+        : getNaturalExplorerSources(catalogs).get(literal.grant)))
   ) {
     return [
       ...new Map(
@@ -876,7 +914,10 @@ export function resolveClassChoiceOptions(
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
     if (!byKey.has(key)) {
-      byKey.set(key, resolveExplicitOption(option, catalogs, 'retained', tableDefinitions))
+      byKey.set(
+        key,
+        resolveExplicitOption(option, catalogs, enemy ? 'eligible' : 'retained', tableDefinitions),
+      )
     }
   }
   return [...byKey.values()].sort(
@@ -952,6 +993,8 @@ export function getClassChoiceCandidates(
       return false
     }
     if (isFeatureLiteralChoiceId(choice.id)) {
+      const enemy = decodeFavoredEnemyChoiceId(choice.id)
+      if (enemy) return false
       const relation = decodeNaturalExplorerChoiceId(choice.id)
       const grants = declarations.filter((row) => row.target === relation?.grant)
       return (
@@ -980,7 +1023,15 @@ export function getClassChoiceCandidates(
             : undefined,
         )
       : []
-  return [...ordinary, ...canonical].sort(
+  const enemies =
+    classData.name && classData.source
+      ? normalizeFavoredEnemyChoices(
+          { type: 'class', name: classData.name, source: classData.source },
+          declarations,
+          catalogs ?? { classFeatures: [] },
+        ).choices
+      : []
+  return [...ordinary, ...canonical, ...enemies].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
   )
 }
@@ -1084,6 +1135,14 @@ export function getClassChoiceDiagnosticCandidateSide(
         )
       : undefined
   const cannyDiagnostics = canny?.diagnostics ?? []
+  const enemyDiagnostics =
+    classData.name && classData.source
+      ? normalizeFavoredEnemyChoices(
+          { type: 'class', name: classData.name, source: classData.source },
+          collectUnconditionalFeatureReferences(classData.classFeatureRefs ?? [], 'classFeature'),
+          catalogs ?? { classFeatures: [] },
+        ).diagnostics
+      : []
   const generalDiagnostics: import('@/types/classRules').ClassChoiceDiagnostic[] = []
   const seenProficiencyDiagnostics = new Set<string>()
   if (classData.name && classData.source) {
@@ -1155,14 +1214,29 @@ export function getClassChoiceDiagnosticCandidateSide(
       },
     })
   return [
+    ...getActiveRequiredSetupDiagnostics(
+      enemyDiagnostics,
+      classData,
+      includeVariants,
+      catalogs?.classFeatures,
+      catalogs?.ambiguousClassFeatureTargets,
+      catalogs?.classFeatureCandidates,
+    ),
     ...classDiagnostics.filter(
       (diagnostic) =>
+        !FAVORED_ENEMY_GRANTS.some(
+          (g) =>
+            diagnostic.featureName === 'Favored Enemy' &&
+            diagnostic.requiredChoice &&
+            getClassChoiceFeatureTarget(diagnostic.requiredChoice.target) === g.target,
+        ) &&
         !(
           diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
           getClassFeatureIdentity(
             decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
           ) === DEFT_EXPLORER_TARGET
-        ) && includeDiagnostic(diagnostic, classDiagnostics),
+        ) &&
+        includeDiagnostic(diagnostic, classDiagnostics),
     ),
     ...cannyDiagnostics,
     ...generalDiagnostics,

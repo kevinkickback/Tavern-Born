@@ -76,6 +76,7 @@ export function BuildClassPage() {
     classes,
     classFeatures,
     creatures,
+    races,
     optionalfeatures,
     spells,
     feats,
@@ -329,6 +330,7 @@ export function BuildClassPage() {
     viewingClassLevel,
     includeClassFeatureVariants,
     catalogs: classChoiceCatalogs,
+    races,
     configurationPaused: !!optionsPendingFeat,
     onFeatOptionsRequired: (feat, choiceId) =>
       setOptionsPendingFeat({ ...feat, classFeatChoiceId: choiceId }),
@@ -671,6 +673,7 @@ export function BuildClassPage() {
           onClose={classChoiceController.close}
           onConfirm={classChoiceController.confirm}
           historicalSetup={classChoiceController.historicalSetup}
+          enemySetup={classChoiceController.enemySetup}
         />
       )}
 

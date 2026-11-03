@@ -385,6 +385,19 @@ const characterClassChoiceSelectionSchema = z.object({
   subclassName: z.string().min(1).optional(),
   subclassSource: z.string().min(1).optional(),
   classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  favoredEnemy: z
+    .object({
+      mode: z.enum(['type', 'humanoid-races']),
+      humanoidsConfirmed: z.literal(true).optional(),
+      language: z
+        .discriminatedUnion('kind', [
+          z.object({ kind: z.literal('spoken'), name: z.string().min(1) }).strict(),
+          z.object({ kind: z.literal('none') }).strict(),
+        ])
+        .optional(),
+    })
+    .strict()
+    .optional(),
   proficiencyAtGain: z
     .object({ name: z.string().min(1), alreadyProficient: z.boolean() })
     .strict()

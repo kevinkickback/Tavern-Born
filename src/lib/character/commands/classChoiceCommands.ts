@@ -3,9 +3,11 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
+  getProficiencyOption,
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
@@ -25,6 +27,7 @@ import {
   retainClassProficiencyGrants,
 } from '@/lib/character/classProficiencyOwnership'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyVocabulary'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   getHistoricalProficiencyRule,
@@ -50,7 +53,7 @@ import {
   getInvalidClassProficiencySelectionIds,
   isValidClassProficiencySelection,
 } from '@/lib/schema/classProficiencyValidation'
-import { getInvalidNaturalExplorerSelectionIds } from '@/lib/schema/naturalExplorerValidation'
+import { getInvalidFeatureLiteralSelectionIds } from '@/lib/schema/featureLiteralValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Class5e, Feat5e } from '@/types/5etools'
 import type {
@@ -58,6 +61,7 @@ import type {
   CharacterClassChoiceOption,
   CharacterClassChoiceSelection,
   CharacterClassEntry,
+  FavoredEnemySetup,
   Feature,
 } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -226,13 +230,15 @@ function currentLiteralChoice(
     ).find((candidate) => candidate.id === choice.id)
   if (!current || !authority?.catalogs)
     throw new RangeError(
-      'Current source rules cannot verify this favored-terrain choice. Restore the source or review the saved choice.',
+      'Current source rules cannot verify this feature choice. Restore the source or review the saved choice.',
     )
   const eligible = new Set(
     resolveClassChoiceOptions(
       current,
       createClassChoiceCatalogs(authority.catalogs),
-      [],
+      decodeFavoredEnemyChoiceId(choice.id)
+        ? selected.map((o) => ({ ...o, slotLevel: choice.level }))
+        : [],
       findOwner(character, current)?.levels ?? 0,
     )
       .filter((option) => option.availability === 'eligible')
@@ -240,7 +246,7 @@ function currentLiteralChoice(
   )
   if (selected.some((option) => !eligible.has(getClassChoiceOptionKey(option))))
     throw new RangeError(
-      'Source rules changed. Review the available favored terrains before confirming.',
+      'Source rules changed. Review the available feature choices before confirming.',
     )
   return current
 }
@@ -289,6 +295,32 @@ export function retainSavedFeatureOptionsCommand(
   ) {
     throw new RangeError(
       'Only a saved source-backed feature choice supports this recovery operation.',
+    )
+  }
+  if (decodeFavoredEnemyChoiceId(choiceId)) {
+    if (remainingKeys.length)
+      throw new RangeError(
+        'Clear the whole saved enemy allocation, or restore its source to edit it.',
+      )
+    const next = (character.classChoiceSelections ?? []).filter((s) => s.choiceId !== choiceId)
+    const grants = reconcileClassChoiceSelectionGrants(
+      character,
+      ledger,
+      next,
+      authority?.catalogs,
+      authority?.spellContext,
+    )
+    return projectProficiencyCommandResult(
+      character,
+      {
+        characterPatch: {
+          classChoiceSelections: next,
+          features: grants.features,
+          proficiencies: grants.proficiencies,
+        },
+        provenanceUpdate: grants.provenanceUpdate,
+      },
+      authority?.catalogs,
     )
   }
   const originalKeys = selection.selected.map(getClassChoiceOptionKey)
@@ -409,7 +441,14 @@ export function applyClassChoiceSelectionCommand(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
   authority?: ClassChoiceAuthority,
+  favoredEnemy?: FavoredEnemySetup,
+  expectedSelectionHandle?: string,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (decodeFavoredEnemyChoiceId(choice.id) && expectedSelectionHandle !== undefined) {
+    const latest = character.classChoiceSelections?.find((s) => s.choiceId === choice.id)
+    if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== expectedSelectionHandle)
+      throw new RangeError('The saved enemy allocation changed. Review it before confirming.')
+  }
   choice = currentLiteralChoice(character, choice, selected, authority)
   const owner = findOwner(character, choice)
   const classLevel = owner?.levels ?? 0
@@ -425,16 +464,37 @@ export function applyClassChoiceSelectionCommand(
     throw new RangeError(`${choice.label} is not available for the character's current subclass.`)
   }
   const requiredCount = getRequiredChoiceSelectionCount(choice, classLevel)
-  if (selected.length > requiredCount) {
+  if (
+    selected.length >
+    (decodeFavoredEnemyChoiceId(choice.id)
+      ? favoredEnemy?.mode === 'humanoid-races'
+        ? 2
+        : 1
+      : requiredCount)
+  ) {
     throw new RangeError(`${choice.label} allows ${requiredCount} selections at this class level.`)
   }
   const existingSelection = character.classChoiceSelections?.find(
     (existing) => existing.choiceId === choice.id,
   )
-  validateSelectedOptions(choice, selected, existingSelection?.selected)
-  if (isFeatureLiteralChoiceId(choice.id) && selected.length) {
+  if (!decodeFavoredEnemyChoiceId(choice.id))
+    validateSelectedOptions(choice, selected, existingSelection?.selected)
+  if (favoredEnemy && !decodeFavoredEnemyChoiceId(choice.id))
+    throw new RangeError('Campaign enemy setup requires its exact choice family.')
+  if (decodeFavoredEnemyChoiceId(choice.id) && !favoredEnemy && selected.length)
+    throw new RangeError('Confirm the enemy setup mode.')
+  if (
+    favoredEnemy?.language?.kind === 'spoken' &&
+    !hasProficiencyCatalogTarget(
+      getProficiencyOption('languages', favoredEnemy.language.name),
+      authority?.catalogs,
+    )
+  )
+    throw new RangeError('Restore this language before confirming its association.')
+  if (isFeatureLiteralChoiceId(choice.id) && (selected.length || favoredEnemy)) {
     const proposed = {
       ...existingSelection,
+      favoredEnemy,
       choiceId: choice.id,
       label: choice.label,
       kind: choice.kind,
@@ -447,15 +507,18 @@ export function applyClassChoiceSelectionCommand(
       ...(character.classChoiceSelections ?? []).filter((row) => row.choiceId !== choice.id),
       proposed,
     ]
-    if (getInvalidNaturalExplorerSelectionIds(next).has(choice.id))
+    if (getInvalidFeatureLiteralSelectionIds(next).has(choice.id))
       throw new RangeError(
-        'Choose a different favored terrain for each earned Natural Explorer choice.',
+        decodeFavoredEnemyChoiceId(choice.id)
+          ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
+          : 'Choose a different favored terrain for each earned Natural Explorer choice.',
       )
   }
   if (
     (choice.kind === 'feature-option' ||
       choice.kind === 'proficiency' ||
       isStormAuraChoiceId(choice.id)) &&
+    JSON.stringify(existingSelection?.favoredEnemy) === JSON.stringify(favoredEnemy) &&
     sameSelectionKeys(
       (existingSelection?.selected ?? []).map(getClassChoiceOptionKey),
       selected.map(getClassChoiceOptionKey),
@@ -481,6 +544,7 @@ export function applyClassChoiceSelectionCommand(
     ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
     ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
+    ...(favoredEnemy ? { favoredEnemy } : {}),
     ...(existingSelection?.proficiencyAtGain
       ? { proficiencyAtGain: existingSelection.proficiencyAtGain }
       : {}),
@@ -495,7 +559,7 @@ export function applyClassChoiceSelectionCommand(
     (existing) => existing.choiceId !== choice.id,
   )
   const next =
-    selection.selected.length > 0 || selection.proficiencyAtGain
+    selection.selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
       ? [...retained, selection]
       : retained
   if (
@@ -707,8 +771,17 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
   authority?: ClassChoiceAuthority,
+  favoredEnemy?: FavoredEnemySetup,
+  expectedSelectionHandle?: string,
 ): CharacterCommandResult {
-  const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected, authority)
+  const selectionPatch = applyClassChoiceSelectionCommand(
+    character,
+    choice,
+    selected,
+    authority,
+    favoredEnemy,
+    expectedSelectionHandle,
+  )
   if (
     (choice.kind === 'feature-option' ||
       choice.kind === 'proficiency' ||
@@ -793,6 +866,8 @@ export function reconcileClassChoiceSelections(
       return []
     }
     const selected = selection.selected.filter((option) => option.slotLevel <= owner.levels)
-    return selected.length > 0 || selection.proficiencyAtGain ? [{ ...selection, selected }] : []
+    return selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
+      ? [{ ...selection, selected }]
+      : []
   })
 }

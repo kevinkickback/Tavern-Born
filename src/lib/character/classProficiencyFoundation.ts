@@ -17,6 +17,7 @@ import {
   stripClassProficiencyGrants,
 } from './classProficiencyOwnership'
 import { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
+import { getFavoredEnemyAuthority } from './favoredEnemyAuthority'
 import { refreshFeatExpertiseState, stripFeatExpertiseGrants } from './featExpertiseSelections'
 import { getCurrentFixedProficiencies } from './fixedProficiencyAuthority'
 import { grantFixedProficiencies, stripFixedProficiencyGrants } from './fixedProficiencyOwnership'
@@ -62,6 +63,10 @@ export function projectOwnedProficiencies(
         { ...selection, selected },
         'foundations',
       )
+  }
+  for (const state of getFavoredEnemyAuthority(character, catalogs?.classes ?? [], catalogs)) {
+    if (state.complete && state.languageAvailable && !state.selection.inactive)
+      foundations = grantClassProficiencySelection(foundations, state.selection, 'foundations')
   }
   let effective = grantFixedProficiencies(
     refreshFeatExpertiseState(foundations, catalogs?.featExpertiseFeats ?? []),

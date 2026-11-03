@@ -3,7 +3,6 @@ import {
   getClassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
-import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   decodeNaturalExplorerChoiceId,
   getNaturalExplorerChoiceId,
@@ -64,7 +63,7 @@ export function getNaturalExplorerSelectionStates(
   const invalid = getInvalidNaturalExplorerSelectionIds(character.classChoiceSelections ?? [])
   const seenContext = new Set<string>()
   return selections
-    .filter((selection) => isFeatureLiteralChoiceId(selection.choiceId))
+    .filter((selection) => !!decodeNaturalExplorerChoiceId(selection.choiceId))
     .sort((left, right) => left.classLevel - right.classLevel)
     .map((selection) => {
       const relation = decodeNaturalExplorerChoiceId(selection.choiceId)

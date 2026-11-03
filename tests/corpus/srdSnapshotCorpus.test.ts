@@ -90,18 +90,14 @@ describe('committed bundled SRD corpus', () => {
     ).toEqual(rawConditions.status.map((row: object) => ({ ...row, _sourceType: 'status' })))
     const rawTraps = await readJson(resolve(DATA_ROOT, 'trapshazards.json'))
     expect(gameData.trapHazards).toHaveLength(rawTraps.trap.length + rawTraps.hazard.length)
-    expect(createCorpusCapabilityReport(gameData).issues).toEqual([
-      {
-        code: 'choice-diagnostic',
-        collection: 'classes',
-        entity: 'Ranger|PHB',
-        path: 'normalizedRules.choiceDiagnostics[0]',
-        message:
-          'Favored Enemy: unsupported-required-choice: Favored Enemy requires enemy and associated language choices. Tavern Born does not yet support this setup.',
-      },
-    ])
+    expect(createCorpusCapabilityReport(gameData).issues).toEqual([])
     const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(gameData))
     const ranger = gameData.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
+    expect(
+      getClassChoiceCandidates(ranger, undefined, catalogs)
+        .filter((c) => c.label === 'Favored Enemy')
+        .map((c) => c.level),
+    ).toEqual([1, 6, 14])
     const terrain = getClassChoiceCandidates(ranger, undefined, catalogs).filter(
       (row) => row.label === 'Natural Explorer',
     )

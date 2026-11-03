@@ -495,7 +495,7 @@ describe('source-confirmed required setup', () => {
           .find((c) => c.source === 'PHB')!
           .normalizedRules!.choiceDiagnostics.map((d) => d.featureName)
           .sort(),
-      ).toEqual(['Favored Enemy'])
+      ).toEqual([])
       expect(
         classes
           .find((c) => c.source === 'PHB')!

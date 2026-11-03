@@ -5,16 +5,17 @@ import {
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
 import type { Character } from '@/types/character'
-import { getInvalidNaturalExplorerSelectionIds } from './naturalExplorerValidation'
+import { getInvalidFeatureLiteralSelectionIds } from './featureLiteralValidation'
 
 /** New literal relations validate structurally even while their rules are unavailable. */
 export function getInvalidFeatureOptionSelectionPaths(
   character: Pick<Character, 'classChoiceSelections'>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
-  const invalidGroups = getInvalidNaturalExplorerSelectionIds(character.classChoiceSelections ?? [])
+  const invalidGroups = getInvalidFeatureLiteralSelectionIds(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
     if (
+      selection.favoredEnemy !== undefined ||
       isFeatureLiteralChoiceId(selection.choiceId) ||
       selection.selected.some(
         (option) => decodeFeatureOptionReference(option)?.format === 'source-group',
