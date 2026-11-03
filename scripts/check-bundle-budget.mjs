@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared creator previews and modal-safe opacity transitions: measured 6,394,425 B.
+  // Shared creator previews and modal-safe opacity transitions: measured 6,394,577 B.
   // Smallest independently reviewed whole-KiB allowance; other limits are unchanged.
   rendererCode: 6245 * KIB,
-  // Stable preview host, focus and scroll lifecycle: measured 1,168,215 B.
+  // Stable preview host, focus and scroll lifecycle: measured 1,168,348 B.
   // Smallest independently reviewed whole-KiB allowance.
   initialRendererScript: 1141 * KIB,
   initialStylesheet: 185 * KIB,

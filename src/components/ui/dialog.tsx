@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import XIcon from 'lucide-react/dist/esm/icons/x'
 import type { ComponentProps, RefCallback } from 'react'
+import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 
 import { cn } from '@/lib/utils'
 
@@ -36,8 +37,12 @@ function DialogContent({
   closeDisabled?: boolean
   rulesPreviewPortalRef?: RefCallback<HTMLDivElement>
 }) {
+  const { portalContainer } = useRulesPreview()
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal
+      data-slot="dialog-portal"
+      container={rulesPreviewPortalRef ? undefined : (portalContainer ?? undefined)}
+    >
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"

@@ -25,7 +25,10 @@ source element. A pinned preview therefore survives route content changes and vi
 unmounts without retaining hidden rows or increasing overscan. The visible pinned title is the
 pointer and keyboard drag handle through `useDraggablePreview`.
 
-`RulesPreviewManager` owns one stable portal root, normally at `document.body`. The creator opts into
+`RulesPreviewManager` owns one stable portal root, normally at `document.body`. Ordinary shared
+dialogs also portal into this root, so modal accessibility hiding targets existing surfaces rather
+than hiding the ancestor of newly opened previews. The creator's own dialog stays at the body to
+avoid an ancestor cycle, then opts into
 `DialogContent.rulesPreviewPortalRef`, moving that root into a viewport-fixed host inside the Radix
 modal's focus/scroll boundary. Opted-in content uses transform-free centering and fade-only entry so
 fixed preview coordinates stay relative to the viewport. Registration moves the root before Radix
@@ -33,7 +36,8 @@ hides siblings. Leaving the host returns it to the body; changing hosts clears o
 Pinned descriptors and shells remain the same snapshots, including their scroll and drag state.
 An unrelated nested discard dialog still owns focus and Escape above the creator. Escape from
 preview content closes its chain/pin and returns to a connected trigger without reopening it through
-the trigger's focus handler; Escape from a normal dialog retains that dialog's behavior.
+the trigger's focus handler. Escape from a normal dialog, listbox or menu retains that overlay's
+behavior and leaves an independent pin intact.
 
 Floating UI owns measured anchoring,
 flipping, and viewport shifting; the manager supplies a synchronous collision-safe fallback so an

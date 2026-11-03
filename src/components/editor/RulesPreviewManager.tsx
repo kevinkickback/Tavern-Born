@@ -59,6 +59,7 @@ const PREVIEW_HOVER_INTENT_DELAY = 120
 const PINNED_PREVIEW_ID = 'rules-preview-pinned'
 
 interface RulesPreviewContextValue {
+  portalContainer: HTMLElement | null
   cancelClose: () => void
   openPreview: (descriptor: RulesPreviewDescriptor, sourceElement: HTMLElement) => void
   pinPreview: (
@@ -72,6 +73,7 @@ interface RulesPreviewContextValue {
 
 const noOp = () => undefined
 const fallbackContext: RulesPreviewContextValue = {
+  portalContainer: null,
   cancelClose: noOp,
   openPreview: noOp,
   pinPreview: noOp,
@@ -912,11 +914,13 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       const target = event.target
-      const targetDialog =
+      const targetOverlay =
         target instanceof HTMLElement
-          ? target.closest<HTMLElement>('[role="dialog"], [role="alertdialog"]')
+          ? target.closest<HTMLElement>(
+              '[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"]',
+            )
           : null
-      if (targetDialog && !targetDialog.hasAttribute('data-rules-preview-layer')) return
+      if (targetOverlay && !targetOverlay.hasAttribute('data-rules-preview-layer')) return
       const current = stateRef.current
       if (current.chain.length > 0) {
         event.preventDefault()
@@ -973,8 +977,15 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
   )
 
   const context = useMemo<RulesPreviewContextValue>(
-    () => ({ cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost }),
-    [cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost],
+    () => ({
+      cancelClose,
+      openPreview,
+      pinPreview,
+      scheduleClose,
+      setPortalHost,
+      portalContainer: portalRoot,
+    }),
+    [cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost, portalRoot],
   )
 
   const pinnedPreview = state.pinned

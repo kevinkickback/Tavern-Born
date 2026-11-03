@@ -74,7 +74,10 @@ describe('rules preview positioning', () => {
     const preview = screen.getByRole('dialog', { name: 'Prone preview' })
     expect(preview.style.left).toBe('696px')
     expect(preview.style.top).toBe('108px')
-    expect(preview.parentElement).toBe(document.body)
+    const portalRoot = document.querySelector('[data-rules-preview-root]')
+    expect(portalRoot?.parentElement).toBe(document.body)
+    expect(preview.parentElement).toBe(portalRoot)
+    expect(document.querySelectorAll('[data-rules-preview-root]')).toHaveLength(1)
   })
 
   test('anchors a pinned preview child beside the pinned shell and ignores its inner scroll', async () => {

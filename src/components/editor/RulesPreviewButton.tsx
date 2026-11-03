@@ -18,6 +18,7 @@ export function RulesPreviewButton({
     <button
       type="button"
       aria-haspopup="dialog"
+      aria-expanded={false}
       className={className}
       onMouseEnter={(event) => openPreview(descriptor, event.currentTarget)}
       onMouseMove={cancelClose}
