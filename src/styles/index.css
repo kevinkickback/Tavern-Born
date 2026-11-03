@@ -36,6 +36,26 @@
     font-family: "JetBrains Mono", monospace;
   }
 
+  /* Composite enter/exit animations establish a fixed-position containing block,
+     even with identity transforms. Preview hosts must animate opacity alone. */
+  @keyframes modal-preview-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modal-preview-exit {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes shake {
     0%,
     100% {

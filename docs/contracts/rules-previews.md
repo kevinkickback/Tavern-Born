@@ -3,10 +3,10 @@
 Read this reference only when changing this contract. Start with the [topic index](../README.md).
 
 The shared manager is the required integration boundary for equivalent creator/app previews.
-Current creator race/class steps still wrap feature text in TraitTooltip; its independent Radix
-outer tooltip means global integration is not complete. Reported parent-to-child dismissal remains
-open qualification/implementation work. Rendering nested GameContent alone does not prove shared
-outer-shell behavior. Inspect actual pointer and keyboard paths before claiming completion.
+Creator race/class feature buttons use the same manager for the outer feature and its descendants.
+They and the Background step pass the wizard's lookup explicitly, so a different active character's
+books do not determine draft details. `RulesPreviewButton` shares root pointer/keyboard behavior
+with spell-name triggers; `GameContent` continues to delegate generated inline references.
 
 Shared rules-entry and spell-name previews use the single `RulesPreviewManager` mounted at the
 application root. Triggers resolve an immutable content descriptor and send it to the manager; pages,
@@ -25,7 +25,17 @@ source element. A pinned preview therefore survives route content changes and vi
 unmounts without retaining hidden rows or increasing overscan. The visible pinned title is the
 pointer and keyboard drag handle through `useDraggablePreview`.
 
-`RulesPreviewManager` creates one portal at `document.body`. Floating UI owns measured anchoring,
+`RulesPreviewManager` owns one stable portal root, normally at `document.body`. The creator opts into
+`DialogContent.rulesPreviewPortalRef`, moving that root into a viewport-fixed host inside the Radix
+modal's focus/scroll boundary. Opted-in content uses transform-free centering and fade-only entry so
+fixed preview coordinates stay relative to the viewport. Registration moves the root before Radix
+hides siblings. Leaving the host returns it to the body; changing hosts clears only transient chains.
+Pinned descriptors and shells remain the same snapshots, including their scroll and drag state.
+An unrelated nested discard dialog still owns focus and Escape above the creator. Escape from
+preview content closes its chain/pin and returns to a connected trigger without reopening it through
+the trigger's focus handler; Escape from a normal dialog retains that dialog's behavior.
+
+Floating UI owns measured anchoring,
 flipping, and viewport shifting; the manager supplies a synchronous collision-safe fallback so an
 overlay never flashes at the viewport origin. Transient placement also reserves the bounds of the
 pin and earlier transient ancestors, trying every side of the spawning shell so deeper content

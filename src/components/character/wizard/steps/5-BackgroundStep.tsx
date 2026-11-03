@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
@@ -10,6 +11,7 @@ import type { StepProps } from '../types'
 
 interface BackgroundStepProps extends StepProps {
   backgrounds: Background5e[]
+  recursiveLookup: RecursiveLookup
 }
 
 function getFirstStringEntry(entries: unknown[]): string {
@@ -28,7 +30,12 @@ function getFirstStringEntry(entries: unknown[]): string {
   return ''
 }
 
-export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepProps) {
+export function BackgroundStep({
+  data,
+  onChange,
+  backgrounds,
+  recursiveLookup,
+}: BackgroundStepProps) {
   const [search, setSearch] = useState('')
   const filteredBackgrounds = backgrounds
 
@@ -193,6 +200,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                 {summary ? (
                   <GameContent
                     entry={summary}
+                    recursiveLookup={recursiveLookup}
                     className="text-sm text-muted-foreground leading-relaxed"
                   />
                 ) : (
@@ -257,6 +265,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                             <GameContent
                               key={key}
                               entry={entry}
+                              recursiveLookup={recursiveLookup}
                               className="text-sm leading-relaxed"
                             />
                           )

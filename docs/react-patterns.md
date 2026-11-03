@@ -56,7 +56,7 @@ Do not add a saved parent/child status mirror.
 ## Rules preview manager
 
 Interactive 5etools content uses `GameContent` and the
-[shared preview contract](contracts/rules-previews.md), which also records the creator integration limit.
+[shared preview contract](contracts/rules-previews.md), including creator draft context and modal integration.
 
 ## Spell presentation
 

@@ -2,11 +2,8 @@ import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { RaceStep } from '@/components/character/wizard/steps/3-RaceStep'
+import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Race5e } from '@/types/5etools'
-
-vi.mock('@/components/character/TraitTooltip', () => ({
-  TraitTooltip: ({ children }: { children: React.ReactNode }) => children,
-}))
 
 describe('RaceStep', () => {
   afterEach(() => {
@@ -20,6 +17,7 @@ describe('RaceStep', () => {
     const onChange = vi.fn()
     const { getByRole } = render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           race: parent.name,
@@ -41,6 +39,7 @@ describe('RaceStep', () => {
     const trait = { type: 'entries', name: 'Keen Senses', entries: ['A benefit.'] }
     const { getAllByText, rerender } = render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{ ...INITIAL_CHARACTER_DATA, race: 'Elf', raceSource: 'PHB' }}
         onChange={vi.fn()}
         races={[{ name: 'Elf', source: 'PHB', entries: [trait, trait] } as Race5e]}
@@ -49,6 +48,7 @@ describe('RaceStep', () => {
     expect(getAllByText('Keen Senses')).toHaveLength(2)
     rerender(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{ ...INITIAL_CHARACTER_DATA, race: 'Elf', raceSource: 'PHB' }}
         onChange={vi.fn()}
         races={[{ name: 'Elf', source: 'PHB', entries: [trait] } as Race5e]}
@@ -77,6 +77,7 @@ describe('RaceStep', () => {
 
     render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           race: 'Human',
@@ -104,7 +105,14 @@ describe('RaceStep', () => {
       { name: 'Elf', source: 'PHB' } as Race5e,
     ]
 
-    render(<RaceStep data={INITIAL_CHARACTER_DATA} onChange={onChange} races={races} />)
+    render(
+      <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
+        data={INITIAL_CHARACTER_DATA}
+        onChange={onChange}
+        races={races}
+      />,
+    )
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
@@ -136,6 +144,7 @@ describe('RaceStep', () => {
 
     const { getByText } = render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           race: 'Human',
@@ -156,6 +165,7 @@ describe('RaceStep', () => {
     const parent = { name: 'Parent', source: 'TEST', lineage: true, subraces: [child] } as Race5e
     const { getByText } = render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           originSystem: '2014',
@@ -183,6 +193,7 @@ describe('RaceStep', () => {
 
     const { getAllByText, queryByText } = render(
       <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           race: 'Aasimar',

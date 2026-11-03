@@ -1,6 +1,7 @@
 import { Warning } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -79,6 +80,7 @@ function sameWizardValue(left: unknown, right: unknown, sourceSelection = false)
 }
 
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
+  const { setPortalHost } = useRulesPreview()
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
@@ -295,6 +297,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
+        rulesPreviewPortalRef={setPortalHost}
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}
         aria-busy={isCreating}

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { BackgroundStep } from '@/components/character/wizard/steps/5-BackgroundStep'
+import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Background5e } from '@/types/5etools'
 
 describe('BackgroundStep', () => {
@@ -26,6 +27,7 @@ describe('BackgroundStep', () => {
 
     render(
       <BackgroundStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           background: '',
@@ -53,6 +55,7 @@ describe('BackgroundStep', () => {
 
     const { getByRole } = render(
       <BackgroundStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           background: 'Acolyte',
@@ -89,6 +92,7 @@ describe('BackgroundStep', () => {
 
     const { getByText } = render(
       <BackgroundStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           background: 'Sage',
@@ -117,6 +121,7 @@ describe('BackgroundStep', () => {
 
     const { container, getByText, queryByText } = render(
       <BackgroundStep
+        recursiveLookup={buildRecursiveLookup({})}
         data={{
           ...INITIAL_CHARACTER_DATA,
           background: 'Acolyte',
