@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { parseItems, parseOptionalFeatures } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { filterSpellRouteSources } from '@/lib/5etools/spellRouteSources'
@@ -60,6 +62,36 @@ describe('writeGameDataCache', () => {
     idbGetMock.mockResolvedValue(null)
   })
 
+  test('retains named target ambiguity through cache and permits an exact unique winning overlay', async () => {
+    const weapon = { name: 'Example weapon', source: 'TEST', type: 'M' }
+    const option = { name: 'Example option', source: 'TEST', featureType: ['TEST'] }
+    const base = {
+      ...makeGameData(),
+      itemsBase: parseItems({ baseitem: [weapon, weapon] }) as GameData['itemsBase'],
+      optionalfeatures: parseOptionalFeatures({ optionalfeature: [option, option] }),
+    }
+    const composed = composeGameDataLayers([base])
+    const entry = await writeGameDataCache(composed, config)
+    idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
+    const cached = (await readGameDataCache())!.data
+    for (const rows of [cached.itemsBase, cached.optionalfeatures]) {
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ sourceIdentityConflict: true })
+    }
+    const restored = composeGameDataLayers([
+      cached,
+      {
+        ...makeGameData(),
+        itemsBase: parseItems({ baseitem: [weapon] }) as GameData['itemsBase'],
+        optionalfeatures: parseOptionalFeatures({ optionalfeature: [option] }),
+      },
+    ])
+    for (const rows of [restored.itemsBase, restored.optionalfeatures]) {
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).not.toHaveProperty('sourceIdentityConflict', true)
+    }
+  })
+
   test('current cache retains route witnesses and invalidates the previous normalization', async () => {
     const fixture = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
     const data = makeGameData()
@@ -69,7 +101,7 @@ describe('writeGameDataCache', () => {
     }) as GameData['spells']
     const before = computeGameDataFingerprint(data)
     const entry = await writeGameDataCache(data, config)
-    expect(entry.cacheSchemaVersion).toBe(61)
+    expect(entry.cacheSchemaVersion).toBe(62)
     idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
     const cached = (await readGameDataCache())!
     expect(filterSpellRouteSources(cached.data.spells[0], ['PHB', 'TCE']).classSpellRoutes).toEqual(
@@ -81,7 +113,7 @@ describe('writeGameDataCache', () => {
       origin: 'cache-fixture',
     }) as GameData['spells']
     expect(computeGameDataFingerprint(data)).not.toBe(before)
-    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 60 })
+    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 61 })
     await expect(readGameDataCache()).resolves.toBeNull()
   })
 

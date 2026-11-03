@@ -23,6 +23,7 @@ import type { ClassCastingSourceProof } from '@/types/classCasting'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 
 export interface ClassChoiceFeatureCatalogs {
+  legacySubclassChoices?: GameData['legacySubclassChoices']
   psionics?: readonly import('@/types/5etools').Psionic5e[]
   classes?: readonly Class5e[]
   optionalClassFeatureSources?: readonly OptionalClassFeatureSourceProof[]
@@ -49,6 +50,7 @@ export interface ClassChoiceFeatureCatalogs {
 export type ScopedClassChoiceFeatureCatalogs = Pick<
   ClassChoiceFeatureCatalogs,
   | 'classFeatures'
+  | 'legacySubclassChoices'
   | 'psionics'
   | 'classFeatureCandidates'
   | 'subclassFeatures'
@@ -88,6 +90,7 @@ export function scopeClassChoiceFeatureCatalogs(
     ? catalogs.subclassTargets.candidatesByOwner.get(subclassOwner)
     : catalogs.subclassTargets.uniqueCandidates
   const result = {
+    legacySubclassChoices: catalogs.legacySubclassChoices,
     psionics: catalogs.psionics,
     classFeatures: catalogs.classFeatures,
     skills: catalogs.skills,
@@ -116,6 +119,7 @@ export function buildClassChoiceFeatureCatalogs(
       Pick<
         GameData,
         | 'skills'
+        | 'legacySubclassChoices'
         | 'psionics'
         | 'languages'
         | 'items'
@@ -150,6 +154,7 @@ export function buildClassChoiceFeatureCatalogs(
     seenClassTargets.add(target)
   }
   return {
+    legacySubclassChoices: data.legacySubclassChoices ?? [],
     classes: data.classes,
     psionics: data.psionics ?? [],
     optionalClassFeatureSources: data.optionalClassFeatureSources ?? [],

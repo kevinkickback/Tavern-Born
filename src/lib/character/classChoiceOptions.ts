@@ -8,14 +8,31 @@ import {
   FAVORED_ENEMY_TARGET,
 } from '@/lib/5etools/favoredEnemyIdentity'
 import { getFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
+import {
+  decodeLegacySubclassChoice,
+  isKenseiChoiceId,
+  legacyChoiceKey,
+} from '@/lib/5etools/legacySubclassChoiceIdentity'
+import {
+  getLegacySubclassChoices,
+  getLegacySubclassFamily,
+  isLegacyChoiceItemEligible,
+  legacySubclassChoiceDiagnostic,
+} from '@/lib/5etools/legacySubclassChoices'
 import { normalizePsionicChoices, psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { decodePsionicChoiceId, PSIONIC_CLASS_SOURCE } from '@/lib/5etools/psionicIdentity'
 import { resolvePsionic } from '@/lib/5etools/psionics'
+import { isValidKenseiSelection } from '@/lib/schema/legacySubclassChoiceValidation'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
+import {
+  getCreatureTypes,
+  getItemPropertyReferences,
+  matchesClassChoiceFilter,
+} from './classChoiceFilters'
 
 export {
   buildClassChoiceFeatureCatalogs,
@@ -59,7 +76,7 @@ import {
   type FeatureTableOption,
   resolveFeatureTableOption,
 } from '@/lib/5etools/featureTableOptions'
-import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
 import {
   hasNaturalExplorerGrant,
   resolveNaturalExplorerOption,
@@ -84,7 +101,6 @@ import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
-import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
   Class5e,
   ClassFeature,
@@ -92,7 +108,6 @@ import type {
   Feat5e,
   Item5e,
   ItemMastery5e,
-  ItemPropertyReference,
   OptionalFeatureLike,
   Raw5ePrereq,
   Subclass5e,
@@ -256,212 +271,11 @@ function getFilteredCatalogIncludesMagicItems(filter: NormalizedChoiceOptionFilt
   )
 }
 
-function getFeatureTypes(entity: ChoiceCatalogEntity): string[] {
-  const raw = (entity as OptionalFeatureLike).featureType
-  return (Array.isArray(raw) ? raw : [raw])
-    .filter((value): value is string => typeof value === 'string')
-    .map(normalized)
-}
-
 function getRawFeatureTypes(entity: ChoiceCatalogEntity): string[] {
   const raw = (entity as OptionalFeatureLike).featureType
   return (Array.isArray(raw) ? raw : [raw]).filter(
     (value): value is string => typeof value === 'string' && value.length > 0,
   )
-}
-
-function getItemTypeLabels(
-  item: Item5e,
-  itemTypeByAbbr: Readonly<Record<string, string>>,
-): string[] {
-  const rawTypes = Array.isArray(item.type) ? item.type : [item.type]
-  const typeCodes = rawTypes
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => value.split('|')[0]?.trim())
-    .filter((value): value is string => Boolean(value))
-  const weaponCategory = normalized(item.weaponCategory)
-  return [
-    ...typeCodes,
-    ...typeCodes.map((code) => itemTypeByAbbr[code.toUpperCase()]),
-    item.weaponCategory,
-    weaponCategory ? `${weaponCategory} weapon` : undefined,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .map(normalized)
-}
-
-function getItemPropertyLabels(
-  item: Item5e,
-  itemPropertyByAbbr: Readonly<Record<string, string>>,
-): string[] {
-  return getItemPropertyReferences(item).flatMap((value) => {
-    const uid = getItemPropertyUid(value)
-    const code = uid.split('|')[0]?.trim() ?? ''
-    return [code, getItemPropertyLabel(uid, itemPropertyByAbbr)].filter((label): label is string =>
-      Boolean(label),
-    )
-  })
-}
-
-function getItemPropertyReferences(item: Item5e): ItemPropertyReference[] {
-  const raw = (item as Record<string, unknown>).property
-  const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
-  return values.flatMap((value) => {
-    if (typeof value === 'string') return [value]
-    if (!value || typeof value !== 'object') return []
-    const record = value as Record<string, unknown>
-    const reference = record.uid ?? record.property ?? record.abbreviation ?? record.name
-    if (typeof reference !== 'string') return []
-    return [typeof record.note === 'string' ? { uid: reference, note: record.note } : reference]
-  })
-}
-
-function matchesAny(actual: readonly string[], expected: readonly string[] | undefined): boolean {
-  if (!expected || expected.length === 0) return true
-  const actualValues = new Set(actual.map(normalized))
-  return expected.some((value) => actualValues.has(normalized(value)))
-}
-
-function matchesFilter(
-  entity: ChoiceCatalogEntity,
-  filter: NormalizedChoiceOptionFilter,
-  itemPropertyByAbbr: Readonly<Record<string, string>>,
-  itemTypeByAbbr: Readonly<Record<string, string>>,
-  weaponProficiencies: readonly string[],
-  classLevel: number,
-): boolean {
-  if ((filter.minimumClassLevel ?? 1) > classLevel) return false
-  if (
-    filter.anyOf?.length &&
-    !filter.anyOf.some((candidate) =>
-      matchesFilter(
-        entity,
-        candidate,
-        itemPropertyByAbbr,
-        itemTypeByAbbr,
-        weaponProficiencies,
-        classLevel,
-      ),
-    )
-  ) {
-    return false
-  }
-  if (filter.source && normalized(entity.source) !== normalized(filter.source)) return false
-  if (
-    filter.entityType === 'creature' &&
-    !matchesAny(getCreatureTypes(entity as Creature5e), filter.creatureTypes)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'creature' &&
-    !matchesAny((entity as Creature5e).size ?? [], filter.sizes)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'creature' &&
-    filter.challengeRatingMaximum !== undefined &&
-    (getCreatureChallengeRating(entity as Creature5e) ?? Infinity) > filter.challengeRatingMaximum
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'creature' &&
-    filter.excludeSwarms &&
-    isCreatureSwarm(entity as Creature5e)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'feat' &&
-    !matchesAny([(entity as Feat5e).category ?? ''], filter.categories)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'optionalFeature' &&
-    !matchesAny(getFeatureTypes(entity), filter.featureTypes)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    !matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.itemTypes)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    filter.excludedItemTypes?.length &&
-    matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.excludedItemTypes)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    filter.excludedItemProperties?.length &&
-    matchesAny(
-      getItemPropertyLabels(entity as Item5e, itemPropertyByAbbr),
-      filter.excludedItemProperties,
-    )
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    !matchesAny([(entity as Item5e).rarity ?? ''], filter.rarities)
-  ) {
-    return false
-  }
-  if (filter.entityType === 'item' && filter.excludeCursed && (entity as Item5e).curse) return false
-  if (
-    filter.entityType === 'item' &&
-    !matchesAny(
-      getNormalizedItemTraits(entity as Item5e, itemTypeByAbbr).weaponRanges,
-      filter.weaponRanges,
-    )
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    filter.requiresProficiency &&
-    !isProficientWithWeapon(weaponProficiencies, entity as Item5e)
-  ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    filter.requiresMastery &&
-    ((entity as Item5e).mastery?.length ?? 0) === 0
-  ) {
-    return false
-  }
-  return true
-}
-
-function getCreatureTypes(creature: Creature5e): string[] {
-  const type = creature.type
-  if (typeof type === 'string') return [type]
-  return typeof type?.type === 'string' ? [type.type] : []
-}
-
-function getCreatureChallengeRating(creature: Creature5e): number | undefined {
-  const raw = typeof creature.cr === 'object' && creature.cr !== null ? creature.cr.cr : creature.cr
-  if (typeof raw === 'number') return raw
-  if (typeof raw !== 'string') return undefined
-  const fraction = /^(\d+)\/(\d+)$/.exec(raw.trim())
-  if (fraction) {
-    const denominator = Number(fraction[2])
-    return denominator > 0 ? Number(fraction[1]) / denominator : undefined
-  }
-  const numeric = Number(raw)
-  return Number.isFinite(numeric) ? numeric : undefined
-}
-
-function isCreatureSwarm(creature: Creature5e): boolean {
-  return typeof creature.type === 'object' && creature.type?.swarmSize != null
 }
 
 export function getCreatureChoiceEntries(creature: Creature5e): unknown[] {
@@ -787,6 +601,8 @@ export function resolveClassChoiceOptions(
   classLevel = 20,
   character?: Character,
 ): ClassChoiceOptionView[] {
+  if (decodeLegacySubclassChoice(choice.id))
+    return resolveLegacySubclassOptions(choice, catalogs, saved, classLevel, character)
   if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:'))
     return resolvePsionicChoiceOptions(choice, catalogs, saved, classLevel, character)
   if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id))
@@ -854,7 +670,7 @@ export function resolveClassChoiceOptions(
     resolved.push(
       ...getFilteredCatalog(filter, catalogs)
         .filter((entity) =>
-          matchesFilter(
+          matchesClassChoiceFilter(
             entity,
             filter,
             catalogs.itemPropertyByAbbr,
@@ -933,6 +749,93 @@ export function resolveClassChoiceOptions(
       left.reference.name.localeCompare(right.reference.name) ||
       normalized(left.reference.source).localeCompare(normalized(right.reference.source)),
   )
+}
+
+function resolveLegacySubclassOptions(
+  requested: NormalizedCharacterChoice,
+  catalogs: ClassChoiceCatalogs,
+  saved: readonly CharacterClassChoiceOption[],
+  classLevel: number,
+  character?: Character,
+): ClassChoiceOptionView[] {
+  const owner = requested.owner,
+    scoped = scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(owner.name, owner.source, owner.subclassName, owner.subclassSource),
+    )
+  const current = getLegacySubclassChoices(
+    owner,
+    owner.subclassName && owner.subclassSource
+      ? { name: owner.subclassName, source: owner.subclassSource }
+      : undefined,
+    scoped,
+  ).find((c) => c.id === requested.id)
+  const dependencies = (catalogs.legacySubclassChoices ?? []).filter(
+    (row) =>
+      row.ownerKey ===
+      getFeatureOwnerKey(owner.name, owner.source, owner.subclassName, owner.subclassSource),
+  )
+  const dependency = dependencies.length === 1 ? dependencies[0] : undefined
+  const local = {
+    ...catalogs,
+    items: [],
+    itemsBase: dependency?.items ?? [],
+    optionalFeatures: dependency?.optionalFeatures ?? [],
+    itemPropertyByAbbr: dependency?.itemPropertyByAbbr ?? {},
+    itemTypeByAbbr: dependency?.itemTypeByAbbr ?? {},
+  }
+  const views = new Map<string, ClassChoiceOptionView>()
+  if (
+    current &&
+    dependency &&
+    classLevel >= current.level &&
+    JSON.stringify(current) === JSON.stringify(requested)
+  ) {
+    const occupied = new Set(
+      (character?.classChoiceSelections ?? [])
+        .filter(
+          (row) =>
+            row.choiceId !== requested.id &&
+            isKenseiChoiceId(row.choiceId) &&
+            isValidKenseiSelection(row) &&
+            legacyChoiceKey(row.className) === legacyChoiceKey(owner.name) &&
+            legacyChoiceKey(row.classSource) === legacyChoiceKey(owner.source),
+        )
+        .flatMap((row) => row.selected.map((v) => legacyChoiceKey(v.name))),
+    )
+    const candidates = current.kind === 'item' ? dependency.items : dependency.optionalFeatures
+    const counts = new Map<string, number>()
+    for (const row of candidates) {
+      const k = `${legacyChoiceKey(row.name)}|${legacyChoiceKey(row.source)}`
+      counts.set(k, (counts.get(k) ?? 0) + 1)
+    }
+    for (const row of candidates) {
+      const k = `${legacyChoiceKey(row.name)}|${legacyChoiceKey(row.source)}`
+      if (counts.get(k) !== 1 || (row as Record<string, unknown>).sourceIdentityConflict === true)
+        continue
+      if (current.kind === 'item') {
+        if (
+          occupied.has(legacyChoiceKey(row.name)) ||
+          !isLegacyChoiceItemEligible(current, row as Item5e, dependency)
+        )
+          continue
+      } else if (
+        !current.options.some(
+          (v) =>
+            legacyChoiceKey(v.name) === legacyChoiceKey(row.name) &&
+            legacyChoiceKey(v.source) === legacyChoiceKey(row.source),
+        ) ||
+        !getRawFeatureTypes(row).some((v) => legacyChoiceKey(v) === 'fs:b')
+      )
+        continue
+      const view = toView(current.kind === 'item' ? 'item' : 'optionalFeature', row, local)
+      views.set(getClassChoiceOptionKey(view.reference), view)
+    }
+  }
+  for (const row of saved)
+    if (!views.has(getClassChoiceOptionKey(row)))
+      views.set(getClassChoiceOptionKey(row), resolveExplicitOption(row, local, 'retained'))
+  return [...views.values()].sort((a, b) => a.reference.name.localeCompare(b.reference.name))
 }
 
 /** Current family, exact printing, slot multiset and cross-pool ownership share one picker/projection policy. */
@@ -1069,11 +972,48 @@ export function getClassChoiceCandidates(
     | undefined,
   catalogs?: ClassChoiceFeatureCatalogs,
 ): NormalizedCharacterChoice[] {
+  const legacyFamily =
+    classData.name && classData.source
+      ? getLegacySubclassFamily(
+          { name: classData.name, source: classData.source },
+          subclass?.name && subclass.source
+            ? { name: subclass.name, source: subclass.source }
+            : undefined,
+        )
+      : undefined
+  const legacy =
+    legacyFamily &&
+    classData.name &&
+    classData.source &&
+    catalogs &&
+    subclass?.name &&
+    subclass.source
+      ? getLegacySubclassChoices(
+          { name: classData.name, source: classData.source },
+          { name: subclass.name, source: subclass.source },
+          scopeClassChoiceFeatureCatalogs(
+            catalogs,
+            getFeatureOwnerKey(classData.name, classData.source, subclass.name, subclass.source),
+          ),
+        )
+      : []
   const declarations = collectUnconditionalFeatureReferences(
     classData.classFeatureRefs ?? [],
     'classFeature',
   )
   const ordinary = getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+    if (
+      legacyFamily &&
+      choice.owner.type === 'subclass' &&
+      ((legacyFamily === 'swords' &&
+        choice.kind === 'optional-feature' &&
+        (normalized(choice.owner.featureName) === 'fighting style' ||
+          normalized(choice.label) === 'fighting style')) ||
+        (legacyFamily === 'kensei' &&
+          choice.kind === 'item' &&
+          normalized(choice.owner.featureName) === 'path of the kensei'))
+    )
+      return false
     if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:')) return false
     if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
       return false
@@ -1119,6 +1059,7 @@ export function getClassChoiceCandidates(
       : []
   return [
     ...ordinary,
+    ...legacy,
     ...canonical,
     ...enemies,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
@@ -1314,7 +1255,35 @@ export function getClassChoiceDiagnosticCandidateSide(
         replaces: 'Natural Explorer|Ranger|PHB|1|PHB',
       },
     })
+  const legacyOwner =
+    classData.name && classData.source
+      ? { name: classData.name, source: classData.source }
+      : undefined
+  const legacySub =
+    subclass?.name && subclass.source ? { name: subclass.name, source: subclass.source } : undefined
+  const legacyDiagnostics =
+    legacyOwner &&
+    legacySub &&
+    getLegacySubclassFamily(legacyOwner, legacySub) &&
+    !getLegacySubclassChoices(
+      legacyOwner,
+      legacySub,
+      catalogs
+        ? scopeClassChoiceFeatureCatalogs(
+            catalogs as ClassChoiceFeatureCatalogs,
+            getFeatureOwnerKey(
+              legacyOwner.name,
+              legacyOwner.source,
+              legacySub.name,
+              legacySub.source,
+            ),
+          )
+        : {},
+    ).length
+      ? legacySubclassChoiceDiagnostic(legacyOwner, legacySub)
+      : []
   return [
+    ...legacyDiagnostics,
     ...normalizePsionicChoices(
       classData,
       subclass,

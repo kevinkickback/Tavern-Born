@@ -116,6 +116,13 @@ audited rule domains continue to apply their own source validation. Dependency a
 the complete ancestor path, so a valid later declaration cannot authorize an invalid earlier path.
 An explicitly empty reference list remains authoritative over its representation mirrors.
 
+Required Swords optional-feature and Kensei item dependencies use separate owner-scoped Class
+catalogs rather than expanding character source availability. Their current qualified declarations
+and exact PHB targets must resolve unambiguously; same-name revised feats/items cannot substitute.
+Named item and optional-feature multiplicity is retained before winning-layer Maps, including
+parsed cache, so duplicate source records cannot become authority through first-match selection.
+An explicitly absent dependency catalog stays absent. See [class setup ownership](class-ownership.md).
+
 Subclass reprints use their short name, parent class name/printing and subclass printing. The current
 catalog must resolve that complete tuple to one actual owner before it can hide an older owner.
 Owner suppression keys remain separate from feature targets: a reprinted subclass never suppresses

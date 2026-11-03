@@ -21,6 +21,7 @@ import { getFavoredEnemyAuthority } from './favoredEnemyAuthority'
 import { refreshFeatExpertiseState, stripFeatExpertiseGrants } from './featExpertiseSelections'
 import { getCurrentFixedProficiencies } from './fixedProficiencyAuthority'
 import { grantFixedProficiencies, stripFixedProficiencyGrants } from './fixedProficiencyOwnership'
+import { grantKenseiProficiencies } from './kenseiProficiencies'
 
 interface CurrentSelection {
   selection: CharacterClassChoiceSelection
@@ -55,6 +56,7 @@ export function projectOwnedProficiencies(
   const liveSelected = (selection: CharacterClassChoiceSelection) =>
     selection.selected.filter((option) => hasProficiencyCatalogTarget(option, catalogs))
   let foundations = grantFixedProficiencies(independent, fixed, 'foundations', catalogs)
+  foundations = grantKenseiProficiencies(foundations, character, catalogs)
   for (const { selection } of current) {
     const selected = liveSelected(selection)
     if (selected.length)

@@ -9,6 +9,11 @@ import {
 import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
+import {
+  decodeLegacySubclassChoice,
+  isKenseiChoiceId,
+} from '@/lib/5etools/legacySubclassChoiceIdentity'
+import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
@@ -58,6 +63,11 @@ import {
 } from '@/lib/schema/classProficiencyValidation'
 import { getInvalidFeatureLiteralSelectionIds } from '@/lib/schema/featureLiteralValidation'
 import {
+  getInvalidKenseiSelectionIds,
+  isValidKenseiSelection,
+  isValidLegacyStyleSelection,
+} from '@/lib/schema/legacySubclassChoiceValidation'
+import {
   getInvalidPsionicSelectionIds,
   isValidPsionicSelection,
 } from '@/lib/schema/psionicValidation'
@@ -90,6 +100,54 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
+  const legacyFamily = getLegacySubclassFamily(
+    choice.owner,
+    choice.owner.subclassName && choice.owner.subclassSource
+      ? { name: choice.owner.subclassName, source: choice.owner.subclassSource }
+      : undefined,
+  )
+  if (
+    decodeLegacySubclassChoice(choice.id) ||
+    (legacyFamily === 'kensei' && choice.kind === 'item') ||
+    (legacyFamily === 'swords' && choice.kind === 'optional-feature')
+  ) {
+    if (!decodeLegacySubclassChoice(choice.id))
+      throw new RangeError('Invalid subclass choice identity.')
+    if (!selected.length) return choice
+    const owner = findOwner(character, choice),
+      cls = authority && findClassReference(choice.owner, authority.classes)
+    const current =
+      cls &&
+      owner &&
+      authority?.catalogs &&
+      getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, owner),
+        createOptionalClassFeatureActivity(character, authority.catalogs),
+        authority.catalogs,
+      ).find((row) => row.id === choice.id)
+    if (!current || !authority?.catalogs || JSON.stringify(current) !== JSON.stringify(choice))
+      throw new RangeError('Subclass source rules changed. Review the current choices.')
+    const eligible = new Set(
+      resolveClassChoiceOptions(
+        current,
+        createClassChoiceCatalogs(authority.catalogs),
+        [],
+        owner!.levels,
+        character,
+      )
+        .filter((v) => v.availability === 'eligible')
+        .map((v) => getClassChoiceOptionKey(v.reference)),
+    )
+    if (
+      selected.some(
+        (v) =>
+          v.ref !== undefined || !v.source?.trim() || !eligible.has(getClassChoiceOptionKey(v)),
+      )
+    )
+      throw new RangeError('Choose available, distinct subclass options.')
+    return current
+  }
   if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:')) {
     if (!decodePsionicChoiceId(choice.id)) throw new RangeError('Invalid psionic choice identity.')
     if (!selected.length) return choice
@@ -340,6 +398,8 @@ export function retainSavedFeatureOptionsCommand(
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
     !isValidPsionicSelection(selection) &&
+    !isValidKenseiSelection(selection) &&
+    !isValidLegacyStyleSelection(selection) &&
     (selection.kind !== 'feature-option' ||
       selection.selected.some((option) => option.entityType !== 'featureOption'))
   ) {
@@ -521,10 +581,13 @@ export function applyClassChoiceSelectionCommand(
     )
       return { classChoiceSelections: character.classChoiceSelections }
   }
-  if (decodeFavoredEnemyChoiceId(choice.id) && expectedSelectionHandle !== undefined) {
+  if (
+    (decodeFavoredEnemyChoiceId(choice.id) || decodeLegacySubclassChoice(choice.id)) &&
+    expectedSelectionHandle !== undefined
+  ) {
     const latest = character.classChoiceSelections?.find((s) => s.choiceId === choice.id)
     if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== expectedSelectionHandle)
-      throw new RangeError('The saved enemy allocation changed. Review it before confirming.')
+      throw new RangeError('The saved allocation changed. Review it before confirming.')
   }
   choice = currentLiteralChoice(character, choice, selected, authority)
   const owner = findOwner(character, choice)
@@ -666,6 +729,8 @@ export function applyClassChoiceSelectionCommand(
     selection.selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
       ? [...retained, selection]
       : retained
+  if (isKenseiChoiceId(choice.id) && getInvalidKenseiSelectionIds(next).size)
+    throw new RangeError('Choose distinct Kensei weapon types in their earned slots.')
   if (choice.kind === 'psionic') {
     if (getInvalidPsionicSelectionIds(next).size)
       throw new RangeError('Choose distinct psionics across the Mystic pools.')

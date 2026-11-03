@@ -629,6 +629,8 @@ export interface GameDataSourceStack {
 }
 
 export interface GameData {
+  /** Derived filtered Class-only dependencies; never ordinary source availability. */
+  legacySubclassChoices?: readonly import('./classRules').LegacySubclassChoiceCatalog[]
   psionics?: Psionic5e[]
   races: Race5e[]
   classes: Class5e[]

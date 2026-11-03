@@ -9,6 +9,7 @@ import type {
 } from '@/types/5etools'
 import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
 import { auditConditionalOptionalFeatures } from '../conditionalProficiencySource'
+import { auditFixedLayerMultiplicity } from '../fixedProficiencySource'
 import { parseMagicVariantTemplates, resolveMagicVariants } from '../magicVariants'
 import { parsePrimaryItemTypes } from '../primaryItemTypes'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
@@ -66,7 +67,7 @@ export function parseItems(data: unknown): unknown[] {
   if (obj.baseitem) items.push(...asArray(obj.baseitem))
   if (Array.isArray(data)) items.push(...data)
 
-  return items
+  return auditFixedLayerMultiplicity(items as object[], 'named')
 }
 
 export function parseActions(data: unknown): unknown[] {
@@ -131,7 +132,7 @@ export function parseOptionalFeatures(data: unknown, sourceId?: string): unknown
   const obj = asObject(data)
   const rows = obj.optionalfeature ? asArray(obj.optionalfeature) : Array.isArray(data) ? data : []
   return auditConditionalOptionalFeatures(
-    rows,
+    auditFixedLayerMultiplicity(rows as object[], 'named'),
     sourceId ?? `optional-feature-document:${subclassProficiencyDigest(data)}`,
   )
 }
