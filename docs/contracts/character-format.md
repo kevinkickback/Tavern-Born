@@ -2,7 +2,13 @@
 
 Current admission is implemented in [the version constant](../../src/lib/schema/characterSchemaVersion.ts),
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
-The current character format is **13**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
+The current character format is **14**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
+
+Format14 replaces single-reference starting item choices and the old Background currency snapshot
+with independent item arrays, exact physical grant lots, owned unspent currency and a persistent
+spending debit. The explicit initial Class does not follow progression reordering. Strict admission
+checks owner/progression, lot/physical and currency/wallet relations without inferring old ownership.
+Earlier formats remain rejected without conversion. See [starting equipment](equipment-state.md).
 
 Additive psionic Class choices retain explicit entity printings and earned slots in the existing
 selection records. Reserved owner/target IDs and materialized Feature/provenance relations are

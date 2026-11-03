@@ -106,7 +106,7 @@
     },
     {
       "file": "src/lib/5etools/toolProficiencySource.ts",
-      "sha256": "97e5d1aabe364f4e94e0efa8b21ac389a97970b22fdb5ad207a351dd0d7de79c"
+      "sha256": "04a0e4c5d17b6fcb1820d16318c6a1373186701e0af0637dec295eb819babbe2"
     },
     {
       "file": "scripts/lib/tool-proficiency-copy-semantics.json",
@@ -136,7 +136,7 @@
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",
-      "sha256": "b5eacb4d6050e56e895eca54834cb145616ad332d6a24463f32635a7dd384a08"
+      "sha256": "7b48c8ad5f1cd083c2a4e0ddfaf54642d3753ff6b1a2cdcbf4b29e3e25bcd28a"
     }
   ],
   "dependencies": [

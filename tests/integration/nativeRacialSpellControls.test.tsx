@@ -295,6 +295,9 @@ test('actual class spell editing commits restored racial level grants together w
   } as Race5e
   const character = makeNativeRacialCharacter(race)
   character.classProgression = [{ name: 'Wizard', source: 'PHB', levels: 5 }]
+  character.initialClass = { name: 'Wizard', source: 'PHB' }
+  // This test authors a Wizard actor rather than retaining the fixture's Fighter grant owner.
+  character.startingEquipmentGrants = undefined
   character.spells.spellProfiles = character.spells.spellProfiles.filter(
     (profile) => profile.type !== 'class',
   )

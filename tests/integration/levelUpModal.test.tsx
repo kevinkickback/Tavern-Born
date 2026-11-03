@@ -23,6 +23,7 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
     races: [],
     backgrounds: [],
     items: [],
+    itemsBase: [],
   }),
 }))
 

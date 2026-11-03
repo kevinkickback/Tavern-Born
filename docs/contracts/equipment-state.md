@@ -10,6 +10,57 @@ proficiency; `reconcileSkillExpertise()` removes invalid expertise.
 Starting-equipment option keys and concrete generic-item choices are stored separately. Inventory
 and equipment provenance change through the same equipment command. Derived AC and capacity read
 equipped state; they are not copied into equipment records.
+
+Format14 records the explicit `initialClass`, independently of progression order. Only that currently
+present Class owns the Class starting package; adding or reordering multiclass entries grants no
+extra package. Removing it retracts only its remaining owned inventory and coins. Another Class is
+not automatically promoted. Explicit base-Class selection establishes the new owner.
+
+Each concrete starting choice saves an array of exact `{name, source}` references. A quantity of two
+permits different items or repeated references. Source-derived category, Basic/mundane, exact group
+and declared proficiency requirements govern the same picker, command and readiness policy. Changes
+must fill the exact declared count; unchanged unfinished selections can remain pending. Explicit named
+groups require a concrete member; groups are never carried as inventory. Raw source-qualified
+dependencies retained for an admitted owner do not enable an entire book or restrict ordinary Add Item.
+Missing or ambiguous rules leave setup pending; another printing cannot substitute.
+
+Group qualifiers apply to their own source clause. Exact member alternatives narrow the declared
+group (for example, Spellfire Initiate's Crystal/Wand choice); a neighboring gaming proficiency
+requirement does not restrict that focus. Legacy coordinated tool alternatives share only their
+own proficiency clause. Unknown, conflicting or unbound qualifiers stay unsupported. Display names
+can corroborate exact source references but cannot invent a printing or alias. The current Druid
+XPHB “Quarterstaff” focus qualifier has no proven match within its declared Druidic Focus group;
+that package slot remains pending rather than substituting Wooden Staff or offering every member.
+
+`startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
+address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and
+remaining owned quantity. A retained lot keeps `remaining = max(0, issued - consumed)` even when
+its current quantity shrinks and regrows; consumption may exceed that current quantity. It never merges
+into a manual or other-role row. Unchanged lots retain their ID and runtime fields; consumed/deleted
+copies do not return on refresh. Quantity increases are independent surplus; decreases consume owned
+copies first. Replacement subtracts only the remaining owned quantity from that exact row, preserving
+surplus and independent providers. Explicitly changing a physical selection can issue a replacement;
+there is no historical anti-farming ledger for former item selections. Name-keyed provenance remains
+a source summary and cannot authorize subtraction. Source loss preserves physical snapshots and saved
+intent; exact restoration revalidates them. Previously unavailable, never-issued grants require an
+explicit Apply current package action, while consumed lots remain consumed.
+
+Structured `value`/`containsValue` amounts credit the wallet; `worthValue` is item valuation. Class and
+Background currency each retain a declared amount, remaining owned coins and cumulative spent copper.
+Wallet decreases consume starting coins first, Class then Background in the edited denomination;
+deposits are independent money. Package changes remove only owned unspent coins, then issue the new
+budget minus that role's cumulative spending, floored at zero. Spending survives lower/higher budgets,
+owner removal and re-add. Wallet edits do not exchange denominations; a changed package budget issues
+its residual as GP/SP/CP. All arithmetic uses safe integers. Strict admission requires each role's
+remaining currency value to equal its declared value minus spending, floored at zero. It also checks
+that combined owned denominations fit the wallet and positive item lots fit exact
+physical rows. Choices, grants, wallet and provenance commit atomically.
+
+This supports deterministic structured packages and A/B gold alternatives. The separate 2014
+`goldAlternative` dice workflow remains manual; refresh never invents or rolls an amount. Structured
+currency takes precedence over inconsistent display prose (for example, the current Cleric XPHB
+declaration contains 7000 copper despite its 7 GP prose). Managed source data is not silently corrected.
+
 Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
 restrictions from either page applies the rule and unequips invalid armor in one character patch.
 Base AC and intrinsic armor/shield `bonusAc` effects share the first equipped body-armor and shield

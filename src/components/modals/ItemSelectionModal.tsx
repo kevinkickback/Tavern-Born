@@ -95,8 +95,17 @@ function getItemDescription(
   item: Item5e,
   itemTypeByAbbr: Readonly<Record<string, string>>,
   textContext?: ItemTextContext,
+  fullDescription = false,
 ): string {
-  const first = iterateItemRulesEntries(item, textContext).next()
+  const rules = iterateItemRulesEntries(item, textContext)
+  if (fullDescription) {
+    const description = [...rules]
+      .map((entry) => toPlainText(renderEntryCached(entry)))
+      .filter(Boolean)
+      .join('\n\n')
+    return description || getArmorStatSummary(item, itemTypeByAbbr)
+  }
+  const first = rules.next()
   if (!first.done) {
     const rendered = renderEntryCached(first.value)
     const plain = toPlainText(rendered)
@@ -213,14 +222,20 @@ function matchItem(
 
 interface ItemCardProps {
   textContext?: ItemTextContext
+  fullDescription?: boolean
   item: Item5e
   isSelected: boolean
 }
 
-const ItemCard = memo(function ItemCard({ item, isSelected, textContext }: ItemCardProps) {
+export const ItemCard = memo(function ItemCard({
+  item,
+  isSelected,
+  textContext,
+  fullDescription = false,
+}: ItemCardProps) {
   const properties = item.property ?? []
   const itemTypeByAbbr = useItemTypeLookup()
-  const description = getItemDescription(item, itemTypeByAbbr, textContext)
+  const description = getItemDescription(item, itemTypeByAbbr, textContext, fullDescription)
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? RARITY_COLORS.unknown
@@ -294,7 +309,12 @@ const ItemCard = memo(function ItemCard({ item, isSelected, textContext }: ItemC
         )}
       </div>
       {description && (
-        <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+        <p
+          className={cn(
+            'mt-2 text-xs text-muted-foreground leading-relaxed',
+            fullDescription ? 'whitespace-pre-line break-words' : 'line-clamp-2',
+          )}
+        >
           {description}
         </p>
       )}

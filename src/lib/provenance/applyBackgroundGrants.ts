@@ -1,11 +1,5 @@
-import {
-  buildItemLookup,
-  resolveBackgroundStartingEquipment,
-} from '@/lib/5etools/startingEquipment'
-import type { Item5e } from '@/types/5etools'
 import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
 import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
-import { addGrant } from './ledger'
 import { normalizeKey } from './normalization'
 import { makeSourceTag } from './sourceLabels'
 import type { ProvenanceLedger } from './types'
@@ -25,7 +19,7 @@ export function applyBackgroundGrants(
     feats?: unknown[]
   },
   ledger: ProvenanceLedger,
-  options?: { itemLookup?: Map<string, Item5e>; suppressLanguageGrants?: boolean },
+  options?: { suppressLanguageGrants?: boolean },
 ): ProvenanceLedger {
   let result = ledger
   const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source)
@@ -55,13 +49,7 @@ export function applyBackgroundGrants(
     prefix,
   )
 
-  // Starting equipment defaults (choice option A from each block).
-  for (const item of resolveBackgroundStartingEquipment(
-    bg.startingEquipment,
-    options?.itemLookup ?? buildItemLookup([]),
-  )) {
-    result = addGrant(result, 'equipment', item.name, bgTag)
-  }
+  // Selected equipment/currency and their source summary are applied atomically by the command.
 
   // Apply background feat grants (2024/5.5e origin feats).
   result = applyFeatGrantBlocks(result, bg.feats, 'background', bg.name, bg.source)

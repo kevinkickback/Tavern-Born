@@ -10,7 +10,9 @@ import {
   resolveClassStartingEquipmentOptions,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import type { Item5e } from '@/types/5etools'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function makeItem(name: string, source = 'PHB', type = 'W'): Item5e {
   return { name, source, type } as Item5e
@@ -254,9 +256,22 @@ describe('resolveEquipmentWithBlockChoices', () => {
 
   test('exposes equipmentType entries as concrete item choices', () => {
     const smithTools = makeItem("Smith's Tools", 'PHB', 'AT')
+    smithTools.rarity = 'none'
     const blocks = [{ _: [{ equipmentType: 'toolArtisan' }] }]
     const lookup = buildItemLookup([smithTools])
-    const unresolved = resolveEquipmentWithBlockChoices(blocks, lookup, [])
+    const policy = createStartingEquipmentPolicy(
+      makeCharacterFixture(),
+      { kind: 'class', name: 'Fighter', source: 'PHB' },
+      {
+        default: [
+          "{@filter artisan's tools|items|source=phb|miscellaneous=mundane|type=artisan's tools}",
+        ],
+      },
+      [smithTools],
+      undefined,
+      { AT: "Artisan's Tools" },
+    )
+    const unresolved = resolveEquipmentWithBlockChoices(blocks, lookup, [], {}, policy)
 
     expect(unresolved.items).toEqual([])
     expect(unresolved.genericChoices).toEqual([
@@ -268,9 +283,15 @@ describe('resolveEquipmentWithBlockChoices', () => {
       },
     ])
 
-    const selected = resolveEquipmentWithBlockChoices(blocks, lookup, [], {
-      '0:_:0': "Smith's Tools|PHB",
-    })
+    const selected = resolveEquipmentWithBlockChoices(
+      blocks,
+      lookup,
+      [],
+      {
+        '0:_:0': [{ name: "Smith's Tools", source: 'PHB' }],
+      },
+      policy,
+    )
     expect(selected.items[0].name).toBe("Smith's Tools")
   })
 

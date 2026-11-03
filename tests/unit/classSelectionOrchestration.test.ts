@@ -143,9 +143,7 @@ describe('applyClassSelectionCommand', () => {
         skills: [],
       },
     }
-    const ledgerWithFighter = applyClassGrants(fighterCls, undefined, emptyProvenance(), {
-      itemLookup: EMPTY_LOOKUP,
-    })
+    const ledgerWithFighter = applyClassGrants(fighterCls, undefined, emptyProvenance())
 
     const wizardCls = {
       name: 'Wizard',
@@ -247,19 +245,9 @@ describe('applyClassSelectionCommand', () => {
     const dagger: Item5e = { name: 'Dagger', source: 'PHB', type: 'W' } as Item5e
     const lookup = buildItemLookup([dagger])
 
-    const character = makeCharacterFixture({
+    const initial = makeCharacterFixture({
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
-      equipment: [
-        {
-          id: 'eq-1',
-          name: 'Dagger',
-          source: 'PHB',
-          type: 'W',
-          quantity: 1,
-          equipped: false,
-          attuned: false,
-        },
-      ],
+      equipment: [],
     })
 
     // Build ledger with Rogue's equipment grant
@@ -269,9 +257,19 @@ describe('applyClassSelectionCommand', () => {
       startingEquipment: { defaultData: [{ A: ['dagger|PHB'] }] },
       startingProficiencies: {},
     }
-    const ledgerWithRogue = applyClassGrants(rogueCls, undefined, emptyProvenance(), {
-      itemLookup: lookup,
-    })
+    const initialized = applyClassSelectionCommand(
+      initial,
+      initial.provenance,
+      rogueCls,
+      undefined,
+      lookup,
+    )
+    const character = {
+      ...initial,
+      ...initialized.characterPatch,
+      provenance: initialized.provenanceUpdate,
+    }
+    const ledgerWithRogue = initialized.provenanceUpdate
 
     const wizardCls = {
       name: 'Wizard',

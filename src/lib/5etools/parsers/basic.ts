@@ -62,10 +62,17 @@ export function parseItems(data: unknown): unknown[] {
   const obj = asObject(data)
   const items: unknown[] = []
 
-  if (obj.item) items.push(...asArray(obj.item))
-  if (obj.itemGroup) items.push(...asArray(obj.itemGroup))
-  if (obj.baseitem) items.push(...asArray(obj.baseitem))
-  if (Array.isArray(data)) items.push(...data)
+  // Renderer.item marks actual baseitem inputs Basic; a resource named items-base is not proof.
+  // Every input owns its category so copies cannot inherit Basic from an unrelated base record.
+  const append = (values: unknown[], category: 'Basic' | 'Other') => {
+    items.push(
+      ...values.map((item) => ({ ...asObject(item), startingEquipmentCategory: category })),
+    )
+  }
+  if (obj.item) append(asArray(obj.item), 'Other')
+  if (obj.itemGroup) append(asArray(obj.itemGroup), 'Other')
+  if (obj.baseitem) append(asArray(obj.baseitem), 'Basic')
+  if (Array.isArray(data)) append(data, 'Other')
 
   return auditFixedLayerMultiplicity(items as object[], 'named')
 }

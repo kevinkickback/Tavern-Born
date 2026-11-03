@@ -11,9 +11,14 @@ import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSp
 
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
+  assertStartingEquipmentSelections,
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import {
+  createStartingEquipmentPolicy,
+  type StartingEquipmentPolicy,
+} from '@/lib/5etools/startingEquipmentPolicy'
 import {
   type CharacterCalculationContext,
   createCharacterCalculationContext,
@@ -23,12 +28,13 @@ import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { retainEarnedManagedClassSpells } from '@/lib/character/commands/managedClassSpellCommands'
-import {
-  removeSourceGrantedEquipment,
-  upsertGrantedEquipment,
-} from '@/lib/character/equipmentHelpers'
 import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { retainEarnedOptionalClassAdoptions } from '@/lib/character/optionalClassFeatureIdentity'
+import {
+  emptyStartingCurrency,
+  reconcileStartingEquipmentGrant,
+  sameStartingReference,
+} from '@/lib/character/startingEquipmentGrants'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -54,6 +60,7 @@ import type {
   ClassFeatChoice,
   HitPointGain,
   HitPointGainMethod,
+  StartingEquipmentItemChoices,
 } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from '../classChoiceFeatureCatalogs'
 import {
@@ -123,6 +130,7 @@ interface ClassProgressionLookups extends NativeSpellLookups {
   spellContext?: ManagedClassSpellContext
 }
 interface SelectSubclassOptions extends ClassProgressionLookups {
+  startingEquipmentPolicy?: StartingEquipmentPolicy
   raceResolution?: ResolvedRaceReference
   classProgression?: CharacterClassEntry[]
   viewingEntry?: CharacterClassEntry
@@ -224,23 +232,16 @@ export function applyClassEquipmentChoiceCommand(
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
-  genericSelections?: Readonly<Record<string, string>>,
+  genericSelections?: Readonly<StartingEquipmentItemChoices>,
+  policyOverride?: StartingEquipmentPolicy,
 ): CharacterCommandResult {
-  const owner = findClassReference(cls, character.classProgression) ?? cls
-  const equipmentToRemove = Object.entries(ledger.equipment)
-    .filter(([, tags]) =>
-      tags.every(
-        (tag) =>
-          tag.sourceType === 'class' &&
-          tag.sourceName === owner.name &&
-          (tag.sourceRef ?? '') === (owner.source ?? ''),
-      ),
-    )
-    .map(([name]) => name)
-  const equipment = removeSourceGrantedEquipment(
-    [...(character.equipment ?? [])],
-    equipmentToRemove,
+  const owner = character.initialClass
+  if (
+    !sameStartingReference(owner, cls) ||
+    !character.classProgression.some((entry) => sameStartingReference(entry, owner))
   )
+    throw new RangeError('Only the initial Class can change starting equipment.')
+  if (!owner) throw new RangeError('Select an initial Class first.')
   const classChoiceKey = getClassChoiceKey(owner.name, owner.source)
   const itemSelections =
     genericSelections ?? character.classEquipmentItemChoices?.[classChoiceKey] ?? {}
@@ -249,11 +250,56 @@ export function applyClassEquipmentChoiceCommand(
   choices[blockIndex] = choice.toLowerCase()
 
   const blocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices, itemSelections)
+  if (!Number.isSafeInteger(blockIndex) || blockIndex < 0 || blockIndex >= blocks.length)
+    throw new RangeError('Starting equipment block is unavailable.')
+  const block = blocks[blockIndex]
+  if (
+    !block ||
+    typeof block !== 'object' ||
+    !Object.keys(block).some((key) => key.toLowerCase() === choice.toLowerCase())
+  )
+    throw new RangeError('Starting equipment package is unavailable.')
+  const policy =
+    policyOverride ??
+    createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
+      ...itemLookup.values(),
+    ])
+  if (!policy.ownerAvailable || !sameStartingReference(policy.owner, owner))
+    throw new RangeError('Restore the current initial Class rules first.')
+  if (JSON.stringify(policy.startingEquipment) !== JSON.stringify(cls.startingEquipment))
+    throw new RangeError('Starting equipment rules changed. Review the current Class.')
+  const resolved = resolveEquipmentWithBlockChoices(
+    blocks,
+    itemLookup,
+    choices,
+    itemSelections,
+    policy,
+  )
+  assertStartingEquipmentSelections(
+    resolved,
+    itemSelections,
+    character.classEquipmentItemChoices?.[classChoiceKey],
+  )
+  const activeKeys = new Set(resolved.genericChoices?.map((slot) => slot.key))
+  for (const [key, refs] of Object.entries(itemSelections)) {
+    if (
+      !activeKeys.has(key) &&
+      JSON.stringify(refs) !==
+        JSON.stringify(character.classEquipmentItemChoices?.[classChoiceKey]?.[key])
+    )
+      throw new RangeError('This starting item slot is no longer active.')
+  }
+  const equipmentPatch = reconcileStartingEquipmentGrant(
+    character,
+    'class',
+    owner,
+    resolved.lots ?? [],
+    resolved.currency,
+  )
 
   return {
     characterPatch: {
-      equipment: upsertGrantedEquipment(equipment, resolved.items),
+      ...equipmentPatch,
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: choices,
@@ -267,7 +313,7 @@ export function applyClassEquipmentChoiceCommand(
       ledger,
       owner.name,
       owner.source,
-      resolved.items.map((item) => item.name),
+      equipmentPatch.startingEquipmentGrants?.class?.items.map((lot) => lot.reference.name) ?? [],
     ),
   }
 }
@@ -278,16 +324,19 @@ function computeClassSelectionEffects(
   cls: ClassSelectionEntity,
   subclass: { name: string; source?: string } | undefined,
   itemLookup: Map<string, Item5e>,
+  policyOverride?: StartingEquipmentPolicy,
 ): CharacterCommandResult {
-  const primaryClassEntry = getCharacterClassEntries(character)[0]
+  const primaryClassEntry =
+    character.classProgression.find((entry) =>
+      sameStartingReference(entry, character.initialClass),
+    ) ?? getCharacterClassEntries(character)[0]
   const oldClassName = primaryClassEntry?.name
   const oldSubclassName = primaryClassEntry?.subclass
 
   let provenanceUpdate = reconcileClassChange(ledger, oldClassName, oldSubclassName)
-  provenanceUpdate = applyClassGrants(cls, subclass, provenanceUpdate, { itemLookup })
+  provenanceUpdate = applyClassGrants(cls, subclass, provenanceUpdate)
 
   let proficiencies = { ...character.proficiencies }
-  let equipment = [...(character.equipment ?? [])]
 
   if (oldClassName) {
     const domains = ['armor', 'weapons', 'tools', 'skills', 'savingThrows'] as const
@@ -308,15 +357,6 @@ function computeClassSelectionEffects(
         }
       }
     }
-
-    const equipmentToRemove = Object.entries(ledger.equipment)
-      .filter(
-        ([, tags]) =>
-          tags.length > 0 &&
-          tags.every((tag) => tag.sourceType === 'class' && tag.sourceName === oldClassName),
-      )
-      .map(([name]) => name)
-    equipment = removeSourceGrantedEquipment(equipment, equipmentToRemove)
   }
 
   const startingProficiencies = cls.startingProficiencies ?? {}
@@ -364,18 +404,30 @@ function computeClassSelectionEffects(
     itemLookup,
     savedBlockChoices,
     character.classEquipmentItemChoices?.[classChoiceKey] ?? {},
+    policyOverride ??
+      createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
+        ...itemLookup.values(),
+      ]),
+  )
+  const equipmentPatch = reconcileStartingEquipmentGrant(
+    character,
+    'class',
+    { name: cls.name, source: cls.source },
+    classEquipment.lots ?? [],
+    classEquipment.currency,
   )
   provenanceUpdate = replaceClassEquipmentGrants(
     provenanceUpdate,
     cls.name,
     cls.source,
-    classEquipment.items.map((item) => item.name),
+    equipmentPatch.startingEquipmentGrants?.class?.items.map((lot) => lot.reference.name) ?? [],
   )
 
   return reconcileExpertiseOwnership({
     characterPatch: {
       proficiencies: reconcileSkillExpertise(proficiencies),
-      equipment: upsertGrantedEquipment(equipment, classEquipment.items),
+      ...equipmentPatch,
+      initialClass: { name: cls.name, source: cls.source },
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: savedBlockChoices,
@@ -541,6 +593,22 @@ export function applyClassProgressionUpdate(
     managedClassSpellRevision: workingCharacter.managedClassSpellRevision,
     proficiencies: classChoiceGrants.proficiencies,
     abilityScores: workingCharacter.abilityScores,
+  }
+  if (
+    character.initialClass &&
+    !nextProgression.some((entry) => sameStartingReference(entry, character.initialClass))
+  ) {
+    Object.assign(
+      characterPatch,
+      reconcileStartingEquipmentGrant(
+        { ...workingCharacter, ...characterPatch },
+        'class',
+        undefined,
+        [],
+        emptyStartingCurrency(),
+      ),
+      { initialClass: undefined },
+    )
   }
   const native = refreshNativeRacialSpellState(
     { ...character, ...characterPatch, provenance: provenanceUpdate },
@@ -777,12 +845,24 @@ export function selectBaseClass(
   }
 
   const updatedProgression = [...character.classProgression]
+  const initialIndex = updatedProgression.findIndex((entry) =>
+    sameStartingReference(entry, character.initialClass),
+  )
+  const targetIndex = initialIndex >= 0 ? initialIndex : 0
+  if (
+    updatedProgression.some(
+      (entry, index) =>
+        index !== targetIndex &&
+        sameStartingReference(entry, { name: className, source: classSource }),
+    )
+  )
+    throw new RangeError('That Class is already in the progression. Keep its separate Class entry.')
   if (updatedProgression.length > 0) {
-    updatedProgression[0] = {
-      ...updatedProgression[0],
+    updatedProgression[targetIndex] = {
+      ...updatedProgression[targetIndex],
       name: className,
       source: classSource,
-      levels: updatedProgression[0].levels,
+      levels: updatedProgression[targetIndex].levels,
       subclass: undefined,
       subclassSource: undefined,
     }
@@ -798,6 +878,7 @@ export function selectBaseClass(
     proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
+    initialClass: { name: className, source: classSource },
   }
 
   const provenanceUpdate = ledger
@@ -872,8 +953,35 @@ export function applyClassSelectionCommand(
     )
   }
 
-  const effects = computeClassSelectionEffects(character, ledger, cls, subclass, itemLookup)
-  const identityCharacter = { ...character, ...effects.characterPatch }
+  if (
+    options?.startingEquipmentPolicy &&
+    (!options.startingEquipmentPolicy.ownerAvailable ||
+      !sameStartingReference(options.startingEquipmentPolicy.owner, cls) ||
+      JSON.stringify(options.startingEquipmentPolicy.startingEquipment) !==
+        JSON.stringify(cls.startingEquipment))
+  )
+    throw new RangeError('Restore the current Class rules before selecting it.')
+
+  const equipmentPolicy =
+    options?.startingEquipmentPolicy ??
+    createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
+      ...itemLookup.values(),
+    ])
+  if (!equipmentPolicy.ownerAvailable)
+    throw new RangeError('Restore the selected Class source rules first.')
+  const effects = computeClassSelectionEffects(
+    character,
+    ledger,
+    cls,
+    subclass,
+    itemLookup,
+    equipmentPolicy,
+  )
+  const identityCharacter = {
+    ...character,
+    ...effects.characterPatch,
+    initialClass: character.initialClass,
+  }
   const identity = selectBaseClass(identityCharacter, ledger, cls.name, cls as Class5e, cls.source)
   const identityProficiencies = identity.characterPatch.proficiencies
   const effectProficiencies = effects.characterPatch.proficiencies ?? character.proficiencies

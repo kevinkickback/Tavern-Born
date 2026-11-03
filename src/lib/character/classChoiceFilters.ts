@@ -1,4 +1,5 @@
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { isMundaneStartingItem } from '@/lib/5etools/startingItemCategory'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type {
@@ -134,6 +135,13 @@ export function matchesClassChoiceFilter(
   if (
     filter.entityType === 'optionalFeature' &&
     !matchesAny(getFeatureTypes(entity), filter.featureTypes)
+  ) {
+    return false
+  }
+  if (
+    filter.entityType === 'item' &&
+    (!matchesAny([(entity as Item5e).startingEquipmentCategory ?? 'Other'], filter.categories) ||
+      (filter.mundane && !isMundaneStartingItem(entity as Item5e)))
   ) {
     return false
   }

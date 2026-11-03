@@ -1,6 +1,7 @@
 {
   "id": "equipment-e2e-char",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
+  "initialClass": { "name": "Fighter", "source": "PHB" },
   "name": "Equipment E2E Hero",
   "originSystem": "2014",
   "race": "Human",

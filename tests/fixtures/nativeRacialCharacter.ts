@@ -70,17 +70,22 @@ export function makeNativeRacialCharacter(
   level = 1,
   originSystem: '2014' | '2024' = '2014',
 ): Character {
+  const classSource = originSystem === '2024' ? 'XPHB' : 'PHB'
   const initial = buildInitialCharacter(
     {
       initial: {
         name: 'Native spell lifecycle',
         originSystem,
-        allowedSources: ['AAG', 'MTF', 'XGE'],
+        allowedSources: [classSource, 'AAG', 'MTF', 'XGE'],
       },
       race,
       subrace: child,
-      classEntity: { name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } } as Class5e,
-      background: { name: 'Acolyte', source: 'PHB' },
+      classEntity: {
+        name: 'Fighter',
+        source: classSource,
+        hd: { faces: 10, number: 1 },
+      } as Class5e,
+      background: { name: 'Acolyte', source: classSource },
     },
     new Map(),
     () => [],
@@ -89,7 +94,7 @@ export function makeNativeRacialCharacter(
   const result = applyClassProgressionUpdate(
     initial,
     initial.provenance,
-    [{ name: 'Fighter', source: 'PHB', levels: level }],
+    [{ name: 'Fighter', source: classSource, levels: level }],
     nativeRaceResolution(race, child),
   )
   return { ...initial, ...result.characterPatch, provenance: result.provenanceUpdate }

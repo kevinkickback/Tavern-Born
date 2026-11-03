@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { Background5e, Class5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function resetStore() {
@@ -17,12 +18,14 @@ function resetStore() {
 
 function setGameDataItems(
   items: Array<{ name: string; source: string; type: string; ac?: number }>,
+  classes: Class5e[] = [],
+  backgrounds: Background5e[] = [],
 ) {
   useGameDataStore.setState({
     gameData: {
       races: [],
-      classes: [],
-      backgrounds: [],
+      classes,
+      backgrounds,
       spells: [],
       feats: [],
       items: items as never,
@@ -91,9 +94,7 @@ describe('useProvenance mutations', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useProvenance())
-
-    result.current.applyClassSelection({
+    const cls = {
       name: 'Cleric',
       source: 'PHB',
       proficiency: ['wis', 'cha'],
@@ -102,18 +103,16 @@ describe('useProvenance mutations', () => {
         weapons: ['simple'],
         tools: [],
       },
-    })
+    }
+    setGameDataItems([], [cls])
+    const { result } = renderHook(() => useProvenance())
+    result.current.applyClassSelection(cls)
 
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.proficiencies.savingThrows).toEqual(['wisdom', 'charisma'])
   })
 
   test('applyClassSelection should add default class starting equipment', () => {
-    setGameDataItems([
-      { name: 'Chain Mail', source: 'phb', type: 'HA', ac: 16 },
-      { name: 'Shield', source: 'phb', type: 'S', ac: 2 },
-    ])
-
     const character = makeCharacterFixture({ id: 'class-equipment' })
 
     useCharacterStore.setState({
@@ -122,9 +121,7 @@ describe('useProvenance mutations', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useProvenance())
-
-    result.current.applyClassSelection({
+    const cls = {
       name: 'Fighter',
       source: 'PHB',
       proficiency: [],
@@ -137,7 +134,16 @@ describe('useProvenance mutations', () => {
           },
         ],
       },
-    })
+    }
+    setGameDataItems(
+      [
+        { name: 'Chain Mail', source: 'phb', type: 'HA', ac: 16 },
+        { name: 'Shield', source: 'phb', type: 'S', ac: 2 },
+      ],
+      [cls],
+    )
+    const { result } = renderHook(() => useProvenance())
+    result.current.applyClassSelection(cls)
 
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.equipment.map((item) => item.name)).toContain('Chain Mail')
@@ -145,8 +151,6 @@ describe('useProvenance mutations', () => {
   })
 
   test('applyBackgroundSelection should apply selected option and currency', () => {
-    setGameDataItems([{ name: 'Pouch', source: 'phb', type: 'G' }])
-
     const character = makeCharacterFixture({ id: 'background-equipment' })
 
     useCharacterStore.setState({
@@ -155,29 +159,27 @@ describe('useProvenance mutations', () => {
       activeCharacter: character,
     })
 
+    const background = {
+      name: 'Acolyte',
+      source: 'PHB',
+      skillProficiencies: [],
+      languageProficiencies: [],
+      toolProficiencies: [],
+      startingEquipment: [
+        {
+          _: [{ special: 'sticks of incense', quantity: 5 }],
+          a: ['Pouch|phb'],
+          b: [
+            { special: 'book of prayer' },
+            { value: 250 },
+            { item: 'Pouch|phb', quantity: 1, containsValue: 35 },
+          ],
+        },
+      ],
+    }
+    setGameDataItems([{ name: 'Pouch', source: 'phb', type: 'G' }], [], [background])
     const { result } = renderHook(() => useProvenance())
-
-    result.current.applyBackgroundSelection(
-      {
-        name: 'Acolyte',
-        source: 'PHB',
-        skillProficiencies: [],
-        languageProficiencies: [],
-        toolProficiencies: [],
-        startingEquipment: [
-          {
-            _: [{ special: 'sticks of incense', quantity: 5 }],
-            a: ['Pouch|phb'],
-            b: [
-              { special: 'book of prayer' },
-              { value: 250 },
-              { item: 'Pouch|phb', quantity: 1, containsValue: 35 },
-            ],
-          },
-        ],
-      },
-      ['b'],
-    )
+    result.current.applyBackgroundSelection(background, ['b'])
 
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.equipment.map((item) => item.name)).toEqual([

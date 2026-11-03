@@ -1,13 +1,17 @@
 import { useCallback, useMemo } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import { useStartingEquipmentAuthority } from '@/hooks/data/useStartingEquipment'
+import { startingEquipmentSetupHandle } from '@/lib/5etools/startingEquipmentPolicy'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
   applyBackgroundAbilityChoicesCommand,
   applyBackgroundSelectionCommand,
 } from '@/lib/character/commands/backgroundCommands'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, StartingEquipmentItemChoices } from '@/types/character'
 
 function buildBackgroundAbilityChoicesPatch(
   character: Character,
@@ -34,6 +38,7 @@ export function useBackgroundProvenanceMutations() {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const itemLookup = useItemLookup()
+  const { getPolicy: getEquipmentPolicy, sourceData } = useStartingEquipmentAuthority()
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -52,25 +57,41 @@ export function useBackgroundProvenanceMutations() {
         feats?: unknown[]
       },
       blockChoices: string[] = [],
-      genericSelections: Readonly<
-        Record<string, string>
-      > = character?.backgroundEquipmentItemChoices ?? {},
+      genericSelections?: Readonly<StartingEquipmentItemChoices>,
     ) => {
-      if (!character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        !hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        ) ||
+        !latest ||
+        !character ||
+        startingEquipmentSetupHandle(latest, 'background') !==
+          startingEquipmentSetupHandle(character, 'background')
+      )
+        throw new RangeError(
+          'Starting equipment changed. Review the current choice before confirming.',
+        )
+      const sameOwner = latest.background === bg.name && latest.backgroundSource === bg.source
       const result = applyBackgroundSelectionCommand(
-        character,
-        ledger,
+        latest,
+        latest.provenance,
         bg as Background5e,
         blockChoices,
         itemLookup,
-        genericSelections,
+        genericSelections ?? (sameOwner ? (latest.backgroundEquipmentItemChoices ?? {}) : {}),
+        getEquipmentPolicy(latest, 'background', bg),
+        true,
       )
-      updateCharacter(character.id, {
+      updateCharacter(latest.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter, itemLookup],
+    [character, updateCharacter, itemLookup, getEquipmentPolicy, sourceData],
   )
 
   const applyBackgroundAbilityChoices = useCallback(

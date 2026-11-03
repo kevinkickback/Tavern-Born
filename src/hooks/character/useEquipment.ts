@@ -7,7 +7,9 @@ import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
   removeManualEquipmentCommand,
+  updateEquipmentQuantityCommand,
 } from '@/lib/character/commands/equipmentCommands'
+import { setStartingCurrencyCommand } from '@/lib/character/startingEquipmentGrants'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import type { Currency, Equipment } from '@/types/character'
@@ -111,10 +113,19 @@ export function useEquipment(): EquipmentState {
 
   const updateItem = useCallback(
     (id: string, patch: Partial<Equipment>) => {
-      if (!character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (!latest || latest.id !== character?.id) return
+      if (patch.quantity !== undefined) {
+        const result = updateEquipmentQuantityCommand(latest, latest.provenance, id, patch.quantity)
+        updateCharacter(latest.id, {
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        })
+        return
+      }
       patchEquipment(equipment.map((e) => (e.id === id ? { ...e, ...patch } : e)))
     },
-    [character, equipment, patchEquipment],
+    [character, equipment, patchEquipment, updateCharacter],
   )
 
   const toggleEquip = useCallback(
@@ -157,16 +168,10 @@ export function useEquipment(): EquipmentState {
 
   const updateCurrency = useCallback(
     (denomination: keyof Currency, amount: number) => {
-      if (!character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (!latest || latest.id !== character?.id) return
       const safeAmount = Math.max(0, Math.trunc(amount))
-      const currentCurrency =
-        useCharacterStore.getState().activeCharacter?.currency ?? DEFAULT_CURRENCY
-      updateCharacter(character.id, {
-        currency: {
-          ...currentCurrency,
-          [denomination]: safeAmount,
-        },
-      })
+      updateCharacter(latest.id, setStartingCurrencyCommand(latest, denomination, safeAmount))
     },
     [character, updateCharacter],
   )

@@ -9,6 +9,7 @@ import {
 import {
   buildBackgroundLookup,
   buildClassLookup,
+  buildItemTypeLookup,
   buildRaceLookup,
   buildSpellLookup,
 } from '@/lib/5etools/lookups'
@@ -17,6 +18,7 @@ import { XPHB_LEGACY_RACE_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
+import { useGameDataStore } from '@/store/gameDataStore'
 import { useFilteredGameDataParams } from './useFilteredGameData'
 import { useBackgroundLookup, useClassLookup, useRaceLookup, useSpellLookup } from './useGameData'
 
@@ -44,6 +46,7 @@ export function useWizardGameData({
   const rawRaceLookup = useRaceLookup()
   const rawBackgroundLookup = useBackgroundLookup()
   const rawSpellLookup = useSpellLookup()
+  const rawData = useGameDataStore((state) => state.gameData)
 
   const races = useMemo(() => {
     if (!effectiveSources || effectiveSources.length === 0) return filteredData.races
@@ -108,6 +111,19 @@ export function useWizardGameData({
     () => ({ spellsByKey: buildSpellLookup(filteredData.spells), rawSpellsByKey: rawSpellLookup }),
     [filteredData.spells, rawSpellLookup],
   )
+  const creationLookups = useMemo(
+    () => ({
+      ...spellLookups,
+      startingEquipment: {
+        rawItems: [...(rawData?.items ?? []), ...(rawData?.itemsBase ?? [])],
+        availableItems: [...filteredData.items, ...filteredData.itemsBase],
+        classes,
+        backgrounds: filteredData.backgrounds,
+        itemTypes: buildItemTypeLookup(rawData?.itemTypes ?? []),
+      },
+    }),
+    [spellLookups, rawData, filteredData, classes],
+  )
 
   const recursiveLookup = useMemo(
     () =>
@@ -128,6 +144,7 @@ export function useWizardGameData({
     classes,
     itemLookup,
     spellLookups,
+    creationLookups,
     resolveRace,
     resolveClass,
     resolveBackground,

@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import { useStartingEquipmentAuthority } from '@/hooks/data/useStartingEquipment'
+import { startingEquipmentSetupHandle } from '@/lib/5etools/startingEquipmentPolicy'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
@@ -15,7 +17,7 @@ import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/h
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { FavoredEnemySetup } from '@/types/character'
+import type { FavoredEnemySetup, StartingEquipmentItemChoices } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 
 export function useClassProvenanceMutations() {
@@ -24,6 +26,7 @@ export function useClassProvenanceMutations() {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useItemLookup()
   const calculationContext = useCharacterCalculationContext(character)
+  const { getPolicy: getEquipmentPolicy } = useStartingEquipmentAuthority()
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -50,20 +53,38 @@ export function useClassProvenanceMutations() {
       },
       subclass?: { name: string; source?: string },
     ) => {
-      if (!character) return
-      const result = applyClassSelectionCommand(character, ledger, cls, subclass, itemLookup, {
-        raceResolution: calculationContext?.raceResolution,
-        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
-        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
-        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
-        spellContext: calculationContext?.classChoices.spellContext,
-      })
-      updateCharacter(character.id, {
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        !hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        )
+      )
+        throw new RangeError('Source rules changed. Review the current Class before confirming.')
+      if (!latest) return
+      const result = applyClassSelectionCommand(
+        latest,
+        latest.provenance,
+        cls,
+        subclass,
+        itemLookup,
+        {
+          startingEquipmentPolicy: getEquipmentPolicy(latest, 'class', cls),
+          raceResolution: calculationContext?.raceResolution,
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+          classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+          spellContext: calculationContext?.classChoices.spellContext,
+        },
+      )
+      updateCharacter(latest.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, updateCharacter, itemLookup, calculationContext],
+    [character, updateCharacter, itemLookup, calculationContext, getEquipmentPolicy, sourceData],
   )
 
   const applyClassEquipmentChoice = useCallback(
@@ -75,24 +96,40 @@ export function useClassProvenanceMutations() {
       },
       blockIndex: number,
       choice: string,
-      genericSelections?: Readonly<Record<string, string>>,
+      genericSelections?: Readonly<StartingEquipmentItemChoices>,
     ) => {
-      if (!character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        !hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        ) ||
+        !latest ||
+        !character ||
+        startingEquipmentSetupHandle(latest, 'class') !==
+          startingEquipmentSetupHandle(character, 'class')
+      )
+        throw new RangeError(
+          'Starting equipment changed. Review the current choice before confirming.',
+        )
       const result = applyClassEquipmentChoiceCommand(
-        character,
-        ledger,
+        latest,
+        latest.provenance,
         cls,
         blockIndex,
         choice,
         itemLookup,
         genericSelections,
+        getEquipmentPolicy(latest, 'class', cls),
       )
-      updateCharacter(character.id, {
+      updateCharacter(latest.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, ledger, itemLookup, updateCharacter],
+    [character, itemLookup, updateCharacter, sourceData, getEquipmentPolicy],
   )
 
   const applyClassChoiceSelection = useCallback(

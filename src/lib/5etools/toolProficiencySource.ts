@@ -31,6 +31,16 @@ const AUDIT = 'toolProficiencySourceAudit'
 const CONFLICT = 'toolProficiencySourceConflict'
 const certificates = generated as ToolCopySemanticCertificate[]
 const digest = (value: unknown) => getFeatureSourceDigest([value], false)!
+// Collection metadata is not a source rule. Keep pinned semantic certificates unchanged,
+// while full projection hashes and the raw/current marker relation protect cache restoration.
+function sourceDigest(item: Item5e): string {
+  const { startingEquipmentCategory: _category, ...source } = item
+  return digest(source)
+}
+const ownCategory = (item: Item5e) =>
+  Object.getOwnPropertyDescriptor(item, 'startingEquipmentCategory')
+    ? [item.startingEquipmentCategory]
+    : []
 const identity = (item: Pick<Item5e, 'name' | 'source'>): [string, string] => [
   typeof item.name === 'string' ? item.name.trim().toLowerCase() : '',
   typeof item.source === 'string' ? item.source.trim().toLowerCase() : '',
@@ -78,7 +88,8 @@ function readAudit(item: Item5e): ToolSourceAudit | undefined {
         ].includes(field),
     ) ||
     key(audit.raw) !== key(item) ||
-    digest(audit.raw) !== audit.rawDigest ||
+    sourceDigest(audit.raw) !== audit.rawDigest ||
+    !same(ownCategory(audit.raw), ownCategory(item)) ||
     digest(withoutAudit(item)) !== audit.projectionDigest ||
     audit.dependencies.some(
       (row) =>
@@ -88,7 +99,7 @@ function readAudit(item: Item5e): ToolSourceAudit | undefined {
         typeof row.raw.name !== 'string' ||
         typeof row.raw.source !== 'string' ||
         !same(identity(row.raw), row.identity) ||
-        digest(row.raw) !== row.digest,
+        sourceDigest(row.raw) !== row.digest,
     )
   )
     return undefined
@@ -199,10 +210,14 @@ export function prepareToolProficiencySources(
       }
       seen.add(parentKey)
       current = parents[0]
-      dependencies.push({ identity: identity(current), digest: digest(current), raw: current })
+      dependencies.push({
+        identity: identity(current),
+        digest: sourceDigest(current),
+        raw: current,
+      })
     }
-    const rawDigest = digest(source),
-      resolvedDigest = digest(withoutAudit(item))
+    const rawDigest = sourceDigest(source),
+      resolvedDigest = sourceDigest(withoutAudit(item))
     let certificate: ToolCopySemanticCertificate | undefined
     if (!reason && source._copy) {
       certificate = semanticCertificates.find(
@@ -231,7 +246,7 @@ export function prepareToolProficiencySources(
       rawDigest,
       dependencies,
       resolvedDigest,
-      projectionDigest: resolvedDigest,
+      projectionDigest: digest(withoutAudit(item)),
       ...(certificate ? { certificate: digest(certificate) } : {}),
       ...(reason ? { reason } : {}),
     }
@@ -282,6 +297,10 @@ export function preserveToolSourcePresentation(
 export function restoreToolSourceInput(item: Item5e): Item5e {
   const audit = readAudit(item)
   if (audit) return audit.raw
+  if (Object.getOwnPropertyDescriptor(item, AUDIT)) {
+    const { startingEquipmentCategory: _category, ...untrusted } = item
+    return { ...untrusted, [CONFLICT]: true }
+  }
   const structured = assessStructuredConcreteToolProficiency(item)
   return structured.kind === 'eligible' ? { ...item, [CONFLICT]: true } : item
 }

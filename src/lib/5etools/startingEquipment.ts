@@ -1,7 +1,24 @@
 import { resolveArmorType } from '@/lib/calculations/armorClass'
-import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
+import { isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
+import {
+  currencyCopper,
+  emptyStartingCurrency as emptyCurrency,
+  type StartingEquipmentResolvedLot,
+  startingEquipmentLotKey,
+  startingCurrencyFromCopper as toCurrencyFromCopper,
+} from '@/lib/character/startingEquipmentGrants'
 import type { Item5e } from '@/types/5etools'
-import type { Equipment } from '@/types/character'
+import type {
+  Equipment,
+  StartingEquipmentItemChoices,
+  StartingEquipmentReference,
+} from '@/types/character'
+import {
+  getStartingEquipmentCandidates,
+  type StartingEquipmentPolicy,
+  startingItemKey,
+  startingItemUid,
+} from './startingEquipmentPolicy'
 
 type EquipmentLike = Omit<Equipment, 'id' | 'equipped' | 'attuned'>
 
@@ -33,6 +50,8 @@ export interface BackgroundStartingPackage {
   items: EquipmentLike[]
   currency: CurrencyTotals
   genericChoices?: GenericEquipmentChoice[]
+  lots?: StartingEquipmentResolvedLot[]
+  issues?: string[]
 }
 
 const DEFAULT_ITEM_SOURCE = 'phb'
@@ -47,6 +66,7 @@ export interface GenericEquipmentChoice {
   token: string
   quantity: number
   candidates: GenericEquipmentCandidate[]
+  diagnostic?: string
 }
 
 function normalizeName(value: string): string {
@@ -75,53 +95,6 @@ function buildGenericEquipmentChoiceKey(
   entryIndex: number,
 ): string {
   return `${blockIndex}:${optionKey.toLowerCase()}:${entryIndex}`
-}
-
-function isEquipmentTypeCandidate(token: string, item: Item5e): boolean {
-  if (!isSelectableEquipmentItem(item)) return false
-  const normalizedToken = token.toLowerCase()
-  const typeCodes = getItemTypeCodes(item.type)
-  const weaponCategory = item.weaponCategory?.toLowerCase()
-  const isMelee = typeCodes.includes('M')
-
-  if (normalizedToken === 'toolartisan') return typeCodes.includes('AT')
-  if (normalizedToken === 'instrumentmusical') return typeCodes.includes('INS')
-  if (normalizedToken === 'setgaming') return typeCodes.includes('GS')
-  if (normalizedToken.startsWith('weaponsimple')) {
-    return weaponCategory === 'simple' && (!normalizedToken.endsWith('melee') || isMelee)
-  }
-  if (normalizedToken.startsWith('weaponmartial')) {
-    return weaponCategory === 'martial' && (!normalizedToken.endsWith('melee') || isMelee)
-  }
-  if (normalizedToken.startsWith('focusspellcasting')) {
-    const focusType = normalizedToken.replace('focusspellcasting', '').replace('druidic', 'druid')
-    return (
-      String(item.scfType ?? '').toLowerCase() === focusType ||
-      (Array.isArray(item.group) &&
-        item.group.some((group) =>
-          String(group)
-            .toLowerCase()
-            .includes(`${focusType === 'druid' ? 'druidic' : focusType} focus`),
-        ))
-    )
-  }
-  return false
-}
-
-function getGenericEquipmentCandidates(
-  token: string,
-  itemLookup: Map<string, Item5e>,
-): GenericEquipmentCandidate[] {
-  const candidates = new Map<string, GenericEquipmentCandidate>()
-  for (const item of itemLookup.values()) {
-    if (!isEquipmentTypeCandidate(token, item)) continue
-    const key = buildItemKey(item.name, item.source)
-    candidates.set(key, { name: item.name, source: item.source })
-  }
-  return [...candidates.values()].sort(
-    (left, right) =>
-      left.name.localeCompare(right.name) || (left.source ?? '').localeCompare(right.source ?? ''),
-  )
 }
 
 function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
@@ -168,11 +141,14 @@ export function getClassStartingEquipmentChoiceOptions(
 function resolveFromItemRef(
   itemRef: string,
   itemLookup: Map<string, Item5e>,
-  options?: { quantity?: number; displayName?: string },
+  options?: { quantity?: number; displayName?: string; itemOverride?: Item5e | null },
 ): EquipmentLike {
   const parsed = parseUid(itemRef)
   const source = normalizeSource(parsed.source)
-  const item = itemLookup.get(buildItemKey(parsed.name, source))
+  const item =
+    options?.itemOverride === undefined
+      ? itemLookup.get(buildItemKey(parsed.name, source))
+      : (options.itemOverride ?? undefined)
 
   if (!item || !isSelectableEquipmentItem(item)) {
     console.warn(
@@ -189,7 +165,9 @@ function resolveFromItemRef(
 
   const armorType = resolveArmorType(item.type ?? '')
   return {
-    name: options?.displayName || item.name,
+    name: item.name,
+    description:
+      options?.displayName && options.displayName !== item.name ? options.displayName : undefined,
     source: item.source,
     type: item.type ?? 'G',
     quantity: options?.quantity ?? 1,
@@ -211,54 +189,35 @@ function resolveFromItemRef(
 function resolveFromEntry(
   entry: EquipmentEntry,
   itemLookup: Map<string, Item5e>,
-  genericChoiceKey?: string,
-  genericSelections: Readonly<Record<string, string>> = {},
+  policy?: StartingEquipmentPolicy,
 ): EquipmentLike | null {
   if (typeof entry === 'string') {
-    return resolveFromItemRef(entry, itemLookup)
+    const ref = startingItemUid(entry)
+    return resolveFromItemRef(entry, itemLookup, {
+      itemOverride: policy ? (ref && policy.raw.get(startingItemKey(ref))) || null : undefined,
+    })
   }
 
   if (!entry || typeof entry !== 'object') return null
 
   if (entry.item) {
+    const ref = startingItemUid(entry.item)
     return resolveFromItemRef(entry.item, itemLookup, {
       quantity: entry.quantity,
       displayName: entry.displayName,
+      itemOverride: policy ? (ref && policy.raw.get(startingItemKey(ref))) || null : undefined,
     })
   }
 
   if (entry.special) {
     return {
       name: entry.special,
-      source: DEFAULT_ITEM_SOURCE,
       type: 'G',
       quantity: entry.quantity ?? 1,
     }
   }
 
-  if (entry.equipmentType) {
-    const selection = genericChoiceKey ? genericSelections[genericChoiceKey] : undefined
-    return selection
-      ? resolveFromItemRef(selection, itemLookup, { quantity: entry.quantity })
-      : null
-  }
-
   return null
-}
-
-function toCurrencyFromCopper(value: number): CurrencyTotals {
-  const gp = Math.floor(value / 100)
-  const remainder = value % 100
-  const sp = Math.floor(remainder / 10)
-  const cp = remainder % 10
-
-  return {
-    cp,
-    sp,
-    ep: 0,
-    gp,
-    pp: 0,
-  }
 }
 
 function addCurrency(target: CurrencyTotals, amount: CurrencyTotals): void {
@@ -267,16 +226,7 @@ function addCurrency(target: CurrencyTotals, amount: CurrencyTotals): void {
   target.ep += amount.ep
   target.gp += amount.gp
   target.pp += amount.pp
-}
-
-function emptyCurrency(): CurrencyTotals {
-  return {
-    cp: 0,
-    sp: 0,
-    ep: 0,
-    gp: 0,
-    pp: 0,
-  }
+  currencyCopper(target)
 }
 
 function mergeEquipment(items: EquipmentLike[]): EquipmentLike[] {
@@ -331,12 +281,15 @@ function resolveEntries(
   context?: {
     blockIndex: number
     optionKey: string
-    genericSelections?: Readonly<Record<string, string>>
+    genericSelections?: Readonly<StartingEquipmentItemChoices>
+    policy?: StartingEquipmentPolicy
   },
 ): BackgroundStartingPackage {
   const resolved: EquipmentLike[] = []
   const currency = emptyCurrency()
   const genericChoices: GenericEquipmentChoice[] = []
+  const lots: StartingEquipmentResolvedLot[] = []
+  const issues: string[] = []
 
   entries.forEach((entry, entryIndex) => {
     if (typeof entry === 'object' && entry !== null) {
@@ -351,22 +304,119 @@ function resolveEntries(
     const genericChoiceKey = context
       ? buildGenericEquipmentChoiceKey(context.blockIndex, context.optionKey, entryIndex)
       : undefined
-    if (typeof entry === 'object' && entry?.equipmentType && genericChoiceKey) {
+    const itemRef = typeof entry === 'string' ? entry : entry?.item
+    const target = itemRef ? startingItemUid(itemRef) : undefined
+    const rawItem =
+      target &&
+      (context?.policy
+        ? context.policy.raw.get(startingItemKey(target))
+        : itemLookup.get(buildItemKey(target.name, target.source)))
+    const isGroup =
+      (!!rawItem && Array.isArray(rawItem.items)) ||
+      (!rawItem &&
+        !!target &&
+        !!genericChoiceKey &&
+        !!context?.genericSelections?.[genericChoiceKey]?.length)
+    const token = typeof entry === 'object' ? entry?.equipmentType : undefined
+    const quantity = typeof entry === 'object' ? (entry?.quantity ?? 1) : 1
+    if ((token || isGroup) && genericChoiceKey && context) {
+      const pool = context?.policy
+        ? getStartingEquipmentCandidates(
+            context.policy,
+            context.blockIndex,
+            token,
+            isGroup ? target : undefined,
+            {
+              option: context.optionKey,
+              entry: entryIndex,
+              displayName: typeof entry === 'object' ? entry.displayName : undefined,
+            },
+          )
+        : { candidates: [], diagnostic: 'Starting item rules are unavailable.' }
+      const selected = context?.genericSelections?.[genericChoiceKey] ?? []
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+        issues.push(`Invalid quantity for ${genericChoiceKey}.`)
+        return
+      }
       genericChoices.push({
         key: genericChoiceKey,
-        token: entry.equipmentType,
-        quantity: entry.quantity ?? 1,
-        candidates: getGenericEquipmentCandidates(entry.equipmentType, itemLookup),
+        token: token ?? rawItem?.name ?? target?.name ?? 'Item group',
+        quantity,
+        candidates: pool.candidates.map((item) => ({ name: item.name, source: item.source })),
+        diagnostic: pool.diagnostic,
       })
+      if (pool.diagnostic) issues.push(pool.diagnostic)
+      if (selected.length !== quantity)
+        issues.push(
+          `Choose exactly ${quantity} item${quantity === 1 ? '' : 's'} for ${genericChoiceKey}.`,
+        )
+      const counted = new Map<
+        string,
+        { reference: StartingEquipmentReference; quantity: number; item?: Item5e }
+      >()
+      for (const ref of selected.slice(0, quantity)) {
+        const candidate = pool.candidates.find(
+          (item) => startingItemKey(item) === startingItemKey(ref),
+        )
+        if (!candidate)
+          issues.push(`The selected item for ${genericChoiceKey} is unavailable or ineligible.`)
+        const reference: StartingEquipmentReference = {
+          kind: 'item',
+          name: candidate?.name ?? ref.name,
+          source: candidate?.source ?? ref.source,
+        }
+        const key = startingEquipmentLotKey(
+          context.blockIndex,
+          context.optionKey.toLowerCase(),
+          entryIndex,
+          reference,
+        )
+        const old = counted.get(key)
+        counted.set(key, { reference, quantity: (old?.quantity ?? 0) + 1, item: candidate })
+      }
+      for (const [key, pick] of counted) {
+        const item = pick.item
+          ? resolveFromItemRef(`${pick.item.name}|${pick.item.source}`, itemLookup, {
+              quantity: pick.quantity,
+              itemOverride: pick.item,
+            })
+          : undefined
+        lots.push({ key, reference: pick.reference, item })
+        if (item) resolved.push(item)
+      }
+      return
     }
-    const item = resolveFromEntry(entry, itemLookup, genericChoiceKey, context?.genericSelections)
-    if (item) resolved.push(item)
+    const item = resolveFromEntry(entry, itemLookup, context?.policy)
+    if (item) {
+      const reference: StartingEquipmentReference =
+        typeof entry === 'object' && entry.special
+          ? { kind: 'special', name: entry.special }
+          : {
+              kind: 'item',
+              name: rawItem?.name ?? target?.name ?? item.name,
+              source: rawItem?.source ?? target?.source ?? DEFAULT_ITEM_SOURCE,
+            }
+      lots.push({
+        key: startingEquipmentLotKey(
+          context?.blockIndex ?? 0,
+          context?.optionKey.toLowerCase() ?? '_',
+          entryIndex,
+          reference,
+        ),
+        reference,
+        item: item._unresolved ? undefined : item,
+      })
+      resolved.push(item)
+      if (item._unresolved) issues.push(`Restore the exact item rules for ${item.name}.`)
+    }
   })
 
   return {
     items: resolved,
     currency,
     genericChoices,
+    lots,
+    issues,
   }
 }
 
@@ -378,25 +428,6 @@ export function buildItemLookup(items: Item5e[]): Map<string, Item5e> {
   }
 
   return map
-}
-
-export function resolveClassStartingEquipment(
-  startingEquipment: unknown,
-  itemLookup: Map<string, Item5e>,
-): EquipmentLike[] {
-  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
-  const items: EquipmentLike[] = []
-
-  for (const block of defaultData) {
-    const normalized = normalizeChoiceBlock(block)
-    if (!normalized) continue
-    const resolved = resolveEntries(collectChosenEntries(normalized, 'a'), itemLookup)
-    items.push(...resolved.items)
-  }
-
-  const merged = mergeEquipment(items)
-  warnIfUnresolved('class starting equipment', merged)
-  return merged
 }
 
 export interface ClassStartingEquipmentOptions {
@@ -443,15 +474,6 @@ export function resolveClassStartingEquipmentOptions(
       genericChoices: optionBGenericChoices,
     },
   }
-}
-
-export function resolveBackgroundStartingEquipment(
-  startingEquipment: unknown,
-  itemLookup: Map<string, Item5e>,
-  preferredOption: 'a' | 'b' = 'a',
-): EquipmentLike[] {
-  return resolveBackgroundStartingEquipmentPackage(startingEquipment, itemLookup, preferredOption)
-    .items
 }
 
 export function resolveBackgroundStartingEquipmentPackage(
@@ -502,6 +524,28 @@ export interface ResolvedEquipmentBlock {
   options: Record<string, BackgroundStartingPackage>
 }
 
+/** Reuse the already-resolved view when deriving the selected UI package; do not rescan catalogs. */
+export function getSelectedEquipmentPackage(
+  blocks: readonly ResolvedEquipmentBlock[],
+  choices: readonly string[],
+): BackgroundStartingPackage {
+  const packages = blocks.map(
+    (block) =>
+      block.options[
+        block.isFixed ? '_' : (choices[block.index]?.toLowerCase() ?? block.choiceKeys[0])
+      ] ?? block.options[block.choiceKeys[0]],
+  )
+  const currency = emptyCurrency()
+  for (const pkg of packages) addCurrency(currency, pkg.currency)
+  return {
+    items: mergeEquipment(packages.flatMap((pkg) => pkg.items)),
+    currency,
+    genericChoices: packages.flatMap((pkg) => pkg.genericChoices ?? []),
+    lots: packages.flatMap((pkg) => pkg.lots ?? []),
+    issues: packages.flatMap((pkg) => pkg.issues ?? []),
+  }
+}
+
 function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
   const seen = new Set<string>()
   const keys: string[] = []
@@ -524,11 +568,14 @@ export function resolveEquipmentWithBlockChoices(
   blocks: unknown[],
   itemLookup: Map<string, Item5e>,
   blockChoices: string[],
-  genericSelections: Readonly<Record<string, string>> = {},
+  genericSelections: Readonly<StartingEquipmentItemChoices> = {},
+  policy?: StartingEquipmentPolicy,
 ): BackgroundStartingPackage {
   const allItems: EquipmentLike[] = []
   const currency = emptyCurrency()
   const genericChoices: GenericEquipmentChoice[] = []
+  const lots: StartingEquipmentResolvedLot[] = []
+  const issues: string[] = []
 
   blocks.forEach((rawBlock, i) => {
     const block = normalizeChoiceBlock(rawBlock)
@@ -537,21 +584,32 @@ export function resolveEquipmentWithBlockChoices(
     const choiceKeys = getBlockChoiceKeys(block)
     const wantedKey = (blockChoices[i] ?? choiceKeys[0] ?? 'a').toLowerCase()
 
-    const actualKey =
-      Object.keys(block).find((k) => k.toLowerCase() === wantedKey) ??
-      Object.keys(block).find((k) => k !== '_')
+    const actualKey = choiceKeys.length
+      ? (Object.keys(block).find((k) => k !== '_' && k.toLowerCase() === wantedKey) ??
+        Object.keys(block).find((k) => k !== '_'))
+      : undefined
 
     const fixed = block._ ?? []
     const chosen = actualKey ? (block[actualKey] ?? []) : []
-    const resolved = resolveEntries([...fixed, ...chosen], itemLookup, {
-      blockIndex: i,
-      optionKey: actualKey ?? '_',
-      genericSelections,
-    })
-
-    allItems.push(...resolved.items)
-    addCurrency(currency, resolved.currency)
-    genericChoices.push(...(resolved.genericChoices ?? []))
+    if (choiceKeys.length && blockChoices[i] && !choiceKeys.includes(wantedKey))
+      issues.push(`Equipment package ${i + 1} is invalid.`)
+    for (const [key, entries] of [
+      ['_', fixed],
+      [actualKey ?? '_', chosen],
+    ] as const) {
+      if (key === '_' && entries === chosen && !actualKey) continue
+      const resolved = resolveEntries(entries, itemLookup, {
+        blockIndex: i,
+        optionKey: key,
+        genericSelections,
+        policy,
+      })
+      allItems.push(...resolved.items)
+      addCurrency(currency, resolved.currency)
+      genericChoices.push(...(resolved.genericChoices ?? []))
+      lots.push(...(resolved.lots ?? []))
+      issues.push(...(resolved.issues ?? []))
+    }
   })
 
   const mergedItems = mergeEquipment(allItems)
@@ -561,6 +619,8 @@ export function resolveEquipmentWithBlockChoices(
     items: mergedItems,
     currency,
     genericChoices,
+    lots,
+    issues,
   }
 }
 
@@ -568,7 +628,8 @@ function resolveBlocksToStructure(
   blocks: unknown[],
   displayTexts: (string | null)[],
   itemLookup: Map<string, Item5e>,
-  genericSelections: Readonly<Record<string, string>> = {},
+  genericSelections: Readonly<StartingEquipmentItemChoices> = {},
+  policy?: StartingEquipmentPolicy,
 ): ResolvedEquipmentBlock[] {
   return blocks.flatMap((rawBlock, index) => {
     const block = normalizeChoiceBlock(rawBlock)
@@ -586,20 +647,32 @@ function resolveBlocksToStructure(
         blockIndex: index,
         optionKey: '_',
         genericSelections,
+        policy,
       })
     } else {
       for (const key of choiceKeys) {
         const actualKey = rawKeys.find((k) => k.toLowerCase() === key) ?? key
-        const combined = resolveEntries(
-          [...(block._ ?? []), ...(block[actualKey] ?? [])],
-          itemLookup,
-          {
-            blockIndex: index,
-            optionKey: actualKey,
-            genericSelections,
-          },
-        )
-        options[key] = combined
+        const fixed = resolveEntries(block._ ?? [], itemLookup, {
+          blockIndex: index,
+          optionKey: '_',
+          genericSelections,
+          policy,
+        })
+        const selected = resolveEntries(block[actualKey] ?? [], itemLookup, {
+          blockIndex: index,
+          optionKey: key,
+          genericSelections,
+          policy,
+        })
+        const currency = { ...fixed.currency }
+        addCurrency(currency, selected.currency)
+        options[key] = {
+          items: mergeEquipment([...fixed.items, ...selected.items]),
+          currency,
+          genericChoices: [...(fixed.genericChoices ?? []), ...(selected.genericChoices ?? [])],
+          lots: [...(fixed.lots ?? []), ...(selected.lots ?? [])],
+          issues: [...(fixed.issues ?? []), ...(selected.issues ?? [])],
+        }
       }
     }
 
@@ -610,7 +683,8 @@ function resolveBlocksToStructure(
 export function resolveClassEquipmentBlocks(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
-  genericSelections: Readonly<Record<string, string>> = {},
+  genericSelections: Readonly<StartingEquipmentItemChoices> = {},
+  policy?: StartingEquipmentPolicy,
 ): ResolvedEquipmentBlock[] {
   const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
   const se = startingEquipment as {
@@ -628,18 +702,48 @@ export function resolveClassEquipmentBlocks(
     return null
   })
 
-  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup, genericSelections)
+  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup, genericSelections, policy)
 }
 
 export function resolveBackgroundEquipmentBlocks(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
-  genericSelections: Readonly<Record<string, string>> = {},
+  genericSelections: Readonly<StartingEquipmentItemChoices> = {},
+  policy?: StartingEquipmentPolicy,
 ): ResolvedEquipmentBlock[] {
   const blocks = getBackgroundEquipmentBlocks(startingEquipment)
 
   const displayTexts: (string | null)[] = blocks.map(() => null)
-  return resolveBlocksToStructure(blocks, displayTexts, itemLookup, genericSelections)
+  return resolveBlocksToStructure(blocks, displayTexts, itemLookup, genericSelections, policy)
+}
+
+/** Validate explicit edits without requiring unrelated unfinished draft slots to be complete. */
+export function assertStartingEquipmentSelections(
+  pkg: BackgroundStartingPackage,
+  selections: Readonly<StartingEquipmentItemChoices>,
+  previous: Readonly<StartingEquipmentItemChoices> = {},
+): void {
+  for (const choice of pkg.genericChoices ?? []) {
+    const selected = selections[choice.key] ?? []
+    if (
+      selected.length > choice.quantity ||
+      (JSON.stringify(selected) !== JSON.stringify(previous[choice.key] ?? []) &&
+        (selected.length !== choice.quantity ||
+          selected.some(
+            (ref) =>
+              !choice.candidates.some(
+                (item) =>
+                  item.source &&
+                  startingItemKey({ name: item.name, source: item.source }) ===
+                    startingItemKey(ref),
+              ),
+          )))
+    ) {
+      throw new RangeError(
+        'A selected starting item no longer fits this choice. Review its current rules.',
+      )
+    }
+  }
 }
 
 export function formatEquipmentOptionEntries(pkg: BackgroundStartingPackage): string[] {

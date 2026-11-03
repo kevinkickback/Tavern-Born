@@ -9,6 +9,8 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
     classes: [{ name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } }],
     classFeatures: [],
+    items: [],
+    itemsBase: [],
   }),
 }))
 

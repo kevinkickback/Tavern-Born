@@ -415,6 +415,7 @@ test('selected actual Battle Master wrapper refreshes nested optional details OF
     { name: 'Fighter', source: 'PHB', levels: 3, subclass: 'Battle Master', subclassSource: 'PHB' },
   ]
   f.character.variantRules = { optionalClassFeatures: true }
+  f.character.initialClass = { name: 'Fighter', source: 'PHB' }
   mount(f)
   await openLevel(3)
   fireEvent.click(screen.getByRole('button', { name: 'Battle Master' }))

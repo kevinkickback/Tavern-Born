@@ -1,8 +1,13 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
+  assertStartingEquipmentSelections,
   getBackgroundEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import {
+  createStartingEquipmentPolicy,
+  type StartingEquipmentPolicy,
+} from '@/lib/5etools/startingEquipmentPolicy'
 import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
 import {
@@ -13,11 +18,12 @@ import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import {
-  removeSourceGrantedEquipment,
-  upsertGrantedEquipment,
-} from '@/lib/character/equipmentHelpers'
+  reconcileStartingEquipmentGrant,
+  sameStartingReference,
+} from '@/lib/character/startingEquipmentGrants'
 import {
   addAbilityBonus,
+  addGrant,
   applyBackgroundGrants,
   diffProficiencyGrants,
   makeSourceTag,
@@ -26,10 +32,8 @@ import {
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Background5e, Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, StartingEquipmentItemChoices } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
-
-const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const
 
 export function applyBackgroundSelectionCommand(
   character: Character,
@@ -37,8 +41,10 @@ export function applyBackgroundSelectionCommand(
   background: Background5e,
   blockChoices: string[],
   itemLookup: Map<string, Item5e>,
-  genericSelections: Readonly<Record<string, string>> = character.backgroundEquipmentItemChoices ??
+  genericSelections: Readonly<StartingEquipmentItemChoices> = character.backgroundEquipmentItemChoices ??
     {},
+  policyOverride?: StartingEquipmentPolicy,
+  validateSelections = true,
 ): CharacterCommandResult {
   const normalizedBackground = normalizeBackgroundForOriginSystem(
     background,
@@ -50,21 +56,23 @@ export function applyBackgroundSelectionCommand(
   const isBackgroundChanged =
     oldBackgroundName !== background.name ||
     (character.backgroundSource ?? '') !== (background.source ?? '')
-  const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
-    { sourceType: 'background', sourceName: oldBackgroundName },
-  ])
+  const retracted = isBackgroundChanged
+    ? retractFeatChoiceOptionsForSources(character, ledger, [
+        { sourceType: 'background', sourceName: oldBackgroundName },
+      ])
+    : { characterPatch: {}, provenanceUpdate: ledger }
   const workingCharacter = { ...character, ...retracted.characterPatch }
-  let provenanceUpdate = reconcileBackgroundChange(retracted.provenanceUpdate, oldBackgroundName)
+  let provenanceUpdate = isBackgroundChanged
+    ? reconcileBackgroundChange(retracted.provenanceUpdate, oldBackgroundName)
+    : retracted.provenanceUpdate
   provenanceUpdate = applyBackgroundGrants(normalizedBackground, provenanceUpdate, {
-    itemLookup,
     suppressLanguageGrants: character.originSystem === '2024',
   })
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
 
   let proficiencies = { ...workingCharacter.proficiencies }
-  let equipment = [...(workingCharacter.equipment ?? [])]
-  if (oldBackgroundName) {
+  if (oldBackgroundName && isBackgroundChanged) {
     for (const domain of ['skills', 'languages', 'tools'] as const) {
       const { toRemove } = diffProficiencyGrants(
         retracted.provenanceUpdate,
@@ -78,17 +86,6 @@ export function applyBackgroundSelectionCommand(
         [domain]: proficiencies[domain].filter((name) => !toRemove.includes(normalizeKey(name))),
       }
     }
-
-    const equipmentToRemove = Object.entries(retracted.provenanceUpdate.equipment)
-      .filter(
-        ([, tags]) =>
-          tags.length > 0 &&
-          tags.every(
-            (tag) => tag.sourceType === 'background' && tag.sourceName === oldBackgroundName,
-          ),
-      )
-      .map(([name]) => name)
-    equipment = removeSourceGrantedEquipment(equipment, equipmentToRemove)
   }
 
   const skills = extractProficiencyBlockNames(normalizedBackground.skillProficiencies ?? [], {
@@ -113,23 +110,68 @@ export function applyBackgroundSelectionCommand(
   }
 
   const blocks = getBackgroundEquipmentBlocks(background.startingEquipment)
+  const policy =
+    policyOverride ??
+    createStartingEquipmentPolicy(
+      { ...workingCharacter, proficiencies, provenance: provenanceUpdate },
+      { ...background, source: background.source ?? '', kind: 'background' },
+      background.startingEquipment,
+      [...itemLookup.values()],
+    )
+  if (
+    !policy.ownerAvailable ||
+    !sameStartingReference(policy.owner, background) ||
+    JSON.stringify(policy.startingEquipment) !== JSON.stringify(background.startingEquipment)
+  )
+    throw new RangeError('Restore the current Background rules first.')
   const resolvedPackage = resolveEquipmentWithBlockChoices(
     blocks,
     itemLookup,
     blockChoices,
     genericSelections,
+    policy,
   )
-  const currency = {
-    cp: character.currency?.cp ?? 0,
-    sp: character.currency?.sp ?? 0,
-    ep: character.currency?.ep ?? 0,
-    gp: character.currency?.gp ?? 0,
-    pp: character.currency?.pp ?? 0,
+  if (validateSelections) {
+    assertStartingEquipmentSelections(
+      resolvedPackage,
+      genericSelections,
+      isBackgroundChanged ? {} : character.backgroundEquipmentItemChoices,
+    )
+    const activeKeys = new Set(resolvedPackage.genericChoices?.map((slot) => slot.key))
+    for (const [key, refs] of Object.entries(genericSelections))
+      if (
+        !activeKeys.has(key) &&
+        JSON.stringify(refs) !== JSON.stringify(character.backgroundEquipmentItemChoices?.[key])
+      )
+        throw new RangeError('This starting item slot is no longer active.')
   }
-  for (const key of CURRENCY_KEYS) {
-    currency[key] = Math.max(0, currency[key] - (character.backgroundCurrencyGrant?.[key] ?? 0))
-    currency[key] += resolvedPackage.currency[key] ?? 0
-  }
+  const equipmentTags = Object.fromEntries(
+    Object.entries(provenanceUpdate.equipment).flatMap(([name, tags]) => {
+      const retained = tags.filter(
+        (tag) =>
+          !(
+            tag.sourceType === 'background' &&
+            sameStartingReference({ name: tag.sourceName, source: tag.sourceRef ?? '' }, background)
+          ),
+      )
+      return retained.length ? [[name, retained]] : []
+    }),
+  )
+  provenanceUpdate = { ...provenanceUpdate, equipment: equipmentTags }
+  const equipmentPatch = reconcileStartingEquipmentGrant(
+    character,
+    'background',
+    { name: background.name, source: background.source },
+    resolvedPackage.lots ?? [],
+    resolvedPackage.currency,
+  )
+  for (const lot of equipmentPatch.startingEquipmentGrants?.background?.items ?? [])
+    provenanceUpdate = addGrant(
+      provenanceUpdate,
+      'equipment',
+      lot.reference.name,
+      makeSourceTag('background', background.name, 'fixed', background.source),
+    )
 
   return reconcileFixedFeatOptionsCommand(character, ledger, {
     characterPatch: {
@@ -138,9 +180,7 @@ export function applyBackgroundSelectionCommand(
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
       proficiencies: reconcileSkillExpertise(proficiencies),
-      equipment: upsertGrantedEquipment(equipment, resolvedPackage.items),
-      currency,
-      backgroundCurrencyGrant: resolvedPackage.currency,
+      ...equipmentPatch,
       backgroundEquipmentChoices: blockChoices,
       backgroundEquipmentItemChoices: { ...genericSelections },
       backgroundAsiBlockIndex:

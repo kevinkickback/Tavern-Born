@@ -60,6 +60,9 @@ export async function seedAppState(
   }
 
   const now = new Date().toISOString()
+  // Persist source data, not runtime Maps serialized as plain objects by page.evaluate.
+  // The app rebuilds lookup indexes when it restores the seed.
+  const { lookups: _runtimeLookups, ...cacheData } = gameData
   const resolvedConfig: DataSourceConfig = dataSourceConfig ?? {
     type: 'remote',
     path: sourcePath,
@@ -142,7 +145,7 @@ export async function seedAppState(
     },
     {
       cacheSeed: {
-        data: gameData,
+        data: cacheData,
         cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
         cachedAt: now,
         sourceSnapshot,

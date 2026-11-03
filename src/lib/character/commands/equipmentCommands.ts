@@ -2,6 +2,7 @@ import { resolveArmorType } from '@/lib/calculations/armorClass'
 import { enforceArmorEquipmentRestrictions } from '@/lib/calculations/itemEquippable'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { generateEquipmentId } from '@/lib/character/ids'
+import { updateStartingEquipmentQuantity } from '@/lib/character/startingEquipmentGrants'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -36,10 +37,10 @@ export function setEquipmentRestrictionsIgnoredCommand(
   }
 }
 
-function buildEquipment(item: Item5e): Equipment {
+function buildEquipment(item: Item5e, occupied: ReadonlySet<string>): Equipment {
   const armorType = resolveArmorType(item.type ?? '')
   return {
-    id: generateEquipmentId(),
+    id: generateEquipmentId(occupied),
     name: item.name,
     type: item.type ?? 'G',
     quantity: 1,
@@ -90,9 +91,16 @@ export function addManualEquipmentBatchCommand(
   if (items.length === 0) return { characterPatch: {}, provenanceUpdate: ledger }
 
   const equipment = [...(character.equipment ?? [])]
+  const occupied = new Set([
+    ...equipment.map((item) => item.id),
+    ...Object.values(character.startingEquipmentGrants ?? {}).flatMap(
+      (grant) => grant?.items.map((lot) => lot.equipmentId) ?? [],
+    ),
+  ])
   let provenanceUpdate = ledger
   for (const item of items) {
-    const entry = buildEquipment(item)
+    const entry = buildEquipment(item, occupied)
+    occupied.add(entry.id)
     equipment.push(entry)
     provenanceUpdate = addGrant(
       provenanceUpdate,
@@ -113,10 +121,11 @@ export function removeManualEquipmentCommand(
   const removed = character.equipment.find((item) => item.id === equipmentId)
   if (!removed) return { characterPatch: {}, provenanceUpdate: ledger }
 
-  const equipment = character.equipment.filter((item) => item.id !== equipmentId)
+  const quantityPatch = updateStartingEquipmentQuantity(character, equipmentId, 0)
+  const equipment = quantityPatch.equipment ?? character.equipment
   const normalizedName = normalizeKey(removed.name)
   if (equipment.some((item) => normalizeKey(item.name) === normalizedName)) {
-    return { characterPatch: { equipment }, provenanceUpdate: ledger }
+    return { characterPatch: quantityPatch, provenanceUpdate: ledger }
   }
 
   const nextEquipmentLedger = { ...ledger.equipment }
@@ -127,8 +136,26 @@ export function removeManualEquipmentCommand(
   else delete nextEquipmentLedger[normalizedName]
 
   return {
-    characterPatch: { equipment },
+    characterPatch: quantityPatch,
     provenanceUpdate: { ...ledger, equipment: nextEquipmentLedger },
+  }
+}
+
+export function updateEquipmentQuantityCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  equipmentId: string,
+  quantity: number,
+): CharacterCommandResult {
+  if (quantity === 0) return removeManualEquipmentCommand(character, ledger, equipmentId)
+  const item = character.equipment.find((entry) => entry.id === equipmentId)
+  if (!item) return { characterPatch: {}, provenanceUpdate: ledger }
+  return {
+    characterPatch: updateStartingEquipmentQuantity(character, equipmentId, quantity),
+    provenanceUpdate:
+      quantity > item.quantity
+        ? addGrant(ledger, 'equipment', item.name, makeSourceTag('manual', 'User Choice', 'choice'))
+        : ledger,
   }
 }
 

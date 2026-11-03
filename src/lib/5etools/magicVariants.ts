@@ -152,6 +152,7 @@ export function resolveMagicVariants(rows: readonly unknown[]): {
       source,
       type: row.type,
       magicVariantReference: { name: target.name, source: target.source },
+      startingEquipmentCategory: 'Other',
     } as Item5e
     const entries = row.entries ?? inherits.entries
     if (entries !== undefined)

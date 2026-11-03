@@ -39,7 +39,7 @@ vi.mock('@/hooks/data/useWizardGameData', () => ({
         { abbreviation: 'TCE', name: 'Test recommended source two' },
         { abbreviation: 'HB', name: 'Test additional content' },
       ],
-      itemLookup: {},
+      itemLookup: new Map(),
       resolveRace: ({ subraceName }: { subraceName?: string }) => ({
         parentRace: race,
         subraceData: subraceName === 'Variant' ? variant : undefined,

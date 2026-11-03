@@ -53,6 +53,8 @@ export function useCharacterCalculationContext(
         ...(filteredData.items ?? []),
         ...(filteredData.itemsBase ?? []),
       ]),
+      startingEquipmentItems: [...filteredData.items, ...filteredData.itemsBase],
+      itemTypeByAbbr: rawLookupSet?.itemTypeByAbbr,
       racesByKey: buildRaceLookup(filteredData.races ?? []),
       spellsByKey: buildSpellLookup(filteredData.spells ?? []),
     }
@@ -61,6 +63,8 @@ export function useCharacterCalculationContext(
       classesByKey: rawLookupSet?.classesByKey ?? {},
       featsByKey: rawLookupSet?.featsByKey ?? {},
       itemLookup: rawLookupSet?.itemLookup,
+      startingEquipmentItems: rawLookupSet?.startingEquipmentItems,
+      itemTypeByAbbr: rawLookupSet?.itemTypeByAbbr,
       racesByKey: rawLookupSet?.racesByKey ?? {},
       spellsByKey: rawLookupSet?.spellsByKey ?? {},
     }

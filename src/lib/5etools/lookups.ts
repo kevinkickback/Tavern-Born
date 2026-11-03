@@ -152,6 +152,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     subclassesByKey: buildSubclassLookup(gameData.classes),
     creaturesByKey: buildCreatureLookup(gameData.creatures ?? []),
     itemLookup: buildItemLookup([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
+    startingEquipmentItems: [...(gameData.items ?? []), ...(gameData.itemsBase ?? [])],
     itemPropertyByAbbr: buildItemPropertyLookup(gameData.itemProperties ?? []),
     itemTypeByAbbr: buildItemTypeLookup(gameData.itemTypes ?? []),
     skillToAbilityMap: buildSkillToAbilityMap(gameData.skills ?? []),

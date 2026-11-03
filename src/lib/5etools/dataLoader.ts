@@ -62,6 +62,7 @@ import {
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
 import { CreatureDataSchema } from './schemas'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
+import { preserveStartingItemCategories } from './startingItemCategory'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -437,7 +438,10 @@ export class FiveEToolsDataLoader {
     const concreteItemCount = gameData.items.length
     const rawToolInputs = [...gameData.items, ...gameData.itemsBase]
     const resolvedItems = resolveCopiedRecords(rawToolInputs, 'item')
-    const toolAuditedItems = prepareToolProficiencySources(rawToolInputs, resolvedItems.records)
+    const toolAuditedItems = prepareToolProficiencySources(
+      rawToolInputs,
+      preserveStartingItemCategories(rawToolInputs, resolvedItems.records),
+    )
     gameData.items = toolAuditedItems.slice(0, concreteItemCount)
     gameData.itemsBase = toolAuditedItems.slice(concreteItemCount)
     appendMagicVariantReferences(gameData)

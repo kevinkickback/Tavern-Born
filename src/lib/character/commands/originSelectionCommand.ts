@@ -1,9 +1,11 @@
+import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
+import { sameStartingReference } from '@/lib/character/startingEquipmentGrants'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { applyBackgroundSelectionCommand } from './backgroundCommands'
@@ -26,6 +28,16 @@ export interface InitialCharacterSelections {
   backgroundEquipmentChoices?: string[]
 }
 
+export interface InitialCharacterLookups extends NativeSpellLookups {
+  startingEquipment?: {
+    rawItems: readonly Item5e[]
+    availableItems: readonly Item5e[]
+    classes: readonly Class5e[]
+    backgrounds: readonly Background5e[]
+    itemTypes: Readonly<Record<string, string>>
+  }
+}
+
 function applyPatch(character: Character, patch: Partial<Character>): Character {
   return { ...character, ...patch }
 }
@@ -34,13 +46,33 @@ export function buildInitialCharacter(
   selections: InitialCharacterSelections,
   itemLookup: Map<string, Item5e>,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
-  spellLookups?: NativeSpellLookups,
+  spellLookups?: InitialCharacterLookups,
 ): Character {
   let character = createEmptyCharacter({
     ...selections.initial,
     raceAsiChoices: selections.raceAsiChoices ?? selections.initial.raceAsiChoices,
   })
   let ledger = character.provenance ?? emptyProvenance()
+  const equipmentPolicy = (owner: Class5e | Background5e, kind: 'class' | 'background') => {
+    const authority = spellLookups?.startingEquipment
+    if (!authority) return undefined
+    return createStartingEquipmentPolicy(
+      character,
+      {
+        name: owner.name,
+        source: owner.source,
+        kind,
+        entries: Array.isArray(owner.entries) ? owner.entries : undefined,
+      },
+      owner.startingEquipment,
+      authority.rawItems,
+      authority.availableItems,
+      authority.itemTypes,
+      (kind === 'class' ? authority.classes : authority.backgrounds).some((row) =>
+        sameStartingReference(row, owner),
+      ),
+    )
+  }
   const raceResolution = selections.race
     ? {
         parentRace: selections.race,
@@ -63,6 +95,8 @@ export function buildInitialCharacter(
       selections.background,
       selections.backgroundEquipmentChoices ?? [],
       itemLookup,
+      undefined,
+      equipmentPolicy(selections.background, 'background'),
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
@@ -104,7 +138,11 @@ export function buildInitialCharacter(
       selections.classEntity,
       undefined,
       itemLookup,
-      { ...spellLookups, raceResolution },
+      {
+        ...spellLookups,
+        raceResolution,
+        startingEquipmentPolicy: equipmentPolicy(selections.classEntity, 'class'),
+      },
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate

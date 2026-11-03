@@ -12,7 +12,7 @@
     "cp": 0,
     "sp": 0,
     "ep": 0,
-    "gp": 25,
+    "gp": 48,
     "pp": 0
   },
   "experiencePoints": 0,
@@ -198,6 +198,208 @@
       "ac": 11,
       "armorType": "light",
       "source": "XPHB"
+    },
+    {
+      "name": "Studded Leather Armor",
+      "source": "XPHB",
+      "type": "LA|XPHB",
+      "quantity": 1,
+      "weight": 13,
+      "value": 4500,
+      "rarity": "none",
+      "reqAttune": false,
+      "ac": 12,
+      "armorType": "light",
+      "id": "companion-choice-character-2024-starting-1",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Scimitar",
+      "source": "XPHB",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "weight": 3,
+      "value": 2500,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "martial",
+      "dmg1": "1d6",
+      "dmgType": "S",
+      "properties": [
+        "F|XPHB",
+        "L|XPHB"
+      ],
+      "id": "companion-choice-character-2024-starting-2",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Shortsword",
+      "source": "XPHB",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "weight": 2,
+      "value": 1000,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "martial",
+      "dmg1": "1d6",
+      "dmgType": "P",
+      "properties": [
+        "F|XPHB",
+        "L|XPHB"
+      ],
+      "id": "companion-choice-character-2024-starting-3",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Longbow",
+      "source": "XPHB",
+      "type": "R|XPHB",
+      "quantity": 1,
+      "weight": 2,
+      "value": 5000,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A|XPHB",
+        "H|XPHB",
+        "2H|XPHB"
+      ],
+      "range": "150/600",
+      "id": "companion-choice-character-2024-starting-4",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Arrows (20)",
+      "source": "XPHB",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "weight": 1,
+      "value": 100,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-5",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Quiver",
+      "source": "XPHB",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "weight": 1,
+      "value": 100,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-6",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Sprig of Mistletoe",
+      "source": "XPHB",
+      "type": "SCF|XPHB",
+      "quantity": 1,
+      "value": 100,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-7",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Explorer's Pack",
+      "source": "XPHB",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "weight": 55,
+      "value": 1000,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-8",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Dagger",
+      "source": "XPHB",
+      "type": "M|XPHB",
+      "quantity": 2,
+      "weight": 1,
+      "value": 200,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "simple",
+      "dmg1": "1d4",
+      "dmgType": "P",
+      "properties": [
+        "F|XPHB",
+        "L|XPHB",
+        "T|XPHB"
+      ],
+      "range": "20/60",
+      "id": "companion-choice-character-2024-starting-9",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Thieves' Tools",
+      "source": "XPHB",
+      "type": "T|XPHB",
+      "quantity": 1,
+      "weight": 1,
+      "value": 2500,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-10",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Crowbar",
+      "source": "XPHB",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "weight": 5,
+      "value": 200,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-11",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Pouch",
+      "source": "XPHB",
+      "type": "G|XPHB",
+      "quantity": 2,
+      "weight": 1,
+      "value": 50,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-12",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Traveler's Clothes",
+      "source": "XPHB",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "weight": 4,
+      "value": 200,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2024-starting-13",
+      "equipped": false,
+      "attuned": false
     }
   ],
   "visions": [
@@ -265,8 +467,14 @@
     "ignoreEquipRestrictions": true
   },
   "raceAsiChoices": [],
-  "backgroundEquipmentChoices": [],
-  "classEquipmentChoices": {},
+  "backgroundEquipmentChoices": [
+    "a"
+  ],
+  "classEquipmentChoices": {
+    "Ranger|XPHB": [
+      "a"
+    ]
+  },
   "asiChoices": [],
   "specialFeats": [],
   "classFeatChoices": [
@@ -516,7 +724,7 @@
       ]
     },
     "equipment": {
-      "longbow": [
+      "studded leather armor": [
         {
           "sourceType": "class",
           "sourceName": "Ranger",
@@ -525,13 +733,126 @@
           "label": "Ranger"
         }
       ],
-      "leather armor": [
+      "scimitar": [
         {
           "sourceType": "class",
           "sourceName": "Ranger",
           "sourceRef": "XPHB",
           "grantType": "fixed",
           "label": "Ranger"
+        }
+      ],
+      "shortsword": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "longbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        },
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "arrows (20)": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "quiver": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "sprig of mistletoe": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "explorer's pack": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "dagger": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ],
+      "thieves' tools": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ],
+      "crowbar": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ],
+      "pouch": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ],
+      "traveler's clothes": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ],
+      "leather armor": [
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
         }
       ]
     },
@@ -547,7 +868,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -611,7 +932,9 @@
     }
   ],
   "backgroundEquipmentItemChoices": {},
-  "classEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {
+    "Ranger|XPHB": {}
+  },
   "movementAdjustments": [],
   "movementOverrides": {},
   "manualEffects": [],
@@ -648,5 +971,213 @@
   "backgroundAsiChoices": [
     "dexterity",
     "constitution"
-  ]
+  ],
+  "initialClass": {
+    "name": "Ranger",
+    "source": "XPHB"
+  },
+  "startingEquipmentGrants": {
+    "class": {
+      "owner": {
+        "name": "Ranger",
+        "source": "XPHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"a\",0,\"item\",\"studded leather armor\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Studded Leather Armor",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-1",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",1,\"item\",\"scimitar\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Scimitar",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-2",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",2,\"item\",\"shortsword\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Shortsword",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-3",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",3,\"item\",\"longbow\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Longbow",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-4",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",4,\"item\",\"arrows (20)\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Arrows (20)",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-5",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",5,\"item\",\"quiver\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Quiver",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-6",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",6,\"item\",\"sprig of mistletoe\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Sprig of Mistletoe",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-7",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",7,\"item\",\"explorer's pack\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Explorer's Pack",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-8",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 7,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 7,
+        "pp": 0
+      },
+      "spentCopper": 0
+    },
+    "background": {
+      "owner": {
+        "name": "Criminal",
+        "source": "XPHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"a\",0,\"item\",\"dagger\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Dagger",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-9",
+          "issuedQuantity": 2,
+          "consumedQuantity": 0,
+          "remainingQuantity": 2
+        },
+        {
+          "key": "[0,\"a\",1,\"item\",\"thieves' tools\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Thieves' Tools",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-10",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",2,\"item\",\"crowbar\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Crowbar",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-11",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"a\",3,\"item\",\"pouch\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Pouch",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-12",
+          "issuedQuantity": 2,
+          "consumedQuantity": 0,
+          "remainingQuantity": 2
+        },
+        {
+          "key": "[0,\"a\",4,\"item\",\"traveler's clothes\",\"xphb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Traveler's Clothes",
+            "source": "XPHB"
+          },
+          "equipmentId": "companion-choice-character-2024-starting-13",
+          "issuedQuantity": 1,
+          "consumedQuantity": 0,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 16,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 16,
+        "pp": 0
+      },
+      "spentCopper": 0
+    }
+  }
 }

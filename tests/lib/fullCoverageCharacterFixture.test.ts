@@ -429,8 +429,16 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       expect(feature.description).toBe('')
     }
     for (const item of character.equipment) {
-      expectCorpusReference(lookups.itemLookup, item.name, item.source)
-      expect(item.description).toBe('')
+      const lot = Object.values(character.startingEquipmentGrants ?? {})
+        .flatMap((grant) => grant.items)
+        .find((candidate) => candidate.equipmentId === item.id)
+      if (lot?.reference.kind === 'special') {
+        expect(item.name).toBe(lot.reference.name)
+        expect(item.source).toBeUndefined()
+      } else {
+        expectCorpusReference(lookups.itemLookup, item.name, item.source)
+      }
+      expect(item.description ?? '').toBe('')
     }
 
     const fixedSpellKeysByProfile = new Map(

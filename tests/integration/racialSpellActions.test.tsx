@@ -102,6 +102,7 @@ test.each([
   const parent = { name: 'Parent', source: 'PHB', subraces: [child] } as Race5e
   let saved = savedChoice(parent, child)
   saved.classProgression = [{ name: 'Bard', source: 'PHB', levels: 1 }]
+  saved.initialClass = { name: 'Bard', source: 'PHB' }
   const chosen = setManagedClassSpellChoiceCommand(
     saved,
     saved.provenance,
