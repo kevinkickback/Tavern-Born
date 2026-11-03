@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
+import { AutocompleteInput } from '@/components/ui/autocomplete-input'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -18,7 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { favoredEnemyOption } from '@/lib/5etools/favoredEnemyIdentity'
+import {
+  getSpokenLanguageSuggestions,
+  type SpokenLanguageSuggestions,
+} from '@/lib/5etools/spokenLanguageSuggestions'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import type { CharacterClassChoiceSelection, FavoredEnemySetup as Setup } from '@/types/character'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -28,56 +32,26 @@ export interface FavoredEnemySetupProps {
   removalOnly: boolean
   types: ClassChoiceOptionView[]
   languages: NormalizedChoiceOptionReference[]
+  suggestions?: SpokenLanguageSuggestions
   onConfirm: (selected: ClassChoiceOptionView[], setup: Setup) => void
   onClear: () => void
 }
 const title = (s: string) => s.replace(/^\p{L}/u, (c) => c.toUpperCase())
-function SetupSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  value: string
-  onChange: (s: string) => void
-  options: { name: string; value: string; disabled?: boolean }[]
-}) {
-  const id = useId()
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} aria-label={label}>
-          <SelectValue placeholder="Choose…" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
-              {o.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
+
 /** Compound campaign assertion adapter within the shared Class dialog and command workflow. */
 export function FavoredEnemySetup({
   selection,
   removalOnly,
   types,
   languages,
+  suggestions,
   onConfirm,
   onClear,
   onClose,
 }: FavoredEnemySetupProps & { onClose: () => void }) {
-  const confirmationId = useId()
+  const id = useId()
   const [mode, setMode] = useState<Setup['mode']>(selection?.favoredEnemy?.mode ?? 'type')
   const [names, setNames] = useState<string[]>(selection?.selected.map((o) => o.name) ?? [])
-  const [humanoidsConfirmed, setHumanoidsConfirmed] = useState(
-    !!selection?.favoredEnemy?.humanoidsConfirmed,
-  )
   const previousLanguage = selection?.favoredEnemy?.language
   const [language, setLanguage] = useState(
     previousLanguage?.kind === 'spoken'
@@ -86,21 +60,40 @@ export function FavoredEnemySetup({
         ? 'none'
         : 'pending',
   )
-  const [languageConfirmed, setLanguageConfirmed] = useState(!!previousLanguage)
-  const resetLanguage = () => {
-    setLanguage('pending')
-    setLanguageConfirmed(false)
-  }
-  const changeNames = (next: string[]) => {
+  const [showAll, setShowAll] = useState(false)
+  const matchingLanguages = (nextMode: Setup['mode'], next: string[]) =>
+    getSpokenLanguageSuggestions(
+      suggestions,
+      nextMode === 'type' ? { creatureType: next[0] } : { races: next },
+    )
+  const changeNames = (next: string[], nextMode = mode) => {
     setNames(next)
-    setHumanoidsConfirmed(false)
-    resetLanguage()
+    if (
+      nextMode === mode &&
+      next.length === names.length &&
+      next.every((name, i) => name.trim().toLowerCase() === names[i].trim().toLowerCase())
+    )
+      return
+    const complete =
+      nextMode === 'type'
+        ? types.some((o) => o.reference.name === next[0]?.trim().toLowerCase())
+        : next.length === 2 &&
+          next.every((n) => n.trim()) &&
+          next[0].trim().toLowerCase() !== next[1].trim().toLowerCase()
+    const matches = complete ? matchingLanguages(nextMode, next) : []
+    setLanguage(matches.length === 1 ? matches[0] : 'pending')
+    setShowAll(false)
   }
   const nonempty = names.map((n) => n.trim()).filter(Boolean)
   const duplicate = new Set(nonempty.map((n) => n.toLowerCase())).size !== nonempty.length
+  const validType = types.some((o) => o.reference.name === nonempty[0]?.toLowerCase())
   const enemiesComplete =
-    !duplicate &&
-    (mode === 'type' ? nonempty.length === 1 : nonempty.length === 2 && humanoidsConfirmed)
+    !duplicate && (mode === 'type' ? nonempty.length === 1 && validType : nonempty.length === 2)
+  const suggestedLanguages = enemiesComplete ? matchingLanguages(mode, names) : []
+  const restricted = !showAll && suggestedLanguages.length > 0
+  const visibleLanguages = languages.filter(
+    (o) => !restricted || suggestedLanguages.includes(o.name) || o.name === language,
+  )
   const unavailableLanguage =
     language !== 'pending' && language !== 'none' && !languages.some((o) => o.name === language)
   const confirm = () =>
@@ -112,8 +105,8 @@ export function FavoredEnemySetup({
       })),
       {
         mode,
-        ...(mode === 'humanoid-races' && humanoidsConfirmed ? { humanoidsConfirmed: true } : {}),
-        ...(enemiesComplete && languageConfirmed && language !== 'pending'
+        ...(mode === 'humanoid-races' && enemiesComplete ? { humanoidsConfirmed: true } : {}),
+        ...(enemiesComplete && !unavailableLanguage && language !== 'pending'
           ? {
               language:
                 language === 'none'
@@ -136,8 +129,8 @@ export function FavoredEnemySetup({
             Favored Enemy{selection ? ` — level ${selection.classLevel}` : ''}
           </DialogTitle>
           <DialogDescription>
-            Choose one creature type or two distinct humanoid races. Confirm campaign facts with
-            your DM; the app cannot verify a complete enemy race or spoken-language map.
+            Choose one creature type or two distinct humanoid races. Confirm saves your campaign
+            choices, including a language spoken by those enemies or explicitly no spoken language.
           </DialogDescription>
         </DialogHeader>
         {removalOnly ? (
@@ -147,107 +140,119 @@ export function FavoredEnemySetup({
           </p>
         ) : (
           <div className="space-y-4">
-            <SetupSelect
-              label="Enemy selection"
+            <Tabs
               value={mode}
-              onChange={(v) => {
-                setMode(v as Setup['mode'])
-                changeNames([])
+              activationMode="manual"
+              onValueChange={(value) => {
+                const next = value as Setup['mode']
+                setMode(next)
+                changeNames([], next)
               }}
-              options={[
-                { value: 'type', name: 'One creature type' },
-                { value: 'humanoid-races', name: 'Two humanoid races' },
-              ]}
-            />
-            {mode === 'type' ? (
-              <SetupSelect
-                label="Creature type"
-                value={names[0] ?? ''}
-                onChange={(v) => changeNames([v])}
-                options={types.map((o) => ({
-                  value: o.reference.name,
-                  name: title(o.reference.name),
-                }))}
-              />
-            ) : (
-              <>
-                {[0, 1].map((i) => (
-                  <div key={i} className="space-y-1.5">
-                    <Label htmlFor={`enemy-race-${i}`}>Humanoid race {i + 1}</Label>
-                    <Input
-                      id={`enemy-race-${i}`}
-                      value={names[i] ?? ''}
+            >
+              <TabsList aria-label="Enemy selection" className="h-auto w-full">
+                <TabsTrigger value="type" className="flex-1 whitespace-normal">
+                  One creature type
+                </TabsTrigger>
+                <TabsTrigger value="humanoid-races" className="flex-1 whitespace-normal">
+                  Two humanoid races
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value={mode}>
+                {mode === 'type' ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`${id}-type`}>Creature type</Label>
+                    <AutocompleteInput
+                      id={`${id}-type`}
+                      value={names[0] ?? ''}
+                      placeholder="Search creature types…"
                       maxLength={200}
-                      onChange={(e) => {
-                        const next = [names[0] ?? '', names[1] ?? '']
-                        next[i] = e.target.value
-                        changeNames(next)
-                      }}
+                      onChange={(e) => changeNames([e.target.value])}
+                      options={types.map((o) => ({ value: title(o.reference.name) }))}
                     />
+                    {nonempty.length > 0 && !validType && (
+                      <p className="text-sm text-destructive">Choose an available creature type.</p>
+                    )}
                   </div>
-                ))}
-                <label
-                  htmlFor={`${confirmationId}-races`}
-                  className="flex items-start gap-2 text-sm"
-                >
-                  <Checkbox
-                    id={`${confirmationId}-races`}
-                    checked={humanoidsConfirmed}
-                    disabled={nonempty.length !== 2 || duplicate}
-                    onCheckedChange={(v) => {
-                      setHumanoidsConfirmed(v === true)
-                      resetLanguage()
-                    }}
-                  />
-                  I confirm these identify two distinct humanoid races in this campaign.
-                </label>
-                {duplicate && (
-                  <p className="text-sm text-destructive">Choose two distinct humanoid races.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {[0, 1].map((i) => (
+                      <div key={i} className="space-y-1.5">
+                        <Label htmlFor={`${id}-race-${i}`}>Humanoid race {i + 1}</Label>
+                        <AutocompleteInput
+                          id={`${id}-race-${i}`}
+                          value={names[i] ?? ''}
+                          placeholder="Search races or enter a campaign race…"
+                          maxLength={200}
+                          onChange={(e) => {
+                            const next = [names[0] ?? '', names[1] ?? '']
+                            next[i] = e.target.value
+                            changeNames(next)
+                          }}
+                          options={(suggestions?.races ?? []).map((race) => ({
+                            value: race.name,
+                            label: `${race.name} (${race.source})`,
+                          }))}
+                        />
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground">
+                      Suggestions are not a complete list. You can enter a humanoid race from your
+                      campaign.
+                    </p>
+                    {duplicate && (
+                      <p className="text-sm text-destructive">
+                        Choose two distinct humanoid races.
+                      </p>
+                    )}
+                  </div>
                 )}
-              </>
-            )}
-            <SetupSelect
-              label="Associated language"
-              value={language}
-              onChange={(v) => {
-                setLanguage(v)
-                setLanguageConfirmed(false)
-              }}
-              options={[
-                { value: 'pending', name: 'Decide later' },
-                { value: 'none', name: 'These enemies speak no language' },
-                ...languages.map((o) => ({ value: o.name, name: title(o.name) })),
-                ...(unavailableLanguage
-                  ? [{ value: language, name: `${title(language)} (unavailable)`, disabled: true }]
-                  : []),
-              ]}
-            />
-            {language !== 'pending' && (
-              <label
-                htmlFor={`${confirmationId}-language`}
-                className="flex items-start gap-2 text-sm"
-              >
-                <Checkbox
-                  id={`${confirmationId}-language`}
-                  checked={languageConfirmed && enemiesComplete}
-                  disabled={!enemiesComplete || unavailableLanguage}
-                  onCheckedChange={(v) => setLanguageConfirmed(v === true)}
-                />
-                {language === 'none'
-                  ? 'I confirm these favored enemies speak no language in this campaign.'
-                  : 'I confirm this language is spoken by the chosen enemies (at least one race for a humanoid pair) and is allowed in this campaign.'}
-              </label>
-            )}
+              </TabsContent>
+            </Tabs>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${id}-language`}>Associated language</Label>
+              <Select value={language} onValueChange={setLanguage} disabled={!enemiesComplete}>
+                <SelectTrigger id={`${id}-language`} aria-label="Associated language">
+                  <SelectValue placeholder="Choose…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Decide later</SelectItem>
+                  <SelectItem value="none">These enemies speak no language</SelectItem>
+                  {visibleLanguages.map((o) => (
+                    <SelectItem key={o.name} value={o.name}>
+                      {title(o.name)}
+                    </SelectItem>
+                  ))}
+                  {unavailableLanguage && (
+                    <SelectItem value={language} disabled>
+                      {title(language)} (unavailable)
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {enemiesComplete && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    {suggestedLanguages.length > 0
+                      ? 'Suggestions come from the available data and may be incomplete.'
+                      : 'No spoken-language matches found. Choose from all available languages; no matches does not mean these enemies cannot speak.'}
+                  </p>
+                  {suggestedLanguages.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setShowAll(!showAll)}
+                    >
+                      {showAll ? 'Show suggested languages' : 'Show all languages'}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
-              An already known language can be recorded again; it grants no substitute language. If
-              the desired language is unavailable, retain pending setup and restore its source.
-              Changing enemies resets their language confirmation.
+              An already known language can be recorded again; it grants no substitute language.
+              Changing enemies updates language suggestions. Decide later saves partial setup.
             </p>
-            {!enemiesComplete && (
-              <p className="text-sm text-muted-foreground">
-                Enemy setup is incomplete. You can save partial progress.
-              </p>
-            )}
           </div>
         )}
         <DialogFooter>
@@ -258,7 +263,14 @@ export function FavoredEnemySetup({
             Cancel
           </Button>
           {!removalOnly && (
-            <Button onClick={confirm} disabled={duplicate}>
+            <Button
+              onClick={confirm}
+              disabled={
+                duplicate ||
+                (mode === 'type' && nonempty.length > 0 && !validType) ||
+                unavailableLanguage
+              }
+            >
               Confirm
             </Button>
           )}

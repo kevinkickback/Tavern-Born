@@ -29,6 +29,10 @@ for (const [label, file] of [
     test.skip(!existsSync(file), 'Configured external Ranger catalog is unavailable')
     const f = makeFavoredEnemyFixture(1, undefined, file),
       character = { ...f.character, name: `Favored Enemy ${label}` }
+    f.data.creatures = [{ name: 'Hill Giant', source: 'MM', type: 'giant', languages: ['Giant'] }]
+    f.data.races = [
+      { name: 'Elf', source: 'PHB', languageProficiencies: [{ common: true, elvish: true }] },
+    ]
     await page.goto('/')
     await seedAppState(page, {
       sourcePath: `e2e-favored-enemy-${label}`,
@@ -39,12 +43,34 @@ for (const [label, file] of [
     await page.reload()
     await selectCharacterFromHome(page, character.name)
     let draft = await open(page)
-    await select(page, 'Enemy selection', 'Two humanoid races')
+    await draft.getByRole('combobox', { name: 'Creature type' }).fill('Gia')
+    await expect(draft.getByRole('button', { name: 'Confirm', exact: true })).toBeDisabled()
+    await draft.getByRole('combobox', { name: 'Creature type' }).fill('Giant')
+    await expect(draft.getByRole('combobox', { name: 'Associated language' })).toContainText(
+      'Giant',
+    )
+    await draft.getByRole('combobox', { name: 'Associated language' }).click()
+    await expect(page.getByRole('option', { name: 'Common', exact: true })).toHaveCount(0)
+    await page.getByRole('option', { name: 'Giant', exact: true }).click()
+    await draft.getByRole('button', { name: 'Show all languages', exact: true }).click()
+    await select(page, 'Associated language', 'Elvish')
+    await draft.getByRole('button', { name: 'Cancel', exact: true }).click()
+    draft = await open(page)
+    await expect(draft.getByRole('combobox', { name: 'Creature type' })).toHaveValue('')
+    await draft.getByRole('tab', { name: 'One creature type' }).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(draft.getByRole('tab', { name: 'Two humanoid races' })).toBeFocused()
+    await draft.getByRole('tab', { name: 'Two humanoid races' }).press('Enter')
+    await expect(draft.getByRole('tab', { name: 'Two humanoid races' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await draft.getByRole('tab', { name: 'Two humanoid races' }).click()
+    await expect(draft.locator('datalist option[value="Elf"]').first()).toHaveCount(1)
     await draft.getByLabel('Humanoid race 1').fill('Gnoll')
     await draft.getByLabel('Humanoid race 2').fill('Orc')
-    await draft.getByRole('checkbox', { name: /two distinct humanoid races/ }).check()
     await select(page, 'Associated language', 'Common')
-    await draft.getByRole('checkbox', { name: /this language is spoken/ }).check()
+    await expect(draft.getByRole('checkbox')).toHaveCount(0)
     await draft.getByRole('button', { name: 'Confirm', exact: true }).click()
     await expect(draft).toHaveCount(0)
     await expect(page.getByRole('group', { name: 'Favored Enemy', exact: true })).toContainText(
@@ -73,9 +99,6 @@ for (const [label, file] of [
     draft = await open(page)
     await expect(draft.getByLabel('Humanoid race 2')).toHaveValue('Orc')
     await draft.getByLabel('Humanoid race 2').fill('Hobgoblin')
-    await expect(
-      draft.getByRole('checkbox', { name: /two distinct humanoid races/ }),
-    ).not.toBeChecked()
     await expect(draft.getByRole('combobox', { name: 'Associated language' })).toContainText(
       'Decide later',
     )

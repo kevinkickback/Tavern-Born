@@ -55,7 +55,10 @@ test('Review routes to shared compound setup; save partial, confirm pair/languag
   mount(f)
   fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
   await screen.findByRole('dialog')
-  await select('Enemy selection', 'Two humanoid races')
+  fireEvent.mouseDown(dialog().getByRole('tab', { name: 'Two humanoid races' }), {
+    button: 0,
+    ctrlKey: false,
+  })
   await confirm()
   expect(active().classChoiceSelections![0]).toMatchObject({
     selected: [],
@@ -69,9 +72,8 @@ test('Review routes to shared compound setup; save partial, confirm pair/languag
   await open()
   fireEvent.change(dialog().getByLabelText('Humanoid race 1'), { target: { value: 'Gnoll' } })
   fireEvent.change(dialog().getByLabelText('Humanoid race 2'), { target: { value: 'Orc' } })
-  fireEvent.click(dialog().getByRole('checkbox', { name: /two distinct humanoid races/ }))
   await select('Associated language', 'Common')
-  fireEvent.click(dialog().getByRole('checkbox', { name: /this language is spoken/ }))
+  expect(dialog().queryByRole('checkbox')).toBeNull()
   await confirm()
   const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(active())))
   expect(saved.classChoiceSelections![0].favoredEnemy).toEqual({
@@ -82,8 +84,11 @@ test('Review routes to shared compound setup; save partial, confirm pair/languag
   expect(saved.proficiencies.languages).toContain('common')
   expect(screen.getByRole('group', { name: 'Favored Enemy' }).textContent).toContain('1 / 1 chosen')
   await open()
-  await select('Enemy selection', 'One creature type')
-  await select('Creature type', 'Beast')
+  fireEvent.mouseDown(dialog().getByRole('tab', { name: 'One creature type' }), {
+    button: 0,
+    ctrlKey: false,
+  })
+  fireEvent.change(dialog().getByLabelText('Creature type'), { target: { value: 'Beast' } })
   await confirm()
   expect(active().classChoiceSelections![0].favoredEnemy).toEqual({ mode: 'type' })
   expect(active().proficiencies.languages).not.toContain('common')
@@ -115,4 +120,69 @@ test('source-unavailable intent has targeted recovery, exact restoration without
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(active().classChoiceSelections).toEqual([])
   expect(active().proficiencies.languages).not.toContain('common')
+})
+
+test('autocomplete, single suggestion, Show all and saved-language preservation use the actual Class command', async () => {
+  const f = makeFavoredEnemyFixture(1)
+  f.data.creatures = [
+    { name: 'Speech fixture', source: 'MM', type: { type: 'dragon' }, languages: ['Draconic'] },
+    { name: 'Disabled source fixture', source: 'FTD', type: 'dragon', languages: ['Common'] },
+  ]
+  f.data.races = [
+    { name: 'Elf', source: 'PHB', languageProficiencies: [{ common: true, elvish: true }] },
+  ]
+  mount(f)
+  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  await screen.findByRole('dialog')
+  const before = JSON.stringify(active())
+  const type = dialog().getByRole('combobox', { name: 'Creature type' })
+  expect(document.getElementById(type.getAttribute('list')!)?.textContent).toContain('Dragon')
+  fireEvent.change(type, { target: { value: 'Dra' } })
+  expect((dialog().getByRole('button', { name: 'Confirm' }) as HTMLButtonElement).disabled).toBe(
+    true,
+  )
+  fireEvent.change(type, { target: { value: 'Dragon' } })
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Draconic',
+  )
+  expect(JSON.stringify(active())).toBe(before)
+  fireEvent.click(dialog().getByRole('combobox', { name: 'Associated language' }))
+  expect(screen.queryByRole('option', { name: 'Common' })).toBeNull()
+  fireEvent.click(screen.getByRole('option', { name: 'Draconic' }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Show all languages' }))
+  await select('Associated language', 'Elvish')
+  await confirm()
+  expect(characterPersistenceSchema.parse(active()).classChoiceSelections![0].favoredEnemy).toEqual(
+    { mode: 'type', language: { kind: 'spoken', name: 'elvish' } },
+  )
+  await open()
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Elvish',
+  )
+  const saved = JSON.stringify(active())
+  await act(async () => useGameDataStore.setState({ gameData: { ...f.data, creatures: [] } }))
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Elvish',
+  )
+  expect(JSON.stringify(active())).toBe(saved)
+  fireEvent.mouseDown(dialog().getByRole('tab', { name: 'Two humanoid races' }), {
+    button: 0,
+    ctrlKey: false,
+  })
+  const race = dialog().getByLabelText('Humanoid race 1')
+  expect(document.getElementById(race.getAttribute('list')!)?.textContent).toContain('Elf (PHB)')
+  fireEvent.change(race, { target: { value: 'Elf' } })
+  fireEvent.change(dialog().getByLabelText('Humanoid race 2'), {
+    target: { value: 'Campaign people' },
+  })
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Decide later',
+  )
+  fireEvent.click(dialog().getByRole('combobox', { name: 'Associated language' }))
+  expect(screen.getByRole('option', { name: 'Common' })).toBeTruthy()
+  expect(screen.getByRole('option', { name: 'Elvish' })).toBeTruthy()
+  expect(screen.queryByRole('option', { name: 'Draconic' })).toBeNull()
+  fireEvent.click(screen.getByRole('option', { name: 'Common' }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
+  expect(JSON.stringify(active())).toBe(saved)
 })

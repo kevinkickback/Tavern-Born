@@ -12,6 +12,7 @@ import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
@@ -51,7 +52,7 @@ import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoo
 import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, Race5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry, FavoredEnemySetup } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
@@ -67,6 +68,7 @@ interface ClassChoiceControllerParams {
     'itemPropertyByAbbr' | 'itemTypeByAbbr' | 'weaponProficiencies'
   >
   configurationPaused?: boolean
+  races?: readonly Race5e[]
   onFeatOptionsRequired?: (feat: ClassChoiceCatalogs['feats'][number], choiceId: string) => void
 }
 
@@ -82,6 +84,7 @@ export function useClassChoiceController({
   catalogs,
   onFeatOptionsRequired,
   configurationPaused = false,
+  races,
 }: ClassChoiceControllerParams) {
   const sourceData = useGameDataStore((state) => state.gameData)
   const character = useMemo(
@@ -129,6 +132,13 @@ export function useClassChoiceController({
     contextKey: string
     catalogs: typeof catalogs
   } | null>(null)
+  const enemySuggestions = useMemo(
+    () =>
+      request?.id && decodeFavoredEnemyChoiceId(request.id)
+        ? buildSpokenLanguageSuggestions(catalogs.creatures, races ?? [], catalogs.languages ?? [])
+        : undefined,
+    [request?.id, catalogs.creatures, races, catalogs.languages],
+  )
   const choices = useMemo(
     () =>
       viewingClassData && activity
@@ -523,6 +533,7 @@ export function useClassChoiceController({
         ? {
             selection: activeSaved?.selection,
             removalOnly: activeRemovalOnly,
+            suggestions: enemySuggestions,
             types: activeOptionViews.filter(
               (v) =>
                 v.availability === 'eligible' &&

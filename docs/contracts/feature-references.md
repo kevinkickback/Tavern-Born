@@ -221,8 +221,19 @@ do not contain a complete enemy race/language ontology: creature tags can combin
 player races are incomplete, and language metadata can include understood-only languages. Players
 therefore confirm the two authored race labels and their associated spoken language, or explicitly
 confirm that the selected enemies speak none. A language spoken by at least one race in a pair
-satisfies the association. A missing match never establishes none. The initial picker uses the
-current filtered language vocabulary; it does not create custom languages or certify campaign legality.
+satisfies the association. A missing match never establishes none. The picker uses the current
+filtered language vocabulary; it does not create custom languages or certify campaign legality.
+The dialog's Confirm action records these campaign assertions without separate checkboxes.
+
+Searchable type options remain source-derived; editable race suggestions preserve campaign names.
+Advisory language suggestions use bare spoken-language names from current copy-resolved, filtered
+creatures, or fixed language declarations on matching race names. Same-name race printings can
+contribute suggestions without creating a saved race-printing reference. Search tags, telepathy,
+comprehension-only text and unresolved language prose do not authorize suggestions. One match is
+preselected when enemies change; multiple matches form the initial list, with Show all languages
+always available. No matches offers the full current vocabulary, not an automatic none. Suggestions
+are memoized for the current catalogs, never persisted as eligibility. Existing saved/manual language
+intent survives suggestion changes; unavailable vocabulary retains the existing recovery semantics.
 
 The shared Class workflow saves one `feature-literals:` actual-owner/base-pool/family/gain/earned-level
 relation. Existing source-group references distinguish declared type tokens from explicitly
