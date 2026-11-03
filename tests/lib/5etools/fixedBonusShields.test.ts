@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { generateFixedBonusShields } from '@/lib/5etools/fixedBonusShields'
 import { getRawItems } from '@/lib/5etools/itemEntries'
 import {
   fixedShieldTemplates,
@@ -37,6 +38,41 @@ test('six literal concrete identities retain physical AC, own prose and source n
   expect(data.items.filter((x) => x.magicVariantReference)).toHaveLength(6)
   expect(getRawItems(data).items).toEqual([])
   expect(getRawItems(structuredClone(data)).items).toEqual([])
+})
+
+test('only known own collection metadata is admitted on fixed-shield bases and generated shields remain Other', async () => {
+  for (const category of ['Basic', 'Other']) {
+    const data = await loadFixedShields(
+      fixedShieldTemplates,
+      shieldBases.map((base) => ({ ...base, startingEquipmentCategory: category })),
+    )
+    // The real parser owns the collection marker even if source JSON claims another value.
+    expect(data.items.filter((item) => item.magicVariantGenerated)).toHaveLength(6)
+    expect(
+      data.items
+        .filter((item) => item.magicVariantGenerated)
+        .every((item) => item.startingEquipmentCategory === 'Other'),
+    ).toBe(true)
+  }
+})
+
+test.each([
+  null,
+  undefined,
+  'basic',
+  'Unknown',
+  1,
+])('an invalid own shield category fails closed: %s', (category) => {
+  const result = generateFixedBonusShields(
+    makeGameDataFixture({
+      fixedShieldBases: shieldBases.map((base) => ({
+        ...base,
+        startingEquipmentCategory: category,
+      })),
+    }),
+    fixedShieldTemplates,
+  )
+  expect(result.items).toEqual([])
 })
 
 test.each([
@@ -145,7 +181,7 @@ test('winning recursive exclusions and requirements survive cache and exact rest
   for (const data of [removed, composeGameDataLayers([structuredClone(removed)])]) {
     expect(data.items.filter((x) => x.magicVariantGenerated)).toEqual([])
     expect(data.fixedShieldDiagnostics).toEqual([])
-    expect(data.fixedShieldBases).toEqual([base])
+    expect(data.fixedShieldBases).toEqual([{ ...base, startingEquipmentCategory: 'Basic' }])
     expect(getRawItems(data).items).toEqual([])
   }
   const restored = composeGameDataLayers([

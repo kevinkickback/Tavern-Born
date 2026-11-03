@@ -9,10 +9,12 @@ import {
   resolveBackgroundStartingEquipmentPackage,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import { buildCompendiumEntries } from '@/lib/compendiumEntries'
 import { buildRecursiveLookup, getRecursiveTooltipData } from '@/lib/renderer/recursiveTooltip'
 import type { Item5e } from '@/types/5etools'
+import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { loadMagicTemplates, shieldTemplate } from '../../fixtures/magicVariantFixtures'
 
 describe('canonical magic template authority', () => {
@@ -461,8 +463,9 @@ describe('canonical magic template authority', () => {
           inherits: { source: 'PHB', weaponCategory: 'simple', scfType: 'arcane' },
         },
       ],
-      [{ name: 'Dagger', source: 'PHB', type: 'M', weaponCategory: 'simple' }],
+      [],
       {
+        baseitem: [{ name: 'Dagger', source: 'PHB', type: 'M', weaponCategory: 'simple' }],
         itemEntry: [{ name: 'Shared', source: 'DMG', entriesTemplate: ['Shared rules.'] }],
         itemType: [
           { abbreviation: 'GV', source: 'DMG', name: 'Generic variant', entries: ['Primary.'] },
@@ -473,12 +476,28 @@ describe('canonical magic template authority', () => {
     expect(barding).toMatchObject({ type: 'GV|DMG', entries: ['Shared rules.'] })
     expect(barding.primaryItemTypeText?.entries).toEqual(['Primary.'])
     expect(isSelectableEquipmentItem(barding)).toBe(false)
-    const lookup = buildItemLookup(data.items)
-    const selected = resolveEquipmentWithBlockChoices(
-      [{ _: [{ equipmentType: 'weaponSimple' }] }],
-      lookup,
-      [],
+    const items = [...data.items, ...data.itemsBase]
+    const lookup = buildItemLookup(items)
+    const blocks = [{ _: [{ equipmentType: 'weaponSimple' }] }]
+    const policy = createStartingEquipmentPolicy(
+      makeCharacterFixture(),
+      {
+        name: 'Fixture',
+        source: 'PHB',
+        kind: 'background',
+        entries: [
+          {
+            name: 'Equipment:',
+            entries: [
+              '{@filter simple weapons|items|source=phb|category=basic|type=simple weapon}',
+            ],
+          },
+        ],
+      },
+      blocks,
+      items,
     )
+    const selected = resolveEquipmentWithBlockChoices(blocks, lookup, [], {}, policy)
     expect(selected.genericChoices?.[0].candidates).toEqual([{ name: 'Dagger', source: 'PHB' }])
     const exact = resolveBackgroundStartingEquipmentPackage(
       [{ _: ['Template Weapon|PHB'] }],

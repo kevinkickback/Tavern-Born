@@ -47,6 +47,8 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
     spells: [],
     classes: [],
     classFeatures: [],
+    items: [],
+    itemsBase: [],
   }),
 }))
 

@@ -6,12 +6,31 @@ import {
   createStartingEquipmentPolicy,
   getStartingEquipmentCandidates,
 } from '@/lib/5etools/startingEquipmentPolicy'
-import { isMundaneStartingItem } from '@/lib/5etools/startingItemCategory'
+import {
+  isMundaneStartingItem,
+  preserveStartingItemCategories,
+} from '@/lib/5etools/startingItemCategory'
 import { clearGameDataCache, readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 
 afterEach(clearGameDataCache)
+
+test('an unmarked child cannot inherit Basic and absent collection evidence stays absent', () => {
+  const unmarked = { name: 'Child', source: 'PHB' } as Item5e
+  const inherited = Object.assign(
+    Object.create({ startingEquipmentCategory: 'Basic' }),
+    unmarked,
+  ) as Item5e
+  for (const input of [unmarked, inherited]) {
+    const result = preserveStartingItemCategories(
+      [input],
+      [{ ...input, startingEquipmentCategory: 'Basic' }],
+    )[0]
+    expect(Object.getOwnPropertyDescriptor(result, 'startingEquipmentCategory')).toBeUndefined()
+    expect(isMundaneStartingItem(result)).toBe(false)
+  }
+})
 
 test('Basic follows the own collection through copy mods, a real cache round trip and winning layers', async () => {
   const layer = createEmptyGameData()
@@ -42,7 +61,7 @@ test('Basic follows the own collection through copy mods, a real cache round tri
   expect(isMundaneStartingItem(composed.items[0])).toBe(true)
   await writeGameDataCache(composed, { type: 'local', path: '/starting-items', isValid: true })
   const cached = await readGameDataCache()
-  expect(cached?.cacheSchemaVersion).toBe(63)
+  expect(cached?.cacheSchemaVersion).toBe(64)
   const restored = composeGameDataLayers([structuredClone(cached!.data)])
   const all = [...restored.items, ...restored.itemsBase]
   const character = makeCharacterFixture()

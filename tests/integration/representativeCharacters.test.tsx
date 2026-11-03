@@ -181,7 +181,7 @@ describe('representative character consumers', () => {
       classChoiceClasses: fixture.gameData.classes,
       classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(fixture.gameData),
     }
-    const calculation = createCharacterCalculationContext(fixture.character, lookups)
+    const calculation = createCharacterCalculationContext(fixture.character, lookups, lookups)
     const viewModel = createCurrentCharacterSheetViewModel(fixture.character, lookups)
     const prerequisiteSnapshot = buildPrerequisiteSnapshot({
       character: fixture.character,
@@ -205,8 +205,33 @@ describe('representative character consumers', () => {
       checkPrerequisite(fixture.prerequisite, prerequisiteSnapshot, fixture.prerequisiteOptions)
         .met,
     ).toBe(true)
-    expect(readiness.blockingIssues).toEqual([])
-    expect(readiness.status).toBe('ready')
+    // These casting fixtures retain actual Class packages without their equipment catalogs.
+    const missingStartingRules: Record<string, string> = {
+      '2014-elf-wizard':
+        "Restore the exact item rules for quarterstaff. Restore the exact item rules for component pouch. Restore the exact item rules for scholar's pack.",
+      'multiclass-spellcaster':
+        "Restore the exact item rules for quarterstaff. Restore the exact item rules for component pouch. Restore the exact item rules for scholar's pack.",
+      '2024-cleric':
+        'Restore the exact item rules for chain shirt. Restore the exact item rules for shield. Restore the exact item rules for mace.',
+      '2024-druid':
+        'Restore the exact item rules for leather armor. Restore the exact item rules for shield. Restore the exact item rules for sickle.',
+    }
+    const explanation = missingStartingRules[fixture.id]
+    expect(readiness.blockingIssues).toEqual(
+      explanation
+        ? [
+            {
+              id: 'starting-equipment:class',
+              section: 'class',
+              severity: 'blocking',
+              title: 'Finish Class starting equipment',
+              explanation,
+              navigationTarget: '/build/class?attention=starting-equipment%3Aclass',
+            },
+          ]
+        : [],
+    )
+    expect(readiness.status).toBe(explanation ? 'incomplete' : 'ready')
     expect(snapshot.readiness?.blockingIssues).toEqual(readiness.blockingIssues)
     expect(snapshot.readiness?.status).toBe(readiness.status)
 
@@ -237,7 +262,9 @@ describe('representative character consumers', () => {
       String(fixture.expected.walkingSpeed),
     )
     await user.click(screen.getByRole('tab', { name: /Needs attention/i }))
-    expect(screen.getByText('Character is ready')).toBeTruthy()
+    expect(
+      screen.getByText(explanation ? 'Character needs attention' : 'Character is ready'),
+    ).toBeTruthy()
 
     expect(snapshot.profileIds).toEqual(fixture.expected.profileIds)
     expect(snapshot.sharedSlots).toEqual(fixture.expected.sharedSlots)

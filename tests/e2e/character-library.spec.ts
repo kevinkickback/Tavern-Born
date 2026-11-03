@@ -23,6 +23,7 @@ function loadLibraryCharacters(): Record<string, unknown>[] {
       id: 'library-bravo',
       name: 'Bravo Mage',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      initialClass: { name: 'Wizard', source: 'PHB' },
       lastModified: '2026-01-03T00:00:00.000Z',
     },
   ]

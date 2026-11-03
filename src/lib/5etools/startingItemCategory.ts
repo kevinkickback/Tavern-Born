@@ -5,11 +5,19 @@ export function preserveStartingItemCategories(
   raw: readonly Item5e[],
   resolved: readonly Item5e[],
 ): Item5e[] {
-  return resolved.map((item, index) => ({
-    ...item,
-    startingEquipmentCategory:
-      raw[index]?.startingEquipmentCategory === 'Basic' ? 'Basic' : 'Other',
-  }))
+  return resolved.map((item, index) => {
+    const ownCategory = Object.getOwnPropertyDescriptor(
+      raw[index] ?? {},
+      'startingEquipmentCategory',
+    )
+      ? raw[index]?.startingEquipmentCategory
+      : undefined
+    const result = { ...item }
+    if (ownCategory === 'Basic' || ownCategory === 'Other')
+      result.startingEquipmentCategory = ownCategory
+    else delete result.startingEquipmentCategory
+    return result
+  })
 }
 
 /** Data-only adaptation of Renderer.item.isMundane, pinned 5etools b90615835361. */

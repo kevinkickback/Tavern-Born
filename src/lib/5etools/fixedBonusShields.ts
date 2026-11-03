@@ -49,6 +49,7 @@ const BASE_FIELDS = new Set([
   'entries',
   'hasFluff',
   'hasFluffImages',
+  'startingEquipmentCategory',
 ])
 const TEMPLATE_FIELDS = new Set([
   'name',
@@ -120,6 +121,9 @@ function validBase(row: Row, source: string): boolean {
     row.source === source &&
     validMetadata(row) &&
     Object.keys(row).every((k) => BASE_FIELDS.has(k)) &&
+    (!Object.getOwnPropertyDescriptor(row, 'startingEquipmentCategory') ||
+      row.startingEquipmentCategory === 'Basic' ||
+      row.startingEquipmentCategory === 'Other') &&
     row.type === (source === 'PHB' ? 'S' : 'S|XPHB') &&
     row.edition === (source === 'PHB' ? 'classic' : 'one') &&
     row.rarity === 'none' &&

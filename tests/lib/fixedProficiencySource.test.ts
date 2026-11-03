@@ -7,6 +7,12 @@ import {
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { resolveCopiedRecords } from '@/lib/5etools/copyResolution'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/fixedProficiencySource'
+import { retainRawItems } from '@/lib/5etools/itemEntries'
+import { parseItems } from '@/lib/5etools/parsers/basic'
+import {
+  createStartingEquipmentPolicy,
+  getStartingEquipmentCandidates,
+} from '@/lib/5etools/startingEquipmentPolicy'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { preserveToolSourcePresentation } from '@/lib/5etools/toolProficiencySource'
 import {
@@ -15,6 +21,7 @@ import {
 } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { GameData, Item5e } from '@/types/5etools'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeFixedSourceData, makeFixedSourceLayer } from '../fixtures/fixedProficiencyFixtures'
 
 const toolRef = 'Tool Expertise|Artificer|TCE|6'
@@ -177,6 +184,70 @@ test('actual concrete mundane tools qualify; inherited magic and enchanted copy 
     assessConcreteToolProficiency({ name: 'A tool', source: 'PHB', type: 'T', rarity: 'none' })
       .kind,
   ).toBe('unsupported')
+})
+
+test('parser-owned categories preserve tool semantics and bind exact metadata through cache restoration', () => {
+  const layer = makeFixedSourceLayer()
+  layer.items = parseItems({ item: layer.items }) as Item5e[]
+  layer.itemsBase = parseItems({ baseitem: layer.itemsBase }) as Item5e[]
+  retainRawItems(layer)
+  const data = composeGameDataLayers([layer])
+  const ordinary = tool(data, "Alchemist's Supplies", 'PHB')
+  expect(ordinary.startingEquipmentCategory).toBe('Basic')
+  expect(assessConcreteToolProficiency(ordinary).kind).toBe('eligible')
+  expect(
+    assessConcreteToolProficiency(tool(data, 'Enchanted Three-Dragon Ante Set', 'LLK')).kind,
+  ).toBe('ineligible')
+  const reopened = composeGameDataLayers([JSON.parse(JSON.stringify(data))])
+  expect(tool(reopened, "Alchemist's Supplies", 'PHB').startingEquipmentCategory).toBe('Basic')
+  expect(assessConcreteToolProficiency(tool(reopened, "Alchemist's Supplies", 'PHB')).kind).toBe(
+    'eligible',
+  )
+  for (const change of ['raw', 'current', 'absent'] as const) {
+    const altered = structuredClone(ordinary)
+    if (change === 'current') altered.startingEquipmentCategory = 'Other'
+    else {
+      const audit = altered.toolProficiencySourceAudit as { raw: Item5e }
+      if (change === 'raw') audit.raw.startingEquipmentCategory = 'Other'
+      else delete audit.raw.startingEquipmentCategory
+    }
+    expect(assessConcreteToolProficiency(altered).kind).toBe('unsupported')
+  }
+})
+
+test('an invalid cached tool audit cannot promote Other to Basic when composition restores raw inputs', () => {
+  const layer = makeFixedSourceLayer()
+  layer.items = parseItems({ item: layer.items }) as Item5e[]
+  layer.itemsBase = parseItems({ baseitem: layer.itemsBase }) as Item5e[]
+  retainRawItems(layer)
+  const original = composeGameDataLayers([layer])
+  const cached = JSON.parse(JSON.stringify(original)) as GameData
+  const current = tool(cached, 'Whistle-Stick', 'OGA')
+  expect(current.startingEquipmentCategory).toBe('Other')
+  expect(assessConcreteToolProficiency(current).kind).toBe('eligible')
+  current.startingEquipmentCategory = 'Basic'
+  expect(assessConcreteToolProficiency(current).kind).toBe('unsupported')
+  const reopened = composeGameDataLayers([cached])
+  expect(tool(reopened, 'Whistle-Stick', 'OGA').startingEquipmentCategory).toBeUndefined()
+  const policy = createStartingEquipmentPolicy(
+    makeCharacterFixture(),
+    { kind: 'class', name: 'Fighter', source: 'PHB' },
+    { default: ['{@filter instrument|items|source=OGA|category=basic|type=instrument}'] },
+    [...reopened.items, ...reopened.itemsBase],
+    undefined,
+    { INS: 'Instrument' },
+  )
+  expect(
+    getStartingEquipmentCandidates(policy, 0, 'instrumentMusical', undefined, {
+      option: '_',
+      entry: 0,
+    }).candidates,
+  ).toEqual([])
+  const restored = composeGameDataLayers([reopened, layer])
+  expect(tool(restored, 'Whistle-Stick', 'OGA').startingEquipmentCategory).toBe('Other')
+  expect(assessConcreteToolProficiency(tool(restored, 'Whistle-Stick', 'OGA')).kind).toBe(
+    'eligible',
+  )
 })
 test('cache reopen preserves actual raw copy proof; missing proof cannot infer a mundane direct source', () => {
   const { data } = makeFixedSourceData()
