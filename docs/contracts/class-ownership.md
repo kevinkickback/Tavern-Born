@@ -11,6 +11,21 @@ Mystic talent, discipline and order-bonus selections use the same Class-choice o
 current-benefit projection. Their distinct catalog, saved relation and setup limits are described
 in [psionic setup](psionic-selection.md).
 
+Legacy College of Swords and Way of the Kensei setup retain their declaring XGE subclass owner
+and exact PHB targets under either PHB or XPHB parents. Their qualified dependency catalogs are
+limited to these Class choices; they do not enable PHB sources, ordinary inventory options or
+conversion to revised feats. Swords uses its explicit two-option Fighting Style list and one quota.
+
+Kensei uses separate initial melee/ranged weapon-type choices, later distinct weapon choices and
+the declared tools choice. Canonical PHB M/R weapon types share the source filter and explicit
+longbow exception; staff focus records do not create additional types beside Quarterstaff.
+Saved item references and earned slots identify intent. A finite relation validates those fields
+and their proficiency provenance; current exact owner/path/target authority activates weapon/tool
+proficiencies in the shared foundation before Expertise. Clear, source loss and owner/gain removal
+retract only this provider. Independent providers survive; valid missing-source intent remains
+recoverable. These choices add no inventory or Weapon Mastery and do not automate attack effects
+or gameplay replacement events. Changed or conflicting unqualified prose remains diagnostic.
+
 ### Individual optional class features
 
 The Rules setting permits optional choices; it never selects them. Class records individual

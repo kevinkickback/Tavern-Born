@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { DataFilter } from '@/lib/5etools/filters'
+import { buildLegacySubclassChoiceCatalogs } from '@/lib/5etools/legacySubclassChoices'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { buildSuppressedKeys, collectReprintableEntities } from '@/lib/5etools/reprints'
 import {
@@ -85,6 +86,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         ...gameData,
         races,
         classes,
+        legacySubclassChoices: buildLegacySubclassChoiceCatalogs(gameData, classes),
         backgrounds,
         organizations,
         spells,
@@ -110,6 +112,11 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const legacyFeatKeys = originSystem === '2024' ? XPHB_LEGACY_FEAT_KEYS : undefined
     const legacySubclassKeys = originSystem === '2024' ? XPHB_LEGACY_SUBCLASS_KEYS : undefined
 
+    const filteredClasses = DataFilter.filterClasses(classes, {
+      sources: compatibleAllowedSources,
+      suppressedKeys,
+      allowedSubclassKeys: legacySubclassKeys,
+    })
     return cacheFilteredData(gameData, cacheKey, {
       ...gameData,
       races: DataFilter.filterRaces(races, {
@@ -122,11 +129,8 @@ export function useFilteredGameDataParams(params: FilterParams) {
           (source) => source.toUpperCase() === row.source.toUpperCase(),
         ),
       ),
-      classes: DataFilter.filterClasses(classes, {
-        sources: compatibleAllowedSources,
-        suppressedKeys,
-        allowedSubclassKeys: legacySubclassKeys,
-      }),
+      classes: filteredClasses,
+      legacySubclassChoices: buildLegacySubclassChoiceCatalogs(gameData, filteredClasses),
       backgrounds: DataFilter.filterBackgrounds(backgrounds, {
         sources: compatibleAllowedSources,
         suppressedKeys,

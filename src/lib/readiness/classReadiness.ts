@@ -108,7 +108,12 @@ export function validateClassChoices(
   )
   for (const state of featureOptionStates.filter(
     (row) =>
-      (row.storm || row.literalGroup || row.proficiency || row.optionalPool || row.psionic) &&
+      (row.storm ||
+        row.literalGroup ||
+        row.proficiency ||
+        row.optionalPool ||
+        row.psionic ||
+        row.legacySubclass) &&
       row.owner &&
       row.recovery,
   )) {

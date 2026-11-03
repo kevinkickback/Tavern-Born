@@ -18,6 +18,7 @@ import {
   hasCompleteEnemyAllocation,
   isValidFavoredEnemySelection,
 } from './favoredEnemyValidation'
+import { isKenseiProficiencyTag } from './legacySubclassChoiceValidation'
 
 export function isValidClassProficiencySelection(
   selection: CharacterClassChoiceSelection,
@@ -99,8 +100,9 @@ export function getOwnedClassProficiencyOptions(s: CharacterClassChoiceSelection
     : []
 }
 export const isClassProficiencyTag = (tag: SourceTag) =>
-  !!tag.grantVariant &&
-  (isClassProficiencyChoiceId(tag.grantVariant) || isFeatureLiteralChoiceId(tag.grantVariant))
+  isKenseiProficiencyTag(tag) ||
+  (!!tag.grantVariant &&
+    (isClassProficiencyChoiceId(tag.grantVariant) || isFeatureLiteralChoiceId(tag.grantVariant)))
 
 export function getInvalidClassProficiencySelectionIds(
   selections: readonly CharacterClassChoiceSelection[],
@@ -162,7 +164,7 @@ export function getInvalidClassProficiencyPaths(
   }
   for (const [domain, values] of Object.entries(character.provenance?.proficiencies ?? {})) {
     for (const [name, tags] of Object.entries(values as Record<string, SourceTag[]>)) {
-      const owned = tags.filter(isClassProficiencyTag)
+      const owned = tags.filter((tag) => isClassProficiencyTag(tag) && !isKenseiProficiencyTag(tag))
       const seen = new Set<string>()
       for (const tag of owned) {
         const selection = selections.get(tag.grantVariant!)

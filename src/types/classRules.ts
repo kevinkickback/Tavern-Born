@@ -1,3 +1,14 @@
+import type { Item5e, OptionalFeatureLike } from './5etools'
+
+/** Character-choice-only targets; these never expand ordinary item or optional-feature catalogs. */
+export interface LegacySubclassChoiceCatalog {
+  ownerKey: string
+  items: readonly Item5e[]
+  optionalFeatures: readonly OptionalFeatureLike[]
+  itemPropertyByAbbr: Readonly<Record<string, string>>
+  itemTypeByAbbr: Readonly<Record<string, string>>
+}
+
 export type NormalizedCharacterChoiceKind =
   | 'class-feature'
   | 'subclass-feature'

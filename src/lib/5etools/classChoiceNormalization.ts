@@ -131,7 +131,7 @@ function countsFromLevel(level: number, count: number): number[] {
   return Array.from({ length: LEVEL_COUNT }, (_, index) => (index + 1 >= level ? count : 0))
 }
 
-function normalizeProgression(progression: OptFeatureProg['progression']): number[] {
+export function normalizeProgression(progression: OptFeatureProg['progression']): number[] {
   if (Array.isArray(progression)) {
     return Array.from({ length: LEVEL_COUNT }, (_, index) => {
       const value = progression[index]
@@ -440,7 +440,7 @@ function inferFilteredChoiceCount(text: string, label: string): number | undefin
   return leadingSelection?.[1] ? parsePositiveCount(leadingSelection[1]) : undefined
 }
 
-function inferSelectionCounts(text: string, level: number, initialCount: number): number[] {
+export function inferSelectionCounts(text: string, level: number, initialCount: number): number[] {
   const gains = new Map<number, number>([[level, initialCount]])
   const searchableText = toSearchableText(text)
   for (const match of searchableText.matchAll(

@@ -2,6 +2,7 @@ import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyId
 import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
+import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import {
   buildSubclassLookup,
   getEntityLookupKey,
@@ -222,7 +223,9 @@ export function buildRetainedCharacterDetails(
             : undefined
         details[index] = entity
           ? {
-              availability,
+              availability: decodeLegacySubclassChoice(choice.choiceId)
+                ? 'source-unavailable'
+                : availability,
               entries:
                 option.entityType === 'psionic'
                   ? getPsionicEntries(entity as Psionic5e)

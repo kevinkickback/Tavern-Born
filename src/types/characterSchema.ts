@@ -25,6 +25,7 @@ import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVe
 import { getInvalidClassProficiencyPaths } from '@/lib/schema/classProficiencyValidation'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
 import { getInvalidFixedProficiencyPaths } from '@/lib/schema/fixedProficiencyValidation'
+import { getInvalidLegacySubclassChoicePaths } from '@/lib/schema/legacySubclassChoiceValidation'
 import { getInvalidManagedClassSpellPaths } from '@/lib/schema/managedClassSpellValidation'
 import { getInvalidPsionicPaths } from '@/lib/schema/psionicValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
@@ -1008,6 +1009,12 @@ export const characterSchema = z
         code: 'custom',
         path,
         message: 'Invalid source-owned fixed proficiency relation.',
+      })
+    for (const path of getInvalidLegacySubclassChoicePaths(char as Character))
+      ctx.addIssue({
+        code: 'custom',
+        path,
+        message: 'Invalid source-owned subclass selection relation.',
       })
     for (const path of getInvalidPsionicPaths(char as Character))
       ctx.addIssue({

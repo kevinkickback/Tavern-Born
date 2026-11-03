@@ -11,6 +11,7 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
+import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
@@ -198,7 +199,8 @@ export function useClassChoiceController({
         state.literalGroup ||
         state.proficiency ||
         state.optionalPool ||
-        state.psionic
+        state.psionic ||
+        state.legacySubclass
       )
         return (
           !!state.owner &&
@@ -380,7 +382,9 @@ export function useClassChoiceController({
         retainSavedFeatureOptions(
           activeSaved.selection.choiceId,
           keys,
-          activeSaved.optionalPool || activeSaved.psionic ? request?.savedHandle : undefined,
+          activeSaved.optionalPool || activeSaved.psionic || activeSaved.legacySubclass
+            ? request?.savedHandle
+            : undefined,
         )
       } catch (error) {
         toast.error(
@@ -436,6 +440,11 @@ export function useClassChoiceController({
         applyClassChoiceSelection(
           current,
           confirmedSelections.map((option) => option.reference),
+          undefined,
+          decodeLegacySubclassChoice(current.id)
+            ? (request?.savedHandle ??
+                (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
+            : undefined,
         )
       }
     } catch (error) {
@@ -619,7 +628,7 @@ export function useClassChoiceController({
               savedHandle:
                 saved && getOptionalClassPoolSelectionSection(saved)
                   ? getOptionalPoolSelectionHandle(saved)
-                  : decodeFavoredEnemyChoiceId(choice.id)
+                  : decodeFavoredEnemyChoiceId(choice.id) || decodeLegacySubclassChoice(choice.id)
                     ? saved
                       ? getOptionalPoolSelectionHandle(saved)
                       : ''
@@ -636,7 +645,7 @@ export function useClassChoiceController({
               id: state.selection.choiceId,
               contextKey,
               savedHandle:
-                state.optionalPool || state.enemy || state.psionic
+                state.optionalPool || state.enemy || state.psionic || state.legacySubclass
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

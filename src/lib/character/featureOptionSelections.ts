@@ -34,6 +34,7 @@ import {
   describeFavoredEnemyLanguage,
   getFavoredEnemySelectionStates,
 } from './favoredEnemySelections'
+import { getLegacySubclassSelectionStates } from './legacySubclassSelections'
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery'
@@ -61,6 +62,7 @@ export interface FeatureOptionSelectionState {
   proficiency?: { domain: ClassProficiencyDomain }
   optionalPool?: boolean
   psionic?: boolean
+  legacySubclass?: boolean
 }
 
 function affinityRules(
@@ -212,6 +214,7 @@ export function getFeatureOptionSelectionStates(
     })
   return [
     ...literal,
+    ...getLegacySubclassSelectionStates(character, classes, catalogs),
     ...getPsionicRecoveryStates(character, classes, catalogs),
     ...getStormAuraSelectionStates(character, classes, catalogs),
     ...getNaturalExplorerSelectionStates(character, classes, catalogs),

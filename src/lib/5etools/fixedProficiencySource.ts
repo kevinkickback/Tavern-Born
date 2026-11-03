@@ -5,7 +5,11 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from './classFeatureIdentity'
-import { CONDITIONAL_PROFICIENCY_RULES } from './conditionalProficiencyRules'
+import {
+  CONDITIONAL_OPTIONAL_CERTIFICATES,
+  CONDITIONAL_PROFICIENCY_RULES,
+} from './conditionalProficiencyRules'
+import { getConditionalOptionalIdentity } from './conditionalProficiencySource'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   DIRECT_FIXED_CLASS_CERTIFICATES,
@@ -151,15 +155,33 @@ export function auditDirectFixedClassDeclarations(
   })
 }
 
+const conditionalOptionalTargets = new Set(
+  CONDITIONAL_OPTIONAL_CERTIFICATES.map((row) => row.target),
+)
 /** Same-layer duplicates must stay invalid even if a later Map would otherwise pick one. */
 export function auditFixedLayerMultiplicity<T extends object>(
   records: readonly T[],
-  kind: 'classes' | 'classFeatures',
+  kind: 'classes' | 'classFeatures' | 'named' | 'optionalFeatures',
 ): T[] {
-  const identity = (row: T) =>
-    kind === 'classes' ? ownerKey(row as Record<string, unknown>) : getClassFeatureIdentity(row)
+  const identity = (row: T) => {
+    if (kind === 'classes') return ownerKey(row as Record<string, unknown>)
+    if (kind === 'classFeatures') return getClassFeatureIdentity(row)
+    // Conditional certificates already distinguish raw producers from agreeing enrichment mirrors.
+    if (
+      kind === 'optionalFeatures' &&
+      conditionalOptionalTargets.has(getConditionalOptionalIdentity(row) ?? '')
+    )
+      return undefined
+    const record = row as Record<string, unknown> | null
+    return record && typeof record.name === 'string' && typeof record.source === 'string'
+      ? JSON.stringify([record.name.trim().toLowerCase(), record.source.trim().toLowerCase()])
+      : undefined
+  }
   const known = (key: string | undefined) =>
-    !!key && (kind === 'classes' ? directOwners.has(key) : directFeatures.has(key))
+    !!key &&
+    (kind === 'classes'
+      ? directOwners.has(key)
+      : kind === 'classFeatures' && directFeatures.has(key))
   const counts = new Map<string, number>()
   for (const row of records) {
     const key = identity(row)

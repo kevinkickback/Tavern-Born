@@ -5,6 +5,7 @@ import { captureFixedProficiencyManualOwners } from '@/lib/character/fixedProfic
 import { retainSelectedFeatureSpellIntent } from '@/lib/character/managedClassSpellState'
 import { addGrant } from '@/lib/provenance/ledger'
 import type { Character } from '@/types/character'
+import { captureKenseiManualOwners } from '../kenseiProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 
 /** One command boundary for ordinary edits and owner transitions; only original values can be captured. */
@@ -35,6 +36,7 @@ export function projectProficiencyCommandResult(
     }
   if (!catalogs) return result
   let next: Character = { ...before, ...result.characterPatch, provenance: result.provenanceUpdate }
+  next = captureKenseiManualOwners(before, next, catalogs)
   const captured = captureFixedProficiencyManualOwners(
     { ...next, proficiencies: before.proficiencies, provenance: before.provenance },
     catalogs,

@@ -11,6 +11,7 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
+import { isKenseiChoiceId } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
@@ -91,6 +92,7 @@ function isSelectedItemChoice(character: Character, item: Equipment): boolean {
   return (character.classChoiceSelections ?? []).some(
     (selection) =>
       !selection.inactive &&
+      !isKenseiChoiceId(selection.choiceId) &&
       selection.selected.some(
         (option) =>
           option.entityType === 'item' &&

@@ -417,7 +417,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
             items: original.items.map(restoreToolSourceInput),
             itemsBase: original.itemsBase.map(restoreToolSourceInput),
           }
-      const audited = auditToolLayerMultiplicity([...raw.items, ...raw.itemsBase])
+      const audited = auditToolLayerMultiplicity(
+        auditFixedLayerMultiplicity([...raw.items, ...raw.itemsBase], 'named'),
+      )
       return [
         layer,
         { items: audited.slice(0, raw.items.length), itemsBase: audited.slice(raw.items.length) },
@@ -488,7 +490,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
           : key === 'classes' || key === 'classFeatures'
             ? auditFixedLayerMultiplicity(layerValues as object[], key)
             : key === 'optionalfeatures'
-              ? auditConditionalOptionalLayerMultiplicity(layerValues)
+              ? auditConditionalOptionalLayerMultiplicity(
+                  auditFixedLayerMultiplicity(layerValues as object[], 'optionalFeatures'),
+                )
               : key === 'spells'
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
                 : layerValues

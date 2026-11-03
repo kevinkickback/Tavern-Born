@@ -187,7 +187,7 @@ export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Recor
 }
 
 /** Build an abbreviation → display name map from parsed itemType records. */
-function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, string> {
+export function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const t of itemTypes) {
     if (!t.abbreviation || result[t.abbreviation]) continue
