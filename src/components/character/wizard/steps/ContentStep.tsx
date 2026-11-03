@@ -27,13 +27,16 @@ export function ContentStep({
   const [search, setSearch] = useState('')
   const query = search.trim().toLowerCase()
   const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
+  const displaySources = selectableSources.filter(
+    (source) => !IMPLICIT_SOURCES.has(source.abbreviation),
+  )
   const configuredSources = data.allowedSources || []
   const allowedSources = data.originSystem
     ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
     : configuredSources
   const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
-  const sourcesByGroup = selectableSources.reduce<Record<string, SourceBook[]>>((acc, source) => {
+  const sourcesByGroup = displaySources.reduce<Record<string, SourceBook[]>>((acc, source) => {
     if (!acc[source.group]) {
       acc[source.group] = []
     }
@@ -46,11 +49,23 @@ export function ContentStep({
     supplement: 'Supplements',
     setting: 'Setting Books',
     adventure: 'Adventure Books',
+    'organized-play': 'Organized Play',
     playtest: 'Playtest & Unofficial',
     other: 'Other Sources',
   }
 
-  const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
+  const groupOrder = [
+    ...new Set([
+      'core',
+      'supplement',
+      'setting',
+      'adventure',
+      'organized-play',
+      'playtest',
+      'other',
+      ...Object.keys(sourcesByGroup),
+    ]),
+  ]
 
   const toggleSource = (sourceAbbr: string) => {
     const source =
@@ -166,9 +181,9 @@ export function ContentStep({
               options, open Settings → Game Data and add compatible 5etools data.
             </p>
           </div>
-        ) : selectableSources.length === 0 ? (
+        ) : displaySources.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
-            No additional content is available. Load game data in Settings first.
+            No additional content is available. To add sourcebooks, open Settings → Game Data.
           </div>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col gap-2">
@@ -191,11 +206,10 @@ export function ContentStep({
               )}
             </div>
             {query &&
-              !selectableSources.some(
+              !displaySources.some(
                 (source) =>
-                  !IMPLICIT_SOURCES.has(source.abbreviation) &&
-                  (source.name.toLowerCase().includes(query) ||
-                    source.abbreviation.toLowerCase().includes(query)),
+                  source.name.toLowerCase().includes(query) ||
+                  source.abbreviation.toLowerCase().includes(query),
               ) && (
                 <p role="status" className="py-6 text-sm text-muted-foreground">
                   No sources match your search.
@@ -210,17 +224,16 @@ export function ContentStep({
               {groupOrder.map((group) => {
                 const groupSources = sourcesByGroup[group]?.filter(
                   (source) =>
-                    !IMPLICIT_SOURCES.has(source.abbreviation) &&
-                    (!query ||
-                      source.name.toLowerCase().includes(query) ||
-                      source.abbreviation.toLowerCase().includes(query)),
+                    !query ||
+                    source.name.toLowerCase().includes(query) ||
+                    source.abbreviation.toLowerCase().includes(query),
                 )
                 if (!groupSources || groupSources.length === 0) return null
 
                 return (
                   <div key={group} className="space-y-1.5">
                     <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {groupLabels[group]}
+                      {groupLabels[group] ?? group}
                     </h5>
                     <div className="grid grid-cols-2 gap-2">
                       {groupSources.map((source) => {

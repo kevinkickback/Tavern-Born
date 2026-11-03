@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Searchable creator Content step and responsive panes: measured 6,397,672 B.
+  // Searchable creator Content step and responsive panes: measured 6,397,758 B.
   // Smallest independently reviewed whole-KiB allowance; other limits are unchanged.
   rendererCode: 6248 * KIB,
   // Creator navigation and stable preview lifecycle: measured 1,168,365 B.

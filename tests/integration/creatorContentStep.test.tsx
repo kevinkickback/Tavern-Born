@@ -6,6 +6,7 @@ import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ContentStep } from '@/components/character/wizard/steps/ContentStep'
 import type { CharacterWizardData } from '@/components/character/wizard/types'
 import { validateStep } from '@/components/character/wizard/validation'
+import { buildSourcesList } from '@/lib/5etools/parsers/basic'
 import type { SourceBook } from '@/types/5etools'
 
 const sources: SourceBook[] = [
@@ -111,6 +112,53 @@ test('search leaves content availability unchanged and preserves inactive intent
   expect(onChange).not.toHaveBeenCalled()
   await user.click(screen.getByRole('button', { name: 'Clear' }))
   expect(screen.getByRole('button', { name: /Restored book/ })).toBeTruthy()
+})
+
+test('core-only catalogs explain that no additional sources are available without changing the draft', () => {
+  const onChange = vi.fn()
+  const core = buildSourcesList(['PHB'], {
+    book: [{ id: 'PHB', name: 'Player Handbook', group: 'core' }],
+  })
+  render(<ContentStep data={INITIAL_CHARACTER_DATA} sources={core} onChange={onChange} />)
+  expect(screen.getByText(/No additional content is available/)).toBeTruthy()
+  expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
+  expect(onChange).not.toHaveBeenCalled()
+})
+
+test('supported organized play and explicitly selectable unfamiliar groups remain searchable and selectable', async () => {
+  const user = userEvent.setup(),
+    onChange = vi.fn()
+  const organized = buildSourcesList(['ALCurseOfStrahd'], { book: [] })
+  expect(organized[0]).toMatchObject({
+    abbreviation: 'ALCURSEOFSTRAHD',
+    group: 'organized-play',
+    hasCharacterOptions: true,
+  })
+  render(
+    <ContentStep
+      data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2014' }}
+      sources={[
+        ...organized,
+        {
+          name: 'Campaign Almanac',
+          abbreviation: 'CAMPAIGN',
+          group: 'campaign',
+          hasCharacterOptions: true,
+        },
+      ]}
+      onChange={onChange}
+    />,
+  )
+  expect(screen.getByRole('heading', { name: 'Organized Play' })).toBeTruthy()
+  const search = screen.getByRole('textbox', { name: 'Search sources' })
+  await user.type(search, 'alcurseofstrahd')
+  await user.click(screen.getByRole('button', { name: /AL: Curse of Strahd/ }))
+  expect(onChange).toHaveBeenLastCalledWith({ allowedSources: ['ALCURSEOFSTRAHD'] })
+  await user.clear(search)
+  await user.type(search, 'campaign')
+  expect(screen.getByRole('heading', { name: 'campaign' })).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: /Campaign Almanac/ }))
+  expect(onChange).toHaveBeenLastCalledWith({ allowedSources: ['CAMPAIGN'] })
 })
 
 test('semantic validation gates the owning step and permits explicit empty Content', () => {
