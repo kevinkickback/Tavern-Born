@@ -11,6 +11,7 @@ import { validateOriginAbilityChoices } from './originReadiness'
 import { readinessIssue } from './readinessIssue'
 import { validateSourceReferences } from './sourceReadiness'
 import { validateSpells } from './spellReadiness'
+import { validateStartingEquipment } from './startingEquipmentReadiness'
 import type {
   CharacterReadinessContext,
   CharacterReadinessIssue,
@@ -48,6 +49,7 @@ export function getCharacterReadiness(
       calculation?.lookups.primary.featExpertiseFeats,
     ),
     ...validateEquipment(character, calculation ?? undefined),
+    ...validateStartingEquipment(character, calculation ?? undefined),
   )
 
   if (!character.portrait) {

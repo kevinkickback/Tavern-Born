@@ -303,6 +303,7 @@ export interface GameDataLookups {
   subclassesByKey: Record<string, Subclass5e>
   creaturesByKey?: Record<string, Creature5e>
   itemLookup: Map<string, Item5e>
+  startingEquipmentItems?: readonly Item5e[]
   /** Maps source-qualified property UIDs and legacy abbreviations to display names. */
   itemPropertyByAbbr: Record<string, string>
   /** Parsed from data/items-base.json → .itemType[]. Maps abbreviation → display name. */
@@ -402,6 +403,8 @@ export type ItemPropertyReference = string | { uid: string; note?: string }
 export interface Item5e {
   name: string
   source: string
+  /** Catalog-only own input collection, adapted from upstream Renderer.item Basic classification. */
+  startingEquipmentCategory?: 'Basic' | 'Other'
   /** Canonical template target behind a reference-only projection; never saved inventory. */
   magicVariantReference?: { name: string; source: string }
   /** Derived catalog lineage; never saved inventory or raw copy authority. */

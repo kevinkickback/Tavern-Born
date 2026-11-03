@@ -7,9 +7,13 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 
 import { useCallback } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import { useStartingEquipmentAuthority } from '@/hooks/data/useStartingEquipment'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { startingEquipmentSetupHandle } from '@/lib/5etools/startingEquipmentPolicy'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 
@@ -18,10 +22,26 @@ export function useUnifiedClassSelection() {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useItemLookup()
   const calculationContext = useCharacterCalculationContext(character)
+  const { getPolicy: getEquipmentPolicy, sourceData } = useStartingEquipmentAuthority()
 
   const selectClass = useCallback(
     (className: string, classSource: string, classLookup: Record<string, Class5e | undefined>) => {
-      if (!character) return
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        !hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        ) ||
+        !latest ||
+        !character ||
+        startingEquipmentSetupHandle(latest, 'class') !==
+          startingEquipmentSetupHandle(character, 'class')
+      )
+        throw new RangeError(
+          'The initial Class or source rules changed. Review the current selection.',
+        )
 
       const cls = findClassReference(
         { name: className, source: classSource },
@@ -30,21 +50,28 @@ export function useUnifiedClassSelection() {
 
       if (!cls) return
 
-      const ledger = character.provenance ?? emptyProvenance()
-      const result = applyClassSelectionCommand(character, ledger, cls, undefined, itemLookup, {
-        raceResolution: calculationContext?.raceResolution,
-        spellsByKey: calculationContext?.lookups.primary.spellsByKey,
-        rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
-        classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
-        spellContext: calculationContext?.classChoices.spellContext,
-      })
+      const result = applyClassSelectionCommand(
+        latest,
+        latest.provenance,
+        cls,
+        undefined,
+        itemLookup,
+        {
+          startingEquipmentPolicy: getEquipmentPolicy(latest, 'class', cls),
+          raceResolution: calculationContext?.raceResolution,
+          spellsByKey: calculationContext?.lookups.primary.spellsByKey,
+          rawSpellsByKey: calculationContext?.lookups.raw.spellsByKey,
+          classChoiceFeatureCatalogs: calculationContext?.classChoices.catalogs,
+          spellContext: calculationContext?.classChoices.spellContext,
+        },
+      )
 
-      updateCharacter(character.id, {
+      updateCharacter(latest.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter, itemLookup, calculationContext],
+    [character, updateCharacter, itemLookup, calculationContext, getEquipmentPolicy, sourceData],
   )
 
   const selectSubclass = useCallback(

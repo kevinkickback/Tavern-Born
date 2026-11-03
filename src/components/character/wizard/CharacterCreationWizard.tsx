@@ -159,6 +159,10 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const handleFinish = () =>
     runCreation(
       async () => {
+        if (useGameDataStore.getState().gameData !== gameData)
+          throw new RangeError(
+            'Content changed. Review the current selections before creating the character.',
+          )
         const classEntity = wizardData.resolveClass({
           name: characterData.class,
           source: characterData.classSource,
@@ -202,7 +206,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
               itemsBase: wizardData.itemsBase,
               allowedSources: characterData.allowedSources,
             }),
-          wizardData.spellLookups,
+          wizardData.creationLookups,
         )
         const saved = await addCharacter(character)
         setActiveCharacter(saved.id)

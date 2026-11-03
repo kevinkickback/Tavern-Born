@@ -45,6 +45,7 @@ export interface NormalizedChoiceOptionReference {
 export interface NormalizedChoiceOptionFilter {
   entityType: ChoiceOptionEntityType
   categories?: string[]
+  mundane?: boolean
   featureTypes?: string[]
   psionicTypes?: string[]
   psionicOrders?: string[]

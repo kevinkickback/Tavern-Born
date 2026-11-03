@@ -22,6 +22,9 @@ export interface EntityLookupSet {
   featExpertiseFeats?: readonly Feat5e[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
   itemLookup?: ReadonlyMap<string, Item5e>
+  /** Preserve exact input multiplicity for starting-equipment dependency authority. */
+  startingEquipmentItems?: readonly Item5e[]
+  itemTypeByAbbr?: Readonly<Record<string, string>>
 }
 
 export interface RaceReference extends EntityReference {

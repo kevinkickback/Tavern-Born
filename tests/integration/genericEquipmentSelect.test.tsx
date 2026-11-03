@@ -12,12 +12,12 @@ describe('GenericEquipmentSelect', () => {
           quantity: 1,
           candidates: [{ name: 'Club', source: 'PHB' }],
         }}
-        value=""
+        value={[]}
         ariaLabel="Equipment choice 1 specific item"
         onChange={vi.fn()}
       />,
     )
 
-    expect(screen.getByRole('combobox', { name: 'Equipment choice 1 specific item' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Equipment choice 1 specific item' })).toBeTruthy()
   })
 })

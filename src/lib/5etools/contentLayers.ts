@@ -60,6 +60,7 @@ import {
 } from './primaryItemTypes'
 import { auditPsionicMultiplicity, getPsionicKey } from './psionics'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
+import { preserveStartingItemCategories } from './startingItemCategory'
 import { getSubclassIntroEntries } from './subclassContent'
 import { collectLayerSubclassFeatures as collectSubclassFeatures } from './subclassFeatureCatalog'
 import {
@@ -540,7 +541,10 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   retainRawItems(composed)
   const rawToolInputs = [...composed.items, ...composed.itemsBase]
   const items = resolveCopiedRecords(rawToolInputs, 'item')
-  const toolAuditedItems = prepareToolProficiencySources(rawToolInputs, items.records)
+  const toolAuditedItems = prepareToolProficiencySources(
+    rawToolInputs,
+    preserveStartingItemCategories(rawToolInputs, items.records),
+  )
   composed.items = toolAuditedItems.slice(0, concreteItemCount)
   composed.itemsBase = toolAuditedItems.slice(concreteItemCount)
   appendMagicVariantReferences(composed)

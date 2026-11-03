@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Source-qualified legacy subclass setup, saved relations and owned proficiencies.
-  // Measured 6,352,954 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6205 * KIB,
-  // Synchronous source/owner/target authority: measured 1,142,217 B.
+  // Starting equipment ownership, current eligibility and shared quantity selection.
+  // Measured 6,385,896 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6237 * KIB,
+  // Synchronous strict ownership and current source authority: measured 1,165,759 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
-  initialRendererScript: 1116 * KIB,
+  initialRendererScript: 1139 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

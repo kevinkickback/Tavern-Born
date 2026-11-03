@@ -12,7 +12,7 @@
     "cp": 137,
     "sp": 88,
     "ep": 23,
-    "gp": 12450,
+    "gp": 12460,
     "pp": 417
   },
   "experiencePoints": 355000,
@@ -771,6 +771,127 @@
       "rarity": "uncommon",
       "source": "DMG",
       "wondrous": true
+    },
+    {
+      "name": "Quarterstaff",
+      "source": "PHB",
+      "type": "M",
+      "quantity": 1,
+      "weight": 4,
+      "value": 20,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "simple",
+      "dmg1": "1d6",
+      "dmg2": "1d8",
+      "dmgType": "B",
+      "properties": [
+        "V"
+      ],
+      "id": "full-coverage-character-2014-starting-1",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Component Pouch",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 2,
+      "value": 2500,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-2",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Scholar's Pack",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 10,
+      "value": 4000,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-3",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Spellbook",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 3,
+      "value": 5000,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-4",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Ink (1-ounce bottle)",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "value": 1000,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-5",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "quill",
+      "type": "G",
+      "quantity": 1,
+      "id": "full-coverage-character-2014-starting-6",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "small knife",
+      "type": "G",
+      "quantity": 1,
+      "id": "full-coverage-character-2014-starting-7",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "letter from a dead colleague posing a question you have not yet been able to answer",
+      "type": "G",
+      "quantity": 1,
+      "id": "full-coverage-character-2014-starting-8",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Common Clothes",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 3,
+      "value": 50,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-9",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Pouch",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 1,
+      "value": 50,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "full-coverage-character-2014-starting-10",
+      "equipped": false,
+      "attuned": false
     },
     {
       "id": "corpus-gear-2014-1",
@@ -1626,133 +1747,6 @@
       "value": 800,
       "rarity": "none",
       "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-68",
-      "name": "Draft Horse",
-      "type": "MNT",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "value": 5000,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-69",
-      "name": "Dragonchess Set",
-      "type": "GS",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 0.5,
-      "value": 100,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-70",
-      "name": "Drum",
-      "type": "INS",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 3,
-      "value": 600,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-71",
-      "name": "Dulcimer",
-      "type": "INS",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 10,
-      "value": 2500,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-72",
-      "name": "Dungeoneer's Pack",
-      "type": "G",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 61.5,
-      "value": 1200,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-73",
-      "name": "Electrum (ep)",
-      "type": "$C",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 0.02,
-      "value": 50,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-74",
-      "name": "Elephant",
-      "type": "MNT",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "value": 20000,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-75",
-      "name": "Emblem",
-      "type": "SCF",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "value": 500,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-76",
-      "name": "Entertainer's Pack",
-      "type": "G",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 38,
-      "value": 4000,
-      "rarity": "none",
-      "source": "PHB"
-    },
-    {
-      "id": "corpus-gear-2014-77",
-      "name": "Exotic Saddle",
-      "type": "TAH",
-      "quantity": 1,
-      "equipped": false,
-      "attuned": false,
-      "description": "",
-      "weight": 40,
-      "value": 6000,
-      "rarity": "none",
-      "source": "PHB"
     }
   ],
   "visions": [
@@ -2061,8 +2055,17 @@
     "ignoreEquipRestrictions": true
   },
   "raceAsiChoices": [],
-  "backgroundEquipmentChoices": [],
-  "classEquipmentChoices": {},
+  "backgroundEquipmentChoices": [
+    "_"
+  ],
+  "classEquipmentChoices": {
+    "Wizard|PHB": [
+      "a",
+      "a",
+      "a",
+      "_"
+    ]
+  },
   "asiChoices": [],
   "specialFeats": [
     {
@@ -3368,82 +3371,174 @@
       ]
     },
     "equipment": {
-      "longsword": [
+      "quarterstaff": [
         {
           "sourceType": "class",
-          "sourceName": "Fighter",
+          "sourceName": "Wizard",
           "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        },
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
+        }
+      ],
+      "component pouch": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        },
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "scholar's pack": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "spellbook": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "ink (1-ounce bottle)": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "quill": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "small knife": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "letter from a dead colleague posing a question you have not yet been able to answer": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "common clothes": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        },
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "pouch": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "longsword": [
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
         }
       ],
       "longbow": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "dagger": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "light crossbow": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
-        }
-      ],
-      "quarterstaff": [
-        {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
-          "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "battleaxe": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "half plate armor": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "shield": [
         {
-          "sourceType": "class",
-          "sourceName": "Fighter",
-          "sourceRef": "PHB",
+          "sourceType": "manual",
+          "sourceName": "User Choice",
           "grantType": "choice",
-          "label": "Fighter"
+          "label": "User Choice"
         }
       ],
       "staff of power": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3451,7 +3546,7 @@
       "cloak of protection": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3459,7 +3554,7 @@
       "ring of spell storing": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3467,7 +3562,7 @@
       "bag of holding": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3475,7 +3570,7 @@
       "boots of elvenkind": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3483,7 +3578,7 @@
       "abacus": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3491,7 +3586,7 @@
       "acid (vial)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3499,7 +3594,7 @@
       "alchemist's fire (flask)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3507,7 +3602,7 @@
       "alchemist's supplies": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3515,7 +3610,7 @@
       "ale (gallon)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3523,7 +3618,7 @@
       "ale (mug)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3531,7 +3626,7 @@
       "amulet": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3539,7 +3634,7 @@
       "antitoxin (vial)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3547,7 +3642,7 @@
       "arrow": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3555,7 +3650,7 @@
       "arrows (20)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3563,7 +3658,7 @@
       "backpack": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3571,7 +3666,7 @@
       "bagpipes": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3579,7 +3674,7 @@
       "ball bearing": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3587,7 +3682,7 @@
       "ball bearings (bag of 1,000)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3595,7 +3690,7 @@
       "barrel": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3603,7 +3698,7 @@
       "basic poison (vial)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3611,7 +3706,7 @@
       "basket": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3619,7 +3714,7 @@
       "bedroll": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3627,7 +3722,7 @@
       "bell": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3635,7 +3730,7 @@
       "bit and bridle": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3643,7 +3738,7 @@
       "blanket": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3651,7 +3746,7 @@
       "block and tackle": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3659,7 +3754,7 @@
       "blowgun needle": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3667,7 +3762,7 @@
       "blowgun needles (50)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3675,7 +3770,7 @@
       "book": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3683,7 +3778,7 @@
       "brewer's supplies": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3691,7 +3786,7 @@
       "bucket": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3699,7 +3794,7 @@
       "bullseye lantern": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3707,7 +3802,7 @@
       "burglar's pack": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3715,7 +3810,7 @@
       "calligrapher's supplies": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3723,7 +3818,7 @@
       "caltrop": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3731,7 +3826,7 @@
       "caltrops (bag of 20)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3739,7 +3834,7 @@
       "camel": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3747,7 +3842,7 @@
       "candle": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3755,7 +3850,7 @@
       "canvas (1 sq. yd.)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3763,7 +3858,7 @@
       "carpenter's tools": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3771,7 +3866,7 @@
       "carriage": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3779,7 +3874,7 @@
       "cart": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3787,7 +3882,7 @@
       "cartographer's tools": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3795,7 +3890,7 @@
       "chain (10 feet)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3803,7 +3898,7 @@
       "chalk (1 piece)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3811,7 +3906,7 @@
       "chariot": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3819,7 +3914,7 @@
       "chest": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3827,7 +3922,7 @@
       "chicken": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3835,7 +3930,7 @@
       "chunk of meat": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3843,7 +3938,7 @@
       "cinnamon": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3851,7 +3946,7 @@
       "climber's kit": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3859,7 +3954,7 @@
       "cloves": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3867,15 +3962,7 @@
       "cobbler's tools": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "common clothes": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3883,15 +3970,7 @@
       "common wine (pitcher)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "component pouch": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3899,7 +3978,7 @@
       "cook's utensils": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3907,7 +3986,7 @@
       "copper": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3915,7 +3994,7 @@
       "copper (cp)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3923,7 +4002,7 @@
       "costume clothes": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3931,7 +4010,7 @@
       "cotton cloth (1 sq. yd.)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3939,7 +4018,7 @@
       "cow": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3947,7 +4026,7 @@
       "crossbow bolt": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3955,7 +4034,7 @@
       "crossbow bolt case": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3963,7 +4042,7 @@
       "crossbow bolts (20)": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3971,7 +4050,7 @@
       "crowbar": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3979,7 +4058,7 @@
       "crystal": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3987,7 +4066,7 @@
       "dice set": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -3995,7 +4074,7 @@
       "diplomat's pack": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -4003,7 +4082,7 @@
       "disguise kit": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -4011,87 +4090,7 @@
       "donkey": [
         {
           "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "draft horse": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "dragonchess set": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "drum": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "dulcimer": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "dungeoneer's pack": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "electrum (ep)": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "elephant": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "emblem": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "entertainer's pack": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
-          "grantType": "choice",
-          "label": "User Choice"
-        }
-      ],
-      "exotic saddle": [
-        {
-          "sourceType": "manual",
-          "sourceName": "Full-coverage test fixture",
+          "sourceName": "User Choice",
           "grantType": "choice",
           "label": "User Choice"
         }
@@ -4109,7 +4108,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "hitPoints": {
     "current": 121,
     "temporary": 17
@@ -4163,7 +4162,9 @@
     }
   ],
   "backgroundEquipmentItemChoices": {},
-  "classEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {
+    "Wizard|PHB": {}
+  },
   "movementAdjustments": [],
   "movementOverrides": {},
   "manualEffects": [
@@ -5031,5 +5032,164 @@
       "policy": "default"
     }
   ],
-  "managedClassSpellRevision": 33
+  "managedClassSpellRevision": 33,
+  "initialClass": {
+    "name": "Wizard",
+    "source": "PHB"
+  },
+  "startingEquipmentGrants": {
+    "class": {
+      "owner": {
+        "name": "Wizard",
+        "source": "PHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"a\",0,\"item\",\"quarterstaff\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Quarterstaff",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-1",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[1,\"a\",0,\"item\",\"component pouch\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Component Pouch",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-2",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[2,\"a\",0,\"item\",\"scholar's pack\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Scholar's Pack",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-3",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[3,\"_\",0,\"item\",\"spellbook\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Spellbook",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-4",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 0,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 0,
+        "pp": 0
+      },
+      "spentCopper": 0
+    },
+    "background": {
+      "owner": {
+        "name": "Sage",
+        "source": "PHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"_\",0,\"item\",\"ink (1-ounce bottle)\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Ink (1-ounce bottle)",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-5",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",1,\"special\",\"quill\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "quill"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-6",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",2,\"special\",\"small knife\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "small knife"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-7",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",3,\"special\",\"letter from a dead colleague posing a question you have not yet been able to answer\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "letter from a dead colleague posing a question you have not yet been able to answer"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-8",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",4,\"item\",\"common clothes\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Common Clothes",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-9",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",5,\"item\",\"pouch\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Pouch",
+            "source": "PHB"
+          },
+          "equipmentId": "full-coverage-character-2014-starting-10",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 10,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 10,
+        "pp": 0
+      },
+      "spentCopper": 0
+    }
+  }
 }

@@ -749,25 +749,29 @@ describe('Class Commands', () => {
   ])('applies class equipment with the saved owner (catalog spelling refresh %s)', (refreshed) => {
     const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
     const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
-    const character = makeCharacterFixture({
+    const initial = makeCharacterFixture({
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       classEquipmentChoices: { 'Rogue|PHB': ['a'] },
-      equipment: [
-        {
-          id: 'old-dagger',
-          name: 'Dagger',
-          source: 'PHB',
-          type: 'M',
-          quantity: 1,
-          equipped: false,
-        },
-      ],
+      equipment: [],
     })
-    const classTag = makeSourceTag('class', 'Rogue', 'fixed', 'PHB')
-    const ledger = {
-      ...(character.provenance ?? emptyProvenance()),
-      equipment: { dagger: [classTag] },
+    const initialized = applyClassSelectionCommand(
+      initial,
+      initial.provenance,
+      {
+        name: 'Rogue',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
+      },
+      undefined,
+      buildItemLookup([dagger, shortbow]),
+    )
+    const character = {
+      ...initial,
+      ...initialized.characterPatch,
+      provenance: initialized.provenanceUpdate,
     }
+    const classTag = makeSourceTag('class', 'Rogue', 'fixed', 'PHB')
+    const ledger = character.provenance
 
     const result = applyClassEquipmentChoiceCommand(
       character,

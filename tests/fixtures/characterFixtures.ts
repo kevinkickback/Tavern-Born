@@ -48,6 +48,12 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
     },
     experiencePoints: 0,
     classProgression: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
+    initialClass: overrides.classProgression
+      ? overrides.classProgression[0] && {
+          name: overrides.classProgression[0].name,
+          source: overrides.classProgression[0].source,
+        }
+      : { name: 'Fighter', source: 'PHB' },
     abilityScores: {
       strength: 10,
       dexterity: 10,

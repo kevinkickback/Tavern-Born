@@ -12,7 +12,7 @@
     "cp": 0,
     "sp": 0,
     "ep": 0,
-    "gp": 25,
+    "gp": 35,
     "pp": 0
   },
   "experiencePoints": 0,
@@ -202,6 +202,151 @@
       "ac": 11,
       "armorType": "light",
       "source": "PHB"
+    },
+    {
+      "name": "Scale Mail",
+      "source": "PHB",
+      "type": "MA",
+      "quantity": 1,
+      "weight": 45,
+      "value": 5000,
+      "rarity": "none",
+      "reqAttune": false,
+      "ac": 14,
+      "armorType": "medium",
+      "id": "companion-choice-character-2014-starting-1",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Shortsword",
+      "source": "PHB",
+      "type": "M",
+      "quantity": 2,
+      "weight": 2,
+      "value": 1000,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "martial",
+      "dmg1": "1d6",
+      "dmgType": "P",
+      "properties": [
+        "F",
+        "L"
+      ],
+      "id": "companion-choice-character-2014-starting-2",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Dungeoneer's Pack",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 61.5,
+      "value": 1200,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2014-starting-3",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Longbow",
+      "source": "PHB",
+      "type": "R",
+      "quantity": 1,
+      "weight": 2,
+      "value": 5000,
+      "rarity": "none",
+      "reqAttune": false,
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A",
+        "H",
+        "2H"
+      ],
+      "range": "150/600",
+      "id": "companion-choice-character-2014-starting-4",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Arrows (20)",
+      "source": "PHB",
+      "type": "A",
+      "quantity": 1,
+      "weight": 1,
+      "value": 100,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2014-starting-5",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Ink (1-ounce bottle)",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "value": 1000,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2014-starting-6",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "quill",
+      "type": "G",
+      "quantity": 1,
+      "id": "companion-choice-character-2014-starting-7",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "small knife",
+      "type": "G",
+      "quantity": 1,
+      "id": "companion-choice-character-2014-starting-8",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "letter from a dead colleague posing a question you have not yet been able to answer",
+      "type": "G",
+      "quantity": 1,
+      "id": "companion-choice-character-2014-starting-9",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Common Clothes",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 3,
+      "value": 50,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2014-starting-10",
+      "equipped": false,
+      "attuned": false
+    },
+    {
+      "name": "Pouch",
+      "source": "PHB",
+      "type": "G",
+      "quantity": 1,
+      "weight": 1,
+      "value": 50,
+      "rarity": "none",
+      "reqAttune": false,
+      "id": "companion-choice-character-2014-starting-11",
+      "equipped": false,
+      "attuned": false
     }
   ],
   "visions": [
@@ -271,8 +416,17 @@
     "ignoreEquipRestrictions": true
   },
   "raceAsiChoices": [],
-  "backgroundEquipmentChoices": [],
-  "classEquipmentChoices": {},
+  "backgroundEquipmentChoices": [
+    "_"
+  ],
+  "classEquipmentChoices": {
+    "Ranger|PHB": [
+      "a",
+      "a",
+      "a",
+      "_"
+    ]
+  },
   "asiChoices": [],
   "specialFeats": [],
   "classFeatChoices": [],
@@ -528,7 +682,7 @@
       ]
     },
     "equipment": {
-      "longbow": [
+      "scale mail": [
         {
           "sourceType": "class",
           "sourceName": "Ranger",
@@ -537,13 +691,108 @@
           "label": "Ranger"
         }
       ],
-      "leather armor": [
+      "shortsword": [
         {
           "sourceType": "class",
           "sourceName": "Ranger",
           "sourceRef": "PHB",
           "grantType": "fixed",
           "label": "Ranger"
+        }
+      ],
+      "dungeoneer's pack": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "longbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        },
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "arrows (20)": [
+        {
+          "sourceType": "class",
+          "sourceName": "Ranger",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ranger"
+        }
+      ],
+      "ink (1-ounce bottle)": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "quill": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "small knife": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "letter from a dead colleague posing a question you have not yet been able to answer": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "common clothes": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "pouch": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "leather armor": [
+        {
+          "sourceType": "manual",
+          "sourceName": "User Choice",
+          "grantType": "choice",
+          "label": "User Choice"
         }
       ]
     },
@@ -559,7 +808,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "hitPoints": {
     "current": 28,
     "temporary": 0
@@ -620,7 +869,9 @@
     }
   ],
   "backgroundEquipmentItemChoices": {},
-  "classEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {
+    "Ranger|PHB": {}
+  },
   "movementAdjustments": [],
   "movementOverrides": {},
   "manualEffects": [],
@@ -710,5 +961,175 @@
       "policy": "default"
     }
   ],
-  "managedClassSpellRevision": 3
+  "managedClassSpellRevision": 3,
+  "initialClass": {
+    "name": "Ranger",
+    "source": "PHB"
+  },
+  "startingEquipmentGrants": {
+    "class": {
+      "owner": {
+        "name": "Ranger",
+        "source": "PHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"a\",0,\"item\",\"scale mail\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Scale Mail",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-1",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[1,\"a\",0,\"item\",\"shortsword\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Shortsword",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-2",
+          "issuedQuantity": 2,
+          "remainingQuantity": 2
+        },
+        {
+          "key": "[2,\"a\",0,\"item\",\"dungeoneer's pack\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Dungeoneer's Pack",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-3",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[3,\"_\",0,\"item\",\"longbow\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Longbow",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-4",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[3,\"_\",1,\"item\",\"arrows (20)\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Arrows (20)",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-5",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 0,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 0,
+        "pp": 0
+      },
+      "spentCopper": 0
+    },
+    "background": {
+      "owner": {
+        "name": "Sage",
+        "source": "PHB"
+      },
+      "items": [
+        {
+          "key": "[0,\"_\",0,\"item\",\"ink (1-ounce bottle)\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Ink (1-ounce bottle)",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-6",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",1,\"special\",\"quill\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "quill"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-7",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",2,\"special\",\"small knife\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "small knife"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-8",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",3,\"special\",\"letter from a dead colleague posing a question you have not yet been able to answer\",null]",
+          "reference": {
+            "kind": "special",
+            "name": "letter from a dead colleague posing a question you have not yet been able to answer"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-9",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",4,\"item\",\"common clothes\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Common Clothes",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-10",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        },
+        {
+          "key": "[0,\"_\",5,\"item\",\"pouch\",\"phb\"]",
+          "reference": {
+            "kind": "item",
+            "name": "Pouch",
+            "source": "PHB"
+          },
+          "equipmentId": "companion-choice-character-2014-starting-11",
+          "issuedQuantity": 1,
+          "remainingQuantity": 1
+        }
+      ],
+      "declaredCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 10,
+        "pp": 0
+      },
+      "remainingCurrency": {
+        "cp": 0,
+        "sp": 0,
+        "ep": 0,
+        "gp": 10,
+        "pp": 0
+      },
+      "spentCopper": 0
+    }
+  }
 }

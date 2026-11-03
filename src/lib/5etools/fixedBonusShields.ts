@@ -234,6 +234,7 @@ export function generateFixedBonusShields(
       base: { name: 'Shield', source: baseSource },
       template: { name: String(definition.name), source },
     }
+    output.startingEquipmentCategory = 'Other'
     const key = identity(output)
     if (occupied.has(key)) {
       diagnose(path, 'Generated shield collides with concrete equipment; concrete item retained.')

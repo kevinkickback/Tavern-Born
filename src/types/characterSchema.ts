@@ -28,6 +28,7 @@ import { getInvalidFixedProficiencyPaths } from '@/lib/schema/fixedProficiencyVa
 import { getInvalidLegacySubclassChoicePaths } from '@/lib/schema/legacySubclassChoiceValidation'
 import { getInvalidManagedClassSpellPaths } from '@/lib/schema/managedClassSpellValidation'
 import { getInvalidPsionicPaths } from '@/lib/schema/psionicValidation'
+import { getInvalidStartingEquipmentPaths } from '@/lib/schema/startingEquipmentValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Character } from './character'
 
@@ -497,12 +498,39 @@ const equipmentSchema = z.object({
 })
 
 const currencySchema = z.object({
-  cp: z.number().int().nonnegative(),
-  sp: z.number().int().nonnegative(),
-  ep: z.number().int().nonnegative(),
-  gp: z.number().int().nonnegative(),
-  pp: z.number().int().nonnegative(),
+  cp: z.number().int().safe().nonnegative(),
+  sp: z.number().int().safe().nonnegative(),
+  ep: z.number().int().safe().nonnegative(),
+  gp: z.number().int().safe().nonnegative(),
+  pp: z.number().int().safe().nonnegative(),
 })
+
+const startingItemReferenceSchema = z
+  .object({ name: z.string().trim().min(1), source: z.string().trim().min(1) })
+  .strict()
+const startingItemChoicesSchema = z.record(z.array(startingItemReferenceSchema))
+const startingEquipmentGrantSchema = z
+  .object({
+    owner: startingItemReferenceSchema.optional(),
+    items: z.array(
+      z
+        .object({
+          key: z.string().min(1),
+          reference: z.discriminatedUnion('kind', [
+            startingItemReferenceSchema.extend({ kind: z.literal('item') }),
+            z.object({ kind: z.literal('special'), name: z.string().min(1) }).strict(),
+          ]),
+          equipmentId: z.string().min(1),
+          issuedQuantity: z.number().int().safe().positive(),
+          remainingQuantity: z.number().int().safe().nonnegative(),
+        })
+        .strict(),
+    ),
+    declaredCurrency: currencySchema,
+    remainingCurrency: currencySchema,
+    spentCopper: z.number().int().safe().nonnegative(),
+  })
+  .strict()
 
 const hitPointsSchema = z.object({
   current: z.number().int().min(0),
@@ -930,11 +958,18 @@ export const characterSchema = z
     raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
     backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
     backgroundEquipmentChoices: z.array(z.string()).optional(),
-    backgroundEquipmentItemChoices: z.record(z.string()).optional(),
+    backgroundEquipmentItemChoices: startingItemChoicesSchema.optional(),
     backgroundAsiChoices: z.array(z.string()).optional(),
-    backgroundCurrencyGrant: currencySchema.optional(),
+    initialClass: startingItemReferenceSchema.optional(),
+    startingEquipmentGrants: z
+      .object({
+        class: startingEquipmentGrantSchema.optional(),
+        background: startingEquipmentGrantSchema.optional(),
+      })
+      .strict()
+      .optional(),
     classEquipmentChoices: z.record(z.array(z.string())).optional(),
-    classEquipmentItemChoices: z.record(z.record(z.string())).optional(),
+    classEquipmentItemChoices: z.record(startingItemChoicesSchema).optional(),
     spells: spellSelectionSchema,
     equipment: z.array(equipmentSchema),
     visions: z
@@ -990,6 +1025,13 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    for (const path of getInvalidStartingEquipmentPaths(char as Character)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Starting equipment, currency and exact owner balances must agree.',
+      })
+    }
     for (const path of getInvalidManagedClassSpellPaths(char as Character))
       ctx.addIssue({
         code: 'custom',

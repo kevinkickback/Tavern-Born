@@ -226,15 +226,16 @@ export interface Character {
   /** Preferred background starting-equipment option keys per block. */
   backgroundEquipmentChoices?: string[]
   /** Concrete item references selected for generic background equipment choices. */
-  backgroundEquipmentItemChoices?: Record<string, string>
+  backgroundEquipmentItemChoices?: StartingEquipmentItemChoices
 
-  /** Last currency grant applied from background starting equipment. */
-  backgroundCurrencyGrant?: Currency
+  /** Explicit initial Class; progression order and viewed Class cannot change its ownership. */
+  initialClass?: StartingItemReference
+  startingEquipmentGrants?: Partial<Record<StartingEquipmentRole, StartingEquipmentGrant>>
 
   /** Equipment option choices for each class, keyed by "className|source". Per-block choice keys array. */
   classEquipmentChoices?: Record<string, string[]>
   /** Concrete item references selected for generic class equipment choices, keyed by class. */
-  classEquipmentItemChoices?: Record<string, Record<string, string>>
+  classEquipmentItemChoices?: Record<string, StartingEquipmentItemChoices>
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.
@@ -491,6 +492,34 @@ export interface Currency {
   ep: number
   gp: number
   pp: number
+}
+
+export interface StartingItemReference {
+  name: string
+  source: string
+}
+
+export type StartingEquipmentItemChoices = Record<string, StartingItemReference[]>
+export type StartingEquipmentRole = 'class' | 'background'
+export type StartingEquipmentReference =
+  | ({ kind: 'item' } & StartingItemReference)
+  | { kind: 'special'; name: string }
+
+interface StartingEquipmentLot {
+  key: string
+  reference: StartingEquipmentReference
+  equipmentId: string
+  issuedQuantity: number
+  remainingQuantity: number
+}
+
+export interface StartingEquipmentGrant {
+  owner?: StartingItemReference
+  items: StartingEquipmentLot[]
+  declaredCurrency: Currency
+  remainingCurrency: Currency
+  /** Consumed starting value remains debited through package/owner changes and removal. */
+  spentCopper: number
 }
 
 export interface HitPoints {

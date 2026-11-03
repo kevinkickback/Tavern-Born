@@ -217,7 +217,7 @@ interface ItemCardProps {
   isSelected: boolean
 }
 
-const ItemCard = memo(function ItemCard({ item, isSelected, textContext }: ItemCardProps) {
+export const ItemCard = memo(function ItemCard({ item, isSelected, textContext }: ItemCardProps) {
   const properties = item.property ?? []
   const itemTypeByAbbr = useItemTypeLookup()
   const description = getItemDescription(item, itemTypeByAbbr, textContext)

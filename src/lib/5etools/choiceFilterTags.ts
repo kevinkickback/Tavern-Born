@@ -3,6 +3,8 @@ export interface ParsedFilterTag {
   label: string
   entityType: ChoiceOptionEntityType
   filter: NormalizedChoiceOptionFilter
+  /** Starting-equipment policy cannot silently discard an unimplemented source constraint. */
+  unsupportedClauses?: string[]
 }
 
 function parseFraction(value: string): number | undefined {
@@ -47,15 +49,31 @@ export function parseFilterTags(text: string): ParsedFilterTag[] {
     if (!entityType) continue
 
     const filter: NormalizedChoiceOptionFilter = { entityType }
+    const unsupportedClauses: string[] = []
+    const seenClauses = new Map<string, string>()
     for (const clause of clauses) {
       const separator = clause.indexOf('=')
-      if (separator < 0) continue
+      if (separator < 0) {
+        unsupportedClauses.push(clause)
+        continue
+      }
       const key = clause.slice(0, separator).trim().toLowerCase()
       const values = clause
         .slice(separator + 1)
         .split(';')
         .map((value) => value.trim())
         .filter(Boolean)
+      if (!values.length) {
+        unsupportedClauses.push(clause)
+        continue
+      }
+      const signature = values
+        .map((value) => value.toLowerCase())
+        .sort()
+        .join(';')
+      if (seenClauses.has(key) && seenClauses.get(key) !== signature)
+        unsupportedClauses.push(clause)
+      seenClauses.set(key, signature)
       if (key === 'category') filter.categories = values
       else if (key === 'feature type') filter.featureTypes = values
       else if (key === 'challenge rating') {
@@ -72,19 +90,33 @@ export function parseFilterTags(text: string): ParsedFilterTag[] {
         if (included.length > 0) filter.itemTypes = included
         if (excluded.length > 0) filter.excludedItemTypes = excluded
       } else if (filter.entityType === 'item' && key === 'property') {
+        if (values.some((value) => !value.startsWith('!'))) unsupportedClauses.push(clause)
         filter.excludedItemProperties = values
           .filter((value) => value.startsWith('!'))
           .map((value) => value.slice(1))
       } else if (key === 'rarity') filter.rarities = values
-      else if (key === 'miscellaneous' && values.includes('!cursed')) filter.excludeCursed = true
-      else if (key === 'miscellaneous' && values.includes('!swarm')) filter.excludeSwarms = true
-      else if (key === 'melee weapon') {
+      else if (key === 'miscellaneous') {
+        if (values.includes('mundane')) filter.mundane = true
+        if (values.includes('!cursed')) filter.excludeCursed = true
+        if (values.includes('!swarm')) filter.excludeSwarms = true
+        if (values.some((value) => !['mundane', '!cursed', '!swarm'].includes(value)))
+          unsupportedClauses.push(clause)
+      } else if (key === 'melee weapon') {
+        if (values.length !== 1 || values[0] !== 'sand') unsupportedClauses.push(clause)
         filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'melee' as const])]
       } else if (key === 'ranged weapon') {
+        if (values.length !== 1 || values[0] !== 'sand') unsupportedClauses.push(clause)
         filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'ranged' as const])]
-      } else if (key === 'source') filter.source = values[0]
+      } else if (key === 'source' && values.length === 1 && !values[0].startsWith('!'))
+        filter.source = values[0]
+      else unsupportedClauses.push(clause)
     }
-    tags.push({ label, entityType, filter })
+    tags.push({
+      label,
+      entityType,
+      filter,
+      ...(unsupportedClauses.length ? { unsupportedClauses } : {}),
+    })
   }
   return tags
 }

@@ -1,20 +1,13 @@
 import { PencilSimple, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
-import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
+import { StartingEquipmentBlocks } from '@/components/character/StartingEquipmentBlocks'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   WorkspaceBody,
   WorkspacePage,
@@ -27,19 +20,21 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useBackgroundLookup, useFeatLookup, useItemLookup } from '@/hooks/data/useGameData'
+import { useStartingEquipmentPolicy } from '@/hooks/data/useStartingEquipment'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
 import { buildBackgroundLookup } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
-  formatEquipmentOptionEntries,
+  getSelectedEquipmentPackage,
   resolveBackgroundEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import { needsStartingEquipmentApplication } from '@/lib/character/startingEquipmentGrants'
 import { resolveFixedFeatGrant } from '@/lib/featGrants'
 import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
@@ -133,6 +128,7 @@ export function BuildBackgroundPage() {
   const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
   const bgEquipmentChoices = character?.backgroundEquipmentChoices ?? []
   const bgEquipmentItemChoices = character?.backgroundEquipmentItemChoices ?? {}
+  const equipmentPolicy = useStartingEquipmentPolicy('background', selectedBg)
 
   const equipmentBlocks = useMemo(
     () =>
@@ -140,12 +136,11 @@ export function BuildBackgroundPage() {
         selectedBg?.startingEquipment,
         itemLookup,
         bgEquipmentItemChoices,
+        equipmentPolicy,
       ),
-    [selectedBg?.startingEquipment, itemLookup, bgEquipmentItemChoices],
+    [selectedBg?.startingEquipment, itemLookup, bgEquipmentItemChoices, equipmentPolicy],
   )
-  const configurableEquipmentBlocks = equipmentBlocks.filter(
-    (block) => !block.isFixed || (block.options._.genericChoices?.length ?? 0) > 0,
-  )
+  const configurableEquipmentBlocks = equipmentBlocks
   const optionCountByBackground = useMemo(() => {
     const counts = new Map<string, number>()
     for (const bg of backgrounds) {
@@ -231,7 +226,10 @@ export function BuildBackgroundPage() {
   const { ref: backgroundSelectionRef, highlighted: backgroundSelectionHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:background')
   const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(focusedBackgroundChoice?.domain === 'equipment')
+    useRouteFocusTarget<HTMLDivElement>(
+      focusedBackgroundChoice?.domain === 'equipment' ||
+        readinessFocus === 'starting-equipment:background',
+    )
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
@@ -537,72 +535,39 @@ export function BuildBackgroundPage() {
                         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Starting Equipment
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                          {configurableEquipmentBlocks.map((block) => {
-                            const currentChoice = block.isFixed
-                              ? '_'
-                              : (bgEquipmentChoices[block.index]?.toLowerCase() ??
-                                block.choiceKeys[0] ??
-                                'a')
-                            const currentPackage = block.options[currentChoice]
-                            return (
-                              <div key={block.index} className="min-w-0 max-w-md flex-1 basis-72">
-                                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Equipment choice {block.index + 1}
-                                </div>
-                                {!block.isFixed && (
-                                  <Select
-                                    value={currentChoice}
-                                    onValueChange={(value) => {
-                                      const next = [...bgEquipmentChoices]
-                                      while (next.length <= block.index) next.push('a')
-                                      next[block.index] = value
-                                      applyBackgroundSelection(
-                                        selectedBg,
-                                        next,
-                                        bgEquipmentItemChoices,
-                                      )
-                                    }}
-                                  >
-                                    <SelectTrigger
-                                      aria-label={`Equipment choice ${block.index + 1}`}
-                                      className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
-                                    >
-                                      <SelectValue placeholder={`Choice ${block.index + 1}…`} />
-                                    </SelectTrigger>
-                                    <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
-                                      {block.choiceKeys.map((key) => {
-                                        const optionData = block.options[key]
-                                        const label =
-                                          formatEquipmentOptionEntries(optionData).join(', ')
-                                        return (
-                                          <SelectItem key={key} value={key} className="text-xs">
-                                            ({key.toUpperCase()}) {label}
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                                {currentPackage?.genericChoices?.map((genericChoice) => (
-                                  <GenericEquipmentSelect
-                                    key={genericChoice.key}
-                                    choice={genericChoice}
-                                    value={bgEquipmentItemChoices[genericChoice.key] ?? ''}
-                                    ariaLabel={`Equipment choice ${block.index + 1} specific item`}
-                                    triggerClassName="bg-background"
-                                    onChange={(itemRef) =>
-                                      applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
-                                        ...bgEquipmentItemChoices,
-                                        [genericChoice.key]: itemRef,
-                                      })
-                                    }
-                                  />
-                                ))}
-                              </div>
+                        <StartingEquipmentBlocks
+                          blocks={configurableEquipmentBlocks}
+                          choices={bgEquipmentChoices}
+                          itemChoices={bgEquipmentItemChoices}
+                          label="Background starting equipment"
+                          needsApplication={
+                            !!equipmentPolicy?.ownerAvailable &&
+                            needsStartingEquipmentApplication(
+                              character,
+                              'background',
+                              getSelectedEquipmentPackage(equipmentBlocks, bgEquipmentChoices),
                             )
-                          })}
-                        </div>
+                          }
+                          onApply={() =>
+                            applyBackgroundSelection(
+                              selectedBg,
+                              bgEquipmentChoices,
+                              bgEquipmentItemChoices,
+                            )
+                          }
+                          onBlockChange={(block, value) => {
+                            const next = [...bgEquipmentChoices]
+                            while (next.length <= block) next.push('a')
+                            next[block] = value
+                            applyBackgroundSelection(selectedBg, next, bgEquipmentItemChoices)
+                          }}
+                          onItemChange={(_, __, key, items) =>
+                            applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
+                              ...bgEquipmentItemChoices,
+                              [key]: items,
+                            })
+                          }
+                        />
                       </div>
                     )}
                   </div>

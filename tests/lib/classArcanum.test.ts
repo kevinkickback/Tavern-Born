@@ -126,7 +126,7 @@ describe('source-qualified Mystic Arcanum setup', () => {
         character = commit(character, [request(character, slot, name)])
       }
       const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
-      expect(reopened.schemaVersion).toBe(13)
+      expect(reopened.schemaVersion).toBe(14)
       expect(reopened.managedClassSpellRevision).toBe(4)
       expect(reopened.spells.spellProfiles[0].spellsKnown).toHaveLength(4)
       expect(reopened.spells.spellProfiles[0].fixedSpells ?? []).toEqual([])

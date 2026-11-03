@@ -1,5 +1,3 @@
-import { buildItemLookup, resolveClassStartingEquipment } from '@/lib/5etools/startingEquipment'
-import type { Item5e } from '@/types/5etools'
 import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
 import { addChoicePlaceholder, addGrant, addSpellGrant } from './ledger'
 import { normalizeKey, stripItemTag } from './normalization'
@@ -50,7 +48,7 @@ export function applyClassGrants(
       }
     | undefined,
   ledger: ProvenanceLedger,
-  options?: { isMulticlassGrant?: boolean; itemLookup?: Map<string, Item5e> },
+  options?: { isMulticlassGrant?: boolean },
 ): ProvenanceLedger {
   let result = ledger
   const clsTag = makeSourceTag('class', cls.name, 'fixed', cls.source)
@@ -124,15 +122,7 @@ export function applyClassGrants(
     }
   }
 
-  // Starting equipment defaults (choice option A from each block).
-  if (!options?.isMulticlassGrant) {
-    for (const item of resolveClassStartingEquipment(
-      cls.startingEquipment,
-      options?.itemLookup ?? buildItemLookup([]),
-    )) {
-      result = addGrant(result, 'equipment', item.name, clsTag)
-    }
-  }
+  // The equipment command owns the selected package and its exact physical/currency relation.
 
   // Subclass attribution (just tag it; features/spells come via modal confirms)
   if (subclass) {

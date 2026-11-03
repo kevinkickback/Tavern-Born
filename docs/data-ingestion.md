@@ -273,8 +273,13 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **61**, owned by [dataCache](../src/lib/storage/dataCache.ts);
+The current parsed cache schema is **63**, owned by [dataCache](../src/lib/storage/dataCache.ts);
 use that constant when changing code. Old increment numbers are not the current version.
+
+Starting-item Basic classification records each parsed item's own input collection. Actual `baseitem`
+rows are Basic; ordinary items/groups and unknown array-only inputs are Other. Copy resolution restores
+that own category rather than inheriting it, generated variants remain Other, and winning layers/cache
+round trips retain the boundary. A filename, source abbreviation or missing rarity cannot establish Basic.
 
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
 output or layer composition changes in a way that makes previous cached data unsafe. Character

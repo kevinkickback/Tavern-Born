@@ -76,7 +76,15 @@ export interface SelectionModalProps<T> {
   initialFilters?: ActiveFilters
   /** Controllers with multi-step setup own successful confirmation and closing. */
   closeOnConfirm?: boolean
-  onConfirm: (selectedIds: string[], selectedItems: T[], filters: ActiveFilters) => void
+  /** Optional bounded quantities; ordinary selectors retain their existing Set semantics. */
+  quantitySelection?: { max: number; initialQuantities?: Readonly<Record<string, number>> }
+  renderSelectionDetails?: (items: readonly T[]) => ReactNode
+  onConfirm: (
+    selectedIds: string[],
+    selectedItems: T[],
+    filters: ActiveFilters,
+    quantities?: Readonly<Record<string, number>>,
+  ) => void
 }
 
 function buildInitialFilters(sections: FilterSection[]): ActiveFilters {
@@ -117,6 +125,8 @@ function SelectionModalInner<T>({
   initialFilters,
   onConfirm,
   closeOnConfirm = true,
+  quantitySelection,
+  renderSelectionDetails,
   onClose,
 }: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange'> & {
   onClose: () => void
@@ -128,7 +138,23 @@ function SelectionModalInner<T>({
     if (!initialFilters) return base
     return { ...base, ...initialFilters }
   })
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () =>
+      new Set([
+        ...initialSelectedIds,
+        ...Object.keys(quantitySelection?.initialQuantities ?? {}).filter(
+          (id) => (quantitySelection?.initialQuantities?.[id] ?? 0) > 0,
+        ),
+      ]),
+  )
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => ({
+    ...quantitySelection?.initialQuantities,
+  }))
+  const selectedQuantity = [...selectedIds].reduce(
+    (sum, id) => sum + (quantitySelection ? (quantities[id] ?? 1) : 1),
+    0,
+  )
+  const quantityOf = (id: string) => (quantitySelection ? (quantities[id] ?? 1) : 1)
   const scrollParentRef = useRef<HTMLDivElement>(null)
 
   const resetScroll = useCallback(() => {
@@ -174,20 +200,59 @@ function SelectionModalInner<T>({
         .map((cat) => ({
           ...cat,
           selected:
-            selectedItems.filter((i) => cat.test(i)).length +
+            selectedItems
+              .filter((i) => cat.test(i))
+              .reduce(
+                (sum, item) => sum + (quantitySelection ? (quantities[getItemId(item)] ?? 1) : 1),
+                0,
+              ) +
             (countUnavailableSelections && categories.length === 1
-              ? unavailableSelections.length
+              ? unavailableSelections.reduce(
+                  (sum, item) => sum + (quantitySelection ? (quantities[item.id] ?? 1) : 1),
+                  0,
+                )
               : 0),
         })),
-    [categories, selectedItems, unavailableSelections, countUnavailableSelections],
+    [
+      categories,
+      selectedItems,
+      unavailableSelections,
+      countUnavailableSelections,
+      quantitySelection,
+      quantities,
+      getItemId,
+    ],
   )
 
   const checkCanSelect = useCallback(
     (item: T): boolean => {
+      if (quantitySelection && selectedQuantity >= quantitySelection.max) return false
+      if (
+        quantitySelection &&
+        categories.some(
+          (category) =>
+            category.test(item) &&
+            selectedItems
+              .filter((selected) => category.test(selected))
+              .reduce((sum, selected) => sum + (quantities[getItemId(selected)] ?? 1), 0) >=
+              category.max,
+        )
+      )
+        return false
       if (canSelect) return canSelect(item, selectedIds, items)
       return defaultCanSelect(item, selectedIds, items, getItemId, categories)
     },
-    [canSelect, selectedIds, items, getItemId, categories],
+    [
+      canSelect,
+      selectedIds,
+      items,
+      getItemId,
+      categories,
+      quantitySelection,
+      selectedQuantity,
+      selectedItems,
+      quantities,
+    ],
   )
 
   const toggleItem = useCallback(
@@ -196,6 +261,11 @@ function SelectionModalInner<T>({
       const alreadySelected = selectedIds.has(id)
       if (!alreadySelected && !checkCanSelect(item)) {
         if (swapOnLimit) {
+          if (quantitySelection) {
+            setSelectedIds(new Set([id]))
+            setQuantities({ [id]: 1 })
+            return
+          }
           setSelectedIds((prev) => {
             const next = new Set(prev)
             for (const sid of next) {
@@ -210,6 +280,13 @@ function SelectionModalInner<T>({
         toast.warning('Selection limit reached for this category.')
         return
       }
+      if (quantitySelection)
+        setQuantities((previous) => {
+          const next = { ...previous }
+          if (alreadySelected) delete next[id]
+          else next[id] = 1
+          return next
+        })
       setSelectedIds((prev) => {
         const next = new Set(prev)
         if (next.has(id)) next.delete(id)
@@ -217,7 +294,7 @@ function SelectionModalInner<T>({
         return next
       })
     },
-    [getItemId, selectedIds, checkCanSelect, swapOnLimit],
+    [getItemId, selectedIds, checkCanSelect, swapOnLimit, quantitySelection],
   )
 
   const handleCheckbox = useCallback(
@@ -251,11 +328,30 @@ function SelectionModalInner<T>({
     resetScroll()
   }
 
-  const confirmationError = getConfirmationError?.(selectedIds, activeFilters)
+  const confirmationError =
+    quantitySelection && selectedQuantity !== quantitySelection.max
+      ? `Choose exactly ${quantitySelection.max} item${quantitySelection.max === 1 ? '' : 's'}.`
+      : getConfirmationError?.(selectedIds, activeFilters)
   const handleConfirm = () => {
     if (confirmationError) return
-    onConfirm([...selectedIds], selectedItems, activeFilters)
-    if (closeOnConfirm) onClose()
+    if (!quantitySelection) {
+      onConfirm([...selectedIds], selectedItems, activeFilters)
+      if (closeOnConfirm) onClose()
+      return
+    }
+    try {
+      onConfirm(
+        [...selectedIds],
+        selectedItems,
+        activeFilters,
+        quantitySelection
+          ? Object.fromEntries([...selectedIds].map((id) => [id, quantityOf(id)]))
+          : undefined,
+      )
+      if (closeOnConfirm) onClose()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'The selection could not be applied.')
+    }
   }
 
   const allAccordionKeys = filterSections.map((s) => s.key)
@@ -469,7 +565,62 @@ function SelectionModalInner<T>({
           )}
         </div>
       </div>
-      <div className="flex flex-shrink-0 items-center justify-between gap-4 border-t border-border bg-surface-raised px-5 py-3">
+      {quantitySelection && selectedItems.length > 0 && (
+        <section
+          className="max-h-44 shrink-0 overflow-y-auto border-t border-border bg-surface-raised px-5 py-3"
+          aria-label="Selected item quantities"
+        >
+          {selectedItems.map((item) => {
+            const id = getItemId(item)
+            const label = getItemLabel?.(item) ?? id
+            return (
+              <div
+                key={id}
+                className="flex min-w-0 items-center justify-between gap-3 py-1 text-sm"
+              >
+                <span className="min-w-0 truncate">{label}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Decrease ${label} quantity`}
+                    onClick={() => {
+                      const next = quantityOf(id) - 1
+                      setQuantities((previous) => ({ ...previous, [id]: next }))
+                      if (!next)
+                        setSelectedIds((previous) => {
+                          const ids = new Set(previous)
+                          ids.delete(id)
+                          return ids
+                        })
+                    }}
+                  >
+                    −
+                  </Button>
+                  <output className="tabular-nums" aria-label={`${label} quantity`}>
+                    {quantityOf(id)}
+                  </output>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Increase ${label} quantity`}
+                    disabled={!checkCanSelect(item)}
+                    onClick={() =>
+                      setQuantities((previous) => ({ ...previous, [id]: (previous[id] ?? 1) + 1 }))
+                    }
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+          {renderSelectionDetails?.(selectedItems)}
+        </section>
+      )}
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-border bg-surface-raised px-5 py-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <span className="text-xs font-semibold uppercase text-muted-foreground">Selected</span>
@@ -489,7 +640,7 @@ function SelectionModalInner<T>({
               })
             ) : (
               <Badge variant="secondary" className="h-6 px-2 text-xs tabular-nums">
-                {selectedIds.size}
+                {selectedQuantity}
               </Badge>
             )}
             {selectionHint && <div className="text-xs text-muted-foreground">{selectionHint}</div>}

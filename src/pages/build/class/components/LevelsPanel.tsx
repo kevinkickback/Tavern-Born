@@ -94,7 +94,7 @@ interface BuildClassLevelsPanelProps {
   viewingClassSource?: string
   viewingClassLevel: number
   classEquipmentBlockChoices: string[]
-  classEquipmentItemChoices?: Readonly<Record<string, string>>
+  classEquipmentItemChoices?: Readonly<import('@/types/character').StartingEquipmentItemChoices>
   feats: Feat5e[]
   spellByReference: Map<string, Spell5e>
   appliedAsiChoicesForClass: AsiChoice[]
@@ -114,7 +114,12 @@ interface BuildClassLevelsPanelProps {
   onOpenAsiPicker: (level: number) => void
   onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
-  onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
+  onItemChoiceChange?: (
+    blockIndex: number,
+    choice: string,
+    key: string,
+    items: import('@/types/character').StartingItemReference[],
+  ) => void
   onSelectFeature: (feature: ClassDetailsSelection) => void
   onExpandDetails: () => void
   onAsiReset: (level: number) => void
@@ -263,12 +268,21 @@ export function BuildClassLevelsPanel({
   const focusedEquipmentChoice =
     focusedViewingClassChoice?.domain === 'equipment' ? focusedViewingClassChoice : undefined
   const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(!!focusedEquipmentChoice)
+    useRouteFocusTarget<HTMLDivElement>(
+      !!focusedEquipmentChoice || readinessFocus === 'starting-equipment:class',
+    )
   const { ref: classChoiceRef, highlighted: classChoiceHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(
       focusedViewingClassChoice?.domain === 'features' ||
         focusedViewingClassChoice?.domain === 'feats',
     )
+
+  useEffect(() => {
+    if (readinessFocus === 'starting-equipment:class')
+      setOpenSections((current) =>
+        current.includes('starting-equipment') ? current : [...current, 'starting-equipment'],
+      )
+  }, [readinessFocus])
 
   useEffect(() => {
     if (!focusLevel) return
@@ -413,38 +427,39 @@ export function BuildClassLevelsPanel({
               onValueChange={setOpenSections}
               className="space-y-2"
             >
-              {(classProgression.length <= 1 || classProgression[0]?.name === viewingClass) && (
-                <AccordionItem
-                  value="starting-equipment"
-                  className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
-                >
-                  <AccordionTrigger className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Starting Equipment</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div
-                      ref={equipmentChoiceRef}
-                      className={cn(
-                        'px-3 pb-2 pt-3',
-                        equipmentChoiceHighlighted && 'animate-route-focus',
-                      )}
-                    >
-                      <BuildClassEquipmentSection
-                        viewingClassData={viewingClassData}
-                        blockChoices={classEquipmentBlockChoices}
-                        itemChoices={classEquipmentItemChoices}
-                        detailCollapsed={detailCollapsed}
-                        onBlockChoiceChange={onBlockChoiceChange}
-                        onItemChoiceChange={onItemChoiceChange}
-                        onSelectFeature={onSelectFeature}
-                        onExpandDetails={onExpandDetails}
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              )}
+              {character.initialClass?.name === viewingClass &&
+                character.initialClass.source === viewingClassSource && (
+                  <AccordionItem
+                    value="starting-equipment"
+                    className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
+                  >
+                    <AccordionTrigger className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Starting Equipment</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div
+                        ref={equipmentChoiceRef}
+                        className={cn(
+                          'px-3 pb-2 pt-3',
+                          equipmentChoiceHighlighted && 'animate-route-focus',
+                        )}
+                      >
+                        <BuildClassEquipmentSection
+                          viewingClassData={viewingClassData}
+                          blockChoices={classEquipmentBlockChoices}
+                          itemChoices={classEquipmentItemChoices}
+                          detailCollapsed={detailCollapsed}
+                          onBlockChoiceChange={onBlockChoiceChange}
+                          onItemChoiceChange={onItemChoiceChange}
+                          onSelectFeature={onSelectFeature}
+                          onExpandDetails={onExpandDetails}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
 
               {levelsToShow.map((lv) => {
                 const {

@@ -168,11 +168,6 @@ function spellReferenceIsMissing(reference: string, index: GameDataAvailabilityI
   return referenceIsMissing(parsed.name, parsed.source, index.spells)
 }
 
-function itemReferenceIsMissing(reference: string, index: GameDataAvailabilityIndex): boolean {
-  const [name, source] = reference.split('|')
-  return referenceIsMissing(name, source, index.items)
-}
-
 /**
  * Reports whether a character has exact, source-qualified saved choices that are absent from the
  * currently loaded catalog. Unqualified custom values are ignored because their origin
@@ -257,14 +252,16 @@ export function characterUsesContentOutsideCatalog(
   if (character.equipment.some((item) => itemIsMissing(item, index))) return true
   if (
     Object.values(character.backgroundEquipmentItemChoices ?? {}).some((reference) =>
-      itemReferenceIsMissing(reference, index),
+      reference.some((item) => itemIsMissing(item, index)),
     )
   ) {
     return true
   }
   if (
     Object.values(character.classEquipmentItemChoices ?? {}).some((choices) =>
-      Object.values(choices).some((reference) => itemReferenceIsMissing(reference, index)),
+      Object.values(choices).some((reference) =>
+        reference.some((item) => itemIsMissing(item, index)),
+      ),
     )
   ) {
     return true

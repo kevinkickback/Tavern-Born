@@ -613,9 +613,8 @@ function buildFixtureProvenance({
     )
   }
 
-  equipment.forEach((item, index) => {
-    const owner = index < 8 ? fighterTag : manualTag
-    addLedgerGrant(provenance.equipment, item.name, owner)
+  equipment.forEach((item) => {
+    addLedgerGrant(provenance.equipment, item.name, manualTag)
   })
 
   if (edition === '2014') {
@@ -964,6 +963,8 @@ function buildFixture(seed, edition) {
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: `Full-Coverage Test Character (${edition})`,
     originSystem: edition,
+    // Authored independent funds, before either starting package is applied.
+    currency: { cp: 137, sp: 88, ep: 23, gp: 12450, pp: 417 },
     race: race.name,
     raceSource: race.source,
     ...(selectedSubrace
@@ -1018,7 +1019,8 @@ function buildFixture(seed, edition) {
     raceAsiChoices: [],
     backgroundAsiBlockIndex: edition === '2024' ? 0 : undefined,
     backgroundAsiChoices: edition === '2024' ? backgroundChoices : undefined,
-    backgroundCurrencyGrant: undefined,
+    initialClass: undefined,
+    startingEquipmentGrants: undefined,
     backgroundEquipmentChoices: [],
     backgroundEquipmentItemChoices: {},
     classEquipmentChoices: {},
@@ -1115,7 +1117,125 @@ function buildFixture(seed, edition) {
     raceResolution.parentRace,
     raceResolution.subraceData,
   )
-  return JSON.parse(JSON.stringify(fixture))
+  return authorStartingEquipmentFixture(JSON.parse(JSON.stringify(fixture)), 90)
+}
+
+/** Author fresh starting grants; never infer acquisition from an older fixture's inventory. */
+function authorStartingEquipmentFixture(input, capacity) {
+  const manualEquipment = input.equipment
+  const initial = input.classProgression[0]
+  const cls = requireEntity(parsedCastingData.classes, initial.name, initial.source)
+  const background = requireEntity(backgrounds, input.background, input.backgroundSource)
+  let character = {
+    ...createEmptyCharacter({
+      name: input.name,
+      originSystem: input.originSystem,
+      allowedSources: input.allowedSources,
+    }),
+    id: input.id,
+    classProgression: input.classProgression,
+    currency: input.currency,
+    initialClass: { name: cls.name, source: cls.source },
+    startingEquipmentGrants: undefined,
+    classEquipmentChoices: {},
+    classEquipmentItemChoices: {},
+    backgroundEquipmentChoices: [],
+    backgroundEquipmentItemChoices: {},
+    equipment: [],
+  }
+  const itemLookup = buildItemLookup(parsedStartingItems)
+  for (const [role, owner] of [
+    ['class', cls],
+    ['background', background],
+  ]) {
+    const policy = createStartingEquipmentPolicy(
+      character,
+      { ...owner, kind: role },
+      owner.startingEquipment,
+      parsedStartingItems,
+      undefined,
+      startingItemTypes,
+    )
+    const blocks =
+      role === 'class'
+        ? resolveClassEquipmentBlocks(owner.startingEquipment, itemLookup, {}, policy)
+        : resolveBackgroundEquipmentBlocks(owner.startingEquipment, itemLookup, {}, policy)
+    const choices = blocks.map((block) => (block.isFixed ? '_' : block.choiceKeys[0]))
+    const selections = Object.fromEntries(
+      blocks.flatMap((block) => {
+        const pkg = block.options[choices[block.index]]
+        return (pkg.genericChoices ?? []).map((slot) => {
+          const candidate = [...slot.candidates].sort((a, b) => key(a).localeCompare(key(b)))[0]
+          if (!candidate) throw new Error(`Missing fixture starting item candidates: ${slot.key}`)
+          return [slot.key, Array.from({ length: slot.quantity }, () => ({ ...candidate }))]
+        })
+      }),
+    )
+    if (role === 'class') {
+      for (const block of blocks) {
+        const result = applyClassEquipmentChoiceCommand(
+          character,
+          character.provenance,
+          cls,
+          block.index,
+          choices[block.index],
+          itemLookup,
+          selections,
+          policy,
+        )
+        character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+      }
+    } else {
+      const result = applyBackgroundSelectionCommand(
+        character,
+        character.provenance,
+        background,
+        choices,
+        itemLookup,
+        selections,
+        policy,
+      )
+      character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+    }
+  }
+  // Remap only newly authored IDs and their lot references to deterministic fixture IDs.
+  const ids = new Map(
+    character.equipment.map((item, index) => [item.id, `${input.id}-starting-${index + 1}`]),
+  )
+  character.equipment = character.equipment.map((item) => ({ ...item, id: ids.get(item.id) }))
+  for (const grant of Object.values(character.startingEquipmentGrants ?? {})) {
+    grant.items = grant.items.map((lot) => ({ ...lot, equipmentId: ids.get(lot.equipmentId) }))
+  }
+  // Preserve equipped/attuned rows and replace tail filler within the PDF's 90-row capacity.
+  const retainedManual = capacity
+    ? manualEquipment.slice(0, capacity - character.equipment.length)
+    : manualEquipment
+  if (capacity && retainedManual.length < 13)
+    throw new Error('Starting fixture exceeds gear capacity.')
+  character.equipment = [
+    ...retainedManual.slice(0, 13),
+    ...character.equipment,
+    ...retainedManual.slice(13),
+  ]
+  for (const item of retainedManual) {
+    addLedgerGrant(
+      character.provenance.equipment,
+      item.name,
+      makeTag('manual', 'User Choice', 'choice'),
+    )
+  }
+  return {
+    ...input,
+    initialClass: character.initialClass,
+    startingEquipmentGrants: character.startingEquipmentGrants,
+    classEquipmentChoices: character.classEquipmentChoices,
+    classEquipmentItemChoices: character.classEquipmentItemChoices,
+    backgroundEquipmentChoices: character.backgroundEquipmentChoices,
+    backgroundEquipmentItemChoices: character.backgroundEquipmentItemChoices,
+    equipment: character.equipment,
+    currency: character.currency,
+    provenance: { ...input.provenance, equipment: character.provenance.equipment },
+  }
 }
 
 function getNativeFixtureResolution(fixture) {
@@ -1398,7 +1518,7 @@ function buildCompanionFixture(baseFixture, edition) {
     makeTag('subclass', beastMaster.name, 'fixed', beastMaster.source),
   )
   for (const item of companionEquipment) {
-    addLedgerGrant(provenance.equipment, item.name, rangerTag)
+    addLedgerGrant(provenance.equipment, item.name, makeTag('manual', 'User Choice', 'choice'))
   }
   const fixture = JSON.parse(
     JSON.stringify({
@@ -1417,6 +1537,12 @@ function buildCompanionFixture(baseFixture, edition) {
       },
       proficiencies,
       classProgression: progression,
+      initialClass: undefined,
+      startingEquipmentGrants: undefined,
+      classEquipmentChoices: {},
+      classEquipmentItemChoices: {},
+      backgroundEquipmentChoices: [],
+      backgroundEquipmentItemChoices: {},
       classChoiceSelections: selected,
       classFeatChoices: classChoiceState.classFeatChoices,
       features: [
@@ -1522,10 +1648,12 @@ function buildCompanionFixture(baseFixture, edition) {
     edition === '2024' ? { entry: progression[0], references: spellReferences } : undefined,
   )
   const resolution = getNativeFixtureResolution(authored)
-  return refreshRacialDefenseState(
-    refreshNativeRacialSpellState(authored, resolution),
-    resolution.parentRace,
-    resolution.subraceData,
+  return authorStartingEquipmentFixture(
+    refreshRacialDefenseState(
+      refreshNativeRacialSpellState(authored, resolution),
+      resolution.parentRace,
+      resolution.subraceData,
+    ),
   )
 }
 
@@ -1617,8 +1745,32 @@ let parseRaces,
   decodeClassProficiencyChoiceId,
   getProficiencyOption,
   applyClassChoiceSelectionWithGrantsCommand,
-  characterPersistenceSchema
+  characterPersistenceSchema,
+  parseItems,
+  parseItemTypes,
+  buildItemLookup,
+  resolveClassEquipmentBlocks,
+  resolveBackgroundEquipmentBlocks,
+  createStartingEquipmentPolicy,
+  applyClassEquipmentChoiceCommand,
+  applyBackgroundSelectionCommand,
+  createEmptyCharacter
 try {
+  ;({ createEmptyCharacter } = await runtime.ssrLoadModule('/src/lib/character/createCharacter.ts'))
+  ;({ parseItems, parseItemTypes } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/parsers/basic.ts',
+  ))
+  ;({ buildItemLookup, resolveClassEquipmentBlocks, resolveBackgroundEquipmentBlocks } =
+    await runtime.ssrLoadModule('/src/lib/5etools/startingEquipment.ts'))
+  ;({ createStartingEquipmentPolicy } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/startingEquipmentPolicy.ts',
+  ))
+  ;({ applyClassEquipmentChoiceCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/classCommands.ts',
+  ))
+  ;({ applyBackgroundSelectionCommand } = await runtime.ssrLoadModule(
+    '/src/lib/character/commands/backgroundCommands.ts',
+  ))
   ;({ parseRaces } = await runtime.ssrLoadModule('/src/lib/5etools/parsers/races.ts'))
   ;({ refreshRacialDefenseState } = await runtime.ssrLoadModule(
     '/src/lib/character/racialDefenseState.ts',
@@ -1677,6 +1829,14 @@ try {
   await runtime.close()
 }
 const nativeRaces = parseRaces(racePayload)
+const startingItemData = composeGameDataLayers([
+  { ...createEmptyGameData(), items: parseItems(itemsPayload) },
+  { ...createEmptyGameData(), itemsBase: parseItems(baseItemsPayload) },
+])
+const parsedStartingItems = [...startingItemData.items, ...startingItemData.itemsBase]
+const startingItemTypes = Object.fromEntries(
+  parseItemTypes(baseItemsPayload).map((type) => [type.abbreviation, type.name]),
+)
 const parsedFixtureSpells = parseSpells(spells, { sourceLookup: spellSourceLookup })
 const nativeSpellLookup = buildSpellLookup(parsedFixtureSpells)
 const parsedCastingData = composeGameDataLayers(
