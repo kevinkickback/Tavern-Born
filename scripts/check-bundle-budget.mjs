@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared enemy setup with searchable controls and data-assisted language suggestions.
-  // Measured 6,306,981 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6160 * KIB,
+  // Shared bounded autocomplete, known-language filtering and optional-feature labels.
+  // Measured 6,315,720 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6168 * KIB,
   // Synchronous source/owner/target authority: measured 1,106,505 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
   initialRendererScript: 1081 * KIB,

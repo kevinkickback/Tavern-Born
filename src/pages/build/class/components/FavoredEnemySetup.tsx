@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { favoredEnemyOption } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   getSpokenLanguageSuggestions,
@@ -32,6 +33,7 @@ export interface FavoredEnemySetupProps {
   removalOnly: boolean
   types: ClassChoiceOptionView[]
   languages: NormalizedChoiceOptionReference[]
+  knownLanguages?: readonly string[]
   suggestions?: SpokenLanguageSuggestions
   onConfirm: (selected: ClassChoiceOptionView[], setup: Setup) => void
   onClear: () => void
@@ -44,6 +46,7 @@ export function FavoredEnemySetup({
   removalOnly,
   types,
   languages,
+  knownLanguages = [],
   suggestions,
   onConfirm,
   onClear,
@@ -53,6 +56,12 @@ export function FavoredEnemySetup({
   const [mode, setMode] = useState<Setup['mode']>(selection?.favoredEnemy?.mode ?? 'type')
   const [names, setNames] = useState<string[]>(selection?.selected.map((o) => o.name) ?? [])
   const previousLanguage = selection?.favoredEnemy?.language
+  const savedLanguage = previousLanguage?.kind === 'spoken' ? previousLanguage.name : undefined
+  const known = new Set(knownLanguages.map(canonicalProficiencyName))
+  const availableLanguages = languages.filter(
+    (option) => !known.has(option.name) || option.name === savedLanguage,
+  )
+  const availableNames = new Set(availableLanguages.map((option) => option.name))
   const [language, setLanguage] = useState(
     previousLanguage?.kind === 'spoken'
       ? previousLanguage.name
@@ -65,7 +74,7 @@ export function FavoredEnemySetup({
     getSpokenLanguageSuggestions(
       suggestions,
       nextMode === 'type' ? { creatureType: next[0] } : { races: next },
-    )
+    ).filter((name) => availableNames.has(name))
   const changeNames = (next: string[], nextMode = mode) => {
     setNames(next)
     if (
@@ -91,11 +100,16 @@ export function FavoredEnemySetup({
     !duplicate && (mode === 'type' ? nonempty.length === 1 && validType : nonempty.length === 2)
   const suggestedLanguages = enemiesComplete ? matchingLanguages(mode, names) : []
   const restricted = !showAll && suggestedLanguages.length > 0
-  const visibleLanguages = languages.filter(
+  const visibleLanguages = availableLanguages.filter(
     (o) => !restricted || suggestedLanguages.includes(o.name) || o.name === language,
   )
   const unavailableLanguage =
     language !== 'pending' && language !== 'none' && !languages.some((o) => o.name === language)
+  const alreadyKnownLanguage =
+    language !== 'pending' &&
+    language !== 'none' &&
+    language !== savedLanguage &&
+    known.has(language)
   const confirm = () =>
     onConfirm(
       nonempty.map((name) => ({
@@ -106,7 +120,10 @@ export function FavoredEnemySetup({
       {
         mode,
         ...(mode === 'humanoid-races' && enemiesComplete ? { humanoidsConfirmed: true } : {}),
-        ...(enemiesComplete && !unavailableLanguage && language !== 'pending'
+        ...(enemiesComplete &&
+        !unavailableLanguage &&
+        !alreadyKnownLanguage &&
+        language !== 'pending'
           ? {
               language:
                 language === 'none'
@@ -129,8 +146,7 @@ export function FavoredEnemySetup({
             Favored Enemy{selection ? ` — level ${selection.classLevel}` : ''}
           </DialogTitle>
           <DialogDescription>
-            Choose one creature type or two distinct humanoid races. Confirm saves your campaign
-            choices, including a language spoken by those enemies or explicitly no spoken language.
+            Choose your favored enemies and associated language.
           </DialogDescription>
         </DialogHeader>
         {removalOnly ? (
@@ -141,6 +157,7 @@ export function FavoredEnemySetup({
         ) : (
           <div className="space-y-4">
             <Tabs
+              className="gap-4"
               value={mode}
               activationMode="manual"
               onValueChange={(value) => {
@@ -165,8 +182,9 @@ export function FavoredEnemySetup({
                       id={`${id}-type`}
                       value={names[0] ?? ''}
                       placeholder="Search creature types…"
+                      suggestionsLabel="Creature type suggestions"
                       maxLength={200}
-                      onChange={(e) => changeNames([e.target.value])}
+                      onValueChange={(value) => changeNames([value])}
                       options={types.map((o) => ({ value: title(o.reference.name) }))}
                     />
                     {nonempty.length > 0 && !validType && (
@@ -182,10 +200,11 @@ export function FavoredEnemySetup({
                           id={`${id}-race-${i}`}
                           value={names[i] ?? ''}
                           placeholder="Search races or enter a campaign race…"
+                          suggestionsLabel={`Humanoid race ${i + 1} suggestions`}
                           maxLength={200}
-                          onChange={(e) => {
+                          onValueChange={(value) => {
                             const next = [names[0] ?? '', names[1] ?? '']
-                            next[i] = e.target.value
+                            next[i] = value
                             changeNames(next)
                           }}
                           options={(suggestions?.races ?? []).map((race) => ({
@@ -195,10 +214,6 @@ export function FavoredEnemySetup({
                         />
                       </div>
                     ))}
-                    <p className="text-xs text-muted-foreground">
-                      Suggestions are not a complete list. You can enter a humanoid race from your
-                      campaign.
-                    </p>
                     {duplicate && (
                       <p className="text-sm text-destructive">
                         Choose two distinct humanoid races.
@@ -227,32 +242,26 @@ export function FavoredEnemySetup({
                       {title(language)} (unavailable)
                     </SelectItem>
                   )}
+                  {!unavailableLanguage && alreadyKnownLanguage && (
+                    <SelectItem value={language} disabled>
+                      {title(language)} (already known)
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
-              {enemiesComplete && (
+              {enemiesComplete && suggestedLanguages.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    {suggestedLanguages.length > 0
-                      ? 'Suggestions come from the available data and may be incomplete.'
-                      : 'No spoken-language matches found. Choose from all available languages; no matches does not mean these enemies cannot speak.'}
-                  </p>
-                  {suggestedLanguages.length > 0 && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto p-0 text-xs"
-                      onClick={() => setShowAll(!showAll)}
-                    >
-                      {showAll ? 'Show suggested languages' : 'Show all languages'}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => setShowAll(!showAll)}
+                  >
+                    {showAll ? 'Show suggested languages' : 'Show all languages'}
+                  </Button>
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              An already known language can be recorded again; it grants no substitute language.
-              Changing enemies updates language suggestions. Decide later saves partial setup.
-            </p>
           </div>
         )}
         <DialogFooter>
@@ -268,7 +277,8 @@ export function FavoredEnemySetup({
               disabled={
                 duplicate ||
                 (mode === 'type' && nonempty.length > 0 && !validType) ||
-                unavailableLanguage
+                unavailableLanguage ||
+                alreadyKnownLanguage
               }
             >
               Confirm

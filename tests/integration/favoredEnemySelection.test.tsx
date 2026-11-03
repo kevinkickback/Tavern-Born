@@ -136,7 +136,10 @@ test('autocomplete, single suggestion, Show all and saved-language preservation 
   await screen.findByRole('dialog')
   const before = JSON.stringify(active())
   const type = dialog().getByRole('combobox', { name: 'Creature type' })
-  expect(document.getElementById(type.getAttribute('list')!)?.textContent).toContain('Dragon')
+  fireEvent.focus(type)
+  expect(screen.getByRole('listbox', { name: 'Creature type suggestions' }).textContent).toContain(
+    'Dragon',
+  )
   fireEvent.change(type, { target: { value: 'Dra' } })
   expect((dialog().getByRole('button', { name: 'Confirm' }) as HTMLButtonElement).disabled).toBe(
     true,
@@ -170,7 +173,10 @@ test('autocomplete, single suggestion, Show all and saved-language preservation 
     ctrlKey: false,
   })
   const race = dialog().getByLabelText('Humanoid race 1')
-  expect(document.getElementById(race.getAttribute('list')!)?.textContent).toContain('Elf (PHB)')
+  fireEvent.focus(race)
+  expect(
+    screen.getByRole('listbox', { name: 'Humanoid race 1 suggestions' }).textContent,
+  ).toContain('Elf (PHB)')
   fireEvent.change(race, { target: { value: 'Elf' } })
   fireEvent.change(dialog().getByLabelText('Humanoid race 2'), {
     target: { value: 'Campaign people' },
@@ -185,4 +191,69 @@ test('autocomplete, single suggestion, Show all and saved-language preservation 
   fireEvent.click(screen.getByRole('option', { name: 'Common' }))
   fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
   expect(JSON.stringify(active())).toBe(saved)
+})
+
+test('known languages are excluded before defaults and Show all; editing and Clear preserve independent providers', async () => {
+  const f = makeFavoredEnemyFixture(1)
+  f.character.proficiencies.languages = ['Common']
+  f.data.creatures = [
+    {
+      name: 'Dragon language fixture',
+      source: 'MM',
+      type: 'dragon',
+      languages: ['Common', 'Draconic'],
+    },
+  ]
+  mount(f)
+  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  await screen.findByRole('dialog')
+  fireEvent.change(dialog().getByRole('combobox', { name: 'Creature type' }), {
+    target: { value: 'Dragon' },
+  })
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Draconic',
+  )
+  fireEvent.click(dialog().getByRole('button', { name: 'Show all languages' }))
+  fireEvent.click(dialog().getByRole('combobox', { name: 'Associated language' }))
+  expect(screen.queryByRole('option', { name: 'Common' })).toBeNull()
+  fireEvent.click(screen.getByRole('option', { name: 'Draconic' }))
+  await confirm()
+  await open()
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Draconic',
+  )
+  await select('Associated language', 'Draconic')
+  fireEvent.click(dialog().getByRole('button', { name: 'Clear' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(active().proficiencies.languages.map((x) => x.toLowerCase())).toEqual(['common'])
+})
+
+test('when all found languages are known, remaining options stay available and setup does not imply none', async () => {
+  const f = makeFavoredEnemyFixture(1)
+  f.character.proficiencies.languages = ['common', 'draconic']
+  f.data.creatures = [
+    {
+      name: 'Dragon language fixture',
+      source: 'MM',
+      type: 'dragon',
+      languages: ['Common', 'Draconic'],
+    },
+  ]
+  mount(f)
+  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  await screen.findByRole('dialog')
+  fireEvent.change(dialog().getByRole('combobox', { name: 'Creature type' }), {
+    target: { value: 'Dragon' },
+  })
+  expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
+    'Decide later',
+  )
+  fireEvent.click(dialog().getByRole('combobox', { name: 'Associated language' }))
+  expect(screen.queryByRole('option', { name: 'Common' })).toBeNull()
+  expect(screen.queryByRole('option', { name: 'Draconic' })).toBeNull()
+  fireEvent.click(screen.getByRole('option', { name: 'Elvish' }))
+  await confirm()
+  expect(characterPersistenceSchema.parse(active()).classChoiceSelections![0].favoredEnemy).toEqual(
+    { mode: 'type', language: { kind: 'spoken', name: 'elvish' } },
+  )
 })

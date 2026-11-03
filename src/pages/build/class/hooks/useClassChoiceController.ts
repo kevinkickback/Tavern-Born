@@ -534,6 +534,7 @@ export function useClassChoiceController({
             selection: activeSaved?.selection,
             removalOnly: activeRemovalOnly,
             suggestions: enemySuggestions,
+            knownLanguages: character?.proficiencies.languages,
             types: activeOptionViews.filter(
               (v) =>
                 v.availability === 'eligible' &&

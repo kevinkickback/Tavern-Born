@@ -245,8 +245,9 @@ removes the complete allocation even without sources, and stale saved handles ca
 newer relation. Each actual owner has distinct enemies across gains; languages may repeat.
 
 Spoken-language contributions use the existing owned-proficiency projection and exact selection ID
-as grantVariant. An already known associated language is permitted as another provider, with no
-substitute or extra benefit. Removing one gain retains other class, race, background and manual
+as grantVariant. New picker choices exclude languages the character already knows, before suggestion
+defaults and Show all. The current allocation's saved language remains visible/editable, preserving
+existing providers without a substitute or extra benefit. Removing one gain retains other class, race, background and manual
 providers. Missing base suspends all gains; missing one improvement suspends only that gain. Missing
 language vocabulary suspends that language contribution and creates language-specific recovery while
 retaining a valid enemy allocation. Exact restoration re-evaluates saved intent without a write.

@@ -1,6 +1,7 @@
 import { CaretRight, Check } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
@@ -260,6 +261,12 @@ export function OptionalClassFeatures(props: OptionalClassFeaturesProps) {
                   <span>{row.root.name}</span>
                   <CaretRight className="size-3 shrink-0 text-muted-foreground group-hover:text-accent" />
                 </button>
+                <Badge
+                  variant="outline"
+                  className="mr-3 self-center text-[10px] text-muted-foreground"
+                >
+                  Optional feature
+                </Badge>
               </div>
               {selected && selectedContent(group)}
             </div>
