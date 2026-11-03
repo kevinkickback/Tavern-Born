@@ -1,5 +1,6 @@
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   buildSubclassLookup,
@@ -36,6 +37,7 @@ import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
 } from './effectiveClassChoiceFeatures'
+import { describeFavoredEnemyLanguage } from './favoredEnemySelections'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
@@ -84,9 +86,14 @@ export function buildRetainedCharacterDetails(
         selection.choiceId,
         selection.selected.map(() => ({
           availability: 'available',
-          entries: [
-            'Saved favored-terrain intent is inactive while Deft Explorer replaces Natural Explorer.',
-          ],
+          entries: decodeFavoredEnemyChoiceId(selection.choiceId)
+            ? [
+                'Saved favored-enemy intent is inactive while Favored Foe replaces Favored Enemy.',
+                describeFavoredEnemyLanguage(selection),
+              ]
+            : [
+                'Saved favored-terrain intent is inactive while Deft Explorer replaces Natural Explorer.',
+              ],
         })),
       )
   const addFeature = (feature: { name: string; source?: string; entries?: unknown[] }) => {

@@ -324,10 +324,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const setupIssues = report.issues.filter((issue) => issue.code === 'choice-diagnostic')
     expect(
       setupIssues.map(({ entity, message }) => ({ entity, feature: message.split(':')[0] })),
-    ).toEqual([
-      { entity: 'Mystic|UATheMysticClass', feature: 'Psionics' },
-      { entity: 'Ranger|PHB', feature: 'Favored Enemy' },
-    ])
+    ).toEqual([{ entity: 'Mystic|UATheMysticClass', feature: 'Psionics' }])
     expect(
       setupIssues.every((issue) => issue.message.includes(': unsupported-required-choice: ')),
     ).toBe(true)

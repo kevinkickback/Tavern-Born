@@ -1,8 +1,15 @@
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import {
+  decodeFavoredEnemyChoiceId,
+  FAVORED_ENEMY_GRANTS,
+} from '@/lib/5etools/favoredEnemyIdentity'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
-import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
+import {
+  decodeNaturalExplorerChoiceId,
+  NATURAL_EXPLORER_GRANTS,
+} from '@/lib/5etools/naturalExplorerIdentity'
 import {
   getCurrentOptionalDeclaration,
   OPTIONAL_CLASS_DECLARATIONS,
@@ -187,6 +194,8 @@ function buildOptionalClassFeatureActivity(
     const owner = optionalClassOwner(row.owner)
     const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (proficiency) return declared(owner, proficiency.target, row.level)
+    const enemy = decodeFavoredEnemyChoiceId(row.id)
+    if (enemy) return declared(owner, enemy.grant, row.level, 'favored-enemy-language')
     const terrain = decodeNaturalExplorerChoiceId(row.id)
     if (terrain) return declared(owner, terrain.grant, row.level, 'favored-terrain')
     const declaration = getClassChoiceDeclaration(row)
@@ -205,6 +214,18 @@ function buildOptionalClassFeatureActivity(
       subclassSource: row.subclassSource,
     })
     const target = row.requiredChoice && getClassChoiceFeatureTarget(row.requiredChoice.target)
+    if (
+      target &&
+      row.featureName === 'Favored Enemy' &&
+      FAVORED_ENEMY_GRANTS.some((g) => g.target === target)
+    )
+      return declared(owner, target, row.level ?? 1, 'favored-enemy-language')
+    if (
+      target &&
+      row.featureName === 'Natural Explorer' &&
+      NATURAL_EXPLORER_GRANTS.some((g) => g.target === target)
+    )
+      return declared(owner, target, row.level ?? 1, 'favored-terrain')
     if (target) return declared(owner, target, row.level ?? 1, undefined, !!row.featureVariant)
     return earned(owner, row.level ?? 1) && !row.featureVariant
   }

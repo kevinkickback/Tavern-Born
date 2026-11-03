@@ -5,6 +5,7 @@ import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormal
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
+  getClassChoiceCompletionCount,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
@@ -64,6 +65,11 @@ export function BuildClassChoicesSection({
           id={state.selection.choiceId}
           label={state.selection.label}
           recovery
+          recoveryHint={
+            state.enemy?.complete && !state.enemy.languageAvailable
+              ? 'Saved language unavailable — enemy selection retained'
+              : undefined
+          }
           selectedCount={state.selection.selected.length}
           isFull={false}
           chosenItems={state.selection.selected.map((row, index) => ({
@@ -82,7 +88,7 @@ export function BuildClassChoicesSection({
       {choices.map((choice) => {
         const required = getRequiredChoiceSelectionCount(choice, classLevel)
         const views = selectedViewsByChoiceId.get(choice.id) ?? []
-        const selectedCount = views.filter(isClassChoiceOptionEligible).length
+        const selectedCount = getClassChoiceCompletionCount(choice, views)
         return (
           <BuildClassProgressionChoiceCard
             key={choice.id}

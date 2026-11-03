@@ -1,6 +1,10 @@
 import type { ClassFeature } from '@/types/5etools'
 import { getClassFeatureIdentity } from './classFeatureIdentity'
+import type { ClassFeatureSourceCatalog } from './featureSourceAudit'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+
+export type { ClassFeatureSourceCatalog } from './featureSourceAudit'
+
 import {
   DEFT_EXPLORER_TARGET,
   NATURAL_EXPLORER_GRANTS,
@@ -70,10 +74,6 @@ export function auditNaturalExplorerSources(
       ? { ...feature, featureOptionSourceConflict: true }
       : feature,
   )
-}
-export interface ClassFeatureSourceCatalog {
-  classFeatures: readonly ClassFeature[]
-  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
 }
 const sourceCache = new WeakMap<object, ReadonlyMap<string, ClassFeature | undefined>>()
 /** Candidate bundles are immutable and replaced on source refresh, as are the existing filtered catalogs. */

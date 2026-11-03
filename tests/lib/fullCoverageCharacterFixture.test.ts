@@ -662,7 +662,7 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
         expect(selection).toBeUndefined()
         continue
       }
-      if (edition === '2014' && choice.label === 'Natural Explorer') {
+      if (edition === '2014' && ['Natural Explorer', 'Favored Enemy'].includes(choice.label)) {
         expect(choice.level).toBe(1)
         expect(selection).toBeUndefined()
         continue
@@ -771,44 +771,39 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
       readiness.blockingIssues.map((issue) => `${issue.title}: ${issue.explanation}`).join('\n'),
     ).toEqual(
       edition === '2014'
-        ? (() => {
+        ? (
+            [
+              ['Favored Enemy', 'favored-enemy', 'class-feature|favored enemy|ranger|phb|1|phb'],
+              [
+                'Natural Explorer',
+                'favored-terrain',
+                'class-feature|natural explorer|ranger|phb|1|phb',
+              ],
+            ] as const
+          ).map(([label, group, target]) => {
             const choiceId =
               'feature-literals:' +
               encodeURIComponent(
-                JSON.stringify([
-                  ['ranger', 'phb', '', ''],
-                  'class-feature|natural explorer|ranger|phb|1|phb',
-                  'favored-terrain',
-                  'class-feature|natural explorer|ranger|phb|1|phb',
-                  1,
-                ]),
+                JSON.stringify([['ranger', 'phb', '', ''], target, group, target, 1]),
               )
-            return [
-              {
-                id: `class-choice:${choiceId}`,
-                severity: 'blocking',
-                section: 'class',
-                title: 'Finish Natural Explorer',
-                explanation: 'Ranger: choose 1 selection; 0 chosen.',
-                navigationTarget:
-                  '/build/class?' +
-                  new URLSearchParams({
-                    class: 'Ranger|PHB',
-                    level: '1',
-                    choice: choiceId,
-                  }).toString(),
-              },
-              {
-                id: 'class-choice-diagnostic:Ranger|PHB:Favored Enemy:unsupported-required-choice',
-                severity: 'blocking',
-                section: 'class',
-                title: 'Review unresolved Favored Enemy choice',
-                explanation:
-                  'Favored Enemy requires enemy and associated language choices. Tavern Born does not yet support this setup.',
-                navigationTarget: '/build/class?class=Ranger%7CPHB&level=1',
-              },
-            ]
-          })()
+            return {
+              id: 'class-choice:' + choiceId,
+              severity: 'blocking',
+              section: 'class',
+              title: 'Finish ' + label,
+              explanation:
+                label === 'Favored Enemy'
+                  ? 'Complete the enemy allocation and confirm its associated spoken language, or explicitly confirm that these enemies speak none.'
+                  : 'Ranger: choose 1 selection; 0 chosen.',
+              navigationTarget:
+                '/build/class?' +
+                new URLSearchParams({
+                  class: 'Ranger|PHB',
+                  level: '1',
+                  choice: choiceId,
+                }).toString(),
+            }
+          })
         : (['expertise', 'languages'] as const).map((domain, index) => {
             const revised = edition === '2024'
             const choiceId =

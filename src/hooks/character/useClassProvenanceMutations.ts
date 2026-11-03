@@ -15,6 +15,7 @@ import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/h
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { FavoredEnemySetup } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 
 export function useClassProvenanceMutations() {
@@ -95,7 +96,12 @@ export function useClassProvenanceMutations() {
   )
 
   const applyClassChoiceSelection = useCallback(
-    (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
+    (
+      choice: NormalizedCharacterChoice,
+      selected: readonly NormalizedChoiceOptionReference[],
+      favoredEnemy?: FavoredEnemySetup,
+      expectedSelectionHandle?: string,
+    ) => {
       const latest = useCharacterStore.getState().activeCharacter
       if (
         !hasCurrentCharacterSourceContext(
@@ -120,6 +126,8 @@ export function useClassProvenanceMutations() {
         choice,
         selected,
         current?.classChoices,
+        favoredEnemy,
+        expectedSelectionHandle,
       )
       if (Object.keys(result.characterPatch).length === 0) return
       updateCharacter(latest.id, {

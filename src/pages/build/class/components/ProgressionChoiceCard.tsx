@@ -28,6 +28,7 @@ interface ProgressionChoiceCardProps {
   selectedCount: number
   totalAllowed?: number
   recovery?: boolean
+  recoveryHint?: string
   isFull: boolean
   chosenItems: ChosenItem[]
   detailCollapsed: boolean
@@ -44,6 +45,7 @@ export function BuildClassProgressionChoiceCard({
   selectedCount,
   totalAllowed,
   recovery = false,
+  recoveryHint,
   isFull,
   chosenItems,
   detailCollapsed,
@@ -100,7 +102,7 @@ export function BuildClassProgressionChoiceCard({
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {!label && isFull && <Check className="h-3.5 w-3.5 shrink-0 text-success" />}
               {recovery
-                ? 'Saved choice — source rules unavailable'
+                ? (recoveryHint ?? 'Saved choice — source rules unavailable')
                 : historical && !setup
                   ? 'Confirm proficiency at acquisition'
                   : historical && setup?.alreadyProficient === false

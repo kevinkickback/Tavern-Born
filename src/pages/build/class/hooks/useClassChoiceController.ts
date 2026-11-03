@@ -3,7 +3,13 @@ import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  canonicalProficiencyName,
+  getProficiencyOption,
+} from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
+import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
@@ -23,6 +29,11 @@ import {
   refreshClassProficiencyState,
 } from '@/lib/character/classProficiencySelections'
 import {
+  hasFavoredEnemyRecovery,
+  isFavoredEnemySetupComplete,
+  scopeFavoredEnemyOptions,
+} from '@/lib/character/favoredEnemySelections'
+import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
 } from '@/lib/character/featureOptionSelections'
@@ -41,7 +52,7 @@ import { getSubclassConfigurations } from '@/lib/character/subclassConfiguration
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry, FavoredEnemySetup } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 interface ClassChoiceControllerParams {
@@ -197,14 +208,18 @@ export function useClassChoiceController({
           const state = featureOptionStates.find((entry) => entry.selection.choiceId === choice.id)
           const views =
             state?.options ??
-            scopeNaturalExplorerOptions(
+            scopeFavoredEnemyOptions(
               choice,
-              resolveClassChoiceOptions(
+              scopeNaturalExplorerOptions(
                 choice,
-                resolvedCatalogs,
-                selected,
-                viewingClassLevel,
-                character ?? undefined,
+                resolveClassChoiceOptions(
+                  choice,
+                  resolvedCatalogs,
+                  selected,
+                  viewingClassLevel,
+                  character ?? undefined,
+                ),
+                character?.classChoiceSelections ?? [],
               ),
               character?.classChoiceSelections ?? [],
             )
@@ -216,6 +231,13 @@ export function useClassChoiceController({
                     (row) =>
                       getClassChoiceOptionKey(row) === getClassChoiceOptionKey(view.reference),
                   )
+                  if (state.enemy)
+                    return {
+                      ...view,
+                      setupComplete: isFavoredEnemySetupComplete(state),
+                      entries:
+                        index < 0 ? view.entries : (state.details[index]?.entries ?? view.entries),
+                    }
                   return index < 0
                     ? view
                     : { ...view, entries: state.details[index]?.entries ?? view.entries }
@@ -271,7 +293,7 @@ export function useClassChoiceController({
     if (request && request.contextKey !== contextKey) setRequest(null)
     if (request?.savedHandle !== undefined) {
       const latest = character?.classChoiceSelections?.find((row) => row.choiceId === request.id)
-      if (!latest || getOptionalPoolSelectionHandle(latest) !== request.savedHandle)
+      if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== request.savedHandle)
         setRequest(null)
     }
     if (
@@ -289,7 +311,8 @@ export function useClassChoiceController({
         : queuedChoice?.id
   const activeSaved = featureOptionStates.find((state) => state.selection.choiceId === activeId)
   const resolvedActiveChoice = choices.find((choice) => choice.id === activeId)
-  const activeRemovalOnly = activeSaved?.recovery ?? false
+  const activeRemovalOnly =
+    (activeSaved?.recovery && !(activeSaved.enemy && activeSaved.choice)) ?? false
   const activeDisplayChoice =
     activeRemovalOnly && activeSaved
       ? {
@@ -483,6 +506,7 @@ export function useClassChoiceController({
           ).filter(
             (diagnostic) =>
               (diagnostic.level === undefined || diagnostic.level <= viewingClassLevel) &&
+              !hasFavoredEnemyRecovery(diagnostic, featureOptionStates) &&
               !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
               !hasClassProficiencyRecovery(diagnostic, featureOptionStates),
           )
@@ -494,6 +518,56 @@ export function useClassChoiceController({
     activeOptionViews,
     activeInitialSelectedIds,
     activeRequiredCount,
+    enemySetup:
+      activeDisplayChoice?.id && decodeFavoredEnemyChoiceId(activeDisplayChoice.id)
+        ? {
+            selection: activeSaved?.selection,
+            removalOnly: activeRemovalOnly,
+            types: activeOptionViews.filter(
+              (v) =>
+                v.availability === 'eligible' &&
+                v.reference.entityType === 'featureOption' &&
+                (() => {
+                  const t = decodeFeatureOptionReference(v.reference)
+                  return t?.format === 'source-group' && t.group === 'enemy-type'
+                })(),
+            ),
+            languages: [
+              ...new Map(
+                (catalogs.languages ?? []).flatMap((l) => {
+                  const name = canonicalProficiencyName(l.name)
+                  return name ? [[name, getProficiencyOption('languages', name)] as const] : []
+                }),
+              ).values(),
+            ].sort((a, b) => a.name.localeCompare(b.name)),
+            onConfirm: (selected: ClassChoiceOptionView[], setup: FavoredEnemySetup) => {
+              if (!resolvedActiveChoice) return
+              try {
+                applyClassChoiceSelection(
+                  resolvedActiveChoice,
+                  selected.map((v) => v.reference),
+                  setup,
+                  request?.savedHandle,
+                )
+                close()
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : 'Review this enemy setup.')
+              }
+            },
+            onClear: () => {
+              if (!activeSaved) {
+                close()
+                return
+              }
+              try {
+                retainSavedFeatureOptions(activeSaved.selection.choiceId, [], request?.savedHandle)
+                close()
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : 'Could not clear this setup.')
+              }
+            },
+          }
+        : undefined,
     historicalSetup:
       activeDisplayChoice?.id &&
       !activeRemovalOnly &&
@@ -527,7 +601,11 @@ export function useClassChoiceController({
               savedHandle:
                 saved && getOptionalClassPoolSelectionSection(saved)
                   ? getOptionalPoolSelectionHandle(saved)
-                  : undefined,
+                  : decodeFavoredEnemyChoiceId(choice.id)
+                    ? saved
+                      ? getOptionalPoolSelectionHandle(saved)
+                      : ''
+                    : undefined,
             },
       )
     },
@@ -539,9 +617,10 @@ export function useClassChoiceController({
           : {
               id: state.selection.choiceId,
               contextKey,
-              savedHandle: state.optionalPool
-                ? getOptionalPoolSelectionHandle(state.selection)
-                : undefined,
+              savedHandle:
+                state.optionalPool || state.enemy
+                  ? getOptionalPoolSelectionHandle(state.selection)
+                  : undefined,
             },
       )
     },

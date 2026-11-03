@@ -4,6 +4,8 @@ import {
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { CLASS_PROFICIENCY_RULES } from '@/lib/5etools/classProficiencyRules'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
+import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   ownedClassProficiencyRule as classProficiencyRule,
   optionalClassProficiencyRule,
@@ -11,6 +13,11 @@ import {
 import { getSubclassProficiencyRootCertificate } from '@/lib/5etools/subclassProficiencyRegistry'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
+import {
+  getInvalidFavoredEnemySelectionIds,
+  hasCompleteEnemyAllocation,
+  isValidFavoredEnemySelection,
+} from './favoredEnemyValidation'
 
 export function isValidClassProficiencySelection(
   selection: CharacterClassChoiceSelection,
@@ -75,8 +82,25 @@ export function isValidClassProficiencySelection(
   )
 }
 
+export const isValidOwnedClassProficiencySelection = (s: CharacterClassChoiceSelection) =>
+  isValidClassProficiencySelection(s) || isValidFavoredEnemySelection(s)
+export function getOwnedClassProficiencyOptions(s: CharacterClassChoiceSelection) {
+  if (!decodeFavoredEnemyChoiceId(s.choiceId)) return s.selected
+  const l = s.favoredEnemy?.language
+  return isValidFavoredEnemySelection(s) && hasCompleteEnemyAllocation(s) && l?.kind === 'spoken'
+    ? [
+        {
+          entityType: 'proficiency' as const,
+          name: l.name,
+          ref: JSON.stringify(['proficiency', 'languages', l.name]),
+          slotLevel: s.classLevel,
+        },
+      ]
+    : []
+}
 export const isClassProficiencyTag = (tag: SourceTag) =>
-  !!tag.grantVariant && isClassProficiencyChoiceId(tag.grantVariant)
+  !!tag.grantVariant &&
+  (isClassProficiencyChoiceId(tag.grantVariant) || isFeatureLiteralChoiceId(tag.grantVariant))
 
 export function getInvalidClassProficiencySelectionIds(
   selections: readonly CharacterClassChoiceSelection[],
@@ -119,10 +143,14 @@ export function getInvalidClassProficiencyPaths(
   character: Pick<Character, 'classChoiceSelections' | 'proficiencies' | 'provenance'>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
-  const invalid = getInvalidClassProficiencySelectionIds(character.classChoiceSelections ?? [])
+  const invalid = new Set([
+    ...getInvalidClassProficiencySelectionIds(character.classChoiceSelections ?? []),
+    ...getInvalidFavoredEnemySelectionIds(character.classChoiceSelections ?? []),
+  ])
   const selections = new Map<string, CharacterClassChoiceSelection>()
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
     if (
+      !decodeFavoredEnemyChoiceId(selection.choiceId) &&
       !isClassProficiencyChoiceId(selection.choiceId) &&
       selection.kind !== 'proficiency' &&
       selection.proficiencyAtGain === undefined &&
@@ -139,13 +167,19 @@ export function getInvalidClassProficiencyPaths(
       for (const tag of owned) {
         const selection = selections.get(tag.grantVariant!)
         const relation = selection && decodeClassProficiencyChoiceId(selection.choiceId)
-        const matches = selection?.selected.some(
-          (option) => decodeProficiencyOption(option)?.name === name,
-        )
+        const matches =
+          selection &&
+          getOwnedClassProficiencyOptions(selection).some(
+            (option) => decodeProficiencyOption(option)?.name === name,
+          )
         if (
           !selection ||
           invalid.has(selection.choiceId) ||
           !(
+            (domain === 'languages' &&
+              !!selection &&
+              !!decodeFavoredEnemyChoiceId(selection.choiceId) &&
+              isValidFavoredEnemySelection(selection)) ||
             relation?.domain === domain ||
             (domain === 'skills' &&
               relation?.domain === 'expertise' &&

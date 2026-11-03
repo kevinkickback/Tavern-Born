@@ -131,7 +131,15 @@ export interface CharacterClassChoiceSelection {
   classLevel: number
   /** Explicit acquisition fact for source-defined historical proficiency fallback choices. */
   proficiencyAtGain?: { name: string; alreadyProficient: boolean }
+  /** Explicit campaign assertions coupled to this earned enemy allocation; absence of language is pending. */
+  favoredEnemy?: FavoredEnemySetup
   selected: CharacterClassChoiceOption[]
+}
+
+export interface FavoredEnemySetup {
+  mode: 'type' | 'humanoid-races'
+  humanoidsConfirmed?: true
+  language?: { kind: 'spoken'; name: string } | { kind: 'none' }
 }
 
 export type OptionalClassFeatureOwner =

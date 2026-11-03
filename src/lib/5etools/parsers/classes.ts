@@ -9,6 +9,7 @@ import {
 import { auditClassProficiencySources } from '@/lib/5etools/classProficiencyChoices'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { getParsedClassSpellSlotProgression } from '@/lib/5etools/classSpellSlotTable'
+import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import {
   auditDirectFixedClassDeclarations,
@@ -445,7 +446,9 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   })
   const classFeature = auditFixedClassFeatures(
     auditClassProficiencySources(
-      auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject)),
+      auditFavoredEnemySources(
+        auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject)),
+      ),
     ),
     origin,
   )

@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared source-dependency and exact reprint identity guards.
-  // Measured 6,285,280 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6138 * KIB,
-  // Synchronous source/owner/target authority: measured 1,093,325 B.
+  // Shared source-owned enemy setup, qualification and campaign-confirmation controls.
+  // Measured 6,304,644 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6157 * KIB,
+  // Synchronous source/owner/target authority: measured 1,106,505 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
-  initialRendererScript: 1068 * KIB,
+  initialRendererScript: 1081 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

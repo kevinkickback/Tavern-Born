@@ -117,15 +117,15 @@ still govern entitlement. Natural Explorer uses the separate literal-group bound
 ## Required setup diagnostics
 
 Normalization reports a bounded set of source-audited mandatory setup gaps: unavailable or
-unverified Storm Aura/Natural Explorer declarations, PHB Ranger Favored Enemy, TCE Deft Explorer/Canny
-and Mystic Psionics. Unsupported families remain diagnostic; unavailable Storm rules stay unverified.
+unverified Storm Aura, Natural Explorer, Favored Enemy and TCE Deft Explorer/Canny declarations,
+and unsupported Mystic Psionics. Unsupported families remain diagnostic; unavailable Storm rules stay unverified.
 Diagnostics never synthesize selectors or guess option counts. A retained known
 UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
 identity remains separate from the selected owner; nested diagnostics begin at the earliest reachable
 grant after all enclosing levels are met. Unselected options are not earned declarations.
 
-Builder and Review/readiness share active diagnostics and the filtered feature catalog. A known
-Ranger base warnings remain until an exact explicit optional adoption governs their family.
+Builder and Review/readiness share active diagnostics and the filtered feature catalog.
+Unverified Ranger base warnings remain until exact sources return or an explicit optional adoption governs their family.
 An adopted missing-source replacement reserves its original and creates one restore-or-clear root
 obligation, avoiding duplicate domain duties. The shared catalog retains repeated complete
 class-feature identities for this audit before its lookup projection. Verified adopted Deft Explorer
@@ -207,6 +207,50 @@ Favored Enemy/language paragraph is not a terrain benefit. No global Expertise, 
 travel state or action is granted. Recovery identifies the exact owner/grant/earned gain; saved
 recovery replaces only that gain's warning. Complete Ranger automation remains unqualified.
 
+## Favored Enemy setup
+
+The exact PHB base and earned improvements at levels 1, 6 and 14 supply one independent enemy
+allocation each. XPHB's same-name Hunter's Mark feature has different semantics. A narrow adapter
+certifies the complete PHB bodies because the alternative cardinality, language association and
+conditional check rules exist only in prose. The shared filter-tag parser extracts the thirteen
+nonhumanoid type values from the certified current body. Changed, conflicting or unreviewed bodies
+remain unverified; an explicit empty current catalog supplies no authority.
+
+Each allocation chooses one declared type or two distinct campaign humanoid races. The catalogs
+do not contain a complete enemy race/language ontology: creature tags can combine several races,
+player races are incomplete, and language metadata can include understood-only languages. Players
+therefore confirm the two authored race labels and their associated spoken language, or explicitly
+confirm that the selected enemies speak none. A language spoken by at least one race in a pair
+satisfies the association. A missing match never establishes none. The initial picker uses the
+current filtered language vocabulary; it does not create custom languages or certify campaign legality.
+
+The shared Class workflow saves one `feature-literals:` actual-owner/base-pool/family/gain/earned-level
+relation. Existing source-group references distinguish declared type tokens from explicitly
+campaign-authored humanoid labels. Optional `favoredEnemy` metadata records the chosen mode, explicit
+pair confirmation and spoken/none assertion; absent language is pending. A chosen mode with zero
+selections remains valid partial progress. Enemy changes reset dependent confirmation in the dialog;
+the command validates the whole current proposed relation atomically. Cancel preserves state, Clear
+removes the complete allocation even without sources, and stale saved handles cannot overwrite a
+newer relation. Each actual owner has distinct enemies across gains; languages may repeat.
+
+Spoken-language contributions use the existing owned-proficiency projection and exact selection ID
+as grantVariant. An already known associated language is permitted as another provider, with no
+substitute or extra benefit. Removing one gain retains other class, race, background and manual
+providers. Missing base suspends all gains; missing one improvement suspends only that gain. Missing
+language vocabulary suspends that language contribution and creates language-specific recovery while
+retaining a valid enemy allocation. Exact restoration re-evaluates saved intent without a write.
+
+Favored Foe's explicit adoption governs both enemy and language through the existing
+`favored-enemy-language` activity facet, including the combined level6 feature. Permission alone
+adopts nothing. Unavailable adopted replacement reserves originals; OFF, ON and Clear retain their
+existing recovery rules. Terrain/Canny and independently declaring owners remain separate.
+
+Class progress, readiness, Review and full/compact PDF distinguish pending, explicit none,
+campaign-confirmed language and source recovery. Current complete enemies supply conditional Survival
+tracking/Intelligence recall context through shared check notes. This grants no global proficiency,
+Expertise, numerical advantage, new action or automatic roll behavior. Shared literal validation and
+presentation dispatch retain terrain semantics and reject unknown reserved families.
+
 ## Canny proficiencies
 
 The exact `Deft Explorer|Ranger|PHB|1|TCE` declaration supplies Canny's one existing skill proficiency
@@ -241,8 +285,9 @@ Offline admission validates the reserved identity, owner,
 domain, slot, quota and bidirectional applied-tag relation while allowing unavailable intent without
 applied tags. [Parsed cache invalidation](../data-ingestion.md#cache-compatibility) rebuilds source
 normalization. Adopted TCE Roving/Tireless visibility follows the earned child activity above;
-their movement/resource automation, Favored Enemy setup and complete Ranger progression remain
-separate mechanics boundaries. Revised XPHB Deft Explorer keeps its standard selectable rules.
+their movement/resource automation and complete Ranger progression remain separate mechanics boundaries.
+[Favored Enemy setup](#favored-enemy-setup) has its own coupled assertion contract.
+Revised XPHB Deft Explorer keeps its standard selectable rules.
 
 ## Rogue Expertise and pending setup
 

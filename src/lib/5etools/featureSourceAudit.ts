@@ -1,6 +1,12 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
+import type { ClassFeature } from '@/types/5etools'
 import { featureOptionRulesSignature } from './featureRulesSignature'
+
+export interface ClassFeatureSourceCatalog {
+  classFeatures: readonly ClassFeature[]
+  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
+}
 
 const digestCache = new Map<string, string>()
 const maxDigestEntries = 256

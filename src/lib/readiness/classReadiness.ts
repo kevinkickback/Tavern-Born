@@ -4,6 +4,7 @@ import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
@@ -18,6 +19,10 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  hasFavoredEnemyRecovery,
+  isFavoredEnemySetupComplete,
+} from '@/lib/character/favoredEnemySelections'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import {
   getHistoricalProficiencyRule,
@@ -122,8 +127,12 @@ export function validateClassChoices(
         classChoiceReadinessId(state.selection.choiceId),
         'blocking',
         'class',
-        `Restore or remove ${state.selection.label}`,
-        'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
+        state.enemy?.complete && !state.enemy.languageAvailable
+          ? 'Restore or change Favored Enemy language'
+          : `Restore or remove ${state.selection.label}`,
+        state.enemy?.complete && !state.enemy.languageAvailable
+          ? 'The confirmed language is unavailable. Restore its source, change the language confirmation, or clear this allocation. The enemy selection remains current.'
+          : 'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
         classChoiceTarget(state.owner!, state.selection.classLevel, state.selection.choiceId),
       ),
     )
@@ -232,17 +241,23 @@ export function validateClassChoices(
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
-      const count = eligibleOptionKeys
-        ? storedSelection.filter(
-            (option) =>
-              eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-              (!['classFeature', 'subclassFeature', 'optionalFeature'].includes(
-                option.entityType,
-              ) ||
-                (!!savedChoice &&
-                  effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
-          ).length
-        : storedSelection.length
+      const count = decodeFavoredEnemyChoiceId(choice.id)
+        ? isFavoredEnemySetupComplete(
+            featureOptionStates.find((s) => s.selection.choiceId === choice.id),
+          )
+          ? 1
+          : 0
+        : eligibleOptionKeys
+          ? storedSelection.filter(
+              (option) =>
+                eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+                (!['classFeature', 'subclassFeature', 'optionalFeature'].includes(
+                  option.entityType,
+                ) ||
+                  (!!savedChoice &&
+                    effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
+            ).length
+          : storedSelection.length
       if (count !== required) {
         issues.push(
           readinessIssue(
@@ -250,7 +265,9 @@ export function validateClassChoices(
             'blocking',
             'class',
             `Finish ${choice.label}`,
-            `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
+            decodeFavoredEnemyChoiceId(choice.id)
+              ? 'Complete the enemy allocation and confirm its associated spoken language, or explicitly confirm that these enemies speak none.'
+              : `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
             classChoiceTarget(entry, choice.level, choice.id),
           ),
         )
@@ -264,6 +281,7 @@ export function validateClassChoices(
     )) {
       if (
         (diagnostic.level ?? 1) > entry.levels ||
+        hasFavoredEnemyRecovery(diagnostic, featureOptionStates) ||
         hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
         (diagnostic.featureName === 'Deft Explorer' &&
@@ -282,7 +300,8 @@ export function validateClassChoices(
             readinessClassKey(entry),
             diagnostic.featureName,
             diagnostic.code,
-            diagnostic.featureName === 'Natural Explorer' && diagnostic.requiredChoice?.target.ref
+            ['Natural Explorer', 'Favored Enemy'].includes(diagnostic.featureName) &&
+              diagnostic.requiredChoice?.target.ref
               ? { ref: diagnostic.requiredChoice.target.ref, level: diagnostic.level ?? 1 }
               : undefined,
           ),

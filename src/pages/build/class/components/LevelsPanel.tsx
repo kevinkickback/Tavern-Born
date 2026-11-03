@@ -23,7 +23,7 @@ import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfil
 import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
-  isClassChoiceOptionEligible,
+  getClassChoiceCompletionCount,
 } from '@/lib/character/classChoiceOptions'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
@@ -487,9 +487,10 @@ export function BuildClassLevelsPanel({
                   levelDiagnostics.length +
                   levelClassChoices.reduce((sum, choice) => {
                     const required = getRequiredChoiceSelectionCount(choice, viewingClassLevel)
-                    const eligibleSelected = (
-                      selectedClassChoiceViewsById.get(choice.id) ?? []
-                    ).filter(isClassChoiceOptionEligible).length
+                    const eligibleSelected = getClassChoiceCompletionCount(
+                      choice,
+                      selectedClassChoiceViewsById.get(choice.id) ?? [],
+                    )
                     return sum + Math.max(0, required - eligibleSelected)
                   }, 0)
                 const pendingChoiceCount =
