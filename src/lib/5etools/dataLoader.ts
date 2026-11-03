@@ -53,6 +53,7 @@ import {
   parseTrapHazards,
   parseVariantRules,
 } from './parsers/index'
+import { parsePsionics } from './parsers/psionics'
 import {
   associatePrimaryItemTypes,
   parsePrimaryItemTypes,
@@ -169,6 +170,11 @@ export class FiveEToolsDataLoader {
       { key: 'languages', file: 'languages.json' },
       { key: 'magicvariants', file: 'magicvariants.json' },
       { key: 'optionalfeatures', file: 'optionalfeatures.json' },
+      {
+        key: 'psionics',
+        file: 'psionics.json',
+        required: this.availableResources?.has('psionics.json') === true,
+      },
       { key: 'variantrules', file: 'variantrules.json' },
       { key: 'trapHazards', file: 'trapshazards.json' },
       { key: 'rewards', file: 'rewards.json' },
@@ -178,9 +184,13 @@ export class FiveEToolsDataLoader {
       this.sourceType !== 'bundled' && this.availableResources?.has('book/book-tce.json') === true
     if (hasOptionalClassBook)
       resources.push({ key: 'optionalClassBook', file: 'book/book-tce.json', required: false })
+    const supportedResources =
+      this.sourceType === 'bundled'
+        ? resources.filter((resource) => resource.key !== 'psionics')
+        : resources
     const configuredResources = this.availableResources
-      ? resources.filter((resource) => this.availableResources?.has(resource.file))
-      : resources
+      ? supportedResources.filter((resource) => this.availableResources?.has(resource.file))
+      : supportedResources
 
     const gameData = createEmptyGameData()
 
@@ -284,6 +294,10 @@ export class FiveEToolsDataLoader {
           case 'actions':
             gameData.actions = parseActions(data)
             this.addItemSources(gameData.actions, sourcesSet)
+            break
+          case 'psionics':
+            gameData.psionics = parsePsionics(data)
+            this.addItemSources(gameData.psionics, sourcesSet)
             break
           case 'conditions':
             gameData.conditions = parseConditions(data)

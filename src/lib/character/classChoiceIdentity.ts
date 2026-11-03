@@ -5,8 +5,9 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
+import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import { getFeatureOptionKey } from '@/lib/5etools/featureOptionIdentity'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { getPsionicKey } from '@/lib/5etools/psionics'
 import type {
   CharacterClassChoiceOption,
   CharacterClassChoiceSelection,
@@ -81,6 +82,8 @@ export function getClassChoiceFeatureTarget(
 }
 
 export function getClassChoiceOptionKey(option: NormalizedChoiceOptionReference): string {
+  if (option.entityType === 'psionic')
+    return `psionic:${getPsionicKey(option.name, option.source ?? '')}`
   if (option.entityType === 'proficiency') {
     const target = decodeProficiencyOption(option)
     return target

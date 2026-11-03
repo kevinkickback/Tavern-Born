@@ -37,6 +37,7 @@ import {
 import { getNaturalExplorerSelectionStates } from './naturalExplorerSelections'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery'
+import { getPsionicRecoveryStates } from './psionicSelections'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
 
@@ -59,6 +60,7 @@ export interface FeatureOptionSelectionState {
   enemy?: { complete: boolean; languageAvailable: boolean }
   proficiency?: { domain: ClassProficiencyDomain }
   optionalPool?: boolean
+  psionic?: boolean
 }
 
 function affinityRules(
@@ -210,6 +212,7 @@ export function getFeatureOptionSelectionStates(
     })
   return [
     ...literal,
+    ...getPsionicRecoveryStates(character, classes, catalogs),
     ...getStormAuraSelectionStates(character, classes, catalogs),
     ...getNaturalExplorerSelectionStates(character, classes, catalogs),
     ...getFavoredEnemySelectionStates(character, classes, catalogs),

@@ -229,9 +229,13 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(true)
     expect(result.foundResources).toHaveLength(Object.keys(payloadByFile).length)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(Object.keys(payloadByFile).length + 1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(Object.keys(payloadByFile).length + 2)
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://example.com/data/book/book-tce.json',
+      expect.any(Object),
+    )
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://example.com/data/psionics.json',
       expect.any(Object),
     )
   })
@@ -251,6 +255,7 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(true)
     expect(readBundledJson).toHaveBeenCalledTimes(Object.keys(payloadByFile).length)
+    expect(readBundledJson).not.toHaveBeenCalledWith('psionics.json')
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
@@ -271,5 +276,35 @@ describe('5etools/validator', () => {
 
     expect(result.isValid).toBe(false)
     expect(result.error).toContain('Missing required file: feats.json')
+  })
+  test('recognizes a partial psionic family and rejects malformed mode costs', async () => {
+    let psi = {
+      psionic: [{ name: 'Test Talent', source: 'TEST', type: 'T', entries: ['Test rules.'] }],
+    }
+    globalThis.fetch = vi.fn((input: string | URL | Request) =>
+      String(input).endsWith('/data/psionics.json')
+        ? makeJsonResponse(psi)
+        : makeJsonResponse({}, false),
+    ) as unknown as typeof fetch
+    const config = { type: 'remote' as const, path: 'https://example.com', isValid: false }
+    expect(await validateDataSource(config)).toMatchObject({
+      isValid: true,
+      foundResources: ['psionics.json'],
+    })
+    psi = {
+      psionic: [
+        {
+          name: 'Bad Discipline',
+          source: 'TEST',
+          type: 'D',
+          entries: [],
+          modes: [{ name: 'Mode', entries: [], cost: { min: 3, max: 1 } }],
+        },
+      ],
+    } as unknown as typeof psi
+    expect(await validateDataSource(config)).toMatchObject({
+      isValid: false,
+      error: 'Invalid file: psionics.json',
+    })
   })
 })

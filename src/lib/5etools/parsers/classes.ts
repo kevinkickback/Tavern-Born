@@ -14,9 +14,12 @@ import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import {
   auditDirectFixedClassDeclarations,
   auditFixedClassFeatures,
+  auditFixedLayerMultiplicity,
+  auditProficiencySubclassLayerMultiplicity,
 } from '@/lib/5etools/fixedProficiencySource'
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
+import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
@@ -242,7 +245,7 @@ function parsePreparedClasses(data: unknown): unknown[] {
     })
   }
 
-  return classes.map((cls) => {
+  const parsed = classes.map((cls) => {
     const clsObj = asObject(cls)
     const key = `${String(clsObj.name ?? '')}|${String(clsObj.source ?? '')}`
     const nested = subclassMap.get(key)
@@ -251,7 +254,17 @@ function parsePreparedClasses(data: unknown): unknown[] {
 
     return {
       ...clsObj,
-      subclasses: nested ?? [],
+      subclasses: (nested ?? []).map((row) => {
+        const sub = row as import('@/types/5etools').Subclass5e
+        return {
+          ...sub,
+          normalizedRules: normalizeSubclassRules(
+            { ...clsObj, classFeatureRefs } as unknown as import('@/types/5etools').Class5e,
+            sub,
+            sub.subclassFeatureRefs ?? [],
+          ),
+        }
+      }),
       classFeatureRefs,
       normalizedRules: normalizeClassRules(
         clsObj as unknown as import('@/types/5etools').Class5e,
@@ -261,6 +274,9 @@ function parsePreparedClasses(data: unknown): unknown[] {
       spellSlotProgression,
     }
   })
+  return auditProficiencySubclassLayerMultiplicity(
+    parsed as unknown as import('@/types/5etools').Class5e[],
+  )
 }
 
 function getLastStringFromEntries(entries: unknown[]): string | null {
@@ -430,12 +446,12 @@ function parsePreparedClassFeatures(data: unknown): unknown[] {
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
 function prepareClassDocument(data: unknown, sourceId?: string): unknown {
-  if (Array.isArray(data)) return data
+  if (Array.isArray(data)) return auditFixedLayerMultiplicity(data.map(asObject), 'classes')
   const obj = asObject(data)
   const records = asArray(obj.subclassFeature).map(asObject)
   const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
   const materializedSubclasses = materializeSubclassCopies(asArray(obj.subclass))
-  const materialized = materializeSubclassFeatureCopies(records)
+  const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
     subclasses: materializedSubclasses,
     subclassFeatures: materialized,
@@ -447,12 +463,17 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   const classFeature = auditFixedClassFeatures(
     auditClassProficiencySources(
       auditFavoredEnemySources(
-        auditNaturalExplorerSources(asArray(obj.classFeature).map(asObject)),
+        auditNaturalExplorerSources(
+          auditPsionicFeatureSources(asArray(obj.classFeature).map(asObject)),
+        ),
       ),
     ),
     origin,
   )
-  const classes = auditDirectFixedClassDeclarations(asArray(obj.class).map(asObject), origin)
+  const classes = auditFixedLayerMultiplicity(
+    auditDirectFixedClassDeclarations(asArray(obj.class).map(asObject), origin),
+    'classes',
+  )
   const subclass = auditSubclassProficiencyRoots(
     asArray(obj.subclass).map(asObject),
     materializedSubclasses,

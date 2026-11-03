@@ -3,6 +3,7 @@ import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
+import { isValidPsionicSelection } from '@/lib/schema/psionicValidation'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
@@ -71,9 +72,10 @@ export function hasUnavailableSubclassConfiguration(
       ) === owner &&
       (choice
         ? getSubclassConfigurations([choice], classData, subclass).length > 0
-        : selection.kind === 'feature-option' &&
-          !isFeatureLiteralChoiceId(selection.choiceId) &&
-          getInvalidFeatureOptionSelectionPaths({ classChoiceSelections: [selection] }).length ===
-            0),
+        : isValidPsionicSelection(selection) ||
+          (selection.kind === 'feature-option' &&
+            !isFeatureLiteralChoiceId(selection.choiceId) &&
+            getInvalidFeatureOptionSelectionPaths({ classChoiceSelections: [selection] }).length ===
+              0)),
   )
 }

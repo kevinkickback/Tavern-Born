@@ -15,13 +15,11 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 import { getClassFeatureIdentity } from './classFeatureIdentity'
+import { getEntityLookupKey } from './entityIdentity'
+import { getPsionicKey, resolvePsionic } from './psionics'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 
-export function getEntityLookupKey(name?: unknown, source?: unknown): string {
-  const safeName = typeof name === 'string' ? name.trim() : ''
-  const safeSource = typeof source === 'string' ? source.trim() : ''
-  return `${safeName}|${safeSource}`
-}
+export { getEntityLookupKey } from './entityIdentity'
 
 export function getSubclassLookupKey(
   className?: unknown,
@@ -139,6 +137,11 @@ export function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass
 
 export function buildGameDataLookups(gameData: GameData): GameDataLookups {
   return {
+    psionicsByKey: Object.fromEntries(
+      (gameData.psionics ?? []).flatMap((row) =>
+        resolvePsionic(row, gameData.psionics) ? [[getPsionicKey(row.name, row.source), row]] : [],
+      ),
+    ),
     classesByKey: buildClassLookup(gameData.classes),
     racesByKey: buildRaceLookup(gameData.races),
     backgroundsByKey: buildBackgroundLookup(gameData.backgrounds),

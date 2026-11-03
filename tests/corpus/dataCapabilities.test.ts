@@ -322,12 +322,9 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.fields.length).toBeGreaterThan(0)
     // Finished shields remain unavailable until materialization; (*) templates are not aliases.
     const setupIssues = report.issues.filter((issue) => issue.code === 'choice-diagnostic')
-    expect(
-      setupIssues.map(({ entity, message }) => ({ entity, feature: message.split(':')[0] })),
-    ).toEqual([{ entity: 'Mystic|UATheMysticClass', feature: 'Psionics' }])
-    expect(
-      setupIssues.every((issue) => issue.message.includes(': unsupported-required-choice: ')),
-    ).toBe(true)
+    // Mystic base and order-bonus setup now have source-qualified selectors; absence of
+    // diagnostics here is structural coverage, not complete legal progression qualification.
+    expect(setupIssues).toEqual([])
     expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual([
       {
         code: 'unresolved-reference',

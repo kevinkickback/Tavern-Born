@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { filterSpellRouteSources } from '@/lib/5etools/spellRouteSources'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
@@ -68,7 +69,7 @@ describe('writeGameDataCache', () => {
     }) as GameData['spells']
     const before = computeGameDataFingerprint(data)
     const entry = await writeGameDataCache(data, config)
-    expect(entry.cacheSchemaVersion).toBe(60)
+    expect(entry.cacheSchemaVersion).toBe(61)
     idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
     const cached = (await readGameDataCache())!
     expect(filterSpellRouteSources(cached.data.spells[0], ['PHB', 'TCE']).classSpellRoutes).toEqual(
@@ -80,9 +81,30 @@ describe('writeGameDataCache', () => {
       origin: 'cache-fixture',
     }) as GameData['spells']
     expect(computeGameDataFingerprint(data)).not.toBe(before)
-    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 58 })
+    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 60 })
     await expect(readGameDataCache()).resolves.toBeNull()
   })
+
+  test.skipIf(!existsSync('data/class/class-mystic.json'))(
+    'retains audited Mystic parent and subclass conflicts through parsed cache roundtrip',
+    async () => {
+      const raw = JSON.parse(readFileSync('data/class/class-mystic.json', 'utf8'))
+      const data = makeGameData()
+      for (const document of [
+        { ...raw, class: [raw.class[0], raw.class[0]] },
+        { ...raw, subclass: [raw.subclass[0], raw.subclass[0]] },
+      ]) {
+        data.classes = parseClassDocument(document).classes as GameData['classes']
+        const entry = await writeGameDataCache(data, config)
+        idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
+        const cached = (await readGameDataCache())!.data.classes
+        expect(
+          cached.every((row) => row.subclasses!.every((sub) => sub.sourceIdentityConflict)),
+        ).toBe(true)
+        expect(cached.every((row) => row.sourceIdentityConflict)).toBe(document.class.length > 1)
+      }
+    },
+  )
 
   test('preserves the established JSON hash while ignoring runtime lookups', () => {
     const data = makeGameData('fingerprint')

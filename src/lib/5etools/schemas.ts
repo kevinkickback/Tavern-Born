@@ -1,7 +1,49 @@
 import { z } from 'zod'
+import type { PsionicMode5e } from '@/types/5etools'
 
 /** Optional nested support capability; exact section semantics are audited separately. */
 export const OptionalClassBookDataSchema = z.object({ data: z.array(z.unknown()) }).strict()
+
+const PsionicCostSchema = z
+  .object({
+    min: z.number().finite().int().nonnegative(),
+    max: z.number().finite().int().nonnegative(),
+  })
+  .strict()
+  .refine((row) => row.min <= row.max)
+const PsionicModeSchema: z.ZodType<PsionicMode5e> = z.lazy(() =>
+  z
+    .object({
+      name: z.string().min(1),
+      type: z.string().optional(),
+      entries: z.array(z.unknown()),
+      cost: PsionicCostSchema.optional(),
+      concentration: z
+        .object({ duration: z.number().finite().nonnegative(), unit: z.string().min(1) })
+        .strict()
+        .optional(),
+      submodes: z.array(PsionicModeSchema).optional(),
+    })
+    .strict(),
+)
+
+export const PsionicDataSchema = z
+  .object({
+    psionic: z.array(
+      z
+        .object({
+          name: z.string().min(1),
+          source: z.string().min(1),
+          type: z.string().min(1),
+          order: z.string().optional(),
+          entries: z.array(z.unknown()).optional(),
+          focus: z.string().optional(),
+          modes: z.array(PsionicModeSchema).optional(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough()
 
 /**
  * 5etools JSON has broad and evolving nested shapes across books and sources.

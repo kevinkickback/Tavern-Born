@@ -7,6 +7,10 @@ Read this reference only when changing this contract. Start with the [topic inde
 Class tags include source-qualified class identity and, where needed, the granting level/choice.
 This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
 
+Mystic talent, discipline and order-bonus selections use the same Class-choice ownership and
+current-benefit projection. Their distinct catalog, saved relation and setup limits are described
+in [psionic setup](psionic-selection.md).
+
 ### Individual optional class features
 
 The Rules setting permits optional choices; it never selects them. Class records individual

@@ -1,8 +1,10 @@
 import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTypeEntries'
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import { resolvePsionic } from '@/lib/5etools/psionics'
 import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { renderEntry } from '@/lib/renderer'
-import type { Creature5e, Item5e, ItemProperty5e, Spell5e } from '@/types/5etools'
+import type { Creature5e, Item5e, ItemProperty5e, Psionic5e, Spell5e } from '@/types/5etools'
 
 interface TooltipEntityLike {
   name?: string
@@ -43,6 +45,7 @@ export interface RecursiveLookup {
   classes: Map<string, TooltipEntityLike>
   backgrounds: Map<string, TooltipEntityLike>
   optionalfeatures: Map<string, TooltipEntityLike>
+  psionics?: Map<string, TooltipEntityLike>
   actions: Map<string, TooltipEntityLike>
   conditions: Map<string, TooltipEntityLike>
   diseases: Map<string, TooltipEntityLike>
@@ -71,6 +74,7 @@ export interface RecursiveTooltipCollections {
   classes?: readonly unknown[]
   backgrounds?: readonly unknown[]
   optionalfeatures?: readonly unknown[]
+  psionics?: readonly Psionic5e[]
   actions?: readonly unknown[]
   conditions?: readonly unknown[]
   deities?: readonly unknown[]
@@ -259,6 +263,11 @@ export function buildRecursiveLookup(
     classes: buildNameMap(classes),
     backgrounds: buildNameMap(asTooltipEntities(collections.backgrounds)),
     optionalfeatures: buildNameMap(asTooltipEntities(collections.optionalfeatures)),
+    psionics: buildNameMap(
+      (collections.psionics ?? [])
+        .filter((row) => !!resolvePsionic(row, collections.psionics))
+        .map((row) => ({ ...row, entries: getPsionicEntries(row) })),
+    ),
     actions: buildNameMap(asTooltipEntities(collections.actions)),
     conditions: buildRuleMap(conditions, 'condition'),
     diseases: buildRuleMap(conditions, 'disease'),
@@ -333,6 +342,7 @@ export function normalizeKind(kind: string): string {
     class: 'classes',
     background: 'backgrounds',
     optionalfeature: 'optionalfeatures',
+    psionic: 'psionics',
     optfeature: 'optionalfeatures',
     trap: 'traps',
     hazard: 'hazards',
@@ -439,6 +449,7 @@ export function getRecursiveTooltipData(
     classes: lookup.classes,
     backgrounds: lookup.backgrounds,
     optionalfeatures: lookup.optionalfeatures,
+    psionics: lookup.psionics,
     actions: lookup.actions,
     conditions: lookup.conditions,
     diseases: lookup.diseases,
@@ -474,6 +485,7 @@ export function getRecursiveTooltipData(
     classes: 'Class',
     backgrounds: 'Background',
     optionalfeatures: 'Optional Feature',
+    psionics: 'Psionic',
     actions: 'Action',
     conditions: 'Condition',
     diseases: 'Disease',
@@ -493,7 +505,7 @@ export function getRecursiveTooltipData(
     title: entity.name ?? reference.name,
     subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
     html:
-      normalizedKind === 'items' && previewEntries?.length
+      (normalizedKind === 'items' || normalizedKind === 'psionics') && previewEntries?.length
         ? previewEntries.map(getEntryWithHoverTitles).join('')
         : getPreviewHtml(previewEntries),
   }

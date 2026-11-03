@@ -26,6 +26,7 @@ import { getInvalidClassProficiencyPaths } from '@/lib/schema/classProficiencyVa
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
 import { getInvalidFixedProficiencyPaths } from '@/lib/schema/fixedProficiencyValidation'
 import { getInvalidManagedClassSpellPaths } from '@/lib/schema/managedClassSpellValidation'
+import { getInvalidPsionicPaths } from '@/lib/schema/psionicValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Character } from './character'
 
@@ -375,6 +376,7 @@ const characterClassChoiceSelectionSchema = z.object({
     'feat',
     'item',
     'optional-feature',
+    'psionic',
     'creature',
     'feature-option',
     'proficiency',
@@ -410,6 +412,7 @@ const characterClassChoiceSelectionSchema = z.object({
         'feat',
         'item',
         'optionalFeature',
+        'psionic',
         'creature',
         'featureOption',
         'proficiency',
@@ -1005,6 +1008,12 @@ export const characterSchema = z
         code: 'custom',
         path,
         message: 'Invalid source-owned fixed proficiency relation.',
+      })
+    for (const path of getInvalidPsionicPaths(char as Character))
+      ctx.addIssue({
+        code: 'custom',
+        path,
+        message: 'Invalid source-owned psionic selection relation.',
       })
     for (const path of getInvalidClassProficiencyPaths(char as Character))
       ctx.addIssue({

@@ -14,6 +14,7 @@ import {
   LanguageDataSchema,
   OptionalClassBookDataSchema,
   OptionalFeatureDataSchema,
+  PsionicDataSchema,
   RaceDataSchema,
   TrapHazardDataSchema,
 } from './schemas'
@@ -62,6 +63,7 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
   { name: 'languages.json', schema: LanguageDataSchema },
   { name: 'magicvariants.json', schema: GenericDataSchema },
   { name: 'optionalfeatures.json', schema: OptionalFeatureDataSchema },
+  { name: 'psionics.json', schema: PsionicDataSchema, required: false },
   { name: 'variantrules.json', schema: GenericDataSchema },
   { name: 'trapshazards.json', schema: TrapHazardDataSchema },
   { name: 'rewards.json', schema: GenericDataSchema },
@@ -131,7 +133,8 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
 
     const reader = createJsonResourceReader({ ...config, path: normalizedPath })
     const candidates = CANDIDATE_FILES.filter(
-      (file) => config.type !== 'bundled' || !file.optionalSupport,
+      (file) =>
+        config.type !== 'bundled' || (!file.optionalSupport && file.name !== 'psionics.json'),
     )
     const results = await mapWithConcurrency(candidates, 6, async (file) => {
       const status = await validateFile(reader, file)

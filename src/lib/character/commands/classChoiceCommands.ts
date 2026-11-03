@@ -9,8 +9,11 @@ import {
 import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
+import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
+import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
+  getClassChoiceDeclaration,
   getClassChoiceFeatureId,
   getClassChoiceGrantedFeature,
   getClassChoiceOptionKey,
@@ -54,6 +57,10 @@ import {
   isValidClassProficiencySelection,
 } from '@/lib/schema/classProficiencyValidation'
 import { getInvalidFeatureLiteralSelectionIds } from '@/lib/schema/featureLiteralValidation'
+import {
+  getInvalidPsionicSelectionIds,
+  isValidPsionicSelection,
+} from '@/lib/schema/psionicValidation'
 import { isValidStormAuraSelection } from '@/lib/schema/stormAuraValidation'
 import type { Class5e, Feat5e } from '@/types/5etools'
 import type {
@@ -83,6 +90,48 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
+  if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:')) {
+    if (!decodePsionicChoiceId(choice.id)) throw new RangeError('Invalid psionic choice identity.')
+    if (!selected.length) return choice
+    const owner = findOwner(character, choice)
+    const cls = authority && findClassReference(choice.owner, authority.classes)
+    const current =
+      cls &&
+      owner &&
+      authority?.catalogs &&
+      getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, owner),
+        createOptionalClassFeatureActivity(character, authority.catalogs),
+        authority.catalogs,
+      ).find((row) => row.id === choice.id)
+    if (!current || !authority?.catalogs || JSON.stringify(current) !== JSON.stringify(choice))
+      throw new RangeError('Psionic source rules changed. Review the current choices.')
+    const prior =
+      character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.selected ?? []
+    const eligible = new Set(
+      resolveClassChoiceOptions(
+        current,
+        createClassChoiceCatalogs(authority.catalogs),
+        prior,
+        owner?.levels ?? 0,
+        character,
+      )
+        .filter((row) => row.availability === 'eligible')
+        .map((row) => getClassChoiceOptionKey(row.reference)),
+    )
+    if (
+      selected.some(
+        (row) =>
+          row.entityType !== 'psionic' ||
+          !row.source?.trim() ||
+          row.ref !== undefined ||
+          !eligible.has(getClassChoiceOptionKey(row)),
+      )
+    )
+      throw new RangeError('Choose available, distinct psionics for this pool.')
+    return current
+  }
   if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
     const relation = decodeClassProficiencyChoiceId(choice.id)
     const owner = findOwner(character, choice)
@@ -290,6 +339,7 @@ export function retainSavedFeatureOptionsCommand(
     !registeredPool &&
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
+    !isValidPsionicSelection(selection) &&
     (selection.kind !== 'feature-option' ||
       selection.selected.some((option) => option.entityType !== 'featureOption'))
   ) {
@@ -444,6 +494,33 @@ export function applyClassChoiceSelectionCommand(
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (choice.id.startsWith('psionic-choice:')) {
+    const relation = decodePsionicChoiceId(choice.id)
+    if (
+      !relation ||
+      choice.kind !== 'psionic' ||
+      choice.level !== 1 ||
+      getClassChoiceDeclaration(choice)?.target !== relation.target ||
+      getPsionicChoiceId(choice.owner, relation.pool) !== choice.id
+    )
+      throw new RangeError('Invalid psionic choice identity.')
+    const prior = character.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+    if (!selected.length)
+      return {
+        classChoiceSelections: (character.classChoiceSelections ?? []).filter(
+          (row) => row.choiceId !== choice.id,
+        ),
+      }
+    if (
+      prior &&
+      isValidPsionicSelection(prior) &&
+      sameSelectionKeys(
+        prior.selected.map(getClassChoiceOptionKey),
+        selected.map(getClassChoiceOptionKey),
+      )
+    )
+      return { classChoiceSelections: character.classChoiceSelections }
+  }
   if (decodeFavoredEnemyChoiceId(choice.id) && expectedSelectionHandle !== undefined) {
     const latest = character.classChoiceSelections?.find((s) => s.choiceId === choice.id)
     if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== expectedSelectionHandle)
@@ -526,7 +603,7 @@ export function applyClassChoiceSelectionCommand(
   ) {
     return { classChoiceSelections: character.classChoiceSelections }
   }
-  const slotLevels = assignProgressionSlotLevels(
+  let slotLevels = assignProgressionSlotLevels(
     (existingSelection?.selected ?? []).map((option) => ({
       key: getClassChoiceOptionKey(option),
       slotLevel: option.slotLevel,
@@ -535,6 +612,33 @@ export function applyClassChoiceSelectionCommand(
     getChoiceSlotLevels(choice).slice(0, requiredCount),
     choice.level,
   )
+  if (choice.kind === 'psionic') {
+    const prior = existingSelection?.selected ?? []
+    const available = [...getChoiceSlotLevels(choice).slice(0, requiredCount)]
+    for (const row of prior.filter((row) =>
+      selected.some((option) => getClassChoiceOptionKey(option) === getClassChoiceOptionKey(row)),
+    )) {
+      const i = available.indexOf(row.slotLevel)
+      if (i >= 0) available.splice(i, 1)
+    }
+    const fresh = selected.filter(
+      (row) => !prior.some((old) => getClassChoiceOptionKey(old) === getClassChoiceOptionKey(row)),
+    )
+    if (fresh.length > available.length)
+      throw new RangeError('No current earned psionic slots remain.')
+    const assigned = assignProgressionSlotLevels(
+      [],
+      fresh.map(getClassChoiceOptionKey),
+      available,
+      choice.level,
+    )
+    const levels = new Map(fresh.map((row, i) => [getClassChoiceOptionKey(row), assigned[i]]))
+    slotLevels = selected.map(
+      (row) =>
+        prior.find((old) => getClassChoiceOptionKey(old) === getClassChoiceOptionKey(row))
+          ?.slotLevel ?? levels.get(getClassChoiceOptionKey(row))!,
+    )
+  }
   const selection: CharacterClassChoiceSelection = {
     choiceId: choice.id,
     label: choice.label,
@@ -562,6 +666,18 @@ export function applyClassChoiceSelectionCommand(
     selection.selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
       ? [...retained, selection]
       : retained
+  if (choice.kind === 'psionic') {
+    if (getInvalidPsionicSelectionIds(next).size)
+      throw new RangeError('Choose distinct psionics across the Mystic pools.')
+    for (const row of selection.selected.filter(
+      (row) =>
+        !existingSelection?.selected.some(
+          (old) => getClassChoiceOptionKey(old) === getClassChoiceOptionKey(row),
+        ),
+    ))
+      if (!psionicSlotIsCurrent(choice, selection.selected, row.slotLevel, classLevel))
+        throw new RangeError('The psionic gain slot is no longer available.')
+  }
   if (
     isClassProficiencyChoiceId(choice.id) &&
     getInvalidClassProficiencySelectionIds(next).has(choice.id)
@@ -595,12 +711,13 @@ export function applyClassChoiceSelectionCommand(
 function isFeatureOption(
   option: CharacterClassChoiceOption,
 ): option is CharacterClassChoiceOption & {
-  entityType: 'classFeature' | 'subclassFeature' | 'optionalFeature'
+  entityType: 'classFeature' | 'subclassFeature' | 'optionalFeature' | 'psionic'
 } {
   return (
     option.entityType === 'classFeature' ||
     option.entityType === 'subclassFeature' ||
-    option.entityType === 'optionalFeature'
+    option.entityType === 'optionalFeature' ||
+    option.entityType === 'psionic'
   )
 }
 
@@ -684,6 +801,13 @@ export function reconcileClassChoiceSelectionGrants(
   const activeSelections = selections
     .filter((selection) => !selection.inactive)
     .map((selection) => {
+      if (selection.kind === 'psionic')
+        return {
+          ...selection,
+          selected: selection.selected.filter((option) =>
+            routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
+          ),
+        }
       const section = getOptionalClassPoolSelectionSection(selection)
       return section
         ? {
@@ -783,7 +907,8 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     expectedSelectionHandle,
   )
   if (
-    (choice.kind === 'feature-option' ||
+    (choice.kind === 'psionic' ||
+      choice.kind === 'feature-option' ||
       choice.kind === 'proficiency' ||
       isClassProficiencyChoiceId(choice.id) ||
       isStormAuraChoiceId(choice.id)) &&

@@ -2,6 +2,7 @@ import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { isClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
+import { resolvePsionic } from '@/lib/5etools/psionics'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import {
   getClassChoiceFeatureTarget,
@@ -124,6 +125,8 @@ function choiceIsMissing(
   index: GameDataAvailabilityIndex,
   subclassOwner?: string,
 ): boolean {
+  if (choice.entityType === 'psionic')
+    return !resolvePsionic(choice, index.featureOptions?.psionics)
   if (choice.entityType === 'proficiency') {
     return !hasProficiencyCatalogTarget(choice, index.featureOptions)
   }
@@ -147,7 +150,7 @@ function choiceIsMissing(
     return !target || !available?.has(target)
   }
   const catalogs: Record<
-    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption' | 'proficiency'>,
+    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption' | 'proficiency' | 'psionic'>,
     ReadonlySet<string>
   > = {
     classFeature: index.classFeatures,

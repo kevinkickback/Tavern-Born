@@ -58,6 +58,7 @@ import {
   mergePrimaryItemTypes,
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
+import { auditPsionicMultiplicity, getPsionicKey } from './psionics'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { getSubclassIntroEntries } from './subclassContent'
 import { collectLayerSubclassFeatures as collectSubclassFeatures } from './subclassFeatureCatalog'
@@ -246,6 +247,7 @@ export function findLayerDependencyIssues(
     creature: new Set(
       (gameData.creatures ?? []).map((value) => entityKey(value.name, value.source)),
     ),
+    psionic: new Set((gameData.psionics ?? []).map((value) => entityKey(value.name, value.source))),
     feat: new Set(gameData.feats.map((value) => entityKey(value.name, value.source))),
     item: new Set(
       [...gameData.items, ...gameData.itemsBase].map((value) =>
@@ -384,6 +386,7 @@ export function findLayerDependencyIssues(
 }
 
 const COLLECTION_IDENTITIES: Partial<Record<GameDataCollectionKey, (value: never) => string>> = {
+  psionics: (value: import('@/types/5etools').Psionic5e) => getPsionicKey(value.name, value.source),
   classFeatures: classFeatureIdentity,
   itemProperties: itemPropertyIdentity,
   sources: sourceIdentity,
@@ -480,13 +483,15 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
           ? toolRawLayers.get(layer)?.[key]
           : layer[key]) ?? []) as unknown[]
       const audited =
-        key === 'classes' || key === 'classFeatures'
-          ? auditFixedLayerMultiplicity(layerValues as object[], key)
-          : key === 'optionalfeatures'
-            ? auditConditionalOptionalLayerMultiplicity(layerValues)
-            : key === 'spells'
-              ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
-              : layerValues
+        key === 'psionics'
+          ? auditPsionicMultiplicity(layerValues as import('@/types/5etools').Psionic5e[])
+          : key === 'classes' || key === 'classFeatures'
+            ? auditFixedLayerMultiplicity(layerValues as object[], key)
+            : key === 'optionalfeatures'
+              ? auditConditionalOptionalLayerMultiplicity(layerValues)
+              : key === 'spells'
+                ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
+                : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values
