@@ -276,6 +276,13 @@ function renderTags(text: string): string {
       'Optional Feature',
     ),
     renderEntityTag(
+      'psionic',
+      'UATheMysticClass',
+      'text-accent font-medium italic cursor-help',
+      'psionic',
+      'Psionic',
+    ),
+    renderEntityTag(
       'variantrule',
       'DMG',
       'text-accent font-medium italic cursor-help',

@@ -33,6 +33,8 @@ import { getFeatureVariantMetadata } from './featureVariantMetadata'
 import { getFilteredFeatAlternative } from './filteredFeatAlternative'
 import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
 import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
+import { normalizePsionicChoices } from './psionicChoices'
+import { PSIONIC_ROOT_TARGET } from './psionicIdentity'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 import { normalizeStormAuraChoices } from './stormAuraChoices'
 import {
@@ -946,6 +948,7 @@ export function normalizeClassChoices(
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const owner = classChoiceOwner(classData)
+  const psionic = normalizePsionicChoices({ ...classData, classFeatureRefs: [...refs] }, undefined)
   const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
   const terrain = normalizeNaturalExplorerChoices(owner, declarations)
@@ -965,6 +968,7 @@ export function normalizeClassChoices(
   )
   const tableBacked = normalizeTableBackedFilterChoices(classData, refs)
   const accumulated = [
+    ...psionic.choices,
     ...direct.choices,
     ...progression,
     ...tableBacked,
@@ -980,11 +984,19 @@ export function normalizeClassChoices(
   return {
     choices,
     diagnostics: [
+      ...psionic.diagnostics,
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
       ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
         (diagnostic) =>
           diagnostic.featureName !== 'Natural Explorer' &&
+          !(
+            (psionic.choices.length || psionic.diagnostics.length) &&
+            diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
+            getClassFeatureIdentity(
+              decodeClassFeatureReference(diagnostic.requiredChoice.target.ref ?? ''),
+            ) === PSIONIC_ROOT_TARGET
+          ) &&
           diagnostic.featureName !== 'Favored Enemy' &&
           !(
             diagnostic.requiredChoice?.target.entityType === 'classFeature' &&
@@ -1003,12 +1015,17 @@ export function normalizeClassChoices(
 
 /** Normalizes selected-subclass feature choices, including nested referenced features. */
 export function normalizeSubclassRules(
-  classData: Pick<Class5e, 'name' | 'source'>,
+  classData: Pick<Class5e, 'name' | 'source'> &
+    Partial<Pick<Class5e, 'classFeatureRefs' | 'classTableGroups'>>,
   subclass: Pick<Subclass5e, 'name' | 'source' | 'optionalfeatureProgression' | 'featProgression'> &
     Partial<Subclass5e>,
   refs: readonly SubclassFeatureReference[],
 ): import('@/types/classRules').NormalizedClassRules {
   const owner = subclassChoiceOwner(classData, subclass)
+  const psionic = normalizePsionicChoices(classData, {
+    ...subclass,
+    subclassFeatureRefs: [...refs],
+  })
   const declarations = collectUnconditionalFeatureReferences(refs, 'subclassFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
   const storm = normalizeStormAuraChoices(owner, declarations)
@@ -1043,6 +1060,7 @@ export function normalizeSubclassRules(
   )
   const creatureTags = normalizeCreatureTagChoices(expandedRefs, directChoices, owner)
   const accumulated = [
+    ...psionic.choices.filter((row) => row.owner.type === 'subclass'),
     ...progression,
     ...directChoices,
     ...creatureTags,
@@ -1059,6 +1077,7 @@ export function normalizeSubclassRules(
       (left, right) => left.level - right.level || left.id.localeCompare(right.id),
     ),
     choiceDiagnostics: [
+      ...psionic.diagnostics.filter((row) => !!row.subclassName),
       ...getSubclassProficiencyDiagnostics(owner, proficiencies),
       ...direct.diagnostics,
       ...singleFilters.diagnostics,

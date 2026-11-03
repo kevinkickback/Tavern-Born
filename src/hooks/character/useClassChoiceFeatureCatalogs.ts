@@ -5,6 +5,7 @@ import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOpti
 /** Qualified feature targets share one complete character-filtered catalog boundary. */
 export function useClassChoiceFeatureCatalogs() {
   const {
+    psionics,
     classes,
     classFeatures,
     skills,
@@ -20,6 +21,7 @@ export function useClassChoiceFeatureCatalogs() {
   return useMemo(
     () =>
       buildClassChoiceFeatureCatalogs({
+        psionics,
         classes,
         classFeatures,
         skills,
@@ -33,6 +35,7 @@ export function useClassChoiceFeatureCatalogs() {
         classCastingSources,
       }),
     [
+      psionics,
       classes,
       classFeatures,
       skills,

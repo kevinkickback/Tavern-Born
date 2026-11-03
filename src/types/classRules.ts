@@ -4,6 +4,7 @@ export type NormalizedCharacterChoiceKind =
   | 'feat'
   | 'item'
   | 'optional-feature'
+  | 'psionic'
   | 'creature'
   | 'feature-option'
   | 'proficiency'
@@ -14,6 +15,7 @@ export type ChoiceOptionEntityType =
   | 'feat'
   | 'item'
   | 'optionalFeature'
+  | 'psionic'
   | 'creature'
   | 'featureOption'
   | 'proficiency'
@@ -33,6 +35,8 @@ export interface NormalizedChoiceOptionFilter {
   entityType: ChoiceOptionEntityType
   categories?: string[]
   featureTypes?: string[]
+  psionicTypes?: string[]
+  psionicOrders?: string[]
   itemTypes?: string[]
   excludedItemTypes?: string[]
   excludedItemProperties?: string[]

@@ -117,6 +117,11 @@ export function useFilteredGameDataParams(params: FilterParams) {
         suppressedKeys,
         allowedKeys: legacyRaceKeys,
       }),
+      psionics: (gameData.psionics ?? []).filter((row) =>
+        compatibleAllowedSources.some(
+          (source) => source.toUpperCase() === row.source.toUpperCase(),
+        ),
+      ),
       classes: DataFilter.filterClasses(classes, {
         sources: compatibleAllowedSources,
         suppressedKeys,

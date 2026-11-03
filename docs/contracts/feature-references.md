@@ -118,7 +118,8 @@ still govern entitlement. Natural Explorer uses the separate literal-group bound
 
 Normalization reports a bounded set of source-audited mandatory setup gaps: unavailable or
 unverified Storm Aura, Natural Explorer, Favored Enemy and TCE Deft Explorer/Canny declarations,
-and unsupported Mystic Psionics. Unsupported families remain diagnostic; unavailable Storm rules stay unverified.
+and unverified Mystic psionic declarations. Supported [psionic setup](psionic-selection.md) derives its
+selectors independently; changed or unavailable declarations remain diagnostic. Unavailable Storm rules stay unverified.
 Diagnostics never synthesize selectors or guess option counts. A retained known
 UID with absent, conflicting or changed source rules reports unverified setup instead. Exact target
 identity remains separate from the selected owner; nested diagnostics begin at the earliest reachable

@@ -1,0 +1,54 @@
+[
+  {
+    "target": "class-feature|psionic disciplines and talents|mystic|uathemysticclass|1|uathemysticclass",
+    "digest": "2ab272891e9071e1f602fe671c643054df29ff78c1cd6854a9949e715fd0e7d5"
+  },
+  {
+    "target": "class-feature|psionics|mystic|uathemysticclass|1|uathemysticclass",
+    "digest": "42d7dbbedcf859567eafda6a8cbcff70756a15a3905428e1cae759120c490b6b"
+  },
+  {
+    "target": "subclass-feature|order of the avatar|mystic|uathemysticclass|avatar|uathemysticclass|1|uathemysticclass",
+    "digest": "5a8a0640f663d18fb65573106eddf397b35230c906b27678ec4b99fb02ac977a"
+  },
+  {
+    "target": "subclass-feature|bonus disciplines|mystic|uathemysticclass|avatar|uathemysticclass|1|uathemysticclass",
+    "digest": "dc07be9670ebc8d4dc8330f73d2233038a6103ed56ab297d3ae4a05500367a27"
+  },
+  {
+    "target": "subclass-feature|order of the awakened|mystic|uathemysticclass|awakened|uathemysticclass|1|uathemysticclass",
+    "digest": "be929e3346328fa978449be1d30409ebd5388469c24d1e84d2c91c3974abe4e5"
+  },
+  {
+    "target": "subclass-feature|bonus disciplines|mystic|uathemysticclass|awakened|uathemysticclass|1|uathemysticclass",
+    "digest": "c377c6d1abaa60ec547528b19ed1625597f34451c05c3162abf921f99e3fa556"
+  },
+  {
+    "target": "subclass-feature|order of the immortal|mystic|uathemysticclass|immortal|uathemysticclass|1|uathemysticclass",
+    "digest": "70e6a2bcf014e23da09e5ddbf623e2c00ad3f899482f41728353a0a48cac4d75"
+  },
+  {
+    "target": "subclass-feature|bonus disciplines|mystic|uathemysticclass|immortal|uathemysticclass|1|uathemysticclass",
+    "digest": "3dc0c131dc2e928a91c66a0378835259251940c937c51c3aafe71f009910e4b1"
+  },
+  {
+    "target": "subclass-feature|order of the nomad|mystic|uathemysticclass|nomad|uathemysticclass|1|uathemysticclass",
+    "digest": "eae2e32fca2022d86618c4badb2677dcddc988a45173665149807a865f53ed50"
+  },
+  {
+    "target": "subclass-feature|bonus disciplines|mystic|uathemysticclass|nomad|uathemysticclass|1|uathemysticclass",
+    "digest": "4d04a64e8924330b54e162982671ba77702b868f73ae3dd9b5d98d428b536997"
+  },
+  {
+    "target": "subclass-feature|order of the soul knife|mystic|uathemysticclass|soul knife|uathemysticclass|1|uathemysticclass",
+    "digest": "6fe6a8cdffe2fa38b49da9146d4efcce92dea0b43045dbb2b82fd3847e46aaa0"
+  },
+  {
+    "target": "subclass-feature|order of the wu jen|mystic|uathemysticclass|wu jen|uathemysticclass|1|uathemysticclass",
+    "digest": "eaf2f37facd3e917fa4d796c408da6265c96ff2e8d18acabad1a44d50e59feca"
+  },
+  {
+    "target": "subclass-feature|bonus disciplines|mystic|uathemysticclass|wu jen|uathemysticclass|1|uathemysticclass",
+    "digest": "37b0b8c9cdbe0ffe4c3b3064b7d0b3f449b94b525acc6260285f7b9de913f696"
+  }
+]

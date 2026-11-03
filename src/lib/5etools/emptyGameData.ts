@@ -6,6 +6,7 @@ export function createEmptyGameData(): GameData & {
   itemMasteries: ItemMastery5e[]
 } {
   return {
+    psionics: [],
     races: [],
     classes: [],
     backgrounds: [],

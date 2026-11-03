@@ -3,8 +3,10 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
+import { renderEntriesToText } from '@/lib/entryText'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
+import { getInvalidPsionicSelectionIds } from '@/lib/schema/psionicValidation'
 import type {
   AbilityScores,
   Character,
@@ -64,11 +66,15 @@ function buildEffectiveClassChoiceFeatureRoutes(
     name: string
     feature: Feature
     guarded: boolean
+    psionic: boolean
+    entries: unknown[]
     prerequisite: ReturnType<typeof resolveClassChoiceOptions>[number]['prerequisite']
     className: string
     classSource: string
   }> = []
+  const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
+    if (invalidPsionics.has(selection.choiceId)) continue
     const choice = choices.get(selection.choiceId)
     const owner = findClassReference(
       { name: selection.className, source: selection.classSource },
@@ -92,7 +98,9 @@ function buildEffectiveClassChoiceFeatureRoutes(
     choiceIds.add(choice.id)
     if (
       !selection.selected.some((row) =>
-        ['classFeature', 'subclassFeature', 'optionalFeature', 'feat'].includes(row.entityType),
+        ['classFeature', 'subclassFeature', 'optionalFeature', 'feat', 'psionic'].includes(
+          row.entityType,
+        ),
       )
     )
       continue
@@ -118,13 +126,19 @@ function buildEffectiveClassChoiceFeatureRoutes(
       )
         continue
       selectedOptions.push({ selection, option })
-      if (['classFeature', 'subclassFeature', 'optionalFeature'].includes(option.entityType)) {
+      if (
+        ['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+          option.entityType,
+        )
+      ) {
         const view = options.find(
           (row) => getClassChoiceOptionKey(row.reference) === getClassChoiceOptionKey(option),
         )!
         contributions.push({
           id: getClassChoiceFeatureId(selection, option),
           feature: getClassChoiceGrantedFeature(selection, option),
+          psionic: option.entityType === 'psionic',
+          entries: view.entries,
           choiceId: selection.choiceId,
           name: option.name,
           guarded: !!getOptionalClassPoolSection(choice),
@@ -180,8 +194,9 @@ function buildEffectiveClassChoiceFeatureRoutes(
     contributions: [...accepted].map((index) => contributions[index]),
     selectedOptions: selectedOptions.filter(
       ({ selection, option }) =>
-        !['classFeature', 'subclassFeature', 'optionalFeature'].includes(option.entityType) ||
-        featureIds.has(getClassChoiceFeatureId(selection, option)),
+        !['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+          option.entityType,
+        ) || featureIds.has(getClassChoiceFeatureId(selection, option)),
     ),
   }
 }
@@ -231,13 +246,24 @@ export function projectEffectiveClassChoiceFeatures(
   prerequisites?: ClassChoicePrerequisiteContext,
 ): Character {
   const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs, prerequisites)
-  const features = character.features.filter(
-    (row) => !row.id.startsWith('class-choice:') || routes.featureIds.has(row.id),
-  )
+  const features = character.features
+    .filter((row) => !row.id.startsWith('class-choice:') || routes.featureIds.has(row.id))
+    .map((row) => {
+      const current = routes.contributions.find(
+        (candidate) => candidate.psionic && candidate.id === row.id,
+      )
+      if (!current) return row
+      const description = renderEntriesToText(current.entries)
+      return description !== row.description ? { ...row, description } : row
+    })
   const existingIds = new Set(features.map((row) => row.id))
   for (const row of routes.contributions)
     if (!existingIds.has(row.id)) {
-      features.push(row.feature)
+      features.push(
+        row.psionic
+          ? { ...row.feature, description: renderEntriesToText(row.entries) }
+          : row.feature,
+      )
       existingIds.add(row.id)
     }
   const managed = new Set((character.classChoiceSelections ?? []).map((row) => row.choiceId))

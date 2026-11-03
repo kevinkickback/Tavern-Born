@@ -291,6 +291,7 @@ export interface ItemType5e {
 }
 
 export interface GameDataLookups {
+  psionicsByKey?: Record<string, Psionic5e>
   classesByKey: Record<string, Class5e>
   racesByKey: Record<string, Race5e>
   backgroundsByKey: Record<string, Background5e>
@@ -628,6 +629,7 @@ export interface GameDataSourceStack {
 }
 
 export interface GameData {
+  psionics?: Psionic5e[]
   races: Race5e[]
   classes: Class5e[]
   backgrounds: Background5e[]
@@ -675,6 +677,28 @@ export interface GameData {
   cultsBoons: unknown[]
   sources: SourceBook[]
   lookups?: GameDataLookups
+}
+
+export interface PsionicMode5e {
+  name: string
+  type?: string
+  entries: unknown[]
+  cost?: { min: number; max: number }
+  concentration?: { duration: number; unit: string }
+  submodes?: PsionicMode5e[]
+}
+
+/** Upstream psionics are a separate family from spells and optional features. */
+export interface Psionic5e {
+  name: string
+  source: string
+  type: string
+  order?: string
+  entries?: unknown[]
+  focus?: string
+  modes?: PsionicMode5e[]
+  /** Same-layer duplicate identities remain unavailable after composition. */
+  psionicSourceConflict?: boolean
 }
 
 export interface OptionalClassFeatureSourceProof {

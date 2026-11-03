@@ -7,6 +7,7 @@ import {
   getEntityLookupKey,
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
   getClassChoiceFeatureId,
@@ -28,6 +29,7 @@ import type {
   Creature5e,
   GameData,
   OptionalFeatureLike,
+  Psionic5e,
   Race5e,
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -117,6 +119,7 @@ export function buildRetainedCharacterDetails(
     for (const feature of [
       ...data.classFeatures,
       ...(data.optionalfeatures as OptionalFeatureLike[]),
+      ...(data.psionics ?? []).map((row) => ({ ...row, entries: getPsionicEntries(row) })),
     ])
       addFeature(feature)
     const subclassFor = (
@@ -221,9 +224,11 @@ export function buildRetainedCharacterDetails(
           ? {
               availability,
               entries:
-                option.entityType === 'creature'
-                  ? getCreatureChoiceEntries(entity as Creature5e)
-                  : (entity.entries ?? []),
+                option.entityType === 'psionic'
+                  ? getPsionicEntries(entity as Psionic5e)
+                  : option.entityType === 'creature'
+                    ? getCreatureChoiceEntries(entity as Creature5e)
+                    : (entity.entries ?? []),
             }
           : { availability: 'missing', entries: [] }
       })

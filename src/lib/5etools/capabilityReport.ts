@@ -160,6 +160,7 @@ function optionCatalogs(
         (value) => getClassFeatureIdentity(value) ?? [],
       ),
     ),
+    psionic: new Set((gameData.psionics ?? []).flatMap((value) => entityKey(value) ?? [])),
     creature: new Set((gameData.creatures ?? []).flatMap((value) => entityKey(value) ?? [])),
     feat: new Set(gameData.feats.flatMap((value) => entityKey(value) ?? [])),
     item: new Set(

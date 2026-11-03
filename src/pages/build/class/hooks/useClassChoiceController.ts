@@ -193,7 +193,13 @@ export function useClassChoiceController({
     const viewed = viewingClassEntry ?? viewingClassData
     return featureOptionStates.filter((state) => {
       if (!state.recovery) return false
-      if (state.storm || state.literalGroup || state.proficiency || state.optionalPool)
+      if (
+        state.storm ||
+        state.literalGroup ||
+        state.proficiency ||
+        state.optionalPool ||
+        state.psionic
+      )
         return (
           !!state.owner &&
           !!viewed &&
@@ -374,7 +380,7 @@ export function useClassChoiceController({
         retainSavedFeatureOptions(
           activeSaved.selection.choiceId,
           keys,
-          activeSaved.optionalPool ? request?.savedHandle : undefined,
+          activeSaved.optionalPool || activeSaved.psionic ? request?.savedHandle : undefined,
         )
       } catch (error) {
         toast.error(
@@ -630,7 +636,7 @@ export function useClassChoiceController({
               id: state.selection.choiceId,
               contextKey,
               savedHandle:
-                state.optionalPool || state.enemy
+                state.optionalPool || state.enemy || state.psionic
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

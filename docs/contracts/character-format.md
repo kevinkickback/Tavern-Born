@@ -4,6 +4,11 @@ Current admission is implemented in [the version constant](../../src/lib/schema/
 [the strict schema](../../src/types/characterSchema.ts), and [the store](../../src/store/characterStore.ts).
 The current character format is **13**; the [parsed catalog cache](../data-ingestion.md#cache-compatibility) is independent.
 
+Additive psionic Class choices retain explicit entity printings and earned slots in the existing
+selection records. Reserved owner/target IDs and materialized Feature/provenance relations are
+validated without loaded content; current eligibility is independently derived. See
+[psionic setup](psionic-selection.md#saved-choices-and-ownership).
+
 The runtime supports exactly `CURRENT_CHARACTER_SCHEMA_VERSION`. Pre-release character formats
 are not carried forward through breaking changes while preparing for 1.0. Older or newer versions
 are rejected before strict validation; the cutoff performs no conversion or ownership inference.

@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Shared bounded autocomplete, known-language filtering and optional-feature labels.
-  // Measured 6,315,720 B; smallest independently reviewed whole-KiB allowance.
-  rendererCode: 6168 * KIB,
-  // Synchronous source/owner/target authority: measured 1,106,505 B.
+  // Shared psionic source/owner/slot authority, saved relations and content projection.
+  // Measured 6,336,702 B; smallest independently reviewed whole-KiB allowance.
+  rendererCode: 6189 * KIB,
+  // Synchronous source/owner/target authority: measured 1,126,244 B.
   // Smallest reviewed whole-KiB allowance; all other limits remain unchanged.
-  initialRendererScript: 1081 * KIB,
+  initialRendererScript: 1100 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -8,6 +8,10 @@ import {
   FAVORED_ENEMY_TARGET,
 } from '@/lib/5etools/favoredEnemyIdentity'
 import { getFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
+import { normalizePsionicChoices, psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import { decodePsionicChoiceId, PSIONIC_CLASS_SOURCE } from '@/lib/5etools/psionicIdentity'
+import { resolvePsionic } from '@/lib/5etools/psionics'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
@@ -192,6 +196,7 @@ export function createClassChoiceCatalogs(
 }
 
 type ChoiceCatalogEntity =
+  | import('@/types/5etools').Psionic5e
   | ClassFeature
   | SubclassFeature
   | Creature5e
@@ -219,7 +224,7 @@ function getCatalog(
     | 'itemsBase'
     | 'optionalFeatures'
   > &
-    Pick<ClassChoiceFeatureCatalogs, 'subclassFeatureCandidates'>,
+    Pick<ClassChoiceFeatureCatalogs, 'subclassFeatureCandidates' | 'psionics'>,
 ): readonly ChoiceCatalogEntity[] {
   if (entityType === 'featureOption' || entityType === 'proficiency') return []
   if (entityType === 'classFeature') return catalogs.classFeatures
@@ -687,6 +692,7 @@ export function resolveClassChoiceOptionEntity(
   catalogs: Parameters<typeof getCatalog>[1],
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): ChoiceCatalogEntity | undefined {
+  if (option.entityType === 'psionic') return resolvePsionic(option, catalogs.psionics)
   if (option.entityType === 'featureOption')
     return resolveFeatureOptionEntity(option, catalogs, cache)
   if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {
@@ -781,6 +787,8 @@ export function resolveClassChoiceOptions(
   classLevel = 20,
   character?: Character,
 ): ClassChoiceOptionView[] {
+  if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:'))
+    return resolvePsionicChoiceOptions(choice, catalogs, saved, classLevel, character)
   if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id))
     return resolveClassProficiencyOptions(choice, catalogs, saved, character)
   if (catalogs.subclassTargets) {
@@ -927,6 +935,81 @@ export function resolveClassChoiceOptions(
   )
 }
 
+/** Current family, exact printing, slot multiset and cross-pool ownership share one picker/projection policy. */
+function resolvePsionicChoiceOptions(
+  requested: NormalizedCharacterChoice,
+  catalogs: ClassChoiceCatalogs,
+  saved: readonly CharacterClassChoiceOption[],
+  classLevel: number,
+  character: Character | undefined,
+): ClassChoiceOptionView[] {
+  const relation = decodePsionicChoiceId(requested.id)
+  const cls = catalogs.classes?.find(
+    (row) =>
+      normalized(row.name) === normalized(requested.owner.name) &&
+      normalized(row.source) === normalized(requested.owner.source),
+  )
+  const sub = cls?.subclasses?.find(
+    (row) =>
+      normalized(row.name) === normalized(requested.owner.subclassName) &&
+      normalized(row.source) === normalized(requested.owner.subclassSource),
+  )
+  const choice =
+    cls &&
+    normalizePsionicChoices(cls, sub, catalogs).choices.find((row) => row.id === requested.id)
+  const current =
+    relation &&
+    choice &&
+    JSON.stringify(choice) === JSON.stringify(requested) &&
+    classLevel >= choice.level
+  const other = new Set(
+    (character?.classChoiceSelections ?? [])
+      .filter(
+        (row) =>
+          row.choiceId !== requested.id &&
+          getFeatureOwnerKey(row.className, row.classSource) ===
+            getFeatureOwnerKey(requested.owner.name, requested.owner.source),
+      )
+      .flatMap((row) =>
+        row.selected
+          .filter((option) => option.entityType === 'psionic')
+          .map(getClassChoiceOptionKey),
+      ),
+  )
+  const views = new Map<string, ClassChoiceOptionView>()
+  if (current)
+    for (const row of catalogs.psionics ?? []) {
+      const reference = { entityType: 'psionic' as const, name: row.name, source: row.source }
+      const key = getClassChoiceOptionKey(reference)
+      const prior = saved.find((option) => getClassChoiceOptionKey(option) === key)
+      const eligible =
+        !!resolvePsionic(reference, catalogs.psionics) &&
+        choice.optionFilter?.psionicTypes?.includes(row.type) &&
+        (!choice.optionFilter?.psionicOrders ||
+          choice.optionFilter.psionicOrders.includes(row.order ?? '')) &&
+        !other.has(key) &&
+        (!prior || psionicSlotIsCurrent(choice, saved, prior.slotLevel, classLevel))
+      if (eligible)
+        views.set(key, {
+          reference,
+          availability: 'eligible',
+          entries: getPsionicEntries(row),
+          presentation: {
+            kind: 'feature',
+            featureTypeLabels: [
+              row.type === 'T' ? 'Talent' : `${row.order ?? 'Unknown order'} discipline`,
+            ],
+          },
+          searchText: `${row.name} ${row.order ?? ''}`,
+        })
+    }
+  for (const reference of saved) {
+    const key = getClassChoiceOptionKey(reference)
+    if (!views.has(key)) views.set(key, { reference, availability: 'retained', entries: [] })
+  }
+  return [...views.values()]
+}
+
 /** Returns normalized class choices for the shared class-choice workflow. */
 export function getStandaloneClassChoices(classData: {
   normalizedRules?: { choices: NormalizedCharacterChoice[] }
@@ -977,10 +1060,12 @@ export function getClassChoiceCandidates(
     name?: string
     source?: string
     classFeatureRefs?: Class5e['classFeatureRefs']
+    classTableGroups?: Class5e['classTableGroups']
     normalizedRules?: { choices: NormalizedCharacterChoice[] }
   },
   subclass:
-    | (Pick<Subclass5e, 'normalizedRules'> & Partial<Pick<Subclass5e, 'name' | 'source'>>)
+    | (Pick<Subclass5e, 'normalizedRules'> &
+        Partial<Pick<Subclass5e, 'name' | 'source' | 'subclassFeatureRefs'>>)
     | undefined,
   catalogs?: ClassChoiceFeatureCatalogs,
 ): NormalizedCharacterChoice[] {
@@ -989,6 +1074,7 @@ export function getClassChoiceCandidates(
     'classFeature',
   )
   const ordinary = getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+    if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:')) return false
     if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
       return false
     }
@@ -1031,9 +1117,12 @@ export function getClassChoiceCandidates(
           catalogs ?? { classFeatures: [] },
         ).choices
       : []
-  return [...ordinary, ...canonical, ...enemies].sort(
-    (left, right) => left.level - right.level || left.id.localeCompare(right.id),
-  )
+  return [
+    ...ordinary,
+    ...canonical,
+    ...enemies,
+    ...normalizePsionicChoices(classData, subclass, catalogs).choices,
+  ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 
 export function getCharacterClassChoices(
@@ -1053,10 +1142,12 @@ export function getClassChoiceDiagnosticCandidateSide(
     name?: string
     source?: string
     classFeatureRefs?: Class5e['classFeatureRefs']
+    classTableGroups?: Class5e['classTableGroups']
     normalizedRules?: { choiceDiagnostics: import('@/types/classRules').ClassChoiceDiagnostic[] }
   },
   subclass:
-    | (Pick<Subclass5e, 'normalizedRules'> & Partial<Pick<Subclass5e, 'name' | 'source'>>)
+    | (Pick<Subclass5e, 'normalizedRules'> &
+        Partial<Pick<Subclass5e, 'name' | 'source' | 'subclassFeatureRefs'>>)
     | undefined,
   includeVariants: boolean,
   catalogs?: Pick<
@@ -1101,8 +1192,18 @@ export function getClassChoiceDiagnosticCandidateSide(
         normalized(candidate.featureVariant.replacesFeatureName) === featureName,
     )
   }
-  const classDiagnostics = classData.normalizedRules?.choiceDiagnostics ?? []
-  const subclassDiagnostics = subclass?.normalizedRules?.choiceDiagnostics ?? []
+  const keepNonPsionic = (row: import('@/types/classRules').ClassChoiceDiagnostic) =>
+    !(
+      normalized(row.className) === 'mystic' &&
+      normalized(row.classSource) === normalized(PSIONIC_CLASS_SOURCE) &&
+      ['Psionics', 'Bonus Disciplines', 'Order of the Soul Knife'].includes(row.featureName)
+    )
+  const classDiagnostics = (classData.normalizedRules?.choiceDiagnostics ?? []).filter(
+    keepNonPsionic,
+  )
+  const subclassDiagnostics = (subclass?.normalizedRules?.choiceDiagnostics ?? []).filter(
+    keepNonPsionic,
+  )
   const subclassProficiencyDiagnostics =
     classData.name && classData.source && subclass?.name && subclass.source
       ? getSubclassProficiencyDiagnostics(
@@ -1214,6 +1315,11 @@ export function getClassChoiceDiagnosticCandidateSide(
       },
     })
   return [
+    ...normalizePsionicChoices(
+      classData,
+      subclass,
+      catalogs as ClassChoiceFeatureCatalogs | undefined,
+    ).diagnostics,
     ...getActiveRequiredSetupDiagnostics(
       enemyDiagnostics,
       classData,

@@ -40,6 +40,7 @@ const ENTITY_LABELS = {
   feat: 'Feat',
   item: 'Item',
   optionalFeature: 'Optional feature',
+  psionic: 'Psionic',
   creature: 'Creature',
   featureOption: 'Feature option',
   proficiency: 'Proficiency',
@@ -218,17 +219,24 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
   prerequisite: { met: boolean; reasons: string[] }
   removalOnly?: boolean
 }) {
+  const Title = option.reference.entityType === 'psionic' ? 'div' : 'span'
   return (
     <div className="p-3.5">
       <div className="mb-1.5 flex items-start justify-between gap-2">
-        <span
+        <Title
           className={cn(
             'font-semibold leading-tight',
             !prerequisite.met && !selected && 'text-muted-foreground',
           )}
         >
-          {getOptionLabel(option)}
-        </span>
+          {option.reference.entityType === 'psionic' ? (
+            <GameContent
+              entry={`{@psionic ${option.reference.name}|${option.reference.source ?? ''}}`}
+            />
+          ) : (
+            getOptionLabel(option)
+          )}
+        </Title>
         <div className="flex shrink-0 gap-1">
           {option.reference.source && (
             <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
@@ -695,6 +703,8 @@ export function ClassChoiceSelectionModal({
               </>
             )}
           </span>
+        ) : choice.kind === 'psionic' ? (
+          'Intelligence is your psionic ability. Edit these choices to correct setup. These controls do not perform level-up replacements or spend psi points.'
         ) : undefined
       }
       getConfirmationError={(ids) =>

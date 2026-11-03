@@ -108,7 +108,7 @@ export function validateClassChoices(
   )
   for (const state of featureOptionStates.filter(
     (row) =>
-      (row.storm || row.literalGroup || row.proficiency || row.optionalPool) &&
+      (row.storm || row.literalGroup || row.proficiency || row.optionalPool || row.psionic) &&
       row.owner &&
       row.recovery,
   )) {
@@ -251,7 +251,7 @@ export function validateClassChoices(
           ? storedSelection.filter(
               (option) =>
                 eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-                (!['classFeature', 'subclassFeature', 'optionalFeature'].includes(
+                (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
                   option.entityType,
                 ) ||
                   (!!savedChoice &&

@@ -12,6 +12,8 @@ import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import { resolvePsionic } from '@/lib/5etools/psionics'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { isStormAuraChoiceId, STORM_TARGETS } from '@/lib/5etools/stormAuraIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -485,6 +487,20 @@ function deriveClassFeatureActions(
             name: feature.name,
             source: option.source?.trim() || target.split('|').slice(-1)[0],
           })
+      } else if (option.entityType === 'psionic') {
+        const feature = resolvePsionic(option, context.classChoiceFeatureCatalogs?.psionics)
+        if (!feature) continue
+        const [action] = rulesTextAction(
+          `feature:${getClassChoiceFeatureId(selection, option)}`,
+          option.name,
+          renderEntriesToText(getPsionicEntries(feature)),
+          {
+            kind: selection.subclassName ? 'subclass' : 'class',
+            name: option.name,
+            source: option.source,
+          },
+        )
+        if (action) actions.set(action.id, action)
       } else if (option.entityType === 'optionalFeature') {
         const feature = context.optionalFeaturesByKey?.[
           getEntityLookupKey(option.name, option.source)
