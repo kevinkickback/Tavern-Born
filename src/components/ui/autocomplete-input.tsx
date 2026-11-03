@@ -1,6 +1,8 @@
 import * as Popover from '@radix-ui/react-popover'
+import { Slot } from '@radix-ui/react-slot'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
 import { type ComponentProps, useEffect, useId, useRef, useState } from 'react'
+import { RemoveScroll } from 'react-remove-scroll'
 import { cn } from '@/lib/utils'
 import { Input } from './input'
 
@@ -39,6 +41,7 @@ export function AutocompleteInput({
   const activeIndex = visible.findIndex((option) => keyOf(option) === activeKey)
   const optionId = (index: number) => `${listId}-${index}`
   const expanded = open && !disabled
+  const parentDialog = anchorRef.current?.closest<HTMLElement>('[role="dialog"]')
   useEffect(() => {
     if (expanded && activeIndex >= 0)
       document.getElementById(`${listId}-${activeIndex}`)?.scrollIntoView({ block: 'nearest' })
@@ -123,54 +126,62 @@ export function AutocompleteInput({
         </div>
       </Popover.Anchor>
       <Popover.Portal>
-        <Popover.Content
-          id={listId}
-          role="listbox"
-          aria-label={suggestionsLabel}
-          align="start"
-          sideOffset={4}
-          collisionPadding={8}
-          className="z-[60] max-h-[min(15rem,var(--radix-popover-content-available-height))] w-(--radix-popover-trigger-width) max-w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault()
-            inputRef.current?.focus()
-          }}
-          onCloseAutoFocus={(event) => event.preventDefault()}
-          onInteractOutside={(event) => {
-            if (event.target instanceof Node && anchorRef.current?.contains(event.target))
-              event.preventDefault()
-          }}
-          onEscapeKeyDown={(event) => {
-            event.preventDefault()
-            setOpen(false)
-          }}
+        <RemoveScroll
+          as={Slot}
+          enabled={expanded}
+          allowPinchZoom
+          removeScrollBar={false}
+          shards={parentDialog ? [parentDialog] : [anchorRef]}
         >
-          {visible.length ? (
-            visible.map((option, index) => (
-              <button
-                type="button"
-                id={optionId(index)}
-                key={keyOf(option)}
-                role="option"
-                tabIndex={-1}
-                aria-selected={index === activeIndex}
-                className={cn(
-                  'block w-full cursor-default rounded-sm px-2 py-1.5 text-left text-sm',
-                  index === activeIndex && 'bg-accent text-accent-foreground',
-                )}
-                onPointerMove={() => setActiveKey(keyOf(option))}
-                onPointerDown={(event) => event.preventDefault()}
-                onClick={() => choose(option)}
-              >
-                {option.label ?? option.value}
-              </button>
-            ))
-          ) : (
-            <div className="px-2 py-1.5 text-sm text-muted-foreground" role="status">
-              No suggestions found
-            </div>
-          )}
-        </Popover.Content>
+          <Popover.Content
+            id={listId}
+            role="listbox"
+            aria-label={suggestionsLabel}
+            align="start"
+            sideOffset={4}
+            collisionPadding={8}
+            className="z-[60] max-h-[min(15rem,var(--radix-popover-content-available-height))] w-(--radix-popover-trigger-width) max-w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-md border bg-popover p-1 text-popover-foreground shadow-md [scrollbar-gutter:stable]"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault()
+              inputRef.current?.focus()
+            }}
+            onCloseAutoFocus={(event) => event.preventDefault()}
+            onInteractOutside={(event) => {
+              if (event.target instanceof Node && anchorRef.current?.contains(event.target))
+                event.preventDefault()
+            }}
+            onEscapeKeyDown={(event) => {
+              event.preventDefault()
+              setOpen(false)
+            }}
+          >
+            {visible.length ? (
+              visible.map((option, index) => (
+                <button
+                  type="button"
+                  id={optionId(index)}
+                  key={keyOf(option)}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={index === activeIndex}
+                  className={cn(
+                    'block w-full cursor-default rounded-sm px-2 py-1.5 text-left text-sm',
+                    index === activeIndex && 'bg-accent text-accent-foreground',
+                  )}
+                  onPointerMove={() => setActiveKey(keyOf(option))}
+                  onPointerDown={(event) => event.preventDefault()}
+                  onClick={() => choose(option)}
+                >
+                  {option.label ?? option.value}
+                </button>
+              ))
+            ) : (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground" role="status">
+                No suggestions found
+              </div>
+            )}
+          </Popover.Content>
+        </RemoveScroll>
       </Popover.Portal>
     </Popover.Root>
   )
