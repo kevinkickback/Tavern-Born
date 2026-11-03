@@ -4,13 +4,14 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { RulesStep } from '@/components/character/wizard/steps/2-RulesStep'
 import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
+import { ContentStep } from '@/components/character/wizard/steps/ContentStep'
 
 describe('ReviewStep variant rule ordering', () => {
   afterEach(() => {
     cleanup()
   })
 
-  test('renders variant rules in the same order as the Rules step', () => {
+  test('renders variant rules in the established review order', () => {
     render(
       <ReviewStep
         data={{
@@ -50,7 +51,7 @@ describe('ReviewStep variant rule ordering', () => {
   })
 })
 
-describe('RulesStep average hit-points toggle', () => {
+describe('Wizard rule controls', () => {
   afterEach(() => {
     cleanup()
   })
@@ -71,7 +72,7 @@ describe('RulesStep average hit-points toggle', () => {
 
   test('disables content-specific rules whose records are unavailable', () => {
     render(
-      <RulesStep
+      <ContentStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, preferNewerPrintings: false },
@@ -97,7 +98,7 @@ describe('RulesStep average hit-points toggle', () => {
 
   test('enables a content-specific rule when its matching record is available', () => {
     render(
-      <RulesStep
+      <ContentStep
         data={INITIAL_CHARACTER_DATA}
         onChange={vi.fn()}
         sources={[]}
@@ -124,7 +125,7 @@ describe('RulesStep average hit-points toggle', () => {
 
   test('explains that newer printings are always preferred for 2024 characters', () => {
     render(
-      <RulesStep
+      <ContentStep
         data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
         onChange={vi.fn()}
         sources={[]}
@@ -143,7 +144,7 @@ describe('RulesStep average hit-points toggle', () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
-      <RulesStep
+      <ContentStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: {
@@ -226,7 +227,7 @@ describe('RulesStep average hit-points toggle', () => {
 
   test('does not offer provenance-only bundled sources', () => {
     render(
-      <RulesStep
+      <ContentStep
         data={INITIAL_CHARACTER_DATA}
         onChange={vi.fn()}
         sources={[
@@ -253,7 +254,7 @@ describe('RulesStep average hit-points toggle', () => {
 
   test('explains how to load more sources when using the bundled SRD', () => {
     const { container } = render(
-      <RulesStep
+      <ContentStep
         data={{ ...INITIAL_CHARACTER_DATA, allowedSources: ['PHB'] }}
         onChange={vi.fn()}
         sources={[{ abbreviation: 'PHB', name: "Player's Handbook", group: 'core' }]}

@@ -1,7 +1,17 @@
 import type { OriginSystem, PortraitTransform } from '@/types/character'
 
+export type WizardStepId =
+  | 'basics'
+  | 'rules'
+  | 'content'
+  | 'race'
+  | 'class'
+  | 'background'
+  | 'abilities'
+  | 'review'
+
 export interface WizardStep {
-  id: number
+  id: WizardStepId
   label: string
   icon: React.ElementType
 }

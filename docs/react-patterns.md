@@ -53,6 +53,14 @@ picker opens. Character, owner, level, variant or catalog changes end a pending 
 Readiness requires current subclass resolution; unavailable saved choices retain recovery controls.
 Do not add a saved parent/child status mirror.
 
+## Creator steps
+
+The creator uses semantic step IDs for component and validation selection; ordinal progress comes
+from the ordered step metadata. Rules owns edition, ability generation and hit points. Additional
+Content owns source selection and content-dependent options. Its search filters displayed source
+rows only: presets, selected counts and option availability use the complete draft catalog. Explicit
+empty sources remain valid. Draft changes and durable creation stay with the existing wizard owner.
+
 ## Rules preview manager
 
 Interactive 5etools content uses `GameContent` and the

@@ -731,34 +731,37 @@ const abilityScoreMethodSchema = z
   .enum(['point-buy', 'standard-array', 'custom', 'manual'])
   .transform((method) => (method === 'manual' ? 'custom' : method))
 
-export const wizardStep1Schema = z.object({
+export const wizardBasicsSchema = z.object({
   name: z
     .string()
     .min(1, 'Character name is required')
     .max(100, 'Name must be 100 characters or fewer'),
 })
 
-export const wizardStep2Schema = z.object({
+export const wizardRulesSchema = z.object({
   originSystem: originSystemSchema,
   abilityScoreMethod: abilityScoreMethodSchema.refine((v) => !!v, {
     message: 'Please select an ability score generation method',
   }),
+})
+
+export const wizardContentSchema = z.object({
   allowedSources: z.array(sourceSchema),
 })
 
-export const wizardStep3Schema = z.object({
+export const wizardRaceSchema = z.object({
   race: z.string().min(1, 'Please select a race'),
 })
 
-export const wizardStep4Schema = z.object({
+export const wizardClassSchema = z.object({
   class: z.string().min(1, 'Please select a class'),
 })
 
-export const wizardStep5Schema = z.object({
+export const wizardBackgroundSchema = z.object({
   background: z.string().min(1, 'Please select a background'),
 })
 
-export const wizardStep6Schema = z.object({
+export const wizardAbilitiesSchema = z.object({
   abilityScores: abilityScoresSchema.optional(),
 })
 
