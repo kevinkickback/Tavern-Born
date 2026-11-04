@@ -14,16 +14,24 @@ import {
 
 const norm = normalizeOwnerIdentity
 
-function dailyEntry(character: Character, profile: SpellProfile) {
+export function getDailyClassSpellEntry(character: Character, profile: SpellProfile) {
+  if (
+    profile.type !== 'class' ||
+    !profile.className ||
+    profile.id !== toClassProfileId(profile.className, profile.classSource)
+  )
+    return undefined
   const entries = character.classProgression.filter(
     (entry) =>
-      profile.type === 'class' &&
-      profile.id === toClassProfileId(entry.name, entry.source) &&
       norm(profile.className) === norm(entry.name) &&
       norm(profile.classSource) === norm(entry.source),
   )
   const entry = entries.length === 1 ? entries[0] : undefined
-  return entry && getClassSpellProfilePolicy(entry).mode === 'daily' ? entry : undefined
+  return entry &&
+    profile.id === toClassProfileId(entry.name, entry.source) &&
+    getClassSpellProfilePolicy(entry).mode === 'daily'
+    ? entry
+    : undefined
 }
 
 /** Unrelated writes retain player intent, never stale fixed or numeric materialization. */
@@ -33,9 +41,9 @@ export function preserveDailyClassSpellIntent(saved: Character, next: Character)
     spells: {
       ...next.spells,
       spellProfiles: next.spells.spellProfiles.map((profile) => {
-        if (!dailyEntry(next, profile)) return profile
+        if (!getDailyClassSpellEntry(next, profile)) return profile
         const previous = saved.spells.spellProfiles.find(
-          (row) => row.id === profile.id && dailyEntry(saved, row),
+          (row) => row.id === profile.id && getDailyClassSpellEntry(saved, row),
         )
         return previous ? { ...profile, preparedSpells: [...previous.preparedSpells] } : profile
       }),
@@ -48,7 +56,7 @@ export function getDailyClassSpellAccess(
   profile: SpellProfile,
   context?: ManagedClassSpellContext,
 ) {
-  const entry = dailyEntry(character, profile)
+  const entry = getDailyClassSpellEntry(character, profile)
   const rule = entry && getClassSpellProfilePolicy(entry).rule
   if (!entry || !rule) return undefined
   const current =
@@ -102,8 +110,8 @@ export function projectDailyClassSpellIntent(
     const previous = saved.spells.spellProfiles.find((row) => row.id === profile.id)
     if (
       !previous?.preparedSpells.length ||
-      !dailyEntry(saved, previous) ||
-      !dailyEntry(current, profile)
+      !getDailyClassSpellEntry(saved, previous) ||
+      !getDailyClassSpellEntry(current, profile)
     )
       return profile
     const access = getDailyClassSpellAccess(current, profile, context)
