@@ -10,22 +10,23 @@ describe('BackgroundStep', () => {
     cleanup()
   })
 
-  test('defaults to the first available background when none is selected', async () => {
+  test('sorts background rows across sources and defaults from catalog order', async () => {
     const onChange = vi.fn()
     const backgrounds: Background5e[] = [
       {
-        name: 'Acolyte',
-        source: 'PHB',
-        entries: ['You have spent your life in service to a temple.'],
-      } as Background5e,
-      {
         name: 'Charlatan',
-        source: 'PHB',
+        source: 'TCE',
         entries: ['You have always had a way with lies.'],
       } as Background5e,
+      {
+        name: 'Acolyte',
+        source: 'TCE',
+        entries: ['You have spent your life in service to a temple.'],
+      } as Background5e,
+      { name: 'Charlatan', source: 'PHB' } as Background5e,
     ]
 
-    render(
+    const { getAllByRole } = render(
       <BackgroundStep
         recursiveLookup={buildRecursiveLookup({})}
         data={{
@@ -40,10 +41,15 @@ describe('BackgroundStep', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
-        background: 'Acolyte',
-        backgroundSource: 'PHB',
+        background: 'Charlatan',
+        backgroundSource: 'TCE',
       })
     })
+    expect(
+      getAllByRole('button', { name: /^(Acolyte|Charlatan) (PHB|TCE)$/ }).map(
+        (button) => button.textContent,
+      ),
+    ).toEqual(['AcolyteTCE', 'CharlatanPHB', 'CharlatanTCE'])
   })
 
   test('selecting a background updates background and source', () => {

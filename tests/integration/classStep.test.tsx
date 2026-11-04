@@ -98,14 +98,15 @@ describe('ClassStep', () => {
     })
   })
 
-  test('defaults to the first available class when none is selected', async () => {
+  test('sorts class rows across sources and defaults from catalog order', async () => {
     const onChange = vi.fn()
     const classes: Class5e[] = [
-      { name: 'Barbarian', source: 'PHB' } as Class5e,
+      { name: 'Wizard', source: 'TCE' } as Class5e,
+      { name: 'Barbarian', source: 'TCE' } as Class5e,
       { name: 'Wizard', source: 'PHB' } as Class5e,
     ]
 
-    render(
+    const { getAllByRole } = render(
       <ClassStep
         recursiveLookup={buildRecursiveLookup({})}
         data={{
@@ -120,10 +121,15 @@ describe('ClassStep', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
-        class: 'Barbarian',
-        classSource: 'PHB',
+        class: 'Wizard',
+        classSource: 'TCE',
       })
     })
+    expect(
+      getAllByRole('button', { name: /^(Barbarian|Wizard) (PHB|TCE)·/ }).map(
+        (button) => button.textContent?.match(/^(Barbarian|Wizard)(PHB|TCE)/)?.[0],
+      ),
+    ).toEqual(['BarbarianTCE', 'WizardPHB', 'WizardTCE'])
   })
 
   test('renders the filtered class collection supplied by the wizard controller', () => {
