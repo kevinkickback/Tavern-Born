@@ -544,7 +544,8 @@ describe('characterSheetPdf', () => {
     expect(withCreatureCatalog([{ ...land, source: 'XPHB' }, wolf]).companions).toEqual([])
     expect(withCreatureCatalog([land, { ...land }]).companions).toEqual([])
     expect(withCreatureCatalog([land, wolf]).companions).toEqual(viewModel.companions)
-    const primal = character.classChoiceSelections?.find((row) => row.label === 'Primal Companion')!
+    const primal = character.classChoiceSelections?.find((row) => row.label === 'Primal Companion')
+    if (!primal) throw new Error('Expected the saved Primal Companion choice')
     const collision = characterPersistenceSchema.parse({
       ...character,
       classChoiceSelections: [
