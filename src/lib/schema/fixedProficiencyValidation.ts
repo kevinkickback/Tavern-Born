@@ -18,7 +18,7 @@ export function getInvalidFixedProficiencyPaths(
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
   const pairs = new Map<string, { name: string; id: string }>()
-  const hasValue = (domain: 'skills' | 'expertise' | 'tools', name: string) =>
+  const hasValue = (domain: 'skills' | 'expertise' | 'tools' | 'languages', name: string) =>
     character.proficiencies[domain].some((value) => canonicalProficiencyName(value) === name)
   for (const [domain, values] of Object.entries(character.provenance?.proficiencies ?? {})) {
     for (const [name, tags] of Object.entries(values as Record<string, SourceTag[]>)) {
@@ -34,10 +34,13 @@ export function getInvalidFixedProficiencyPaths(
           (tool
             ? domain === 'expertise' &&
               CONCRETE_TOOL_PROFICIENCY_NAMES.includes(name) &&
-              hasValue('tools', name)
-            : ['skills', 'expertise'].includes(domain) && rule.skills?.includes(name)) &&
-          (domain === 'skills' || domain === 'expertise') &&
-          hasValue(domain, name) &&
+              hasValue('tools', name) &&
+              hasValue(domain, name)
+            : rule.kind === 'fixed-languages'
+              ? domain === 'languages' && rule.languages?.includes(name) && hasValue(domain, name)
+              : (domain === 'skills' || domain === 'expertise') &&
+                rule.skills?.includes(name) &&
+                hasValue(domain, name)) &&
           canonicalProficiencyName(name) === name &&
           tag.sourceType === (relation.owner.length === 4 ? 'subclass' : 'class') &&
           canonicalProficiencyName(tag.sourceName) ===

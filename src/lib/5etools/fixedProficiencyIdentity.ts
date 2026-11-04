@@ -12,6 +12,20 @@ export const isFixedProficiencyId = (id: string) => id.startsWith(PREFIX)
 export const getFixedProficiencyId = ({ owner, target, level }: FixedProficiencyRelation) =>
   PREFIX + encodeURIComponent(JSON.stringify([owner, target, level]))
 
+export const isDirectFixedProficiencyRelation = ({
+  owner,
+  target,
+  level,
+}: FixedProficiencyRelation) =>
+  DIRECT_FIXED_CLASS_CERTIFICATES.some(
+    (row) =>
+      owner.length === 2 &&
+      row.owner[0] === owner[0] &&
+      row.owner[1] === owner[1] &&
+      row.target === target &&
+      row.level === level,
+  )
+
 /** Offline identity is finite and independent of whether its source is currently enabled. */
 export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation | undefined {
   if (!isFixedProficiencyId(id)) return undefined
@@ -31,20 +45,13 @@ export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation |
       return undefined
     const rule = fixedProficiencyRule(target)
     if (!rule || level < rule.level || level > 20) return undefined
+    const relation = { owner: owner as FixedProficiencyOwner, target, level }
     const qualified =
       owner.length === 2
-        ? rule.kind === 'proficient-tools' &&
-          DIRECT_FIXED_CLASS_CERTIFICATES.some(
-            (row) =>
-              JSON.stringify(row.owner) === JSON.stringify(owner) &&
-              row.target === target &&
-              row.level === level,
-          )
-        : rule.kind !== 'proficient-tools' &&
-          getSubclassProficiencyRootCertificate(owner)?.paths.some(
+        ? isDirectFixedProficiencyRelation(relation)
+        : getSubclassProficiencyRootCertificate(owner)?.paths.some(
             (path) => path.target === target && path.level === level,
           )
-    const relation = { owner: owner as FixedProficiencyOwner, target, level }
     return qualified && getFixedProficiencyId(relation) === id ? relation : undefined
   } catch {
     return undefined

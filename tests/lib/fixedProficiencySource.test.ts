@@ -6,7 +6,7 @@ import {
 } from '@/lib/5etools/concreteToolProficiencies'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { resolveCopiedRecords } from '@/lib/5etools/copyResolution'
-import { getCurrentDirectFixedClassRules } from '@/lib/5etools/fixedProficiencySource'
+import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
 import { retainRawItems } from '@/lib/5etools/itemEntries'
 import { parseItems } from '@/lib/5etools/parsers/basic'
 import {

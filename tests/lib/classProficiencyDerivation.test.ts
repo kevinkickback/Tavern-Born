@@ -9,6 +9,7 @@ import {
   validateExpertiseRule,
 } from '../../scripts/lib/class-proficiency-source.mjs'
 import { proficiencySources } from '../fixtures/classProficiencyFixtures'
+import rogueLanguageSources from '../fixtures/rogueLanguageSources.json'
 
 const dependencies = JSON.parse(
   readFileSync('tests/fixtures/classProficiencyDependencies.json', 'utf8'),
@@ -19,10 +20,13 @@ const options = () => ({
   digest: getFeatureSourceDigest,
 })
 
-test('source-derived checkpoint exactly reproduces all fourteen supported complete producers', () => {
-  expect(deriveClassProficiencyRules(proficiencySources, options())).toEqual(
-    CLASS_PROFICIENCY_RULES,
-  )
+test('source-derived checkpoint exactly reproduces the supported complete producers', () => {
+  expect(
+    deriveClassProficiencyRules(
+      [...proficiencySources, ...rogueLanguageSources.classFeature],
+      options(),
+    ),
+  ).toEqual(CLASS_PROFICIENCY_RULES)
   const later = CLASS_PROFICIENCY_RULES.find(
     (row) => row.target === 'class-feature|expertise|expert sidekick|tce|15|tce',
   )!

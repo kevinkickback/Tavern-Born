@@ -469,6 +469,11 @@ no removable choice. The shared projection applies fixed and paired foundations 
 Expertise, and commands preserve genuinely preexisting manual owners before first fixed ownership.
 Conditional benefits remain separate from unconditional Expertise.
 
+Both Rogue printings grant Thieves' Cant at level 1 through the audited direct class feature.
+The revised printing also requires one other language from the referenced standard and rare tables.
+That choice uses the shared class proficiency workflow and requires the same current class and
+feature proof as the fixed grant. Independent language grants retain their own ownership.
+
 ### Conditional proficiency checks
 
 Fire Rune, legacy Dragon Ancestor and Natural Explorer contribute qualified, player-applied check

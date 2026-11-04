@@ -398,5 +398,49 @@
         "count": 1
       }
     ]
+  },
+  {
+    "target": "class-feature|thieves' cant|rogue|xphb|1|xphb",
+    "digest": "95cd9459190b356cd6b7841195435510fc53fb5ee8c55961996d5f62d003c0ac",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "languages",
+        "count": 1,
+        "languagePool": [
+          "abyssal",
+          "celestial",
+          "common",
+          "common sign language",
+          "deep speech",
+          "draconic",
+          "druidic",
+          "dwarvish",
+          "elvish",
+          "giant",
+          "gnomish",
+          "goblin",
+          "halfling",
+          "infernal",
+          "orc",
+          "primordial",
+          "sylvan",
+          "undercommon"
+        ]
+      }
+    ]
   }
 ]

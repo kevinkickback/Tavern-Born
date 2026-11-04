@@ -183,8 +183,50 @@ export function deriveLanguagePool(book) {
   return { names: names.sort(), tables: matches }
 }
 
+/** The two Rogue printings express their grants in prose, with no structured language fields. */
+export function deriveThievesCant(feature) {
+  if (feature.name !== "Thieves' Cant" || feature.className !== 'Rogue') return undefined
+  validateShape(feature)
+  if (
+    feature.level !== 1 ||
+    feature.source !== feature.classSource ||
+    feature.isClassFeatureVariant
+  )
+    fail("Unsupported Thieves' Cant owner")
+  const language = feature.name.toLowerCase()
+  if (
+    feature.source === 'PHB' &&
+    same(feature.entries, [
+      "During your rogue training you learned thieves' cant, a secret mix of dialect, jargon, and code that allows you to hide messages in seemingly normal conversation. Only another creature that knows thieves' cant understands such messages. It takes four times longer to convey such a message than it does to speak the same idea plainly.",
+      "In addition, you understand a set of secret signs and symbols used to convey short, simple messages, such as whether an area is dangerous or the territory of a thieves' guild, whether loot is nearby, or whether the people in an area are easy marks or will provide a safe house for thieves on the run.",
+    ])
+  )
+    return { language, count: 0 }
+  const choice =
+    /^You picked up various languages in the communities where you plied your roguish talents\. You know Thieves' Cant and (one) other language of your choice, which you choose from the language tables in \{@book chapter 2\|XPHB\|2\|Choose Languages\}\.$/.exec(
+      feature.entries[0],
+    )
+  if (feature.source === 'XPHB' && feature.entries.length === 1 && choice)
+    return { language, count: NUMBERS[choice[1]] }
+  fail("Unsupported Thieves' Cant clause")
+}
+
 function deriveDomains(feature, languagePool) {
   validateShape(feature)
+  const cant = deriveThievesCant(feature)
+  if (cant?.count) {
+    if (!languagePool.includes(cant.language))
+      fail("Thieves' Cant missing from the referenced table")
+    return {
+      domains: [
+        {
+          domain: 'languages',
+          count: cant.count,
+          languagePool: languagePool.filter((name) => name !== cant.language),
+        },
+      ],
+    }
+  }
   const entries = feature.entries
   // No fuzzy prose inference. Full entry/wrapper shapes and the current/future clauses must match.
   const strings = entries.filter((entry) => typeof entry === 'string')
@@ -327,8 +369,10 @@ function deriveDomains(feature, languagePool) {
 }
 
 export function deriveClassProficiencyRules(features, { languagePool, identity, digest }) {
-  const candidates = features.filter((feature) =>
-    ['Expertise', 'Scholar', 'Deft Explorer'].includes(feature.name),
+  const candidates = features.filter(
+    (feature) =>
+      ['Expertise', 'Scholar', 'Deft Explorer'].includes(feature.name) ||
+      (feature.classSource === 'XPHB' && deriveThievesCant(feature)?.count),
   )
   const seen = new Set()
   const derived = candidates.map((feature) => {
@@ -342,7 +386,11 @@ export function deriveClassProficiencyRules(features, { languagePool, identity, 
       rule: {
         target,
         digest: digest(feature.entries, false),
-        fields: [...Object.keys(feature), 'featureOptionSourceConflict'].sort(),
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          ...(feature.name === "Thieves' Cant" ? ['fixedProficiencySourceAudit'] : []),
+        ].sort(),
         optional: feature.isClassFeatureVariant === true,
         domains,
       },

@@ -16,6 +16,7 @@ import {
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { XPHB_LEGACY_RACE_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -114,6 +115,7 @@ export function useWizardGameData({
   const creationLookups = useMemo(
     () => ({
       ...spellLookups,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(filteredData),
       startingEquipment: {
         rawItems: [...(rawData?.items ?? []), ...(rawData?.itemsBase ?? [])],
         availableItems: [...filteredData.items, ...filteredData.itemsBase],

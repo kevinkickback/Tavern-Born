@@ -1,4 +1,5 @@
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
+import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
 import {
   type FixedProficiencyRelation,
   getFixedProficiencyId,
@@ -7,7 +8,6 @@ import {
   type FixedProficiencyRule,
   fixedProficiencyRule,
 } from '@/lib/5etools/fixedProficiencyRules'
-import { getCurrentDirectFixedClassRules } from '@/lib/5etools/fixedProficiencySource'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import type { Character } from '@/types/character'
@@ -90,8 +90,7 @@ export function getCurrentFixedProficiencies(
     )
     for (const path of certificate?.paths ?? []) {
       const rule = fixedProficiencyRule(path.target)
-      if (rule && rule.kind !== 'proficient-tools')
-        push({ owner, target: path.target, level: path.level }, rule, sub.name, sub.source)
+      if (rule) push({ owner, target: path.target, level: path.level }, rule, sub.name, sub.source)
     }
   }
   return result

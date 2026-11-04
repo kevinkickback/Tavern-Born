@@ -1,6 +1,56 @@
 {
   "features": [
     {
+      "target": "class-feature|thieves' cant|rogue|phb|1|phb",
+      "name": "Thieves' Cant",
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "languages": ["thieves' cant"],
+      "bundledMetadataDigest": "5e85563035881af6ce945aeb4758e5cd5153404bb8df9dcf13fba2e362b16aad",
+      "digest": "791734e37039514b02177ab6ff729b605e2a330eff412edb545a0e5f055fce21",
+      "metadataDigest": "5ad3f7bb0352ea26cd717d5724cd42d9ffb0219893c1726cc05fa648f0445ad0",
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ]
+    },
+    {
+      "target": "class-feature|thieves' cant|rogue|xphb|1|xphb",
+      "name": "Thieves' Cant",
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "languages": ["thieves' cant"],
+      "bundledMetadataDigest": "3a87796ab3f837a1c4cbf3f0e746f5226aa23c0af6dd56d1b4d5c6d32bfb0b90",
+      "digest": "95cd9459190b356cd6b7841195435510fc53fb5ee8c55961996d5f62d003c0ac",
+      "metadataDigest": "8bb346fa380465757a7d10802a76837a63c1f747220bba46fa33d18b7731a684",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52"
+      ]
+    },
+    {
       "target": "class-feature|tool expertise|artificer|tce|6|tce",
       "name": "Tool Expertise",
       "className": "Artificer",
@@ -86,6 +136,22 @@
       "rawDeclaration": "Tool Expertise|Artificer|TCE|6",
       "declarationDigest": "3c2e060f54429be7fd80b689b5ef6f4caebf01a2a8cc779cdeb1f6fbfba94273",
       "ordinal": 8
+    },
+    {
+      "owner": ["rogue", "phb"],
+      "target": "class-feature|thieves' cant|rogue|phb|1|phb",
+      "level": 1,
+      "rawDeclaration": "Thieves' Cant|Rogue||1",
+      "declarationDigest": "3f8419ecfda567e8d3b81738cebe4ec581e75af1ccf8eaaef8bb4c7463abe47c",
+      "ordinal": 2
+    },
+    {
+      "owner": ["rogue", "xphb"],
+      "target": "class-feature|thieves' cant|rogue|xphb|1|xphb",
+      "level": 1,
+      "rawDeclaration": "Thieves' Cant|Rogue|XPHB|1",
+      "declarationDigest": "3c66eeb9ef95b6496f219a334647729e41a26015aebe2fbf94f16a5989cd4b8f",
+      "ordinal": 2
     }
   ],
   "toolNames": [

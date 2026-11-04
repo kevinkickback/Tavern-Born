@@ -14,12 +14,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Alphabetical creator selection lists: measured 6,398,000 B.
+  // Rogue language grants: measured 6,401,601 B.
   // Smallest independently reviewed whole-KiB allowance; other limits are unchanged.
-  rendererCode: 6249 * KIB,
-  // Creator navigation and stable preview lifecycle: measured 1,168,365 B.
+  rendererCode: 6252 * KIB,
+  // Rogue language grants: measured 1,170,506 B.
   // Smallest independently reviewed whole-KiB allowance.
-  initialRendererScript: 1141 * KIB,
+  initialRendererScript: 1144 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
