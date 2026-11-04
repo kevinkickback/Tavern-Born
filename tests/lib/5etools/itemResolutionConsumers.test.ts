@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { deriveWeaponActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import {
   addManualEquipmentBatchCommand,
   removeManualEquipmentCommand,
 } from '@/lib/character/commands/equipmentCommands'
-import type { Item5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Item5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
@@ -16,6 +19,7 @@ test('equipment producers retain exact printings through projections, strict reo
     name: 'Test Relic',
     source: 'A',
     type: 'M',
+    weaponCategory: 'martial',
     rarity: 'rare',
     dmg1: '1d6',
     bonusAc: '+1',
@@ -29,7 +33,15 @@ test('equipment producers retain exact printings through projections, strict reo
     mastery: ['Second Mastery|B'],
     entries: ['Second rules.'],
   }
-  const initial = makeCharacterFixture()
+  const { classes, classFeatures } = parseClassDocument(
+    JSON.parse(readFileSync('resources/srd/core/data/class/class-fighter.json', 'utf8')),
+  )
+  const fighter = (classes as Class5e[]).find((row) => row.source === 'XPHB')!
+  const mastery = fighter.normalizedRules!.choices.find((row) => row.optionFilter?.requiresMastery)!
+  const initial = makeCharacterFixture({
+    originSystem: '2024',
+    classProgression: [{ name: fighter.name, source: fighter.source, levels: 1 }],
+  })
   const added = addManualEquipmentBatchCommand(initial, initial.provenance!, [first, second])
   const character = characterPersistenceSchema.parse(
     JSON.parse(
@@ -40,11 +52,11 @@ test('equipment producers retain exact printings through projections, strict reo
         equipment: added.characterPatch.equipment!.map((item) => ({ ...item, equipped: true })),
         classChoiceSelections: [
           {
-            choiceId: 'relics',
-            label: 'Relics',
+            choiceId: mastery.id,
+            label: mastery.label,
             kind: 'item',
             className: 'Fighter',
-            classSource: 'PHB',
+            classSource: 'XPHB',
             classLevel: 1,
             selected: [
               { entityType: 'item', name: first.name, source: 'A', slotLevel: 1 },
@@ -78,10 +90,17 @@ test('equipment producers retain exact printings through projections, strict reo
     deriveWeaponActions(character, {
       abilityModifiers: context.abilityScores.modifiers,
       proficiencyBonus: 2,
-      itemLookup: raw,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+        classes: [fighter],
+        classFeatures: classFeatures as ClassFeature[],
+        itemsBase: [...raw.values()],
+      }),
     })
   expect(actions().find((action) => action.source.source === 'A')?.mastery).toEqual([
     { name: 'First Mastery', source: 'A' },
+  ])
+  expect(actions().find((action) => action.source.source === 'B')?.mastery).toEqual([
+    { name: 'Second Mastery', source: 'B' },
   ])
   const descriptions = () =>
     createCurrentCharacterSheetViewModel(character, { itemLookup: raw }).magicItems.map((entry) => [
@@ -98,10 +117,16 @@ test('equipment producers retain exact printings through projections, strict reo
     ['B', 'Second rules.'],
   ])
   expect(actions().find((action) => action.source.source === 'A')?.mastery).toEqual([])
+  expect(actions().find((action) => action.source.source === 'B')?.mastery).toEqual([
+    { name: 'Second Mastery', source: 'B' },
+  ])
   raw.set('restored-first', first)
   expect(descriptions()).toEqual([
     ['A', 'First rules.'],
     ['B', 'Second rules.'],
+  ])
+  expect(actions().find((action) => action.source.source === 'A')?.mastery).toEqual([
+    { name: 'First Mastery', source: 'A' },
   ])
   expect(JSON.stringify(character)).toBe(unchanged)
 
