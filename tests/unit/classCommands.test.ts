@@ -14,11 +14,22 @@ import {
   selectSubclass,
   updateCharacterLevel,
 } from '@/lib/character/commands/classCommands'
+import {
+  commitFeatOptionsCommand,
+  replaceBonusFeatSelectionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
+
+function applyChange(character: Character, result: ReturnType<typeof applyClassProgressionUpdate>) {
+  return { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+}
 
 describe('Class Commands', () => {
   test('selectBaseClass updates top-level class fields and progression', () => {
@@ -416,6 +427,111 @@ describe('Class Commands', () => {
     expect(result.characterPatch.classProgression?.[0]?.levels).toBe(3)
     expect(result.characterPatch.asiChoices).toEqual([])
     expect(result.characterPatch.hitPoints?.current).toBe(22)
+  })
+
+  test.each([
+    ['2014', 'PHB', 'Fighter', 4],
+    ['2024', 'XPHB', 'Rogue', 19],
+  ] as const)('level-down removes an ordinary %s feat from a lost slot', (originSystem, source, name, levels) => {
+    const initial = makeCharacterFixture({
+      originSystem,
+      classProgression: [{ name, source, levels }],
+    })
+    initial.abilityScores.strength = 13
+    const feat = {
+      name: 'Grappler',
+      source,
+      className: name,
+      classSource: source,
+      classLevel: levels,
+    }
+    let character = applyChange(
+      initial,
+      replaceFeatSelectionsCommand(initial, initial.provenance, [feat]),
+    )
+    if (originSystem === '2024') {
+      character = applyChange(
+        character,
+        commitFeatOptionsCommand(
+          character,
+          character.provenance,
+          { ...feat, selectionKind: 'ordinary' },
+          { abilityScore: 'str' },
+        ),
+      )
+    }
+    const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+    const context = createCharacterCalculationContext(saved, {})
+    expect(context.abilityScores.total.strength).toBe(originSystem === '2024' ? 14 : 13)
+
+    const reduced = applyChange(saved, applyLevelDown(saved, saved.provenance, context))
+    const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(reduced)))
+
+    expect(reopened.classProgression[0]?.levels).toBe(levels - 1)
+    expect(reopened.feats).toEqual([])
+    expect(reopened.provenance.feats.grappler).toBeUndefined()
+    expect(createCharacterCalculationContext(reopened, {}).abilityScores.total.strength).toBe(13)
+    expect(
+      updateCharacterLevel(reopened, reopened.provenance, levels).characterPatch.feats,
+    ).toEqual([])
+  })
+
+  test('class removal preserves earned feats, incomplete owners and independent feat grants', () => {
+    const initial = makeCharacterFixture({
+      classProgression: [
+        { name: 'Fighter', source: 'PHB', levels: 4 },
+        { name: 'Fighter', source: 'XPHB', levels: 4 },
+      ],
+    })
+    const lost = {
+      name: 'Skilled',
+      source: 'XPHB',
+      className: ' fighter ',
+      classSource: ' xphb ',
+      classLevel: 4,
+    }
+    const earned = { ...lost, source: 'PHB', classSource: ' phb ' }
+    const incomplete = { name: 'Alert', source: 'XPHB', className: 'Fighter', classLevel: 8 }
+    let character = applyChange(
+      initial,
+      replaceFeatSelectionsCommand(initial, initial.provenance, [lost, earned, incomplete]),
+    )
+    character = applyChange(
+      character,
+      replaceBonusFeatSelectionsCommand(character, character.provenance, [lost]),
+    )
+    character = applyChange(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        { ...lost, selectionKind: 'ordinary' },
+        { skills: ['Arcana', 'History', 'Nature'] },
+      ),
+    )
+    character = applyChange(
+      character,
+      commitFeatOptionsCommand(
+        character,
+        character.provenance,
+        { ...lost, selectionKind: 'bonus' },
+        { skills: ['Arcana', 'Insight', 'Religion'] },
+      ),
+    )
+    character.feats[1].prerequisites = 'Retained metadata'
+    const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+
+    const reduced = applyChange(saved, removeMulticlass(saved, saved.provenance, 'Fighter', 'XPHB'))
+    const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(reduced)))
+
+    expect(reopened.feats).toEqual(saved.feats.slice(1))
+    expect(reopened.specialFeats).toEqual(saved.specialFeats)
+    expect(reopened.proficiencies.skills).toEqual(['arcana', 'insight', 'religion'])
+    expect(reopened.provenance.feats.skilled).toEqual(
+      saved.provenance.feats.skilled.filter(
+        (tag) => tag.grantVariant !== 'selection:ordinary' || tag.sourceRef !== 'XPHB',
+      ),
+    )
   })
 
   test('level removal prunes its persisted hit-point gain', () => {
