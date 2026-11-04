@@ -71,10 +71,11 @@ import {
   LIBRARY_BACKUP_EXTENSION,
   MAX_LIBRARY_BACKUP_SIZE,
   type PreparedCharacterDownload,
+  type PreparedLibraryRecoveryDownload,
   prepareCharacterDownload,
   prepareCharacterImport,
   prepareLibraryDownload,
-  prepareUnsupportedCharacterDownloads,
+  prepareUnsupportedCharacterDownload,
 } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
@@ -88,14 +89,17 @@ import type { Character } from '@/types/character'
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
 type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
 
-function downloadPreparedFile(file: PreparedCharacterDownload) {
-  const dataBlob = new Blob([file.text], { type: 'application/json' })
+function downloadPreparedFile(file: PreparedCharacterDownload | PreparedLibraryRecoveryDownload) {
+  const dataBlob = 'blob' in file ? file.blob : new Blob([file.text], { type: 'application/json' })
   const url = URL.createObjectURL(dataBlob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = file.filename
-  link.click()
-  URL.revokeObjectURL(url)
+  try {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.filename
+    link.click()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 interface CharacterImportReport {
@@ -419,10 +423,24 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   }, [])
 
   const handleExportUnsupportedCharacters = useCallback(() => {
-    prepareUnsupportedCharacterDownloads(unsupportedCharacters).forEach(downloadPreparedFile)
-    toast.success(
-      `${unsupportedCharacters.length} character backup${unsupportedCharacters.length === 1 ? '' : 's'} exported`,
-    )
+    try {
+      const backup = prepareUnsupportedCharacterDownload(unsupportedCharacters)
+      downloadPreparedFile(backup)
+      if ('blob' in backup && backup.blob.size > MAX_LIBRARY_BACKUP_SIZE) {
+        toast.warning('Character backup exported', {
+          description:
+            'This backup exceeds the 250 MB import limit. For individual recovery, save each record in the characters array as its own .tbc file.',
+          duration: 10000,
+        })
+      } else {
+        toast.success('Character backup exported')
+      }
+    } catch (error) {
+      toast.error(
+        'Could not export the character backup.',
+        error instanceof Error ? { description: error.message } : undefined,
+      )
+    }
   }, [unsupportedCharacters])
 
   const exportLibrary = (selected: readonly Character[]) => {

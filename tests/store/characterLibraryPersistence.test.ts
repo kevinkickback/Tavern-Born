@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
+import { prepareUnsupportedCharacterDownload } from '@/lib/character/characterTransfer'
 import {
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
@@ -33,6 +33,15 @@ vi.unmock('@/lib/storage/idb-storage')
 
 const reader = createIdbStorage<{ characters: Character[]; unsupportedCharacters: unknown[] }>()
 const readCharacters = async () => (await reader.getItem('character-storage'))?.state.characters
+
+function readBackupText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fileReader = new FileReader()
+    fileReader.onload = () => resolve(String(fileReader.result))
+    fileReader.onerror = () => reject(fileReader.error)
+    fileReader.readAsText(blob)
+  })
+}
 
 describe('acknowledged character library in IndexedDB', () => {
   test('native refresh without a mounted page survives immediate Save, absence and actual durable reopen', async () => {
@@ -410,11 +419,11 @@ describe('acknowledged character library in IndexedDB', () => {
       characters: [valid, neighbor, created],
       unsupportedCharacters: before,
     })
-    expect(
-      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
-        (download) => JSON.parse(download.text),
-      ),
-    ).toEqual(before)
+    const backup = prepareUnsupportedCharacterDownload(
+      useCharacterStore.getState().unsupportedCharacters,
+    )
+    if (!('blob' in backup)) throw new Error('Expected a recovery library backup.')
+    expect(JSON.parse(await readBackupText(backup.blob)).characters).toEqual(before)
     await expect(
       useCharacterStore.getState().importCharacters([valid, originals[0] as unknown as Character]),
     ).rejects.toThrow()
@@ -525,11 +534,11 @@ describe('acknowledged character library in IndexedDB', () => {
       characters: [valid, created],
       unsupportedCharacters: before,
     })
-    expect(
-      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
-        (download) => JSON.parse(download.text),
-      ),
-    ).toEqual(before)
+    const backup = prepareUnsupportedCharacterDownload(
+      useCharacterStore.getState().unsupportedCharacters,
+    )
+    if (!('blob' in backup)) throw new Error('Expected a recovery library backup.')
+    expect(JSON.parse(await readBackupText(backup.blob)).characters).toEqual(before)
     expect(originals).toEqual(before)
     const library = useCharacterStore.getState().characters
     await expect(
@@ -659,11 +668,10 @@ describe('acknowledged character library in IndexedDB', () => {
       characters: [valid, neighbor, created],
       unsupportedCharacters: [original],
     })
-    expect(
-      prepareUnsupportedCharacterDownloads(useCharacterStore.getState().unsupportedCharacters).map(
-        (download) => JSON.parse(download.text),
-      ),
-    ).toEqual([original])
+    const backup = prepareUnsupportedCharacterDownload(
+      useCharacterStore.getState().unsupportedCharacters,
+    )
+    expect(backup).toHaveProperty('text', JSON.stringify(original, null, 2))
     for (const batch of [
       [valid, malformed],
       [malformed, valid],
