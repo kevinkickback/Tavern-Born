@@ -200,6 +200,7 @@ describe('BuildAbilityScoresPage', () => {
     try {
       act(() => vi.advanceTimersByTime(48))
       expect(screen.getByTestId('race-ability-choices').className).toContain('animate-route-focus')
+      expect(screen.getByText('Choose 1 ability from STR, DEX (+2)')).toBeTruthy()
     } finally {
       view.unmount()
       vi.useRealTimers()

@@ -397,9 +397,7 @@ export function BuildAbilityScoresPage() {
                               Racial bonuses
                             </h3>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {isLineageRaceAsiFallback
-                                ? formatRacialAbilityPatterns(raceAsiData)
-                                : 'Assign the ability increases granted by your race.'}
+                              {formatRacialAbilityPatterns(raceAsiData)}
                             </p>
                           </div>
                           {isLineageRaceAsiFallback && (

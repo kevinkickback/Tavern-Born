@@ -94,7 +94,7 @@ function RaceAsiBonuses({
       <div>
         <h3 className="text-sm font-semibold">Racial Bonuses</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {isLineageRaceAsiFallback
+          {choices.length > 0
             ? formatRacialAbilityPatterns(raceAsiData)
             : 'Apply the bonuses granted by your selected race.'}
         </p>
