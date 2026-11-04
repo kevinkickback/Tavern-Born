@@ -12,6 +12,7 @@ import {
 import {
   getRevisedHunterRule,
   isValidRevisedHunterSelection,
+  revisedHunterOwner,
 } from '@/lib/5etools/revisedHunterIdentity'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -21,7 +22,11 @@ import type {
   CharacterClassChoiceSelection,
   CharacterClassEntry,
 } from '@/types/character'
-import type { ClassProficiencyDomain, NormalizedCharacterChoice } from '@/types/classRules'
+import type {
+  ClassChoiceDiagnostic,
+  ClassProficiencyDomain,
+  NormalizedCharacterChoice,
+} from '@/types/classRules'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -67,6 +72,27 @@ export interface FeatureOptionSelectionState {
   optionalPool?: boolean
   psionic?: boolean
   legacySubclass?: boolean
+}
+
+export function hasRevisedHunterRecovery(
+  diagnostic: ClassChoiceDiagnostic,
+  states: readonly FeatureOptionSelectionState[],
+): boolean {
+  return (
+    diagnostic.className === revisedHunterOwner.name &&
+    diagnostic.classSource === revisedHunterOwner.source &&
+    diagnostic.subclassName === revisedHunterOwner.subclassName &&
+    diagnostic.subclassSource === revisedHunterOwner.subclassSource &&
+    states.some((state) => {
+      const rule = getRevisedHunterRule(state.selection.choiceId)
+      return (
+        state.owner &&
+        state.recovery &&
+        rule?.name === diagnostic.featureName &&
+        rule.level === diagnostic.level
+      )
+    })
+  )
 }
 
 function affinityRules(

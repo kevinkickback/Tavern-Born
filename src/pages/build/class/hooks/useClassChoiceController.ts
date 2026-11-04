@@ -38,6 +38,7 @@ import {
 import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
+  hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import {
   getHistoricalProficiencyRule,
@@ -541,7 +542,8 @@ export function useClassChoiceController({
               (diagnostic.level === undefined || diagnostic.level <= viewingClassLevel) &&
               !hasFavoredEnemyRecovery(diagnostic, featureOptionStates) &&
               !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
-              !hasClassProficiencyRecovery(diagnostic, featureOptionStates),
+              !hasClassProficiencyRecovery(diagnostic, featureOptionStates) &&
+              !hasRevisedHunterRecovery(diagnostic, featureOptionStates),
           )
         : [],
     selectionByChoiceId,

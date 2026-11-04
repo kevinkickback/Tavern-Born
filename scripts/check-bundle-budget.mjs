@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised Hunter setup: measured 6,423,437 B renderer and 1,186,212 B initial.
+  // Revised Hunter setup: measured 6,423,473 B renderer and 1,186,466 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6273 * KIB,
   initialRendererScript: 1159 * KIB,

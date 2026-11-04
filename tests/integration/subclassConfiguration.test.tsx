@@ -123,6 +123,63 @@ function withoutDraconicSubclass(data: ReturnType<typeof makeGameDataFixture>) {
   return unavailable
 }
 
+test('revised Hunter Builder shows one recovery row and keeps the unsaved group diagnostic', async () => {
+  const path = 'resources/srd/core/data/class/class-ranger.json'
+  const document = JSON.parse(readFileSync(path, 'utf8'))
+  const prey = "Hunter's Prey"
+  const defense = 'Defensive Tactics'
+  const load = (source: unknown) => {
+    const parsed = parseClassDocument(source, path)
+    const data = makeGameDataFixture({
+      classes: parsed.classes as Class5e[],
+      classFeatures: parsed.classFeatures as ClassFeature[],
+    })
+    data.lookups = buildGameDataLookups(data)
+    return data
+  }
+  const data = load(document)
+  mount(
+    data,
+    makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: ['XPHB'],
+      classProgression: [
+        { name: 'Ranger', source: 'XPHB', levels: 7, subclass: 'Hunter', subclassSource: 'XPHB' },
+      ],
+    }),
+  )
+  await expand(3)
+  fireEvent.click(screen.getByRole('button', { name: `Choose ${prey}` }))
+  fireEvent.click(await row('Horde Breaker'))
+  await confirm()
+  const saved = JSON.stringify(active())
+
+  const withdrawn = load({
+    ...document,
+    subclassFeature: document.subclassFeature.filter(
+      (feature: { name: string; source: string }) =>
+        feature.source !== 'XPHB' || ![prey, defense].includes(feature.name),
+    ),
+  })
+  act(() => {
+    useGameDataStore.setState({ gameData: withdrawn })
+  })
+  const third = within(screen.getByRole('region', { name: /^Level 3\b/ }))
+  const recovery = screen.getByRole('group', { name: prey })
+  expect(within(recovery).getByText('Saved choice — source rules unavailable')).toBeTruthy()
+  expect(third.queryByText('Needs review')).toBeNull()
+  await expand(7)
+  const seventh = within(screen.getByRole('region', { name: /^Level 7\b/ }))
+  expect(seventh.getByText(defense)).toBeTruthy()
+  expect(seventh.getByText('Needs review')).toBeTruthy()
+
+  act(() => {
+    useGameDataStore.setState({ gameData: data })
+  })
+  expect(third.getByRole('button', { name: `Edit ${prey}` })).toBeTruthy()
+  expect(JSON.stringify(active())).toBe(saved)
+})
+
 test('configured ancestry parent becomes incomplete when its subclass disappears and completes on exact restoration without a write', async () => {
   const fixture = makeFeatureOptionFixture()
   const reopened = characterPersistenceSchema.parse(

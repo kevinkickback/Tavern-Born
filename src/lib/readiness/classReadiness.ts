@@ -5,7 +5,6 @@ import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyId
 import { findClassReference } from '@/lib/5etools/classReference'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
-import { getRevisedHunterRule, revisedHunterOwner } from '@/lib/5etools/revisedHunterIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
@@ -24,7 +23,10 @@ import {
   hasFavoredEnemyRecovery,
   isFavoredEnemySetupComplete,
 } from '@/lib/character/favoredEnemySelections'
-import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
+import {
+  getFeatureOptionSelectionStates,
+  hasRevisedHunterRecovery,
+} from '@/lib/character/featureOptionSelections'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   getHistoricalProficiencyRule,
@@ -308,19 +310,7 @@ export function validateClassChoices(
         hasFavoredEnemyRecovery(diagnostic, featureOptionStates) ||
         hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
-        (diagnostic.className === revisedHunterOwner.name &&
-          diagnostic.classSource === revisedHunterOwner.source &&
-          diagnostic.subclassName === revisedHunterOwner.subclassName &&
-          diagnostic.subclassSource === revisedHunterOwner.subclassSource &&
-          featureOptionStates.some((state) => {
-            const rule = getRevisedHunterRule(state.selection.choiceId)
-            return (
-              state.owner &&
-              state.recovery &&
-              rule?.name === diagnostic.featureName &&
-              rule.level === diagnostic.level
-            )
-          })) ||
+        hasRevisedHunterRecovery(diagnostic, featureOptionStates) ||
         (diagnostic.featureName === 'Deft Explorer' &&
           featureOptionStates.some(
             (state) =>
