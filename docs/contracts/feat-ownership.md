@@ -27,6 +27,10 @@ remaining feat choices with the same source owner, including distinct choice IDs
 compares complete feat references rather than opaque issued IDs; new class feat IDs encode their fields without delimiter
 collisions. Cards and Edit use the same normalized complete reference after catalog casing refresh.
 
+Class progression changes remove ordinary selections when their source-qualified class is removed
+or falls below the saved slot level. They use the same setup retraction as ordinary feat removal.
+Ordinary records with incomplete slot metadata remain independent of this cleanup.
+
 Name-only unconfigured choice records remain visible and removable without catalog inference. They
 require explicit printing reselection before setup. Commit/Edit must match exactly one qualified
 saved choice reference; configured name-only references reject at admission. Choice setup benefit

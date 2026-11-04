@@ -26,7 +26,10 @@ import {
 import { reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
-import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
+import {
+  replaceFeatSelectionsCommand,
+  retractFeatOptionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { retainEarnedManagedClassSpells } from '@/lib/character/commands/managedClassSpellCommands'
 import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { retainEarnedOptionalClassAdoptions } from '@/lib/character/optionalClassFeatureIdentity'
@@ -71,6 +74,7 @@ import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
+import { applyCharacterCommandResult } from './featCommandSupport'
 import { projectProficiencyCommandResult } from './proficiencyProjection'
 
 export interface ClassSelectionEntity {
@@ -468,6 +472,18 @@ export function applyClassProgressionUpdate(
     nextProgression,
   )
   let provenanceUpdate = workingCharacter.provenance
+  const retainedFeats = character.feats.filter(({ className, classSource, classLevel }) => {
+    if (classLevel == null || !className?.trim() || !classSource?.trim()) return true
+    const owner = findClassReference({ name: className, source: classSource }, nextProgression)
+    return owner != null && owner.levels >= classLevel
+  })
+  if (retainedFeats.length !== character.feats.length) {
+    const result = replaceFeatSelectionsCommand(workingCharacter, provenanceUpdate, retainedFeats)
+    workingCharacter = applyCharacterCommandResult(workingCharacter, result)
+    workingCharacter.feats = retainedFeats
+    provenanceUpdate = result.provenanceUpdate
+  }
+
   for (const removed of removedEntries) {
     workingCharacter = retractRemovedClassMaterializedState(
       workingCharacter,
@@ -508,11 +524,7 @@ export function applyClassProgressionUpdate(
           { name: feat.name, source: feat.source, classFeatChoiceId: choice.id },
           feat.options,
         )
-        workingCharacter = {
-          ...workingCharacter,
-          ...result.characterPatch,
-          provenance: result.provenanceUpdate,
-        }
+        workingCharacter = applyCharacterCommandResult(workingCharacter, result)
         provenanceUpdate = result.provenanceUpdate
       }
       const key = normalizeKey(feat.name)
@@ -561,7 +573,6 @@ export function applyClassProgressionUpdate(
     {
       ...workingCharacter,
       classProgression: nextProgression,
-      proficiencies: workingCharacter.proficiencies,
     },
     provenanceUpdate,
     classChoiceSelections,
@@ -584,6 +595,7 @@ export function applyClassProgressionUpdate(
     optionalClassFeatureAdoptions: retainEarnedOptionalClassAdoptions(character, nextProgression),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
+    feats: workingCharacter.feats,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
     asiChoices,
@@ -611,7 +623,7 @@ export function applyClassProgressionUpdate(
     )
   }
   const native = refreshNativeRacialSpellState(
-    { ...character, ...characterPatch, provenance: provenanceUpdate },
+    applyCharacterCommandResult(character, { characterPatch, provenanceUpdate }),
     raceResolution,
     spellLookups,
   )
@@ -715,12 +727,8 @@ export function applyLevelUp(
     ),
     gain,
   ].sort((a, b) => a.characterLevel - b.characterLevel)
-  const projectedCharacter: Character = {
-    ...character,
-    ...progressionResult.characterPatch,
-    hitPointGains,
-    provenance: progressionResult.provenanceUpdate,
-  }
+  const projectedCharacter = applyCharacterCommandResult(character, progressionResult)
+  projectedCharacter.hitPointGains = hitPointGains
   const maximumHitPoints = projectMaximumHitPoints(projectedCharacter, calculationContext)
 
   return {
@@ -786,11 +794,7 @@ export function applyLevelDown(
       spellContext: calculationContext.classChoices.spellContext,
     },
   )
-  const projectedCharacter: Character = {
-    ...character,
-    ...progressionResult.characterPatch,
-    provenance: progressionResult.provenanceUpdate,
-  }
+  const projectedCharacter = applyCharacterCommandResult(character, progressionResult)
   const maximumHitPoints = projectMaximumHitPoints(projectedCharacter, calculationContext)
   return {
     characterPatch: {
