@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
+import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
 interface RaceStepProps extends StepProps {
@@ -28,17 +29,18 @@ interface RaceStepProps extends StepProps {
 export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepProps) {
   const [search, setSearch] = useState('')
   const filteredRaces = races
+  const orderedRaces = useMemo(() => sortCreatorOptions(races), [races])
 
   const searchFilteredRaces = useMemo(() => {
-    if (!search.trim()) return filteredRaces
+    if (!search.trim()) return orderedRaces
     const q = search.toLowerCase()
-    return filteredRaces.filter(
+    return orderedRaces.filter(
       (r) =>
         r.name.toLowerCase().includes(q) ||
         r.source.toLowerCase().includes(q) ||
         r.subraces?.some((sr) => sr.name?.toLowerCase().includes(q)),
     )
-  }, [filteredRaces, search])
+  }, [orderedRaces, search])
 
   const selectedRace = data.race
     ? data.raceSource
@@ -74,6 +76,9 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   }, [data.race, data.raceSource, filteredRaces, getAvailableSubraces, onChange])
 
   const subraces = getAvailableSubraces(selectedRace)
+  const orderedSubraces = sortCreatorOptions(subraces, (subrace) =>
+    getSubraceDisplayName(selectedRace?.name ?? '', subrace.name),
+  )
   const selectedSubrace = subraces.find(
     (sr) => sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? ''),
   )
@@ -261,7 +266,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                     Subrace
                   </span>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {subraces.map((sr) => {
+                    {orderedSubraces.map((sr) => {
                       const isActive =
                         sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? '')
                       return (

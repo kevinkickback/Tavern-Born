@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { RaceStep } from '@/components/character/wizard/steps/3-RaceStep'
@@ -13,9 +13,18 @@ describe('RaceStep', () => {
 
   test('shortens complete lineage labels while selection values and opening stay unchanged', () => {
     const child = { name: 'Dragonborn (Draconblood; Brass)', source: 'EGW' } as Race5e
-    const parent = { name: 'Dragonborn', source: 'PHB', subraces: [child] } as Race5e
+    const parent = {
+      name: 'Dragonborn',
+      source: 'PHB',
+      subraces: [
+        { name: 'Dragonborn (Zinc)', source: 'PHB' },
+        child,
+        { name: child.name, source: 'DMG' },
+        { name: 'Forest', source: 'PHB' },
+      ],
+    } as Race5e
     const onChange = vi.fn()
-    const { getByRole } = render(
+    const { getByRole, getAllByRole } = render(
       <RaceStep
         recursiveLookup={buildRecursiveLookup({})}
         data={{
@@ -31,7 +40,23 @@ describe('RaceStep', () => {
     )
     expect(getByRole('heading', { name: /Dragonborn\s*\(Draconblood: Brass\)/ })).toBeTruthy()
     expect(getByRole('button', { name: 'Draconblood: Brass · EGW' })).toBeTruthy()
+    expect(
+      getAllByRole('button', { name: /^(Forest|Draconblood: Brass|Zinc) · / }).map(
+        (button) => button.textContent,
+      ),
+    ).toEqual([
+      'Draconblood: Brass · DMG',
+      'Draconblood: Brass · EGW',
+      'Forest · PHB',
+      'Zinc · PHB',
+    ])
     expect(onChange).not.toHaveBeenCalled()
+    fireEvent.click(getByRole('button', { name: 'Draconblood: Brass · DMG' }))
+    expect(onChange).toHaveBeenCalledWith({
+      subrace: child.name,
+      subraceSource: 'DMG',
+      raceAsiChoices: [],
+    })
   })
 
   test('renders repeated trait names without duplicate React keys', () => {
@@ -98,14 +123,15 @@ describe('RaceStep', () => {
     expect(document.body.textContent?.includes('diverse and ambitious')).toBe(true)
   })
 
-  test('defaults to the first available race when no race is selected', async () => {
+  test('sorts the displayed races across sources and defaults from catalog order', async () => {
     const onChange = vi.fn()
     const races: Race5e[] = [
-      { name: 'Dwarf', source: 'PHB' } as Race5e,
+      { name: 'Elf', source: 'TCE' } as Race5e,
+      { name: 'Dwarf', source: 'TCE' } as Race5e,
       { name: 'Elf', source: 'PHB' } as Race5e,
     ]
 
-    render(
+    const { getAllByRole, getByPlaceholderText } = render(
       <RaceStep
         recursiveLookup={buildRecursiveLookup({})}
         data={INITIAL_CHARACTER_DATA}
@@ -116,14 +142,26 @@ describe('RaceStep', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
-        race: 'Dwarf',
-        raceSource: 'PHB',
+        race: 'Elf',
+        raceSource: 'TCE',
         subrace: '',
         subraceSource: '',
         raceAsiChoices: [],
         raceAsiBlockIndex: 0,
       })
     })
+    const labels = () =>
+      getAllByRole('button', { name: /^(Dwarf|Elf) (PHB|TCE)$/ }).map(
+        (button) => button.textContent,
+      )
+    expect(labels()).toEqual(['DwarfTCE', 'ElfPHB', 'ElfTCE'])
+    fireEvent.change(getByPlaceholderText('Search races...'), { target: { value: 'elf' } })
+    expect(labels()).toEqual(['ElfPHB', 'ElfTCE'])
+    expect(races.map(({ name, source }) => [name, source])).toEqual([
+      ['Elf', 'TCE'],
+      ['Dwarf', 'TCE'],
+      ['Elf', 'PHB'],
+    ])
   })
 
   test('keeps parent race traits visible when the default subrace is selected', () => {

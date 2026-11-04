@@ -7,6 +7,7 @@ import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
+import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
 interface BackgroundStepProps extends StepProps {
@@ -38,12 +39,13 @@ export function BackgroundStep({
 }: BackgroundStepProps) {
   const [search, setSearch] = useState('')
   const filteredBackgrounds = backgrounds
+  const orderedBackgrounds = useMemo(() => sortCreatorOptions(backgrounds), [backgrounds])
 
   const searchFilteredBackgrounds = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return filteredBackgrounds
+    if (!query) return orderedBackgrounds
 
-    return filteredBackgrounds.filter(
+    return orderedBackgrounds.filter(
       (bg) =>
         bg.name.toLowerCase().includes(query) ||
         bg.source.toLowerCase().includes(query) ||
@@ -51,7 +53,7 @@ export function BackgroundStep({
           .toLowerCase()
           .includes(query),
     )
-  }, [filteredBackgrounds, search])
+  }, [orderedBackgrounds, search])
 
   useEffect(() => {
     if (filteredBackgrounds.length === 0) return

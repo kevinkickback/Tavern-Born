@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import { DetailHtmlSection, DetailSection } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
+import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
 interface ClassStepProps extends StepProps {
@@ -31,13 +32,14 @@ interface ClassStepProps extends StepProps {
 export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassStepProps) {
   const [search, setSearch] = useState('')
   const filteredClasses = classes
+  const orderedClasses = useMemo(() => sortCreatorOptions(classes), [classes])
   const searchFilteredClasses = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return filteredClasses
-    return filteredClasses.filter(
+    if (!query) return orderedClasses
+    return orderedClasses.filter(
       (cls) => cls.name.toLowerCase().includes(query) || cls.source.toLowerCase().includes(query),
     )
-  }, [filteredClasses, search])
+  }, [orderedClasses, search])
 
   const selectedClass = data.class
     ? data.classSource
