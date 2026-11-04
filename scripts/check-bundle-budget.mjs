@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Beast Master companion recovery: measured 6,428,240 B renderer and 1,191,010 B initial.
+  // Classic companion scaling: measured 6,430,039 B renderer and 1,191,186 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6278 * KIB,
+  rendererCode: 6280 * KIB,
   initialRendererScript: 1164 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

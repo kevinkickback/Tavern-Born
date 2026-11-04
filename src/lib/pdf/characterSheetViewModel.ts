@@ -187,6 +187,7 @@ export interface CharacterSheetViewModel {
     className?: string
     classSource?: string
     creature?: Creature5e
+    classicRangerLevel?: number
   }>
   resolvedClasses: readonly Class5e[]
   mergedRace: Race5e | undefined
@@ -783,7 +784,7 @@ export function createCharacterSheetViewModel(
     character,
     companionCatalogs?.classes ?? calculationContext.classChoices.classes,
     companionCatalogs,
-  ).flatMap(({ creature, selection }) =>
+  ).flatMap(({ creature, selection, classicRangerLevel }) =>
     creature
       ? [
           {
@@ -792,6 +793,7 @@ export function createCharacterSheetViewModel(
             className: selection.className,
             classSource: selection.classSource,
             creature,
+            classicRangerLevel,
           },
         ]
       : [],

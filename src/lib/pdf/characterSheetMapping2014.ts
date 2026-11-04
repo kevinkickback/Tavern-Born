@@ -7,7 +7,7 @@ import {
   formatViewModelModifier,
   usesCustomOrganization,
 } from '@/lib/pdf/characterSheetViewModel'
-import { getCompanionSheetValues } from '@/lib/pdf/companionSheet'
+import { getCompanionSheetValues, renderCompanionEntries } from '@/lib/pdf/companionSheet'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 import type { CharacterAction } from '@/types/actions'
 
@@ -171,13 +171,6 @@ function splitRuledSection(value: string, visibleCharacters: number): [string, s
   return [value.slice(0, cut).trimEnd(), value.slice(cut).trimStart()]
 }
 
-function renderCompanionEntries(entries: readonly unknown[] | undefined): string {
-  return renderEntriesToText(entries)
-    .replace(/\{@hitYourSpellAttack\}/gu, 'your spell attack modifier')
-    .replace(/\bmw\b(?=\s+(?:\(|your|to hit))/gu, 'Melee Weapon Attack:')
-    .replace(/\brw\b(?=\s+(?:\(|your|to hit))/gu, 'Ranged Weapon Attack:')
-}
-
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
   const { character } = viewModel
   const printedEquipment = viewModel.equipmentForSheet ?? character.equipment
@@ -206,6 +199,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   const ammoRows = getAmmunitionRows(viewModel)
   const companion = viewModel.companions[0]
   const {
+    creature: companionCreature,
     stat: companionStat,
     summary: companionSummary,
     armorClass: companionArmorClass,
@@ -347,7 +341,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'P4.AScomp.Comp.Use.AC': companionArmorClass,
     'P4.AScomp.Comp.Use.HP.Max': companionMaxHp,
     'P4.AScomp.Comp.Use.Proficiency Bonus':
-      companion?.creature?.pbNote === 'equals your bonus'
+      companionCreature?.pbNote === 'equals your bonus'
         ? formatViewModelModifier(viewModel.proficiencyBonus)
         : (companionStat?.proficiencyBonus ?? ''),
     'P4.AScomp.Comp.Use.Senses':
@@ -357,7 +351,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
         .filter((section) => section.id !== 'traits' && section.id !== 'actions')
         .map((section) => `${section.title}\n${renderCompanionEntries(section.entries)}`)
         .join('\n\n') ?? '',
-    'P4.AScomp.Comp.Use.Traits': (companion?.creature?.trait ?? [])
+    'P4.AScomp.Comp.Use.Traits': (companionCreature?.trait ?? [])
       .map((trait) =>
         [trait.name, renderCompanionEntries(trait.entries)].filter(Boolean).join(': '),
       )
@@ -372,9 +366,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
             ? [`Speed: ${companionSummary.speed}`]
             : []),
           ...companionStat.core
-            .filter(
-              (line) => line.label === 'Hit Points' && companion?.creature?.hp?.average == null,
-            )
+            .filter((line) => line.label === 'Hit Points' && companionCreature?.hp?.average == null)
             .map((line) => `${line.label}: ${line.value}`),
           ...companionStat.details
             .filter((line) => line.label !== 'Senses')
@@ -395,7 +387,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     textFields[`${prefix}.Mod`] = ability.score == null ? '' : ability.modifier
   }
 
-  for (const [index, action] of (companion?.creature?.action ?? []).slice(0, 3).entries()) {
+  for (const [index, action] of (companionCreature?.action ?? []).slice(0, 3).entries()) {
     const prefix = `P4.AScomp.Comp.Use.Attack.${index + 1}`
     textFields[`${prefix}.Weapon Selection`] = action.name ?? ''
     textFields[`${prefix}.Description`] = renderCompanionEntries(action.entries)

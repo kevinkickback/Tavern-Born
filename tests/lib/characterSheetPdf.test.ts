@@ -25,6 +25,7 @@ import {
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { buildCompanionSheetData } from '@/lib/pdf/companionSheet'
 import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
@@ -41,7 +42,11 @@ import {
   addRangerArchetypeGain,
   makeOptionalDeclarationCatalog,
 } from '../fixtures/optionalClassDeclarationFixtures'
-import { createCurrentCharacterSheetViewModel, sourceTemplateBytes } from '../fixtures/pdfTemplates'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+  sourceTemplateBytes,
+} from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
   character: Character,
@@ -448,7 +453,21 @@ describe('characterSheetPdf', () => {
       size: ['M'],
       type: 'beast',
       cr: '1/4',
-      hp: { average: 11 },
+      ac: [{ ac: 13, from: ['natural armor'] }],
+      hp: { average: 11, formula: '2d8 + 2' },
+      str: 12,
+      dex: 15,
+      wis: 12,
+      skill: { perception: '+3', stealth: '+4' },
+      passive: 13,
+      action: [
+        {
+          name: 'Bite',
+          entries: [
+            '{@atk mw} {@hit 4} to hit. {@h}7 ({@damage 2d4 + 2}) piercing damage. The target must succeed on a {@dc 11} Strength saving throw.',
+          ],
+        },
+      ],
     }
     const currentCatalogs = { ...createClassChoiceCatalogs(catalogs), creatures: [land, wolf] }
     let character: Character = makeCharacterFixture({
@@ -501,6 +520,84 @@ describe('characterSheetPdf', () => {
       })
     }
     choose("Ranger's Companion", 'Wolf')
+    const inputs = {
+      classesByKey: buildClassLookup(data.classes),
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: currentCatalogs,
+      creaturesByKey: { 'Beast of the Land|TCE': land, 'Wolf|MM': wolf },
+    }
+    const classic = (rangerLevel: number, fighterLevels = 0) =>
+      createCurrentCharacterSheetViewModel(
+        {
+          ...character,
+          classProgression: [
+            { ...character.classProgression[0], levels: rangerLevel },
+            ...(fighterLevels ? [{ name: 'Fighter', source: 'PHB', levels: fighterLevels }] : []),
+          ],
+        },
+        inputs,
+      )
+    const low = classic(3)
+    const mixed = classic(3, 2)
+    const high = classic(20)
+    expect(low.companions[0]?.classicRangerLevel).toBe(3)
+    expect(buildCompanionSheetData(low, low.companions[0])).toMatchObject({
+      armorClass: '15',
+      maxHp: '12',
+      hitDice: '2d8 + 2',
+      passive: '15',
+      actions: [{ name: 'Bite', bonus: '+6', damage: '2d4 + 4 piercing' }],
+    })
+    expect(buildCompanionSheetData(mixed, mixed.companions[0])).toMatchObject({
+      armorClass: '16',
+      maxHp: '12',
+      actions: [{ name: 'Bite', bonus: '+7', damage: '2d4 + 5 piercing' }],
+    })
+    const highStats = buildCompanionSheetData(high, high.companions[0])
+    expect(highStats.abilities.find((ability) => ability.key === 'str')?.save).toBe('+1')
+    expect(highStats.skills.find((skill) => skill.name === 'perception')?.modifier).toBe('+9')
+    expect(highStats.skills.find((skill) => skill.name === 'stealth')?.modifier).toBe('+10')
+    expect(highStats.skills.find((skill) => skill.name === 'athletics')?.modifier).toBe('+1')
+    const printedBase = buildCompanionSheetData(low, {
+      ...low.companions[0],
+      creature: {
+        ...wolf,
+        hp: { average: 13 },
+        save: { dex: '+4' },
+        action: [
+          { name: 'Scratch', entries: ['{@atk mw} {@hit 0} to hit. {@h}1 slashing damage.'] },
+          {
+            name: 'Sting',
+            entries: [
+              '{@atkr m} {@hit 4}, reach 5 ft. {@h}4 ({@damage 1d4 + 2}) piercing damage plus 3 ({@damage 1d6}) poison damage. The target must make a {@dc 11} Constitution saving throw or take 7 ({@damage 2d6}) acid damage.',
+            ],
+          },
+        ],
+      },
+    })
+    expect(printedBase.maxHp).toBe('13')
+    expect(printedBase.abilities.find((ability) => ability.key === 'dex')?.save).toBe('+6')
+    expect(printedBase.actions[0]).toEqual({ name: 'Scratch', bonus: '+2', damage: '1 slashing' })
+    expect(printedBase.attacks).toMatch(
+      /6 \(\s*1d4 \+ 4\s*\) piercing damage plus 3 \(\s*1d6\s*\) poison damage/,
+    )
+    expect(printedBase.attacks).toContain('DC 11')
+    expect(printedBase.attacks).toMatch(/9 \(\s*2d6 \+ 2\s*\) acid damage/)
+    const official = (
+      await PDFDocument.load(await generateTestCharacterSheet(high, '2014-official'))
+    ).getForm()
+    expect(official.getTextField('Companion1__AC').getText()).toBe('19')
+    expect(official.getTextField('Companion1__MAX HP').getText()).toBe('80')
+    expect(official.getTextField('Companion1__Attacks.0.2.1.2.0').getText()).toBe('+10')
+    expect(official.getTextField('Companion1__Attacks.0.0.2').getText()).toBe('2d4 + 8 piercing')
+    const classicMpmb = mapCharacterSheetViewModel(high, '2014-custom')
+    expect(classicMpmb.textFields['P4.AScomp.Comp.Use.AC']).toBe('19')
+    expect(classicMpmb.textFields['P4.AScomp.Comp.Use.HP.Max']).toBe('80')
+    expect(classicMpmb.textFields['P4.AScomp.Comp.Use.Attack.1.Description']).toContain(
+      'Melee Weapon Attack: +10 to hit.',
+    )
+    expect(classicMpmb.textFields['P4.AScomp.Comp.Use.Attack.1.Description']).toContain('DC 11')
+    expect(wolf.hp?.average).toBe(11)
     const adopted = setOptionalClassAdoptionCommand(
       character,
       character.provenance,
@@ -522,13 +619,8 @@ describe('characterSheetPdf', () => {
     expect(
       character.classChoiceSelections?.find((row) => row.label === "Ranger's Companion")?.inactive,
     ).toBe(true)
-    const inputs = {
-      classesByKey: buildClassLookup(data.classes),
-      classChoiceClasses: data.classes,
-      classChoiceFeatureCatalogs: currentCatalogs,
-      creaturesByKey: { 'Beast of the Land|TCE': land, 'Wolf|MM': wolf },
-    }
     const viewModel = createCurrentCharacterSheetViewModel(character, inputs)
+    expect(viewModel.companions[0]?.classicRangerLevel).toBeUndefined()
     const suspended = createCurrentCharacterSheetViewModel(character, {
       ...inputs,
       classChoiceFeatureCatalogs: { ...currentCatalogs, optionalClassFeatureSources: [] },
