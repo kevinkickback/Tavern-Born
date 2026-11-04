@@ -54,6 +54,13 @@ available and offers removal of the saved choice if the feature is unavailable.
 An unavailable Tasha's adoption keeps its existing recovery prompt and reserves the
 replaced classic feature until the adoption is restored or cleared.
 
+The verified PHB Ranger's Companion declaration adds the character's proficiency
+bonus to armor class, attack and damage rolls, and the creature's proficient skills
+and saves. Its maximum HP is the greater of the creature's normal maximum and four
+times the owning Ranger level. Both companion PDF layouts use the same projected
+stats. Fixed damage and save DCs retain their published values. The Tasha's and
+revised Primal Companion forms keep their source-defined formulas.
+
 ### Weapon Mastery
 
 The current class, its unambiguous declaring feature, and the filtered base-weapon catalog govern

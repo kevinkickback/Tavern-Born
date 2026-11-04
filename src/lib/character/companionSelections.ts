@@ -8,6 +8,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
+import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import type { Class5e, Creature5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
@@ -33,6 +34,8 @@ import { optionalClassOwner } from './optionalClassFeatureIdentity'
 
 const norm = (value?: string) => value?.trim().toLowerCase()
 const gain = 3
+// The original PHB feature expresses the scaling relationship as prose.
+const classicCompanionBody = 'df55720dfd85174444d4e96621a23ffee39588c8a2aa98b5c0efa5243105839d'
 const companionRules = (
   [
     ['PHB', 'PHB', "Ranger's Companion", 'PHB'],
@@ -88,14 +91,14 @@ export function isRegisteredCompanionSelection(selection: CharacterClassChoiceSe
   )
 }
 
-function hasCurrentDeclaration(
+function getCurrentDeclaration(
   choice: NormalizedCharacterChoice,
   rule: CompanionRule,
   cls: Class5e,
   subclass: Subclass5e,
   catalogs: ClassChoiceFeatureCatalogs,
 ) {
-  if (getClassChoiceDeclaration(choice)?.target !== rule.target) return false
+  if (getClassChoiceDeclaration(choice)?.target !== rule.target) return undefined
   const gains = (cls.classFeatureRefs ?? []).filter((ref) => ref.gainSubclassFeature)
   const first = gains.filter((ref) => getClassFeatureReferenceLevel(ref) === gain)
   const gainFeature = first.length === 1 ? first[0].feature : undefined
@@ -105,14 +108,14 @@ function hasCurrentDeclaration(
     gainFeature.isClassFeatureVariant ||
     gains.some((ref) => (getClassFeatureReferenceLevel(ref) ?? 0) < gain)
   )
-    return false
+    return undefined
   const gainTarget = getClassFeatureIdentity(gainFeature)
   if (
     !gainTarget ||
     gainFeature.level !== gain ||
     getClassFeatureIdentity(decodeClassFeatureReference(first[0].ref)) !== gainTarget
   )
-    return false
+    return undefined
   const liveGains = catalogs.classFeatureCandidates
     ? catalogs.classFeatureCandidates.get(gainTarget)
     : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === gainTarget)
@@ -124,7 +127,7 @@ function hasCurrentDeclaration(
     featureOptionRulesSignature(liveGains[0].entries ?? []) !==
       featureOptionRulesSignature(gainFeature.entries ?? [])
   )
-    return false
+    return undefined
   const refs = collectUnconditionalFeatureReferences(
     subclass.subclassFeatureRefs ?? [],
     'subclassFeature',
@@ -138,14 +141,14 @@ function hasCurrentDeclaration(
     attached.featureOptionSourceConflict ||
     (rule.featureSource !== 'TCE' && attached.isClassFeatureVariant)
   )
-    return false
+    return undefined
   const scoped = scopeClassChoiceFeatureCatalogs(catalogs, ownerKey(rule.owner))
   const candidates = scoped.subclassFeatureCandidates
     ? scoped.subclassFeatureCandidates.get(rule.target)
     : scoped.subclassFeatures.filter((row) => getSubclassFeatureIdentity(row) === rule.target)
-  if (!candidates?.length) return false
+  if (!candidates?.length) return undefined
   const signature = featureOptionRulesSignature(attached.entries)
-  return !candidates.some(
+  return candidates.some(
     (row) =>
       row.sourceIdentityConflict ||
       row.featureOptionSourceConflict ||
@@ -154,11 +157,14 @@ function hasCurrentDeclaration(
       !row.entries ||
       featureOptionRulesSignature(row.entries) !== signature,
   )
+    ? undefined
+    : attached
 }
 
 export interface CompanionSelectionState extends FeatureOptionSelectionState {
   companion: true
   creature?: Creature5e
+  classicRangerLevel?: number
 }
 
 /** Current stat blocks and recoverable intent share the same earned choice and option pool. */
@@ -231,16 +237,11 @@ export function getCompanionSelectionStates(
         )
       : []
     const candidate = candidates.length === 1 ? candidates[0] : undefined
-    const choice =
-      candidate &&
-      (!rule ||
-        (catalogs &&
-          cls &&
-          subclass &&
-          !subclass.sourceIdentityConflict &&
-          hasCurrentDeclaration(candidate, rule, cls, subclass, catalogs)))
-        ? candidate
+    const declaration =
+      candidate && rule && catalogs && cls && subclass && !subclass.sourceIdentityConflict
+        ? getCurrentDeclaration(candidate, rule, cls, subclass, catalogs)
         : undefined
+    const choice = !rule || declaration ? candidate : undefined
     if (!choice && !rule) return []
     const exact = selected.source?.trim()
       ? creatures.filter(
@@ -270,6 +271,13 @@ export function getCompanionSelectionStates(
         subclass,
         choice,
         creature: option ? exact[0] : undefined,
+        classicRangerLevel:
+          option &&
+          rule?.featureSource === 'PHB' &&
+          declaration?.entries &&
+          getFeatureSourceDigest(declaration.entries, false) === classicCompanionBody
+            ? owner.levels
+            : undefined,
         recovery: !option,
         companion: true,
         options: [],
