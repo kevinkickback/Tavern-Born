@@ -23,7 +23,10 @@ import {
   hasFavoredEnemyRecovery,
   isFavoredEnemySetupComplete,
 } from '@/lib/character/favoredEnemySelections'
-import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
+import {
+  getFeatureOptionSelectionStates,
+  hasRevisedHunterRecovery,
+} from '@/lib/character/featureOptionSelections'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   getHistoricalProficiencyRule,
@@ -307,6 +310,7 @@ export function validateClassChoices(
         hasFavoredEnemyRecovery(diagnostic, featureOptionStates) ||
         hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
+        hasRevisedHunterRecovery(diagnostic, featureOptionStates) ||
         (diagnostic.featureName === 'Deft Explorer' &&
           featureOptionStates.some(
             (state) =>

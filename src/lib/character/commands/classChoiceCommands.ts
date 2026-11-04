@@ -9,7 +9,10 @@ import {
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
-import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
+import {
+  decodeFeatureOptionReference,
+  isFeatureLiteralChoiceId,
+} from '@/lib/5etools/featureOptionIdentity'
 import {
   decodeLegacySubclassChoice,
   isKenseiChoiceId,
@@ -17,6 +20,7 @@ import {
 import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   getClassChoiceDeclaration,
@@ -355,11 +359,13 @@ function currentLiteralChoice(
     return choice
   }
   const classData = authority && findClassReference(choice.owner, authority.classes)
+  const hunter = getRevisedHunterRule(choice.id)
+  const owner = hunter && findOwner(character, choice)
   const current =
     classData &&
     getCharacterClassChoices(
       classData,
-      undefined,
+      owner ? getSelectedSubclassData(classData, owner) : undefined,
       createOptionalClassFeatureActivity(character, authority?.catalogs),
       authority?.catalogs,
     ).find((candidate) => candidate.id === choice.id)
@@ -582,6 +588,14 @@ export function applyClassChoiceSelectionCommand(
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (
+    !getRevisedHunterRule(choice.id) &&
+    selected.some((option) => {
+      const target = decodeFeatureOptionReference(option)
+      return target?.format === 'source-group' && target.group === REVISED_HUNTER_GROUP
+    })
+  )
+    throw new RangeError('Choose a Hunter option through its exact subclass feature.')
   if (choice.id.startsWith('psionic-choice:')) {
     const relation = decodePsionicChoiceId(choice.id)
     if (
@@ -668,6 +682,8 @@ export function applyClassChoiceSelectionCommand(
       kind: choice.kind,
       className: owner.name,
       classSource: owner.source,
+      ...(choice.owner.subclassName ? { subclassName: choice.owner.subclassName } : {}),
+      ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
       classLevel: choice.level,
       selected: selected.map((option) => ({ ...option, slotLevel: choice.level })),
     } as CharacterClassChoiceSelection
@@ -679,7 +695,9 @@ export function applyClassChoiceSelectionCommand(
       throw new RangeError(
         decodeFavoredEnemyChoiceId(choice.id)
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
-          : 'Choose a different favored terrain for each earned Natural Explorer choice.',
+          : getRevisedHunterRule(choice.id)
+            ? 'Choose one current option for the exact Hunter feature.'
+            : 'Choose a different favored terrain for each earned Natural Explorer choice.',
       )
   }
   if (

@@ -9,6 +9,11 @@ import {
   ELEMENTAL_AFFINITY_REF,
   featureOptionRulesSignature,
 } from '@/lib/5etools/featureTableOptions'
+import {
+  getRevisedHunterRule,
+  isValidRevisedHunterSelection,
+  revisedHunterOwner,
+} from '@/lib/5etools/revisedHunterIdentity'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Class5e, ClassFeature, Subclass5e } from '@/types/5etools'
@@ -17,7 +22,11 @@ import type {
   CharacterClassChoiceSelection,
   CharacterClassEntry,
 } from '@/types/character'
-import type { ClassProficiencyDomain, NormalizedCharacterChoice } from '@/types/classRules'
+import type {
+  ClassChoiceDiagnostic,
+  ClassProficiencyDomain,
+  NormalizedCharacterChoice,
+} from '@/types/classRules'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -63,6 +72,27 @@ export interface FeatureOptionSelectionState {
   optionalPool?: boolean
   psionic?: boolean
   legacySubclass?: boolean
+}
+
+export function hasRevisedHunterRecovery(
+  diagnostic: ClassChoiceDiagnostic,
+  states: readonly FeatureOptionSelectionState[],
+): boolean {
+  return (
+    diagnostic.className === revisedHunterOwner.name &&
+    diagnostic.classSource === revisedHunterOwner.source &&
+    diagnostic.subclassName === revisedHunterOwner.subclassName &&
+    diagnostic.subclassSource === revisedHunterOwner.subclassSource &&
+    states.some((state) => {
+      const rule = getRevisedHunterRule(state.selection.choiceId)
+      return (
+        state.owner &&
+        state.recovery &&
+        rule?.name === diagnostic.featureName &&
+        rule.level === diagnostic.level
+      )
+    })
+  )
 }
 
 function affinityRules(
@@ -130,9 +160,11 @@ export function getFeatureOptionSelectionStates(
       (selection) =>
         selection.kind === 'feature-option' &&
         !selection.inactive &&
-        !isFeatureLiteralChoiceId(selection.choiceId),
+        (!isFeatureLiteralChoiceId(selection.choiceId) ||
+          !!getRevisedHunterRule(selection.choiceId)),
     )
     .map((selection) => {
+      const hunter = getRevisedHunterRule(selection.choiceId)
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
         character.classProgression,
@@ -166,6 +198,7 @@ export function getFeatureOptionSelectionStates(
                 candidate.id === selection.choiceId &&
                 candidate.level === selection.classLevel &&
                 candidate.level <= owner.levels &&
+                (!hunter || isValidRevisedHunterSelection(selection)) &&
                 selection.selected.every(
                   (row) => row.slotLevel >= candidate.level && row.slotLevel <= owner.levels,
                 ),
@@ -184,20 +217,36 @@ export function getFeatureOptionSelectionStates(
               availability: 'retained' as const,
               entries: [],
             }))
-      const recovery = !choice || !options.some(isClassChoiceOptionEligible)
+      const recovery =
+        !choice ||
+        !options.some(
+          (option) =>
+            isClassChoiceOptionEligible(option) &&
+            (!hunter ||
+              selection.selected.some(
+                (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
+              )),
+        )
       const affinity =
-        !recovery && owner && subclass ? affinityRules(owner, subclass, catalogs) : undefined
+        !hunter && !recovery && owner && subclass
+          ? affinityRules(owner, subclass, catalogs)
+          : undefined
       const details = selection.selected.map((selected) => {
         const option = options.find(
           (view) => getClassChoiceOptionKey(view.reference) === getClassChoiceOptionKey(selected),
         )
         const available =
-          !recovery && !!option && isClassChoiceOptionEligible(option) && !!option.featureOption
+          !recovery &&
+          !!option &&
+          isClassChoiceOptionEligible(option) &&
+          !!(hunter ? option.sourceGroup : option.featureOption)
         const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
           : [
-              'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
+              hunter
+                ? 'Restore the exact Hunter feature source or remove the saved choice.'
+                : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]
         if (available && affinity) {
           entries.push({
@@ -210,7 +259,25 @@ export function getFeatureOptionSelectionStates(
         }
         return { name: selected.name, damageType, entries, available }
       })
-      return { selection, owner, classData, subclass, choice, options, recovery, details, affinity }
+      return {
+        selection,
+        owner,
+        classData,
+        subclass,
+        choice,
+        options,
+        recovery,
+        details,
+        affinity,
+        ...(hunter && {
+          literalGroup: {
+            family: hunter.id,
+            group: hunter.name,
+            gain: hunter.level,
+            title: hunter.name,
+          },
+        }),
+      }
     })
   return [
     ...literal,

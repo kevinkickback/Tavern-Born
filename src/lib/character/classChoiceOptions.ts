@@ -87,6 +87,11 @@ import {
 } from '@/lib/5etools/naturalExplorerIdentity'
 import { getNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
+import {
+  getRevisedHunterSetup,
+  resolveRevisedHunterOption,
+} from '@/lib/5etools/revisedHunterChoices'
+import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { resolveStormFeature } from '@/lib/5etools/stormAuraChoices'
 import {
   isStormAuraChoiceId,
@@ -238,7 +243,7 @@ function getCatalog(
     | 'itemsBase'
     | 'optionalFeatures'
   > &
-    Pick<ClassChoiceFeatureCatalogs, 'subclassFeatureCandidates' | 'psionics'>,
+    Pick<ClassChoiceFeatureCatalogs, 'classes' | 'subclassFeatureCandidates' | 'psionics'>,
 ): readonly ChoiceCatalogEntity[] {
   if (entityType === 'featureOption' || entityType === 'proficiency') return []
   if (entityType === 'classFeature') return catalogs.classFeatures
@@ -481,15 +486,20 @@ export function resolveFeatureOptionEntity(
   option: NormalizedChoiceOptionReference,
   catalogs: Pick<
     ClassChoiceFeatureCatalogs,
-    'classFeatures' | 'classFeatureCandidates' | 'subclassFeatures' | 'subclassFeatureCandidates'
+    | 'classes'
+    | 'classFeatures'
+    | 'classFeatureCandidates'
+    | 'subclassFeatures'
+    | 'subclassFeatureCandidates'
   >,
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): FeatureTableOption | SourceGroupOption | undefined {
   const target = decodeFeatureOptionReference(option)
   if (target?.format === 'source-group')
-    return (
-      resolveNaturalExplorerOption(option, catalogs) ?? resolveFavoredEnemyOption(option, catalogs)
-    )
+    return target.group === REVISED_HUNTER_GROUP
+      ? resolveRevisedHunterOption(option, catalogs)
+      : (resolveNaturalExplorerOption(option, catalogs) ??
+          resolveFavoredEnemyOption(option, catalogs))
   if (!target || target.kind !== 'subclassFeature') return undefined
   const candidates =
     catalogs.subclassFeatureCandidates !== undefined
@@ -566,9 +576,11 @@ function resolveExplicitOption(
         kind: 'feature',
         featureTypeLabels: [
           'group' in match
-            ? isFavoredEnemyOption(option)
-              ? 'Favored enemy'
-              : 'Favored terrain'
+            ? match.group === REVISED_HUNTER_GROUP
+              ? 'Hunter option'
+              : isFavoredEnemyOption(option)
+                ? 'Favored enemy'
+                : 'Favored terrain'
             : 'Dragon ancestry',
         ],
       },
@@ -640,6 +652,7 @@ export function resolveClassChoiceOptions(
   const literal = decodeNaturalExplorerChoiceId(choice.id) ?? enemy
   if (
     isFeatureLiteralChoiceId(choice.id) &&
+    !getRevisedHunterRule(choice.id) &&
     (!literal ||
       !(enemy
         ? getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET) &&
@@ -1220,6 +1233,15 @@ export function getClassChoiceCandidates(
     ...legacy,
     ...canonical,
     ...enemies,
+    ...getRevisedHunterSetup(
+      classData,
+      subclass,
+      catalogs &&
+        scopeClassChoiceFeatureCatalogs(
+          catalogs,
+          getFeatureOwnerKey('Ranger', 'XPHB', 'Hunter', 'XPHB'),
+        ),
+    ).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
@@ -1493,6 +1515,15 @@ export function getClassChoiceDiagnosticCandidates(
   const rows = [
     ...getClassChoiceDiagnosticCandidateSide(classData, subclass, false, catalogs),
     ...getClassChoiceDiagnosticCandidateSide(classData, subclass, true, catalogs),
+    ...getRevisedHunterSetup(
+      classData,
+      subclass,
+      catalogs?.subclassFeatures &&
+        scopeClassChoiceFeatureCatalogs(
+          catalogs as ClassChoiceFeatureCatalogs,
+          getFeatureOwnerKey('Ranger', 'XPHB', 'Hunter', 'XPHB'),
+        ),
+    ).diagnostics,
   ]
   return [...new Map(rows.map((row) => [JSON.stringify(row), row])).values()]
 }
