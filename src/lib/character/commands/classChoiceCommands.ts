@@ -1,3 +1,4 @@
+import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
@@ -233,7 +234,13 @@ function currentLiteralChoice(
     return resolveHistoricalProficiencyChoice(character, current)
   }
   if (!isFeatureLiteralChoiceId(choice.id)) {
-    if (choice.source.field.endsWith(':entries.filter-alternative-v1') && selected.length) {
+    const mastery =
+      choice.optionFilter?.requiresMastery ||
+      choice.id === getNormalizedClassChoiceId(choice.owner, 'Weapon Mastery', choice.level)
+    if (
+      (mastery || choice.source.field.endsWith(':entries.filter-alternative-v1')) &&
+      selected.length
+    ) {
       const owner = findOwner(character, choice)
       const cls = authority && findClassReference(choice.owner, authority.classes)
       const current =
@@ -246,8 +253,15 @@ function currentLiteralChoice(
           createOptionalClassFeatureActivity(character, authority.catalogs),
           authority.catalogs,
         ).find((row) => row.id === choice.id)
-      if (!current || !authority?.catalogs)
+      if (
+        !current ||
+        !authority?.catalogs ||
+        (mastery && (cls?.sourceIdentityConflict || !current.optionFilter?.requiresMastery))
+      )
         throw new RangeError('Restore the current source for this class choice.')
+      const eligibilityCharacter = mastery
+        ? refreshClassProficiencyState(character, authority.classes, authority.catalogs)
+        : character
       const options = resolveClassChoiceOptions(
         current,
         {
@@ -256,7 +270,7 @@ function currentLiteralChoice(
         },
         [],
         owner?.levels ?? 0,
-        character,
+        eligibilityCharacter,
       )
       const eligible = new Set(
         options
@@ -272,8 +286,12 @@ function currentLiteralChoice(
       if (
         selected.some(
           (option) =>
-            !eligible.has(getClassChoiceOptionKey(option)) &&
-            !prior.has(getClassChoiceOptionKey(option)),
+            (mastery &&
+              (option.entityType !== 'item' ||
+                !option.source?.trim() ||
+                option.ref !== undefined)) ||
+            (!eligible.has(getClassChoiceOptionKey(option)) &&
+              !prior.has(getClassChoiceOptionKey(option))),
         )
       )
         throw new RangeError('This class choice changed. Review its current alternatives.')

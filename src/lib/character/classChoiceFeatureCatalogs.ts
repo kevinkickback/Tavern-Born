@@ -33,6 +33,7 @@ export interface ClassChoiceFeatureCatalogs {
   languages?: readonly Language5e[]
   proficiencyTools?: readonly Item5e[]
   allConcreteTools?: readonly Item5e[]
+  itemsBase?: readonly Item5e[]
   featExpertiseFeats?: readonly Feat5e[]
   optionalFeatures?: readonly OptionalFeatureLike[]
   optionalFeatureCandidates?: ReadonlyMap<string, readonly OptionalFeatureLike[]>
@@ -162,6 +163,7 @@ export function buildClassChoiceFeatureCatalogs(
     optionalClassSections: data.optionalClassSections ?? [],
     skills: data.skills ?? [],
     languages: data.languages ?? [],
+    itemsBase: data.itemsBase ?? [],
     proficiencyTools: [...(data.items ?? []), ...(data.itemsBase ?? [])].filter(
       (item) => isSelectableEquipmentItem(item) && getItemTypeCodes(item.type).includes('AT'),
     ),

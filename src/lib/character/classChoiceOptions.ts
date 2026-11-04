@@ -1,3 +1,4 @@
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   normalizeFavoredEnemyChoices,
   resolveFavoredEnemyOption,
@@ -23,16 +24,13 @@ import { normalizePsionicChoices, psionicSlotIsCurrent } from '@/lib/5etools/psi
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { decodePsionicChoiceId, PSIONIC_CLASS_SOURCE } from '@/lib/5etools/psionicIdentity'
 import { resolvePsionic } from '@/lib/5etools/psionics'
+import { getCurrentWeaponProficiencies } from '@/lib/calculations/weaponProficiency'
 import { isValidKenseiSelection } from '@/lib/schema/legacySubclassChoiceValidation'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
-import {
-  getCreatureTypes,
-  getItemPropertyReferences,
-  matchesClassChoiceFilter,
-} from './classChoiceFilters'
+import { getCreatureTypes, matchesClassChoiceFilter } from './classChoiceFilters'
 
 export {
   buildClassChoiceFeatureCatalogs,
@@ -76,7 +74,7 @@ import {
   type FeatureTableOption,
   resolveFeatureTableOption,
 } from '@/lib/5etools/featureTableOptions'
-import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
+import { getItemPropertyLabel, getItemPropertyReferences } from '@/lib/5etools/itemProperties'
 import {
   hasNaturalExplorerGrant,
   resolveNaturalExplorerOption,
@@ -316,7 +314,7 @@ function getItemPropertyDisplayLabels(
   item: Item5e,
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
-  return getItemPropertyReferences(item).map((value) =>
+  return getItemPropertyReferences(item.property).map((value) =>
     getItemPropertyLabel(value, itemPropertyByAbbr),
   )
 }
@@ -657,29 +655,59 @@ export function resolveClassChoiceOptions(
     ]
   }
   const filter = choice.optionFilter
+  const masteryOwners = filter?.requiresMastery
+    ? catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
+    : undefined
+  const masteryTarget = filter?.requiresMastery
+    ? getClassFeatureIdentity({
+        name: choice.owner.featureName,
+        source: choice.owner.featureSource,
+        className: choice.owner.name,
+        classSource: choice.owner.source,
+        level: choice.level,
+      })
+    : undefined
+  const masteryFeatures = masteryTarget
+    ? (catalogs.classFeatureCandidates?.get(masteryTarget) ??
+      catalogs.classFeatures.filter(
+        (feature) => getClassFeatureIdentity(feature) === masteryTarget,
+      ))
+    : []
+  const currentFilter =
+    masteryOwners &&
+    (masteryOwners.length !== 1 ||
+      masteryOwners[0].sourceIdentityConflict ||
+      masteryFeatures.length !== 1 ||
+      masteryFeatures[0].sourceIdentityConflict)
+      ? undefined
+      : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
-  if (choice.options.length > 0) {
+  if (choice.options.length > 0 && !filter?.requiresMastery) {
     resolved.push(
       ...choice.options
         .filter((option) => (option.minimumClassLevel ?? 1) <= classLevel)
         .map((option) => resolveExplicitOption(option, catalogs, 'eligible', tableDefinitions)),
     )
   }
-  if (filter) {
+  if (currentFilter) {
+    const weapons =
+      currentFilter.requiresMastery && currentFilter.requiresProficiency && character
+        ? getCurrentWeaponProficiencies(character, catalogs.classes)
+        : catalogs.weaponProficiencies
     resolved.push(
-      ...getFilteredCatalog(filter, catalogs)
+      ...getFilteredCatalog(currentFilter, catalogs)
         .filter((entity) =>
           matchesClassChoiceFilter(
             entity,
-            filter,
+            currentFilter,
             catalogs.itemPropertyByAbbr,
             catalogs.itemTypeByAbbr,
-            catalogs.weaponProficiencies,
+            weapons,
             classLevel,
           ),
         )
-        .map((entity) => toView(filter.entityType, entity, catalogs)),
+        .map((entity) => toView(currentFilter.entityType, entity, catalogs)),
     )
   }
 

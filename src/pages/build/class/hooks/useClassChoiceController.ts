@@ -159,22 +159,30 @@ export function useClassChoiceController({
       character,
     ],
   )
-  const persistedSelectionByChoiceId = useMemo(
-    () =>
-      new Map(
-        (character
-          ? getEffectiveClassChoiceSelections(
-              character,
-              viewingClassData ? [viewingClassData] : [],
-              catalogs,
-            )
-          : []
+  const persistedSelectionByChoiceId = useMemo(() => {
+    const selections = character
+      ? getEffectiveClassChoiceSelections(
+          character,
+          viewingClassData ? [viewingClassData] : [],
+          catalogs,
         )
-          .filter((entry) => !entry.inactive)
-          .map((entry) => [entry.choiceId, entry]),
-      ),
-    [character, viewingClassData, catalogs],
-  )
+      : []
+    const masteryIds = new Set(
+      choices.filter((choice) => choice.optionFilter?.requiresMastery).map((choice) => choice.id),
+    )
+    const seen = new Set<string>()
+    const byId = new Map<string, (typeof selections)[number]>()
+    for (const entry of selections) {
+      if (entry.inactive) continue
+      if (masteryIds.has(entry.choiceId) && seen.has(entry.choiceId)) {
+        byId.delete(entry.choiceId)
+        continue
+      }
+      seen.add(entry.choiceId)
+      byId.set(entry.choiceId, entry)
+    }
+    return byId
+  }, [character, viewingClassData, catalogs, choices])
   const resolvedCatalogs = useMemo<ClassChoiceCatalogs>(
     () => ({ ...catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies }),
     [catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies],

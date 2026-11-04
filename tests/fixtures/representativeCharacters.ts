@@ -789,6 +789,15 @@ const weaponMasteryData = withLookups(
   makeGameDataFixture({
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [fighter2024],
+    classFeatures: [
+      {
+        name: 'Weapon Mastery',
+        source: 'XPHB',
+        className: 'Fighter',
+        classSource: 'XPHB',
+        level: 1,
+      },
+    ],
     backgrounds: [
       {
         name: 'Soldier',

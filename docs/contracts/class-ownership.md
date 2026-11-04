@@ -26,6 +26,21 @@ retract only this provider. Independent providers survive; valid missing-source 
 recoverable. These choices add no inventory or Weapon Mastery and do not automate attack effects
 or gameplay replacement events. Changed or conflicting unqualified prose remains diagnostic.
 
+### Weapon Mastery
+
+The current class, its unambiguous declaring feature, and the filtered base-weapon catalog govern
+mastery selection, completion and attack notes. The shared proficiency matcher recognizes the
+revised Rogue's Light-or-Finesse martial grant and the Monk's Light martial grant. Class-owned
+fixed proficiencies are checked against the current primary or multiclass declaration. Qualified
+martial grants also require the matching structured filter. Independent and unattributed weapon
+proficiencies retain their saved values.
+
+Previously saved unavailable item picks remain editable and confer no mastery while ineligible.
+Duplicate saved rows suspend the choice until it is confirmed again or cleared.
+The revised arcane Staff and druidic Wooden Staff use the Quarterstaff mastery selection when
+wielded. They have no separate mastery slots. This relation follows the [SRD equipment tables](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf#page=96)
+and applies when these exact revised focus printings are in the filtered catalog.
+
 ### Individual optional class features
 
 The Rules setting permits optional choices; it never selects them. Class records individual

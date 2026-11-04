@@ -136,6 +136,10 @@ const PROGRESSION_GAME_DATA_BASE: GameData = {
       (row) => row.name === 'Wizard' && ['PHB', 'XPHB'].includes(row.source),
     ),
   ],
+  classFeatures: [
+    ...castingFixture.gameData.classFeatures,
+    fighter.classFeatureRefs!.find((row) => row.name === 'Weapon Mastery')!.feature!,
+  ],
   backgrounds: [
     { name: 'Criminal', source: 'PHB', entries: ['You have experience outside the law.'] },
     {

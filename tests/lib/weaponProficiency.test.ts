@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 
 describe('isProficientWithWeapon', () => {
+  it('respects the difference between the revised Rogue and Monk property grants', () => {
+    const martial = { name: 'Rapier', weaponCategory: 'martial', property: [{ uid: 'F|XPHB' }] }
+    expect(
+      isProficientWithWeapon(['Martial weapons that have the Finesse or Light property'], martial),
+    ).toBe(true)
+    expect(isProficientWithWeapon(['Martial weapons that have the Light property'], martial)).toBe(
+      false,
+    )
+    expect(
+      isProficientWithWeapon(['Martial weapons that have the Light property'], {
+        ...martial,
+        property: [{ uid: 'L|XPHB' }],
+      }),
+    ).toBe(true)
+  })
   it('matches an exact source-derived weapon name', () => {
     expect(isProficientWithWeapon(['training blade'], { name: 'Training Blade' })).toBe(true)
   })

@@ -339,7 +339,7 @@
     },
     {
       "file": "src/lib/5etools/itemProperties.ts",
-      "sha256": "3e447a5d59e84293cc7385670f06b3af72c572a3f5aec37100bc89f027d453bb"
+      "sha256": "64da64b1e8a198d7f2ddd1028d5e73de7e1baa4116447a5b4264904071f1bb4e"
     },
     {
       "file": "src/lib/5etools/itemResolvers.ts",
@@ -587,15 +587,15 @@
     },
     {
       "file": "src/lib/calculations/weaponProficiency.ts",
-      "sha256": "7800209fb0387d601f49b56721185bd7e6862128ad39f5a68427c8a42def60dc"
+      "sha256": "a8c0eac2381ab33c06e93f6af972cf928ad855106a449f118ae78626201e484c"
     },
     {
       "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
-      "sha256": "39c2cc15f1724786649fcbc62cbc84ec0e78f8277b533fc5a1bd74a01b2dd659"
+      "sha256": "4310c1fa3d7d6731ee3872b3c574e0f1237581579b4b6fbee1fd1457beb32def"
     },
     {
       "file": "src/lib/character/classChoiceFilters.ts",
-      "sha256": "5691dd79598e22ec949be58cd953665c9c75aa063c598d64979603265e128d3f"
+      "sha256": "ddd249f2ba1d4bf1ed976d5a6e6601327f85ba1cce17d8f79c4a2f053237f87c"
     },
     {
       "file": "src/lib/character/classChoiceIdentity.ts",
@@ -627,7 +627,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "5d18f6a08be9f16959907cebd0013b16f28dcab9b2deed2835b5c9c318c0d112"
+      "sha256": "48838a6a69f3e5f024718ec5f89608169b4281af5a7e035622be3ac624791abd"
     },
     {
       "file": "src/types/actions.ts",

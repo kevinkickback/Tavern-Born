@@ -1128,7 +1128,7 @@ export function addMulticlass(
     weapons: [
       ...new Set([
         ...(character.proficiencies.weapons ?? []),
-        ...(gained?.weapons ?? fallback.weapons ?? [])
+        ...(gained?.weapons ?? [])
           .filter((weapon): weapon is string => typeof weapon === 'string')
           .map((weapon) => stripItemTag(weapon)),
       ]),
