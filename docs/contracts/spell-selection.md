@@ -46,6 +46,11 @@ Primal Awareness's fixed knowledge grants follow the same current-source project
 established numeric choices while excluding new redundant selections. Fixed spell labels use
 their actual class-feature or subclass provenance.
 
+Revised Ranger Favored Enemy grants Hunter's Mark from the current level-1 class schedule
+and exact feature declaration. It appears as always prepared and uses no ordinary
+preparation slot. An independently saved daily choice remains available if the grant
+disappears and the ordinary spell list still permits it.
+
 Each record saves its exact target, revision, `default` or `ignore-class-list` policy, and optional
 `prepare:true` for a learned spellbook entry. The explicit bypass changes only list eligibility;
 current target/source, earned ownership, level, schools, fixed-at-gain exclusion and quota still apply.

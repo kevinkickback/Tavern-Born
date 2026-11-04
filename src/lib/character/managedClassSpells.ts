@@ -43,10 +43,11 @@ import {
 } from './managedClassSpellIdentity'
 import { stripManagedClassSpellState } from './managedClassSpellState'
 import {
+  type ClassFixedSpellStatus,
   getOptionalClassFixedSpellGrants,
   getOptionalClassFixedSpellNamesAtGain,
-  type OptionalClassFixedSpellStatus,
 } from './optionalClassFixedSpells'
+import { getRevisedRangerFixedSpell } from './revisedRangerFixedSpell'
 import { getSelectedFeatureCantripPool } from './selectedFeatureSpells'
 
 export interface ManagedClassSpellStatus {
@@ -350,14 +351,27 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
-  const optionalFixedStatuses: OptionalClassFixedSpellStatus[] = []
-  for (const grant of getOptionalClassFixedSpellGrants(character, context?.catalogs)) {
+  const fixedClassSpellStatuses: ClassFixedSpellStatus[] = []
+  const grants = getOptionalClassFixedSpellGrants(character, context?.catalogs)
+  const rangerGrant = getRevisedRangerFixedSpell(character, context?.catalogs)
+  if (rangerGrant) grants.push(rangerGrant)
+  for (const grant of grants) {
+    const prepared = grant === rangerGrant
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
-      !spell || !permitted(allowed, spell.source)
+      !spell ||
+      !permitted(allowed, spell.source) ||
+      (prepared &&
+        (spell.level !== 1 ||
+          (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1))
         ? 'Restore the exact spell printing from the enabled content.'
         : undefined
-    optionalFixedStatuses.push({ ...grant, active: !reason, ...(reason ? { reason } : {}) })
+    fixedClassSpellStatuses.push({
+      ...grant,
+      prepared,
+      active: !reason,
+      ...(reason ? { reason } : {}),
+    })
     if (reason) continue
     const entry = character.classProgression.find(
       (entry) => norm(entry.name) === grant.owner[1] && norm(entry.source) === grant.owner[2],
@@ -375,6 +389,7 @@ export function projectManagedClassSpellState(
             ...profile,
             spellsKnown: add(profile.spellsKnown),
             fixedSpells: add(profile.fixedSpells ?? []),
+            ...(prepared && { alwaysPreparedSpells: add(profile.alwaysPreparedSpells ?? []) }),
           }
         : profile,
     )
@@ -383,7 +398,7 @@ export function projectManagedClassSpellState(
       label: grant.featureName,
       grantSource: parseSpellReference(grant.reference).source,
       grantVariant: JSON.stringify([
-        'optional-class-spell',
+        prepared ? 'class-prepared-spell' : 'optional-class-spell',
         grant.owner,
         grant.target,
         grant.level,
@@ -543,6 +558,6 @@ export function projectManagedClassSpellState(
     independentSpellProfiles,
     statuses,
     dailyStatuses: daily.statuses,
-    optionalFixedStatuses,
+    fixedClassSpellStatuses,
   }
 }

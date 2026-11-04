@@ -1,4 +1,4 @@
-import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
@@ -112,12 +112,14 @@ export function buildSpellProfileDisplayModels({
       ? (preparedCasterItemsByProfile?.get(profile.id) ?? [])
       : []
     const availableClassSpells = availableClassItems.map(({ spell }) => spell)
-    const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
+    const alwaysPreparedSet = new Set(
+      profile.alwaysPreparedSpells?.map((name) => getSpellReferenceKey(name)),
+    )
     const preparedSet = isTruePrepared
       ? new Set(
           (profile.preparedSpells ?? [])
-            .filter((name) => !alwaysPreparedSet.has(getSpellNameKey(name)))
-            .map(getSpellNameKey),
+            .map((name) => getSpellReferenceKey(name))
+            .filter((key) => !alwaysPreparedSet.has(key)),
         )
       : new Set(
           items

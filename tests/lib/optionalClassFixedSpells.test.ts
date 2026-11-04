@@ -143,7 +143,7 @@ describe('source-owned Primal Awareness knowledge grants', () => {
     expect(profile(project(initial()).character).spellsKnown).toEqual([])
     expect(() => adopt(initial(2))).toThrow()
     const forged = { ...initial(2), optionalClassFeatureAdoptions: [adoption] }
-    expect(project(forged).optionalFixedStatuses).toEqual([])
+    expect(project(forged).fixedClassSpellStatuses).toEqual([])
   })
 
   test('OFF, clear, source loss and exact restoration retain adoption intent without stale fixed benefits', () => {
@@ -155,7 +155,7 @@ describe('source-owned Primal Awareness knowledge grants', () => {
     ]) {
       const view = project(dormant)
       expect(profile(view.character).spellsKnown).toEqual([])
-      expect(view.optionalFixedStatuses).toEqual([])
+      expect(view.fixedClassSpellStatuses).toEqual([])
       expect(view.character.provenance.spells['speak with animals']).toBeUndefined()
       expect(profile(ensureContextFree(dormant)).spellsKnown).toEqual([])
     }
@@ -179,7 +179,9 @@ describe('source-owned Primal Awareness knowledge grants', () => {
       const context = { ...fixture.context, spellsByKey }
       const view = project(saved, context)
       expect(profile(view.character).spellsKnown).toEqual([])
-      expect(view.optionalFixedStatuses).toMatchObject([{ reference: expected[0], active: false }])
+      expect(view.fixedClassSpellStatuses).toMatchObject([
+        { reference: expected[0], active: false },
+      ])
       const lookups = { ...fixture.lookups, spellsByKey }
       const calculation = createCharacterCalculationContext(saved, lookups, fixture.lookups)
       expect(
@@ -189,7 +191,7 @@ describe('source-owned Primal Awareness knowledge grants', () => {
       ).toHaveLength(1)
       expect(createCharacterSheetViewModel(saved, fixture.lookups, lookups).spellRows).toEqual([])
     }
-    expect(project(saved).optionalFixedStatuses[0].active).toBe(true)
+    expect(project(saved).fixedClassSpellStatuses[0].active).toBe(true)
   })
 
   test.each<{ name: string; change: (document: OptionalDeclarationDocument) => void }>([
@@ -213,7 +215,7 @@ describe('source-owned Primal Awareness knowledge grants', () => {
   ])('changed $name cannot certify the feature', ({ change }) => {
     const saved = adopt(initial())
     const context = makePrimalAwarenessSpellFixtures(change).context
-    expect(project(saved, context).optionalFixedStatuses).toEqual([])
+    expect(project(saved, context).fixedClassSpellStatuses).toEqual([])
     expect(
       createOptionalClassFeatureActivity(saved, context.catalogs).states.find(
         (row) => row.root.target === adoption.target,
@@ -227,7 +229,7 @@ describe('source-owned Primal Awareness knowledge grants', () => {
       ...saved,
       classProgression: [...saved.classProgression, ...saved.classProgression],
     }
-    expect(project(duplicate).optionalFixedStatuses).toEqual([])
+    expect(project(duplicate).fixedClassSpellStatuses).toEqual([])
   })
 
   test.each([

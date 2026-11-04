@@ -115,11 +115,11 @@ export function validateSpells(
       ),
     )
   }
-  for (const grant of calculation.optionalFixedSpellStatuses) {
+  for (const grant of calculation.fixedClassSpellStatuses) {
     if (grant.active) continue
     issues.push(
       readinessIssue(
-        `spells:optional-fixed:${JSON.stringify([grant.owner, grant.target, grant.level, grant.reference])}`,
+        `spells:${grant.prepared ? 'class-fixed' : 'optional-fixed'}:${JSON.stringify([grant.owner, grant.target, grant.level, grant.reference])}`,
         'blocking',
         'sources',
         `Restore ${grant.featureName} spell: ${grant.reference}`,

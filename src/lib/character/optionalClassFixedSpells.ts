@@ -5,14 +5,15 @@ import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
-export interface OptionalClassFixedSpellGrant {
+export interface ClassFixedSpellGrant {
   owner: OptionalClassFeatureOwner
   target: string
   featureName: string
   level: number
   reference: string
 }
-export interface OptionalClassFixedSpellStatus extends OptionalClassFixedSpellGrant {
+export interface ClassFixedSpellStatus extends ClassFixedSpellGrant {
+  prepared: boolean
   active: boolean
   reason?: string
 }
@@ -28,7 +29,7 @@ export function getOptionalClassFixedSpellGrants(
   character: Character,
   catalogs?: ClassChoiceFeatureCatalogs,
   atClassLevel?: number,
-): OptionalClassFixedSpellGrant[] {
+): ClassFixedSpellGrant[] {
   const row = createOptionalClassFeatureActivity(character, catalogs).states.find(
     ({ root }) => root.target === 'class-feature|primal awareness|ranger|phb|3|tce',
   )
@@ -45,7 +46,7 @@ export function getOptionalClassFixedSpellGrants(
   )
   if (!entry) return []
   const limit = Math.min(entry.levels, atClassLevel ?? entry.levels)
-  const grants: OptionalClassFixedSpellGrant[] = []
+  const grants: ClassFixedSpellGrant[] = []
   let previous = 0
   for (const cells of tables[0].rows) {
     if (!Array.isArray(cells) || cells.length !== 2) return []

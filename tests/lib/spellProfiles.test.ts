@@ -793,15 +793,15 @@ describe('spellProfiles', () => {
     expect(details[0].preparedSpellLimit).toBe(9)
   })
 
-  test('counts unique player selections without fixed or always-prepared grants', () => {
+  test('counts player selections and excludes only exact always-prepared printings', () => {
     expect(
       getSpellProfileSelectionCounts({
         cantrips: ['Fire Bolt|PHB', 'fire bolt|XPHB', 'Light|PHB'],
         spellsKnown: ['Magic Missile|PHB', 'magic missile|XPHB', 'Detect Magic|PHB', 'Shield|PHB'],
-        preparedSpells: ['Magic Missile|PHB', 'magic missile|XPHB', 'Shield|PHB'],
+        preparedSpells: ['Magic Missile|PHB', 'magic missile|XPHB', 'Shield|PHB', 'Shield|XPHB'],
         fixedSpells: ['Light|XPHB', 'Detect Magic|XPHB', 'Shield|XPHB'],
         alwaysPreparedSpells: ['Shield|XPHB'],
       }),
-    ).toEqual({ cantrips: 1, spells: 1, prepared: 1 })
+    ).toEqual({ cantrips: 1, spells: 1, prepared: 3 })
   })
 })

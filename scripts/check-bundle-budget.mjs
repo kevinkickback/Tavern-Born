@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Champion Fighting Styles: measured 6,414,401 B renderer and 1,177,666 B initial.
+  // Revised Ranger fixed spell: measured 6,416,557 B renderer and 1,179,603 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6265 * KIB,
-  initialRendererScript: 1151 * KIB,
+  rendererCode: 6267 * KIB,
+  initialRendererScript: 1152 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
