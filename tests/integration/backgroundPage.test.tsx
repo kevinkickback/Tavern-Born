@@ -76,8 +76,12 @@ describe('BackgroundPage', () => {
     await user.click(screen.getByRole('button', { name: /Fixture Background$/ }))
 
     await waitFor(() => expect(screen.getByText('Not configured')).toBeTruthy())
-    expect(screen.getByText(/\+2\/\+1 from STR, DEX, CON/)).toBeTruthy()
-    expect(screen.getByText(/\+1\/\+1\/\+1 from STR, DEX, CON/)).toBeTruthy()
+    expect(
+      screen.getByText(
+        /Choose 2 abilities from STR, DEX, CON \(\+2 and \+1, one bonus per ability\)/,
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText(/Choose 3 abilities from STR, DEX, CON \(\+1 each\)/)).toBeTruthy()
     expect(screen.queryByTestId('feat-options-modal')).toBeNull()
     expect(screen.queryByText('Current Bonuses')).toBeNull()
     expect(screen.queryByText('Provided by background')).toBeNull()

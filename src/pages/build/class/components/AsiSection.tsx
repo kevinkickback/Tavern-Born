@@ -2,6 +2,7 @@ import { Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { formatAbilityBonus } from '@/lib/calculations/abilityScoreDisplay'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Feat } from '@/types/character'
@@ -84,10 +85,7 @@ export function BuildClassAsiSection({
               {isApplied
                 ? existingAsi
                   ? Object.entries(existingAsi.abilityChanges)
-                      .map(
-                        ([ability, bonus]) =>
-                          `+${bonus} ${ability.charAt(0).toUpperCase() + ability.slice(1)}`,
-                      )
+                      .map(([ability, bonus]) => formatAbilityBonus(ability, bonus))
                       .join(', ')
                   : featForLevel?.name
                 : mode === 'asi'
@@ -196,9 +194,7 @@ export function BuildClassAsiSection({
                   }}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
                 >
-                  <span className="font-medium">
-                    +{bonus} {ability.charAt(0).toUpperCase() + ability.slice(1)}
-                  </span>
+                  <span className="font-medium">{formatAbilityBonus(ability, bonus)}</span>
                 </button>
               ))}
             </div>

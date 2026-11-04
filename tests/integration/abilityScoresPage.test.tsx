@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -24,7 +24,7 @@ const ability = [
 const testRace: Race5e = { name: 'Test Race', source: 'TEST' }
 const testBackground: Background5e = {
   name: 'Test Background',
-  source: 'TEST',
+  source: 'XPHB',
   edition: 'one',
   ability,
   feats: [{ anyFromCategory: { category: ['O'], count: 1 } }],
@@ -47,6 +47,7 @@ describe('BuildAbilityScoresPage', () => {
       background: testBackground.name,
       backgroundSource: testBackground.source,
       backgroundAsiChoices: [],
+      allowedSources: ['XPHB'],
     })
     useCharacterStore.setState({
       characters: [character],
@@ -77,7 +78,7 @@ describe('BuildAbilityScoresPage', () => {
         trapHazards: [],
         rewards: [],
         cultsBoons: [],
-        sources: [],
+        sources: [{ abbreviation: 'XPHB', name: 'Player’s Handbook (2024)', group: 'core' }],
       } as GameData,
     })
   })
@@ -107,7 +108,16 @@ describe('BuildAbilityScoresPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Sources/ }))
 
-    expect(screen.getByText(/choose \+2\/\+1 from STR, DEX, CON/i)).toBeTruthy()
+    const sources = within(screen.getByRole('region', { name: /Sources/ }))
+    expect(
+      sources.getByText(
+        /Choose 2 abilities from STR, DEX, CON \(\+2 and \+1, one bonus per ability\)/,
+      ),
+    ).toBeTruthy()
+    await user.click(screen.getByLabelText('Background ability bonus +2'))
+    await user.click(screen.getByRole('option', { name: 'STR' }))
+    expect(screen.getByTestId('background-ability-choices')).toBeTruthy()
+    expect(await screen.findByText('Choose 1 more ability from DEX, CON (+1)')).toBeTruthy()
     expect(screen.getByText(/\(background\)/i)).toBeTruthy()
   })
 

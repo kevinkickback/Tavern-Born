@@ -31,12 +31,14 @@ import {
 } from '@/lib/5etools/parsers/featOptions'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
+import { formatAbilityChoice } from '@/lib/calculations/abilityScoreDisplay'
 import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
 import { getFeatExpertiseSkillPool } from '@/lib/character/featExpertiseSelections'
 import { canChangeSkilledSkills, getSkilledSkillPool } from '@/lib/character/featSkillSelections'
 import { assignSavedFeatSpells, createFeatSpellMatcher } from '@/lib/character/featSpellChoices'
+import { SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import { normalizeKey } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -306,17 +308,30 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
 })
 
 const AbilityScoreStep = memo(function AbilityScoreStep({
+  feat,
   step,
   value,
   onChange,
 }: {
+  feat: Feat5e
   step: Extract<FeatOptionStep, { kind: 'abilityScore' }>
   value: string
   onChange: (v: string) => void
 }) {
+  const blocks = feat.ability as Array<{ choose?: { count?: number; amount?: number } }> | undefined
+  const choice = blocks?.[0]?.choose
+  const isSingleBonus =
+    blocks?.length === 1 &&
+    choice &&
+    (choice.count ?? 1) === 1 &&
+    (choice.amount ?? SELECTED_FEAT_ABILITY_BONUS) === SELECTED_FEAT_ABILITY_BONUS
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{step.label}</p>
+      <p className="text-sm text-muted-foreground">
+        {isSingleBonus
+          ? formatAbilityChoice(1, step.from, SELECTED_FEAT_ABILITY_BONUS)
+          : step.label}
+      </p>
       <div className="flex flex-wrap gap-2">
         {step.from.map((abilityKey) => {
           const label = ABILITY_ABBREV_TO_TITLE[abilityKey] ?? abilityKey
@@ -1022,6 +1037,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
           )}
           {currentStep.kind === 'abilityScore' && (
             <AbilityScoreStep
+              feat={feat}
               step={currentStep}
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(v) => setSingle(stepIndex, v)}

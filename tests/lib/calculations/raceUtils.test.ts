@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import {
   formatCapitalized,
-  getAsiDisplay,
   getAvailableSubraces,
   getDamageTraitDisplay,
   getDarkvisionDisplay,
@@ -147,16 +147,16 @@ describe('getAsiDisplay', () => {
   test('describes the selected lineage distribution', () => {
     const race = makeRace({ lineage: true } as Partial<Race5e>)
     const result = getAsiDisplay(race)
-    expect(result).toEqual(['Choose 1: +2 (any ability)', 'Choose 1: +1 (any ability)'])
-    expect(getAsiDisplay(race, 1)).toEqual(['Choose 3: +1 (any ability)'])
+    expect(result).toEqual(['Choose 1 ability (+2)', 'Choose 1 ability (+1)'])
+    expect(getAsiDisplay(race, 1)).toEqual(['Choose 3 abilities (+1 each)'])
   })
 
   test('formats fixed ability increases', () => {
     const race = makeRace({
-      ability: [{ dex: 2 }],
+      ability: [{ dex: 2, str: -1 }],
     })
     const result = getAsiDisplay(race)
-    expect(result.some((l) => l.includes('DEX') && l.includes('+2'))).toBe(true)
+    expect(result).toEqual(['DEX +2', 'STR -1'])
   })
 
   test('summary bounds and normalizes selections across blocks exactly like bonuses', () => {
@@ -174,7 +174,12 @@ describe('getAsiDisplay', () => {
     ).toEqual(['STR +2', 'DEX +1', 'CON +1'])
     expect(getAsiDisplay(race, 0, [['strength'], ['strength', 'wisdom']])).toEqual([
       'STR +2',
-      'Choose 2 × +1 from STR/DEX/CON',
+      'Choose 2 abilities from DEX, CON (+1 each)',
+    ])
+    expect(getAsiDisplay(race, 0, [['strength'], ['dexterity']])).toEqual([
+      'STR +2',
+      'DEX +1',
+      'Choose 1 more ability from CON (+1)',
     ])
   })
 })

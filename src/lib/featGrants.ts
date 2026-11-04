@@ -1,6 +1,8 @@
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Feat5e } from '@/types/5etools'
 
+export const SELECTED_FEAT_ABILITY_BONUS = 1
+
 export interface ResolvedFixedFeatGrant {
   feat: Feat5e | undefined
   resolution: 'resolved' | 'missing'

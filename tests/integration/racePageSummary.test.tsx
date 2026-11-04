@@ -282,7 +282,7 @@ describe('Race page summary', () => {
       </TooltipProvider>,
     )
 
-    const abilityValue = screen.getByText('Choose 1 × +2 from STR/DEX')
+    const abilityValue = screen.getByText('Choose 1 ability from STR, DEX (+2)')
     const abilityCell = abilityValue.closest('div.flex.min-h-16')
     expect(abilityCell?.textContent).toContain('Choose bonuses')
     expect(screen.getByRole('link', { name: 'Choose bonuses' }).className).toContain(

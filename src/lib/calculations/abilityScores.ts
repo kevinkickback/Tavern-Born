@@ -275,14 +275,6 @@ export interface BackgroundAbilityData {
   blocks: BackgroundAbilityBlock[]
 }
 
-export function formatBackgroundAbilityPatterns(data: BackgroundAbilityData): string[] {
-  return data.blocks.map((block) => {
-    const weights = block.weights.map((weight) => `+${weight}`).join('/')
-    const abilities = block.from.map((ability) => ABILITY_ABBREVIATIONS[ability]).join(', ')
-    return `${weights} from ${abilities}`
-  })
-}
-
 export function isBackgroundAbilitySelectionComplete(
   data: BackgroundAbilityData,
   blockIndex: number,

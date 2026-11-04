@@ -42,8 +42,37 @@ const magicInitiate = {
   ],
 } as Feat5e
 
-describe('FeatOptionsModal fixed spellcasting class', () => {
+describe('FeatOptionsModal', () => {
   afterEach(cleanup)
+
+  test('describes and applies the existing single ability choice', () => {
+    const onFinish = vi.fn()
+    const feat: Feat5e = {
+      name: 'Fixture Feat',
+      source: 'PHB',
+      ability: [{ choose: { from: ['str', 'dex'], count: 1 } }],
+    }
+    render(<FeatOptionsModal open onOpenChange={vi.fn()} feat={feat} onFinish={onFinish} />)
+
+    expect(screen.getByText('Choose 1 ability from STR, DEX (+1)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Dexterity' }))
+    fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
+    expect(onFinish).toHaveBeenCalledWith({ abilityScore: 'dex' })
+  })
+
+  test('keeps a generic instruction for multi-block feat choices', () => {
+    const feat: Feat5e = {
+      name: 'Ability Score Improvement',
+      source: 'XPHB',
+      ability: [
+        { choose: { from: ['str', 'dex'], count: 1, amount: 2 } },
+        { choose: { from: ['str', 'dex'], count: 2, amount: 1 } },
+      ],
+    }
+    render(<FeatOptionsModal open onOpenChange={vi.fn()} feat={feat} onFinish={vi.fn()} />)
+
+    expect(screen.getByText('Choose an ability score to increase')).toBeTruthy()
+  })
 
   test('skips a fixed class step and preserves the class when finishing', () => {
     const onFinish = vi.fn()

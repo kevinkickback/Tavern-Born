@@ -40,17 +40,14 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
-import {
-  ABILITY_ABBREVIATIONS,
-  hasUnresolvedRaceAbilityChoices,
-} from '@/lib/calculations/abilityScores'
+import { formatAbilityBonus, getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
+import { hasUnresolvedRaceAbilityChoices } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
-  getAsiDisplay,
   getAvailableSubraces,
   getDamageTraitDisplay,
   getDarkvisionDisplay,
@@ -67,7 +64,6 @@ import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
-import type { AbilityName } from '@/types/character'
 
 type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
 
@@ -145,7 +141,7 @@ export function BuildRacePage() {
         calculationContext?.abilityScores.normalizedRaceSelection.subrace,
       )
     : Object.entries(calculationContext?.abilityScores.racialBonuses ?? {}).map(
-        ([ability, value]) => `${ABILITY_ABBREVIATIONS[ability as AbilityName]} +${value}`,
+        ([ability, value]) => formatAbilityBonus(ability, value),
       )
 
   // Racial feat choices from provenance

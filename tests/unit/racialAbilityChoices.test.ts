@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { buildRacialBonuses, getRaceAbilityData } from '@/lib/calculations/abilityScores'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
-import { getAsiDisplay } from '@/lib/calculations/raceUtils'
 import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import {
@@ -136,6 +136,10 @@ test('Half-Elf keeps fixed Charisma alongside its two chosen abilities', () => {
     'STR +1',
     'DEX +1',
   ])
+  const partial = selectRace(halfElf, 0, [['strength']])
+  expect(getAbilityBonusRows(partial.provenance!).filter((row) => row.isPending)).toMatchObject([
+    { itemName: 'Choose 1 more ability from DEX, CON, INT, WIS (+1)' },
+  ])
 })
 
 test.each([
@@ -149,7 +153,7 @@ test.each([
     )
     .toEqual([{ count: 1, amount: 2 }])
   expect.soft(calculation.abilityScores.racialBonuses).toEqual({ wisdom: 2 })
-  expect.soft(getAsiDisplay(customLineage, mode)).toEqual(['Choose 1: +2 (any ability)'])
+  expect.soft(getAsiDisplay(customLineage, mode)).toEqual(['Choose 1 ability (+2)'])
   expect
     .soft(getAbilityBonusRows(character.provenance!).map((row) => row.itemName))
     .toEqual(['WIS +2'])

@@ -4,6 +4,8 @@ import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
 import { getBackgroundAbilitySummary } from '@/pages/build/background/model/data'
 
 describe('getBackgroundAbilitySummary', () => {
+  const options =
+    'Choose 2 abilities from STR, DEX, CON (+2 and +1, one bonus per ability) or Choose 3 abilities from STR, DEX, CON (+1 each)'
   const abilityData: BackgroundAbilityData = {
     blocks: [
       {
@@ -19,8 +21,8 @@ describe('getBackgroundAbilitySummary', () => {
 
   test('describes every parsed assignment pattern and the current selection', () => {
     expect(getBackgroundAbilitySummary(abilityData, 0, ['strength', 'dexterity'])).toEqual({
-      current: '+2 STR · +1 DEX',
-      options: '+2/+1 from STR, DEX, CON or +1/+1/+1 from STR, DEX, CON',
+      current: 'STR +2 · DEX +1',
+      options,
     })
   })
 
@@ -35,12 +37,15 @@ describe('getBackgroundAbilitySummary', () => {
   test('builds a pending source row from parsed patterns until the assignment is complete', () => {
     expect(getPendingBackgroundAbilityRows(abilityData, 0, [])).toEqual([
       {
-        itemName: 'choose +2/+1 from STR, DEX, CON or +1/+1/+1 from STR, DEX, CON',
+        itemName: options,
         category: 'Ability Bonuses',
         attribution: 'background',
         sourceTypes: ['background'],
         isPending: true,
       },
+    ])
+    expect(getPendingBackgroundAbilityRows(abilityData, 0, ['strength', ''])).toMatchObject([
+      { itemName: 'Choose 1 more ability from DEX, CON (+1)', isPending: true },
     ])
     expect(getPendingBackgroundAbilityRows(abilityData, 0, ['strength', 'dexterity'])).toEqual([])
   })

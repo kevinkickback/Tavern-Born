@@ -1,10 +1,4 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
-import {
-  ABILITY_ABBREVIATIONS,
-  ABILITY_NAMES,
-  getRaceAbilityChoiceSelections,
-  getRaceAbilityData,
-} from '@/lib/calculations/abilityScores'
 import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import { getRaceDefenseField, RACE_DEFENSE_FIELDS } from '@/lib/calculations/raceDefenseFields'
 import type { Race5e } from '@/types/5etools'
@@ -140,47 +134,6 @@ export function getSkillProfDisplay(race: Race5e | undefined): string[] {
     }
   }
   return skills
-}
-
-/**
- * Format ability score increases as display strings.
- * When `raceAsiChoices` is provided, shows selected choices and remaining count.
- * Uses the selected parent/child rules and the chosen flexible distribution.
- */
-export function getAsiDisplay(
-  race: Race5e | undefined,
-  raceAsiBlockIndex: 0 | 1 = 0,
-  raceAsiChoices?: string[][],
-  subrace?: Race5e,
-): string[] {
-  if (!race) return []
-  const { fixed, choices } = getRaceAbilityData(race, subrace, raceAsiBlockIndex)
-  const selectedByBlock = getRaceAbilityChoiceSelections({ choices }, raceAsiChoices ?? [])
-  const lines: string[] = []
-  for (const fb of fixed) {
-    lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`)
-  }
-  for (const [blockIdx, block] of choices.entries()) {
-    const selections = selectedByBlock[blockIdx]
-    if (selections.length > 0) {
-      for (const ab of selections) {
-        lines.push(`${ABILITY_ABBREVIATIONS[ab]} +${block.amount}`)
-      }
-      const remaining = block.count - selections.length
-      if (remaining > 0) lines.push(`Choose ${remaining} more +${block.amount}`)
-    } else {
-      const isAnyAbility = block.from.length === ABILITY_NAMES.length
-      if (isAnyAbility) {
-        lines.push(`Choose ${block.count}: +${block.amount} (any ability)`)
-      } else {
-        const fromStr = block.from
-          .map((a) => ABILITY_ABBREVIATIONS[a] ?? a.toUpperCase().slice(0, 3))
-          .join('/')
-        lines.push(`Choose ${block.count} × +${block.amount} from ${fromStr}`)
-      }
-    }
-  }
-  return lines
 }
 
 /**

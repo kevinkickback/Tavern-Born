@@ -23,6 +23,11 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
+  formatAbilityBonus,
+  formatAbilityChoice,
+  formatRacialAbilityPatterns,
+} from '@/lib/calculations/abilityScoreDisplay'
+import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
   hasFlexibleRaceOriginAsi,
@@ -392,7 +397,9 @@ export function BuildAbilityScoresPage() {
                               Racial bonuses
                             </h3>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              Assign the ability increases granted by your race.
+                              {isLineageRaceAsiFallback
+                                ? formatRacialAbilityPatterns(raceAsiData)
+                                : 'Assign the ability increases granted by your race.'}
                             </p>
                           </div>
                           {isLineageRaceAsiFallback && (
@@ -436,11 +443,8 @@ export function BuildAbilityScoresPage() {
                               key={`${fb.ability}|${fb.value}`}
                               className="flex min-h-9 items-center gap-2 rounded-md border border-border bg-background/35 px-3"
                             >
-                              <span className="text-xs font-semibold text-muted-foreground">
-                                +{fb.value}
-                              </span>
                               <span className="text-xs font-semibold">
-                                {ABILITY_ABBREVIATIONS[fb.ability]}
+                                {formatAbilityBonus(fb.ability, fb.value)}
                               </span>
                             </div>
                           ))}
@@ -514,8 +518,13 @@ export function BuildAbilityScoresPage() {
                               Background bonuses
                             </h3>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              Assign the origin ability increases supplied by the selected
-                              background.
+                              {currentBackgroundBlock
+                                ? formatAbilityChoice(
+                                    currentBackgroundBlock.weights.length,
+                                    currentBackgroundBlock.from,
+                                    currentBackgroundBlock.weights,
+                                  )
+                                : 'Assign the origin ability increases supplied by the selected background.'}
                             </p>
                           </div>
                           {bgAsiData.blocks.length > 1 && (
