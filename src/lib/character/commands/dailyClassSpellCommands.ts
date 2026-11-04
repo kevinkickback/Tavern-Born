@@ -1,12 +1,15 @@
-import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
 import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import {
+  getClassSpellProfileMetadata,
+  toClassProfileId,
+} from '@/lib/calculations/spellProfiles.constants'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
-import { getDailyClassSpellAccess, preserveDailyClassSpellIntent } from '../dailyClassSpells'
+import { getDailyClassSpellAccess, getDailyClassSpellEntry } from '../dailyClassSpells'
 import { isPlainSpellIdentityPart } from '../managedClassSpellIdentity'
 import { type ManagedClassSpellContext, projectManagedClassSpellState } from '../managedClassSpells'
 import type { CharacterCommandResult } from './commandResult'
@@ -24,34 +27,44 @@ export function setDailyClassSpellPreparedCommand(
   if (parts.length !== 2 || !parts.every(isPlainSpellIdentityPart))
     throw new RangeError('Choose an exact spell printing.')
   const unchanged = { characterPatch: {}, provenanceUpdate: ledger }
-  const profile = character.spells.spellProfiles.find((row) => row.id === profileId)
-  if (!profile || profile.type !== 'class')
+  const profiles = character.spells.spellProfiles
+  const matchingProfiles = profiles.filter((row) => row.id === profileId)
+  const [saved] = matchingProfiles
+  const owner = character.classProgression.find(
+    (entry) => toClassProfileId(entry.name, entry.source) === profileId,
+  )
+  if (!owner || matchingProfiles.length > 1 || (saved && saved.type !== 'class'))
+    throw new RangeError('Choose a daily class spell profile.')
+  const profile = saved ?? {
+    ...getClassSpellProfileMetadata(owner),
+    cantrips: [],
+    spellsKnown: [],
+    preparedSpells: [],
+  }
+  if (!getDailyClassSpellEntry(character, profile))
+    throw new RangeError('Learned spell preparation must address its class spell choice.')
+  if (
+    profiles.some(
+      (row) =>
+        row.id !== profileId &&
+        row.type === 'class' &&
+        norm(row.className) === norm(owner.name) &&
+        norm(row.classSource) === norm(owner.source),
+    )
+  )
     throw new RangeError('Choose a daily class spell profile.')
   const key = getSpellReferenceKey(reference)
   const selected = profile.preparedSpells.some((row) => getSpellReferenceKey(row) === key)
-  // The finite daily policy still applies when its current source is unavailable.
-  const policyEntry = character.classProgression.find(
-    (entry) =>
-      entry.name.trim().toLowerCase() === profile.className?.trim().toLowerCase() &&
-      entry.source.trim().toLowerCase() === profile.classSource?.trim().toLowerCase(),
-  )
-  if (
-    !policyEntry ||
-    profileId !== toClassProfileId(policyEntry.name, policyEntry.source) ||
-    getClassSpellProfilePolicy(policyEntry).mode !== 'daily'
-  )
-    throw new RangeError('Learned spell preparation must address its class spell choice.')
   if (selected === prepared) return unchanged
-  const spellProfiles = character.spells.spellProfiles.map((row) =>
-    row.id === profileId
-      ? {
-          ...row,
-          preparedSpells: prepared
-            ? [...row.preparedSpells, formatSpellReference(reference)]
-            : row.preparedSpells.filter((target) => getSpellReferenceKey(target) !== key),
-        }
-      : row,
-  )
+  const updated = {
+    ...profile,
+    preparedSpells: prepared
+      ? [...profile.preparedSpells, formatSpellReference(reference)]
+      : profile.preparedSpells.filter((target) => getSpellReferenceKey(target) !== key),
+  }
+  const spellProfiles = saved
+    ? profiles.map((row) => (row === saved ? updated : row))
+    : [...profiles, updated]
   const proposed = {
     ...character,
     provenance: ledger,
@@ -90,7 +103,7 @@ export function setDailyClassSpellPreparedCommand(
   if (capacity === null || count > capacity)
     throw new RangeError('The class preparation limit has been reached.')
   return {
-    characterPatch: { spells: preserveDailyClassSpellIntent(proposed, projected.character).spells },
-    provenanceUpdate: projected.character.provenance,
+    characterPatch: { spells: proposed.spells },
+    provenanceUpdate: ledger,
   }
 }

@@ -8,10 +8,9 @@ import type { Character, SpellProfile } from '@/types/character'
 import { deriveNativeRacialSpellProfiles } from './nativeRacialSpells'
 import { getSpellNameKey, getSpellReferenceKey } from './spellIdentity'
 import {
-  buildClassProfileLabel,
+  getClassSpellProfileMetadata,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
-  toClassProfileId,
 } from './spellProfiles.constants'
 
 function cloneProfile(profile: SpellProfile): SpellProfile {
@@ -112,8 +111,8 @@ export function ensureSpellProfiles(
   const spellKey = getSpellReferenceKey
 
   for (const entry of classEntries) {
-    const id = toClassProfileId(entry.name, entry.source)
-    const existingProfile = byId.get(id)
+    const metadata = getClassSpellProfileMetadata(entry)
+    const existingProfile = byId.get(metadata.id)
     const classData = findClassReference(entry, classesById?.values())
     const subclassSpells = getEarnedSubclassSpellGrants(classData, entry)
     if (
@@ -154,11 +153,7 @@ export function ensureSpellProfiles(
     const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map((name) => spellKey(name)))
 
     next.push({
-      id,
-      type: 'class',
-      label: buildClassProfileLabel(entry),
-      className: entry.name,
-      classSource: entry.source,
+      ...metadata,
       cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips, spellKey),
       spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells, spellKey),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(
@@ -170,7 +165,6 @@ export function ensureSpellProfiles(
           : undefined,
       alwaysPreparedSpells:
         alwaysPreparedSubclassSpells.length > 0 ? alwaysPreparedSubclassSpells : undefined,
-      alwaysPrepared: false,
     })
   }
 

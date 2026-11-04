@@ -58,6 +58,110 @@ const prepared = (character: Character) =>
   character.spells.spellProfiles.find((row) => row.id === profileId(character))!.preparedSpells
 
 describe('current daily class preparation and saved intent', () => {
+  test.each([
+    ['Ranger', 'XPHB', 1, 'Goodberry|XPHB'],
+    ['Paladin', 'XPHB', 1, 'Bless|XPHB'],
+    ['Paladin', 'PHB', 2, 'Bless|PHB'],
+    ['Cleric', 'PHB', 1, 'Bless|PHB'],
+  ] as const)('%s %s creates only its own profile on the first legal preparation', (name, source, levels, reference) => {
+    const actor = makeCharacterFixture({
+      originSystem: source === 'XPHB' ? '2024' : '2014',
+      classProgression: [
+        { name, source, levels },
+        { name: 'Druid', source, levels: 1 },
+      ],
+    })
+    const id = toClassProfileId(name, source)
+    const prepareFirst = (character: Character, desired: boolean) =>
+      setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        id,
+        reference,
+        desired,
+        desired ? { ...context, abilityScores: character.abilityScores } : undefined,
+      )
+    const before = JSON.stringify(actor)
+    expect(prepareFirst(actor, false).characterPatch).toEqual({})
+    const result = prepareFirst(actor, true)
+    expect(result.provenanceUpdate).toBe(actor.provenance)
+    const saved = apply(actor, result)
+    expect(saved.spells.spellProfiles.filter((row) => row.id !== id)).toEqual(
+      actor.spells.spellProfiles,
+    )
+    expect(saved.spells.spellProfiles.find((row) => row.id === id)).toMatchObject({
+      type: 'class',
+      className: name,
+      classSource: source,
+      preparedSpells: [reference],
+    })
+    expect(
+      createCharacterCalculationContext(saved, lookups).dailyClassSpellStatuses,
+    ).toContainEqual({ profileId: id, reference, active: true })
+    expect(prepareFirst(saved, true).characterPatch).toEqual({})
+    const cleared = apply(saved, prepareFirst(saved, false))
+    expect(cleared.spells.spellProfiles.find((row) => row.id === id)?.preparedSpells).toEqual([])
+    expect(JSON.stringify(actor)).toBe(before)
+  })
+
+  test('a first preparation still requires unique earned ownership and live spell authority', () => {
+    const entry = { name: 'Ranger', source: 'XPHB', levels: 1 }
+    const actor = makeCharacterFixture({ originSystem: '2024', classProgression: [entry] })
+    const id = toClassProfileId(entry.name, entry.source)
+    const current = { ...context, abilityScores: actor.abilityScores }
+    const choose = (character: Character, reference = 'Goodberry|XPHB', rules = current) =>
+      setDailyClassSpellPreparedCommand(character, character.provenance, id, reference, true, rules)
+    expect(() => choose(actor, 'Goodberry|PHB')).toThrow(RangeError)
+    expect(() => choose(actor, 'Goodberry|XPHB', { ...current, spellsByKey: {} })).toThrow(
+      RangeError,
+    )
+    expect(() =>
+      choose(actor, 'Goodberry|XPHB', {
+        ...current,
+        catalogs: { ...current.catalogs, classCastingSources: [] },
+      }),
+    ).toThrow(RangeError)
+    expect(() =>
+      choose({ ...actor, classProgression: [entry, { ...entry, name: ' ranger ' }] }),
+    ).toThrow(RangeError)
+    const saved = apply(actor, choose(actor))
+    const profile = saved.spells.spellProfiles.find((row) => row.id === id)!
+    for (const collision of [
+      [{ ...profile, type: 'special' as const }],
+      [{ ...profile, classSource: 'PHB' }],
+      [{ ...profile, className: ' ranger ' }],
+      [profile, profile],
+      [{ ...profile, id: 'ambiguous-ranger-profile' }],
+    ]) {
+      expect(() =>
+        choose({
+          ...actor,
+          spells: { ...actor.spells, spellProfiles: [...actor.spells.spellProfiles, ...collision] },
+        }),
+      ).toThrow(RangeError)
+    }
+    expect(actor.spells.spellProfiles.some((row) => row.id === id)).toBe(false)
+  })
+
+  test.each([
+    ['Paladin', 'PHB', 'Bless|PHB'],
+    ['Wizard', 'PHB', 'Shield|PHB'],
+    ['Ranger', 'PHB', 'Goodberry|PHB'],
+    ['Warlock', 'XPHB', 'Hex|XPHB'],
+  ] as const)('first daily preparation does not create an unearned or non-daily %s %s profile', (name, source, reference) => {
+    const actor = makeCharacterFixture({ classProgression: [{ name, source, levels: 1 }] })
+    expect(() =>
+      setDailyClassSpellPreparedCommand(
+        actor,
+        actor.provenance,
+        toClassProfileId(name, source),
+        reference,
+        true,
+        { ...context, abilityScores: actor.abilityScores },
+      ),
+    ).toThrow(RangeError)
+  })
+
   test('a supported newly parsed spell works without a name branch and survives removal/restoration', () => {
     const original = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
       .spell[0]

@@ -7,8 +7,15 @@ export function toClassProfileId(name: string, source?: string): string {
   return `class:${name}|${source ?? ''}`
 }
 
-export function buildClassProfileLabel(entry: CharacterClassEntry): string {
-  return entry.levels > 1 ? `${entry.name} (Lv ${entry.levels})` : `${entry.name} (Lv 1)`
+export function getClassSpellProfileMetadata(entry: CharacterClassEntry) {
+  return {
+    id: toClassProfileId(entry.name, entry.source),
+    type: 'class' as const,
+    label: entry.levels > 1 ? `${entry.name} (Lv ${entry.levels})` : `${entry.name} (Lv 1)`,
+    className: entry.name,
+    classSource: entry.source,
+    alwaysPrepared: false,
+  }
 }
 
 export function buildClassSpellLevelKey(

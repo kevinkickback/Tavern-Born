@@ -161,8 +161,10 @@ preserving recoverable intent. The finite casting registry still requires review
 a new casting producer or changed source semantics; setup capacity does not authorize rest replacement
 quantity or create past gameplay events.
 
-New preparation uses the latest current effective ability and preparation limit. A desired no-op
-writes nothing; exact withdrawal remains source-free and preserves independent ownership. Source loss,
+New preparation uses the latest current effective ability and preparation limit. The first
+validated preparation creates the missing profile for its exact earned class and saves only the
+requested intent. A desired no-op writes nothing. Exact withdrawal remains source-free and
+preserves independent ownership. Source loss,
 Bonus/native edits, numeric edits and synchronization retain raw daily intent. Reduced capacity flags
 an over-limit list without silently deleting or reordering it. Daily intent has no numeric revision,
 ordinal or inferred acquisition history. Full daily selection history, rest/acquisition events,
