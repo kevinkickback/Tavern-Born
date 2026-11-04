@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised Ranger fixed spell: measured 6,416,557 B renderer and 1,179,603 B initial.
+  // Revised Hunter setup: measured 6,423,437 B renderer and 1,186,212 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6267 * KIB,
-  initialRendererScript: 1152 * KIB,
+  rendererCode: 6273 * KIB,
+  initialRendererScript: 1159 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

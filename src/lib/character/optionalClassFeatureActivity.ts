@@ -17,6 +17,12 @@ import {
 import { OPTIONAL_CLASS_FEATURE_RULES } from '@/lib/5etools/optionalClassFeatureRules'
 import { getCurrentOptionalClassDeclaration } from '@/lib/5etools/optionalClassFeatureSource'
 import { getCurrentOptionalClassSection } from '@/lib/5etools/optionalClassSectionSource'
+import { resolveRevisedHunterOption } from '@/lib/5etools/revisedHunterChoices'
+import {
+  getRevisedHunterRule,
+  isValidRevisedHunterSelection,
+  revisedHunterRules,
+} from '@/lib/5etools/revisedHunterIdentity'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import type { Subclass5e } from '@/types/5etools'
 import type {
@@ -52,7 +58,7 @@ type Actor = Pick<
   Character,
   'classProgression' | 'variantRules' | 'optionalClassFeatureAdoptions'
 > &
-  Partial<Pick<Character, 'allowedSources' | 'originSystem'>>
+  Partial<Pick<Character, 'allowedSources' | 'originSystem' | 'classChoiceSelections'>>
 const norm = (value: string | undefined) => value?.trim().toLowerCase() ?? ''
 const equal = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 const knownOptional = new Set([
@@ -191,6 +197,7 @@ function buildOptionalClassFeatureActivity(
       : !facets.length || facets.some((value) => !suppressed(owner, target, value))
   }
   const choice = (row: NormalizedCharacterChoice): boolean => {
+    if (getRevisedHunterRule(row.id) && allowed && !allowed.has('xphb')) return false
     const owner = optionalClassOwner(row.owner)
     const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (proficiency) return declared(owner, proficiency.target, row.level)
@@ -229,8 +236,33 @@ function buildOptionalClassFeatureActivity(
     if (target) return declared(owner, target, row.level ?? 1, undefined, !!row.featureVariant)
     return earned(owner, row.level ?? 1) && !row.featureVariant
   }
-  const entries = (owner: OptionalClassFeatureOwner, target: string, values: unknown[]) =>
-    values.filter(
+  const entries = (owner: OptionalClassFeatureOwner, target: string, values: unknown[]) => {
+    const hunter = revisedHunterRules.find((row) => row.target === target)
+    if (hunter && equal(owner, ['subclass', 'ranger', 'xphb', 'hunter', 'xphb'])) {
+      const selections = character.classChoiceSelections?.filter(
+        (row) => row.choiceId === hunter.id,
+      )
+      const saved = selections?.length === 1 ? selections[0] : undefined
+      const selected =
+        saved &&
+        !saved.inactive &&
+        isValidRevisedHunterSelection(saved) &&
+        earned(owner, hunter.level) &&
+        (!allowed || allowed.has('xphb')) &&
+        catalogs &&
+        resolveRevisedHunterOption(
+          saved.selected[0],
+          scopeClassChoiceFeatureCatalogs(
+            catalogs,
+            getFeatureOwnerKey(owner[1], owner[2], owner[3], owner[4]),
+          ),
+        )
+      const intro = typeof values[0] === 'string' ? [values[0]] : []
+      return selected
+        ? [...intro, { type: 'entries', name: selected.name, entries: selected.entries }]
+        : intro
+    }
+    return values.filter(
       (_, index) =>
         !reserved.some(
           ({ root }) =>
@@ -238,6 +270,7 @@ function buildOptionalClassFeatureActivity(
             root.replaces.some((row) => row.target === target && row.entryIndexes?.includes(index)),
         ),
     )
+  }
   const dormant = (owner: OptionalClassFeatureOwner, target: string) => {
     if (!knownOptional.has(target)) return false
     const state = states.find(

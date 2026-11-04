@@ -36,6 +36,15 @@ saved details, legacy feature effects and revised feat effects use the effective
 Revised configured feat options, including spells, follow their exact slot owner. Mixed-edition
 style equivalence and styles from other classes use their existing rules.
 
+### Revised Hunter choices
+
+The XPHB Hunter chooses one initial option for Hunter's Prey at level 3 and one for
+Defensive Tactics at level 7. The shared picker reads the named alternatives from
+each current source group. The saved reference keeps the exact parent feature,
+earned gain and selected option. Current character details and PDF use that choice.
+Source loss keeps the selection available for recovery. Losing the gain removes it.
+Rest-triggered replacements remain a gameplay rule outside initial setup.
+
 ### Weapon Mastery
 
 The current class, its unambiguous declaring feature, and the filtered base-weapon catalog govern

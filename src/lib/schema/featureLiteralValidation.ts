@@ -4,6 +4,10 @@ import {
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
+import {
+  getRevisedHunterRule,
+  isValidRevisedHunterSelection,
+} from '@/lib/5etools/revisedHunterIdentity'
 import type { CharacterClassChoiceSelection } from '@/types/character'
 import { getInvalidFavoredEnemySelectionIds } from './favoredEnemyValidation'
 import { getInvalidNaturalExplorerSelectionIds } from './naturalExplorerValidation'
@@ -18,7 +22,13 @@ export function getInvalidFeatureLiteralSelectionIds(
     ),
     ...getInvalidFavoredEnemySelectionIds(rows),
   ])
-  for (const s of rows)
+  const seenHunter = new Set<string>()
+  for (const s of rows) {
+    if (getRevisedHunterRule(s.choiceId)) {
+      if (seenHunter.has(s.choiceId) || !isValidRevisedHunterSelection(s)) invalid.add(s.choiceId)
+      seenHunter.add(s.choiceId)
+      continue
+    }
     if (
       (isFeatureLiteralChoiceId(s.choiceId) ||
         s.selected.some((o) => decodeFeatureOptionReference(o)?.format === 'source-group')) &&
@@ -26,5 +36,6 @@ export function getInvalidFeatureLiteralSelectionIds(
       !decodeFavoredEnemyChoiceId(s.choiceId)
     )
       invalid.add(s.choiceId)
+  }
   return invalid
 }
