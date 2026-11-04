@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Classic companion scaling: measured 6,430,039 B renderer and 1,191,186 B initial.
+  // Classic companion scaling: measured 6,430,282 B renderer and 1,191,186 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6280 * KIB,
   initialRendererScript: 1164 * KIB,

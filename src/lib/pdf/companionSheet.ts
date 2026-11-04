@@ -119,11 +119,13 @@ export function buildCompanionSheetData(
       : typeof value === 'string'
         ? value
         : ''
-  const addsProficiencyToChecksAndSaves = (creature?.trait ?? []).some((trait) =>
-    /add your proficiency bonus to any ability check or saving throw/iu.test(
-      renderCompanionEntries(trait.entries),
-    ),
-  )
+  const addsProficiencyToChecksAndSaves =
+    !companion.classicRangerLevel &&
+    (creature?.trait ?? []).some((trait) =>
+      /add your proficiency bonus to any ability check or saving throw/iu.test(
+        renderCompanionEntries(trait.entries),
+      ),
+    )
   const checkBonus = (value: string) =>
     addsProficiencyToChecksAndSaves && /^[+-]?\d+$/u.test(value)
       ? bonus(Number(value) + vm.proficiencyBonus)
@@ -166,9 +168,15 @@ export function buildCompanionSheetData(
     const raw = JSON.stringify(action.entries ?? [])
     const hit = /\{@hit ([+-]?\d+)\}/u.exec(raw)?.[1]
     const fixed = companion.classicRangerLevel ? /\{@h\}\s*(\d+) ([a-z]+) damage/iu.exec(raw) : null
+    // A separate save effect belongs in the full description, outside the fixed hit.
+    const rolled = fixed
+      ? /^\s+plus\s+(?:\d+\s+\()?\{@damage [^}]+\}\)?(?: [a-z]+ damage)?/iu.exec(
+          raw.slice(fixed.index + fixed[0].length),
+        )?.[0]
+      : raw
     const damage =
       /\{@damage ([^}|]+)[^}]*\}\)?(?: plus your (strength|dexterity|constitution|intelligence|wisdom|charisma) modifier)?(?: ([a-z]+) damage)?/iu.exec(
-        raw,
+        rolled ?? '',
       )
     const damageParts = damage
       ? [
@@ -179,6 +187,13 @@ export function buildCompanionSheetData(
           damage[3],
         ]
       : []
+    // Mixed hits use short type labels in the narrow cell. The description retains full labels.
+    const damageSummary =
+      fixed && damage
+        ? `${fixed[1]} ${fixed[2].slice(0, 4)} + ${damage[1].replace(/\s+/gu, '')} ${damage[3]?.slice(0, 4) ?? ''}`.trimEnd()
+        : fixed
+          ? `${fixed[1]} ${fixed[2]}`
+          : damageParts.filter(Boolean).join(' ')
     return {
       name: action.name ?? '',
       bonus: hit
@@ -186,7 +201,7 @@ export function buildCompanionSheetData(
         : /\{@hitYourSpellAttack\b/u.test(raw)
           ? bonus(spellAttackBonus)
           : '',
-      damage: fixed ? `${fixed[1]} ${fixed[2]}` : damageParts.filter(Boolean).join(' '),
+      damage: damageSummary,
     }
   })
   const sections = stat?.sections ?? []

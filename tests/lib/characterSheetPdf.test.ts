@@ -558,12 +558,13 @@ describe('characterSheetPdf', () => {
     expect(highStats.skills.find((skill) => skill.name === 'perception')?.modifier).toBe('+9')
     expect(highStats.skills.find((skill) => skill.name === 'stealth')?.modifier).toBe('+10')
     expect(highStats.skills.find((skill) => skill.name === 'athletics')?.modifier).toBe('+1')
-    const printedBase = buildCompanionSheetData(low, {
+    const edgeCompanion = {
       ...low.companions[0],
       creature: {
         ...wolf,
         hp: { average: 13 },
         save: { dex: '+4' },
+        trait: [{ entries: ['Add your proficiency bonus to any ability check or saving throw.'] }],
         action: [
           { name: 'Scratch', entries: ['{@atk mw} {@hit 0} to hit. {@h}1 slashing damage.'] },
           {
@@ -572,17 +573,45 @@ describe('characterSheetPdf', () => {
               '{@atkr m} {@hit 4}, reach 5 ft. {@h}4 ({@damage 1d4 + 2}) piercing damage plus 3 ({@damage 1d6}) poison damage. The target must make a {@dc 11} Constitution saving throw or take 7 ({@damage 2d6}) acid damage.',
             ],
           },
+          {
+            name: 'Flying Snake bite',
+            entries: [
+              '{@atk mw} {@hit 6} to hit. {@h}1 piercing damage plus 7 ({@damage 3d4}) poison damage.',
+            ],
+          },
+          {
+            name: 'Venomous bite',
+            entries: [
+              '{@atk mw} {@hit 0} to hit. {@h}1 piercing damage. The target must make a {@dc 11} Constitution saving throw or take 3 ({@damage 1d6}) poison damage.',
+            ],
+          },
         ],
       },
-    })
+    }
+    const printedBase = buildCompanionSheetData(low, edgeCompanion)
     expect(printedBase.maxHp).toBe('13')
     expect(printedBase.abilities.find((ability) => ability.key === 'dex')?.save).toBe('+6')
+    expect(printedBase.skills.find((skill) => skill.name === 'perception')?.modifier).toBe('+5')
+    expect(printedBase.passive).toBe('15')
     expect(printedBase.actions[0]).toEqual({ name: 'Scratch', bonus: '+2', damage: '1 slashing' })
     expect(printedBase.attacks).toMatch(
       /6 \(\s*1d4 \+ 4\s*\) piercing damage plus 3 \(\s*1d6\s*\) poison damage/,
     )
     expect(printedBase.attacks).toContain('DC 11')
     expect(printedBase.attacks).toMatch(/9 \(\s*2d6 \+ 2\s*\) acid damage/)
+    expect(printedBase.actions[2]).toEqual({
+      name: 'Flying Snake bite',
+      bonus: '+8',
+      damage: '1 pier + 3d4+2 pois',
+    })
+    expect(printedBase.actions[3].damage).toBe('1 piercing')
+    expect(printedBase.attacks).toMatch(/5 \(\s*1d6 \+ 2\s*\) poison damage/)
+    const compact = (
+      await PDFDocument.load(
+        await generateTestCharacterSheet({ ...low, companions: [edgeCompanion] }, '2014-official'),
+      )
+    ).getForm()
+    expect(compact.getTextField('Companion1__Attacks.0.2.2').getText()).toBe('1 pier + 3d4+2 pois')
     const official = (
       await PDFDocument.load(await generateTestCharacterSheet(high, '2014-official'))
     ).getForm()
