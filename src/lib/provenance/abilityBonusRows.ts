@@ -9,11 +9,20 @@ import {
   isBackgroundAbilitySelectionComplete,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
+import type { Character } from '@/types/character'
+import { isRaceAbilityChoiceRecord } from './raceAbilityChoiceIdentity'
+import { getSelectedRaceAbilityChoices } from './raceOwnership'
 import { formatSourceType } from './summaries'
-import type { ProvenanceLedger, SourceRow, SourceTag } from './types'
+import type { ChoiceRecord, ProvenanceLedger, SourceRow, SourceTag } from './types'
 
 /** Derive ability bonus source rows for display. */
-export function getAbilityBonusRows(ledger: ProvenanceLedger): SourceRow[] {
+export function getAbilityBonusRows(
+  ledger: ProvenanceLedger,
+  selection?: Pick<
+    Character,
+    'originSystem' | 'race' | 'raceSource' | 'subrace' | 'subraceSource'
+  > | null,
+): SourceRow[] {
   // Fixed and directly-applied bonuses (race fixed ASIs, background ASIs, ASI class features).
   const fixedRows: SourceRow[] = ledger.abilityBonuses.map((r) => ({
     itemName: formatAbilityBonus(r.ability, r.value),
@@ -26,7 +35,12 @@ export function getAbilityBonusRows(ledger: ProvenanceLedger): SourceRow[] {
   // Choice-based ASI bonuses. ChoiceRecord.selected is populated by
   // resolveRaceAsiChoicesInLedger before rows are derived.
   const choices = ledger.choices.filter((choice) => choice.domain === 'abilityBonuses')
-  const taken = new Set(choices.flatMap((choice) => choice.selected.map(normalizeAbilityName)))
+  const racialChoices = new Set<ChoiceRecord>(
+    selection?.originSystem === '2014' ? getSelectedRaceAbilityChoices(ledger, selection) : [],
+  )
+  const racialTaken = Array.from(racialChoices).flatMap((choice) =>
+    choice.status === 'pending' ? [] : choice.selected.map(normalizeAbilityName),
+  )
   const choiceRows: SourceRow[] = choices.flatMap((choice) => {
     const source = {
       category: 'Ability Bonuses',
@@ -42,11 +56,16 @@ export function getAbilityBonusRows(ledger: ProvenanceLedger): SourceRow[] {
     }))
     if (choice.status !== 'resolved') {
       const pool = choice.optionPool.length ? choice.optionPool : ABILITY_NAMES
+      const taken = racialChoices.has(choice)
+        ? racialTaken
+        : isRaceAbilityChoiceRecord(choice)
+          ? selected.map(normalizeAbilityName)
+          : []
       rows.push({
         ...source,
         itemName: formatAbilityChoice(
           choice.chooseCount - selected.length,
-          pool.filter((ability) => !taken.has(normalizeAbilityName(ability))),
+          pool.filter((ability) => !taken.includes(normalizeAbilityName(ability))),
           amount,
           selected.length > 0,
         ),

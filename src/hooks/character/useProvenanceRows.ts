@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react'
-import type { RaceDisplaySelection } from '@/lib/calculations/raceDisplay'
 import {
   getAbilityBonusRows,
   getAllProficiencyRows,
@@ -11,10 +10,11 @@ import {
 import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows'
 import type { ProvenanceLedger, SourceRow } from '@/lib/provenance/types'
 import { getCollapseState, setCollapseState } from '@/lib/storage/collapseState'
+import type { Character } from '@/types/character'
 
 interface UseProvenanceRowsParams {
   ledger: ProvenanceLedger
-  selection?: RaceDisplaySelection | null
+  selection?: Character | null
 }
 
 export function useProvenanceRows({ ledger, selection }: UseProvenanceRowsParams) {
@@ -22,7 +22,10 @@ export function useProvenanceRows({ ledger, selection }: UseProvenanceRowsParams
     () => getAllProficiencyRows(ledger, selection),
     [ledger, selection],
   )
-  const abilityBonusRows = useMemo(() => getAbilityBonusRows(ledger), [ledger])
+  const abilityBonusRows = useMemo(
+    () => getAbilityBonusRows(ledger, selection),
+    [ledger, selection],
+  )
   const featRows = useMemo(() => getFeatRows(ledger), [ledger])
   const featureRows = useMemo(() => getFeatureRows(ledger), [ledger])
   const spellRows = useMemo(() => getSpellRows(ledger), [ledger])

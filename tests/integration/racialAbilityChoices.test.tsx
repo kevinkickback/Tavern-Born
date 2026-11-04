@@ -117,6 +117,22 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
+test('Builder Sources excludes a pick from the other block of the selected race', async () => {
+  await importActiveCharacter({
+    ...selectRace(dhampir, 0, [['strength'], []]),
+    allowedSources: ['VRGR'],
+  })
+  render(
+    <MemoryRouter>
+      <BuildAbilityScoresPage />
+    </MemoryRouter>,
+  )
+  await userEvent.setup().click(screen.getByRole('button', { name: /^Sources/ }))
+  const sources = within(screen.getByRole('region', { name: /^Sources/ }))
+  expect(sources.getByText('STR +2')).toBeTruthy()
+  expect(sources.getByText('Choose 1 ability from DEX, CON, INT, WIS, CHA (+1)')).toBeTruthy()
+})
+
 test.each([
   false,
   true,

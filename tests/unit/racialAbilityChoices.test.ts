@@ -142,6 +142,68 @@ test('Half-Elf keeps fixed Charisma alongside its two chosen abilities', () => {
   ])
 })
 
+test('Sources shares exclusions only across the selected racial choice blocks', () => {
+  const parent: Race5e = {
+    name: 'Parent',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str', 'dex'], count: 1, amount: 2 } }],
+  }
+  const child: Race5e = {
+    name: 'Child',
+    source: 'PHB',
+    ability: [{ choose: { from: ['str', 'con'], count: 1, amount: 1 } }],
+  }
+  const character = selectRace(parent, 0, [], child)
+  const classChoice = {
+    id: 'independent-class-ability-1',
+    domain: 'abilityBonuses' as const,
+    sourceTag: makeSourceTag('class', 'Independent', 'placeholder', 'PHB'),
+    optionPool: ['strength', 'dexterity'],
+    chooseCount: 1,
+    amount: 1,
+    selected: ['strength'],
+    status: 'resolved' as const,
+  }
+  const ledger = character.provenance!
+  const reopened = characterPersistenceSchema.parse({
+    ...character,
+    provenance: {
+      ...ledger,
+      choices: [
+        ...ledger.choices,
+        classChoice,
+        { ...classChoice, id: 'independent-class-ability-2', selected: [], status: 'pending' },
+      ],
+    },
+  })
+  const pending = (rows: ReturnType<typeof getAbilityBonusRows>) =>
+    rows.filter((row) => row.isPending).map((row) => [row.attribution, row.itemName])
+  expect(pending(getAbilityBonusRows(reopened.provenance, reopened))).toEqual([
+    ['race', 'Choose 1 ability from STR, DEX (+2)'],
+    ['subrace', 'Choose 1 ability from STR, CON (+1)'],
+    ['class', 'Choose 1 ability from STR, DEX (+1)'],
+  ])
+
+  const picked = applyRaceAsiChoicesCommand(reopened, reopened.provenance, [['strength'], []])
+  const saved = characterPersistenceSchema.parse({
+    ...reopened,
+    ...picked.characterPatch,
+    provenance: picked.provenanceUpdate,
+  })
+  expect(pending(getAbilityBonusRows(saved.provenance, saved))).toEqual([
+    ['subrace', 'Choose 1 ability from CON (+1)'],
+    ['class', 'Choose 1 ability from STR, DEX (+1)'],
+  ])
+  expect(pending(getAbilityBonusRows(saved.provenance))).toEqual([
+    ['subrace', 'Choose 1 ability from STR, CON (+1)'],
+    ['class', 'Choose 1 ability from STR, DEX (+1)'],
+  ])
+  const cleared = applyRaceAsiChoicesCommand(saved, saved.provenance, [])
+  expect(pending(getAbilityBonusRows(cleared.provenanceUpdate, saved))).toEqual(
+    pending(getAbilityBonusRows(reopened.provenance, reopened)),
+  )
+})
+
 test.each([
   0, 1,
 ] as const)('Custom Lineage explicit +2 is independent of synthesized distribution mode %s', (mode) => {
