@@ -10,7 +10,12 @@ import {
   isMundaneStartingItem,
   preserveStartingItemCategories,
 } from '@/lib/5etools/startingItemCategory'
-import { clearGameDataCache, readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  clearGameDataCache,
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 
@@ -61,7 +66,7 @@ test('Basic follows the own collection through copy mods, a real cache round tri
   expect(isMundaneStartingItem(composed.items[0])).toBe(true)
   await writeGameDataCache(composed, { type: 'local', path: '/starting-items', isValid: true })
   const cached = await readGameDataCache()
-  expect(cached?.cacheSchemaVersion).toBe(64)
+  expect(cached?.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
   const restored = composeGameDataLayers([structuredClone(cached!.data)])
   const all = [...restored.items, ...restored.itemsBase]
   const character = makeCharacterFixture()
