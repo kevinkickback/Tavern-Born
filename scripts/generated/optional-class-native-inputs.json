@@ -506,7 +506,7 @@
     },
     {
       "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
-      "sha256": "4310c1fa3d7d6731ee3872b3c574e0f1237581579b4b6fbee1fd1457beb32def"
+      "sha256": "1134eddac5805cc031bcd69404cb2cdaec7fdacdaa0c8726558db5d5387b8669"
     },
     {
       "file": "src/lib/character/classChoiceFilters.ts",

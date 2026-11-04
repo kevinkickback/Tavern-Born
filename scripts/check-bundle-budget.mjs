@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised Hunter setup: measured 6,423,473 B renderer and 1,186,466 B initial.
+  // Beast Master companion recovery: measured 6,428,240 B renderer and 1,191,010 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6273 * KIB,
-  initialRendererScript: 1159 * KIB,
+  rendererCode: 6278 * KIB,
+  initialRendererScript: 1164 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -121,13 +121,6 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       Object.fromEntries(filteredData.feats.map((feat) => [`${feat.name}|${feat.source}`, feat])),
     [filteredData.feats],
   )
-  const creaturesByKey = useMemo(
-    () =>
-      Object.fromEntries(
-        filteredData.creatures.map((creature) => [`${creature.name}|${creature.source}`, creature]),
-      ),
-    [filteredData.creatures],
-  )
   const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()
@@ -168,7 +161,6 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
               spellsByKey,
               featsByKey,
               featExpertiseFeats: filteredData.feats,
-              creaturesByKey,
               itemLookup,
               itemPropertyByAbbr,
               organizations,
@@ -184,7 +176,6 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       classChoiceFeatureCatalogs,
       filteredData.classes,
       classesByKey,
-      creaturesByKey,
       featsByKey,
       itemPropertyByAbbr,
       itemLookup,

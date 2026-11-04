@@ -30,6 +30,7 @@ import {
   hasClassProficiencyRecovery,
   refreshClassProficiencyState,
 } from '@/lib/character/classProficiencySelections'
+import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import {
   hasFavoredEnemyRecovery,
   isFavoredEnemySetupComplete,
@@ -188,16 +189,30 @@ export function useClassChoiceController({
     () => ({ ...catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies }),
     [catalogs, itemPropertyByAbbr, itemTypeByAbbr, weaponProficiencies],
   )
-  const featureOptionStates = useMemo(
+  const companionStates = useMemo(
     () =>
       character
-        ? getFeatureOptionSelectionStates(
+        ? getCompanionSelectionStates(
             character,
-            viewingClassData ? [viewingClassData] : [],
+            resolvedCatalogs.classes ?? (viewingClassData ? [viewingClassData] : []),
             resolvedCatalogs,
           )
         : [],
     [character, viewingClassData, resolvedCatalogs],
+  )
+  const featureOptionStates = useMemo(
+    () =>
+      character
+        ? [
+            ...getFeatureOptionSelectionStates(
+              character,
+              viewingClassData ? [viewingClassData] : [],
+              resolvedCatalogs,
+            ),
+            ...companionStates.filter((state) => state.recovery && !state.choice),
+          ]
+        : [],
+    [character, viewingClassData, resolvedCatalogs, companionStates],
   )
   const recoveries = useMemo(() => {
     const viewed = viewingClassEntry ?? viewingClassData
@@ -209,7 +224,8 @@ export function useClassChoiceController({
         state.proficiency ||
         state.optionalPool ||
         state.psionic ||
-        state.legacySubclass
+        state.legacySubclass ||
+        state.companion
       )
         return (
           !!state.owner &&
@@ -290,15 +306,27 @@ export function useClassChoiceController({
           const selectedKeys = new Set(
             (selectionByChoiceId.get(choice.id)?.selected ?? []).map(getClassChoiceOptionKey),
           )
+          const selected = (optionViewsByChoiceId.get(choice.id) ?? []).filter((option) =>
+            selectedKeys.has(getClassChoiceOptionKey(option.reference)),
+          )
+          const companionMissing =
+            choice.kind === 'creature' &&
+            !companionStates.some(
+              (state) => state.selection.choiceId === choice.id && state.creature,
+            )
           return [
             choice.id,
-            (optionViewsByChoiceId.get(choice.id) ?? []).filter((option) =>
-              selectedKeys.has(getClassChoiceOptionKey(option.reference)),
-            ),
+            companionMissing
+              ? selected.map((option) => ({
+                  ...option,
+                  availability: 'retained' as const,
+                  entries: [],
+                }))
+              : selected,
           ]
         }),
       ),
-    [choices, optionViewsByChoiceId, selectionByChoiceId],
+    [choices, optionViewsByChoiceId, selectionByChoiceId, companionStates],
   )
   const configurations = useMemo(
     () => getSubclassConfigurations(visibleChoices, viewingClassData, viewingSubclassData),
@@ -391,7 +419,10 @@ export function useClassChoiceController({
         retainSavedFeatureOptions(
           activeSaved.selection.choiceId,
           keys,
-          activeSaved.optionalPool || activeSaved.psionic || activeSaved.legacySubclass
+          activeSaved.optionalPool ||
+            activeSaved.psionic ||
+            activeSaved.legacySubclass ||
+            activeSaved.companion
             ? request?.savedHandle
             : undefined,
         )
@@ -442,6 +473,9 @@ export function useClassChoiceController({
     try {
       const unchanged =
         previousKeys.size === confirmedSelections.length &&
+        (current.kind !== 'creature' ||
+          !previousKeys.size ||
+          companionStates.some((state) => state.selection.choiceId === current.id)) &&
         confirmedSelections.every((option) =>
           previousKeys.has(getClassChoiceOptionKey(option.reference)),
         )
@@ -638,7 +672,9 @@ export function useClassChoiceController({
               savedHandle:
                 saved && getOptionalClassPoolSelectionSection(saved)
                   ? getOptionalPoolSelectionHandle(saved)
-                  : decodeFavoredEnemyChoiceId(choice.id) || decodeLegacySubclassChoice(choice.id)
+                  : choice.kind === 'creature' ||
+                      decodeFavoredEnemyChoiceId(choice.id) ||
+                      decodeLegacySubclassChoice(choice.id)
                     ? saved
                       ? getOptionalPoolSelectionHandle(saved)
                       : ''
@@ -655,7 +691,11 @@ export function useClassChoiceController({
               id: state.selection.choiceId,
               contextKey,
               savedHandle:
-                state.optionalPool || state.enemy || state.psionic || state.legacySubclass
+                state.optionalPool ||
+                state.enemy ||
+                state.psionic ||
+                state.legacySubclass ||
+                state.companion
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

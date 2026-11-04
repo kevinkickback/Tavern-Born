@@ -18,6 +18,7 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
+import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   hasFavoredEnemyRecovery,
@@ -105,11 +106,15 @@ export function validateClassChoices(
       .filter((selection) => !selection.inactive)
       .map((selection) => [selection.choiceId, selection]),
   )
-  const featureOptionStates = getFeatureOptionSelectionStates(
+  const companionStates = getCompanionSelectionStates(
     character,
     calculation.classChoices.classes,
     catalogs,
   )
+  const featureOptionStates = [
+    ...getFeatureOptionSelectionStates(character, calculation.classChoices.classes, catalogs),
+    ...companionStates,
+  ]
   for (const state of featureOptionStates.filter(
     (row) =>
       (row.storm ||
@@ -117,7 +122,8 @@ export function validateClassChoices(
         row.proficiency ||
         row.optionalPool ||
         row.psionic ||
-        row.legacySubclass) &&
+        row.legacySubclass ||
+        row.companion) &&
       row.owner &&
       row.recovery,
   )) {
@@ -240,7 +246,10 @@ export function validateClassChoices(
             : calculationCatalogs
           : choiceCatalogs
       const eligibleOptionKeys =
-        choiceCatalogs && !choice.optionFilter?.requiresMastery && !fighterStyle
+        choiceCatalogs &&
+        choice.kind !== 'creature' &&
+        !choice.optionFilter?.requiresMastery &&
+        !fighterStyle
           ? new Set(
               resolveClassChoiceOptions(
                 choice,
@@ -259,31 +268,41 @@ export function validateClassChoices(
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
-      const count = decodeFavoredEnemyChoiceId(choice.id)
-        ? isFavoredEnemySetupComplete(
-            featureOptionStates.find((s) => s.selection.choiceId === choice.id),
-          )
-          ? 1
-          : 0
-        : choice.optionFilter?.requiresMastery
-          ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0)
-          : fighterStyle && routeCatalogs?.classes
-            ? effectiveRoutes.selectedOptions.filter(
-                ({ selection }) => selection.choiceId === choice.id,
-              ).length
-            : eligibleOptionKeys
-              ? storedSelection.filter(
-                  (option) =>
-                    eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-                    (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
-                      option.entityType,
-                    ) ||
-                      (!!savedChoice &&
-                        effectiveRoutes.featureIds.has(
-                          getClassChoiceFeatureId(savedChoice, option),
-                        ))),
-                ).length
-              : storedSelection.length
+      const count =
+        choice.kind === 'creature'
+          ? Number(
+              companionStates.some(
+                (state) => state.selection.choiceId === choice.id && state.creature,
+              ),
+            )
+          : decodeFavoredEnemyChoiceId(choice.id)
+            ? isFavoredEnemySetupComplete(
+                featureOptionStates.find((s) => s.selection.choiceId === choice.id),
+              )
+              ? 1
+              : 0
+            : choice.optionFilter?.requiresMastery
+              ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0)
+              : fighterStyle && routeCatalogs?.classes
+                ? effectiveRoutes.selectedOptions.filter(
+                    ({ selection }) => selection.choiceId === choice.id,
+                  ).length
+                : eligibleOptionKeys
+                  ? storedSelection.filter(
+                      (option) =>
+                        eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+                        (![
+                          'classFeature',
+                          'subclassFeature',
+                          'optionalFeature',
+                          'psionic',
+                        ].includes(option.entityType) ||
+                          (!!savedChoice &&
+                            effectiveRoutes.featureIds.has(
+                              getClassChoiceFeatureId(savedChoice, option),
+                            ))),
+                    ).length
+                  : storedSelection.length
       if (count !== required) {
         issues.push(
           readinessIssue(
@@ -352,7 +371,11 @@ export function validateClassChoices(
       )
         continue
       if (
-        (state.storm || state.literalGroup || state.proficiency || state.optionalPool) &&
+        (state.storm ||
+          state.literalGroup ||
+          state.proficiency ||
+          state.optionalPool ||
+          state.companion) &&
         state.recovery
       )
         continue

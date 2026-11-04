@@ -170,7 +170,7 @@ describe('CharacterSheetPage', () => {
     renderPage()
     const lookups = vi.mocked(createCharacterSheetViewModel).mock.lastCall?.[1]
     expect(Object.keys(lookups?.featsByKey ?? {})).toEqual(['Alert|PHB'])
-    expect(Object.keys(lookups?.creaturesByKey ?? {})).toEqual(['Wolf|MM'])
+    expect(lookups?.classChoiceFeatureCatalogs?.creatures).toEqual([creatures[0]])
   })
 
   const sharedFeature: ClassFeature = {

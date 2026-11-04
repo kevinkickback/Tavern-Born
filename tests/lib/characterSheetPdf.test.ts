@@ -37,7 +37,10 @@ import {
   authorManagedClassSpellFixture,
   makeManagedClassSpellFixtures,
 } from '../fixtures/managedClassSpellFixtures'
-import { makeOptionalDeclarationCatalog } from '../fixtures/optionalClassDeclarationFixtures'
+import {
+  addRangerArchetypeGain,
+  makeOptionalDeclarationCatalog,
+} from '../fixtures/optionalClassDeclarationFixtures'
 import { createCurrentCharacterSheetViewModel, sourceTemplateBytes } from '../fixtures/pdfTemplates'
 
 function prepareViewModel(
@@ -423,13 +426,11 @@ describe('characterSheetPdf', () => {
   })
 
   test('2014 fills the active creature companion but ignores an inactive choice', async () => {
-    const { data, catalogs } = makeOptionalDeclarationCatalog('class/class-ranger.json', [
-      'subclass',
-      'ranger',
-      'phb',
-      'beast master',
-      'phb',
-    ])
+    const { data, catalogs } = makeOptionalDeclarationCatalog(
+      'class/class-ranger.json',
+      ['subclass', 'ranger', 'phb', 'beast master', 'phb'],
+      addRangerArchetypeGain,
+    )
     const land: Creature5e = {
       name: 'Beast of the Land',
       source: 'TCE',
@@ -477,6 +478,15 @@ describe('characterSheetPdf', () => {
       const option = resolveClassChoiceOptions(choice, currentCatalogs, [], 3, character).find(
         (row) => row.reference.name === name && row.availability === 'eligible',
       )!
+      expect(() =>
+        applyClassChoiceSelectionWithGrantsCommand(
+          character,
+          character.provenance,
+          choice,
+          [option.reference],
+          { classes: data.classes, catalogs: { ...currentCatalogs, creatures: [] } },
+        ),
+      ).toThrow('The companion source changed')
       const result = applyClassChoiceSelectionWithGrantsCommand(
         character,
         character.provenance,
@@ -524,6 +534,29 @@ describe('characterSheetPdf', () => {
       classChoiceFeatureCatalogs: { ...currentCatalogs, optionalClassFeatureSources: [] },
     })
     expect(suspended.companions ?? []).toEqual([])
+    const withCreatureCatalog = (creatures: typeof currentCatalogs.creatures) =>
+      createCurrentCharacterSheetViewModel(character, {
+        ...inputs,
+        classChoiceFeatureCatalogs: { ...currentCatalogs, creatures },
+      })
+    // A retained lookup or a different printing may still have the same name.
+    expect(withCreatureCatalog([]).companions).toEqual([])
+    expect(withCreatureCatalog([{ ...land, source: 'XPHB' }, wolf]).companions).toEqual([])
+    expect(withCreatureCatalog([land, { ...land }]).companions).toEqual([])
+    expect(withCreatureCatalog([land, wolf]).companions).toEqual(viewModel.companions)
+    const primal = character.classChoiceSelections?.find((row) => row.label === 'Primal Companion')!
+    const collision = characterPersistenceSchema.parse({
+      ...character,
+      classChoiceSelections: [
+        ...(character.classChoiceSelections ?? []),
+        {
+          ...primal,
+          kind: 'item',
+          selected: [{ entityType: 'item', name: 'Handaxe', source: 'PHB', slotLevel: 3 }],
+        },
+      ],
+    })
+    expect(createCurrentCharacterSheetViewModel(collision, inputs).companions).toEqual([])
     const map = mapCharacterSheetViewModel(viewModel, '2014-custom')
     expect(map.textFields['P4.AScomp.Comp.Desc.Name']).toBe('Beast of the Land')
     expect(map.textFields['P4.AScomp.Comp.Use.Ability.Str.Score']).toBe('14')

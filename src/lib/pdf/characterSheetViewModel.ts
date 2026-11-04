@@ -11,7 +11,6 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
@@ -53,7 +52,7 @@ import {
 } from '@/lib/calculations/spellUtils'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
-import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import {
   getFeatureOptionSelectionStates,
   summarizeFeatureOptionSelectionGroups,
@@ -91,7 +90,6 @@ export interface CharacterSheetLookupSet extends EntityLookupSet {
   sourceCatalog?: readonly SourceBook[]
   /** Complete filtered choice targets; raw lookups remain available for retained details. */
   classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
-  creaturesByKey?: Readonly<Record<string, Creature5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -780,32 +778,24 @@ export function createCharacterSheetViewModel(
     ...item,
     description: item.description?.trim() || descriptions.get(item) || '',
   }))
-  const activeClassRoutes = getEffectiveClassChoiceFeatureRoutes(
+  const companionCatalogs = primaryLookups.classChoiceFeatureCatalogs
+  const companions = getCompanionSelectionStates(
     character,
-    primaryLookups.classChoiceFeatureCatalogs,
-    calculationContext.classChoices.prerequisites,
+    companionCatalogs?.classes ?? calculationContext.classChoices.classes,
+    companionCatalogs,
+  ).flatMap(({ creature, selection }) =>
+    creature
+      ? [
+          {
+            name: creature.name,
+            source: creature.source,
+            className: selection.className,
+            classSource: selection.classSource,
+            creature,
+          },
+        ]
+      : [],
   )
-  const companions = (character.classChoiceSelections ?? [])
-    .filter(
-      (choice) => choice.kind === 'creature' && activeClassRoutes.choiceIds.has(choice.choiceId),
-    )
-    .flatMap((choice) =>
-      choice.selected.map((selection) => ({
-        ...selection,
-        className: choice.className,
-        classSource: choice.classSource,
-      })),
-    )
-    .filter((selection) => selection.entityType === 'creature')
-    .map((selection) => ({
-      name: selection.name,
-      source: selection.source,
-      className: selection.className,
-      classSource: selection.classSource,
-      creature: selection.source
-        ? rawLookups.creaturesByKey?.[getEntityLookupKey(selection.name, selection.source)]
-        : undefined,
-    }))
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)

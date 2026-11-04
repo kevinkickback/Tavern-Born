@@ -380,6 +380,68 @@ test.runIf(rangerAvailable)(
 )
 
 test.runIf(rangerAvailable)(
+  'classic companion remains editable when the creature is absent and removable when its feature is absent',
+  async () => {
+    const { data, character } = classicCompanionFixture()
+    const label = "Ranger's Companion"
+    mount(data, character)
+    await expand(3)
+    await pickSubclass('Ranger Archetype', 'Beast Master')
+    fireEvent.click(await row('Wolf'))
+    await confirm()
+    const saved = JSON.stringify(active())
+
+    const missingCreature = {
+      ...data,
+      creatures: (data.creatures ?? []).filter((row) => row.name !== 'Wolf' || row.source !== 'MM'),
+    }
+    act(() => {
+      useGameDataStore.setState({ gameData: missingCreature })
+    })
+    fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }))
+    expect(within(await row('Wolf')).getByText('Unavailable')).toBeTruthy()
+    expect(await row('Panther')).toBeTruthy()
+    fireEvent.click(footer('Cancel'))
+    expect(JSON.stringify(active())).toBe(saved)
+
+    const document = JSON.parse(readFileSync('data/class/class-ranger.json', 'utf8'))
+    document.subclassFeature = document.subclassFeature.filter(
+      (feature: { name: string; source: string }) =>
+        feature.name !== label || feature.source !== 'PHB',
+    )
+    const missingFeature = {
+      ...data,
+      classes: parseClasses(document) as Class5e[],
+      classFeatures: parseClassFeatures(document) as ClassFeature[],
+    }
+    missingFeature.lookups = buildGameDataLookups(missingFeature)
+    act(() => {
+      useGameDataStore.setState({ gameData: missingFeature })
+    })
+    const recovery = await screen.findByRole('group', { name: label })
+    fireEvent.click(within(recovery).getByRole('button', { name: 'Review saved choice' }))
+    expect(modal().getByRole('heading', { name: `Review saved ${label}` })).toBeTruthy()
+    fireEvent.click(footer('Cancel'))
+    act(() => {
+      useGameDataStore.setState({ gameData: data })
+    })
+    expect(screen.getByRole('button', { name: `Edit ${label}` })).toBeTruthy()
+    expect(JSON.stringify(active())).toBe(saved)
+
+    act(() => {
+      useGameDataStore.setState({ gameData: missingFeature })
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review saved choice' }))
+    fireEvent.click(await row('Wolf'))
+    await confirm()
+    expect(active().classChoiceSelections?.some((selection) => selection.label === label)).toBe(
+      false,
+    )
+    expect(active().features).toEqual(character.features)
+  },
+)
+
+test.runIf(rangerAvailable)(
   'strictly reopened actual classic companion unchanged Edit preserves bytes, dirty state and manual features',
   async () => {
     const { data, character } = classicCompanionFixture()
@@ -433,6 +495,23 @@ test.runIf(rangerAvailable)(
     expect(active().classChoiceSelections).toEqual(reopened.classChoiceSelections)
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
     expect(active().features).toEqual(character.features)
+
+    const malformed = characterPersistenceSchema.parse({
+      ...reopened,
+      classChoiceSelections: reopened.classChoiceSelections?.map((selection) => ({
+        ...selection,
+        selected: selection.selected.map((pick) => ({ ...pick, slotLevel: 2 })),
+      })),
+    })
+    act(() => {
+      setActiveCharacter(malformed)
+    })
+    expect(screen.getByRole('group', { name: 'Ranger Archetype' }).className).toContain(
+      'border-warning',
+    )
+    fireEvent.click(screen.getByRole('button', { name: "Edit Ranger's Companion" }))
+    await confirm()
+    expect(active().classChoiceSelections?.[0].selected[0].slotLevel).toBe(3)
   },
 )
 

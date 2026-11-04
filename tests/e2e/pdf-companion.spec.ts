@@ -23,7 +23,10 @@ import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClas
 import type { Creature5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeClassCastingLayer } from '../fixtures/classCastingFixtures'
-import { optionalDeclarationSources } from '../fixtures/optionalClassDeclarationFixtures'
+import {
+  addRangerArchetypeGain,
+  optionalDeclarationSources,
+} from '../fixtures/optionalClassDeclarationFixtures'
 import { ensureStartupPromptResolved, seedAppState } from './helpers/startup'
 
 test('2014 MPMB export fills the active creature companion page', async ({ page }, testInfo) => {
@@ -61,6 +64,7 @@ test('2014 MPMB export fills the active creature companion page', async ({ page 
       expect(new Set(identities).size).toBe(combined.length)
       document[field] = combined
     }
+    addRangerArchetypeGain(document)
   })
   gameData.optionalfeatures = optionalDeclarationSources.optionalfeatures ?? []
   gameData.creatures = beast ? [beast] : []

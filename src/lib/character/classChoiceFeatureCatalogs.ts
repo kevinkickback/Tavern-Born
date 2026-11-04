@@ -9,6 +9,7 @@ import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/
 import type {
   Class5e,
   ClassFeature,
+  Creature5e,
   Feat5e,
   GameData,
   Item5e,
@@ -26,6 +27,7 @@ export interface ClassChoiceFeatureCatalogs {
   legacySubclassChoices?: GameData['legacySubclassChoices']
   psionics?: readonly import('@/types/5etools').Psionic5e[]
   classes?: readonly Class5e[]
+  creatures?: readonly Creature5e[]
   optionalClassFeatureSources?: readonly OptionalClassFeatureSourceProof[]
   classCastingSources?: readonly ClassCastingSourceProof[]
   optionalClassSections?: readonly OptionalClassSectionSource[]
@@ -62,6 +64,7 @@ export type ScopedClassChoiceFeatureCatalogs = Pick<
   | 'allConcreteTools'
   | 'featExpertiseFeats'
   | 'classes'
+  | 'creatures'
   | 'optionalFeatures'
   | 'optionalFeatureCandidates'
   | 'optionalClassFeatureSources'
@@ -97,6 +100,7 @@ export function scopeClassChoiceFeatureCatalogs(
     skills: catalogs.skills,
     languages: catalogs.languages,
     classes: catalogs.classes,
+    ...(catalogs.creatures ? { creatures: catalogs.creatures } : {}),
     optionalClassFeatureSources: catalogs.optionalClassFeatureSources,
     classCastingSources: catalogs.classCastingSources,
     optionalClassSections: catalogs.optionalClassSections,
@@ -130,6 +134,7 @@ export function buildClassChoiceFeatureCatalogs(
         | 'optionalClassFeatureSources'
         | 'classCastingSources'
         | 'optionalClassSections'
+        | 'creatures'
       >
     >,
 ) {
@@ -157,6 +162,7 @@ export function buildClassChoiceFeatureCatalogs(
   return {
     legacySubclassChoices: data.legacySubclassChoices ?? [],
     classes: data.classes,
+    ...(data.creatures ? { creatures: data.creatures } : {}),
     psionics: data.psionics ?? [],
     optionalClassFeatureSources: data.optionalClassFeatureSources ?? [],
     classCastingSources: data.classCastingSources ?? [],

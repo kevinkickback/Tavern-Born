@@ -41,6 +41,10 @@ import {
 } from '@/lib/character/classProficiencyOwnership'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyVocabulary'
+import {
+  getCompanionSelectionStates,
+  isRegisteredCompanionSelection,
+} from '@/lib/character/companionSelections'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
@@ -419,16 +423,20 @@ export function retainSavedFeatureOptionsCommand(
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
   const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
+  const registeredCompanion = isRegisteredCompanionSelection(selection)
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
-    (registeredPool && expectedSelectionHandle === undefined) ||
+    ((registeredPool || registeredCompanion) && expectedSelectionHandle === undefined) ||
+    (registeredCompanion &&
+      character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
     (expectedSelectionHandle !== undefined &&
       getOptionalPoolSelectionHandle(selection) !== expectedSelectionHandle)
   )
     throw new RangeError('The saved choice changed. Review it before confirming.')
   if (
     !registeredPool &&
+    !registeredCompanion &&
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
     !isValidPsionicSelection(selection) &&
@@ -775,6 +783,16 @@ export function applyClassChoiceSelectionCommand(
     selection.selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
       ? [...retained, selection]
       : retained
+  if (
+    authority?.catalogs?.creatures &&
+    isRegisteredCompanionSelection(selection) &&
+    !getCompanionSelectionStates(
+      { ...character, classChoiceSelections: next },
+      authority.classes,
+      authority.catalogs,
+    ).some((state) => state.selection.choiceId === choice.id && state.creature)
+  )
+    throw new RangeError('The companion source changed. Review the available creatures.')
   if (isKenseiChoiceId(choice.id) && getInvalidKenseiSelectionIds(next).size)
     throw new RangeError('Choose distinct Kensei weapon types in their earned slots.')
   if (choice.kind === 'psionic') {

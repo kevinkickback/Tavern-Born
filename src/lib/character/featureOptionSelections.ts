@@ -72,6 +72,7 @@ export interface FeatureOptionSelectionState {
   optionalPool?: boolean
   psionic?: boolean
   legacySubclass?: boolean
+  companion?: boolean
 }
 
 export function hasRevisedHunterRecovery(
