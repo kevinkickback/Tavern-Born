@@ -13,6 +13,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
+  formatAbilityBonus,
+  formatRacialAbilityPatterns,
+} from '@/lib/calculations/abilityScoreDisplay'
+import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
@@ -90,7 +94,9 @@ function RaceAsiBonuses({
       <div>
         <h3 className="text-sm font-semibold">Racial Bonuses</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Apply the bonuses granted by your selected race.
+          {choices.length > 0
+            ? formatRacialAbilityPatterns(raceAsiData)
+            : 'Apply the bonuses granted by your selected race.'}
         </p>
       </div>
       {isLineageRaceAsiFallback && (
@@ -120,7 +126,7 @@ function RaceAsiBonuses({
             key={`${fb.ability}|${fb.value}`}
             className="rounded border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-semibold text-success-foreground"
           >
-            {ABILITY_ABBREVIATIONS[fb.ability]} +{fb.value}
+            {formatAbilityBonus(fb.ability, fb.value)}
           </span>
         ))}
         {choices.map((block, blockIdx) => {

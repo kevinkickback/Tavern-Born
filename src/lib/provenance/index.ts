@@ -1,3 +1,4 @@
+export * from './abilityBonusRows'
 export * from './applyAsiChoices'
 export * from './applyBackgroundGrants'
 export * from './applyClassGrants'

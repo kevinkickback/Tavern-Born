@@ -218,7 +218,7 @@ describe('RaceStep', () => {
       />,
     )
     expect(getByText('CON +1')).toBeTruthy()
-    expect(getByText('Choose 3: +1 (any ability)')).toBeTruthy()
+    expect(getByText('Choose 3 abilities (+1 each)')).toBeTruthy()
   })
 
   test('renders the filtered race collection supplied by the wizard controller', () => {

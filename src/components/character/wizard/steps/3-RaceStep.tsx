@@ -1,11 +1,11 @@
 import { BookOpen, ChartBar, Eye, MagnifyingGlass, Shield, Users, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
+import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
-  getAsiDisplay,
   getDamageTraitDisplay,
   getLanguageDisplay,
   getRaceTraits,

@@ -18,7 +18,7 @@ import {
   resolveSpecialSpellKind,
   setSpecialSpellKind,
 } from '@/lib/character/specialSpellState'
-import { getFixedFeatOptionKey } from '@/lib/featGrants'
+import { getFixedFeatOptionKey, SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import {
   addAbilityBonus,
   addGrant,
@@ -711,7 +711,7 @@ function commitResolvedFeatOptions(
     if (ability) {
       provenanceUpdate = addAbilityBonus(provenanceUpdate, {
         ability,
-        value: 1,
+        value: SELECTED_FEAT_ABILITY_BONUS,
         sourceTag,
       })
     }

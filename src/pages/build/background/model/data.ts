@@ -1,8 +1,10 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
-  ABILITY_ABBREVIATIONS,
-  type BackgroundAbilityData,
+  formatAbilityBonus,
   formatBackgroundAbilityPatterns,
+} from '@/lib/calculations/abilityScoreDisplay'
+import {
+  type BackgroundAbilityData,
   isBackgroundAbilitySelectionComplete,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
@@ -65,7 +67,7 @@ export function getBackgroundAbilitySummary(
     ? selectedBlock.weights.map((weight, index) => {
         const ability = normalizeAbilityName(choices[index] ?? '')
         if (!ability || !selectedBlock.from.includes(ability)) return null
-        return `+${weight} ${ABILITY_ABBREVIATIONS[ability]}`
+        return formatAbilityBonus(ability, weight)
       })
     : []
   const hasCompleteSelection = isBackgroundAbilitySelectionComplete(data, blockIndex, choices)
