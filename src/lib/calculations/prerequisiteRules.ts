@@ -7,6 +7,9 @@ import type { AbilityName } from './abilityScores'
 
 export interface PrereqCharacterSnapshot {
   progression: readonly (CharacterClassEntry & { subclassShortName?: string })[]
+  /** Upper bound when only part of the progression at a class gain can be verified. */
+  maximumCharacterLevel?: number
+  hasSpellcastingFeature?: boolean
   race?: string
   raceSource?: string
   abilityScores?: Partial<Record<AbilityName, number>>
@@ -200,8 +203,12 @@ function checkLevelPrerequisite(
     met: false,
     reason: `Requires ${className ?? 'character'} level ${required}`,
   }
-  if (!hasOwner)
-    return getTotalClassLevels(character.progression) >= required ? { met: true } : unmet
+  if (!hasOwner) {
+    if (getTotalClassLevels(character.progression) >= required) return { met: true }
+    return (character.maximumCharacterLevel ?? 0) >= required
+      ? unsupported('character level when the slot was earned')
+      : unmet
+  }
   const owners = character.progression.filter(
     (entry) =>
       !className ||
@@ -241,6 +248,7 @@ const CHECKED_PREREQUISITE_KEYS = new Set([
   'race',
   'class',
   'spellcasting',
+  'spellcasting2020',
   'spell',
   'pact',
   'patron',
@@ -310,6 +318,12 @@ export function checkPrerequisite(
     if (!hasSpellcasting) {
       return { met: false, reason: 'Requires spellcasting ability' }
     }
+  }
+  if (prereq.spellcasting2020 !== undefined) {
+    if (prereq.spellcasting2020 !== true || character.hasSpellcastingFeature === undefined)
+      reviewReasons.push('Spellcasting or Pact Magic feature')
+    else if (!character.hasSpellcastingFeature)
+      return { met: false, reason: 'Requires the Spellcasting or Pact Magic feature' }
   }
   if (prereq.spell !== undefined) {
     const required = Array.isArray(prereq.spell) ? prereq.spell : [prereq.spell]

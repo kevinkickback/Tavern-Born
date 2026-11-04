@@ -64,6 +64,7 @@ export interface SelectionModalProps<T> {
   categories?: CategoryLimit<T>[]
   selectionHint?: ReactNode
   canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
+  isItemEligible?: (item: T) => boolean
   swapOnLimit?: boolean
   initialSelectedIds?: string[]
   /** Labels for saved selections whose catalog items are currently unavailable. */
@@ -116,6 +117,7 @@ function SelectionModalInner<T>({
   categories = [],
   selectionHint,
   canSelect,
+  isItemEligible,
   swapOnLimit = false,
   initialSelectedIds = [],
   unavailableSelectionLabels,
@@ -257,6 +259,7 @@ function SelectionModalInner<T>({
     (item: T) => {
       const id = getItemId(item)
       const alreadySelected = selectedIds.has(id)
+      if (!alreadySelected && isItemEligible?.(item) === false) return
       if (!alreadySelected && !checkCanSelect(item)) {
         if (swapOnLimit) {
           if (quantitySelection) {
@@ -292,7 +295,7 @@ function SelectionModalInner<T>({
         return next
       })
     },
-    [getItemId, selectedIds, checkCanSelect, swapOnLimit, quantitySelection],
+    [getItemId, selectedIds, isItemEligible, checkCanSelect, swapOnLimit, quantitySelection],
   )
 
   const handleCheckbox = useCallback(
@@ -531,7 +534,9 @@ function SelectionModalInner<T>({
                 const item = filteredItems[virtualRow.index]
                 const id = getItemId(item)
                 const isSelected = selectedIds.has(id)
-                const canSel = isSelected || checkCanSelect(item) || swapOnLimit
+                const canSel =
+                  isSelected ||
+                  (isItemEligible?.(item) !== false && (checkCanSelect(item) || swapOnLimit))
                 return (
                   <div
                     key={virtualRow.key}

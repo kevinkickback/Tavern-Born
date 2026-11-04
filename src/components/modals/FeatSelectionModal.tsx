@@ -99,6 +99,7 @@ export interface FeatSelectionModalProps {
   maxSelections: number
   initialSelectedIds?: string[]
   characterSnapshot: PrereqCharacterSnapshot
+  requirePrerequisites?: boolean
   initialFilters?: ActiveFilters
   swapOnLimit?: boolean
   onConfirm: (selectedFeats: Feat5e[]) => void
@@ -111,6 +112,7 @@ export function FeatSelectionModal({
   maxSelections,
   initialSelectedIds = [],
   characterSnapshot,
+  requirePrerequisites = false,
   initialFilters,
   swapOnLimit = true,
   onConfirm,
@@ -233,6 +235,23 @@ export function FeatSelectionModal({
       matchItem={matchItem}
       filterSections={filterSections}
       categories={categories}
+      isItemEligible={
+        requirePrerequisites
+          ? (feat) => prereqMap.get(getFeatSelectionKey(feat))?.met === true
+          : undefined
+      }
+      getConfirmationError={
+        requirePrerequisites
+          ? (ids) =>
+              [...ids].some(
+                (id) =>
+                  !prereqMap.has(id) ||
+                  (!initialSelectedIds.includes(id) && !prereqMap.get(id)?.met),
+              )
+                ? 'A selected feat is unavailable or no longer meets its prerequisites.'
+                : undefined
+          : undefined
+      }
       swapOnLimit={swapOnLimit}
       initialSelectedIds={initialSelectedIds}
       initialFilters={initialFilters}

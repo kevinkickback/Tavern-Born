@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { FeatDetailCard, FeatDetailsInspector } from '@/pages/feats/components/FeatCards'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Feat5e } from '@/types/5etools'
@@ -68,6 +69,32 @@ describe('FeatSelectionModal', () => {
     expect(props.matchItem(unknown, '', { prereq: new Set(['showUnmet']) })).toBe(true)
     expect(props.filterSections[0].options[0].label).toContain('unverified')
     expect(screen.getByText('Requires manual review: feat')).toBeTruthy()
+  })
+
+  test('revised confirmation distinguishes a withdrawn pending target from an intentional clear', () => {
+    const missing = getFeatSelectionKey({ name: 'Withdrawn feat', source: 'XPHB' })
+    render(
+      <FeatSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        feats={[watchfulFeat, defensiveDuelistPrerequisite]}
+        maxSelections={1}
+        initialSelectedIds={[getFeatSelectionKey(defensiveDuelistPrerequisite)]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture({ abilityScores: { dexterity: 8 } })}
+        requirePrerequisites
+        onConfirm={vi.fn()}
+      />,
+    )
+    const props = selectionModalCapture.props as {
+      getConfirmationError: (ids: Set<string>) => string | undefined
+      isItemEligible: (feat: Feat5e) => boolean
+    }
+    expect(props.getConfirmationError(new Set([missing]))).toContain('unavailable')
+    expect(props.getConfirmationError(new Set())).toBeUndefined()
+    expect(
+      props.getConfirmationError(new Set([getFeatSelectionKey(defensiveDuelistPrerequisite)])),
+    ).toBeUndefined()
+    expect(props.isItemEligible(defensiveDuelistPrerequisite)).toBe(false)
   })
 
   test('distinguishes manual review from unmet prerequisites in saved feat details', () => {

@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Weapon Mastery eligibility: measured 6,404,802 B renderer and 1,173,094 B initial.
+  // Revised class feat eligibility: measured 6,409,843 B renderer and 1,173,464 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6255 * KIB,
+  rendererCode: 6260 * KIB,
   initialRendererScript: 1146 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
