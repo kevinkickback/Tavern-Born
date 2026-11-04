@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, test } from 'vitest'
@@ -9,6 +9,7 @@ import {
 } from '@/hooks/data/useFilteredGameData'
 import { getLegacySubclassChoices } from '@/lib/5etools/legacySubclassChoices'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { deriveWeaponActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
@@ -23,7 +24,7 @@ import {
   applyClassChoiceSelectionWithGrantsCommand,
   retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
-import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
@@ -37,7 +38,7 @@ import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { GameData } from '@/types/5etools'
+import type { Class5e, ClassFeature, GameData } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -122,6 +123,41 @@ describe.runIf(available)('configured source-owned Swords and Kensei setup', () 
     })
     return validateClassChoices(character, calc, cat)
   }
+  test('mastery confirmation retracts a weapon proficiency when its Kensei source is unavailable', () => {
+    const f = view('2024', 'Monk')
+    const trained = pick(f, f.character, 'Kensei ranged weapon', ['Longbow'])
+    expect(trained.proficiencies.weapons).toContain('longbow')
+    const data = parseClassDocument(
+      JSON.parse(readFileSync('resources/srd/core/data/class/class-rogue.json', 'utf8')),
+    )
+    const rogue = (data.classes as Class5e[]).find((row) => row.source === 'XPHB')!
+    const mastery = rogue.normalizedRules!.choices.find((row) => row.optionFilter?.requiresMastery)!
+    const classes = [f.cls, rogue]
+    const catalogs = buildClassChoiceFeatureCatalogs({
+      ...f.d,
+      classes,
+      classFeatures: [...f.d.classFeatures, ...(data.classFeatures as ClassFeature[])],
+    })
+    const added = addMulticlass(trained, trained.provenance, rogue.name, rogue)
+    const actor = characterPersistenceSchema.parse({
+      ...trained,
+      ...added.characterPatch,
+      provenance: added.provenanceUpdate,
+    })
+    const confirm = (current: typeof catalogs) =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        actor,
+        actor.provenance,
+        mastery,
+        [{ entityType: 'item', name: 'Longbow', source: 'XPHB' }],
+        { classes, catalogs: current },
+      )
+    expect(confirm(catalogs).characterPatch.classChoiceSelections).toContainEqual(
+      expect.objectContaining({ choiceId: mastery.id }),
+    )
+    expect(() => confirm({ ...catalogs, legacySubclassChoices: [] })).toThrow(RangeError)
+  })
+
   for (const edition of ['2014', '2024'] as const) {
     test(
       edition + ' Swords uses only the two exact PHB optional features and no extra quota',

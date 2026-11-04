@@ -63,6 +63,7 @@ export interface Class5e {
     proficienciesGained?: {
       armor?: string[]
       weapons?: string[]
+      weaponProficiencies?: Record<string, unknown>[]
       tools?: string[]
       toolProficiencies?: Array<
         Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
@@ -74,6 +75,7 @@ export interface Class5e {
   startingProficiencies?: {
     armor?: string[]
     weapons?: string[]
+    weaponProficiencies?: Record<string, unknown>[]
     tools?: string[]
     skills?: Array<string | Record<string, unknown>>
   }

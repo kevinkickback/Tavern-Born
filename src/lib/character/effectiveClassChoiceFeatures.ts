@@ -55,6 +55,8 @@ function buildEffectiveClassChoiceFeatureRoutes(
   )
   const featureIds = new Set<string>(),
     choiceIds = new Set<string>()
+  const masteredWeapons = new Map<string, Set<string>>()
+  const seenMastery = new Set<string>()
   const featureNamesByChoice = new Map<string, Set<string>>()
   const selectedOptions: Array<{
     selection: CharacterClassChoiceSelection
@@ -76,6 +78,14 @@ function buildEffectiveClassChoiceFeatureRoutes(
   for (const selection of character.classChoiceSelections ?? []) {
     if (invalidPsionics.has(selection.choiceId)) continue
     const choice = choices.get(selection.choiceId)
+    const mastery = choice?.optionFilter?.requiresMastery
+    if (mastery) {
+      if (seenMastery.has(selection.choiceId)) {
+        masteredWeapons.delete(selection.choiceId)
+        continue
+      }
+      seenMastery.add(selection.choiceId)
+    }
     const owner = findClassReference(
       { name: selection.className, source: selection.classSource },
       character.classProgression,
@@ -92,11 +102,13 @@ function buildEffectiveClassChoiceFeatureRoutes(
       (choice.owner.subclassSource?.trim().toLowerCase() ?? '') !==
         (selection.subclassSource?.trim().toLowerCase() ?? '') ||
       selection.selected.length > getRequiredChoiceSelectionCount(choice, owner.levels) ||
-      new Set(selection.selected.map(getClassChoiceOptionKey)).size !== selection.selected.length
+      (!mastery &&
+        new Set(selection.selected.map(getClassChoiceOptionKey)).size !== selection.selected.length)
     )
       continue
     choiceIds.add(choice.id)
     if (
+      !mastery &&
       !selection.selected.some((row) =>
         ['classFeature', 'subclassFeature', 'optionalFeature', 'feat', 'psionic'].includes(
           row.entityType,
@@ -122,9 +134,16 @@ function buildEffectiveClassChoiceFeatureRoutes(
       if (
         option.slotLevel < choice.level ||
         option.slotLevel > owner.levels ||
+        (mastery && !option.source?.trim()) ||
         !eligible.has(getClassChoiceOptionKey(option))
       )
         continue
+      if (mastery) {
+        const keys = masteredWeapons.get(choice.id) ?? new Set<string>()
+        keys.add(getClassChoiceOptionKey(option))
+        masteredWeapons.set(choice.id, keys)
+        continue
+      }
       selectedOptions.push({ selection, option })
       if (
         ['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
@@ -190,6 +209,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
   return {
     featureIds,
     choiceIds,
+    masteredWeapons,
     featureNamesByChoice,
     contributions: [...accepted].map((index) => contributions[index]),
     selectedOptions: selectedOptions.filter(

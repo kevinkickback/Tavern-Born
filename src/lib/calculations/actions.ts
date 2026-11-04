@@ -10,8 +10,6 @@ import {
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
-import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
-import { isKenseiChoiceId } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
@@ -19,10 +17,14 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { isStormAuraChoiceId, STORM_TARGETS } from '@/lib/5etools/stormAuraIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
-import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
+import {
+  getCurrentWeaponProficiencies,
+  isProficientWithWeapon,
+} from '@/lib/calculations/weaponProficiency'
 import {
   getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
+  getClassChoiceOptionKey,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
@@ -88,25 +90,13 @@ function parseMasteryReference(reference: string): { name: string; source?: stri
   return { name, source: sourcePart?.trim() || undefined }
 }
 
-function isSelectedItemChoice(character: Character, item: Equipment): boolean {
-  return (character.classChoiceSelections ?? []).some(
-    (selection) =>
-      !selection.inactive &&
-      !isKenseiChoiceId(selection.choiceId) &&
-      selection.selected.some(
-        (option) =>
-          option.entityType === 'item' &&
-          option.name === item.name &&
-          (!option.source || !item.source || option.source === item.source),
-      ),
-  )
-}
-
 export interface WeaponActionProjectionContext {
   abilityModifiers: Record<AbilityName, number>
   proficiencyBonus: number
   itemLookup?: ReadonlyMap<string, Item5e>
   propertyLookup?: Readonly<Record<string, string>>
+  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
+  classChoicePrerequisites?: ClassChoicePrerequisiteContext
   effects?: readonly CharacterEffect[]
   effectContext?: EffectResolutionContext
 }
@@ -114,14 +104,12 @@ export interface WeaponActionProjectionContext {
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   effectiveSpellProfiles?: readonly SpellProfile[]
   managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
-  classChoicePrerequisites?: ClassChoicePrerequisiteContext
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
   raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
   availableClasses?: readonly Class5e[]
   /** Explicit available choice targets; raw text lookups never replenish this catalog. */
-  classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
@@ -600,8 +588,15 @@ export function deriveWeaponActions(
       (left, right) =>
         Number(right.equipped) - Number(left.equipped) || left.id.localeCompare(right.id),
     )
-  const itemRules = resolveItemReferences(weapons, context.itemLookup)
-  return weapons.map((item, index) => {
+  const catalogs = context.classChoiceFeatureCatalogs
+  const weaponProficiencies = getCurrentWeaponProficiencies(character, catalogs?.classes)
+  const masteryChoices = getEffectiveClassChoiceFeatureRoutes(
+    character,
+    context.classChoiceFeatureCatalogs,
+    context.classChoicePrerequisites,
+  ).masteredWeapons
+  const masteredWeapons = new Set([...masteryChoices.values()].flatMap((keys) => [...keys]))
+  return weapons.map((item) => {
     const properties = item.properties ?? []
     const propertyKeys = properties.map((property) =>
       getItemPropertyUid(property).split('|')[0].toUpperCase(),
@@ -613,7 +608,7 @@ export function deriveWeaponActions(
       : getItemTypeCodes(item.type).includes('R')
         ? 'dexterity'
         : 'strength'
-    const proficient = isProficientWithWeapon(character.proficiencies.weapons, item)
+    const proficient = isProficientWithWeapon(weaponProficiencies, item)
     const baseAttackBonus =
       context.abilityModifiers[ability] + (proficient ? context.proficiencyBonus : 0)
     const attackBonus = Math.trunc(
@@ -632,13 +627,38 @@ export function deriveWeaponActions(
         effectContext,
       ).value,
     )
-    const itemData = itemRules[index]
-    const mastery = isSelectedItemChoice(character, item)
-      ? (itemData?.mastery ?? []).flatMap((reference) => {
-          const parsed = parseMasteryReference(reference)
-          return parsed ? [parsed] : []
-        })
-      : []
+    // The revised SRD equipment tables name these two focus forms as Quarterstaffs.
+    const focusType =
+      item.name === 'Staff' ? 'arcane' : item.name === 'Wooden Staff' ? 'druid' : undefined
+    const focusStaff =
+      focusType &&
+      item.source === 'XPHB' &&
+      catalogs?.itemsBase?.some(
+        (row) =>
+          row.name === item.name &&
+          row.source === item.source &&
+          row.type === 'SCF|XPHB' &&
+          row.scfType === focusType &&
+          !row.sourceIdentityConflict,
+      )
+    const masteryName = focusStaff ? 'Quarterstaff' : item.name
+    const masteryItem =
+      item.source &&
+      masteredWeapons.has(
+        getClassChoiceOptionKey({
+          entityType: 'item',
+          name: masteryName,
+          source: item.source,
+        }),
+      )
+        ? context.classChoiceFeatureCatalogs?.itemsBase?.find(
+            (row) => row.name === masteryName && row.source === item.source,
+          )
+        : undefined
+    const mastery = (masteryItem?.mastery ?? []).flatMap((reference) => {
+      const parsed = parseMasteryReference(reference)
+      return parsed ? [parsed] : []
+    })
     const propertyLabels = [
       ...new Set(
         properties.map((property) => {

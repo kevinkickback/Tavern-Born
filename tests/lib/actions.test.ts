@@ -35,7 +35,7 @@ describe('character action projection', () => {
       expect(deriveSpellActions(character, buildSpellLookup(spells))).toEqual([])
     expect(character).toEqual(before)
   })
-  test('derives an effect-aware weapon attack with proficiency, properties, and selected mastery', () => {
+  test('derives an effect-aware weapon attack and ignores an unverified item pick', () => {
     const character = makeCharacterFixture({
       proficiencies: {
         armor: [],
@@ -134,7 +134,7 @@ describe('character action projection', () => {
         range: 'test range',
         damage: [{ dice: '1d8', bonus: 5, damageType: 'test damage' }],
         properties: ['Test Property (while held)'],
-        mastery: [{ name: 'Test Mastery', source: 'TEST' }],
+        mastery: [],
       }),
     ])
   })

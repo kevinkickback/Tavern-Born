@@ -227,19 +227,20 @@ export function validateClassChoices(
       const storedSelection = selections.get(choice.id)?.selected ?? []
       const choiceCatalogs =
         choice.owner.type === 'subclass' && !catalogs?.subclassTargets ? subclassCatalogs : catalogs
-      const eligibleOptionKeys = choiceCatalogs
-        ? new Set(
-            resolveClassChoiceOptions(
-              choice,
-              choiceCatalogs,
-              choice.kind === 'proficiency' ? storedSelection : [],
-              entry.levels,
-              character,
+      const eligibleOptionKeys =
+        choiceCatalogs && !choice.optionFilter?.requiresMastery
+          ? new Set(
+              resolveClassChoiceOptions(
+                choice,
+                choiceCatalogs,
+                choice.kind === 'proficiency' ? storedSelection : [],
+                entry.levels,
+                character,
+              )
+                .filter(isClassChoiceOptionEligible)
+                .map((option) => getClassChoiceOptionKey(option.reference)),
             )
-              .filter(isClassChoiceOptionEligible)
-              .map((option) => getClassChoiceOptionKey(option.reference)),
-          )
-        : undefined
+          : undefined
       const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(
         character,
         choiceCatalogs,
@@ -252,17 +253,21 @@ export function validateClassChoices(
           )
           ? 1
           : 0
-        : eligibleOptionKeys
-          ? storedSelection.filter(
-              (option) =>
-                eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-                (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
-                  option.entityType,
-                ) ||
-                  (!!savedChoice &&
-                    effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
-            ).length
-          : storedSelection.length
+        : choice.optionFilter?.requiresMastery
+          ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0)
+          : eligibleOptionKeys
+            ? storedSelection.filter(
+                (option) =>
+                  eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+                  (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+                    option.entityType,
+                  ) ||
+                    (!!savedChoice &&
+                      effectiveRoutes.featureIds.has(
+                        getClassChoiceFeatureId(savedChoice, option),
+                      ))),
+              ).length
+            : storedSelection.length
       if (count !== required) {
         issues.push(
           readinessIssue(

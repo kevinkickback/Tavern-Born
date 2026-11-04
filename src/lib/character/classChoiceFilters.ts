@@ -1,14 +1,12 @@
-import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import {
+  getItemPropertyLabel,
+  getItemPropertyReferences,
+  getItemPropertyUid,
+} from '@/lib/5etools/itemProperties'
 import { isMundaneStartingItem } from '@/lib/5etools/startingItemCategory'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
-import type {
-  Creature5e,
-  Feat5e,
-  Item5e,
-  ItemPropertyReference,
-  OptionalFeatureLike,
-} from '@/types/5etools'
+import type { Creature5e, Feat5e, Item5e, OptionalFeatureLike } from '@/types/5etools'
 import type { NormalizedChoiceOptionFilter } from '@/types/classRules'
 
 interface FilterableChoiceEntity {
@@ -47,25 +45,12 @@ function getItemPropertyLabels(
   item: Item5e,
   itemPropertyByAbbr: Readonly<Record<string, string>>,
 ): string[] {
-  return getItemPropertyReferences(item).flatMap((value) => {
+  return getItemPropertyReferences(item.property).flatMap((value) => {
     const uid = getItemPropertyUid(value)
     const code = uid.split('|')[0]?.trim() ?? ''
     return [code, getItemPropertyLabel(uid, itemPropertyByAbbr)].filter((label): label is string =>
       Boolean(label),
     )
-  })
-}
-
-export function getItemPropertyReferences(item: Item5e): ItemPropertyReference[] {
-  const raw = (item as Record<string, unknown>).property
-  const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
-  return values.flatMap((value) => {
-    if (typeof value === 'string') return [value]
-    if (!value || typeof value !== 'object') return []
-    const record = value as Record<string, unknown>
-    const reference = record.uid ?? record.property ?? record.abbreviation ?? record.name
-    if (typeof reference !== 'string') return []
-    return [typeof record.note === 'string' ? { uid: reference, note: record.note } : reference]
   })
 }
 
@@ -194,7 +179,9 @@ export function matchesClassChoiceFilter(
   if (
     filter.entityType === 'item' &&
     filter.requiresMastery &&
-    ((entity as Item5e).mastery?.length ?? 0) === 0
+    ((entity as Item5e).sourceIdentityConflict ||
+      ((entity as Item5e).mastery?.length ?? 0) === 0 ||
+      !getNormalizedItemTraits(entity as Item5e, itemTypeByAbbr).weaponRanges.length)
   ) {
     return false
   }
