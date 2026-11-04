@@ -3,12 +3,19 @@ import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
-import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { findClassReference } from '@/lib/5etools/classReference'
+import { deriveFeatOptionSteps, hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
-import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
+import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getFeatOptionOwnerKey } from '@/lib/character/commands/featCommandIdentity'
-import type { FeatOptionTarget } from '@/lib/character/commands/featCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import {
+  type FeatOptionTarget,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { getFeatSetupOwners } from '@/lib/character/featSetupOwners'
+import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import {
@@ -100,8 +107,119 @@ export function useClassAsiFeatController({
       }),
     [classProgression, character, classLookup],
   )
+  const viewedClass = findClassReference(
+    { name: viewingClass, source: viewingClassSource },
+    Object.values(classLookup),
+  )
+  const revisedFeatSlot =
+    viewedClass?.edition === 'one' ||
+    viewingClassSource?.toUpperCase() === 'XPHB' ||
+    (!viewedClass && character?.originSystem === '2024')
+  const slot = useMemo(() => {
+    const catalogs = calculationContext?.classChoices.catalogs
+    if (
+      !revisedFeatSlot ||
+      !character ||
+      !viewingClass ||
+      !viewingClassSource ||
+      featPickerLevel == null ||
+      !catalogs ||
+      appliedAsiChoicesForClass.some((choice) => choice.level === featPickerLevel)
+    )
+      return undefined
+    return getRevisedClassFeatSlot(
+      character,
+      { name: viewingClass, source: viewingClassSource, level: featPickerLevel },
+      catalogs,
+    )
+  }, [
+    revisedFeatSlot,
+    character,
+    viewingClass,
+    viewingClassSource,
+    featPickerLevel,
+    calculationContext,
+    appliedAsiChoicesForClass,
+  ])
+  const featPickerSnapshot = useMemo(() => {
+    if (!slot || !character || !viewingClass || !calculationContext) return characterSnapshot
+    const otherFeats = character.feats.filter(
+      (feat) =>
+        !isClassAsiFeatForSlot(
+          feat,
+          viewingClass,
+          viewingClassSource,
+          featPickerLevel ?? undefined,
+        ),
+    )
+    const remaining =
+      otherFeats.length === character.feats.length
+        ? calculationContext
+        : createCharacterCalculationContext(
+            applyCharacterCommandResult(
+              character,
+              replaceFeatSelectionsCommand(character, character.provenance, otherFeats),
+            ),
+            calculationContext.lookups.primary,
+            calculationContext.lookups.raw,
+          )
+    return {
+      ...characterSnapshot,
+      ...slot,
+      abilityScores: remaining.abilityScores.total,
+      features: remaining.character.features,
+      spells:
+        remaining === calculationContext
+          ? characterSnapshot.spells
+          : buildPrerequisiteSnapshot({
+              character: remaining.character,
+              effectiveSpellProfiles: remaining.character.spells.spellProfiles,
+            }).spells,
+      progression: slot.progression.map((entry) => ({
+        ...findClassReference(entry, characterSnapshot.progression),
+        ...entry,
+      })),
+    }
+  }, [
+    slot,
+    character,
+    viewingClass,
+    viewingClassSource,
+    featPickerLevel,
+    calculationContext,
+    characterSnapshot,
+  ])
   const featModalFeats = useMemo(() => {
-    const available = feats.filter(isNormallySelectableFeat)
+    const counts = new Map<string, number>()
+    if (slot)
+      for (const feat of feats) {
+        const key = getFeatSelectionKey(feat)
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+      }
+    const owned = new Set(
+      slot && character
+        ? getFeatSetupOwners(character, []).map((owner) => getFeatSelectionKey(owner.target))
+        : [],
+    )
+    const current = new Set(
+      classAsiFeats.filter((feat) => feat.classLevel === featPickerLevel).map(getFeatSelectionKey),
+    )
+    const available = feats.filter((feat) => {
+      if (!revisedFeatSlot) return isNormallySelectableFeat(feat)
+      if (!slot) return false
+      const key = getFeatSelectionKey(feat)
+      return (
+        !!feat.source?.trim() &&
+        feat.sourceIdentityConflict !== true &&
+        counts.get(key) === 1 &&
+        (current.has(key) ||
+          !owned.has(key) ||
+          (feat.repeatable === true &&
+            !deriveFeatOptionSteps(feat).some((step) => step.kind === 'spellcastingClass'))) &&
+        (isNormallySelectableFeat(feat) ||
+          (slot.openFeatCategories && (feat.category === 'O' || feat.category === 'EB')))
+      )
+    })
     const merged = buildFeatModalFeats({
       availableFeats: available,
       selectedFeats: effectiveFeats,
@@ -123,7 +241,17 @@ export function useClassAsiFeatController({
         .map(getFeatSelectionKey),
     )
     return merged.filter((feat) => !assignedElsewhere.has(getFeatSelectionKey(feat)))
-  }, [feats, effectiveFeats, featPickerLevel, viewingClass, viewingClassSource])
+  }, [
+    feats,
+    effectiveFeats,
+    featPickerLevel,
+    viewingClass,
+    viewingClassSource,
+    revisedFeatSlot,
+    character,
+    classAsiFeats,
+    slot,
+  ])
   const featPickerInitialSelectedIds = useMemo(
     () =>
       classAsiFeats.filter((feat) => feat.classLevel === featPickerLevel).map(getFeatSelectionKey),
@@ -132,6 +260,25 @@ export function useClassAsiFeatController({
 
   const confirmFeat = (selectedFeats: Feat5e[]) => {
     if (!character || !viewingClass || !viewingClassSource || featPickerLevel == null) return
+    if (revisedFeatSlot) {
+      if (useCharacterStore.getState().activeCharacter !== character || selectedFeats.length > 1)
+        return
+      const selected = selectedFeats[0]
+      if (selected) {
+        const key = getFeatSelectionKey(selected)
+        if (featPickerInitialSelectedIds.includes(key)) {
+          setFeatPickerOpen(false)
+          setFeatPickerLevel(null)
+          return
+        }
+        const live = featModalFeats.find((feat) => getFeatSelectionKey(feat) === key)
+        if (!slot || !live || !checkAllPrerequisites(live, featPickerSnapshot).met) {
+          toast.info('Review this slot’s feat prerequisites and try again.')
+          return
+        }
+        selectedFeats = [live]
+      }
+    }
     const previousKeys = new Set(effectiveFeats.map(getFeatSelectionKey))
     const otherFeats = effectiveFeats.filter(
       (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, featPickerLevel),
@@ -196,6 +343,8 @@ export function useClassAsiFeatController({
 
   return {
     characterSnapshot,
+    featPickerSnapshot,
+    revisedFeatSlot,
     totalAsi,
     usedAsi: character?.feats?.length ?? 0,
     effectiveFeats,

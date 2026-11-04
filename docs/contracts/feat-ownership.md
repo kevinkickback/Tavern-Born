@@ -31,6 +31,16 @@ Class progression changes remove ordinary selections when their source-qualified
 or falls below the saved slot level. They use the same setup retraction as ordinary feat removal.
 Ordinary records with incomplete slot metadata remain independent of this cleanup.
 
+Revised class feat slots use the current earned class gain and filtered feat catalog. Origin
+feats and Epic Boons are available when their prerequisites are met. Numeric level requirements
+use the total character level at the gain, including a qualifying multiclass gain. The level-up
+history supplies the order when complete. With incomplete history, the class gain and current
+progression bound the possible level and ambiguous requirements need review. Spell Recall
+requires an earned, current Spellcasting or Pact Magic declaration. Exact saved selections can
+still be kept or cleared when current eligibility cannot be established. Replacement checks use
+the effective character after removal of that slot's old feat. Repeated selections that need a
+different spell list across independent owners remain outside this picker’s supported choices.
+
 Name-only unconfigured choice records remain visible and removable without catalog inference. They
 require explicit printing reselection before setup. Commit/Edit must match exactly one qualified
 saved choice reference; configured name-only references reject at admission. Choice setup benefit

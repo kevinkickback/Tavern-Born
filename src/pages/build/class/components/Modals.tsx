@@ -36,6 +36,7 @@ interface BuildClassModalsProps {
   featPickerOpen: boolean
   onFeatPickerOpenChange: (open: boolean) => void
   featModalFeats: Feat5e[]
+  requireFeatPrerequisites?: boolean
   featPickerInitialSelectedIds: string[]
   onFeatConfirm: (selectedFeats: Feat5e[]) => void
 }
@@ -105,6 +106,7 @@ export function BuildClassModals(props: BuildClassModalsProps) {
         maxSelections={1}
         initialSelectedIds={props.featPickerInitialSelectedIds}
         characterSnapshot={props.characterSnapshot}
+        requirePrerequisites={props.requireFeatPrerequisites}
         onConfirm={props.onFeatConfirm}
       />
     </>

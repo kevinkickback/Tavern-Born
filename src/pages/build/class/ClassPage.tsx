@@ -301,6 +301,8 @@ export function BuildClassPage() {
   })
   const {
     characterSnapshot,
+    featPickerSnapshot,
+    revisedFeatSlot,
     totalAsi: totalASIAcrossClasses,
     usedAsi: usedASI,
     appliedAsiChoicesForClass,
@@ -640,7 +642,8 @@ export function BuildClassPage() {
           handleSubclassSelect(subclass)
           classChoiceController.configureSubclass(subclass)
         }}
-        characterSnapshot={characterSnapshot}
+        characterSnapshot={featPickerSnapshot}
+        requireFeatPrerequisites={revisedFeatSlot}
         asiPickerLevel={asiPickerLevel}
         onAsiPickerLevelChange={setAsiPickerLevel}
         appliedAsiChoicesForClass={appliedAsiChoicesForClass}
