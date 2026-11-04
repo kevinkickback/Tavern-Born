@@ -26,6 +26,16 @@ retract only this provider. Independent providers survive; valid missing-source 
 recoverable. These choices add no inventory or Weapon Mastery and do not automate attack effects
 or gameplay replacement events. Changed or conflicting unqualified prose remains diagnostic.
 
+### Fighter and Champion Fighting Styles
+
+The base and additional Fighting Style slots share an edition-specific pool. The picker and
+confirmation validate the current source-qualified options against the other earned slot.
+An older duplicate remains editable. The base slot supplies the effective style, and clearing
+or changing it lets the additional slot supply its retained style when eligible. Readiness,
+saved details, legacy feature effects and revised feat effects use the effective slot.
+Revised configured feat options, including spells, follow their exact slot owner. Mixed-edition
+style equivalence and styles from other classes use their existing rules.
+
 ### Weapon Mastery
 
 The current class, its unambiguous declaring feature, and the filtered base-weapon catalog govern

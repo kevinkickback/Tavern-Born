@@ -9,12 +9,15 @@ import {
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
 import {
   type ClassChoicePrerequisiteContext,
   projectEffectiveClassChoiceFeatures,
 } from '@/lib/character/effectiveClassChoiceFeatures'
+import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   type ManagedClassSpellContext,
   type ManagedClassSpellStatus,
@@ -32,6 +35,7 @@ import {
   getStormAuraSelectionStates,
 } from '@/lib/character/stormAuraSelections'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
@@ -357,11 +361,34 @@ export function createCharacterCalculationContext(
   }
   const dailyIntentSource = character
   character = projectManagedClassSpellState(character, managedSpellContext).character
+  const savedClassFeats = character.classFeatChoices
   character = projectEffectiveClassChoiceFeatures(
     character,
     primaryLookups.classChoiceFeatureCatalogs,
     undefined,
   )
+  if (character.classFeatChoices !== savedClassFeats) {
+    for (const saved of savedClassFeats ?? []) {
+      if (!getFighterStylePair(saved.id)) continue
+      const active = character.classFeatChoices?.find((choice) => choice.id === saved.id)
+      for (const feat of saved.feats) {
+        if (
+          !feat.options ||
+          active?.feats.some((row) => getFeatSelectionKey(row) === getFeatSelectionKey(feat))
+        )
+          continue
+        character = applyCharacterCommandResult(
+          character,
+          retractFeatOptionsCommand(
+            { ...character, classFeatChoices: savedClassFeats },
+            character.provenance,
+            { ...feat, classFeatChoiceId: saved.id },
+            feat.options,
+          ),
+        )
+      }
+    }
+  }
   character = refreshClassProficiencyState(
     character,
     primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {}),

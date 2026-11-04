@@ -125,6 +125,7 @@ import {
 } from './classChoiceIdentity'
 import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
+import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import {
   createOptionalClassFeatureActivity,
@@ -713,8 +714,9 @@ export function resolveClassChoiceOptions(
 
   const poolSection = getOptionalClassPoolSection(choice)
   const activity = character && createOptionalClassFeatureActivity(character, catalogs)
+  const pair = getFighterStylePair(choice.id)
   const poolCounts = new Map<string, number>()
-  if (poolSection)
+  if (poolSection || pair?.source === 'PHB')
     for (const row of catalogs.optionalFeatures) {
       const key = getClassChoiceOptionKey({
         entityType: 'optionalFeature',
@@ -723,6 +725,25 @@ export function resolveClassChoiceOptions(
       })
       poolCounts.set(key, (poolCounts.get(key) ?? 0) + 1)
     }
+  const isCurrentPoolMember = (
+    poolChoice: NormalizedCharacterChoice,
+    section: ReturnType<typeof getOptionalClassPoolSection>,
+    reference: NormalizedChoiceOptionReference,
+  ) => {
+    if (
+      !section ||
+      reference.entityType !== 'optionalFeature' ||
+      normalized(reference.source) !== normalized(section.source)
+    )
+      return true
+    if (!activity?.option(poolChoice, reference)) return false
+    const key = getClassChoiceOptionKey(reference)
+    const count = poolCounts.get(key) ?? 0
+    const candidateCount = catalogs.optionalFeatureCandidates
+      ? (catalogs.optionalFeatureCandidates.get(key) ?? []).length
+      : count
+    return count === 1 && candidateCount === 1
+  }
   const byKey = new Map(
     resolved
       .map((option) => {
@@ -745,22 +766,7 @@ export function resolveClassChoiceOptions(
           ? { ...option, prerequisite: undefined }
           : { ...option, availability: 'retained' as const }
       })
-      .filter((option) => {
-        if (
-          !poolSection ||
-          option.reference.entityType !== 'optionalFeature' ||
-          normalized(option.reference.source) !== normalized(poolSection.source)
-        )
-          return true
-        if (!activity?.option(choice, option.reference)) return false
-        const key = getClassChoiceOptionKey(option.reference)
-        const count = poolCounts.get(key) ?? 0
-        const candidateCount =
-          catalogs.optionalFeatureCandidates !== undefined
-            ? (catalogs.optionalFeatureCandidates.get(key) ?? []).length
-            : count
-        return count === 1 && candidateCount === 1
-      })
+      .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
       .map((option) => [getClassChoiceOptionKey(option.reference), option]),
   )
   for (const option of saved) {
@@ -770,6 +776,130 @@ export function resolveClassChoiceOptions(
         key,
         resolveExplicitOption(option, catalogs, enemy ? 'eligible' : 'retained', tableDefinitions),
       )
+    }
+  }
+  const styleOwner =
+    pair && character ? findClassReference(choice.owner, character.classProgression) : undefined
+  const styleClasses = pair
+    ? catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
+    : undefined
+  const styleClass =
+    styleClasses?.length === 1 && !styleClasses[0].sourceIdentityConflict
+      ? styleClasses[0]
+      : undefined
+  const styleSubclasses = styleClass?.subclasses?.filter((subclass) =>
+    findClassReference({ name: styleOwner?.subclass, source: styleOwner?.subclassSource }, [
+      subclass,
+    ]),
+  )
+  const styleSubclass =
+    styleSubclasses?.length === 1 && !styleSubclasses[0].sourceIdentityConflict
+      ? styleSubclasses[0]
+      : undefined
+  const currentStyles =
+    styleClass && styleOwner && activity
+      ? getCharacterClassChoices(styleClass, styleSubclass, activity, catalogs).filter((row) => {
+          const filter = row.optionFilter
+          return pair?.source === 'PHB'
+            ? filter?.entityType === 'optionalFeature' &&
+                filter.featureTypes?.length === 1 &&
+                filter.featureTypes[0] === 'FS:F'
+            : filter?.entityType === 'feat' &&
+                filter.categories?.length === 1 &&
+                filter.categories[0] === 'FS'
+        })
+      : []
+  const currentStyle = currentStyles.find(
+    (row) => row.id === choice.id && row.level <= (styleOwner?.levels ?? 0),
+  )
+  const savedStyleKeys = pair ? new Set(saved.map(getClassChoiceOptionKey)) : undefined
+  const earnedStyleKeys = pair
+    ? new Set(
+        saved.filter((option) => option.slotLevel === choice.level).map(getClassChoiceOptionKey),
+      )
+    : undefined
+  const styleCandidates = new Map<string, Array<Feat5e | OptionalFeatureLike>>()
+  if (pair && savedStyleKeys) {
+    const entityType = pair.source === 'PHB' ? 'optionalFeature' : 'feat'
+    for (const row of pair.source === 'PHB' ? catalogs.optionalFeatures : catalogs.feats) {
+      const key = getClassChoiceOptionKey({ entityType, name: row.name, source: row.source })
+      if (byKey.has(key)) styleCandidates.set(key, [...(styleCandidates.get(key) ?? []), row])
+    }
+    for (const [key, option] of byKey) {
+      const rows = styleCandidates.get(key)
+      if (
+        option.reference.source?.trim() &&
+        (!character || !styleClasses || currentStyle) &&
+        (!savedStyleKeys.has(key) || earnedStyleKeys?.has(key)) &&
+        rows?.length === 1 &&
+        !('sourceIdentityConflict' in rows[0] && rows[0].sourceIdentityConflict === true)
+      ) {
+        if (currentStyle && option.reference.entityType === 'feat' && option.prerequisite?.length) {
+          let satisfied = false
+          const prerequisite = option.prerequisite.map((entry) => {
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
+            const { feature, ...rest } = entry
+            if (!Array.isArray(feature) || feature.length !== 1 || feature[0] !== 'Fighting Style')
+              return entry
+            satisfied ||= Object.keys(rest).length === 0
+            return rest
+          })
+          byKey.set(key, {
+            ...option,
+            prerequisite: satisfied ? undefined : prerequisite,
+          })
+        }
+        continue
+      }
+      if (savedStyleKeys.has(key)) byKey.set(key, { ...option, availability: 'retained' })
+      else byKey.delete(key)
+    }
+  }
+  if (pair && character && styleOwner && savedStyleKeys) {
+    const siblingId = choice.id === pair.base ? pair.additional : pair.base
+    const sibling = currentStyles.find((row) => row.id === siblingId)
+    const siblingRows = character.classChoiceSelections?.filter((row) => row.choiceId === siblingId)
+    const row = siblingRows?.length === 1 ? siblingRows[0] : undefined
+    if (
+      sibling &&
+      row &&
+      row.kind === sibling.kind &&
+      row.classLevel === sibling.level &&
+      row.selected.length === 1 &&
+      row.selected[0].slotLevel === sibling.level &&
+      styleOwner.levels >= sibling.level &&
+      findClassReference({ name: row.className, source: row.classSource }, [styleOwner]) &&
+      normalized(row.subclassName) === normalized(sibling.owner.subclassName) &&
+      normalized(row.subclassSource) === normalized(sibling.owner.subclassSource)
+    ) {
+      const key = getClassChoiceOptionKey(row.selected[0])
+      const option = byKey.get(key)
+      const candidate = styleCandidates.get(key)?.[0]
+      const keepsOriginal = choice.id === pair.base && earnedStyleKeys?.has(key)
+      const repeats =
+        option?.reference.entityType === 'feat' &&
+        candidate &&
+        'repeatable' in candidate &&
+        candidate.repeatable === true
+      if (
+        option?.availability === 'eligible' &&
+        !keepsOriginal &&
+        !repeats &&
+        candidate &&
+        sibling.optionFilter &&
+        isCurrentPoolMember(sibling, getOptionalClassPoolSection(sibling), row.selected[0]) &&
+        matchesClassChoiceFilter(
+          candidate,
+          sibling.optionFilter,
+          catalogs.itemPropertyByAbbr,
+          catalogs.itemTypeByAbbr,
+          catalogs.weaponProficiencies,
+          styleOwner.levels,
+        )
+      ) {
+        if (savedStyleKeys.has(key)) byKey.set(key, { ...option, availability: 'retained' })
+        else byKey.delete(key)
+      }
     }
   }
   return [...byKey.values()].sort(

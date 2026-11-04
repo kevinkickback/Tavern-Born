@@ -13,6 +13,7 @@ import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
   getClassChoiceFeatureId,
   getClassChoiceFeatureTarget,
+  getClassChoiceOptionKey,
   getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
@@ -42,6 +43,7 @@ import {
 } from './effectiveClassChoiceFeatures'
 import { describeFavoredEnemyLanguage } from './favoredEnemySelections'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
+import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
@@ -240,14 +242,22 @@ export function buildRetainedCharacterDetails(
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
   for (const selection of character.classChoiceSelections ?? []) {
-    if (!getOptionalClassPoolSelectionSection(selection)) continue
+    const fighterStyle = getFighterStylePair(selection.choiceId)
+    if (!fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
     const details = choiceDetailsById.get(selection.choiceId)
     selection.selected.forEach((option, index) => {
       const detail = details?.[index]
       if (
-        option.entityType === 'optionalFeature' &&
         detail?.availability === 'available' &&
-        !routes.featureIds.has(getClassChoiceFeatureId(selection, option))
+        (fighterStyle
+          ? !routes.selectedOptions.some(
+              (row) =>
+                row.selection.choiceId === selection.choiceId &&
+                row.option.slotLevel === option.slotLevel &&
+                getClassChoiceOptionKey(row.option) === getClassChoiceOptionKey(option),
+            )
+          : option.entityType === 'optionalFeature' &&
+            !routes.featureIds.has(getClassChoiceFeatureId(selection, option)))
       )
         details![index] = { ...detail, availability: 'inactive' }
     })
