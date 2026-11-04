@@ -1,20 +1,22 @@
 import {
-  wizardStep1Schema,
-  wizardStep2Schema,
-  wizardStep3Schema,
-  wizardStep4Schema,
-  wizardStep5Schema,
-  wizardStep6Schema,
+  wizardAbilitiesSchema,
+  wizardBackgroundSchema,
+  wizardBasicsSchema,
+  wizardClassSchema,
+  wizardContentSchema,
+  wizardRaceSchema,
+  wizardRulesSchema,
 } from '@/types/characterSchema'
-import type { CharacterWizardData, ValidationResult } from './types'
+import type { CharacterWizardData, ValidationResult, WizardStepId } from './types'
 
 const STEP_SCHEMAS = {
-  1: wizardStep1Schema,
-  2: wizardStep2Schema,
-  3: wizardStep3Schema,
-  4: wizardStep4Schema,
-  5: wizardStep5Schema,
-  6: wizardStep6Schema,
+  basics: wizardBasicsSchema,
+  rules: wizardRulesSchema,
+  content: wizardContentSchema,
+  race: wizardRaceSchema,
+  class: wizardClassSchema,
+  background: wizardBackgroundSchema,
+  abilities: wizardAbilitiesSchema,
 } as const
 
 interface WizardStepAvailability {
@@ -24,23 +26,23 @@ interface WizardStepAvailability {
 }
 
 export function validateStep(
-  step: number,
+  step: WizardStepId,
   characterData: CharacterWizardData,
   gameData: WizardStepAvailability | null | undefined,
 ): ValidationResult {
-  if (step === 3 && (gameData?.races ?? []).length === 0) {
+  if (step === 'race' && (gameData?.races ?? []).length === 0) {
     return {
       valid: false,
       error: 'No races available. Please load game data in Settings first.',
     }
   }
-  if (step === 4 && (gameData?.classes ?? []).length === 0) {
+  if (step === 'class' && (gameData?.classes ?? []).length === 0) {
     return {
       valid: false,
       error: 'No classes available. Please load game data in Settings first.',
     }
   }
-  if (step === 5 && (gameData?.backgrounds ?? []).length === 0) {
+  if (step === 'background' && (gameData?.backgrounds ?? []).length === 0) {
     return {
       valid: false,
       error: 'No backgrounds available. Please load game data in Settings first.',

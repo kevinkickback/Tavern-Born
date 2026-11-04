@@ -37,11 +37,12 @@ import {
   BackgroundStep,
   BasicsStep,
   ClassStep,
+  ContentStep,
   RaceStep,
   ReviewStep,
   RulesStep,
 } from './steps'
-import type { CharacterWizardData } from './types'
+import type { CharacterWizardData, WizardStepId } from './types'
 import { validateStep } from './validation'
 import { WizardFooter } from './WizardFooter'
 import { WizardNavigation } from './WizardNavigation'
@@ -50,6 +51,17 @@ interface CharacterCreationWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+const STEP_COMPONENTS = {
+  basics: BasicsStep,
+  rules: RulesStep,
+  content: ContentStep,
+  race: RaceStep,
+  class: ClassStep,
+  background: BackgroundStep,
+  abilities: AbilityScoresStep,
+  review: ReviewStep,
+} satisfies Record<WizardStepId, unknown>
 
 function getDefaultAbilityScoresForMethod(method: string): Record<string, number> {
   if (method === 'standard-array') return makeDefaultStandardArrayAssignment()
@@ -86,6 +98,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
   const gameData = useGameDataStore((state) => state.gameData)
   const [currentStep, setCurrentStep] = useState(1)
+  const stepId = WIZARD_STEPS[currentStep - 1]?.id
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const originalValues = useRef<Record<string, unknown>>({})
   const [confirmDiscard, setConfirmDiscard] = useState(false)
@@ -224,7 +237,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     )
 
   const handleNext = () => {
-    const validation = validateStep(currentStep, characterData, wizardData)
+    if (!stepId) return
+    const validation = validateStep(stepId, characterData, wizardData)
     if (!validation.valid) {
       setValidationError(validation.error || 'Please complete this step')
       if (validation.fields) setInvalidFields(new Set(validation.fields))
@@ -284,15 +298,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     subraceName: characterData.subrace,
     subraceSource: characterData.subraceSource,
   })
-  const Step = [
-    BasicsStep,
-    RulesStep,
-    RaceStep,
-    ClassStep,
-    BackgroundStep,
-    AbilityScoresStep,
-    ReviewStep,
-  ][currentStep - 1]
+  const Step = stepId ? STEP_COMPONENTS[stepId] : undefined
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -307,13 +313,13 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         <DialogDescription className="sr-only">
           Step through the wizard to configure your new character.
         </DialogDescription>
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div
               className={cn(
-                'min-h-0 flex-1 py-6 pl-8 pr-14',
-                currentStep === 2 ? 'overflow-hidden' : 'overflow-y-auto',
+                'min-h-0 flex-1 p-4 sm:p-6 lg:pr-12',
+                stepId === 'content' ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto',
               )}
             >
               {validationError && invalidFields.size === 0 && (

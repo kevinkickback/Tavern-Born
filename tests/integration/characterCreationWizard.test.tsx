@@ -64,7 +64,7 @@ describe('character creation and proficiencies validation', () => {
     const { validateStep } = await import('@/components/character/wizard/validation')
 
     const result = validateStep(
-      2,
+      'rules',
       {
         ...INITIAL_CHARACTER_DATA,
         originSystem: '',

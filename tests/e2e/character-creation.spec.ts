@@ -69,14 +69,14 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await page.getByRole('option', { name: 'Non-binary', exact: true }).click()
   await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await expect(dialog.getByText('Step 2 of 7').first()).toBeVisible()
+  await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
 
   const dialogBounds = await dialog.boundingBox()
   if (!dialogBounds || dialogBounds.x <= 1) throw new Error('Expected space outside the wizard')
   await page.mouse.click(dialogBounds.x / 2, 10)
 
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByText('Step 2 of 7').first()).toBeVisible()
+  await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
   await dialog.getByRole('button', { name: 'Back' }).click()
   await expect(dialog.getByLabel('Character Name')).toHaveValue('Retained Wizard Hero')
   await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
@@ -89,7 +89,7 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await expect(dialog).toBeHidden()
   await page.getByRole('button', { name: 'New Character' }).first().click()
   await expect(dialog.getByLabel('Character Name')).toHaveValue('')
-  await expect(dialog.getByText('Step 1 of 7').first()).toBeVisible()
+  await expect(dialog.getByText('Step 1 of 8').first()).toBeVisible()
 })
 
 test('wizard exit confirmation keeps focus and input until discard is confirmed', async ({
@@ -147,7 +147,7 @@ test('wizard exit confirmation keeps focus and input until discard is confirmed'
   await expect(confirmation).toHaveCount(0)
 })
 
-test('reverted source choices remain pristine when recommended sources arrive later', async ({
+test('reverted source choices adopt late recommended defaults without losing draft input', async ({
   page,
 }) => {
   await page.goto('/')
@@ -162,9 +162,12 @@ test('reverted source choices remain pristine when recommended sources arrive la
   const wizard = page.getByRole('dialog', { name: 'Create New Character' })
   await wizard.getByLabel('Character Name').fill('Temporary name')
   await wizard.getByRole('button', { name: 'Next' }).click()
+  await wizard.getByRole('button', { name: /5e Legacy/ }).click()
+  await wizard.getByRole('button', { name: 'Next' }).click()
   const additionalSource = wizard.getByRole('button', { name: /Test additional content/ })
   await additionalSource.click()
   await additionalSource.click()
+  await wizard.getByRole('button', { name: 'Back' }).click()
   await wizard.getByRole('button', { name: 'Back' }).click()
   await wizard.getByLabel('Character Name').fill('')
   await page.evaluate(async () => {
@@ -182,8 +185,17 @@ test('reverted source choices remain pristine when recommended sources arrive la
     })
   })
   await wizard.getByRole('button', { name: 'Cancel' }).click()
-  await expect(wizard).toBeHidden()
-  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
+  await expect(confirmation).toBeVisible()
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click()
+  await wizard.getByLabel('Character Name').fill('Restored late defaults')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
+  await expect(wizard.getByRole('button', { name: /Late recommended source/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
 })
 
 test('empty source selection survives refresh under discard confirmation', async ({ page }) => {
@@ -199,6 +211,8 @@ test('empty source selection survives refresh under discard confirmation', async
   await newCharacter.click()
   const wizard = page.getByRole('dialog', { name: 'Create New Character' })
   await wizard.getByLabel('Character Name').fill('Preserved empty sources')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await wizard.getByRole('button', { name: /5e Legacy/ }).click()
   await wizard.getByRole('button', { name: 'Next' }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
   await wizard.getByRole('button', { name: 'None', exact: true }).click()
@@ -228,6 +242,8 @@ test('empty source selection survives refresh under discard confirmation', async
   await newCharacter.click()
   await wizard.getByLabel('Character Name').fill('New wizard lifetime')
   await wizard.getByRole('button', { name: 'Next' }).click()
+  await wizard.getByRole('button', { name: /5e Legacy/ }).click()
+  await wizard.getByRole('button', { name: 'Next' }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
 })
 
@@ -241,6 +257,7 @@ test('Rules warnings remain visible while Additional Content scrolls', async ({ 
   await dialog.getByRole('button', { name: 'Next' }).click()
 
   await dialog.getByRole('button', { name: /5\.5e Revised/ }).click()
+  await dialog.getByRole('button', { name: 'Next' }).click()
   const sourceScroller = dialog.getByRole('region', { name: 'Additional Content' })
   await expect(sourceScroller).toBeVisible()
   await expect
@@ -264,6 +281,63 @@ test('Rules warnings remain visible while Additional Content scrolls', async ({ 
     .toBeGreaterThan(0)
 })
 
+for (const viewport of [
+  { width: 1280, height: 720 },
+  { width: 900, height: 640 },
+]) {
+  test(`Content search and native scrolling retain source choices at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/')
+    await ensureStartupPromptResolved(page, 'e2e-content-search', {
+      ...CHARACTER_CREATION_GAME_DATA,
+      sources: [...CHARACTER_CREATION_GAME_DATA.sources, ...GAME_DATA_WITH_MANY_SOURCES.sources],
+    })
+    await page.getByRole('button', { name: 'New Character' }).first().click()
+    const wizard = page.getByRole('dialog', { name: 'Create New Character' })
+    await wizard.getByLabel('Character Name').fill('Content choices')
+    await wizard.getByRole('button', { name: 'Next' }).click()
+    await expect(wizard.getByRole('textbox', { name: 'Search sources' })).toHaveCount(0)
+    await wizard.getByRole('button', { name: /5e Legacy/ }).click()
+    await wizard.getByRole('button', { name: 'Next' }).click()
+    const search = wizard.getByRole('textbox', { name: 'Search sources' })
+    const region = wizard.getByRole('region', { name: 'Additional Content' })
+    expect(await region.evaluate((node) => node.clientHeight)).toBeGreaterThan(200)
+    await region.hover()
+    await page.mouse.wheel(0, 320)
+    await expect.poll(() => region.evaluate((node) => node.scrollTop)).toBeGreaterThan(0)
+    await region.focus()
+    await region.press('Home')
+    await expect.poll(() => region.evaluate((node) => node.scrollTop)).toBe(0)
+    await region.press('End')
+    await expect.poll(() => region.evaluate((node) => node.scrollTop)).toBeGreaterThan(0)
+    await search.fill('  tEsT30 ')
+    const source = region.getByRole('button', { name: /Test Source 30/ })
+    await expect(region.getByRole('button')).toHaveCount(1)
+    await source.click()
+    await expect(source).toHaveAttribute('aria-pressed', 'true')
+    await search.fill('missing source')
+    await expect(wizard.getByRole('status')).toHaveText('No sources match your search.')
+    await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
+    await wizard.getByRole('button', { name: 'Back' }).click()
+    await wizard.getByRole('button', { name: 'Next' }).click()
+    await search.fill('source 30')
+    await expect(source).toHaveAttribute('aria-pressed', 'true')
+    await wizard.getByRole('button', { name: 'Clear', exact: true }).click()
+    await expect(region.getByRole('button')).toHaveCount(30)
+    await expect(wizard.getByRole('button', { name: 'Next' })).toBeInViewport()
+    await page.screenshot({ path: info.outputPath('content-step.png') })
+    await wizard.getByRole('button', { name: 'Next' }).click()
+    await expect(wizard.getByPlaceholder('Search races...')).toBeVisible()
+    await wizard.getByRole('button', { name: 'Next' }).click()
+    const armor = wizard.getByText('Armor Proficiencies', { exact: true }).first()
+    await expect(armor).toBeVisible()
+    expect(await armor.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('class-details.png') })
+  })
+}
+
 test('creates a complete character and persists it across a full reload', async ({ page }) => {
   await page.goto('/')
   await seedAppState(page, {
@@ -284,6 +358,8 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByRole('button', { name: /5e Legacy/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
 
+    await expect(dialog.getByRole('heading', { name: 'Additional Content' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Next' }).click()
     await dialog.getByRole('button', { name: /Human\s+PHB/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
 

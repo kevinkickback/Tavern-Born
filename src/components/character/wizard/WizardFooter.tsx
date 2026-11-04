@@ -18,12 +18,12 @@ export function WizardFooter({
   isPending = false,
 }: WizardFooterProps) {
   return (
-    <div className="flex flex-shrink-0 items-center justify-between border-t border-border bg-surface-raised px-6 py-3">
+    <div className="flex flex-shrink-0 items-center justify-between border-t border-border bg-surface-raised px-4 py-3 sm:px-6">
       <Button variant="ghost" size="sm" onClick={onCancel} disabled={isPending}>
         Cancel
       </Button>
       <div className="flex items-center gap-2">
-        <span className="mr-2 text-xs text-muted-foreground">
+        <span className="mr-2 hidden text-xs text-muted-foreground sm:inline">
           Step {currentStep} of {totalSteps}
         </span>
         {currentStep > 1 && (
@@ -31,7 +31,7 @@ export function WizardFooter({
             variant="outline"
             size="sm"
             onClick={onBack}
-            className="min-w-24"
+            className="min-w-16 sm:min-w-24"
             disabled={isPending}
           >
             Back
@@ -40,7 +40,7 @@ export function WizardFooter({
         <Button
           size="sm"
           onClick={onNext}
-          className="min-w-24"
+          className="min-w-16 sm:min-w-24"
           disabled={isPending}
           aria-busy={isPending}
         >

@@ -135,6 +135,7 @@ vi.mock('@/components/character/wizard/steps', () => ({
     </>
   ),
   RulesStep: () => null,
+  ContentStep: () => null,
   RaceStep: () => null,
   ClassStep: () => null,
   BackgroundStep: () => null,
@@ -183,14 +184,14 @@ test('outside mouse and touch clicks preserve the current wizard step and entere
   const dialog = screen.getByRole('dialog', { name: 'Create New Character' })
   await user.type(within(dialog).getByRole('textbox', { name: 'Character name' }), 'Retained Hero')
   await user.click(within(dialog).getByRole('button', { name: 'Next' }))
-  expect(within(dialog).getAllByText('Step 2 of 7').length).toBeGreaterThan(0)
+  expect(within(dialog).getAllByText('Step 2 of 8').length).toBeGreaterThan(0)
 
   const backdrop = wizardBackdrop()
   await user.click(backdrop)
   await user.pointer([{ keys: '[TouchA>]', target: backdrop }, { keys: '[/TouchA]' }])
 
   expect(screen.getByRole('dialog', { name: 'Create New Character' })).toBe(dialog)
-  expect(within(dialog).getAllByText('Step 2 of 7').length).toBeGreaterThan(0)
+  expect(within(dialog).getAllByText('Step 2 of 8').length).toBeGreaterThan(0)
   await user.click(within(dialog).getByRole('button', { name: 'Back' }))
   expect(
     within(dialog).getByRole<HTMLInputElement>('textbox', { name: 'Character name' }).value,
@@ -231,7 +232,7 @@ test.each([
   await user.keyboard('{Escape}')
   await waitFor(() => expect(document.activeElement).toBe(origin))
   expect(screen.getByRole('dialog', { name: 'Create New Character' })).toBe(dialog)
-  expect(within(dialog).getAllByText('Step 2 of 7').length).toBeGreaterThan(0)
+  expect(within(dialog).getAllByText('Step 2 of 8').length).toBeGreaterThan(0)
 
   await requestClose()
   await user.click(screen.getByRole('button', { name: 'Keep editing' }))
@@ -246,7 +247,7 @@ test.each([
   expect(screen.queryByRole('dialog', { name: 'Create New Character' })).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
   const reopened = screen.getByRole('dialog', { name: 'Create New Character' })
-  expect(within(reopened).getAllByText('Step 1 of 7').length).toBeGreaterThan(0)
+  expect(within(reopened).getAllByText('Step 1 of 8').length).toBeGreaterThan(0)
   expect(
     within(reopened).getByRole<HTMLInputElement>('textbox', { name: 'Character name' }).value,
   ).toBe('')
@@ -456,7 +457,7 @@ test('keeps wizard input and permits retry after a delayed creation failure', as
   render(<CharacterCreationWizard open onOpenChange={onOpenChange} />)
   await user.type(screen.getByRole('textbox', { name: 'Character name' }), 'Recoverable Hero')
   await user.click(screen.getByRole('button', { name: 'Choose Variant' }))
-  for (let step = 1; step < 7; step++)
+  for (let step = 1; step < 8; step++)
     await user.click(screen.getByRole('button', { name: 'Next' }))
   await user.click(screen.getByRole('button', { name: 'Create' }))
   expect(screen.getByRole('button', { name: 'Creating…' }).hasAttribute('disabled')).toBe(true)

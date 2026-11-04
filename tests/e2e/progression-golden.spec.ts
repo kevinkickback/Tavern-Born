@@ -242,6 +242,8 @@ async function createCharacter(
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: options.rulesetButton }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()
+  await expect(dialog.getByRole('heading', { name: 'Additional Content' })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: new RegExp(`Human\\s+${options.raceSource}`) }).click()
   if (options.subrace) {
     await dialog.getByRole('button', { name: options.subrace, exact: true }).click()

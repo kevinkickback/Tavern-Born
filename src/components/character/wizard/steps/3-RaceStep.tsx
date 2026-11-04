@@ -142,9 +142,9 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   const raceSummary = getRaceSummary(displayRace)
 
   return (
-    <div className="flex h-full gap-5">
+    <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
       {/* Left: Race list */}
-      <div className="w-72 flex-shrink-0 flex flex-col rounded-lg border border-border bg-muted/20">
+      <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
             <Users className="h-4 w-4 text-primary" weight="fill" />
@@ -174,7 +174,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 space-y-0.5">
           {searchFilteredRaces.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No races found</div>
           ) : (
@@ -211,7 +211,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       </div>
 
       {/* Right: Race details */}
-      <div className="flex-1 min-w-0 flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
+      <div className="@container flex-1 min-h-0 min-w-0 flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
         {!selectedRace ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-2">
@@ -220,10 +220,10 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
             </div>
           </div>
         ) : (
-          <div className="flex flex-col h-full">
+          <div className="flex min-h-0 flex-col h-full">
             {/* Header */}
             <div className="px-5 py-4 border-b border-border">
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-display text-xl font-bold">
                   {selectedRace.name}
                   {selectedSubrace && (
@@ -241,7 +241,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
               {raceSummary && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
@@ -286,7 +286,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               )}
 
               {/* Quick stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 @md:grid-cols-3 gap-2">
                 <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Size
