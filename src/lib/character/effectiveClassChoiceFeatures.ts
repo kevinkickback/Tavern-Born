@@ -22,6 +22,7 @@ import {
   getClassChoiceFeatureId,
   getClassChoiceGrantedFeature,
   getClassChoiceOptionKey,
+  getFeatureOwnerKey,
 } from './classChoiceIdentity'
 import {
   createClassChoiceCatalogs,
@@ -299,15 +300,28 @@ export function projectEffectiveClassChoiceFeatures(
   const managed = new Set((character.classChoiceSelections ?? []).map((row) => row.choiceId))
   const suppressedStyleGrants = new Map<string, Set<string>>()
   const classFeatChoices = character.classFeatChoices?.flatMap((choice) => {
-    if (!getFighterStylePair(choice.id)) return [choice]
+    if (!catalogs?.classes || !getFighterStylePair(choice.id)) return [choice]
+    const owner = getFeatureOwnerKey(
+      choice.className,
+      choice.classSource,
+      choice.subclassName,
+      choice.subclassSource,
+    )
     const allowed = routes.selectedOptions.filter(
-      ({ selection }) => selection.choiceId === choice.id,
+      ({ selection }) =>
+        selection.choiceId === choice.id &&
+        getFeatureOwnerKey(
+          selection.className,
+          selection.classSource,
+          selection.subclassName,
+          selection.subclassSource,
+        ) === owner,
     )
     const feats = choice.feats.filter((feat) => {
       const current = allowed.some(
         ({ option }) =>
           option.entityType === 'feat' &&
-          option.slotLevel === feat.classLevel &&
+          (feat.classLevel == null || option.slotLevel === feat.classLevel) &&
           getFeatSelectionKey(option) === getFeatSelectionKey(feat),
       )
       if (!current) {

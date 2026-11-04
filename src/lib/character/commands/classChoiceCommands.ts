@@ -236,11 +236,14 @@ function currentLiteralChoice(
   }
   if (!isFeatureLiteralChoiceId(choice.id)) {
     const fighterStyle = getFighterStylePair(choice.id)
+    const optionalPool = getOptionalClassPoolSection(choice)
     const mastery =
       choice.optionFilter?.requiresMastery ||
       choice.id === getNormalizedClassChoiceId(choice.owner, 'Weapon Mastery', choice.level)
     if (
-      (mastery || fighterStyle || choice.source.field.endsWith(':entries.filter-alternative-v1')) &&
+      (mastery ||
+        (fighterStyle && !optionalPool) ||
+        choice.source.field.endsWith(':entries.filter-alternative-v1')) &&
       selected.length
     ) {
       const owner = findOwner(character, choice)
@@ -301,7 +304,7 @@ function currentLiteralChoice(
         throw new RangeError('This class choice changed. Review its current alternatives.')
       return current
     }
-    if (getOptionalClassPoolSection(choice)) {
+    if (optionalPool) {
       const owner = findOwner(character, choice)
       const cls = authority && findClassReference(choice.owner, authority.classes)
       const current =
@@ -319,7 +322,10 @@ function currentLiteralChoice(
       const eligible = new Set(
         resolveClassChoiceOptions(
           current,
-          createClassChoiceCatalogs(authority.catalogs),
+          {
+            ...createClassChoiceCatalogs(authority.catalogs),
+            classes: authority.catalogs.classes ?? authority.classes,
+          },
           [],
           owner?.levels ?? 0,
           character,

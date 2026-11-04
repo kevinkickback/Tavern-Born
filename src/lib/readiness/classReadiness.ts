@@ -229,6 +229,13 @@ export function validateClassChoices(
       const choiceCatalogs =
         choice.owner.type === 'subclass' && !catalogs?.subclassTargets ? subclassCatalogs : catalogs
       const fighterStyle = getFighterStylePair(choice.id)
+      const calculationCatalogs = calculation.classChoices.catalogs
+      const routeCatalogs =
+        fighterStyle && !choiceCatalogs?.classes && calculationCatalogs?.classes
+          ? choiceCatalogs
+            ? { ...choiceCatalogs, classes: calculationCatalogs.classes }
+            : calculationCatalogs
+          : choiceCatalogs
       const eligibleOptionKeys =
         choiceCatalogs && !choice.optionFilter?.requiresMastery && !fighterStyle
           ? new Set(
@@ -245,7 +252,7 @@ export function validateClassChoices(
           : undefined
       const effectiveRoutes = getEffectiveClassChoiceFeatureRoutes(
         character,
-        choiceCatalogs,
+        routeCatalogs,
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
@@ -257,7 +264,7 @@ export function validateClassChoices(
           : 0
         : choice.optionFilter?.requiresMastery
           ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0)
-          : fighterStyle
+          : fighterStyle && routeCatalogs?.classes
             ? effectiveRoutes.selectedOptions.filter(
                 ({ selection }) => selection.choiceId === choice.id,
               ).length

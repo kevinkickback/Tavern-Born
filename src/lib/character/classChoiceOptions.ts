@@ -714,8 +714,9 @@ export function resolveClassChoiceOptions(
 
   const poolSection = getOptionalClassPoolSection(choice)
   const activity = character && createOptionalClassFeatureActivity(character, catalogs)
+  const pair = getFighterStylePair(choice.id)
   const poolCounts = new Map<string, number>()
-  if (poolSection)
+  if (poolSection || pair?.source === 'PHB')
     for (const row of catalogs.optionalFeatures) {
       const key = getClassChoiceOptionKey({
         entityType: 'optionalFeature',
@@ -724,6 +725,25 @@ export function resolveClassChoiceOptions(
       })
       poolCounts.set(key, (poolCounts.get(key) ?? 0) + 1)
     }
+  const isCurrentPoolMember = (
+    poolChoice: NormalizedCharacterChoice,
+    section: ReturnType<typeof getOptionalClassPoolSection>,
+    reference: NormalizedChoiceOptionReference,
+  ) => {
+    if (
+      !section ||
+      reference.entityType !== 'optionalFeature' ||
+      normalized(reference.source) !== normalized(section.source)
+    )
+      return true
+    if (!activity?.option(poolChoice, reference)) return false
+    const key = getClassChoiceOptionKey(reference)
+    const count = poolCounts.get(key) ?? 0
+    const candidateCount = catalogs.optionalFeatureCandidates
+      ? (catalogs.optionalFeatureCandidates.get(key) ?? []).length
+      : count
+    return count === 1 && candidateCount === 1
+  }
   const byKey = new Map(
     resolved
       .map((option) => {
@@ -746,22 +766,7 @@ export function resolveClassChoiceOptions(
           ? { ...option, prerequisite: undefined }
           : { ...option, availability: 'retained' as const }
       })
-      .filter((option) => {
-        if (
-          !poolSection ||
-          option.reference.entityType !== 'optionalFeature' ||
-          normalized(option.reference.source) !== normalized(poolSection.source)
-        )
-          return true
-        if (!activity?.option(choice, option.reference)) return false
-        const key = getClassChoiceOptionKey(option.reference)
-        const count = poolCounts.get(key) ?? 0
-        const candidateCount =
-          catalogs.optionalFeatureCandidates !== undefined
-            ? (catalogs.optionalFeatureCandidates.get(key) ?? []).length
-            : count
-        return count === 1 && candidateCount === 1
-      })
+      .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
       .map((option) => [getClassChoiceOptionKey(option.reference), option]),
   )
   for (const option of saved) {
@@ -773,7 +778,6 @@ export function resolveClassChoiceOptions(
       )
     }
   }
-  const pair = getFighterStylePair(choice.id)
   const styleOwner =
     pair && character ? findClassReference(choice.owner, character.classProgression) : undefined
   const styleClasses = pair
@@ -883,6 +887,7 @@ export function resolveClassChoiceOptions(
         !repeats &&
         candidate &&
         sibling.optionFilter &&
+        isCurrentPoolMember(sibling, getOptionalClassPoolSection(sibling), row.selected[0]) &&
         matchesClassChoiceFilter(
           candidate,
           sibling.optionFilter,
