@@ -172,3 +172,45 @@ test('exports and restores a complete library backup with collision-safe identit
     })
     .toEqual(['Alpha Hero', 'Alpha Hero (Imported)', 'Bravo Mage', 'Bravo Mage (Imported)'])
 })
+
+test('startup downloads all incompatible originals in one library backup', async ({ page }) => {
+  const [valid, previous] = loadLibraryCharacters()
+  const originals = [
+    {
+      ...previous,
+      schemaVersion: 0,
+      retiredFields: { list: ['preserve', null, false], options: { enabled: true } },
+    },
+    { id: 'incomplete', schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION, originalValue: 'é' },
+  ]
+  await seedAppState(page, {
+    sourcePath: 'e2e-library-seed',
+    characters: [valid, ...originals],
+  })
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-library-seed')
+  const dialog = page.getByRole('alertdialog', { name: 'Character compatibility issue' })
+  await expect(dialog).toContainText('found 2 characters')
+
+  const filenames: string[] = []
+  page.on('download', (download) => filenames.push(download.suggestedFilename()))
+  const downloadEvent = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Download Backup' }).click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toMatch(
+    /^tavern-born-legacy-backup-\d{4}-\d{2}-\d{2}\.tbclib$/,
+  )
+  const backup = JSON.parse(fs.readFileSync(await download.path(), 'utf8'))
+  expect(backup).toEqual({
+    kind: 'tavern-born-library',
+    version: 1,
+    exportedAt: expect.any(String),
+    characters: originals,
+  })
+
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Continue' }).click()
+  await expect(dialog).toBeHidden()
+  expect(filenames).toEqual([download.suggestedFilename()])
+  expect(await readPersistedCharacters(page)).toEqual([valid])
+})

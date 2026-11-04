@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import { MAX_LIBRARY_BACKUP_SIZE } from '@/lib/character/characterTransfer'
 import {
   CURRENT_CHARACTER_SCHEMA_VERSION,
   UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
@@ -246,14 +247,13 @@ describe('home page integration workflows', () => {
     expect(screen.queryByText('Additional content')).toBeNull()
   })
 
-  test('requires acknowledgment and can export unsupported-character backups', async () => {
+  test('retains incompatible originals after download failure and exports one oversized backup on retry', async () => {
     const user = userEvent.setup()
-    useCharacterStore.setState({
-      unsupportedCharacters: [
-        { ...makeCharacterFixture({ name: 'Old/Hero' }), schemaVersion: 0 },
-        { ...makeCharacterFixture({ name: 'Second Hero' }), schemaVersion: 0 },
-      ],
-    })
+    const originals = [
+      { ...makeCharacterFixture({ name: 'Old/Hero' }), schemaVersion: 0 },
+      { ...makeCharacterFixture({ name: 'Second Hero' }), schemaVersion: 0 },
+    ]
+    useCharacterStore.setState({ unsupportedCharacters: originals })
     const originalCreateElement = document.createElement.bind(document)
     const downloadLinks: HTMLAnchorElement[] = []
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
@@ -265,7 +265,12 @@ describe('home page integration workflows', () => {
       }
       return element
     }) as typeof document.createElement)
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:legacy-character')
+    const createObjectURL = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockImplementationOnce(() => {
+        throw new Error('Download unavailable')
+      })
+      .mockReturnValue('blob:legacy-character')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
 
     render(<HomePage />)
@@ -276,19 +281,33 @@ describe('home page integration workflows', () => {
     expect(unsupportedDialog.textContent).toContain(
       'Tavern Born found 2 characters that are incompatible with the current version or contain invalid data. They have been removed from the character list.',
     )
-    expect(unsupportedDialog.textContent).toContain(
-      'Download the original files before continuing if you want to keep backups for recovery or use with a compatible older version of Tavern Born.',
-    )
     await user.keyboard('{Escape}')
     expect(screen.getByRole('alertdialog')).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: 'Download Backups' }))
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
-    expect(downloadLinks.map((link) => link.download)).toEqual([
-      'Old_Hero-legacy-backup-1.tbc',
-      'Second Hero-legacy-backup-2.tbc',
-    ])
-    expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
+    const downloadButton = screen.getByRole('button', { name: 'Download Backup' })
+    await user.click(downloadButton)
+    expect(toast.error).toHaveBeenCalledWith('Could not export the character backup.', {
+      description: 'Download unavailable',
+    })
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(toast.warning).not.toHaveBeenCalled()
+    expect(downloadLinks).toHaveLength(0)
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual(originals)
+    expect(screen.getByRole('alertdialog')).toBe(unsupportedDialog)
+
+    const size = vi
+      .spyOn(Blob.prototype, 'size', 'get')
+      .mockReturnValue(MAX_LIBRARY_BACKUP_SIZE + 1)
+    await user.click(downloadButton)
+    size.mockRestore()
+    expect(createObjectURL).toHaveBeenCalledTimes(2)
+    expect(downloadLinks.map((link) => link.download)).toEqual([expect.stringMatching(/\.tbclib$/)])
+    expect(downloadLinks[0].click).toHaveBeenCalledTimes(1)
+    expect(toast.warning).toHaveBeenCalledWith(
+      'Character backup exported',
+      expect.objectContaining({ description: expect.stringMatching(/250 MB import limit.*\.tbc/) }),
+    )
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual(originals)
 
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())

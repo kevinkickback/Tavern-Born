@@ -12,6 +12,11 @@ export interface PreparedCharacterDownload {
   text: string
 }
 
+export interface PreparedLibraryRecoveryDownload {
+  filename: string
+  blob: Blob
+}
+
 export interface PreparedCharacterImport {
   characters: Array<{ label: string; character: Character }>
   failures: Array<{ label: string; reason: string; kind: 'parse' | 'validation' | 'format' }>
@@ -38,17 +43,48 @@ export function prepareCharacterDownload(character: Character): PreparedCharacte
   }
 }
 
-export function prepareUnsupportedCharacterDownloads(
+export function prepareUnsupportedCharacterDownload(
   characters: readonly unknown[],
-): PreparedCharacterDownload[] {
-  return characters.map((character, index) => {
-    const name = isRecord(character) && typeof character.name === 'string' ? character.name : ''
-    const suffix = characters.length === 1 ? '' : `-${index + 1}`
-    return {
-      filename: `${safeFilenameBase(name)}-legacy-backup${suffix}.tbc`,
-      text: JSON.stringify(character, null, 2),
-    }
-  })
+): PreparedCharacterDownload | PreparedLibraryRecoveryDownload {
+  if (characters.length === 0) throw new RangeError('No original characters to back up.')
+  if (characters.length > 1) return prepareLibraryRecoveryDownload(characters)
+
+  const [character] = characters
+  const name = isRecord(character) && typeof character.name === 'string' ? character.name : ''
+  return {
+    filename: `${safeFilenameBase(name)}-legacy-backup.tbc`,
+    text: serializeRecoveryOriginal(character, 2),
+  }
+}
+
+function serializeRecoveryOriginal(character: unknown, spacing?: number): string {
+  const text = JSON.stringify(character, null, spacing)
+  if (text === undefined) throw new TypeError('An original character could not be saved as JSON.')
+  return text
+}
+
+function libraryBackupMetadata(exportedAt: string) {
+  return { kind: LIBRARY_BACKUP_KIND, version: LIBRARY_BACKUP_VERSION, exportedAt }
+}
+
+function prepareLibraryRecoveryDownload(
+  characters: readonly unknown[],
+): PreparedLibraryRecoveryDownload {
+  const exportedAt = new Date().toISOString()
+  const metadata = JSON.stringify(libraryBackupMetadata(exportedAt))
+  const parts: BlobPart[] = [metadata.slice(0, -1), ',"characters":[']
+
+  // Recovery can exceed the import limit. Keep each original separate in memory
+  // so the complete backup never has to fit in a single JavaScript string.
+  for (const [index, character] of characters.entries()) {
+    if (index > 0) parts.push(',')
+    parts.push(new Blob([serializeRecoveryOriginal(character)]))
+  }
+  parts.push(']}')
+  return {
+    filename: `tavern-born-legacy-backup-${exportedAt.slice(0, 10)}${LIBRARY_BACKUP_EXTENSION}`,
+    blob: new Blob(parts, { type: 'application/json' }),
+  }
 }
 
 export function prepareLibraryDownload(
@@ -56,16 +92,7 @@ export function prepareLibraryDownload(
   exportedAt = new Date().toISOString(),
 ): PreparedCharacterDownload {
   if (characters.length === 0) throw new RangeError('Select at least one character to export.')
-  const text = JSON.stringify(
-    {
-      kind: LIBRARY_BACKUP_KIND,
-      version: LIBRARY_BACKUP_VERSION,
-      exportedAt,
-      characters,
-    },
-    null,
-    2,
-  )
+  const text = JSON.stringify({ ...libraryBackupMetadata(exportedAt), characters }, null, 2)
   if (new Blob([text]).size > MAX_LIBRARY_BACKUP_SIZE) {
     throw new RangeError('Library backup exceeds the 250MB safety limit. Export fewer characters.')
   }

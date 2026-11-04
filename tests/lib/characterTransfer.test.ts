@@ -6,7 +6,7 @@ import {
   prepareCharacterDownload,
   prepareCharacterImport,
   prepareLibraryDownload,
-  prepareUnsupportedCharacterDownloads,
+  prepareUnsupportedCharacterDownload,
 } from '@/lib/character/characterTransfer'
 import { validateCharacterData } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -109,7 +109,7 @@ describe('character transfer', () => {
     ).toEqual([expect.objectContaining({ kind: 'format' })])
   })
 
-  test('prepares collision-free imported names and unsupported backups', () => {
+  test('prepares collision-free imported names', () => {
     expect(getImportedCharacterName('Hero', ['hero'])).toBe('Hero (Imported)')
     expect(getImportedCharacterName('Hero', ['hero', 'HERO (IMPORTED)'])).toBe('Hero (Imported 2)')
     expect(getImportedCharacterName('Other', ['Hero'])).toBe('Other')
@@ -120,11 +120,14 @@ describe('character transfer', () => {
     expect(secondCollision).toHaveLength(100)
     expect(firstCollision).toMatch(/ \(Imported\)$/)
     expect(secondCollision).toMatch(/ \(Imported 2\)$/)
-    expect(
-      prepareUnsupportedCharacterDownloads([
-        { name: 'Old/Hero', schemaVersion: 0 },
-        { name: 'Another', schemaVersion: 0 },
-      ]).map((file) => file.filename),
-    ).toEqual(['Old_Hero-legacy-backup-1.tbc', 'Another-legacy-backup-2.tbc'])
+  })
+
+  test('exports a single incompatible original in the existing character file format', () => {
+    const original = { name: 'Old/Hero', schemaVersion: 0, retired: { value: true } }
+    const backup = prepareUnsupportedCharacterDownload([original])
+    expect(backup).toEqual({
+      filename: 'Old_Hero-legacy-backup.tbc',
+      text: JSON.stringify(original, null, 2),
+    })
   })
 })

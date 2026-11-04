@@ -206,7 +206,12 @@ on a write failure it leaves the prior library intact before the import result i
 
 Current pre-release admission accepts exactly character format **14**, validates complete ownership
 without loaded rules, and rejects incompatible/malformed records without conversion. Existing
-originals stay in durable exportable quarantine until acknowledged. See [Character format](contracts/character-format.md)
+originals stay in durable exportable quarantine until acknowledged. The recovery dialog downloads
+one original as a `.tbc` file or all affected originals in one `.tbclib` file, preserving their JSON
+fields. Recovery downloads can exceed the 250 MB limit for ordinary library exports and imports.
+Extract each record from the `characters` array of an oversized backup into its own `.tbc` file
+for individual recovery. An export failure leaves the originals available.
+See [Character format](contracts/character-format.md)
 for the full current admission and breaking-change checklist. Catalog cache schema is independent.
 
 **Release requirement:** no pre-v1 characters need preservation or a migration project. Existing

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { prepareUnsupportedCharacterDownloads } from '@/lib/character/characterTransfer'
+import { prepareUnsupportedCharacterDownload } from '@/lib/character/characterTransfer'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -75,8 +75,8 @@ test.each([
       version: 0,
     }),
   )
-  const [download] = prepareUnsupportedCharacterDownloads(store.getState().unsupportedCharacters)
-  expect(JSON.parse(download.text)).toEqual(before)
+  const download = prepareUnsupportedCharacterDownload(store.getState().unsupportedCharacters)
+  expect(download).toHaveProperty('text', JSON.stringify(before, null, 2))
   expect(original).toEqual(before)
 })
 
@@ -110,8 +110,8 @@ test('invalid current racial ownership is durably quarantined and exports the un
       version: 0,
     }),
   )
-  const [download] = prepareUnsupportedCharacterDownloads(store.getState().unsupportedCharacters)
-  expect(JSON.parse(download.text)).toEqual(before)
+  const download = prepareUnsupportedCharacterDownload(store.getState().unsupportedCharacters)
+  expect(download).toHaveProperty('text', JSON.stringify(before, null, 2))
   expect(original).toEqual(before)
 })
 
