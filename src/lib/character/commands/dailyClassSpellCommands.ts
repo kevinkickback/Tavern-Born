@@ -79,6 +79,11 @@ export function setDailyClassSpellPreparedCommand(
     throw new RangeError(status?.reason ?? 'The current rules cannot verify this prepared spell.')
   const current = projected.character.spells.spellProfiles.find((row) => row.id === profileId)
   if (!current) throw new RangeError('The class spell profile changed. Reopen the selection.')
+  const alwaysPrepared = new Set(
+    current.alwaysPreparedSpells?.map((target) => getSpellReferenceKey(target)),
+  )
+  if (alwaysPrepared.has(key))
+    throw new RangeError('This spell is already always prepared for this class.')
   const access = getDailyClassSpellAccess(proposed, current, context)
   const ability = access && normalizeAbilityName(access.effective.spellcastingAbility ?? '')
   const score = ability && context?.abilityScores?.[ability]
@@ -92,12 +97,7 @@ export function setDailyClassSpellPreparedCommand(
       : null
   const count = new Set(
     current.preparedSpells
-      .filter(
-        (target) =>
-          !current.alwaysPreparedSpells?.some(
-            (fixed) => getSpellReferenceKey(fixed) === getSpellReferenceKey(target),
-          ),
-      )
+      .filter((target) => !alwaysPrepared.has(getSpellReferenceKey(target)))
       .map((target) => getSpellReferenceKey(target)),
   ).size
   if (capacity === null || count > capacity)

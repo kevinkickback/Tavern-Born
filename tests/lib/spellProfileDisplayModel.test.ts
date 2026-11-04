@@ -62,7 +62,7 @@ describe('spell profile display model', () => {
       id: 'class:Cleric|PHB',
       type: 'class',
       label: 'Cleric',
-      preparedSpells: ['Bless|PHB'],
+      preparedSpells: ['Bless|PHB', 'Cure Wounds|XGE', 'Cure Wounds|PHB'],
       alwaysPreparedSpells: ['Cure Wounds|PHB'],
     }
     const bless = item({ profileId: profile.id, name: 'Bless' })
@@ -93,8 +93,8 @@ describe('spell profile display model', () => {
         ],
       ]),
     })
-    expect(models[0].preparedCount).toBe(1)
-    expect(models[0].preparedSet).toEqual(new Set(['bless']))
+    expect(models[0].preparedCount).toBe(2)
+    expect(models[0].preparedSet).toEqual(new Set(['bless|phb', 'cure wounds|xge']))
     expect(models[0].preparedTotal).toBe(3)
     expect(models[0].displayedTotal).toBe(2)
   })

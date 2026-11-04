@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
-import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   buildSpellProfileDisplayModels,
   type PreparedCasterSpellItem,
@@ -578,7 +578,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                     const isAlwaysPrepared = !!item.alwaysPrepared
                                     const isPrepared =
                                       isAlwaysPrepared ||
-                                      preparedSet.has(getSpellNameKey(item.name))
+                                      preparedSet.has(getSpellReferenceKey(item.name))
                                     const atLimit =
                                       !isAlwaysPrepared &&
                                       !isPrepared &&

@@ -23,7 +23,7 @@ import {
   type ManagedClassSpellStatus,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
-import type { OptionalClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
+import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { refreshRaceAbilityState } from '@/lib/character/raceAbilityState'
 import {
   deriveRacialDefenseEffects,
@@ -116,7 +116,7 @@ export interface CharacterCalculationContext {
   abilityScores: EffectiveAbilityScoreData
   managedClassSpellStatuses: readonly ManagedClassSpellStatus[]
   dailyClassSpellStatuses: readonly DailyClassSpellStatus[]
-  optionalFixedSpellStatuses: readonly OptionalClassFixedSpellStatus[]
+  fixedClassSpellStatuses: readonly ClassFixedSpellStatus[]
   classCasting: ReturnType<typeof deriveCurrentClassCasting>
   initiativeModifier: number
   senses: readonly EffectiveSense[]
@@ -493,7 +493,7 @@ export function createCharacterCalculationContext(
     abilityScores,
     managedClassSpellStatuses: managedSpells.statuses,
     dailyClassSpellStatuses: managedSpells.dailyStatuses,
-    optionalFixedSpellStatuses: managedSpells.optionalFixedStatuses,
+    fixedClassSpellStatuses: managedSpells.fixedClassSpellStatuses,
     classCasting: deriveCurrentClassCasting(
       character,
       choiceCatalogs,

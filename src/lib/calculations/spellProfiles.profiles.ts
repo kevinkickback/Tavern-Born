@@ -65,7 +65,9 @@ export function getSpellProfileSelectionCounts(
   >,
 ): SpellProfileSelectionCounts {
   const fixed = uniqueSpellKeys(profile.fixedSpells ?? [])
-  const alwaysPrepared = uniqueSpellKeys(profile.alwaysPreparedSpells ?? [])
+  const alwaysPrepared = new Set(
+    profile.alwaysPreparedSpells?.map((row) => getSpellReferenceKey(row)),
+  )
   const countSelectable = (names: readonly string[]) =>
     new Set(names.map(getSpellNameKey).filter((key) => key && !fixed.has(key))).size
 
@@ -73,7 +75,9 @@ export function getSpellProfileSelectionCounts(
     cantrips: countSelectable(profile.cantrips),
     spells: countSelectable(profile.spellsKnown),
     prepared: new Set(
-      profile.preparedSpells.map(getSpellNameKey).filter((key) => key && !alwaysPrepared.has(key)),
+      profile.preparedSpells
+        .map((row) => getSpellReferenceKey(row))
+        .filter((key) => !alwaysPrepared.has(key)),
     ).size,
   }
 }
