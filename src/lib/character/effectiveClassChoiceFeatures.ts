@@ -4,7 +4,9 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
 import { renderEntriesToText } from '@/lib/entryText'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { addGrant } from '@/lib/provenance/ledger'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { getInvalidPsionicSelectionIds } from '@/lib/schema/psionicValidation'
 import type {
@@ -26,6 +28,7 @@ import {
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
+import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
@@ -77,6 +80,12 @@ function buildEffectiveClassChoiceFeatureRoutes(
   const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
     if (invalidPsionics.has(selection.choiceId)) continue
+    if (
+      getFighterStylePair(selection.choiceId) &&
+      character.classChoiceSelections?.filter((row) => row.choiceId === selection.choiceId)
+        .length !== 1
+    )
+      continue
     const choice = choices.get(selection.choiceId)
     const mastery = choice?.optionFilter?.requiresMastery
     if (mastery) {
@@ -134,6 +143,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
       if (
         option.slotLevel < choice.level ||
         option.slotLevel > owner.levels ||
+        (getFighterStylePair(choice.id) && option.slotLevel !== choice.level) ||
         (mastery && !option.source?.trim()) ||
         !eligible.has(getClassChoiceOptionKey(option))
       )
@@ -287,6 +297,32 @@ export function projectEffectiveClassChoiceFeatures(
       existingIds.add(row.id)
     }
   const managed = new Set((character.classChoiceSelections ?? []).map((row) => row.choiceId))
+  const suppressedStyleGrants = new Map<string, Set<string>>()
+  const classFeatChoices = character.classFeatChoices?.flatMap((choice) => {
+    if (!getFighterStylePair(choice.id)) return [choice]
+    const allowed = routes.selectedOptions.filter(
+      ({ selection }) => selection.choiceId === choice.id,
+    )
+    const feats = choice.feats.filter((feat) => {
+      const current = allowed.some(
+        ({ option }) =>
+          option.entityType === 'feat' &&
+          option.slotLevel === feat.classLevel &&
+          getFeatSelectionKey(option) === getFeatSelectionKey(feat),
+      )
+      if (!current) {
+        const names = suppressedStyleGrants.get(choice.id) ?? new Set<string>()
+        names.add(normalizeKey(feat.name))
+        suppressedStyleGrants.set(choice.id, names)
+      }
+      return current
+    })
+    return feats.length === choice.feats.length
+      ? [choice]
+      : feats.length
+        ? [{ ...choice, feats }]
+        : []
+  })
   let changed =
     features.length !== character.features.length ||
     features.some((row, index) => row !== character.features[index])
@@ -305,8 +341,22 @@ export function projectEffectiveClassChoiceFeatures(
       return kept.length ? [[name, kept]] : []
     }),
   )
+  const provenanceFeats = suppressedStyleGrants.size
+    ? Object.fromEntries(
+        Object.entries(character.provenance.feats).flatMap(([name, tags]) => {
+          const kept = tags.filter(
+            (tag) =>
+              tag.sourceType !== 'class' ||
+              !tag.grantVariant ||
+              !suppressedStyleGrants.get(tag.grantVariant)?.has(name),
+          )
+          return kept.length ? [[name, kept]] : []
+        }),
+      )
+    : character.provenance.feats
+  changed ||= suppressedStyleGrants.size > 0
   const baseLedger = changed
-    ? { ...character.provenance, features: provenanceFeatures }
+    ? { ...character.provenance, features: provenanceFeatures, feats: provenanceFeats }
     : character.provenance
   let provenance = baseLedger
   for (const row of routes.contributions)
@@ -319,6 +369,7 @@ export function projectEffectiveClassChoiceFeatures(
     ? {
         ...character,
         features,
+        classFeatChoices,
         provenance,
       }
     : character

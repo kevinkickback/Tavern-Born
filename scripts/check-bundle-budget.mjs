@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised class feat eligibility: measured 6,409,843 B renderer and 1,173,464 B initial.
+  // Champion Fighting Styles: measured 6,414,050 B renderer and 1,177,417 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6260 * KIB,
-  initialRendererScript: 1146 * KIB,
+  rendererCode: 6264 * KIB,
+  initialRendererScript: 1150 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

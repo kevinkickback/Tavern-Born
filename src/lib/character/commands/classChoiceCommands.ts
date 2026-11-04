@@ -38,6 +38,7 @@ import {
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyVocabulary'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
@@ -234,11 +235,12 @@ function currentLiteralChoice(
     return resolveHistoricalProficiencyChoice(character, current)
   }
   if (!isFeatureLiteralChoiceId(choice.id)) {
+    const fighterStyle = getFighterStylePair(choice.id)
     const mastery =
       choice.optionFilter?.requiresMastery ||
       choice.id === getNormalizedClassChoiceId(choice.owner, 'Weapon Mastery', choice.level)
     if (
-      (mastery || choice.source.field.endsWith(':entries.filter-alternative-v1')) &&
+      (mastery || fighterStyle || choice.source.field.endsWith(':entries.filter-alternative-v1')) &&
       selected.length
     ) {
       const owner = findOwner(character, choice)
@@ -256,7 +258,8 @@ function currentLiteralChoice(
       if (
         !current ||
         !authority?.catalogs ||
-        (mastery && (cls?.sourceIdentityConflict || !current.optionFilter?.requiresMastery))
+        (mastery && (cls?.sourceIdentityConflict || !current.optionFilter?.requiresMastery)) ||
+        (fighterStyle && cls?.sourceIdentityConflict)
       )
         throw new RangeError('Restore the current source for this class choice.')
       const eligibilityCharacter = mastery
@@ -266,6 +269,7 @@ function currentLiteralChoice(
         current,
         {
           ...createClassChoiceCatalogs(authority.catalogs),
+          classes: authority.catalogs.classes ?? authority.classes,
           feats: authority.feats ?? authority.catalogs.featExpertiseFeats ?? [],
         },
         [],
@@ -884,7 +888,12 @@ export function reconcileClassChoiceSelectionGrants(
   const activeSelections = selections
     .filter((selection) => !selection.inactive)
     .map((selection) => {
-      if (selection.kind === 'psionic')
+      if (
+        selection.kind === 'psionic' ||
+        (catalogs &&
+          selection.kind === 'optional-feature' &&
+          getFighterStylePair(selection.choiceId))
+      )
         return {
           ...selection,
           selected: selection.selected.filter((option) =>
@@ -981,6 +990,9 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
 ): CharacterCommandResult {
+  if (authority?.catalogs && !authority.catalogs.classes && getFighterStylePair(choice.id)) {
+    authority = { ...authority, catalogs: { ...authority.catalogs, classes: authority.classes } }
+  }
   const selectionPatch = applyClassChoiceSelectionCommand(
     character,
     choice,
