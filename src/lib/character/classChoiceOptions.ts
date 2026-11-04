@@ -630,6 +630,21 @@ export function resolveClassChoiceOptions(
         : undefined
     catalogs = { ...catalogs, ...scopeClassChoiceFeatureCatalogs(catalogs, owner) }
   }
+  if (choice.kind === 'creature') {
+    const key = ({ name, source }: Creature5e) =>
+      getClassChoiceOptionKey({ entityType: 'creature', name, source })
+    const counts = new Map<string, number>()
+    for (const row of catalogs.creatures) {
+      const id = key(row)
+      counts.set(id, (counts.get(id) ?? 0) + 1)
+    }
+    catalogs = {
+      ...catalogs,
+      creatures: catalogs.creatures.filter(
+        (row) => counts.get(key(row)) === 1 && row.sourceIdentityConflict !== true,
+      ),
+    }
+  }
   if (
     isStormAuraChoiceId(choice.id) &&
     !['Path of the Storm Herald', 'Storm Aura'].every((name) =>

@@ -45,6 +45,15 @@ earned gain and selected option. Current character details and PDF use that choi
 Source loss keeps the selection available for recovery. Losing the gain removes it.
 Rest-triggered replacements remain a gameplay rule outside initial setup.
 
+### Beast Master companion recovery
+
+A companion needs its current earned feature declaration and the exact eligible creature
+printing. Missing rules preserve the saved pick for recovery and withhold the companion
+from sheet export. The Builder keeps the normal replacement picker while the feature is
+available and offers removal of the saved choice if the feature is unavailable.
+An unavailable Tasha's adoption keeps its existing recovery prompt and reserves the
+replaced classic feature until the adoption is restored or cleared.
+
 ### Weapon Mastery
 
 The current class, its unambiguous declaring feature, and the filtered base-weapon catalog govern

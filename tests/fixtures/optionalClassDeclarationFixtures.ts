@@ -20,6 +20,18 @@ export const optionalDeclarationSources: {
   documents: Array<{ file: string; data: OptionalDeclarationDocument }>
   optionalfeatures?: unknown[]
 } = JSON.parse(readFileSync('tests/fixtures/optionalClassDeclarationSources.json', 'utf8'))
+
+/** The optional/casting source slices omit ordinary feature bodies. */
+export function addRangerArchetypeGain(document: OptionalDeclarationDocument) {
+  const bundled = JSON.parse(
+    readFileSync('resources/srd/core/data/class/class-ranger.json', 'utf8'),
+  ) as OptionalDeclarationDocument
+  const gain = bundled.classFeature.find(
+    (row) => row.name === 'Ranger Archetype' && row.source === 'PHB' && row.level === 3,
+  )
+  if (!gain) throw new Error('Missing bundled Ranger Archetype feature')
+  document.classFeature.push(gain)
+}
 export function makeOptionalDeclarationLayer(
   file: string,
   change?: (document: OptionalDeclarationDocument) => void,
