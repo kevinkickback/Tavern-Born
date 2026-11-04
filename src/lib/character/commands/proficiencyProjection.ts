@@ -42,7 +42,7 @@ export function projectProficiencyCommandResult(
     catalogs,
   )
   let ledger = next.provenance
-  for (const domain of ['skills', 'expertise'] as const)
+  for (const domain of ['skills', 'expertise', 'languages'] as const)
     for (const value of next.proficiencies[domain]) {
       const name = canonicalProficiencyName(value)
       if (name && !before.provenance.proficiencies[domain]?.[name]?.length) {

@@ -7,7 +7,13 @@ import {
   getClassProficiencyChoiceId,
 } from './classProficiencyIdentity'
 import { CLASS_PROFICIENCY_RULES, classProficiencyRule } from './classProficiencyRules'
+import { findClassReference } from './classReference'
+import {
+  getCurrentDirectFixedClassRules,
+  getDirectFixedClassCertificate,
+} from './directFixedProficiencySource'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+import { fixedProficiencyRule } from './fixedProficiencyRules'
 import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
 import { type ClassFeatureSourceCatalog, getNaturalExplorerSources } from './naturalExplorerSource'
 import {
@@ -82,38 +88,41 @@ export function normalizeClassProficiencyChoices(
   const canny = normalizeCannyChoices(owner, declarations)
   const choices: NormalizedCharacterChoice[] = [...canny.choices]
   const diagnostics: ClassChoiceDiagnostic[] = [...canny.diagnostics]
+  const direct = getDirectFixedClassCertificate(owner)
   for (const rule of CLASS_PROFICIENCY_RULES) {
     if (rule.target === DEFT_EXPLORER_TARGET) continue
     const rows = declarations.filter(
       (row) => row.kind === 'classFeature' && row.target === rule.target,
     )
-    if (!rows.length) continue
     const row = rows[0]
-    const target = decodeClassFeatureReference(row.reference.ref!)
+    const ref =
+      row?.reference.ref ?? (direct?.target === rule.target ? direct.rawDeclaration : undefined)
+    if (!ref) continue
+    const target = decodeClassFeatureReference(ref)
     const declared = {
       ...target,
       ...Object.fromEntries(
-        Object.entries(row.reference).filter(([, value]) => value !== undefined),
+        Object.entries(row?.reference ?? {}).filter(([, value]) => value !== undefined),
       ),
     }
     if (
       rows.length !== 1 ||
       getClassFeatureIdentity(declared) !== rule.target ||
-      !isAuditedClassProficiencyFeature(row.reference.feature)
+      !isAuditedClassProficiencyFeature(row?.reference.feature)
     ) {
       diagnostics.push({
         code: 'unverified-required-choice',
         className: owner.name,
         classSource: owner.source,
         featureName: target.name,
-        level: row.level,
+        level: row?.level ?? target.level,
         message: `${target.name} proficiency rules are unavailable, conflicting or changed. Restore the exact feature declaration.`,
         requiredChoice: {
           target: {
             entityType: 'classFeature',
             name: target.name,
             source: target.source,
-            ref: row.reference.ref!,
+            ref,
           },
         },
       })
@@ -144,7 +153,7 @@ export function normalizeClassProficiencyChoices(
 export function getCurrentClassProficiencyChoices(
   classData: Pick<Class5e, 'name' | 'source' | 'classFeatureRefs'>,
   includeVariants: boolean,
-  catalogs: ClassFeatureSourceCatalog | undefined,
+  catalogs: (ClassFeatureSourceCatalog & { classes?: readonly Class5e[] }) | undefined,
 ): NormalizedCharacterChoice[] {
   const sources = getClassProficiencySources(catalogs)
   return normalizeClassProficiencyChoices(
@@ -152,6 +161,16 @@ export function getCurrentClassProficiencyChoices(
     collectUnconditionalFeatureReferences(classData.classFeatureRefs ?? [], 'classFeature'),
   ).choices.filter((choice) => {
     const target = classProficiencyRule(decodeClassProficiencyChoiceId(choice.id)?.target ?? '')
-    return !!target && sources.has(target.target) && (includeVariants || !target.optional)
+    if (!target || !sources.has(target.target) || (!includeVariants && target.optional))
+      return false
+    if (fixedProficiencyRule(target.target)?.kind !== 'fixed-languages') return true
+    const owners = catalogs?.classes?.filter((row) => findClassReference(classData, [row]))
+    return !!(
+      catalogs &&
+      owners?.length === 1 &&
+      getCurrentDirectFixedClassRules(owners[0], catalogs).some(
+        (rule) => rule.target === target.target,
+      )
+    )
   })
 }

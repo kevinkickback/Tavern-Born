@@ -9,11 +9,13 @@ import {
 import { auditClassProficiencySources } from '@/lib/5etools/classProficiencyChoices'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { getParsedClassSpellSlotProgression } from '@/lib/5etools/classSpellSlotTable'
-import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
-import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import {
   auditDirectFixedClassDeclarations,
   auditFixedClassFeatures,
+} from '@/lib/5etools/directFixedProficiencySource'
+import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
+import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
+import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
 } from '@/lib/5etools/fixedProficiencySource'

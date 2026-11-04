@@ -56,7 +56,9 @@ export function grantFixedProficiencies(
   )
   for (const owner of current) {
     const automatic = owner.rule.kind === 'proficient-tools'
+    const language = owner.rule.kind === 'fixed-languages'
     if (automatic && phase === 'foundations') continue
+    if (language && phase === 'expertise') continue
     const names = automatic
       ? character.proficiencies.tools.flatMap((value) => {
           const name = canonicalProficiencyName(value)
@@ -64,8 +66,8 @@ export function grantFixedProficiencies(
             ? [name]
             : []
         })
-      : (owner.rule.skills ?? [])
-    const domain = phase === 'foundations' ? 'skills' : 'expertise'
+      : ((language ? owner.rule.languages : owner.rule.skills) ?? [])
+    const domain = language ? 'languages' : phase === 'foundations' ? 'skills' : 'expertise'
     const tag = {
       ...makeSourceTag(
         owner.owner.length === 4 ? 'subclass' : 'class',
@@ -97,7 +99,7 @@ export function captureFixedProficiencyManualOwners(
     catalogs,
   )
   let ledger = character.provenance ?? emptyProvenance()
-  for (const domain of ['skills', 'expertise'] as const) {
+  for (const domain of ['skills', 'expertise', 'languages'] as const) {
     for (const value of character.proficiencies[domain]) {
       const name = canonicalProficiencyName(value)
       if (

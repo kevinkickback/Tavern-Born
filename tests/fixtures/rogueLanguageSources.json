@@ -1,0 +1,47 @@
+{
+  "class": [
+    {
+      "name": "Rogue",
+      "source": "PHB",
+      "classFeatures": ["Expertise|Rogue||1", "Sneak Attack|Rogue||1", "Thieves' Cant|Rogue||1"]
+    },
+    {
+      "name": "Rogue",
+      "source": "XPHB",
+      "classFeatures": [
+        "Expertise|Rogue|XPHB|1",
+        "Sneak Attack|Rogue|XPHB|1",
+        "Thieves' Cant|Rogue|XPHB|1"
+      ]
+    }
+  ],
+  "classFeature": [
+    {
+      "name": "Thieves' Cant",
+      "source": "PHB",
+      "page": 94,
+      "srd": true,
+      "basicRules": true,
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 1,
+      "entries": [
+        "During your rogue training you learned thieves' cant, a secret mix of dialect, jargon, and code that allows you to hide messages in seemingly normal conversation. Only another creature that knows thieves' cant understands such messages. It takes four times longer to convey such a message than it does to speak the same idea plainly.",
+        "In addition, you understand a set of secret signs and symbols used to convey short, simple messages, such as whether an area is dangerous or the territory of a thieves' guild, whether loot is nearby, or whether the people in an area are easy marks or will provide a safe house for thieves on the run."
+      ]
+    },
+    {
+      "name": "Thieves' Cant",
+      "source": "XPHB",
+      "page": 128,
+      "srd52": true,
+      "basicRules2024": true,
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "level": 1,
+      "entries": [
+        "You picked up various languages in the communities where you plied your roguish talents. You know Thieves' Cant and one other language of your choice, which you choose from the language tables in {@book chapter 2|XPHB|2|Choose Languages}."
+      ]
+    }
+  ]
+}

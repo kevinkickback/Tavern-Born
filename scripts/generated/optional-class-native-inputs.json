@@ -74,7 +74,7 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "9b5bc5d9d94a4feff74008b512d2b69ccd6117d7545db6f10c13abd7af3169b6"
+      "sha256": "e5c5362f2830f39d7626288530441b0ffe14d213b328027bdb69c3ce9bf0e4e3"
     },
     {
       "file": "scripts/generate-optional-class-native-rules.mjs",
@@ -101,12 +101,16 @@
       "sha256": "65018fbf9a249bb8d2fcee0582a7e9a0aab485d9f2181adfe9b92e3ca5843772"
     },
     {
+      "file": "src/lib/5etools/choiceFilterTags.ts",
+      "sha256": "b9a34c6c91224916fd7a136c6d60e136abc9728ebc69a2261526e488e2f65e33"
+    },
+    {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "63d38516c4af20037a8ba7bbd46e87037f9f611973c52c50495e45fae0c18602"
+      "sha256": "f64925e8aba4ef764716ff75b01f5592b420457af567080b856c859b7550b45d"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "aa775a1fa6d0b90b6205e157a35952a6fbec60afd4c12cf611abe0ac2b071daf"
+      "sha256": "a2ed47a188e713c76dc1f909d5438aac40fb819d60c97112f40cc939aa83ae44"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
@@ -114,7 +118,7 @@
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "d0239f8634882248c1352d681b97b64ecf2964879cf7cf82ade7b2ae087a156f"
+      "sha256": "a3e98ca8b70272ca0cda89add916577197779d4ffec55bf9abb67f5a01bd5fe0"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -122,7 +126,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "6e48a61194fdad7c8910544a85912f3256cbacb3ebb1797bacec6040cef0b2bc"
+      "sha256": "1a6afd14348fcee7dbee7928935fc2ad6c3fa01e4b1fa2f115f14ff849f2e3ef"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -130,11 +134,11 @@
     },
     {
       "file": "src/lib/5etools/classFeatureIdentity.ts",
-      "sha256": "28c54f76b6b9b7fc999dc0491d92339ea6624a2b6cd06a4ab5c0b4fc5957bc52"
+      "sha256": "03426e9f2eef3f9332278633527f51adb4554ea34731e99292c9ecd3e328e60b"
     },
     {
       "file": "src/lib/5etools/classProficiencyChoices.ts",
-      "sha256": "c9c2ccd602209be18c7132d53c737b45423e79a6295a089fcb6a53240f0fb4b0"
+      "sha256": "a66e9ac70ea1aa0f08665ba14bc47bace73cb38f86f46932e17553849559531c"
     },
     {
       "file": "src/lib/5etools/classProficiencyIdentity.ts",
@@ -142,7 +146,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.generated.json",
-      "sha256": "c9d3a4bb5f4815f3f0854b0581bbc47bc943d516cfacec20255ca781411820d2"
+      "sha256": "a6d0a6b6b17530fafba685d7d5cec6c7bc66837ae22736d6c4a53a9e508c3679"
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.ts",
@@ -161,12 +165,24 @@
       "sha256": "179ac6e2b3804b939e8ceea457c6449a17588e5ec10093af9cf95be5f4e845fe"
     },
     {
+      "file": "src/lib/5etools/concreteToolClassification.ts",
+      "sha256": "4608fbad468a57cac1307b8a5233bc6eea9ead5eebbde4697809b47b5eb81302"
+    },
+    {
+      "file": "src/lib/5etools/concreteToolProficiencies.ts",
+      "sha256": "0ab52269c77278ab89e83a566a1b5dd6d853c799daa447bd86442356a1c01776"
+    },
+    {
       "file": "src/lib/5etools/conditionalProficiencyRules.generated.json",
       "sha256": "8decce1ec67e97ba4bb4a57ce8095fb41cc30ce015e123f2fae73d499eb85fbd"
     },
     {
       "file": "src/lib/5etools/conditionalProficiencyRules.ts",
       "sha256": "f17e6401377f28323c9eb3a1fb6602e96323c6d64ed22c98d8ee1552748b37d2"
+    },
+    {
+      "file": "src/lib/5etools/conditionalProficiencySource.ts",
+      "sha256": "d174a0d3507925c1f3b918e9dc5ae20344094edd4a130aac3e35efb7b14e5a88"
     },
     {
       "file": "src/lib/5etools/constants.ts",
@@ -178,7 +194,27 @@
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
-      "sha256": "bf65d093edbca9c104d5db2d1addf5be4c268c75752464a9b440bc8bb3cc4aba"
+      "sha256": "5608f8eff0e6e8d292e5b4a753db912e7bc976da8722cdb9596212c49b9f5298"
+    },
+    {
+      "file": "src/lib/5etools/directFixedProficiencySource.ts",
+      "sha256": "b443e8df4082d30603e62339f9c0966d941b61a5a43b64033d3491332038dc9d"
+    },
+    {
+      "file": "src/lib/5etools/entityIdentity.ts",
+      "sha256": "01ea66819047ff0d97ace224f34667ef1d2e7bcba3b255dad0d4a746babca47b"
+    },
+    {
+      "file": "src/lib/5etools/favoredEnemyChoices.ts",
+      "sha256": "fea7c3b8634e38f264087db67394f055f0b02b5fdf011442a75a75742d11e868"
+    },
+    {
+      "file": "src/lib/5etools/favoredEnemyIdentity.ts",
+      "sha256": "66ca0fa97b55afbcd4eee94da945009c86ee3ab9e361b41007d2761f2f714118"
+    },
+    {
+      "file": "src/lib/5etools/favoredEnemySource.ts",
+      "sha256": "ff6d117b2a152e09592b084d0b28fe90ad3a695c1923a5e202f640e4f6d459f5"
     },
     {
       "file": "src/lib/5etools/featureOptionIdentity.ts",
@@ -186,11 +222,11 @@
     },
     {
       "file": "src/lib/5etools/featureRulesSignature.ts",
-      "sha256": "8cb4b6468ef04f0d39a6403980af64dcfb99266b1917ec4a32c65dbb992b9adb"
+      "sha256": "65d23e48a51f0c19da2c812dfcc8398a9918e5899dca6fa0c504ea2d6d462954"
     },
     {
       "file": "src/lib/5etools/featureSourceAudit.ts",
-      "sha256": "98586ca6e8a52bc61901b4f1ce7619a008d2b18513a63bb52f95e0782fc5a651"
+      "sha256": "2df8f3323a8a2b5cf6b90db1b526827490bee3162495f2ae98a82ebffbf47224"
     },
     {
       "file": "src/lib/5etools/featureTableOptions.ts",
@@ -201,16 +237,40 @@
       "sha256": "51cf009d4041ab677de980d1353286309a9d86c17758495e5ce17c3ccd10e5bd"
     },
     {
+      "file": "src/lib/5etools/filteredFeatAlternative.ts",
+      "sha256": "3a60bf58c3dce392548c58d2cf5d9957a5ad51a13d1c877da8edaa3d0f9077da"
+    },
+    {
+      "file": "src/lib/5etools/filters.ts",
+      "sha256": "2f22083db3b2c8d1d747098ee5948f5ae8383b8fcb287cde3480ad47ac4b9cab"
+    },
+    {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "f9a0109517d6ad5284379d238a85e5a1813302e8e77c9a2a4274ff7cf6ef0723"
+      "sha256": "d2ab044abb54862987cb4e5a306d16fdb255e4c074f311fcfdd32c3b0e69522a"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "83ba2814a5244c547fa097669b34f452bbd98ba29175ba83fc01aa0d362824df"
+      "sha256": "a059ce8111c2340898b5d6a2fb446cfb8e8f7e0fc6905d9db8b3e75edd1b7547"
     },
     {
       "file": "src/lib/5etools/fixedProficiencySource.ts",
-      "sha256": "aaeccfb7f8e144816dc59786c12cfb19fd29672cca6986c8ab0ec3bee66b94c9"
+      "sha256": "e08c72aa62b10281f6d681d9a975fe10b034aeb53ae3a6cd989dfff762b56bdd"
+    },
+    {
+      "file": "src/lib/5etools/inlineTagSegments.ts",
+      "sha256": "8c40d89bb308b65d7eb566c5f810123311cc4b7ab4d741420d19420f458ba945"
+    },
+    {
+      "file": "src/lib/5etools/itemProperties.ts",
+      "sha256": "3e447a5d59e84293cc7385670f06b3af72c572a3f5aec37100bc89f027d453bb"
+    },
+    {
+      "file": "src/lib/5etools/itemResolvers.ts",
+      "sha256": "03eca648b38018f1e06a19fafc240308ed8ffb7c753543ec62c32c924a86ae83"
+    },
+    {
+      "file": "src/lib/5etools/lookups.ts",
+      "sha256": "7440d846ca3c4ee29e38ef7e4da66bcb83eb99273f6bc6c2bf4790a653f89507"
     },
     {
       "file": "src/lib/5etools/naturalExplorerChoices.ts",
@@ -222,7 +282,7 @@
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",
-      "sha256": "b5eacb4d6050e56e895eca54834cb145616ad332d6a24463f32635a7dd384a08"
+      "sha256": "7b48c8ad5f1cd083c2a4e0ddfaf54642d3753ff6b1a2cdcbf4b29e3e25bcd28a"
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationRules.generated.json",
@@ -262,11 +322,39 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "a35916b906d8d8a594ac94418f36fc43514694b89e6c232909155a3cd71bd587"
+      "sha256": "6688772f367e646457493129c322d1f8f94cfd36a5dd583b72ef69d298eaddb8"
     },
     {
       "file": "src/lib/5etools/parsers/shared.ts",
       "sha256": "00555c6c887672f4abc0dd2ffb14a1bd7f8c8de7fb9f7e8709ae23fbade4901d"
+    },
+    {
+      "file": "src/lib/5etools/playerItemAvailability.ts",
+      "sha256": "f623133df9c4102318529cff7e0f4fc17038d027d380702d8947897bef71d27e"
+    },
+    {
+      "file": "src/lib/5etools/psionicChoices.ts",
+      "sha256": "277f568ed0d83050945d8273d11725b39628f10503b75efd9c881434499a3f0d"
+    },
+    {
+      "file": "src/lib/5etools/psionicIdentity.ts",
+      "sha256": "4b9b1e28678fc76a70e1daf25970170df695f7ef48a65761cda233c9ca2f3836"
+    },
+    {
+      "file": "src/lib/5etools/psionicSourceRules.generated.json",
+      "sha256": "e05fe41dccba6f501ba17261f4738ffe5073fbd5b7b5622efdb853e450951ac2"
+    },
+    {
+      "file": "src/lib/5etools/psionicSources.ts",
+      "sha256": "19ad86e5e93667f1fce38a763dc57c57ca66a9fc8a353a52bcd86c813f8fd1b1"
+    },
+    {
+      "file": "src/lib/5etools/psionics.ts",
+      "sha256": "cc4fe2477faeb9822f0c04d60d4e1677aca50d315366799d66d9d489bbe8f2c4"
+    },
+    {
+      "file": "src/lib/5etools/reprints.ts",
+      "sha256": "ce40d1a3808a6a22b14ad15c1d0e2ff01e634df069b94722443dd6851bf271c4"
     },
     {
       "file": "src/lib/5etools/requiredSetupDiagnostics.ts",
@@ -275,6 +363,34 @@
     {
       "file": "src/lib/5etools/rulesetMetadata.ts",
       "sha256": "dbf8435d33df6cb1e46fec6a532a8c8a7cc7e78aa0e5a5b1681008c3d53c252e"
+    },
+    {
+      "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
+      "sha256": "283fefdddd014d4e9235fe9f08810f70b8549bd7def83d20b748740fd081dd92"
+    },
+    {
+      "file": "src/lib/5etools/spellRouteSources.ts",
+      "sha256": "c33936bd07859af0af0ccf970a1ea1846fe191d51efc4b6f8b52540f21358fc5"
+    },
+    {
+      "file": "src/lib/5etools/startingEquipment.ts",
+      "sha256": "3d2ac705bcc31c84796d147b6d7739c4173e80054cc61fee88289bd697f3bf34"
+    },
+    {
+      "file": "src/lib/5etools/startingEquipmentClauses.ts",
+      "sha256": "ea0822ef77edd6dbd61fcecfbac7e3c25399123f8db992bde47b68abfbfbb0af"
+    },
+    {
+      "file": "src/lib/5etools/startingEquipmentIdentity.ts",
+      "sha256": "58020ec435e17f61fc8b114f4dc57da6f1a9fe97bd998146bad89e41887716f5"
+    },
+    {
+      "file": "src/lib/5etools/startingEquipmentPolicy.ts",
+      "sha256": "1343ecf527b56272c7a66c24c2c80d597543eb9a231d283e35899176b6546ab4"
+    },
+    {
+      "file": "src/lib/5etools/startingItemCategory.ts",
+      "sha256": "f64d5a58b2d6064e19ae1a29172474c474d9d0449010bb0bfb039311dc923d4b"
     },
     {
       "file": "src/lib/5etools/stormAuraChoices.ts",
@@ -286,7 +402,7 @@
     },
     {
       "file": "src/lib/5etools/stormAuraSource.ts",
-      "sha256": "0fef71c27a7eba29f328857570881e2a06b0af98fdc3168616668867e1e1e5eb"
+      "sha256": "c1531d20511866ce50399abe0c6a8c31041805e926912a29ad7009804483d809"
     },
     {
       "file": "src/lib/5etools/subclassContent.ts",
@@ -302,7 +418,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "63ced4c582ae4a77c542db121ba44035519aa4199f3510ef622f676a1109d00a"
+      "sha256": "2aeac0fccbfb1b05dc76a6a9ecbd47274d32744bf436f071464dae8b53b01bae"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
@@ -322,7 +438,15 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "86387667adfc5e7ef7cd58400f7e094b175f48df234ef473757947df4b7eddae"
+      "sha256": "21bad9f1eecff0a77ba3182cd440c57b2141f84c2fefb52432ae74664e091428"
+    },
+    {
+      "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
+      "sha256": "86115968901684ccb236c5bde8bb08296b42dbb06f2b34ceda3cbf9dedf8440b"
+    },
+    {
+      "file": "src/lib/5etools/toolProficiencySource.ts",
+      "sha256": "04a0e4c5d17b6fcb1820d16318c6a1373186701e0af0637dec295eb819babbe2"
     },
     {
       "file": "src/lib/5etools/unconditionalFeatureReferences.ts",
@@ -334,7 +458,15 @@
     },
     {
       "file": "src/lib/calculations/abilityScores.ts",
-      "sha256": "c1e6bb3f6f6790db8c87335b866d6d10ca7b5e566e0d29cd005aeb480df45b60"
+      "sha256": "734327df942c2c965046ba32b67a183df278529ff2e5e01cb5281fb1b9547d32"
+    },
+    {
+      "file": "src/lib/calculations/armorClass.ts",
+      "sha256": "ca05335f767a5bc3c0bbe218e1618eb99d1c429e0e1098bd2319dc72f79bd3f4"
+    },
+    {
+      "file": "src/lib/calculations/characterEffects.ts",
+      "sha256": "05377c3ea56924305f48918c3252c967dff31f161b786fccf8283700476e8605"
     },
     {
       "file": "src/lib/calculations/effects.ts",
@@ -345,12 +477,52 @@
       "sha256": "2d7506e3c025893489eec605fb3922020e7beec0553abd0c6f46d80449e0a3d6"
     },
     {
+      "file": "src/lib/calculations/itemClassification.ts",
+      "sha256": "0462f54a6a6fa4c81d5c8182b272faf3d34057c543278beb5a796b148f8f16e1"
+    },
+    {
       "file": "src/lib/calculations/skills.ts",
       "sha256": "607aac7f09a671346a0f89148cdc099ce3c2a2d68188b57247df5e9354604799"
     },
     {
+      "file": "src/lib/calculations/spellIdentity.ts",
+      "sha256": "10bb06cbc1bb877ea878f1598798a24eb8976316693b75726817ef7c40f18d19"
+    },
+    {
       "file": "src/lib/calculations/spellSlots.ts",
       "sha256": "6faa1a9716ed8241c7ab80ebf0e87aafc457e61c84624a242d68cc56dce42649"
+    },
+    {
+      "file": "src/lib/calculations/spellUtils.ts",
+      "sha256": "58dc686b09ba37e912c823b4b9377b18e6cb032da28dc68ffc3f4cc0229b32f9"
+    },
+    {
+      "file": "src/lib/calculations/weaponBonuses.ts",
+      "sha256": "74fb9b8a0d2e1e50ad9d771e52032faab8e850ee36c90fac352140ad05a5ac63"
+    },
+    {
+      "file": "src/lib/calculations/weaponProficiency.ts",
+      "sha256": "7800209fb0387d601f49b56721185bd7e6862128ad39f5a68427c8a42def60dc"
+    },
+    {
+      "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
+      "sha256": "39c2cc15f1724786649fcbc62cbc84ec0e78f8277b533fc5a1bd74a01b2dd659"
+    },
+    {
+      "file": "src/lib/character/classChoiceFilters.ts",
+      "sha256": "5691dd79598e22ec949be58cd953665c9c75aa063c598d64979603265e128d3f"
+    },
+    {
+      "file": "src/lib/character/classChoiceIdentity.ts",
+      "sha256": "3e34d1de3fd580451dce1f503d1da7499ed7ef5af2c85a2dcd263c3f4e5bf55a"
+    },
+    {
+      "file": "src/lib/character/ids.ts",
+      "sha256": "b7861ca07dbc931bf7264dd0dc517a1fea5aa008c53ca815bbf0e56b4a4e3e35"
+    },
+    {
+      "file": "src/lib/character/startingEquipmentGrants.ts",
+      "sha256": "9bfb5fb0f7b68d791f9d20ebf0900ad83f02bb1c2bd6bf119ab4930e99057a87"
     },
     {
       "file": "src/lib/provenance/normalization.ts",
@@ -361,24 +533,36 @@
       "sha256": "e76a5c0454ddd4927fea15e27c484167d2e024f41998720b1d1e0dc318a709d9"
     },
     {
+      "file": "src/lib/sourceCompatibility.ts",
+      "sha256": "fc02f6fcea2b4382a333ad8651cd3e6b22aa02edb8f8db0dde0c97bbddff9d7e"
+    },
+    {
+      "file": "src/lib/sourcePresets.ts",
+      "sha256": "185c4f08923244d36843a2e8a9ab45c5e887c38db65b3f7533e583e5e51baba3"
+    },
+    {
       "file": "src/types/5etools.ts",
-      "sha256": "106dc3668f0d9625432de080177081ae8e8ee0bd292a3f68d08d86d6a18f7880"
+      "sha256": "5d18f6a08be9f16959907cebd0013b16f28dcab9b2deed2835b5c9c318c0d112"
     },
     {
       "file": "src/types/actions.ts",
       "sha256": "b55dbe923381ce17d8cc88b1dc7c0c89a6a5b491ce9e6b27dde0d4666e20a3aa"
     },
     {
+      "file": "src/types/additionalSpells.ts",
+      "sha256": "dbcfd069e5b157efe78c2760450c693f6c882de445b73b4140984d2109433ac8"
+    },
+    {
       "file": "src/types/character.ts",
-      "sha256": "ea54884e5505ef8337581c250ddbb718e41a54430efc2b3df392721d138d6e45"
+      "sha256": "9db41b318e51efb6eccd114e4568dab15037feece7fc881dfa4a976009a53754"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "e8aa570decf9e6528c1726218818735b0fcdae549c2e04a726772ec3dff01b74"
+      "sha256": "2d7e95a63c34e51d2c12407ff74cfd02f1c21a1ba4b06a7f55338659fabff3ee"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "ef16c32cd224a8fce655746c31fdf7dc7b4fc0034071962070b896ffb7bc7407"
+      "sha256": "6c126c0363bb2227cf5a33793d39f2d71a4ea13fd9dd7e21f43d5d21360ce137"
     },
     {
       "file": "src/types/effects.ts",

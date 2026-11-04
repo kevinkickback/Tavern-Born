@@ -9,6 +9,7 @@ import * as certificates from '@/lib/5etools/subclassProficiencyCertificates'
 import * as preparation from '@/lib/5etools/subclassSourcePreparation'
 import { deriveFixedProficiencyRules } from '../../scripts/lib/fixed-proficiency-source.mjs'
 import { fixedSources } from '../fixtures/fixedProficiencyFixtures'
+import rogueLanguageSources from '../fixtures/rogueLanguageSources.json'
 
 const api = {
   materializeFeatures: preparation.materializeSubclassFeatureCopies,
@@ -19,8 +20,12 @@ const api = {
   digest: certificates.subclassProficiencyDigest,
   metadata: certificates.subclassProficiencyMetadata,
 }
-test('complete actual fixed producers reproduce all three descriptors and direct declaration', () => {
-  expect(deriveFixedProficiencyRules([fixedSources], api)).toEqual({
+test('complete actual fixed producers reproduce the descriptors and direct declarations', () => {
+  const sources = {
+    ...fixedSources,
+    class: fixedSources.class.filter((row) => row.name !== 'Rogue'),
+  }
+  expect(deriveFixedProficiencyRules([sources, rogueLanguageSources], api)).toEqual({
     features: FIXED_PROFICIENCY_RULES,
     directClasses: DIRECT_FIXED_CLASS_CERTIFICATES,
   })

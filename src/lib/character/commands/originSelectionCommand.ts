@@ -29,6 +29,7 @@ export interface InitialCharacterSelections {
 }
 
 export interface InitialCharacterLookups extends NativeSpellLookups {
+  classChoiceFeatureCatalogs?: import('@/lib/character/classChoiceFeatureCatalogs').ClassChoiceFeatureCatalogs
   startingEquipment?: {
     rawItems: readonly Item5e[]
     availableItems: readonly Item5e[]

@@ -1,3 +1,5 @@
+import { deriveThievesCant } from './class-proficiency-source.mjs'
+
 // Closed adapters for prose-only fixed grants. Names, owners and pools come from qualified source.
 const fail = (text) => {
   throw new Error(text)
@@ -112,6 +114,21 @@ export function deriveFixedProficiencyRules(documents, api) {
       }
     }
     for (const feature of document.classFeature ?? []) {
+      const cant = deriveThievesCant(feature)
+      if (cant) {
+        // The bundled SRD strips the printed page and Basic Rules availability flags.
+        const { page: _page, basicRules: _basic, basicRules2024: _basic2024, ...bundled } = feature
+        push(
+          feature,
+          'fixed-languages',
+          {
+            languages: [cant.language],
+            bundledMetadataDigest: api.digest(api.metadata(bundled)),
+          },
+          api.classIdentity,
+        )
+        continue
+      }
       if (feature.name !== 'Tool Expertise') continue
       validateFeature(feature, [...FEATURE_FIELDS, 'otherSources'])
       const annotation = /^\{@i (\d+)(?:st|nd|rd|th)-level ([^}]+) feature\}$/.exec(
@@ -143,7 +160,7 @@ export function deriveFixedProficiencyRules(documents, api) {
     }
   }
   const directClasses = []
-  for (const feature of features.filter((row) => row.kind === 'proficient-tools')) {
+  for (const feature of features.filter((row) => row.target.startsWith('class-feature|'))) {
     const roots = documents
       .flatMap((doc) => doc.class ?? [])
       .filter(
@@ -153,7 +170,6 @@ export function deriveFixedProficiencyRules(documents, api) {
       )
     if (roots.length !== 1 || roots[0]._copy || !Array.isArray(roots[0].classFeatures))
       fail('Ambiguous direct fixed owner')
-    const rawDeclaration = `${feature.name}|${feature.className}|${feature.classSource}|${feature.level}`
     const occurrences = []
     const scan = (value, ordinal) => {
       if (typeof value === 'string') {
@@ -168,6 +184,9 @@ export function deriveFixedProficiencyRules(documents, api) {
         })
     }
     roots[0].classFeatures.forEach(scan)
+    const source =
+      feature.kind === 'fixed-languages' && feature.classSource === 'PHB' ? '' : feature.classSource
+    const rawDeclaration = `${feature.name}|${feature.className}|${source}|${feature.level}`
     if (occurrences.length !== 1 || roots[0].classFeatures[occurrences[0]] !== rawDeclaration)
       fail('Unsupported or duplicate direct fixed declaration')
     directClasses.push({

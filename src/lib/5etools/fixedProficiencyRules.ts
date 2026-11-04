@@ -6,8 +6,10 @@ export interface FixedProficiencyRule {
   className: string
   classSource: string
   level: number
-  kind: 'fixed-skills' | 'historical-skill' | 'proficient-tools'
+  kind: 'fixed-skills' | 'historical-skill' | 'proficient-tools' | 'fixed-languages'
   skills?: readonly string[]
+  languages?: readonly string[]
+  bundledMetadataDigest?: string
   fallback?: { name: string; count: number; skillPool: readonly string[] }
   digest: string
   metadataDigest: string
