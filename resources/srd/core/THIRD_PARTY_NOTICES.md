@@ -1,6 +1,6 @@
 # Tavern Born Bundled SRD Notices
 
-Pack version: 1.0.0
+Pack version: 1.0.1
 
 Tavern Born's bundled rules data is derived from the official English System Reference Document
 5.1 and System Reference Document 5.2.1.
