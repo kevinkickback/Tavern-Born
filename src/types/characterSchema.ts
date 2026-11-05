@@ -190,40 +190,32 @@ const movementAdjustmentSchema = z.object({
   createdAt: z.string(),
 })
 
+const effectAbilitySchema = z.enum([
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+])
+
 const numericEffectTargetSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('ability-score'),
-    ability: z.enum([
-      'strength',
-      'dexterity',
-      'constitution',
-      'intelligence',
-      'wisdom',
-      'charisma',
-    ]),
+    ability: effectAbilitySchema,
   }),
   z.object({
     kind: z.literal('ability-check-modifier'),
-    ability: z.enum([
-      'strength',
-      'dexterity',
-      'constitution',
-      'intelligence',
-      'wisdom',
-      'charisma',
-    ]),
+    ability: effectAbilitySchema,
   }),
-  z.object({ kind: z.literal('skill-modifier'), skill: z.string().min(1) }),
+  z.object({
+    kind: z.literal('skill-modifier'),
+    skill: z.string().min(1),
+    ability: effectAbilitySchema.optional(),
+  }),
   z.object({
     kind: z.literal('saving-throw-modifier'),
-    ability: z.enum([
-      'strength',
-      'dexterity',
-      'constitution',
-      'intelligence',
-      'wisdom',
-      'charisma',
-    ]),
+    ability: effectAbilitySchema,
   }),
   z.object({ kind: z.literal('initiative') }),
   z.object({ kind: z.literal('armor-class') }),

@@ -3,7 +3,7 @@ import type { AbilityName } from './character'
 export type NumericEffectTarget =
   | { kind: 'ability-score'; ability: AbilityName }
   | { kind: 'ability-check-modifier'; ability: AbilityName }
-  | { kind: 'skill-modifier'; skill: string }
+  | { kind: 'skill-modifier'; skill: string; ability?: AbilityName }
   | { kind: 'saving-throw-modifier'; ability: AbilityName }
   | { kind: 'initiative' }
   | { kind: 'armor-class' }

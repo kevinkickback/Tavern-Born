@@ -4,6 +4,7 @@ import {
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { DIVINE_ORDER_ID, getSavedDivineOrder } from '@/lib/5etools/divineOrderIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   ELEMENTAL_AFFINITY_REF,
@@ -39,6 +40,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceOptions'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
+import { getCurrentDivineOrder } from './divineOrder'
 import {
   describeFavoredEnemyLanguage,
   getFavoredEnemySelectionStates,
@@ -73,6 +75,7 @@ export interface FeatureOptionSelectionState {
   psionic?: boolean
   legacySubclass?: boolean
   companion?: boolean
+  divineOrder?: boolean
 }
 
 export function hasRevisedHunterRecovery(
@@ -280,8 +283,45 @@ export function getFeatureOptionSelectionStates(
         }),
       }
     })
+  const savedOrder = getCurrentDivineOrder(character, catalogs)
+    ? undefined
+    : getSavedDivineOrder(character)
+  const orderOwner =
+    savedOrder &&
+    findClassReference(
+      { name: savedOrder.selection.className, source: savedOrder.selection.classSource },
+      character.classProgression,
+    )
+  const orderClass = orderOwner && findClassReference(orderOwner, classes)
+  const orderHasEditor =
+    orderClass &&
+    orderOwner &&
+    getCharacterClassChoices(
+      orderClass,
+      getSelectedSubclassData(orderClass, orderOwner),
+      createOptionalClassFeatureActivity(character, catalogs),
+      catalogs,
+    ).some((choice) => choice.id === DIVINE_ORDER_ID && choice.level <= orderOwner.levels)
+  const orderRecovery: FeatureOptionSelectionState[] =
+    savedOrder && orderOwner && !orderHasEditor
+      ? [
+          {
+            selection: savedOrder.selection,
+            owner: orderOwner,
+            options: [],
+            recovery: true,
+            details: savedOrder.selection.selected.map((option) => ({
+              name: option.name,
+              entries: ['Restore the exact Divine Order source or remove the saved choice.'],
+              available: false,
+            })),
+            divineOrder: true,
+          },
+        ]
+      : []
   return [
     ...literal,
+    ...orderRecovery,
     ...getLegacySubclassSelectionStates(character, classes, catalogs),
     ...getPsionicRecoveryStates(character, classes, catalogs),
     ...getStormAuraSelectionStates(character, classes, catalogs),

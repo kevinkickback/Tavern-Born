@@ -8,6 +8,7 @@ import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
+import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -21,6 +22,7 @@ import {
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import { type ManagedClassSpellContext, permitted, sources } from './classSpellAuthority'
+import { getCurrentDivineOrder } from './divineOrder'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -33,6 +35,11 @@ import {
 } from './selectedFeatureSpellOwnership'
 
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
+
+// The audited prose-only branch supplies the same descriptor as native additionalSpells.
+const thaumaturgeSpells: AdditionalSpellBlock[] = [
+  { ability: 'wis', known: { _: [{ choose: 'level=0|class=Cleric' }] } },
+]
 
 export interface SelectedFeatureCantripSetup {
   owner: ClassSpellOwner
@@ -61,6 +68,7 @@ export function getSelectedFeatureCantripSetups(
     selection.selected.flatMap((option) => {
       const producer = getSelectedFeatureSpellProducer(selection, option)
       if (!producer) return []
+      const isDivineOrder = option.entityType === 'classFeature'
       const rows =
         option.entityType === 'feat' ? catalogs?.featExpertiseFeats : catalogs?.optionalFeatures
       const candidates = (rows ?? []).filter(
@@ -75,7 +83,7 @@ export function getSelectedFeatureCantripSetups(
       // Ordinary Class feats retain the existing feat actor; only missing class-attribution semantics
       // route a feat through this Class-profile adapter.
       if (option.entityType === 'feat' && !semantics) return []
-      if (!semantics && !(feature && 'additionalSpells' in feature)) return []
+      if (!isDivineOrder && !semantics && !(feature && 'additionalSpells' in feature)) return []
       const owner = selectedFeatureSpellOwner(selection)
       const setup: SelectedFeatureCantripSetup = {
         owner,
@@ -83,19 +91,21 @@ export function getSelectedFeatureCantripSetups(
         level: option.slotLevel,
         name: option.name,
         count: 0,
-        offered: !!semantics && semantics.className === owner[1],
+        offered: isDivineOrder || (!!semantics && semantics.className === owner[1]),
       }
       const deny = (reason: string) => [{ ...setup, reason }]
-      if (!feature)
+      if (isDivineOrder && getCurrentDivineOrder(character, catalogs)?.selection !== selection)
+        return deny('Restore the exact Divine Order and Thaumaturge sources to choose a cantrip.')
+      if (!isDivineOrder && !feature)
         return deny(
           'Restore the exact granting feature source; duplicate definitions cannot grant spells.',
         )
       let blocks: ReturnType<typeof parseAdditionalSpellBlocks>
       try {
         blocks = parseAdditionalSpellBlocks(
-          ('additionalSpells' in feature ? feature.additionalSpells : undefined) as
-            | AdditionalSpellBlock[]
-            | undefined,
+          isDivineOrder
+            ? thaumaturgeSpells
+            : (feature?.additionalSpells as AdditionalSpellBlock[] | undefined),
         )
       } catch (error) {
         return deny(error instanceof Error ? error.message : 'Unsupported additional-spell syntax.')
@@ -124,7 +134,11 @@ export function getSelectedFeatureCantripSetups(
       setup.choice = choice
       if (choice.filter?.classes.some((name) => /[()[\]]/.test(name)))
         return deny('Decorated class spell filters need unsupported source or plugin rules.')
-      if (!hasCurrentFeatureSpellSemantics(option.entityType, feature, selection.className))
+      if (
+        !isDivineOrder &&
+        (!feature ||
+          !hasCurrentFeatureSpellSemantics(option.entityType, feature, selection.className))
+      )
         return deny(
           'This feature’s class attribution or additional conditions are unsupported or changed.',
         )
@@ -226,6 +240,7 @@ export function getSelectedFeatureCantripPool(
     unique.set(key, unique.has(key) ? undefined : spell)
   }
   const choice = setup?.choice
+  const isDivineOrder = decodeSelectedFeatureSpellAddress(slot[2])?.[1] === 'classFeature'
   const spells =
     reason || !choice
       ? []
@@ -244,6 +259,7 @@ export function getSelectedFeatureCantripPool(
             checked.classSpellRoutes?.some(
               (route) =>
                 matchesJoinedSpellClassFilter(route, filter.classes) &&
+                (!isDivineOrder || (route[3] === slot[0][1] && route[4] === slot[0][2])) &&
                 [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
                   permitted(allowed, source),
                 ),

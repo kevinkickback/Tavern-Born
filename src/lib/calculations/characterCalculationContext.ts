@@ -13,6 +13,7 @@ import { applyCharacterCommandResult } from '@/lib/character/commands/featComman
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
+import { getCurrentDivineOrder } from '@/lib/character/divineOrder'
 import {
   type ClassChoicePrerequisiteContext,
   projectEffectiveClassChoiceFeatures,
@@ -523,9 +524,26 @@ export function createCharacterCalculationContext(
     choiceCatalogs,
     prerequisites,
   )
-  // These explanatory notes cannot feed back into numeric ability or prerequisite calculations.
+  // Skill modifiers and explanatory notes do not feed back into ability or prerequisite calculations.
+  const divineOrder = getCurrentDivineOrder(character, choiceCatalogs)
+  const thaumaturgeSkillEffects: CharacterEffect[] =
+    divineOrder?.branch === 'thaumaturge'
+      ? ['arcana', 'religion'].map((skill) => ({
+          id: `${divineOrder.selection.choiceId}:thaumaturge:${skill}`,
+          label: 'Thaumaturge',
+          source: {
+            kind: 'class',
+            name: 'Thaumaturge',
+            source: 'XPHB',
+            provenance: { choiceId: divineOrder.selection.choiceId },
+          },
+          target: { kind: 'skill-modifier', skill, ability: 'intelligence' },
+          operation: { kind: 'add', value: Math.max(1, abilityScores.modifiers.wisdom) },
+        }))
+      : []
   const sourceEffects = [
     ...baseSourceEffects,
+    ...thaumaturgeSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
       choiceCatalogs,

@@ -8,11 +8,13 @@ import {
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { DIVINE_ORDER_OPTIONS, getSavedDivineOrder } from '@/lib/5etools/divineOrderIdentity'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import { getFixedProficiencyId } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
   decodeLegacySubclassChoice,
   isKenseiChoiceId,
@@ -48,6 +50,7 @@ import {
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { isRetiredEpicBoonChoice } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
+import { stripFixedProficiencyGrants } from '@/lib/character/fixedProficiencyOwnership'
 import {
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
@@ -425,10 +428,12 @@ export function retainSavedFeatureOptionsCommand(
   }
   const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
   const registeredCompanion = isRegisteredCompanionSelection(selection)
+  const registeredOrder = getSavedDivineOrder(character)?.selection === selection
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
-    ((registeredPool || registeredCompanion) && expectedSelectionHandle === undefined) ||
+    ((registeredPool || registeredCompanion || registeredOrder) &&
+      expectedSelectionHandle === undefined) ||
     (registeredCompanion &&
       character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
     (expectedSelectionHandle !== undefined &&
@@ -438,6 +443,7 @@ export function retainSavedFeatureOptionsCommand(
   if (
     !registeredPool &&
     !registeredCompanion &&
+    !registeredOrder &&
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
     !isValidPsionicSelection(selection) &&
@@ -517,12 +523,29 @@ export function retainSavedFeatureOptionsCommand(
           (registeredPool ? { classes: [], classFeatures: [], subclassFeatures: [] } : undefined),
         authority?.spellContext,
       )
+  const protectorId =
+    registeredOrder && !selected.length
+      ? getFixedProficiencyId({
+          owner: ['cleric', 'xphb'],
+          target: DIVINE_ORDER_OPTIONS.protector,
+          level: 1,
+        })
+      : undefined
+  const afterOrderClear = protectorId
+    ? stripFixedProficiencyGrants(
+        { ...character, provenance: ledger },
+        (tag) => tag.grantVariant === protectorId,
+      )
+    : undefined
   const grants = {
     features: featureGrants?.features ?? character.features,
-    proficiencies: ownedProficiencies?.proficiencies ?? character.proficiencies,
+    proficiencies:
+      ownedProficiencies?.proficiencies ??
+      afterOrderClear?.proficiencies ??
+      character.proficiencies,
     provenanceUpdate: ownedProficiencies?.provenance ?? {
       ...featureGrants!.provenanceUpdate,
-      proficiencies: ledger.proficiencies,
+      proficiencies: afterOrderClear?.provenance.proficiencies ?? ledger.proficiencies,
     },
   }
   const projected = authority?.catalogs

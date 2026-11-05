@@ -7,6 +7,7 @@ import { getArmorEquipRestriction } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentBatchCommand,
   removeManualEquipmentCommand,
+  setEquipmentRestrictionsIgnoredCommand,
   updateEquipmentQuantityCommand,
 } from '@/lib/character/commands/equipmentCommands'
 import { setStartingCurrencyCommand } from '@/lib/character/startingEquipmentGrants'
@@ -34,6 +35,7 @@ export interface EquipmentState {
   removeItem: (id: string) => void
   updateItem: (id: string, patch: Partial<Equipment>) => void
   toggleEquip: (id: string) => void
+  setRestrictionsIgnored: (ignored: boolean) => void
   toggleAttune: (id: string) => void
   updateCurrency: (denomination: keyof Currency, amount: number) => void
 }
@@ -42,6 +44,7 @@ export function useEquipment(): EquipmentState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
+  const armorTraining = calculationContext?.character.proficiencies.armor
 
   const equipment = character?.equipment ?? []
   const currency = character?.currency ?? DEFAULT_CURRENCY
@@ -135,7 +138,11 @@ export function useEquipment(): EquipmentState {
       if (!item) return
 
       if (!item.equipped && !(character.variantRules?.ignoreEquipRestrictions ?? false)) {
-        const restriction = getArmorEquipRestriction(item, equipment, character.proficiencies.armor)
+        const restriction = getArmorEquipRestriction(
+          item,
+          equipment,
+          armorTraining ?? character.proficiencies.armor,
+        )
         if (restriction?.kind === 'slot-conflict') {
           toast.warning(
             `${restriction.conflictingItem.name} is already equipped. Unequip it first.`,
@@ -152,7 +159,18 @@ export function useEquipment(): EquipmentState {
 
       patchEquipment(equipment.map((e) => (e.id === id ? { ...e, equipped: !e.equipped } : e)))
     },
-    [character, equipment, patchEquipment],
+    [character, equipment, patchEquipment, armorTraining],
+  )
+
+  const setRestrictionsIgnored = useCallback(
+    (ignored: boolean) => {
+      if (!character) return
+      updateCharacter(
+        character.id,
+        setEquipmentRestrictionsIgnoredCommand(character, ignored, armorTraining),
+      )
+    },
+    [character, updateCharacter, armorTraining],
   )
 
   const toggleAttune = useCallback(
@@ -188,6 +206,7 @@ export function useEquipment(): EquipmentState {
     removeItem,
     updateItem,
     toggleEquip,
+    setRestrictionsIgnored,
     toggleAttune,
     updateCurrency,
   }

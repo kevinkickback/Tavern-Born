@@ -225,7 +225,8 @@ export function useClassChoiceController({
         state.optionalPool ||
         state.psionic ||
         state.legacySubclass ||
-        state.companion
+        state.companion ||
+        state.divineOrder
       )
         return (
           !!state.owner &&
@@ -422,7 +423,8 @@ export function useClassChoiceController({
           activeSaved.optionalPool ||
             activeSaved.psionic ||
             activeSaved.legacySubclass ||
-            activeSaved.companion
+            activeSaved.companion ||
+            activeSaved.divineOrder
             ? request?.savedHandle
             : undefined,
         )
@@ -695,7 +697,8 @@ export function useClassChoiceController({
                 state.enemy ||
                 state.psionic ||
                 state.legacySubclass ||
-                state.companion
+                state.companion ||
+                state.divineOrder
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

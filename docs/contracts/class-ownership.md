@@ -7,6 +7,16 @@ Read this reference only when changing this contract. Start with the [topic inde
 Class tags include source-qualified class identity and, where needed, the granting level/choice.
 This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
 
+Revised Cleric Divine Order uses the existing level-1 class-feature choice.
+The current direct XPHB declaration and its exact selected option establish
+benefit authority. The bundled and configured sources express the mechanics
+in tagged prose, so a finite source adapter verifies those bodies before
+applying the grants. Protector supplies martial weapon proficiency and heavy
+armor training through the shared fixed-proficiency projection. Thaumaturge
+adds the current Wisdom modifier (minimum +1) to Intelligence checks for
+Arcana and Religion. Choice removal or unavailable authority removes only
+that provider's effects. Existing independent providers survive.
+
 Mystic talent, discipline and order-bonus selections use the same Class-choice ownership and
 current-benefit projection. Their distinct catalog, saved relation and setup limits are described
 in [psionic setup](psionic-selection.md).

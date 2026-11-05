@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Unified Epic Boon advancement: measured 6,446,149 B renderer and 1,207,415 B initial.
+  // Divine Order grants and recovery: measured 6,452,539 B renderer and 1,213,286 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6296 * KIB,
-  initialRendererScript: 1180 * KIB,
+  rendererCode: 6302 * KIB,
+  initialRendererScript: 1185 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

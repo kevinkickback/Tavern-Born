@@ -217,8 +217,23 @@ describe('representative character consumers', () => {
         'Restore the exact item rules for leather armor. Restore the exact item rules for shield. Restore the exact item rules for sickle.',
     }
     const explanation = missingStartingRules[fixture.id]
-    expect(readiness.blockingIssues).toEqual(
-      explanation
+    const expectedIssues = [
+      // This abbreviated Cleric fixture has saved intent but lacks the exact Divine Order rules.
+      ...(fixture.id === '2024-cleric'
+        ? [
+            {
+              id: 'class-choice:class:cleric|xphb|choice:divine-order|1',
+              section: 'class',
+              severity: 'blocking',
+              title: 'Review Divine Order',
+              explanation:
+                'Restore the exact Divine Order and selected option sources or change the selection.',
+              navigationTarget:
+                '/build/class?class=Cleric%7CXPHB&level=1&choice=class%3Acleric%7Cxphb%7Cchoice%3Adivine-order%7C1',
+            },
+          ]
+        : []),
+      ...(explanation
         ? [
             {
               id: 'starting-equipment:class',
@@ -229,9 +244,14 @@ describe('representative character consumers', () => {
               navigationTarget: '/build/class?attention=starting-equipment%3Aclass',
             },
           ]
-        : [],
-    )
-    expect(readiness.status).toBe(explanation ? 'incomplete' : 'ready')
+        : []),
+    ]
+    expect(readiness.blockingIssues).toEqual(expectedIssues)
+    if (fixture.id === '2024-cleric') {
+      expect(calculation.character.proficiencies.armor).not.toContain('heavy')
+      expect(calculation.character.proficiencies.weapons).not.toContain('martial')
+    }
+    expect(readiness.status).toBe(expectedIssues.length ? 'incomplete' : 'ready')
     expect(snapshot.readiness?.blockingIssues).toEqual(readiness.blockingIssues)
     expect(snapshot.readiness?.status).toBe(readiness.status)
 
@@ -263,7 +283,7 @@ describe('representative character consumers', () => {
     )
     await user.click(screen.getByRole('tab', { name: /Needs attention/i }))
     expect(
-      screen.getByText(explanation ? 'Character needs attention' : 'Character is ready'),
+      screen.getByText(expectedIssues.length ? 'Character needs attention' : 'Character is ready'),
     ).toBeTruthy()
 
     expect(snapshot.profileIds).toEqual(fixture.expected.profileIds)

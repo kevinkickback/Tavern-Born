@@ -3,6 +3,7 @@ import { getConcreteToolProficiencyName } from '@/lib/5etools/concreteToolProfic
 import { CONCRETE_TOOL_PROFICIENCY_NAMES } from '@/lib/5etools/fixedProficiencyRules'
 import { addGrant, emptyProvenance } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
+import type { SourceTag } from '@/lib/provenance/types'
 import { isFixedProficiencyTag } from '@/lib/schema/fixedProficiencyValidation'
 import type { Character } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
@@ -11,8 +12,19 @@ import {
   getCurrentFixedProficiencies,
 } from './fixedProficiencyAuthority'
 
+export const FIXED_PROFICIENCY_FOUNDATION_DOMAINS = [
+  'armor',
+  'weapons',
+  'skills',
+  'expertise',
+  'languages',
+] as const
+
 /** Remove attributed stale values once, retaining every independent owner. */
-export function stripFixedProficiencyGrants(character: Character): Character {
+export function stripFixedProficiencyGrants(
+  character: Character,
+  matches: (tag: SourceTag) => boolean = isFixedProficiencyTag,
+): Character {
   const ledger = character.provenance ?? emptyProvenance()
   const proficiencies = { ...character.proficiencies }
   const maps = { ...ledger.proficiencies }
@@ -28,14 +40,14 @@ export function stripFixedProficiencyGrants(character: Character): Character {
     const original = ledger.proficiencies[domain] ?? {}
     const retained = Object.fromEntries(
       Object.entries(original).flatMap(([name, tags]) => {
-        const kept = tags.filter((tag) => !isFixedProficiencyTag(tag))
+        const kept = tags.filter((tag) => !matches(tag))
         return kept.length ? [[name, kept]] : []
       }),
     )
     if (domain !== 'expertise' || ledger.proficiencies.expertise) maps[domain] = retained
     proficiencies[domain] = proficiencies[domain].filter((value) => {
       const name = canonicalProficiencyName(value) ?? value
-      return !(original[name] ?? []).some(isFixedProficiencyTag) || !!retained[name]?.length
+      return !(original[name] ?? []).some(matches) || !!retained[name]?.length
     })
   }
   return { ...character, proficiencies, provenance: { ...ledger, proficiencies: maps } }
@@ -58,7 +70,7 @@ export function grantFixedProficiencies(
     const automatic = owner.rule.kind === 'proficient-tools'
     const language = owner.rule.kind === 'fixed-languages'
     if (automatic && phase === 'foundations') continue
-    if (language && phase === 'expertise') continue
+    if ((language || owner.rule.kind === 'fixed-training') && phase === 'expertise') continue
     const names = automatic
       ? character.proficiencies.tools.flatMap((value) => {
           const name = canonicalProficiencyName(value)
@@ -67,7 +79,6 @@ export function grantFixedProficiencies(
             : []
         })
       : ((language ? owner.rule.languages : owner.rule.skills) ?? [])
-    const domain = language ? 'languages' : phase === 'foundations' ? 'skills' : 'expertise'
     const tag = {
       ...makeSourceTag(
         owner.owner.length === 4 ? 'subclass' : 'class',
@@ -77,10 +88,28 @@ export function grantFixedProficiencies(
       ),
       grantVariant: owner.id,
     }
-    for (const name of names) {
-      ledger = addGrant(ledger, domain, name, tag)
-      if (!proficiencies[domain].some((value) => canonicalProficiencyName(value) === name))
-        proficiencies[domain] = [...proficiencies[domain], name]
+    const grants =
+      owner.rule.kind === 'fixed-training'
+        ? (['armor', 'weapons'] as const).map((domain) => ({
+            domain,
+            names: owner.rule.training?.[domain] ?? [],
+          }))
+        : [
+            {
+              domain: language
+                ? ('languages' as const)
+                : phase === 'foundations'
+                  ? ('skills' as const)
+                  : ('expertise' as const),
+              names,
+            },
+          ]
+    for (const { domain, names } of grants) {
+      for (const name of names) {
+        ledger = addGrant(ledger, domain, name, tag)
+        if (!proficiencies[domain].some((value) => canonicalProficiencyName(value) === name))
+          proficiencies[domain] = [...proficiencies[domain], name]
+      }
     }
   }
   return { ...character, proficiencies, provenance: ledger }
@@ -99,7 +128,7 @@ export function captureFixedProficiencyManualOwners(
     catalogs,
   )
   let ledger = character.provenance ?? emptyProvenance()
-  for (const domain of ['skills', 'expertise', 'languages'] as const) {
+  for (const domain of FIXED_PROFICIENCY_FOUNDATION_DOMAINS) {
     for (const value of character.proficiencies[domain]) {
       const name = canonicalProficiencyName(value)
       if (

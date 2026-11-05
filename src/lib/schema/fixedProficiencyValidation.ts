@@ -1,11 +1,14 @@
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
+import { getSavedDivineOrder } from '@/lib/5etools/divineOrderIdentity'
 import {
   decodeFixedProficiencyId,
   isFixedProficiencyId,
+  isProtectorProficiencyRelation,
 } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
   CONCRETE_TOOL_PROFICIENCY_NAMES,
   fixedProficiencyRule,
+  PROTECTOR_TRAINING,
 } from '@/lib/5etools/fixedProficiencyRules'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
@@ -14,12 +17,15 @@ export const isFixedProficiencyTag = (tag: SourceTag) =>
   !!tag.grantVariant && isFixedProficiencyId(tag.grantVariant)
 /** Strict reopen checks both materialization and complete paired ownership; no live catalog needed. */
 export function getInvalidFixedProficiencyPaths(
-  character: Pick<Character, 'proficiencies' | 'provenance'>,
+  character: Pick<Character, 'proficiencies' | 'provenance' | 'classChoiceSelections'>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
   const pairs = new Map<string, { name: string; id: string }>()
-  const hasValue = (domain: 'skills' | 'expertise' | 'tools' | 'languages', name: string) =>
-    character.proficiencies[domain].some((value) => canonicalProficiencyName(value) === name)
+  const protectorIds = new Set<string>()
+  const hasValue = (
+    domain: 'skills' | 'expertise' | 'tools' | 'languages' | 'armor' | 'weapons',
+    name: string,
+  ) => character.proficiencies[domain].some((value) => canonicalProficiencyName(value) === name)
   for (const [domain, values] of Object.entries(character.provenance?.proficiencies ?? {})) {
     for (const [name, tags] of Object.entries(values as Record<string, SourceTag[]>)) {
       const seen = new Set<string>()
@@ -28,6 +34,7 @@ export function getInvalidFixedProficiencyPaths(
           relation = decodeFixedProficiencyId(id)
         const rule = relation && fixedProficiencyRule(relation.target)
         const tool = rule?.kind === 'proficient-tools'
+        if (relation && isProtectorProficiencyRelation(relation)) protectorIds.add(id)
         const legal =
           relation &&
           rule &&
@@ -38,9 +45,15 @@ export function getInvalidFixedProficiencyPaths(
               hasValue(domain, name)
             : rule.kind === 'fixed-languages'
               ? domain === 'languages' && rule.languages?.includes(name) && hasValue(domain, name)
-              : (domain === 'skills' || domain === 'expertise') &&
-                rule.skills?.includes(name) &&
-                hasValue(domain, name)) &&
+              : rule.kind === 'fixed-training'
+                ? (domain === 'armor' || domain === 'weapons') &&
+                  rule.training?.[domain]?.includes(name) &&
+                  hasValue(domain, name)
+                : (domain === 'skills' || domain === 'expertise') &&
+                  rule.skills?.includes(name) &&
+                  hasValue(domain, name)) &&
+          (!isProtectorProficiencyRelation(relation) ||
+            getSavedDivineOrder(character)?.branch === 'protector') &&
           canonicalProficiencyName(name) === name &&
           tag.sourceType === (relation.owner.length === 4 ? 'subclass' : 'class') &&
           canonicalProficiencyName(tag.sourceName) ===
@@ -70,6 +83,15 @@ export function getInvalidFixedProficiencyPaths(
     )
       paths.push(['provenance', 'proficiencies', 'expertise', name])
   }
+  for (const id of protectorIds)
+    for (const domain of ['armor', 'weapons'] as const)
+      for (const name of PROTECTOR_TRAINING.training?.[domain] ?? [])
+        if (
+          !(character.provenance?.proficiencies[domain]?.[name] ?? []).some(
+            (tag) => tag.grantVariant === id,
+          )
+        )
+          paths.push(['provenance', 'proficiencies', domain, name])
   for (const domain of ['features', 'feats', 'spells', 'equipment'] as const)
     for (const [name, tags] of Object.entries(character.provenance?.[domain] ?? {}))
       if (tags.some(isFixedProficiencyTag)) paths.push(['provenance', domain, name])

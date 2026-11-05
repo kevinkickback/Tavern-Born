@@ -1,7 +1,10 @@
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { projectOwnedProficiencies } from '@/lib/character/classProficiencyFoundation'
-import { captureFixedProficiencyManualOwners } from '@/lib/character/fixedProficiencyOwnership'
+import {
+  captureFixedProficiencyManualOwners,
+  FIXED_PROFICIENCY_FOUNDATION_DOMAINS,
+} from '@/lib/character/fixedProficiencyOwnership'
 import { retainSelectedFeatureSpellIntent } from '@/lib/character/managedClassSpellState'
 import { addGrant } from '@/lib/provenance/ledger'
 import type { Character } from '@/types/character'
@@ -42,7 +45,7 @@ export function projectProficiencyCommandResult(
     catalogs,
   )
   let ledger = next.provenance
-  for (const domain of ['skills', 'expertise', 'languages'] as const)
+  for (const domain of FIXED_PROFICIENCY_FOUNDATION_DOMAINS)
     for (const value of next.proficiencies[domain]) {
       const name = canonicalProficiencyName(value)
       if (name && !before.provenance.proficiencies[domain]?.[name]?.length) {
