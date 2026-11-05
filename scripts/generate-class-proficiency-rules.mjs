@@ -17,6 +17,7 @@ import {
   deriveConcreteToolNames,
   deriveFixedProficiencyRules,
 } from './lib/fixed-proficiency-source.mjs'
+import { deriveLifeDomainProficiency } from './lib/life-domain-proficiency-source.mjs'
 import {
   deriveArtisanToolPool,
   deriveSubclassProficiencyCertificates,
@@ -36,6 +37,8 @@ const read = (file) => {
 }
 const index = read('class/index.json')
 const documents = [...new Set(Object.values(index))].sort().map((file) => read(`class/${file}`))
+const bundledClericPath = 'resources/srd/core/data/class/class-cleric.json'
+const bundledClericBytes = fs.readFileSync(bundledClericPath)
 const features = documents.flatMap((document) => document.classFeature ?? [])
 const itemDocuments = [read('items.json'), read('items-base.json')]
 const optionalRecords = read('optionalfeatures.json').optionalfeature
@@ -169,6 +172,22 @@ try {
   const toolNames = deriveConcreteToolNames(preparedTools, (item) =>
     assessConcreteToolProficiency(item, toolCopySemantics.certificates),
   )
+  const subclassCertificateApi = {
+    materializeRoots: preparation.materializeSubclassCopies,
+    materializeFeatures: preparation.materializeSubclassFeatureCopies,
+    identity: getSubclassFeatureIdentity,
+    decode: decodeSubclassFeatureReference,
+    copyKey: certificates.getSubclassCopyLookupKey,
+    paths: certificates.collectSubclassProficiencyPaths,
+    owner: certificates.getSubclassProficiencyOwner,
+    digest: certificates.subclassProficiencyDigest,
+    entriesDigest: getFeatureSourceDigest,
+    metadata: certificates.subclassProficiencyMetadata,
+    intro: getSubclassIntroReference,
+    validateProgression: (root) =>
+      validateConditionalSubclassProgression(root, conditional.features),
+    admittedContexts: conditionalContexts.contexts,
+  }
   const subclassCertificates = deriveSubclassProficiencyCertificates(
     documents,
     [
@@ -178,29 +197,29 @@ try {
       ),
       ...conditional.features.filter((row) => row.target.startsWith('subclass-feature|')),
     ],
-    {
-      materializeRoots: preparation.materializeSubclassCopies,
-      materializeFeatures: preparation.materializeSubclassFeatureCopies,
-      identity: getSubclassFeatureIdentity,
-      decode: decodeSubclassFeatureReference,
-      copyKey: certificates.getSubclassCopyLookupKey,
-      paths: certificates.collectSubclassProficiencyPaths,
-      owner: certificates.getSubclassProficiencyOwner,
-      digest: certificates.subclassProficiencyDigest,
-      entriesDigest: getFeatureSourceDigest,
-      metadata: certificates.subclassProficiencyMetadata,
-      intro: getSubclassIntroReference,
-      validateProgression: (root) =>
-        validateConditionalSubclassProgression(root, conditional.features),
-      admittedContexts: conditionalContexts.contexts,
-    },
+    subclassCertificateApi,
   )
+  const life = deriveLifeDomainProficiency(
+    documents.find((document) =>
+      document.class?.some((row) => row.name === 'Cleric' && row.source === 'PHB'),
+    ),
+    JSON.parse(bundledClericBytes),
+    subclassCertificateApi,
+  )
+  subclassCertificates.packages = life.packages
+  fixed.features.push(life.rule)
+  fixed.features.sort((left, right) => left.target.localeCompare(right.target))
   const provenance = {
     purpose:
       'Reviewed development-time semantic checkpoint; runtime validates complete granting source and filtered vocabulary.',
     upstream:
       '5etools b9061583536101068b3a59d27e886d1fa664e366 UID/copy handling; rendering Expertise prerequisites supplies no character choice model.',
     inputs,
+    bundledLifeDomainInput: { file: bundledClericPath, sha256: sha(bundledClericBytes) },
+    lifeDomainProficiencyDependencies: [
+      'scripts/lib/life-domain-proficiency-source.mjs',
+      'scripts/lib/subclass-proficiency-source.mjs',
+    ].map((file) => ({ file, sha256: sha(fs.readFileSync(file)) })),
     toolClassificationDependencies: [
       'src/lib/calculations/itemClassification.ts',
       'src/lib/5etools/copyResolution.ts',

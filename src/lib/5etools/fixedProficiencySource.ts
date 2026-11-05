@@ -14,7 +14,7 @@ import { FIXED_PROFICIENCY_RULES } from './fixedProficiencyRules'
 import { getSubclassProficiencyOwner } from './subclassProficiencyCertificates'
 import {
   isConditionalOnlySubclassProficiencyTarget,
-  SUBCLASS_PROFICIENCY_CHECKPOINT,
+  SUBCLASS_PROFICIENCY_ROOTS,
 } from './subclassProficiencyRegistry'
 
 const fixedTargets = new Set(
@@ -23,7 +23,7 @@ const fixedTargets = new Set(
     ...CONDITIONAL_PROFICIENCY_RULES.filter((rule) => rule.target.startsWith('subclass-feature|')),
   ].map((rule) => rule.target),
 )
-const subclassRoots = SUBCLASS_PROFICIENCY_CHECKPOINT.roots.filter((root) =>
+const subclassRoots = SUBCLASS_PROFICIENCY_ROOTS.filter((root) =>
   root.paths.some((path) => fixedTargets.has(path.target)),
 )
 const consumedSubclassTargets = new Set(

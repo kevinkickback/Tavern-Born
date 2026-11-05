@@ -27,6 +27,7 @@ import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etool
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
   auditSubclassProficiencyFeatures,
+  auditSubclassProficiencyPackage,
   auditSubclassProficiencyRoots,
 } from '@/lib/5etools/subclassProficiencySource'
 import {
@@ -459,8 +460,16 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   if (Array.isArray(data)) return auditFixedLayerMultiplicity(data.map(asObject), 'classes')
   const obj = asObject(data)
   const records = asArray(obj.subclassFeature).map(asObject)
+  const classRecords = asArray(obj.class).map(asObject)
+  const subclassRecords = asArray(obj.subclass).map(asObject)
   const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
-  const materializedSubclasses = materializeSubclassCopies(asArray(obj.subclass))
+  const packageAudit = auditSubclassProficiencyPackage(
+    classRecords,
+    subclassRecords,
+    records,
+    origin,
+  )
+  const materializedSubclasses = materializeSubclassCopies(subclassRecords)
   const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
     subclasses: materializedSubclasses,
@@ -481,13 +490,14 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     origin,
   )
   const classes = auditFixedLayerMultiplicity(
-    auditDirectFixedClassDeclarations(asArray(obj.class).map(asObject), origin),
+    auditDirectFixedClassDeclarations(classRecords, origin),
     'classes',
   )
   const subclass = auditSubclassProficiencyRoots(
-    asArray(obj.subclass).map(asObject),
+    subclassRecords,
     materializedSubclasses,
     origin,
+    packageAudit,
   )
   if (!records.length)
     return {
@@ -509,6 +519,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
       records,
       auditFeatureOptionSources(materialized),
       origin,
+      packageAudit,
     ),
   }
 }

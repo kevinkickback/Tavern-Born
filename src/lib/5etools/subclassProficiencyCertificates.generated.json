@@ -1025,5 +1025,211 @@
         }
       ]
     }
+  ],
+  "packages": [
+    {
+      "features": [
+        {
+          "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
+          "rawDigest": "2f7a0cb3c998ced94e390f93df0ce8e7bae7b713fbd5e69e40e362d2aed73ec5",
+          "metadataDigest": "8ea467b2c2dec3730861e16da5ad63ea648ce21d5594d52206422201a8418d46",
+          "fields": [
+            "basicRules",
+            "className",
+            "classSource",
+            "entries",
+            "header",
+            "level",
+            "name",
+            "page",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235"
+            }
+          ],
+          "copies": []
+        },
+        {
+          "target": "subclass-feature|life domain|cleric|phb|life|phb|1|phb",
+          "rawDigest": "13811cb8f2b721ba9b70581217d6df7a68184fb9e50e7a74fd20bab5d659a3f6",
+          "metadataDigest": "973516d6054977a97785b657163f9fd6e20c94bdb85d714d752af46163730f02",
+          "fields": [
+            "basicRules",
+            "className",
+            "classSource",
+            "entries",
+            "level",
+            "name",
+            "page",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "b8dd721119af4e5370db981248717de0d94099fa249ee36066794e59b1149bca"
+            },
+            {
+              "digest": "636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32"
+            },
+            {
+              "digest": "01fb9b1d289a173230b8bfb5e9027390133564f5d289ae4c6e777232ebf1a120"
+            },
+            {
+              "digest": "277e5a6f349b2aab3365839e00635db038975a08068e4b17cb8154ce45029e2e",
+              "reference": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb"
+            },
+            {
+              "digest": "37c389e84482af804ee654463d5532a7193a3f201829db31b778a1d39aea6a87",
+              "reference": "subclass-feature|disciple of life|cleric|phb|life|phb|1|phb"
+            }
+          ],
+          "copies": []
+        }
+      ],
+      "roots": [
+        {
+          "owner": ["cleric", "phb", "life domain", "phb"],
+          "shortName": "Life",
+          "rawDigest": "1e15ee65728d9b01cf593c1c7a29217d5e014cff3a2731826e10241774139122",
+          "metadataDigest": "69ca4072b0589b6604212c2f389f55f7441ebbd6650ec482135e49f07abda188",
+          "fields": [
+            "additionalSpells",
+            "basicRules",
+            "className",
+            "classSource",
+            "edition",
+            "name",
+            "page",
+            "reprintedAs",
+            "shortName",
+            "source",
+            "srd",
+            "subclassFeatures"
+          ],
+          "copies": [],
+          "declarations": [
+            "Life Domain|Cleric||Life||1",
+            "Channel Divinity: Preserve Life|Cleric||Life||2",
+            "Blessed Healer|Cleric||Life||6",
+            "Divine Strike|Cleric||Life||8",
+            "Blessed Strikes|Cleric||Life||8|TCE",
+            "Supreme Healing|Cleric||Life||17"
+          ],
+          "intro": "Life Domain|Cleric||Life||1",
+          "paths": [
+            {
+              "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
+              "refs": ["Life Domain|Cleric||Life||1", "Bonus Proficiency|Cleric||Life||1"],
+              "level": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "features": [
+        {
+          "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
+          "rawDigest": "d603ec69b39565314751d0a37125ca1d056e9f2368f621e9605495bc1e589cc6",
+          "metadataDigest": "b957a6f2e11edfa0644b84bd169871ee0b941941d88df0d69216d35f9e8ab805",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "header",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235"
+            }
+          ],
+          "copies": []
+        },
+        {
+          "target": "subclass-feature|life domain|cleric|phb|life|phb|1|phb",
+          "rawDigest": "39c258d4f93e7e32c197c5673463fa6f6fb05a033ac54378b66546bf5d3d7c8f",
+          "metadataDigest": "6db0af94bd3157fea9049aa270e662a9f007f3c688bd187c851afa7924c4b66a",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "b8dd721119af4e5370db981248717de0d94099fa249ee36066794e59b1149bca"
+            },
+            {
+              "digest": "636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32"
+            },
+            {
+              "digest": "01fb9b1d289a173230b8bfb5e9027390133564f5d289ae4c6e777232ebf1a120"
+            },
+            {
+              "digest": "277e5a6f349b2aab3365839e00635db038975a08068e4b17cb8154ce45029e2e",
+              "reference": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb"
+            },
+            {
+              "digest": "37c389e84482af804ee654463d5532a7193a3f201829db31b778a1d39aea6a87",
+              "reference": "subclass-feature|disciple of life|cleric|phb|life|phb|1|phb"
+            }
+          ],
+          "copies": []
+        }
+      ],
+      "roots": [
+        {
+          "owner": ["cleric", "phb", "life domain", "phb"],
+          "shortName": "Life",
+          "rawDigest": "d9e29d8b9ca46d83cce74f51e8af8221015cd80176394187ece0e286d0af04e7",
+          "metadataDigest": "d9edf424302bf22205f6af9d310cdcbc608d1764aeb233c07411346fa2e090ef",
+          "fields": [
+            "additionalSpells",
+            "className",
+            "classSource",
+            "edition",
+            "name",
+            "shortName",
+            "source",
+            "srd",
+            "subclassFeatures"
+          ],
+          "copies": [],
+          "declarations": [
+            "Life Domain|Cleric||Life||1",
+            "Channel Divinity: Preserve Life|Cleric||Life||2",
+            "Blessed Healer|Cleric||Life||6",
+            "Divine Strike|Cleric||Life||8",
+            "Supreme Healing|Cleric||Life||17"
+          ],
+          "intro": "Life Domain|Cleric||Life||1",
+          "paths": [
+            {
+              "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
+              "refs": ["Life Domain|Cleric||Life||1", "Bonus Proficiency|Cleric||Life||1"],
+              "level": 1
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

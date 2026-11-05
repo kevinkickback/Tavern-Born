@@ -32,15 +32,19 @@ export interface SubclassProficiencyRootCertificate {
   intro: string
   paths: SubclassProficiencyPath[]
 }
-export interface SubclassProficiencyCheckpoint {
+export interface SubclassProficiencyPackage {
   features: SubclassProficiencyFeatureCertificate[]
   roots: SubclassProficiencyRootCertificate[]
+}
+export interface SubclassProficiencyCheckpoint extends SubclassProficiencyPackage {
+  packages?: SubclassProficiencyPackage[]
 }
 export interface SubclassProficiencySourceAudit {
   version: 1
   certificate: string
   origin: string
   verified: boolean
+  package?: string
 }
 
 /** Exact production subclass copy lookup, distinct from its canonical selected-owner tuple. */
@@ -78,6 +82,7 @@ export { isExactSubclassProficiencyReference }
 export function collectSubclassProficiencyPaths(
   refs: readonly SubclassFeatureReference[],
   resolve: (target: string) => SubclassFeature | undefined,
+  verifyAttached?: (target: string, feature: SubclassFeature) => boolean,
 ): SubclassProficiencyPath[] {
   const paths: SubclassProficiencyPath[] = []
   const visit = (
@@ -89,6 +94,14 @@ export function collectSubclassProficiencyPaths(
     if (!isExactSubclassProficiencyReference(reference, uid)) return
     const decoded = decodeSubclassFeatureReference(uid)
     const target = getSubclassFeatureIdentity(decoded)!
+    if (
+      verifyAttached &&
+      (reference.sourceIdentityConflict ||
+        reference.featureOptionSourceConflict ||
+        !reference.feature ||
+        !verifyAttached(target, reference.feature as SubclassFeature))
+    )
+      return
     if (
       previous.some(
         (ref) => getSubclassFeatureIdentity(decodeSubclassFeatureReference(ref)) === target,
@@ -115,7 +128,7 @@ export function collectSubclassProficiencyPaths(
       }
       scan(entry.entries)
     }
-    scan(feature.entries)
+    scan(verifyAttached ? (reference.feature as SubclassFeature).entries : feature.entries)
   }
   refs.forEach((reference) => {
     if (typeof reference.ref === 'string')

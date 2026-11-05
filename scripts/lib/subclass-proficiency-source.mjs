@@ -208,6 +208,8 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
 
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */
 export function deriveSubclassProficiencyCertificates(documents, rules, api) {
+  const rootFields = [...ROOT_FIELDS, ...(api.sourceFields ?? [])]
+  const featureFields = [...FEATURE_FIELDS, ...(api.sourceFields ?? [])]
   const validateMetadata = (record, root = false) => {
     if (record.srd !== undefined && typeof record.srd !== 'boolean')
       fail('Unsupported subclass srd metadata')
@@ -249,7 +251,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
       if (
         !owner ||
         rawRoots.filter((row) => same(api.owner(row), owner)).length !== 1 ||
-        !only(raw, ROOT_FIELDS)
+        !only(raw, rootFields)
       )
         fail('Missing, duplicate or unsupported subclass root')
       checkCopy(raw)
@@ -267,7 +269,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
         if (
           matches.length !== 1 ||
           rawRoots.filter((row) => same(api.owner(row), api.owner(matches[0]))).length !== 1 ||
-          !only(matches[0], ROOT_FIELDS)
+          !only(matches[0], rootFields)
         )
           fail('Ambiguous subclass copy base')
         copies.push({ key, digest: api.digest(matches[0]) })
@@ -304,7 +306,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
     for (const target of needed) {
       const rows = rawByTarget(target),
         effective = candidates(target)
-      if (rows.length !== 1 || effective.length !== 1 || !only(rows[0], FEATURE_FIELDS))
+      if (rows.length !== 1 || effective.length !== 1 || !only(rows[0], featureFields))
         fail('Missing, duplicate or unsupported enabling feature')
       const raw = rows[0],
         feature = effective[0],
@@ -314,7 +316,9 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
       // Leaf mechanics use the closed grammar above. Parent prose and wrappers need a separate
       // reviewed semantic checkpoint that ordinary generation cannot silently refresh.
       if (!supported.has(target)) {
-        const reviewed = semanticCheckpoint.ancestors.filter((row) => row.target === target)
+        const reviewed = (api.reviewedAncestors ?? semanticCheckpoint.ancestors).filter(
+          (row) => row.target === target,
+        )
         if (reviewed.length !== 1 || reviewed[0].digest !== api.digest(feature))
           fail(`Unreviewed enabling feature semantics: ${target}`)
       }
@@ -326,7 +330,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
         if (!parent || seen.has(parent)) fail('Invalid feature copy closure')
         seen.add(parent)
         const matches = rawByTarget(parent)
-        if (matches.length !== 1 || !only(matches[0], FEATURE_FIELDS))
+        if (matches.length !== 1 || !only(matches[0], featureFields))
           fail('Ambiguous feature copy base')
         copies.push({ target: parent, digest: api.digest(matches[0]) })
         validateMetadata(matches[0])
