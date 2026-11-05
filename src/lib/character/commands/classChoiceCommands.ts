@@ -46,6 +46,7 @@ import {
   isRegisteredCompanionSelection,
 } from '@/lib/character/companionSelections'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import { isRetiredEpicBoonChoice } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   getHistoricalProficiencyRule,
@@ -596,6 +597,8 @@ export function applyClassChoiceSelectionCommand(
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (isRetiredEpicBoonChoice(choice, authority?.catalogs))
+    throw new RangeError('Choose or remove this feat through the Epic Boon advancement slot.')
   if (
     !getRevisedHunterRule(choice.id) &&
     selected.some((option) => {

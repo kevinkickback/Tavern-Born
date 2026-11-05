@@ -25,6 +25,7 @@ import {
   type ClassChoiceOptionView,
   getClassChoiceCompletionCount,
 } from '@/lib/character/classChoiceOptions'
+import { EPIC_BOON_LEVEL, type EpicBoonSlot } from '@/lib/character/epicBoonSlots'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
 import type { OptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
@@ -99,6 +100,8 @@ interface BuildClassLevelsPanelProps {
   spellByReference: Map<string, Spell5e>
   appliedAsiChoicesForClass: AsiChoice[]
   classAsiFeats: Feat[]
+  epicBoonSlot?: EpicBoonSlot
+  onEditEpicBoonOptions?: () => void
   asiModeByLevel: Record<string, 'asi' | 'feat'>
   usedASI: number
   totalASIAcrossClasses: number
@@ -204,6 +207,8 @@ export function BuildClassLevelsPanel({
   spellByReference,
   appliedAsiChoicesForClass,
   classAsiFeats,
+  epicBoonSlot,
+  onEditEpicBoonOptions,
   asiModeByLevel,
   usedASI,
   totalASIAcrossClasses,
@@ -462,6 +467,7 @@ export function BuildClassLevelsPanel({
                 )}
 
               {levelsToShow.map((lv) => {
+                const epicBoon = lv === EPIC_BOON_LEVEL ? epicBoonSlot : undefined
                 const {
                   isSubclassLevel,
                   isASILevel,
@@ -477,17 +483,20 @@ export function BuildClassLevelsPanel({
                   spellChoicesByLevel,
                   featuresByLevel,
                 })
-                const levelClassChoices = classChoices.filter((choice) => choice.level === lv)
+                const levelClassChoices = classChoices.filter(
+                  (choice) => choice.level === lv && choice.id !== epicBoonSlot?.choiceId,
+                )
                 const levelDiagnostics = classChoiceDiagnostics.filter(
                   (diagnostic) => (diagnostic.level ?? 1) === lv,
                 )
                 const normalizedChoiceCount = levelClassChoices.length + levelDiagnostics.length
                 const levelChoiceCount = choiceCount + normalizedChoiceCount
 
-                const asiChoiceComplete =
-                  !isASILevel ||
-                  appliedAsiChoicesForClass.some((choice) => choice.level === lv) ||
-                  classAsiFeats.some((feat) => feat.classLevel === lv)
+                const asiChoiceComplete = epicBoon
+                  ? epicBoon.state === 'selected'
+                  : !isASILevel ||
+                    appliedAsiChoicesForClass.some((choice) => choice.level === lv) ||
+                    classAsiFeats.some((feat) => feat.classLevel === lv)
                 const subclassChoiceComplete = !isSubclassLevel || !!viewingSubclass
                 const selectedSpellCount = managedSpellStatuses.filter(
                   (row) =>
@@ -815,6 +824,8 @@ export function BuildClassLevelsPanel({
                             featuresByLevel={featuresByLevel}
                             appliedAsiChoicesForClass={appliedAsiChoicesForClass}
                             featForLevel={classAsiFeats.find((feat) => feat.classLevel === lv)}
+                            epicBoon={epicBoon}
+                            onEditEpicBoonOptions={onEditEpicBoonOptions}
                             asiModeByLevel={asiModeByLevel}
                             usedASI={usedASI}
                             totalASIAcrossClasses={totalASIAcrossClasses}

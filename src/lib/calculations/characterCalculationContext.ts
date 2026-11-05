@@ -17,6 +17,13 @@ import {
   type ClassChoicePrerequisiteContext,
   projectEffectiveClassChoiceFeatures,
 } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  type EpicBoonSlot,
+  getEpicBoonSlots,
+  isEpicBoonIncreaseWithinCap,
+  projectEpicBoonSlots,
+  withoutEpicBoonSelection,
+} from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
   type ManagedClassSpellContext,
@@ -107,6 +114,7 @@ export interface CharacterCalculationContext {
   classes: readonly Class5e[]
   classChoices: {
     classes: readonly Class5e[]
+    epicBoonSlots: readonly EpicBoonSlot[]
     catalogs?: ClassChoiceFeatureCatalogs
     feats?: readonly Feat5e[]
     spellContext?: ManagedClassSpellContext
@@ -206,6 +214,24 @@ function addBonuses(scores: AbilityScores, bonuses: Partial<Record<AbilityName, 
   }
 }
 
+export function getIntrinsicAbilityScores({
+  base,
+  racialBonuses,
+  backgroundBonuses,
+  asiBonuses,
+  featBonuses,
+}: Pick<
+  EffectiveAbilityScoreData,
+  'base' | 'racialBonuses' | 'backgroundBonuses' | 'asiBonuses' | 'featBonuses'
+>): AbilityScores {
+  const scores = { ...base }
+  addBonuses(scores, racialBonuses)
+  addBonuses(scores, backgroundBonuses)
+  addBonuses(scores, asiBonuses)
+  addBonuses(scores, featBonuses)
+  return scores
+}
+
 function getProvenanceFeatBonuses(
   character: Character | null | undefined,
 ): Partial<Record<AbilityName, number>> {
@@ -264,11 +290,13 @@ export function deriveEffectiveAbilityScores(
   }
   const featBonuses = getProvenanceFeatBonuses(character)
 
-  const total = { ...base }
-  addBonuses(total, racialBonuses)
-  addBonuses(total, backgroundBonuses)
-  addBonuses(total, asiBonuses)
-  addBonuses(total, featBonuses)
+  const total = getIntrinsicAbilityScores({
+    base,
+    racialBonuses,
+    backgroundBonuses,
+    asiBonuses,
+    featBonuses,
+  })
 
   if (character) {
     const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
@@ -359,6 +387,15 @@ export function createCharacterCalculationContext(
       primaryLookups,
     ),
   }
+  let epicBoonSlots = getEpicBoonSlots(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    primaryLookups.featExpertiseFeats ??
+      primaryLookups.classChoiceFeatureCatalogs?.featExpertiseFeats ??
+      Object.values(primaryLookups.featsByKey ?? {}),
+    rawLookups.classesByKey,
+  )
+  character = projectEpicBoonSlots(character, epicBoonSlots)
   const dailyIntentSource = character
   character = projectManagedClassSpellState(character, managedSpellContext).character
   const savedClassFeats = character.classFeatChoices
@@ -430,6 +467,26 @@ export function createCharacterCalculationContext(
     ),
     ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]
+  // Old generic ASI saves could persist +2 from 19. Check the same capped
+  // allocation against the actor without that slot before using its benefits.
+  for (const slot of epicBoonSlots) {
+    if (!slot.asi) continue
+    const withoutAsi = withoutEpicBoonSelection(character, slot.owner)
+    const before = getIntrinsicAbilityScores(
+      deriveEffectiveAbilityScores(
+        withoutAsi,
+        raceResolution.parentRace,
+        raceResolution.subraceData,
+        background,
+        baseSourceEffects,
+      ),
+    )
+    if (isEpicBoonIncreaseWithinCap(slot.asi.abilityChanges, before)) continue
+    character = withoutAsi
+    epicBoonSlots = epicBoonSlots.map((row) =>
+      row === slot ? { ...row, state: 'unavailable', asi: undefined } : row,
+    )
+  }
   const abilityScores = deriveEffectiveAbilityScores(
     character,
     raceResolution.parentRace,
@@ -451,6 +508,7 @@ export function createCharacterCalculationContext(
   }
   const classChoices = {
     classes: choiceClasses,
+    epicBoonSlots,
     catalogs: choiceCatalogs,
     feats: primaryLookups.featExpertiseFeats,
     prerequisites,

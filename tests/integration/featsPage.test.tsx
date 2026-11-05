@@ -10,12 +10,18 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { replaceFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
+import { buildClassLookup } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import {
+  replaceClassFeatSelectionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { makeSourceTag } from '@/lib/provenance'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useFeatsPageController } from '@/pages/feats/hooks/useFeatsPageController'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { Feat5e, Race5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Feat5e, Race5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -40,13 +46,14 @@ const magicInitiate = {
 } as Feat5e
 
 let rawFeatLookup: Record<string, Feat5e> = {}
+let boonData: { classes: Class5e[]; classFeatures: ClassFeature[]; feats: Feat5e[] } | undefined
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
-    feats: [configurableFeat, configurableFeat2024, magicInitiate],
+    feats: [configurableFeat, configurableFeat2024, magicInitiate, ...(boonData?.feats ?? [])],
     spells: [],
-    classes: [],
-    classFeatures: [],
+    classes: boonData?.classes ?? [],
+    classFeatures: boonData?.classFeatures ?? [],
     items: [],
     itemsBase: [],
   }),
@@ -54,7 +61,7 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
 
 vi.mock('@/hooks/data/useGameData', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/hooks/data/useGameData')>()),
-  useClassLookup: () => new Map(),
+  useClassLookup: () => buildClassLookup(boonData?.classes ?? []),
   useFeatLookup: () => rawFeatLookup,
   useSpellLookup: () => ({}),
 }))
@@ -475,6 +482,78 @@ describe('FeatsPage bonus feat configuration', () => {
         'magic initiate|other|cleric'
       ],
     ).toEqual({ spellcastingClass: 'Cleric Spells' })
+  })
+
+  test('a retained Epic Boon reserves its slot and disappears from active Feats on source loss', () => {
+    const path = 'resources/srd/core/data/class/class-ranger.json'
+    const parsed = parseClassDocument(JSON.parse(readFileSync(path, 'utf8')), path)
+    const classes = (parsed.classes as Class5e[]).filter((row) => row.source === 'XPHB')
+    const feats = JSON.parse(readFileSync('resources/srd/core/data/feats.json', 'utf8'))
+      .feat as Feat5e[]
+    const boon = feats.find((row) => row.name === 'Boon of Combat Prowess')!
+    boonData = { classes, classFeatures: parsed.classFeatures as ClassFeature[], feats: [boon] }
+    try {
+      const owner = { className: 'Ranger', classSource: 'XPHB' }
+      const id = 'class:ranger|xphb|choice:epic-boon|19'
+      const base = makeCharacterFixture({
+        originSystem: '2024',
+        classProgression: [{ name: 'Ranger', source: 'XPHB', levels: 19 }],
+        asiChoices: [4, 8, 12, 16].map((level) => ({
+          ...owner,
+          id: String(level),
+          level,
+          abilityChanges: { dexterity: 2 },
+        })),
+        classChoiceSelections: [
+          {
+            ...owner,
+            choiceId: id,
+            label: 'Epic Boon',
+            kind: 'feat',
+            classLevel: 19,
+            selected: [{ entityType: 'feat', name: boon.name, source: boon.source, slotLevel: 19 }],
+          },
+        ],
+      })
+      const character = characterPersistenceSchema.parse(
+        applyCharacterCommandResult(
+          base,
+          replaceClassFeatSelectionsCommand(
+            base,
+            base.provenance,
+            {
+              ...owner,
+              choiceId: id,
+              categories: ['EB'],
+              progressionName: 'Epic Boon',
+              slotLevels: [19],
+            },
+            [boon],
+          ),
+        ),
+      )
+      useCharacterStore.setState({
+        characters: [character],
+        activeCharacter: character,
+        activeCharacterId: character.id,
+      })
+      const { result, rerender } = renderHook(() => useFeatsPageController(), {
+        wrapper: MemoryRouter,
+      })
+      expect(result.current.remainingASI).toBe(0)
+      expect(result.current.classProgressionFeats.map(({ feat }) => feat.name)).toEqual([boon.name])
+      boonData = { ...boonData, classFeatures: [] }
+      rerender()
+      expect(result.current.remainingASI).toBe(0)
+      expect(result.current.classProgressionFeats).toEqual([])
+      act(() =>
+        result.current.handleCompleteSetup(boon.name, boon.source, undefined, undefined, id),
+      )
+      expect(result.current.featOptionsTarget).toBeNull()
+      expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    } finally {
+      boonData = undefined
+    }
   })
 
   test('opens a source-qualified feat from a route deep link', () => {

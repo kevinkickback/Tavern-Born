@@ -20,6 +20,7 @@ export interface AsiPickerDialogProps {
   open: boolean
   level: number
   abilityScores: AbilityScores
+  abilityScoresBeforeChoice?: AbilityScores
   existingChanges?: Record<string, 1 | 2>
   onApply: (changes: Record<string, 1 | 2>) => void
   onClose: () => void
@@ -31,18 +32,20 @@ export function AsiPickerDialog({
   open,
   level,
   abilityScores,
+  abilityScoresBeforeChoice,
   existingChanges,
   onApply,
   onClose,
 }: AsiPickerDialogProps) {
   // Strip existing changes so baseScores reflect pre-ASI values.
   const baseScores = useMemo<AbilityScores>(() => {
+    if (abilityScoresBeforeChoice) return abilityScoresBeforeChoice
     const result = { ...abilityScores }
     for (const [ability, bonus] of Object.entries(existingChanges ?? {})) {
       ;(result as Record<string, number>)[ability] -= bonus
     }
     return result
-  }, [abilityScores, existingChanges])
+  }, [abilityScores, existingChanges, abilityScoresBeforeChoice])
 
   const [mode, setMode] = useState<Mode>('single')
   const [selected, setSelected] = useState<AbilityName[]>([])
@@ -78,7 +81,11 @@ export function AsiPickerDialog({
     }
   }
 
-  const canApply = mode === 'single' ? selected.length === 1 : selected.length === 2
+  const increase = mode === 'single' ? 2 : 1
+  const canApply =
+    selected.length === (mode === 'single' ? 1 : 2) &&
+    (!abilityScoresBeforeChoice ||
+      selected.every((ability) => baseScores[ability] + increase <= ABILITY_SCORE_MAX))
 
   const handleApply = () => {
     if (!canApply) return
@@ -98,7 +105,10 @@ export function AsiPickerDialog({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Ability Score Increase — Level {level}</DialogTitle>
+          <DialogTitle>
+            {abilityScoresBeforeChoice ? 'Ability Score Improvement' : 'Ability Score Increase'} —
+            Level {level}
+          </DialogTitle>
           <DialogDescription>Choose how to spend your ability score increase.</DialogDescription>
         </DialogHeader>
 
@@ -135,7 +145,9 @@ export function AsiPickerDialog({
             const bonus = getBonus(ability)
             const newScore = Math.min(base + bonus, ABILITY_SCORE_MAX)
             const isSelected = selected.includes(ability)
-            const isCapped = base >= ABILITY_SCORE_MAX
+            const isCapped = abilityScoresBeforeChoice
+              ? base + increase > ABILITY_SCORE_MAX
+              : base >= ABILITY_SCORE_MAX
             const isDisabled =
               (!isSelected && mode === 'split' && selected.length >= 2) || (isCapped && !isSelected)
 

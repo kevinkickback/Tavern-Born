@@ -103,7 +103,9 @@ export function countTotalFeatSlots({
     const cls = resolveClassForEntry(entry, classLookup)
     const earned = getASILevelsFromClass(cls).filter((level) => level <= (entry.levels ?? 0))
     const usedForAsi = (character.asiChoices ?? []).filter(
-      (choice) => choice.className === entry.name && earned.includes(choice.level),
+      (choice) =>
+        earned.includes(choice.level) &&
+        !!findClassReference(entry, [{ name: choice.className, source: choice.classSource }]),
     ).length
     count += earned.length - usedForAsi
   }
