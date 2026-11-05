@@ -25,6 +25,14 @@ to Bonus Proficiency. Bundled and configured data have separate complete
 certificates. Training is suspended when that path is unavailable and
 restored with the source. Independent armor training keeps its own owner.
 
+Both Druid editions derive Druidic at class level 1 from the current certified
+direct feature and its exact language printing. Revised Druidic also grants
+always-prepared Speak with Animals when the feature, the level-1 spell schedule,
+and the current spell printing agree. It uses the existing class spell projection
+outside the daily preparation quota. The schedule's later Find Familiar entry
+belongs to Wild Companion's conditional casting. Losing a provider retracts
+its benefit while independent language and spell owners survive.
+
 Revised Cleric Blessed Strikes is one required Class choice at level 7.
 The exact XPHB declaration uses qualified feature references with a
 choose-one clause in prose. The chosen branch is active only while its

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Druid static PDF rules: 6,494,955 B renderer, 1,248,746 B initial.
+  // Druidic fixed benefits and static PDF rules: 6,498,085 B renderer, 1,251,783 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6343 * KIB,
-  initialRendererScript: 1220 * KIB,
+  rendererCode: 6346 * KIB,
+  initialRendererScript: 1223 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

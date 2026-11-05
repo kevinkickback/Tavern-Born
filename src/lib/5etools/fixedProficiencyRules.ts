@@ -16,10 +16,12 @@ export interface FixedProficiencyRule {
   training?: Readonly<Partial<Record<'armor' | 'weapons', readonly string[]>>>
   skills?: readonly string[]
   languages?: readonly string[]
+  languageSource?: string
   fallback?: { name: string; count: number; skillPool: readonly string[] }
 }
 export interface GeneratedFixedProficiencyRule extends FixedProficiencyRule {
   bundledMetadataDigest?: string
+  alwaysPreparedSpell?: string
   digest: string
   metadataDigest: string
   fields: readonly string[]

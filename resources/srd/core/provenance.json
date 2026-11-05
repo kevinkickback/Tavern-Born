@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.0.0",
+  "packVersion": "1.0.1",
   "distributionStatus": "approved-for-distribution",
   "snapshotGeneratedAt": "2026-09-20T00:00:00.000Z",
   "review": {
@@ -14,6 +14,15 @@
     "staleApprovals": 0,
     "auditReportSha256": "9348df6e2bb205c5533b9409fb6fb22b599a4d3b6e1b2f678fdaeb531e8e58a2"
   },
+  "maintenance": [
+    {
+      "packVersion": "1.0.1",
+      "date": "2026-11-05",
+      "record": "Druidic Focus|PHB",
+      "source": "SRD 5.1, Druid starting equipment and Adventuring Gear table (PDF pages 19 and 69)",
+      "reason": "Restore the missing group dependency for the four existing PHB items."
+    }
+  ],
   "documents": [
     {
       "version": "5.1",

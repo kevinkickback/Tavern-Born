@@ -229,6 +229,7 @@ const derivedParentFields = new Set([
   'fluffEntries',
   'classFluffSections',
   'classFluffImages',
+  'fixedProficiencySourceAudit',
 ])
 function currentFeatureMatches(
   value: ClassFeature | undefined,
