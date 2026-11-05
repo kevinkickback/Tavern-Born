@@ -4,6 +4,7 @@ export interface PdfTextBounds {
   min: number
   max: number
   multiline?: boolean
+  preWrap?: boolean
 }
 
 /** Match PDF word boundaries using a binary search, avoiding quadratic paragraph scanning. */
@@ -80,7 +81,7 @@ export function fitPdfText(
     ) {
       // Pre-wrap long paragraphs so appearance generation does not repeat an expensive scan.
       return {
-        text: value.length > 1000 ? lines.join('\n') : value,
+        text: bounds.preWrap || value.length > 1000 ? lines.join('\n') : value,
         fontSize: size,
         truncated: false,
       }

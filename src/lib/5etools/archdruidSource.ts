@@ -24,8 +24,13 @@ export function isClassicDruid(entry: Pick<CharacterClassEntry, 'name' | 'source
 const targetOf = (uid: unknown) =>
   typeof uid === 'string' ? decodeOptionalDeclaration(uid, 'classFeature')?.target : undefined
 
-function getCurrentGain(druid: Class5e, catalogs: ClassFeatureSourceCatalog, target: string) {
-  const declared = druid.classFeatures?.filter(
+export function getCurrentDirectClassFeature(
+  cls: Class5e,
+  catalogs: ClassFeatureSourceCatalog,
+  target: string,
+) {
+  if (cls.sourceIdentityConflict || cls._copy) return undefined
+  const declared = cls.classFeatures?.filter(
     (row) => (targetOf(row) ?? targetOf(optionalDeclarationObject(row).classFeature)) === target,
   )
   const declaration = declared?.length === 1 ? declared[0] : undefined
@@ -40,7 +45,7 @@ function getCurrentGain(druid: Class5e, catalogs: ClassFeatureSourceCatalog, tar
     !exactOptionalDeclarationReference(declarationRow, uid, 'classFeature')
   )
     return undefined
-  const refs = druid.classFeatureRefs?.filter(
+  const refs = cls.classFeatureRefs?.filter(
     (row) => targetOf(row.ref) === target || getClassFeatureIdentity(row) === target,
   )
   const ref = refs?.length === 1 ? refs[0] : undefined
@@ -79,9 +84,9 @@ export function getClassicArchdruidWildShapeRule(
     return undefined
   const owners = classes?.filter(isClassicDruid)
   const druid = owners?.length === 1 ? owners[0] : undefined
-  if (!druid || druid.sourceIdentityConflict || druid._copy) return undefined
-  const capstone = getCurrentGain(druid, catalogs, archdruidTarget)
-  const base = capstone && getCurrentGain(druid, catalogs, CLASSIC_WILD_SHAPE_TARGET)
+  if (!druid) return undefined
+  const capstone = getCurrentDirectClassFeature(druid, catalogs, archdruidTarget)
+  const base = capstone && getCurrentDirectClassFeature(druid, catalogs, CLASSIC_WILD_SHAPE_TARGET)
   if (!base || !Array.isArray(capstone?.entries)) return undefined
   const matches = capstone.entries.filter(
     (line): line is string => typeof line === 'string' && unlimitedSentence.test(line.trim()),

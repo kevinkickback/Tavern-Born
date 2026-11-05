@@ -338,6 +338,25 @@ export function landTerrainSpellToken(
   return spell
 }
 
+/** Fixed Land rules are earned from the subclass independently of its terrain choice. */
+export function getLandStaticFeatures(cls: Class5e, subclass: Subclass5e, level: number) {
+  const owner = getLandOwner(cls, subclass)
+  if (!owner) return []
+  const source = norm(owner.source)
+  const recovery = source === 'phb' ? owner.level : 6
+  return (
+    [
+      ["nature's ward", 10],
+      ['natural recovery', recovery],
+    ] as const
+  ).flatMap(([name, gain]) => {
+    if (level < gain) return []
+    const target = `subclass-feature|${name}|druid|${source}|land|${source}|${gain}|${source}`
+    const feature = getLandFeature(subclass, target, gain)
+    return feature ? [feature] : []
+  })
+}
+
 export function hasLandSanctuary(subclass: Subclass5e) {
   return !!getLandFeature(
     subclass,

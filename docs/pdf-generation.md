@@ -23,7 +23,12 @@ The export page supplies the raw class-feature and optional-feature lookup catal
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and
 timing follow the same unique-match and ambiguity policy as Actions. The classic Druid's current
 level-20 Archdruid rule replaces its finite Wild Shape counter with an unlimited-uses line in the
-feature summary. That usage limit appears in both description modes. Feat and creature export
+feature summary. That usage limit appears in both description modes. Full descriptions also
+include the current row of the Druid's base Wild Shape table and finite recovery, and Circle of the Land's
+earned Natural Recovery and Nature's Ward rules. Revised Poisoned immunity appears independently
+of terrain resistance. These references use current source-qualified gains and the shared feature
+fitting and continuation settings. Lost Loot wraps its class-feature text within the printed columns.
+Names-only keeps the feature labels. Feat and creature export
 lookups continue to use the character's filtered catalog.
 
 ## Templates and page assembly
