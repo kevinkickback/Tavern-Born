@@ -24,9 +24,13 @@ import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 const capstone = (feature: ClassFeature) =>
   feature.name === 'Archdruid' && feature.classSource === 'PHB' && feature.source === 'PHB'
 
-function readCatalog(file: string, change?: (feature: ClassFeature) => ClassFeature) {
-  const source = JSON.parse(readFileSync(file, 'utf8')) as { classFeature: ClassFeature[] }
-  if (change) source.classFeature = source.classFeature.map(change)
+type ClassDocument = {
+  class: Array<{ name: string; source: string; classFeatures: unknown[] }>
+  classFeature: ClassFeature[]
+}
+function readCatalog(file: string, change?: (source: ClassDocument) => void) {
+  const source = JSON.parse(readFileSync(file, 'utf8')) as ClassDocument
+  change?.(source)
   const parsed = parseClassDocument(source)
   return composeGameDataLayers([
     makeGameDataFixture({
@@ -132,26 +136,52 @@ test.each([
   expect(verify(rolledBack, current, false)).toBe(actionId)
   expect(verify(restored, current, true)).toBe(actionId)
   const variant = lookups(
-    readCatalog(file, (row) => (capstone(row) ? { ...row, isClassFeatureVariant: true } : row)),
+    readCatalog(file, (source) => {
+      source.classFeature = source.classFeature.map((row) =>
+        capstone(row) ? { ...row, isClassFeatureVariant: true } : row,
+      )
+    }),
   )
   for (const rules of [absent, duplicate, changed, variant, rawOnly]) verify(at20, rules, false)
   verify(at20, current, true)
+  for (const [qualifiers, unlimited] of [
+    [{ tableDisplayName: 'Archdruid' }, true],
+    [{ classSource: 'XPHB' }, false],
+    [{ gainSubclassFeature: true }, false],
+    [{ isClassFeatureVariant: true }, false],
+  ] as const) {
+    const wrapped = lookups(
+      readCatalog(file, (source) => {
+        const druid = source.class.find((row) => row.name === 'Druid' && row.source === 'PHB')!
+        druid.classFeatures = druid.classFeatures.map((uid) =>
+          uid === 'Archdruid|Druid||20'
+            ? { classFeature: uid, ...qualifiers }
+            : uid === 'Wild Shape|Druid||2'
+              ? { classFeature: uid, tableDisplayName: 'Wild Shape' }
+              : uid,
+        )
+      }),
+    )
+    verify(at20, wrapped, unlimited)
+  }
   const reworded = lookups(
-    readCatalog(file, (row) =>
-      row.name === 'Wild Shape' && row.classSource === 'PHB' && row.source === 'PHB'
-        ? {
-            ...row,
-            entries: row.entries?.map((entry) =>
-              typeof entry === 'string'
-                ? entry.replace(
-                    'You can use this feature twice.',
-                    'You can use this ability two times.',
-                  )
-                : entry,
-            ),
-          }
-        : row,
-    ),
+    readCatalog(file, (source) => {
+      source.classFeature = source.classFeature.map((row) =>
+        row.name === 'Wild Shape' && row.classSource === 'PHB' && row.source === 'PHB'
+          ? {
+              ...row,
+              entries: row.entries?.map((entry) =>
+                typeof entry === 'string'
+                  ? entry.replace(
+                      'You can use this feature twice.',
+                      'You can use this ability two times.',
+                    )
+                  : entry,
+              ),
+            }
+          : row,
+      )
+    }),
   )
   verify(at20, reworded, true)
   const rewordedAction = createCharacterSheetViewModel(at20, reworded, reworded).actions.find(

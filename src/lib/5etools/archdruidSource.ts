@@ -28,7 +28,18 @@ function getCurrentGain(druid: Class5e, catalogs: ClassFeatureSourceCatalog, tar
   const declared = druid.classFeatures?.filter(
     (row) => (targetOf(row) ?? targetOf(optionalDeclarationObject(row).classFeature)) === target,
   )
-  if (declared?.length !== 1 || targetOf(declared[0]) !== target) return undefined
+  const declaration = declared?.length === 1 ? declared[0] : undefined
+  const declarationRow = optionalDeclarationObject(declaration)
+  const uid = typeof declaration === 'string' ? declaration : declarationRow.classFeature
+  if (
+    typeof uid !== 'string' ||
+    targetOf(uid) !== target ||
+    declarationRow.gainSubclassFeature ||
+    declarationRow.isClassFeatureVariant ||
+    declarationRow.sourceIdentityConflict ||
+    !exactOptionalDeclarationReference(declarationRow, uid, 'classFeature')
+  )
+    return undefined
   const refs = druid.classFeatureRefs?.filter(
     (row) => targetOf(row.ref) === target || getClassFeatureIdentity(row) === target,
   )
